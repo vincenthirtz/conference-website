@@ -115,7 +115,7 @@ function Popup() {
                   </Paragraph>
                   <Link href="/venue/California">
                     <Button type="button" className="w-[200px]">
-                      S'inscrire
+                      S&apos;inscrire
                     </Button>
                   </Link>
                 </div>
