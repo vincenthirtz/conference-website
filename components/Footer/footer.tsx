@@ -17,7 +17,7 @@ function Footer(): JSX.Element {
             className="hover:underline text-white duration-200 ease-in-out flex items-center"
             data-test="code-of-conduct"
           >
-            <span> Code of Conduct </span>
+            <span> Règlement </span>
             <span>
               <ILink className="w-4 ml-2" fill="white" />
             </span>
@@ -26,8 +26,9 @@ function Footer(): JSX.Element {
         <div></div>
         <div className="flex items-center justify-between sm:flex-col sm:items-center">
           <div className="text-white text-center">
-            Made with ❤️ by AsyncAPI contributors. By the community for the
-            community!
+            Fait avec ❤️ par AsyncAPI contributors. Repris par <a
+            href="https://www.twitch.tv/arukdo"
+            target="_blank" rel="noreferrer">Arukdo</a>.
           </div>
           <div className="w-[0.9px] h-4 bg-white ml-4 sm:hidden" />
           <div className="ml-4 flex justify-between items-center gap-2 sm:mt-4">

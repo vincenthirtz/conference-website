@@ -12,34 +12,30 @@ function About(): JSX.Element {
       data-test="about-section"
     >
       <div className="w-[1120px] lg:w-full flex lg:flex-col-reverse items-center justify-between">
-        <div className="lg:mt-16 bg-[url('/img/about.jpeg')]  bg-center bg-cover w-[450px] h-[550px] sm:w-[100%] sm:h-[500px] rounded-[30px]"></div>
+        <div className="lg:mt-16 bg-[url('/img/fourplayers.png')]  bg-left bg-cover w-[450px] h-[550px] sm:w-[100%] sm:h-[500px] rounded-[30px]"></div>
         <div className="w-[600px] ml-10 lg:ml-0 lg:w-full lg:text-center">
           <div className="flex items-center lg:justify-center">
             <div className="text-lg sm:text-sm text-white font-semi-bold border-b-2 border-blue-400 mb-1">
-              About The Event
+              A propos du tournoi
             </div>
           </div>
           <Heading typeStyle="heading-md" className="text-gradient lg:mt-10">
-            AsyncAPI Conference
+            OW WOMEN'S CUP
           </Heading>
           <Paragraph
             typeStyle="body-lg"
             className="mt-6"
             textColor="text-gray-200"
           >
-            The AsyncAPI Conference is an official event created by the AsyncAPI
-            Initiative. This conference is aimed primarily at the community to
-            share and exchange experiences between existing users and new
-            members. We plan to integrate new members into the community and
-            expand their knowledge about the project.
+         Le but étant de promouvoir l’esport féminin et français à travers une compétition 100% féminine. Le cast sera aussi composé uniquement de femmes.
+Évidemment il ne faut pas aller trop vite et il faut faire en fonction du nombre de participantes et du nombre d’équipe qui en découle.
           </Paragraph>
           <Paragraph
             typeStyle="body-lg"
             className="mt-6"
             textColor="text-gray-200"
           >
-            We are currently looking for sponsors, for more details please read
-            our Sponsorship Prospectus.
+           Nous sommes à le recherche d'un premier sponsor officiel
           </Paragraph>
           <div
             className="mt-10 flex gap-4 sm:flex-col lg:justify-center"
@@ -52,7 +48,7 @@ function About(): JSX.Element {
               rel="noreferrer"
             >
               <Button type="button" className="w-[200px]">
-                Become a sponsor now
+                Devenir sponsor
               </Button>
             </a>
             <a
@@ -60,7 +56,7 @@ function About(): JSX.Element {
               href="/pdf/conf-2025.pdf"
               download={`conf ${new Date().getFullYear()}.pdf`}
             >
-              <Button type="button" overlay={true} className="w-[240px] border">
+              {/* <Button type="button" overlay={true} className="w-[240px] border">
                 <div className="flex gap-2 justify-center items-center">
                   <Image
                     src="/img/Download_icon.png"
@@ -71,7 +67,7 @@ function About(): JSX.Element {
                   />
                   <div>Sponsorship prospectus</div>
                 </div>
-              </Button>
+              </Button> */}
             </a>
           </div>
         </div>

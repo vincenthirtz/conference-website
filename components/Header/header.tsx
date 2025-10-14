@@ -16,7 +16,7 @@ function Header(): JSX.Element {
           <div className="flex justify-center w-full mt-32">
             <div className="flex flex-col justify-center items-center w-full">
               <div className="my-10">
-                <Announcement />
+            {/*     <Announcement /> */}
               </div>
               <div
                 className="sm:w-full text-center"
@@ -27,19 +27,18 @@ function Header(): JSX.Element {
                   level="h1"
                   typeStyle="heading-lg"
                 >
-                  AsyncAPI Conference 2025
+                 OW WOMEN'S CUP 2025
                 </Heading>
               </div>
-              <div className="w-[624px] sm:w-full text-center">
+              <div className="w-[640px] sm:w-full text-center">
                 <Paragraph className="mt-[16px]" textColor="text-gray-200">
-                  Join us for the AsyncAPI Conference, bringing the latest in
-                  AsyncAPI technology to locations worldwide!
+                  Rejoins le tournoi 100% féminin et francophone sur Overwatch 2
                 </Paragraph>
               </div>
               <div className="mt-[54px] relative flex items-center justify-center">
-                <Link href="#tickets">
+                <Link href="https://battlefy.com/ow-women’s-cup/ow-women’s-cup-2025/68e762e82fb71c00210da40b/info" target='_blank'>
                   <Button type="button" className="w-[250px]">
-                    Register Now
+                    Rejoindre
                   </Button>
                 </Link>
               </div>
@@ -47,13 +46,13 @@ function Header(): JSX.Element {
           </div>
         </div>
       </div>
-      <div className="mt-24">
+      {/* <div className="mt-24">
         <ReactSlider>
           {cities.map((city) => {
             return <Venue key={city.name} city={city} />;
           })}
         </ReactSlider>
-      </div>
+      </div> */}
     </div>
   );
 }
