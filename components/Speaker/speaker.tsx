@@ -31,7 +31,7 @@ function Speaker({ details, location, className }: ISpeaker): JSX.Element {
         />
       </div>
       <div className="mt-[19px]">
-        <h3 className="text-[23px] text-white">{shortenedName}</h3>
+        <a href={details.link} target='_blank' rel="noreferrer"><h3 className="text-[23px] text-white">{shortenedName}</h3></a>
         <div className={`flex flex-col ${'min-h-[150px]'} justify-between`}>
           <div>
             {' '}

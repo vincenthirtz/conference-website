@@ -1,44 +1,10 @@
 [
   {
-    "title": "About",
+    "title": "A propos",
     "ref": "/#about"
   },
   {
-    "title": "Venue",
-    "ref": "",
-    "subMenu": [
-      {
-        "title": "Singapore",
-        "ref": "/venue/Singapore"
-      },
-      {
-        "title": "Munich, Germany",
-        "ref": "/venue/Munich"
-      },
-      {
-        "title": "Lagos, Nigeria",
-        "ref": "/venue/Lagos"
-      },
-      {
-        "title": "London, UK",
-        "ref": "/venue/London"
-      },
-      {
-        "title": "Bangalore, India",
-        "ref": "/venue/Bangalore"
-      },
-      {
-        "title": "Online",
-        "ref": "/venue/Online"
-      },
-      {
-        "title": "Paris, France",
-        "ref": "/venue/Paris"
-      }
-    ]
-  },
-  {
-    "title": "Speakers",
+    "title": "Cast",
     "ref": "/#speakers"
   },
   {
@@ -48,9 +14,5 @@
   {
     "title": "Sponsors",
     "ref": "/#sponsors"
-  },
-  {
-    "title": "Past Editions",
-    "ref": "/editions"
-  }
+}
 ]

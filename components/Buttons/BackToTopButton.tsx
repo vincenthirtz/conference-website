@@ -51,7 +51,7 @@ const BackToTopButton: React.FC = () => {
         fill="white"
       />
       <span className="back-to-top-text absolute text-white text-xs opacity-0 whitespace-nowrap transition-all duration-300 ease-in-out">
-        Back to Top
+        Aller en haut
       </span>
     </button>
   ) : null;

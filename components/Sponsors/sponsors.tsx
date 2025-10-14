@@ -19,19 +19,19 @@ function Sponsors({ eventSponsors, financialSponsor }: ISponsors) {
     >
       <div className="py-[80px] flex flex-col items-center">
         <div className="max-w-3xl sm:w-full">
-          <Paragraph className="mt-[40px]" textColor="text-white">
+          {/* <Paragraph className="mt-[40px]" textColor="text-white">
             Elevating the future of APIs. Our valued partners and sponsors play
             a pivotal role in bringing our vision to life. With their support,
             we orchestrate an unforgettable celebration.
-          </Paragraph>
+          </Paragraph> */}
         </div>
-        <Heading
+        {/* <Heading
           typeStyle="heading-md"
           className="text-slate-200 mt-10 sm:text-2xl sm:mt-5"
         >
           Event and Host Sponsor
-        </Heading>
-        <div className="flex justify-center w-[650px] sm:w-full flex-col  items-center">
+        </Heading> */}
+        {/* <div className="flex justify-center w-[650px] sm:w-full flex-col  items-center">
           {eventSponsors &&
             eventSponsors.map((sponsor) => (
               <div
@@ -48,8 +48,8 @@ function Sponsors({ eventSponsors, financialSponsor }: ISponsors) {
                 </Link>
               </div>
             ))}
-        </div>
-        <div>
+        </div> */}
+        {/* <div>
           {financialSponsor && (
             <div>
               <Heading
@@ -78,7 +78,7 @@ function Sponsors({ eventSponsors, financialSponsor }: ISponsors) {
               </div>
             </div>
           )}
-        </div>
+        </div> */}
       </div>
     </div>
   );

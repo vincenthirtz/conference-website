@@ -96,11 +96,8 @@ function Popup() {
 
                 <div className="flex flex-col items-center text-center space-y-6 pb-4">
                   <h1 className=" text-[30px] sm:text-[25px] font-bold text-white leading-tight">
-                    AsyncAPI Is Headed to
+                    Ouverture des inscriptions
                     <br />
-                    DeveloperWeek <span className="text-[#B31942]">U</span>
-                    <span>S</span>
-                    <span className="text-[#0A3161]">A</span> 2026!
                   </h1>
                   <Paragraph typeStyle="body-md">
                     For the first time ever, we&apos;re bringing the AsyncAPI
@@ -118,7 +115,7 @@ function Popup() {
                   </Paragraph>
                   <Link href="/venue/California">
                     <Button type="button" className="w-[200px]">
-                      See What&apos;s Next
+                      S'inscrire
                     </Button>
                   </Link>
                 </div>
