@@ -27,7 +27,7 @@ function Header(): JSX.Element {
                   level="h1"
                   typeStyle="heading-lg"
                 >
-                 OW WOMEN'S CUP 2025
+                 OW WOMEN&apos;S CUP 2025
                 </Heading>
               </div>
               <div className="w-[640px] sm:w-full text-center">
