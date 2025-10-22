@@ -12,6 +12,7 @@ import Paragraph from '../components/Typography/paragraph';
 import Subscription from '../components/Form/subscription';
 import Speaker from '../components/Speaker/speaker';
 import cities from '../config/city-lists.json';
+import teams from '../config/teams.json';
 import speakers from '../config/speakers.json';
 import Link from 'next/link';
 import Button from '../components/Buttons/button';
@@ -22,6 +23,7 @@ import Popup from '../components/Popup/popup';
 export default function Home() {
   const isTablet = useMediaQuery({ maxWidth: '1118px' });
   const [speakersList, setSpeakersList] = useState(speakers);
+  const [teamsList, setTeamsList] = useState(teams);
   const [currentCity, setCurrentCity] = useState<Partial<City>>({
     name: 'All',
   });
@@ -38,6 +40,20 @@ export default function Home() {
       setSpeakersList([]);
     }
   };
+
+  const handleTeams = (city: string) => {
+    if (city && city !== 'all') {
+      const cityTeam = teams.filter((team) =>
+        team.city.includes(city)
+      );
+      setTeamsList(cityTeam);
+    } else if (city === 'all') {
+      setTeamsList(teams);
+    } else {
+      setTeamsList([]);
+    }
+  };
+
   return (
     <div>
       <Head>
@@ -80,7 +96,7 @@ export default function Home() {
                 className="mt-6"
                 textColor="text-gray-200"
               >
-                Joueuses et streameuses récurrentes de la scène française
+                Joueuses et streameuses récurrentes de la scène francophone
               </Paragraph>
             </div>
             <div className="lg:py-20 w-[1130px] lg:w-full">
@@ -221,6 +237,114 @@ export default function Home() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+      <div id="register" className="container mt-20 lg:mt-0">
+        <div className="flex items-center flex-col justify-center">
+          <div
+            id="teams"
+            className="relative flex flex-col items-center justify-center pt-20 lg:pt-8"
+          >
+            <div className="text-center">
+              <div className="flex items-center justify-center">
+                <div className="text-lg sm:text-sm text-white font-semi-bold border-b-2 border-blue-400 mb-1">
+                  Equipes
+                </div>
+              </div>
+            </div>
+            <Heading
+              typeStyle="heading-md"
+              className="text-gradient text-center lg:mt-10"
+            >
+              Des équipes au rendez-vous
+            </Heading>
+            <div className="max-w-3xl sm:w-full text-center">
+              <Paragraph
+                typeStyle="body-lg"
+                className="mt-6"
+                textColor="text-gray-200"
+              >
+                Tout niveau et de plusieurs nationalités
+              </Paragraph>
+            </div>
+            <div className="lg:py-20 w-[1130px] lg:w-full">
+              <div className="mt-[64px] lg:mt-0">
+                {isTablet ? (
+                  <div className="w-full">
+                    <Dropdown
+                      city={currentCity}
+                      cities={cities}
+                      setCity={setCurrentCity}
+                      handleSpeakers={handleTeams}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex justify-center">
+                    <div className="space-x-4 lg:w-full flex justify-between"></div>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-[64px] pb-[181px] lg:pb-[80px]">
+                {teamsList.length > 0 ? (
+                  <div className="w-full grid grid-cols-3 lg:grid-cols-2 sm:grid-cols-1 gap-4">
+                    {teamsList.map((team) => {
+                      return (
+                        <Speaker
+                          key={team.id}
+                          details={team}
+                          location={
+                            currentCity.name !== 'All'
+                              ? `${currentCity.name}, ${currentCity.country}`
+                              : team.city[1]
+                                ? `${team.city[0]} & ${team.city[1]}`
+                                : `${team.city[0]}`
+                          }
+                          className="mt-10"
+                        />
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="mt-[64px] pb-[181px] flex items-center justify-center text-center">
+                    <div className="w-[720px] lg:w-full">
+                      {typeof currentCity !== 'string' && currentCity.cfp ? (
+                        <div>
+                          <Paragraph className="text-gray-200">
+                            We are actively accepting speaker applications, and
+                            you can start your journey by clicking the button
+                            below. Join us on stage and share your valuable
+                            insights with our enthusiastic audience!
+                          </Paragraph>
+                          <Link legacyBehavior href={currentCity.cfp}>
+                            <a className="flex justify-center" target="_blank">
+                              <Button
+                                type="button"
+                                className="mt-[80px] w-[244px] border border-gray"
+                              >
+                                Apply as a speaker
+                              </Button>
+                            </a>
+                          </Link>
+                        </div>
+                      ) : (
+                        <div>
+                          <Heading
+                            typeStyle="heading-md-semibold"
+                            className="text-gray-200"
+                          >
+                            {typeof currentCity !== 'string' &&
+                              currentCity.name}{' '}
+                            Speakers Coming Soon - Stay Tuned!
+                          </Heading>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
           <div
             id="tickets"
             className="flex items-center flex-col justify-center pt-20 lg:pt-0"
@@ -248,9 +372,6 @@ export default function Home() {
                 </Paragraph>
               </div>
             </div>
-           {/*  <div className="w-full mt-12">
-              <Tickets />
-            </div> */}
           </div>
         </div>
       </div>
