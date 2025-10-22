@@ -43,7 +43,7 @@ function About(): JSX.Element {
           >
             <a
               className="flex justify-center"
-              href="https://opencollective.com/asyncapi/events/asyncapi-conference-e9fd5b06"
+              href="https://discord.gg/7BzJpEtTn"
               target="_blank"
               rel="noreferrer"
             >
