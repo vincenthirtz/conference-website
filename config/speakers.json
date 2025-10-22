@@ -10,9 +10,17 @@
   {
     "name": "Gwadael",
     "title": "Streameuse Overwatch 2",
-    "img": "/img/speaker-images/gwadael2.jpg",
+    "img": "/img/speaker-images/gwadael.jpg",
     "link": "https://www.twitch.tv/gwadael",
     "id": 2,
+    "city": ["France"]
+  },
+  {
+    "name": "Crocheh",
+    "title": "Streameuse Overwatch 2",
+    "img": "/img/speaker-images/crocheh.jpeg",
+    "link": "https://www.twitch.tv/crocheh",
+    "id": 3,
     "city": ["France"]
   }
 ]
