@@ -11,8 +11,7 @@ function Footer(): JSX.Element {
       >
         <div className="mt-2 text-[14px] text-gray-100 ">
           <a
-            href="https://github.com/asyncapi/community/blob/master/CODE_OF_CONDUCT.md"
-            target="_blank"
+            href="/rules"
             rel="noreferrer"
             className="hover:underline text-white duration-200 ease-in-out flex items-center"
             data-test="code-of-conduct"
