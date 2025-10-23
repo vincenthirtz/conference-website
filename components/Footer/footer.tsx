@@ -1,4 +1,5 @@
 import React, { JSX } from 'react';
+import Link from 'next/link';
 import ILink from '../illustration/link';
 import socials, { SocialWithIcon } from '../../config/socials';
 
@@ -10,17 +11,14 @@ function Footer(): JSX.Element {
         data-test="footer-asyncAPI-logo"
       >
         <div className="mt-2 text-[14px] text-gray-100 ">
-          <a
-            href="/rules"
-            rel="noreferrer"
-            className="hover:underline text-white duration-200 ease-in-out flex items-center"
-            data-test="code-of-conduct"
-          >
+        <Link href="/rules">
+      <div className="hover:underline text-white duration-200 ease-in-out flex items-center">
             <span> Règlement </span>
-            <span>
+                <span>
               <ILink className="w-4 ml-2" fill="white" />
             </span>
-          </a>
+      </div>
+    </Link> 
         </div>
         <div></div>
         <div className="flex items-center justify-between sm:flex-col sm:items-center">
