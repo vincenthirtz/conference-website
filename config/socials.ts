@@ -16,21 +16,21 @@ export interface SocialWithIcon {
 }
 
 const socials: SocialWithIcon[] = [
-  {
-    name: 'Linkedin',
-    href: 'https://www.linkedin.com/company/asyncapi/',
-    icon: LinkedIn,
-  },
-  {
-    name: 'Twitter(X)',
-    href: 'https://x.com/asyncapispec',
-    icon: X,
-  },
-  {
-    name: 'YouTube',
-    href: 'https://www.youtube.com/@AsyncAPI',
-    icon: Youtube,
-  },
+  // {
+  //   name: 'Linkedin',
+  //   href: 'https://www.linkedin.com/company/asyncapi/',
+  //   icon: LinkedIn,
+  // },
+  // {
+  //   name: 'Twitter(X)',
+  //   href: 'https://x.com/asyncapispec',
+  //   icon: X,
+  // },
+  // {
+  //   name: 'YouTube',
+  //   href: 'https://www.youtube.com/@AsyncAPI',
+  //   icon: Youtube,
+  // },
 ];
 
 export default socials;

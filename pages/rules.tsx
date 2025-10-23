@@ -67,10 +67,6 @@ export default function Home() {
         alt="background-illustration"
       />
       <Header />
-      {/* <Popup /> */}
-      <div id="about" className="mt-20">
-        <About />
-      </div>
       <div id="register" className="container mt-20 lg:mt-0">
         <div className="flex items-center flex-col justify-center">
           <div
