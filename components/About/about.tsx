@@ -43,7 +43,7 @@ function About(): JSX.Element {
           >
             <a
               className="flex justify-center"
-              href="https://discord.gg/7BzJpEtTn"
+              href="https://discord.gg/gERSsjC3Vd"
               target="_blank"
               rel="noreferrer"
             >
