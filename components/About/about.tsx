@@ -27,8 +27,7 @@ function About(): JSX.Element {
             className="mt-6"
             textColor="text-gray-200"
           >
-         Le but étant de promouvoir l’esport féminin et français à travers une compétition 100% féminine. Le cast sera aussi composé uniquement de femmes.
-Évidemment il ne faut pas aller trop vite et il faut faire en fonction du nombre de participantes et du nombre d’équipe qui en découle.
+         Le but étant de promouvoir l’esport féminin et francophone à travers une compétition 100% féminine. Le cast sera aussi composé uniquement de femmes.
           </Paragraph>
           <Paragraph
             typeStyle="body-lg"
