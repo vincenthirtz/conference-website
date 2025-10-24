@@ -9,7 +9,7 @@ function Subscription(): JSX.Element {
           Rejoindre le Discord pour plus d&apos;informations
         </h3>
         <a
-          href="4"
+          href="https://discord.gg/gERSsjC3Vd"
           target="_blank"
           rel="noreferrer"
           className="sm:w-full"
