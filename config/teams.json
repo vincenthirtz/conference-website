@@ -14,5 +14,21 @@
     "link": "https://battlefy.com/teams/68f7972567dabd0117d8303d",
     "id": 1,
     "city": ["France", "Suisse"]
+  },
+  {
+    "name": "Foxes",
+    "title": "ZezzDeCitron (waiting dps) Miks38 Hyuuka SEKKANN (c)",
+    "img": "/img/teams-images/foxes.png",
+    "link": "https://battlefy.com/teams/68f275eac45c74002805e2fe",
+    "id": 1,
+    "city": ["France"]
+  },
+  {
+    "name": "Sparkles",
+    "title": "Asa Saro Mawell LuxuWu MissKiwiii (c)",
+    "img": "/img/teams-images/sparkles.png",
+    "link": "https://battlefy.com/teams/68f275eac45c74002805e2fe",
+    "id": 1,
+    "city": ["France"]
   }
 ]
