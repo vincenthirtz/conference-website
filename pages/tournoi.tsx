@@ -47,7 +47,11 @@ function isCountable(m: Match): boolean {
 export default function Tournoi() {
   const teams: Team[] = useMemo<Team[]>(() => {
     const base = (teamsData as any[]).slice(0, 4).map(t => ({ name: t.name as string, img: t.img as string, color: (t as any).color as string }))
-    while (base.length < 4) base.push({ name: `Équipe ${base.length + 1}` })
+    while (base.length < 4) base.push({
+        name: `Équipe ${base.length + 1}`,
+        img: '',
+        color: ''
+    })
     return base
   }, [])
 
