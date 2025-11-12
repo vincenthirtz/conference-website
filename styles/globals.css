@@ -281,3 +281,11 @@ backdrop-filter: blur(10px); */
   font-size: 13px;
   opacity: 1;
 }
+
+@keyframes confettiPulse {
+  0%, 100% { opacity: 0.1; transform: translateY(0); }
+  50% { opacity: 0.3; transform: translateY(-10px); }
+}
+.animate-pulse {
+  animation: confettiPulse 3s infinite ease-in-out;
+}
