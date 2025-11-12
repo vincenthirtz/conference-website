@@ -16,10 +16,6 @@ export interface EventSponsor {
   websiteUrl: string;
 }
 
-export interface Sponsors {
-  eventSponsors: EventSponsor[];
-}
-
 export interface City {
   name: string;
   country: string;
@@ -29,7 +25,6 @@ export interface City {
   img: string;
   address: string;
   mapUrl: string | undefined;
-  sponsors: Sponsors;
   freeEntry: boolean;
   cfp: string | null;
   recordings: string | null;
