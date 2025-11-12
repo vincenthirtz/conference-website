@@ -197,6 +197,7 @@ export default function Home() {
                   <div className="w-full grid grid-cols-3 lg:grid-cols-2 sm:grid-cols-1 gap-4">
                     {teamsList.map((team) => {
                       return (
+                        <Link href={`/team/${team.name.replace(/\s+/g, '-').toLowerCase()}`}>
                         <Speaker
                           key={team.id}
                           details={team}
@@ -208,7 +209,7 @@ export default function Home() {
                                 : `${team.city[0]}`
                           }
                           className="mt-10"
-                        />
+                        /></Link>
                       );
                     })}
                   </div>
