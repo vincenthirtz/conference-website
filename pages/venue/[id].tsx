@@ -183,8 +183,7 @@ function Venue({ city }: IVenue) {
           <div></div>
         )}
       </div>
-      <div id="sponsors">
-      </div>
+      <div id="sponsors"></div>
     </div>
   );
 }

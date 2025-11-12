@@ -11,21 +11,27 @@ function Footer(): JSX.Element {
         data-test="footer-asyncAPI-logo"
       >
         <div className="mt-2 text-[14px] text-gray-100 ">
-        <Link href="/rules">
-      <div className="hover:underline text-white duration-200 ease-in-out flex items-center">
-            <span> Règlement </span>
-                <span>
-              <ILink className="w-4 ml-2" fill="white" />
-            </span>
-      </div>
-    </Link> 
+          <Link href="/rules">
+            <div className="hover:underline text-white duration-200 ease-in-out flex items-center">
+              <span> Règlement </span>
+              <span>
+                <ILink className="w-4 ml-2" fill="white" />
+              </span>
+            </div>
+          </Link>
         </div>
         <div></div>
         <div className="flex items-center justify-between sm:flex-col sm:items-center">
           <div className="text-white text-center">
-            Fait avec ❤️ par AsyncAPI contributors. Repris par <a
-            href="https://www.twitch.tv/arukdo"
-            target="_blank" rel="noreferrer">Arukdo</a>.
+            Fait avec ❤️ par AsyncAPI contributors. Repris par{' '}
+            <a
+              href="https://www.twitch.tv/arukdo"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Arukdo
+            </a>
+            .
           </div>
           <div className="w-[0.9px] h-4 bg-white ml-4 sm:hidden" />
           <div className="ml-4 flex justify-between items-center gap-2 sm:mt-4">

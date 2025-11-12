@@ -19,7 +19,7 @@ import Dropdown from '../components/Dropdown/dropdown';
 import { City } from '../types/types';
 import Popup from '../components/Popup/popup';
 import Contact from '../components/Form/Contact';
-import SponsorBanner from "../components/Banner/SponsorBanner";
+import SponsorBanner from '../components/Banner/SponsorBanner';
 
 export default function Home() {
   const isTablet = useMediaQuery({ maxWidth: '1118px' });
@@ -44,9 +44,7 @@ export default function Home() {
 
   const handleTeams = (city: string) => {
     if (city && city !== 'all') {
-      const cityTeam = teams.filter((team) =>
-        team.city.includes(city)
-      );
+      const cityTeam = teams.filter((team) => team.city.includes(city));
       setTeamsList(cityTeam);
     } else if (city === 'all') {
       setTeamsList(teams);
@@ -196,20 +194,26 @@ export default function Home() {
                 {teamsList.length > 0 ? (
                   <div className="w-full grid grid-cols-3 lg:grid-cols-2 sm:grid-cols-1 gap-4">
                     {teamsList.map((team) => {
+                      const slug = team.name.replace(/\s+/g, '-').toLowerCase();
                       return (
-                        <Link href={`/team/${team.name.replace(/\s+/g, '-').toLowerCase()}`}>
-                        <Speaker
-                          key={team.id}
-                          details={team}
-                          location={
-                            currentCity.name !== 'All'
-                              ? `${currentCity.name}, ${currentCity.country}`
-                              : team.city[1]
-                                ? `${team.city[0]} & ${team.city[1]}`
-                                : `${team.city[0]}`
-                          }
-                          className="mt-10"
-                        /></Link>
+                        <Link
+                          key={`team-${team.name}`} // ✅ la clé est au niveau racine retourné
+                          href={`/team/${slug}`}
+                          className="group relative"
+                        >
+                          <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition blur-2xl bg-white/10 pointer-events-none" />
+                          <Speaker
+                            details={team}
+                            location={
+                              currentCity.name !== 'All'
+                                ? `${currentCity.name}, ${currentCity.country}`
+                                : team.city[1]
+                                  ? `${team.city[0]} & ${team.city[1]}`
+                                  : `${team.city[0]}`
+                            }
+                            className="mt-10"
+                          />
+                        </Link>
                       );
                     })}
                   </div>
@@ -284,24 +288,24 @@ export default function Home() {
         </div>
       </div>
       <div id="sponsors" className="mt-20">
-          <SponsorBanner />
+        <SponsorBanner />
       </div>
       {/* Formulaire de contact */}
       <div
-            id="contact"
-            className="flex items-center flex-col justify-center pt-20 lg:pt-0"
-          >
-            <div className="text-lg sm:text-sm text-white font-semi-bold border-b-2 border-blue-400 mb-1">
-              Contact
-            </div>
-              <Heading
-              typeStyle="heading-md"
-              className="text-gradient text-center lg:mt-10"
-            >
-              Faites nous un petit message
-            </Heading>
-            <Contact className="mt-20" />
-            </div>
+        id="contact"
+        className="flex items-center flex-col justify-center pt-20 lg:pt-0"
+      >
+        <div className="text-lg sm:text-sm text-white font-semi-bold border-b-2 border-blue-400 mb-1">
+          Contact
+        </div>
+        <Heading
+          typeStyle="heading-md"
+          className="text-gradient text-center lg:mt-10"
+        >
+          Faites nous un petit message
+        </Heading>
+        <Contact className="mt-20" />
+      </div>
 
       <div className="mt-5">
         <Subscription />

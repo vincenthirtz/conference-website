@@ -7,7 +7,7 @@
     "title": "Cast",
     "ref": "/#speakers"
   },
-    {
+  {
     "title": "Equipes",
     "ref": "/#teams"
   },
@@ -18,5 +18,5 @@
   {
     "title": "Sponsors",
     "ref": "/#sponsors"
-}
+  }
 ]

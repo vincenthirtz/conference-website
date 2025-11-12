@@ -19,16 +19,18 @@ export default function Contact({ className = '' }: { className?: string }) {
     const defaults = { origin: { y: 0.6 } };
 
     function fire(particleRatio: number, opts: Record<string, any>) {
-      confetti(Object.assign({}, defaults, opts, {
-        particleCount: Math.floor(count * particleRatio),
-      }));
+      confetti(
+        Object.assign({}, defaults, opts, {
+          particleCount: Math.floor(count * particleRatio),
+        })
+      );
     }
 
     fire(0.25, { spread: 26, startVelocity: 55 });
-    fire(0.2,  { spread: 60 });
+    fire(0.2, { spread: 60 });
     fire(0.35, { spread: 100, decay: 0.91, scalar: 0.9 });
-    fire(0.1,  { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
-    fire(0.1,  { spread: 120, startVelocity: 45 });
+    fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
+    fire(0.1, { spread: 120, startVelocity: 45 });
   }, []);
 
   useEffect(() => {
@@ -41,7 +43,9 @@ export default function Contact({ className = '' }: { className?: string }) {
 
     if (!endpoint) {
       setStatus('error');
-      setError('Formspree ID manquant. Définis NEXT_PUBLIC_FORMSPREE_ID dans .env.local');
+      setError(
+        'Formspree ID manquant. Définis NEXT_PUBLIC_FORMSPREE_ID dans .env.local'
+      );
       return;
     }
 
@@ -70,7 +74,10 @@ export default function Contact({ className = '' }: { className?: string }) {
         liveRef.current?.focus();
       } else {
         setStatus('error');
-        setError(json?.errors?.[0]?.message || 'Une erreur est survenue. Réessaie plus tard.');
+        setError(
+          json?.errors?.[0]?.message ||
+            'Une erreur est survenue. Réessaie plus tard.'
+        );
       }
     } catch {
       setStatus('error');
@@ -84,7 +91,8 @@ export default function Contact({ className = '' }: { className?: string }) {
         {/* Titre style site: gradient + sous-titre fin */}
         <div className="text-center">
           <p className="mt-4 text-gray-300">
-            Une question sur l’OW Women&apos;s Cup ? Laisse-nous un message, on répond vite.
+            Une question sur l’OW Women&apos;s Cup ? Laisse-nous un message, on
+            répond vite.
           </p>
         </div>
 
@@ -115,7 +123,9 @@ export default function Contact({ className = '' }: { className?: string }) {
 
           <div className="grid sm:grid-cols-2 gap-6">
             <div className="grid gap-2">
-              <label htmlFor="name" className="text-gray-200">Nom</label>
+              <label htmlFor="name" className="text-gray-200">
+                Nom
+              </label>
               <input
                 id="name"
                 name="name"
@@ -125,7 +135,9 @@ export default function Contact({ className = '' }: { className?: string }) {
               />
             </div>
             <div className="grid gap-2">
-              <label htmlFor="email" className="text-gray-200">Email</label>
+              <label htmlFor="email" className="text-gray-200">
+                Email
+              </label>
               <input
                 id="email"
                 name="email"
@@ -139,7 +151,9 @@ export default function Contact({ className = '' }: { className?: string }) {
           </div>
 
           <div className="grid gap-2">
-            <label htmlFor="subject" className="text-gray-200">Sujet</label>
+            <label htmlFor="subject" className="text-gray-200">
+              Sujet
+            </label>
             <input
               id="subject"
               name="subject"
@@ -150,7 +164,9 @@ export default function Contact({ className = '' }: { className?: string }) {
           </div>
 
           <div className="grid gap-2">
-            <label htmlFor="message" className="text-gray-200">Message</label>
+            <label htmlFor="message" className="text-gray-200">
+              Message
+            </label>
             <textarea
               id="message"
               name="message"
@@ -162,8 +178,14 @@ export default function Contact({ className = '' }: { className?: string }) {
           </div>
 
           <label className="flex items-start gap-3 text-gray-300 text-sm">
-            <input type="checkbox" name="consent" required className="mt-1 accent-blue-500" />
-            J’accepte que mes informations soient utilisées pour traiter ma demande. (Pas de revente.)
+            <input
+              type="checkbox"
+              name="consent"
+              required
+              className="mt-1 accent-blue-500"
+            />
+            J’accepte que mes informations soient utilisées pour traiter ma
+            demande. (Pas de revente.)
           </label>
 
           <div className="flex flex-wrap items-center gap-4">
@@ -181,7 +203,9 @@ export default function Contact({ className = '' }: { className?: string }) {
             </button>
 
             {status === 'success' && (
-              <span className="text-green-400">Merci ! Ton message a bien été envoyé 🎉</span>
+              <span className="text-green-400">
+                Merci ! Ton message a bien été envoyé 🎉
+              </span>
             )}
             {status === 'error' && (
               <span className="text-red-400">{error}</span>

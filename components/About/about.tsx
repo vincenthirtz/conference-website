@@ -27,14 +27,16 @@ function About(): JSX.Element {
             className="mt-6"
             textColor="text-gray-200"
           >
-         Le but étant de promouvoir l’esport féminin et francophone à travers une compétition 100% féminine. Le cast sera aussi composé uniquement de femmes.
+            Le but étant de promouvoir l’esport féminin et francophone à travers
+            une compétition 100% féminine. Le cast sera aussi composé uniquement
+            de femmes.
           </Paragraph>
           <Paragraph
             typeStyle="body-lg"
             className="mt-6"
             textColor="text-gray-200"
           >
-           Nous sommes à le recherche d'un premier sponsor officiel
+            Nous sommes à le recherche d'un premier sponsor officiel
           </Paragraph>
           <div
             className="mt-10 flex gap-4 sm:flex-col lg:justify-center"
