@@ -366,7 +366,13 @@ export default function Home() {
               aria-hidden="true"
               className="pointer-events-none absolute inset-0 w-full h-full transition-opacity duration-300 opacity-0"
             />
-
+    {/* requis pour Netlify */}
+              <form name="contact" data-netlify="true" netlify-honeypot="bot-field" hidden>
+  <input type="hidden" name="form-name" value="contact" />
+  <input type="text" name="name" />
+  <input type="email" name="email" />
+  <textarea name="message" />
+</form>
             <form
               name="contact"
               method="POST"
@@ -375,13 +381,7 @@ export default function Home() {
               onSubmit={handleSubmit}
               className="relative bg-gray-900/80 backdrop-blur rounded-2xl border border-white/10 p-6 sm:p-8 space-y-6"
             >
-              {/* requis pour Netlify */}
-              <form name="contact" data-netlify="true" netlify-honeypot="bot-field" hidden>
-  <input type="hidden" name="form-name" value="contact" />
-  <input type="text" name="name" />
-  <input type="email" name="email" />
-  <textarea name="message" />
-</form>
+          
               <p className="hidden">
                 <label>
                   Ne pas remplir : <input name="bot-field" />
