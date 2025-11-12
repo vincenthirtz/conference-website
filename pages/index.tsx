@@ -19,6 +19,7 @@ import Button from '../components/Buttons/button';
 import Dropdown from '../components/Dropdown/dropdown';
 import { City } from '../types/types';
 import Popup from '../components/Popup/popup';
+import Contact from '../components/Form/Contact';
 
 export default function Home() {
   const isTablet = useMediaQuery({ maxWidth: '1118px' });
@@ -305,6 +306,17 @@ export default function Home() {
           ]}
         />
       </div>
+      {/* Formulaire de contact */}
+      <div
+            id="contact"
+            className="flex items-center flex-col justify-center pt-20 lg:pt-0"
+          >
+            <div className="text-lg sm:text-sm text-white font-semi-bold border-b-2 border-blue-400 mb-1">
+              Contact
+            </div>
+            <Contact className="mt-20" />
+            </div>
+
       <div className="mt-5">
         <Subscription />
       </div>
