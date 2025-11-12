@@ -32,5 +32,3 @@ yarn-error.log*
 .vercel
 
 credentials.json
-*storybook.log
-storybook-static
