@@ -290,7 +290,7 @@ export default function Tournoi() {
         <title>Tournoi – Round Robin (BO3) + Finale (BO5)</title>
       </Head>
 
-      <section className="mt-10">
+      <section className="mt-40">
         <h1 className="text-3xl md:text-4xl font-extrabold text-gradient">Gestion du tournoi</h1>
         <p className="text-gray-300 mt-2">Format: 4 équipes · Round Robin en BO3 (6 matchs) · Top 2 en finale BO5.</p>
       </section>
