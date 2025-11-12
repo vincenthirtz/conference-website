@@ -3,7 +3,6 @@ import React from 'react';
 import Button from '../../components/Buttons/button';
 import Heading from '../../components/Typography/heading';
 import Paragraph from '../../components/Typography/paragraph';
-import Sponsors from '../../components/Sponsors/sponsors';
 import {
   Agenda as AgendaType,
   City,
@@ -185,7 +184,6 @@ function Venue({ city }: IVenue) {
         )}
       </div>
       <div id="sponsors">
-        <Sponsors eventSponsors={city.sponsors.eventSponsors} />
       </div>
     </div>
   );
