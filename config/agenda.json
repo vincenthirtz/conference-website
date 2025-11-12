@@ -58,7 +58,7 @@
   {
     "time": "13:30 PM WAT - 14:00 PM WAT",
     "session": "An Intro to AsyncAPI Without The Technical Jargon",
-    "speaker": [10,9],
+    "speaker": [10, 9],
     "type": "Community Speakers",
     "city": "Lagos"
   },
@@ -86,7 +86,7 @@
   {
     "time": "15:45 PM WAT - 16:15 PM WAT",
     "session": "Contributing to AsyncAPI from a Technical Writers POV",
-    "speaker": [11,13],
+    "speaker": [11, 13],
     "type": "Community Speakers",
     "city": "Lagos"
   },
@@ -114,7 +114,7 @@
   {
     "time": "15:15 PM BST - 15:40 PM BST",
     "session": "Bringing Avro and AsyncAPI Together: Pitfalls and Learnings",
-    "speaker": [5,8],
+    "speaker": [5, 8],
     "type": "Technical Speaker",
     "city": "London"
   },

@@ -19,7 +19,8 @@ interface Team {
 // Génère un dégradé HSL stable à partir du nom (fallback si pas de color dans JSON)
 function gradientFromName(name: string) {
   let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  for (let i = 0; i < name.length; i++)
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
   const hue = Math.abs(hash) % 360;
   const hue2 = (hue + 35) % 360;
   const c1 = `hsl(${hue} 85% 55%)`;
@@ -46,24 +47,28 @@ export default function TeamPage({ team }: { team: Team }) {
 
   // Style du bandeau (priorité à team.color si fournie)
   const bannerStyle: React.CSSProperties = team.color
-    ? { background: `linear-gradient(135deg, ${team.color} 0%, rgba(255,255,255,0.08) 100%)` }
+    ? {
+        background: `linear-gradient(135deg, ${team.color} 0%, rgba(255,255,255,0.08) 100%)`,
+      }
     : { background: gradientFromName(team.name) };
 
   return (
     <div>
       <Head>
-        <title>{team.name} | OW Women's Cup</title>
+        <title>{team.name} | OW Women&apos;s Cup</title>
         <meta name="description" content={`Fiche équipe ${team.name}`} />
       </Head>
 
       {/* Bandeau */}
-      <section
-        className="relative w-full"
-        style={bannerStyle}
-      >
+      <section className="relative w-full" style={bannerStyle}>
         {/* Halo lumineux */}
-        <div className="absolute inset-0 opacity-40"
-             style={{ background: 'radial-gradient(60% 60% at 50% 40%, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0) 60%)' }} />
+        <div
+          className="absolute inset-0 opacity-40"
+          style={{
+            background:
+              'radial-gradient(60% 60% at 50% 40%, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0) 60%)',
+          }}
+        />
         <div className="container mx-auto px-6 py-16 relative">
           <div className="flex flex-col items-center text-center">
             <img
@@ -107,7 +112,10 @@ export default function TeamPage({ team }: { team: Team }) {
             </ul>
           </div>
 
-          <Link href="/" className="mt-10 inline-block text-blue-300 hover:underline">
+          <Link
+            href="/"
+            className="mt-10 inline-block text-blue-300 hover:underline"
+          >
             ← Retour à l&apos;accueil
           </Link>
         </div>

@@ -42,9 +42,7 @@ export default function Home() {
 
   const handleTeams = (city: string) => {
     if (city && city !== 'all') {
-      const cityTeam = teams.filter((team) =>
-        team.city.includes(city)
-      );
+      const cityTeam = teams.filter((team) => team.city.includes(city));
       setTeamsList(cityTeam);
     } else if (city === 'all') {
       setTeamsList(teams);
@@ -276,8 +274,7 @@ export default function Home() {
           </div>
         </div>
       </div>
-      <div id="sponsors" className="mt-20">
-      </div>
+      <div id="sponsors" className="mt-20"></div>
       <div className="mt-5">
         <Subscription />
       </div>
