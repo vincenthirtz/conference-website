@@ -367,8 +367,7 @@ export default function Home() {
               className="pointer-events-none absolute inset-0 w-full h-full transition-opacity duration-300 opacity-0"
             />
     {/* requis pour Netlify */}
-              <form name="contact" data-netlify="true" 
-              netlify netlify-honeypot="bot-field" hidden>
+              <form name="contact" data-netlify="true" data-netlify-honeypot="bot-field" hidden>
   <input type="hidden" name="form-name" value="contact" />
   <input type="text" name="name" />
   <input type="email" name="email" />
@@ -376,12 +375,11 @@ export default function Home() {
 </form>
             <form
               name="contact"
-              method="POST"
-              data-netlify="true" 
-              netlify
-              netlify-honeypot="bot-field"
-              onSubmit={handleSubmit}
-              className="relative bg-gray-900/80 backdrop-blur rounded-2xl border border-white/10 p-6 sm:p-8 space-y-6"
+  method="POST"
+  data-netlify="true"
+  data-netlify-honeypot="bot-field"
+  onSubmit={handleSubmit}
+  className="relative bg-gray-900/80 backdrop-blur rounded-2xl border border-white/10 p-6 sm:p-8 space-y-6"
             >
           
               <p className="hidden">
