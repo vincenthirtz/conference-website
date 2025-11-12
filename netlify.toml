@@ -3,7 +3,7 @@
   publish = ".next"
 
 [build.environment]
-  NODE_VERSION = "24.11.0"
+  NODE_VERSION = "20.17.0"
   NPM_VERSION = "11.6.1"
 
 [functions]
