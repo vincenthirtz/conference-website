@@ -20,6 +20,10 @@ import Dropdown from '../components/Dropdown/dropdown';
 import { City } from '../types/types';
 import Popup from '../components/Popup/popup';
 
+function encode(data: Record<string, string>) {
+  return new URLSearchParams(data).toString();
+}
+
 export default function Home() {
   const isTablet = useMediaQuery({ maxWidth: '1118px' });
   const [speakersList, setSpeakersList] = useState(speakers);
@@ -43,9 +47,7 @@ export default function Home() {
 
   const handleTeams = (city: string) => {
     if (city && city !== 'all') {
-      const cityTeam = teams.filter((team) =>
-        team.city.includes(city)
-      );
+      const cityTeam = teams.filter((team) => team.city.includes(city));
       setTeamsList(cityTeam);
     } else if (city === 'all') {
       setTeamsList(teams);
@@ -53,6 +55,45 @@ export default function Home() {
       setTeamsList([]);
     }
   };
+
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState<null | 'ok' | 'err'>(null);
+  const [errMsg, setErrMsg] = useState('');
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setSending(true);
+    setSent(null);
+    setErrMsg('');
+
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    // IMPORTANT: Netlify a besoin du champ "form-name" dans le body
+    const payload: Record<string, string> = {
+      'form-name': (form.getAttribute('name') as string) || 'contact',
+    };
+    formData.forEach((value, key) => (payload[key] = String(value)));
+
+    try {
+      const res = await fetch('/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: encode(payload),
+      });
+      if (res.ok) {
+        form.reset();
+        setSent('ok');
+      } else {
+        setSent('err');
+        setErrMsg('Soumission non acceptée.');
+      }
+    } catch (err: any) {
+      setSent('err');
+      setErrMsg('Erreur réseau.');
+    } finally {
+      setSending(false);
+    }
+  }
 
   return (
     <div>
@@ -256,7 +297,7 @@ export default function Home() {
             className="flex items-center flex-col justify-center pt-20 lg:pt-0"
           >
             <div className="text-lg sm:text-sm text-white font-semi-bold border-b-2 border-blue-400 mb-1">
-              Tickets
+              Live
             </div>
             <div
               data-test="ticket-section"
@@ -269,13 +310,121 @@ export default function Home() {
                 Suivre la compétition
               </Heading>
               <div className="max-w-3xl sm:w-full text-center">
-                <Paragraph
-                  typeStyle="body-lg"
-                  className="mt-6"
-                  textColor="text-gray-200"
-                >
-                  A suivre prochainement sur Twitch gratuitement
-                </Paragraph>
+                <div id="contact" className="container mt-20 lg:mt-0">
+                  <div className="flex items-center flex-col justify-center">
+                    <div className="text-lg sm:text-sm text-white font-semi-bold border-b-2 border-blue-400 mb-1">
+                      Contact
+                    </div>
+                    <Heading
+                      typeStyle="heading-md"
+                      className="text-gradient text-center lg:mt-10"
+                    >
+                      Nous contacter
+                    </Heading>
+                    <div id="contact" className="container mt-20 lg:mt-0">
+                      <div className="flex items-center flex-col justify-center">
+                        <div className="text-lg sm:text-sm text-white font-semi-bold border-b-2 border-blue-400 mb-1">
+                          Contact
+                        </div>
+                        <Heading
+                          typeStyle="heading-md"
+                          className="text-gradient text-center lg:mt-10"
+                        >
+                          Nous contacter
+                        </Heading>
+
+                        <div className="max-w-2xl w-full mt-10">
+                          {/* 
+              POINTS CLEFS POUR NETLIFY :
+              - name="contact" (identifie le formulaire)
+              - method="POST" et data-netlify="true" (détection)
+              - netlify-honeypot="bot-field" + input hidden (anti-bot)
+              - input hidden form-name (obligatoire)
+            */}
+
+                          <form
+                            name="contact"
+                            method="POST"
+                            data-netlify="true"
+                            netlify-honeypot="bot-field"
+                            onSubmit={handleSubmit}
+                            className="flex flex-col space-y-6 bg-gray-900 p-8 rounded-2xl shadow-lg"
+                          >
+                            {/* champs cachés requis */}
+                            <input
+                              type="hidden"
+                              name="form-name"
+                              value="contact"
+                            />
+                            <p className="hidden">
+                              <label>
+                                Ne pas remplir : <input name="bot-field" />
+                              </label>
+                            </p>
+
+                            <div>
+                              <label className="block text-gray-300 mb-2">
+                                Nom
+                              </label>
+                              <input
+                                type="text"
+                                name="name"
+                                required
+                                className="w-full p-3 rounded-md bg-gray-800 border border-gray-700 text-white focus:border-blue-400 focus:outline-none"
+                                placeholder="Votre nom"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-gray-300 mb-2">
+                                Email
+                              </label>
+                              <input
+                                type="email"
+                                name="email"
+                                required
+                                className="w-full p-3 rounded-md bg-gray-800 border border-gray-700 text-white focus:border-blue-400 focus:outline-none"
+                                placeholder="Votre adresse email"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-gray-300 mb-2">
+                                Message
+                              </label>
+                              <textarea
+                                name="message"
+                                rows={5}
+                                required
+                                className="w-full p-3 rounded-md bg-gray-800 border border-gray-700 text-white focus:border-blue-400 focus:outline-none"
+                                placeholder="Votre message..."
+                              />
+                            </div>
+
+                            <button
+                              type="submit"
+                              disabled={sending}
+                              className={`bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-md transition-colors duration-200 ${sending ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            >
+                              {sending ? 'Envoi en cours…' : 'Envoyer'}
+                            </button>
+
+                            {sent === 'ok' && (
+                              <p className="text-green-400 text-sm">
+                                Merci pour votre message !
+                              </p>
+                            )}
+                            {sent === 'err' && (
+                              <p className="text-red-400 text-sm">
+                                Échec de l’envoi : {errMsg}
+                              </p>
+                            )}
+                          </form>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

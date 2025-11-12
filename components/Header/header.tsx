@@ -15,9 +15,7 @@ function Header(): JSX.Element {
         <div className="">
           <div className="flex justify-center w-full mt-32">
             <div className="flex flex-col justify-center items-center w-full">
-              <div className="my-10">
-            {/*     <Announcement /> */}
-              </div>
+              <div className="my-10">{/*     <Announcement /> */}</div>
               <div
                 className="sm:w-full text-center"
                 data-test="landing-heading"
@@ -27,7 +25,7 @@ function Header(): JSX.Element {
                   level="h1"
                   typeStyle="heading-lg"
                 >
-                 OW WOMEN&apos;S CUP 2025
+                  OW WOMEN&apos;S CUP 2025
                 </Heading>
               </div>
               <div className="w-[640px] sm:w-full text-center">
@@ -36,7 +34,10 @@ function Header(): JSX.Element {
                 </Paragraph>
               </div>
               <div className="mt-[54px] relative flex items-center justify-center">
-                <Link href="https://battlefy.com/ow-women’s-cup/ow-women’s-cup-2025/68e762e82fb71c00210da40b/info" target='_blank'>
+                <Link
+                  href="https://battlefy.com/ow-women’s-cup/ow-women’s-cup-2025/68e762e82fb71c00210da40b/info"
+                  target="_blank"
+                >
                   <Button type="button" className="w-[250px]">
                     Rejoindre
                   </Button>
