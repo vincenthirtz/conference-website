@@ -136,6 +136,7 @@ export default function Home() {
     const formData = new FormData(form);
     const payload: Record<string, string> = {
       'form-name': (form.getAttribute('name') as string) || 'contact',
+      consent: 'on'
     };
     formData.forEach((value, key) => (payload[key] = String(value)));
 
@@ -375,7 +376,12 @@ export default function Home() {
               className="relative bg-gray-900/80 backdrop-blur rounded-2xl border border-white/10 p-6 sm:p-8 space-y-6"
             >
               {/* requis pour Netlify */}
-              <input type="hidden" name="form-name" value="contact" />
+              <form name="contact" data-netlify="true" netlify-honeypot="bot-field" hidden>
+  <input type="hidden" name="form-name" value="contact" />
+  <input type="text" name="name" />
+  <input type="email" name="email" />
+  <textarea name="message" />
+</form>
               <p className="hidden">
                 <label>
                   Ne pas remplir : <input name="bot-field" />
