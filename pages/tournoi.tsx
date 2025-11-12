@@ -108,9 +108,9 @@ export default function Tournoi() {
       new Date(year, 10, 17, 21, 0),
       new Date(year, 10, 17, 22, 30),
       new Date(year, 10, 17, 23, 30),
-      new Date(year, 10, 24, 19, 0),
       new Date(year, 10, 24, 21, 0),
-      new Date(year, 10, 24, 22, 30),
+      new Date(year, 10, 24, 22, 0),
+      new Date(year, 10, 24, 23, 30),
     ]
 
     built = built.map((m, i) => {
