@@ -4,7 +4,6 @@ import { useState } from 'react';
 import Head from 'next/head';
 import { useMediaQuery } from 'react-responsive';
 import Header from '../components/Header/header';
-import Sponsors from '../components/Sponsors/sponsors';
 import About from '../components/About/about';
 import Tickets from '../components/Tickets/tickets';
 import Heading from '../components/Typography/heading';
@@ -20,6 +19,7 @@ import Dropdown from '../components/Dropdown/dropdown';
 import { City } from '../types/types';
 import Popup from '../components/Popup/popup';
 import Contact from '../components/Form/Contact';
+import SponsorBanner from "../components/Banner/SponsorBanner";
 
 export default function Home() {
   const isTablet = useMediaQuery({ maxWidth: '1118px' });
@@ -283,28 +283,7 @@ export default function Home() {
         </div>
       </div>
       <div id="sponsors" className="mt-20">
-        <Sponsors
-          eventSponsors={[
-            {
-              image: '/img/logos/apidays.png',
-              websiteUrl: 'https://www.apidays.global/',
-            },
-            {
-              image: '/img/logos/APICONF-LOGO-White.png',
-              websiteUrl: 'https://apiconf.net/',
-            },
-          ]}
-          financialSponsor={[
-            {
-              image: '/img/logos/IBM.png',
-              websiteUrl: 'https://www.ibm.com/',
-            },
-            {
-              image: '/img/logos/graviteeio-logo.webp',
-              websiteUrl: 'https://www.gravitee.io/',
-            },
-          ]}
-        />
+          <SponsorBanner />
       </div>
       {/* Formulaire de contact */}
       <div
@@ -314,6 +293,12 @@ export default function Home() {
             <div className="text-lg sm:text-sm text-white font-semi-bold border-b-2 border-blue-400 mb-1">
               Contact
             </div>
+              <Heading
+              typeStyle="heading-md"
+              className="text-gradient text-center lg:mt-10"
+            >
+              Faites nous un petit message
+            </Heading>
             <Contact className="mt-20" />
             </div>
 
