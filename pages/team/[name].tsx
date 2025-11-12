@@ -83,7 +83,7 @@ export default function TeamPage({ team }: { team: Team }) {
               {team.city.join(' • ')}
             </Paragraph>
             <Link href={team.link} target="_blank" className="mt-6">
-              <Button className="border border-white/40 bg-white/10 hover:bg-white/20">
+              <Button type="button" className="border border-white/40 bg-white/10 hover:bg-white/20">
                 Voir la fiche sur Battlefy
               </Button>
             </Link>
