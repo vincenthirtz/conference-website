@@ -3,7 +3,6 @@ import Heading from '../Typography/heading';
 import Paragraph from '../Typography/paragraph';
 import Button from '../Buttons/button';
 import ReactSlider from '../Slider/slider';
-import Venue from '../Venue/venue';
 import Announcement from '../announcement';
 import Link from 'next/link';
 
