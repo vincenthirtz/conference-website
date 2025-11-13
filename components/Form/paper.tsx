@@ -4,7 +4,6 @@ import StepOne from './Cfp/stepOne';
 import StepTwo from './Cfp/stepTwo';
 import StepThree from './Cfp/stepThree';
 import StepFour from './Cfp/stepFour';
-import cfpData from '../../config/cfp-data.json';
 import { CfpForm } from '../../types/types';
 
 type Field = {
@@ -119,7 +118,6 @@ function Paper(): JSX.Element {
               P.S. We do not offer travel scholarships or financial support.
             </p>
             <p className="sm:mt-4">
-              Application closes on {cfpData.CallEndDate}
             </p>
           </div>
         </div>
