@@ -5,7 +5,6 @@ import Head from 'next/head';
 import { useMediaQuery } from 'react-responsive';
 import Header from '../components/Header/header';
 import About from '../components/About/about';
-import Tickets from '../components/Tickets/tickets';
 import Heading from '../components/Typography/heading';
 import Paragraph from '../components/Typography/paragraph';
 import Subscription from '../components/Form/subscription';
