@@ -22,7 +22,6 @@
     "net": "^1.0.2",
     "next": "^15.4.7",
     "next-on-netlify": "^2.7.2",
-    "nodemailer": "^7.0.7",
     "react": "^18.2.1",
     "react-confetti": "^6.1.0",
     "react-dom": "^18.2.1",
@@ -33,7 +32,6 @@
     "react-slick": "^0.29.0"
   },
   "devDependencies": {
-    "@types/nodemailer": "^6.4.17",
     "@types/react-dom": "^19.1.6",
     "@types/react-slick": "^0.23.13",
     "autoprefixer": "^10.4.7",
