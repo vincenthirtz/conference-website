@@ -1,8 +1,8 @@
 /* eslint-disable @next/next/no-img-element */
 import Head from 'next/head';
 import { useEffect, useMemo, useState } from 'react';
-import teamsData from '../config/teams.json';
-import resultsData from '../config/results.json';
+import teamsData from '@/config/teams.json';
+import resultsData from '@/config/results.json';
 
 // Types
 type Team = {

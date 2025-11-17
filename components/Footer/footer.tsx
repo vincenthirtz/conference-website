@@ -1,7 +1,7 @@
 import React, { JSX } from 'react';
 import Link from 'next/link';
 import ILink from '../illustration/link';
-import socials, { SocialWithIcon } from '../../config/socials';
+import socials, { SocialWithIcon } from '@/config/socials';
 
 function Footer(): JSX.Element {
   return (

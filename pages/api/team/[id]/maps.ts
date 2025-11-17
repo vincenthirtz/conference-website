@@ -1,0 +1,252 @@
+// pages/api/team/[id]/maps.ts
+// API publique pour récupérer le "profil de maps" d'une équipe :
+// - stats détaillées par map (wins / losses / rounds / OT / tiebreakers)
+// - nombre total de matchs joués (hors BYE & annulés)
+
+import type { NextApiRequest, NextApiResponse } from "next";
+import { supabaseAdmin } from "@/utils/supabase";
+
+/* -----------------------------------------------------------
+ * Types
+ * ---------------------------------------------------------*/
+
+type Team = {
+  id: string;
+  name: string;
+  short_name?: string | null;
+  logo_url?: string | null;
+  country?: string | null;
+};
+
+type MatchStatus = "pending" | "ongoing" | "finished" | "cancelled";
+
+type MatchRow = {
+  id: string;
+  status: MatchStatus;
+  is_bye: boolean | null;
+  team1_id: string | null;
+  team2_id: string | null;
+};
+
+type GameRow = {
+  match_id: string;
+  map_name: string | null;
+  team1_score: number | null;
+  team2_score: number | null;
+  is_tiebreaker: boolean | null;
+  went_overtime: boolean | null;
+};
+
+export type MapStat = {
+  mapName: string;
+  gamesPlayed: number;
+  wins: number;
+  losses: number;
+  winrate: number; // 0–1
+  roundsFor: number;
+  roundsAgainst: number;
+  diff: number;
+  overtimes: number;
+  tiebreakers: number;
+};
+
+export type TeamMapsApiResponse = {
+  team: Team;
+  mapStats: MapStat[];
+  totalMatches: number;
+  totalGames: number;
+};
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  const { id } = req.query;
+
+  if (!id || Array.isArray(id)) {
+    return res.status(400).json({ error: "Invalid team id" });
+  }
+
+  if (req.method !== "GET") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  try {
+    const teamId = id as string;
+
+    // 1) Team
+    const { data: team, error: tErr } = await supabaseAdmin
+      .from("teams")
+      .select("id, name, short_name, logo_url, country")
+      .eq("id", teamId)
+      .maybeSingle();
+
+    if (tErr || !team) {
+      return res.status(404).json({ error: "Team not found" });
+    }
+
+    // 2) Matches de l'équipe (hors annulés, hors BYE)
+    const { data: matchesData, error: mErr } =
+      await supabaseAdmin
+        .from("matches")
+        .select(
+          "id, status, is_bye, team1_id, team2_id"
+        )
+        .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
+        .neq("status", "cancelled");
+
+    if (mErr) {
+      console.error("team maps matches error:", mErr);
+    }
+
+    const matches = ((matchesData || []) as MatchRow[]).filter(
+      (m) => !m.is_bye
+    );
+    const matchIds = matches.map((m) => m.id);
+
+    // 3) Games de ces matches
+    let games: GameRow[] = [];
+    if (matchIds.length > 0) {
+      const { data: gamesData, error: gErr } =
+        await supabaseAdmin
+          .from("games")
+          .select(
+            "match_id, map_name, team1_score, team2_score, is_tiebreaker, went_overtime"
+          )
+          .in("match_id", matchIds);
+
+      if (gErr) {
+        console.error("team maps games error:", gErr);
+      } else {
+        games = (gamesData || []) as GameRow[];
+      }
+    }
+
+    const mapStats = computeMapStatsForTeam(
+      teamId,
+      matches,
+      games
+    );
+    const totalMatches = matches.length;
+    const totalGames = mapStats.reduce(
+      (acc, m) => acc + m.gamesPlayed,
+      0
+    );
+
+    const response: TeamMapsApiResponse = {
+      team: team as Team,
+      mapStats,
+      totalMatches,
+      totalGames,
+    };
+
+    return res.status(200).json(response);
+  } catch (err: any) {
+    console.error(
+      "[/api/team/[id]/maps] internal error:",
+      err
+    );
+    return res.status(500).json({
+      error: "Internal server error",
+      detail: err?.message,
+    });
+  }
+}
+
+/* -----------------------------------------------------------
+ * Calcul des stats de maps pour une équipe
+ * (même logique que la page /team/[id]/maps.ts)
+ * ---------------------------------------------------------*/
+
+function computeMapStatsForTeam(
+  teamId: string,
+  matches: MatchRow[],
+  games: GameRow[]
+): MapStat[] {
+  const matchById = new Map<string, MatchRow>();
+  matches.forEach((m) => matchById.set(m.id, m));
+
+  type Agg = {
+    games: number;
+    wins: number;
+    losses: number;
+    roundsFor: number;
+    roundsAgainst: number;
+    overtimes: number;
+    tiebreakers: number;
+  };
+
+  const agg = new Map<string, Agg>();
+
+  for (const g of games) {
+    if (!g.map_name) continue;
+    const match = matchById.get(g.match_id);
+    if (!match) continue;
+
+    const isTeam1 = match.team1_id === teamId;
+    const isTeam2 = match.team2_id === teamId;
+    if (!isTeam1 && !isTeam2) continue;
+
+    const key = g.map_name;
+    const entry =
+      agg.get(key) || {
+        games: 0,
+        wins: 0,
+        losses: 0,
+        roundsFor: 0,
+        roundsAgainst: 0,
+        overtimes: 0,
+        tiebreakers: 0,
+      };
+
+    entry.games += 1;
+
+    const s1 = g.team1_score ?? 0;
+    const s2 = g.team2_score ?? 0;
+
+    if (isTeam1) {
+      entry.roundsFor += s1;
+      entry.roundsAgainst += s2;
+      if (s1 > s2) entry.wins += 1;
+      else if (s1 < s2) entry.losses += 1;
+    } else if (isTeam2) {
+      entry.roundsFor += s2;
+      entry.roundsAgainst += s1;
+      if (s2 > s1) entry.wins += 1;
+      else if (s2 < s1) entry.losses += 1;
+    }
+
+    if (g.went_overtime) entry.overtimes += 1;
+    if (g.is_tiebreaker) entry.tiebreakers += 1;
+
+    agg.set(key, entry);
+  }
+
+  const list: MapStat[] = Array.from(agg.entries()).map(
+    ([mapName, entry]) => ({
+      mapName,
+      gamesPlayed: entry.games,
+      wins: entry.wins,
+      losses: entry.losses,
+      winrate:
+        entry.games > 0
+          ? entry.wins / entry.games
+          : 0,
+      roundsFor: entry.roundsFor,
+      roundsAgainst: entry.roundsAgainst,
+      diff: entry.roundsFor - entry.roundsAgainst,
+      overtimes: entry.overtimes,
+      tiebreakers: entry.tiebreakers,
+    })
+  );
+
+  // Tri : d'abord nombre de games, puis winrate
+  list.sort((a, b) => {
+    if (b.gamesPlayed !== a.gamesPlayed) {
+      return b.gamesPlayed - a.gamesPlayed;
+    }
+    return b.winrate - a.winrate;
+  });
+
+  return list;
+}

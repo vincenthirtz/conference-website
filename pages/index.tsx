@@ -3,21 +3,21 @@
 import { useState } from 'react';
 import Head from 'next/head';
 import { useMediaQuery } from 'react-responsive';
-import Header from '../components/Header/header';
-import About from '../components/About/about';
-import Heading from '../components/Typography/heading';
-import Paragraph from '../components/Typography/paragraph';
-import Subscription from '../components/Form/subscription';
-import Speaker from '../components/Speaker/speaker';
-import teams from '../config/teams.json';
-import speakers from '../config/speakers.json';
+import Header from '@/components/Header/header';
+import About from '@/components/About/about';
+import Heading from '@/components/Typography/heading';
+import Paragraph from '@/components/Typography/paragraph';
+import Subscription from '@/components/Form/subscription';
+import Speaker from '@/components/Speaker/speaker';
+import teams from '@/config/teams.json';
+import speakers from '@/config/speakers.json';
 import Link from 'next/link';
-import Button from '../components/Buttons/button';
-import Dropdown from '../components/Dropdown/dropdown';
+import Button from '@/components/Buttons/button';
+import Dropdown from '@/components/Dropdown/dropdown';
 import { City } from '../types/types';
-import Popup from '../components/Popup/popup';
-import Contact from '../components/Form/Contact';
-import SponsorBanner from '../components/Banner/SponsorBanner';
+import Popup from '@/components/Popup/popup';
+import Contact from '@/components/Form/Contact';
+import SponsorBanner from '@/components/Banner/SponsorBanner';
 
 export default function Home() {
   const isTablet = useMediaQuery({ maxWidth: '1118px' });
