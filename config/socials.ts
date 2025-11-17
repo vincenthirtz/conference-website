@@ -1,7 +1,7 @@
 import { JSX } from 'react';
-import LinkedIn from '../components/illustration/Socials/LinkedIn';
-import X from '../components/illustration/Socials/X';
-import Youtube from '../components/illustration/Socials/Youtube';
+import LinkedIn from '@/components/illustration/Socials/LinkedIn';
+import X from '@/components/illustration/Socials/X';
+import Youtube from '@/components/illustration/Socials/Youtube';
 
 export interface SocialWithIcon {
   name: string;

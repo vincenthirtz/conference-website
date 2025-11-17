@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import teams from '../../config/teams.json';
+import teams from '@/config/teams.json';
 
 export default function TeamsBanner() {
   return (

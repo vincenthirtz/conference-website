@@ -1,0 +1,336 @@
+// pages/api/admin/teams/[teamId].ts
+// Admin: gestion d'une équipe
+// - GET        : récupérer une équipe
+// - PUT/PATCH  : mettre à jour une équipe (meta)
+// - DELETE     : désactiver (soft) ou supprimer (hard)
+
+import type { NextApiRequest, NextApiResponse } from "next";
+import { supabaseAdmin } from "@/utils/supabase";
+import { withStaffRoute } from "@/utils/staff";
+import { logStaffAction } from "@/utils/staffLogs";
+
+export type TeamRow = {
+  id: string;
+  name: string;
+  slug: string | null;
+  short_name: string | null;
+  logo_url: string | null;
+  banner_url: string | null;
+  country: string | null;
+  description: string | null;
+  twitter: string | null;
+  discord: string | null;
+  website: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string | null;
+};
+
+// rôle minimum : manager (gestion des équipes)
+export default withStaffRoute(handler, "manager");
+
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: any
+) {
+  const { teamId } = req.query;
+
+  if (!teamId || Array.isArray(teamId)) {
+    return res
+      .status(400)
+      .json({ error: "Invalid teamId" });
+  }
+
+  const id = String(teamId);
+
+  try {
+    switch (req.method) {
+      case "GET":
+        return await handleGet(id, res);
+      case "PUT":
+      case "PATCH":
+        return await handlePut(id, req, res, ctx);
+      case "DELETE":
+        return await handleDelete(id, req, res, ctx);
+      default:
+        return res
+          .status(405)
+          .json({ error: "Method not allowed" });
+    }
+  } catch (err: any) {
+    console.error(
+      "[/api/admin/teams/[teamId]] internal error:",
+      err
+    );
+    return res.status(500).json({
+      error: "Internal server error",
+      detail: err?.message,
+    });
+  }
+}
+
+/* -----------------------------------------------------------
+ * GET : récupérer une équipe
+ * ---------------------------------------------------------*/
+
+async function handleGet(
+  id: string,
+  res: NextApiResponse
+) {
+  const { data, error } = await supabaseAdmin
+    .from("teams")
+    .select(
+      `
+      id,
+      name,
+      slug,
+      short_name,
+      logo_url,
+      banner_url,
+      country,
+      description,
+      twitter,
+      discord,
+      website,
+      is_active,
+      created_at,
+      updated_at
+    `
+    )
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error || !data) {
+    console.error("admin GET team error:", error);
+    return res
+      .status(404)
+      .json({ error: "Team not found" });
+  }
+
+  return res.status(200).json({
+    team: data as TeamRow,
+  });
+}
+
+/* -----------------------------------------------------------
+ * PUT / PATCH : mise à jour d'une équipe
+ * Body : partial<TeamRow> (sans id/created_at)
+ * ---------------------------------------------------------*/
+
+async function handlePut(
+  id: string,
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: any
+) {
+  const body = req.body || {};
+
+  const allowedFields: (keyof TeamRow)[] = [
+    "name",
+    "slug",
+    "short_name",
+    "logo_url",
+    "banner_url",
+    "country",
+    "description",
+    "twitter",
+    "discord",
+    "website",
+    "is_active",
+  ];
+
+  const updatePayload: Partial<TeamRow> = {};
+
+  for (const key of allowedFields) {
+    if (key in body) {
+      // @ts-expect-error index assign
+      updatePayload[key] = body[key];
+    }
+  }
+
+  if (Object.keys(updatePayload).length === 0) {
+    return res.status(400).json({
+      error:
+        "No valid fields to update. Allowed: " +
+        allowedFields.join(", "),
+    });
+  }
+
+  updatePayload.updated_at = new Date().toISOString();
+
+  const { data: before, error: fetchErr } =
+    await supabaseAdmin
+      .from("teams")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+
+  if (fetchErr || !before) {
+    return res
+      .status(404)
+      .json({ error: "Team not found" });
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("teams")
+    .update(updatePayload)
+    .eq("id", id)
+    .select("*")
+    .maybeSingle();
+
+  if (error || !data) {
+    console.error(
+      "admin PUT team error:",
+      error
+    );
+    return res.status(500).json({
+      error: "Failed to update team",
+    });
+  }
+
+  if (ctx?.staff?.id) {
+    try {
+      await logStaffAction({
+        staff_id: ctx.staff.id,
+        action: "update_team",
+        entity_type: "team",
+        entity_id: id,
+        tournament_id: null,
+        payload: {
+          before,
+          after: data,
+        },
+      });
+    } catch (e) {
+      console.error(
+        "admin PUT team logStaffAction error:",
+        e
+      );
+    }
+  }
+
+  return res.status(200).json({
+    team: data as TeamRow,
+  });
+}
+
+/* -----------------------------------------------------------
+ * DELETE :
+ *  - soft (par défaut) : is_active=false
+ *  - hard (?hard=1) : suppression DB
+ * ---------------------------------------------------------*/
+
+async function handleDelete(
+  id: string,
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: any
+) {
+  const hard =
+    req.query.hard === "1" ||
+    req.query.hard === "true";
+
+  const { data: before, error: fetchErr } =
+    await supabaseAdmin
+      .from("teams")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+
+  if (fetchErr || !before) {
+    return res
+      .status(404)
+      .json({ error: "Team not found" });
+  }
+
+  if (hard) {
+    const { error } = await supabaseAdmin
+      .from("teams")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.error(
+        "admin hard delete team error:",
+        error
+      );
+      return res.status(500).json({
+        error: "Failed to hard-delete team",
+      });
+    }
+
+    if (ctx?.staff?.id) {
+      try {
+        await logStaffAction({
+          staff_id: ctx.staff.id,
+          action: "delete_team",
+          entity_type: "team",
+          entity_id: id,
+          tournament_id: null,
+          payload: {
+            hard_delete: true,
+          },
+        });
+      } catch (e) {
+        console.error(
+          "admin hard delete team logStaffAction error:",
+          e
+        );
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      hardDeleted: true,
+    });
+  }
+
+  // soft delete
+  const { data, error } = await supabaseAdmin
+    .from("teams")
+    .update({
+      is_active: false,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .select("*")
+    .maybeSingle();
+
+  if (error || !data) {
+    console.error(
+      "admin soft delete team error:",
+      error
+    );
+    return res.status(500).json({
+      error: "Failed to deactivate team",
+    });
+  }
+
+  if (ctx?.staff?.id) {
+    try {
+      await logStaffAction({
+        staff_id: ctx.staff.id,
+        action: "update_team",
+        entity_type: "team",
+        entity_id: id,
+        tournament_id: null,
+        payload: {
+          soft_delete: true,
+          new_is_active: false,
+        },
+      });
+    } catch (e) {
+      console.error(
+        "admin soft delete team logStaffAction error:",
+        e
+      );
+    }
+  }
+
+  return res.status(200).json({
+    success: true,
+    hardDeleted: false,
+    team: data as TeamRow,
+  });
+}

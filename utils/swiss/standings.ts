@@ -1,0 +1,268 @@
+// lib/swiss/standings.ts
+// Calcul des standings pour un système Swiss
+// - Score total (points)
+// - Buchholz (somme des scores des adversaires)
+// - Median Buchholz (Buchholz en retirant meilleur et pire adversaire)
+// - Gère les bye (adversaire null)
+
+// Ce fichier est volontairement indépendant de la persistance (Supabase, etc.)
+// et ne fait que de la logique pure.
+
+export interface SwissStandingParticipant {
+  /** ID unique (team_id, player_id, etc.) */
+  id: string;
+  /** Nom affiché (optionnel, pour l'UI) */
+  name?: string;
+  /** Seed initial (plus petit = mieux classé) */
+  seed?: number;
+}
+
+/**
+ * Résultat d'un match utilisé pour le calcul des standings.
+ * Les scores ici sont des points de tournoi (1 / 0.5 / 0, 3 / 1 / 0, etc.),
+ * pas le score "ingame" (rounds, maps, etc.).
+ */
+export interface SwissMatchResult {
+  round: number;
+  player1Id: string;
+  player2Id: string | null; // null = bye
+  /** Points gagnés par player1 pour le classement */
+  player1Score: number;
+  /** Points gagnés par player2 pour le classement (0 si bye) */
+  player2Score: number;
+}
+
+/**
+ * Standing final d'un joueur / équipe
+ */
+export interface SwissStanding {
+  id: string;
+  name?: string;
+  seed?: number;
+
+  /** Score total (somme des points sur tous les rounds) */
+  score: number;
+
+  /** Nombre de victoires / nulles / défaites (dérivé des scores) */
+  wins: number;
+  draws: number;
+  losses: number;
+
+  /** True si ce joueur a reçu au moins un bye */
+  hadBye: boolean;
+
+  /** Buchholz = somme des scores finaux des adversaires (hors bye) */
+  buchholz: number;
+
+  /**
+   * Median Buchholz = Buchholz en retirant
+   * le plus haut score d'adversaire et le plus bas
+   * (si au moins 3 adversaires ; sinon = Buchholz).
+   */
+  medianBuchholz: number;
+
+  /** Liste des IDs d'adversaires rencontrés (hors bye) */
+  opponents: string[];
+}
+
+/**
+ * Options de calcul
+ */
+export interface ComputeSwissStandingsOptions {
+  participants: SwissStandingParticipant[];
+  results: SwissMatchResult[];
+}
+
+/**
+ * Calcule les standings Swiss (score + Buchholz + Median Buchholz)
+ * à partir d'une liste de participants et de résultats de matchs.
+ */
+export function computeSwissStandings(
+  options: ComputeSwissStandingsOptions
+): SwissStanding[] {
+  const { participants, results } = options;
+
+  // 1) Initialiser les agrégats
+  type Agg = {
+    id: string;
+    name?: string;
+    seed?: number;
+    score: number;
+    wins: number;
+    draws: number;
+    losses: number;
+    hadBye: boolean;
+    opponents: Set<string>;
+  };
+
+  const map = new Map<string, Agg>();
+
+  for (const p of participants) {
+    map.set(p.id, {
+      id: p.id,
+      name: p.name,
+      seed: p.seed,
+      score: 0,
+      wins: 0,
+      draws: 0,
+      losses: 0,
+      hadBye: false,
+      opponents: new Set(),
+    });
+  }
+
+  // Helper pour récupérer / créer un participant même s'il n'est pas dans la liste initiale
+  function ensureAgg(id: string): Agg {
+    let agg = map.get(id);
+    if (!agg) {
+      agg = {
+        id,
+        name: undefined,
+        seed: undefined,
+        score: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+        hadBye: false,
+        opponents: new Set(),
+      };
+      map.set(id, agg);
+    }
+    return agg;
+  }
+
+  // 2) Parcourir les résultats et accumuler les scores + adversaires
+  for (const m of results) {
+    const p1 = ensureAgg(m.player1Id);
+
+    if (!m.player2Id) {
+      // Bye : le joueur1 prend les points, mais pas d'adversaire
+      p1.score += m.player1Score;
+      p1.hadBye = true;
+      // On peut considérer un bye comme "victoire" si on veut
+      if (m.player1Score > 0) p1.wins += 1;
+      continue;
+    }
+
+    const p2 = ensureAgg(m.player2Id);
+
+    p1.score += m.player1Score;
+    p2.score += m.player2Score;
+
+    // Win/draw/loss selon la comparaison des scores de match
+    if (m.player1Score > m.player2Score) {
+      p1.wins += 1;
+      p2.losses += 1;
+    } else if (m.player1Score < m.player2Score) {
+      p2.wins += 1;
+      p1.losses += 1;
+    } else {
+      // même score = draw
+      p1.draws += 1;
+      p2.draws += 1;
+    }
+
+    // Adversaires pour tie-breakers
+    p1.opponents.add(p2.id);
+    p2.opponents.add(p1.id);
+  }
+
+  // 3) Calculer Buchholz / Median Buchholz
+  const allAggs = Array.from(map.values());
+
+  // Map id → score final (utile pour tie-break)
+  const finalScoreById = new Map<string, number>();
+  for (const agg of allAggs) {
+    finalScoreById.set(agg.id, agg.score);
+  }
+
+  const standings: SwissStanding[] = allAggs.map((agg) => {
+    const opponentScores: number[] = [];
+
+    for (const oppId of agg.opponents) {
+      const oppScore = finalScoreById.get(oppId);
+      if (typeof oppScore === "number") {
+        opponentScores.push(oppScore);
+      }
+    }
+
+    // Buchholz = somme des scores des adversaires
+    const buchholz = opponentScores.reduce(
+      (sum, v) => sum + v,
+      0
+    );
+
+    // Median Buchholz : on retire le plus bas et le plus haut si >= 3 adversaires
+    let medianBuchholz = buchholz;
+    if (opponentScores.length >= 3) {
+      const sorted = opponentScores
+        .slice()
+        .sort((a, b) => a - b);
+      const trimmed = sorted.slice(
+        1,
+        sorted.length - 1
+      ); // retire min et max
+      medianBuchholz = trimmed.reduce(
+        (sum, v) => sum + v,
+        0
+      );
+    }
+
+    return {
+      id: agg.id,
+      name: agg.name,
+      seed: agg.seed,
+      score: agg.score,
+      wins: agg.wins,
+      draws: agg.draws,
+      losses: agg.losses,
+      hadBye: agg.hadBye,
+      buchholz,
+      medianBuchholz,
+      opponents: Array.from(agg.opponents),
+    };
+  });
+
+  // 4) Trier le classement :
+  // - score DESC
+  // - buchholz DESC
+  // - medianBuchholz DESC
+  // - seed ASC (si présent)
+  // - id pour stabilité
+  standings.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    if (b.buchholz !== a.buchholz)
+      return b.buchholz - a.buchholz;
+    if (b.medianBuchholz !== a.medianBuchholz)
+      return b.medianBuchholz - a.medianBuchholz;
+
+    const sa = a.seed ?? Number.MAX_SAFE_INTEGER;
+    const sb = b.seed ?? Number.MAX_SAFE_INTEGER;
+    if (sa !== sb) return sa - sb;
+
+    return a.id.localeCompare(b.id);
+  });
+
+  return standings;
+}
+
+/* -----------------------------------------------------------
+ * Helpers pour l'UI
+ * ---------------------------------------------------------*/
+
+/**
+ * Ajoute un champ "rank" (1, 2, 3, ...) sur les standings.
+ * Utile pour l'affichage direct dans un tableau.
+ */
+export interface RankedSwissStanding extends SwissStanding {
+  rank: number;
+}
+
+export function rankSwissStandings(
+  standings: SwissStanding[]
+): RankedSwissStanding[] {
+  return standings.map((s, idx) => ({
+    ...s,
+    rank: idx + 1,
+  }));
+}

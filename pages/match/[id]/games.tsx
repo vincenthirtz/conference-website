@@ -1,0 +1,503 @@
+// pages/match/[id]/games.tsx
+/* eslint-disable react/no-unescaped-entities */
+import { GetServerSideProps } from "next";
+import Head from "next/head";
+import Link from "next/link";
+import Heading from "@/components/Typography/heading";
+import Paragraph from "@/components/Typography/paragraph";
+import Button from "@/components/Buttons/button";
+import { supabaseAdmin } from "@/utils/supabase";
+
+type MatchStatus = "pending" | "ongoing" | "finished" | "cancelled";
+
+type SimpleTeam = {
+  id: string;
+  name: string;
+  short_name?: string | null;
+  logo_url?: string | null;
+};
+
+type Tournament = {
+  id: string;
+  name: string;
+  short_name?: string | null;
+  game?: string | null;
+};
+
+type Stage = {
+  id: string;
+  name: string;
+  stage_type: string;
+};
+
+type Game = {
+  id: string;
+  map_name: string | null;
+  map_order: number | null;
+  team1_score: number | null;
+  team2_score: number | null;
+  is_tiebreaker: boolean | null;
+  went_overtime: boolean | null;
+  created_at: string;
+};
+
+type Match = {
+  id: string;
+  tournament_id: string;
+  stage_id: string | null;
+  status: MatchStatus;
+  is_bye: boolean | null;
+  match_format: string | null;
+  round_name: string | null;
+  round_number: number | null;
+  group_key: string | null;
+  scheduled_at: string | null;
+  completed_at: string | null;
+  team1_score: number | null;
+  team2_score: number | null;
+  team1: SimpleTeam | null;
+  team2: SimpleTeam | null;
+  tournament: Tournament;
+  stage: Stage | null;
+  games: Game[];
+};
+
+type Props = {
+  match: Match | null;
+};
+
+export const getServerSideProps: GetServerSideProps<Props> = async (
+  ctx
+) => {
+  const { id } = ctx.query;
+  if (!id || Array.isArray(id)) {
+    return { notFound: true };
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("matches")
+    .select(
+      `
+      id,
+      tournament_id,
+      stage_id,
+      status,
+      is_bye,
+      match_format,
+      round_name,
+      round_number,
+      group_key,
+      scheduled_at,
+      completed_at,
+      team1_score,
+      team2_score,
+      team1:team1_id ( id, name, short_name, logo_url ),
+      team2:team2_id ( id, name, short_name, logo_url ),
+      tournament:tournament_id ( id, name, short_name, game ),
+      stage:stage_id ( id, name, stage_type ),
+      games (*)
+    `
+    )
+    .eq("id", id)
+    .single();
+
+  if (error || !data) {
+    console.error("match games page error:", error);
+    return { notFound: true };
+  }
+
+  const match = data as any as Match;
+
+  match.games =
+    match.games?.slice().sort((a: Game, b: Game) => {
+      const oa = a.map_order ?? 0;
+      const ob = b.map_order ?? 0;
+      return oa - ob;
+    }) ?? [];
+
+  return {
+    props: {
+      match,
+    },
+  };
+};
+
+export default function MatchGamesPage({ match }: Props) {
+  if (!match) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <p>Match introuvable.</p>
+      </div>
+    );
+  }
+
+  const t1 = match.team1;
+  const t2 = match.team2;
+  const isBye = match.is_bye;
+
+  const t1Name = t1?.short_name || t1?.name || "Équipe 1";
+  const t2Name =
+    t2?.short_name ||
+    t2?.name ||
+    (isBye ? "(bye)" : "Équipe 2");
+
+  const statusLabel = getMatchStatusLabel(match.status);
+  const statusChipClass = getMatchStatusChipClass(match.status);
+  const formatLabel = match.match_format?.toUpperCase() || "BO?";
+
+  const roundsSummary = computeRoundsSummary(match.games);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
+      <Head>
+        <title>
+          Maps – {t1Name} vs {t2Name} | {match.tournament.name} |
+          OW Women&apos;s Cup
+        </title>
+      </Head>
+
+      <main className="container mx-auto px-4 pt-24 pb-16 max-w-5xl">
+        {/* Header */}
+        <section className="mb-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <div className="inline-flex items-center gap-2 px-2 py-1 rounded-full bg-white/5 border border-white/10 mb-3 text-[10px] uppercase tracking-wide">
+                <span className="px-1.5 py-[2px] rounded-full bg-gradient-to-r from-pink-500/80 to-orange-400/80 text-black font-semibold">
+                  OW Women&apos;s Cup
+                </span>
+                <span className="text-gray-200">
+                  {match.tournament.game || "Overwatch 2"}
+                </span>
+                <span className="w-[1px] h-3 bg-white/20" />
+                <span className={statusChipClass}>
+                  {statusLabel}
+                </span>
+                <span className="w-[1px] h-3 bg-white/20" />
+                <span className="px-1.5 py-[2px] rounded-full bg-black/60 border border-white/15 text-[9px] text-gray-300">
+                  {formatLabel}
+                </span>
+              </div>
+
+              <Heading
+                typeStyle="heading-md"
+                className="mb-1 text-gradient"
+              >
+                Détail des maps – {t1Name}{" "}
+                {!isBye && (
+                  <span className="text-gray-400">vs</span>
+                )}{" "}
+                {t2Name}
+              </Heading>
+
+              <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-300 mb-1">
+                <Link
+                  href={`/tournament/${match.tournament.id}`}
+                  className="hover:text-white"
+                >
+                  {match.tournament.short_name ||
+                    match.tournament.name}
+                </Link>
+                {match.stage && (
+                  <>
+                    <span className="text-gray-500">·</span>
+                    <span>{match.stage.name}</span>
+                  </>
+                )}
+                {match.round_name && (
+                  <>
+                    <span className="text-gray-500">·</span>
+                    <span>{match.round_name}</span>
+                  </>
+                )}
+                {match.group_key && (
+                  <>
+                    <span className="text-gray-500">·</span>
+                    <span>Poule {match.group_key}</span>
+                  </>
+                )}
+              </div>
+
+              <Paragraph
+                typeStyle="body-sm"
+                textColor="text-gray-200"
+                className="max-w-xl"
+              >
+                Vue centrée sur les games de ce match : scores
+                détaillés carte par carte, overtimes, tiebreakers et
+                total de rounds.
+              </Paragraph>
+            </div>
+
+            <div className="flex flex-wrap gap-2 justify-end">
+              <Link href={`/match/${match.id}`}>
+                <Button
+                  type="button"
+                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-blue-400"
+                >
+                  ← Résumé du match
+                </Button>
+              </Link>
+              <Link href={`/tournament/${match.tournament.id}`}>
+                <Button
+                  type="button"
+                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-emerald-400"
+                >
+                  Tournoi
+                </Button>
+              </Link>
+              <Link
+                href={`/tournament/${match.tournament.id}/maps`}
+              >
+                <Button
+                  type="button"
+                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-purple-400"
+                >
+                  Top maps du tournoi
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* Résumé rounds */}
+        <section className="mb-6">
+          <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
+            {match.games.length === 0 && (
+              <Paragraph
+                typeStyle="body-sm"
+                textColor="text-gray-300"
+              >
+                Aucune carte n&apos;est encore enregistrée pour ce
+                match.
+              </Paragraph>
+            )}
+
+            {match.games.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <StatCard
+                  label="Maps jouées"
+                  value={match.games.length}
+                />
+                <StatCard
+                  label={`Rounds ${t1Name}`}
+                  value={roundsSummary.team1Rounds}
+                />
+                <StatCard
+                  label={`Rounds ${t2Name}`}
+                  value={roundsSummary.team2Rounds}
+                />
+                <StatCard
+                  label="Différence de rounds"
+                  value={
+                    roundsSummary.diff > 0
+                      ? `+${roundsSummary.diff}`
+                      : roundsSummary.diff.toString()
+                  }
+                  hint={
+                    roundsSummary.diff > 0
+                      ? t1Name
+                      : roundsSummary.diff < 0
+                      ? t2Name
+                      : "Équilibré"
+                  }
+                />
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Liste des games */}
+        {match.games.length > 0 && (
+          <section>
+            <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[11px] uppercase tracking-wide text-gray-400">
+                  Cartes du match
+                </p>
+                <span className="text-[10px] text-gray-500">
+                  {match.games.length} map
+                  {match.games.length > 1 ? "s" : ""} enregistrée
+                  {match.games.length > 1 ? "s" : ""}
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-[11px]">
+                  <thead>
+                    <tr className="text-gray-400 border-b border-white/10">
+                      <th className="text-left py-1.5 pr-3">
+                        #
+                      </th>
+                      <th className="text-left py-1.5 pr-3">
+                        Map
+                      </th>
+                      <th className="text-right py-1.5 px-3">
+                        {t1Name}
+                      </th>
+                      <th className="text-right py-1.5 px-3">
+                        {t2Name}
+                      </th>
+                      <th className="text-right py-1.5 px-3">
+                        Total rounds
+                      </th>
+                      <th className="text-right py-1.5 pl-3">
+                        Tags
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {match.games.map((g, idx) => {
+                      const order =
+                        typeof g.map_order === "number"
+                          ? g.map_order + 1
+                          : idx + 1;
+                      const s1 = g.team1_score ?? 0;
+                      const s2 = g.team2_score ?? 0;
+                      const total = s1 + s2;
+                      const tags: string[] = [];
+                      if (g.is_tiebreaker) tags.push("Tiebreaker");
+                      if (g.went_overtime) tags.push("Overtime");
+
+                      return (
+                        <tr
+                          key={g.id}
+                          className={
+                            "border-b border-white/5" +
+                            (idx % 2 === 0
+                              ? " bg-white/0"
+                              : " bg-white/[0.02]")
+                          }
+                        >
+                          <td className="py-1.5 pr-3 text-gray-400">
+                            {order}
+                          </td>
+                          <td className="py-1.5 pr-3 text-gray-100">
+                            {g.map_name ||
+                              `Map ${order}`}
+                          </td>
+                          <td className="py-1.5 px-3 text-right text-gray-100">
+                            {s1}
+                          </td>
+                          <td className="py-1.5 px-3 text-right text-gray-100">
+                            {s2}
+                          </td>
+                          <td className="py-1.5 px-3 text-right text-gray-100">
+                            {total}
+                          </td>
+                          <td className="py-1.5 pl-3 text-right">
+                            <div className="flex flex-wrap justify-end gap-1">
+                              {tags.length === 0 && (
+                                <span className="text-[10px] text-gray-500">
+                                  —
+                                </span>
+                              )}
+                              {tags.map((tag) => (
+                                <span
+                                  key={tag}
+                                  className={
+                                    "px-1.5 py-[1px] rounded-full border text-[9px]" +
+                                    (tag === "Tiebreaker"
+                                      ? " bg-fuchsia-500/20 border-fuchsia-400/70 text-fuchsia-100"
+                                      : " bg-amber-500/20 border-amber-400/70 text-amber-100")
+                                  }
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <p className="mt-2 text-[10px] text-gray-500">
+                Les scores correspondent aux manches cumulées
+                remportées par chaque équipe sur la carte
+                (rounds, points, etc. selon le mode de jeu).
+              </p>
+            </div>
+          </section>
+        )}
+      </main>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+ * Utils & petits composants
+ * ────────────────────────────────────────────*/
+
+function computeRoundsSummary(games: Game[]) {
+  let team1Rounds = 0;
+  let team2Rounds = 0;
+
+  for (const g of games) {
+    team1Rounds += g.team1_score ?? 0;
+    team2Rounds += g.team2_score ?? 0;
+  }
+
+  return {
+    team1Rounds,
+    team2Rounds,
+    diff: team1Rounds - team2Rounds,
+  };
+}
+
+function StatCard({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string | number;
+  hint?: string;
+}) {
+  return (
+    <div className="rounded-2xl bg-gradient-to-br from-white/8 via-white/5 to-white/0 border border-white/10 px-3 py-3">
+      <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-1">
+        {label}
+      </p>
+      <p className="text-xl font-semibold text-white">
+        {typeof value === "number" ? value.toString() : value}
+      </p>
+      {hint && (
+        <p className="text-[10px] text-gray-400 mt-[2px]">
+          {hint}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function getMatchStatusLabel(status: MatchStatus): string {
+  switch (status) {
+    case "pending":
+      return "À venir";
+    case "ongoing":
+      return "En cours";
+    case "finished":
+      return "Terminé";
+    case "cancelled":
+      return "Annulé";
+    default:
+      return status;
+  }
+}
+
+function getMatchStatusChipClass(status: MatchStatus): string {
+  switch (status) {
+    case "pending":
+      return "px-1.5 py-[2px] rounded-full bg-yellow-500/20 text-yellow-200 border border-yellow-500/60";
+    case "ongoing":
+      return "px-1.5 py-[2px] rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/60";
+    case "finished":
+      return "px-1.5 py-[2px] rounded-full bg-gray-500/20 text-gray-200 border border-gray-500/60";
+    case "cancelled":
+      return "px-1.5 py-[2px] rounded-full bg-red-500/20 text-red-200 border border-red-500/60";
+    default:
+      return "px-1.5 py-[2px] rounded-full bg-white/10 text-white border border-white/30";
+  }
+}

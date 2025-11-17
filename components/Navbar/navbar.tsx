@@ -1,13 +1,19 @@
 import Link from 'next/link';
 import Dropdown from '../illustration/dropdown';
 import { useState, useEffect, useRef, useCallback, JSX } from 'react';
-import links from '../../config/links.json';
+import links from '@/config/links.json';
 import NavDrop from './navDrop';
 import Hamburger from '../illustration/hamburger';
 import { useMediaQuery } from 'react-responsive';
 import Cancel from '../illustration/cancel';
 import Image from 'next/image';
 import { LinkItem } from '../../types/types';
+import { supabaseClient } from '@/utils/supabase';
+
+type AdminLink = {
+  title: string;
+  ref: string;
+};
 
 function Navbar(): JSX.Element {
   const isTablet = useMediaQuery({ maxWidth: '1118px' });
@@ -18,6 +24,12 @@ function Navbar(): JSX.Element {
   const menuRef = useRef<HTMLDivElement>(null);
   const svg = useRef<SVGSVGElement>(null);
   const subMenuRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+
+  // Admin / staff state (source de vérité pour tout le menu)
+  const [adminLoading, setAdminLoading] = useState(true);
+  const [isStaff, setIsStaff] = useState(false);
+  const [staffName, setStaffName] = useState<string | null>(null);
+  const [adminMenuOpen, setAdminMenuOpen] = useState(false);
 
   //TODO: Refactor Navbar Code
   let closeTimeout = useRef<ReturnType<typeof window.setTimeout> | null>(null);
@@ -86,10 +98,80 @@ function Navbar(): JSX.Element {
     setFocusedSubMenuItem(-1);
   };
 
+  // ----------------------------------------------------
+  // 🔐 Vérifier si un staff est connecté (source de vérité)
+  // ----------------------------------------------------
+  useEffect(() => {
+    const checkStaff = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabaseClient.auth.getSession();
+
+        if (!session?.access_token) {
+          setIsStaff(false);
+          setStaffName(null);
+          return;
+        }
+
+        const res = await fetch('/api/admin/me', {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+
+        if (!res.ok) {
+          setIsStaff(false);
+          setStaffName(null);
+          return;
+        }
+
+        const me = await res.json();
+
+        if (me?.role) {
+          setIsStaff(true);
+          setStaffName(me.display_name || me.email || 'Staff');
+        } else {
+          setIsStaff(false);
+          setStaffName(null);
+        }
+      } catch (e) {
+        console.error('Navbar staff check error:', e);
+        setIsStaff(false);
+        setStaffName(null);
+      } finally {
+        setAdminLoading(false);
+      }
+    };
+
+    checkStaff();
+  }, []);
+
+  // Liens du menu Admin (partagés avec NavDrop)
+  const adminLinks: AdminLink[] = [
+    { title: 'Dashboard admin', ref: '/admin' },
+    { title: 'Tournois – liste', ref: '/admin/tournaments' },
+    { title: 'Créer un tournoi', ref: '/admin/tournaments/create' },
+    { title: 'Créer une équipe', ref: '/admin/teams/new' },
+    { title: 'Demandes joueurs / équipes', ref: '/admin/demandes' },
+    { title: 'Logs staff', ref: '/admin/logs' },
+    { title: 'Stats équipes', ref: '/admin/stats/teams' },
+    { title: 'Stats maps', ref: '/admin/stats/maps' },
+  ];
+
+  const handleLogout = () => {
+    // Ferme tous les menus et envoie vers la page de logout
+    setAdminMenuOpen(false);
+    setDrop(false);
+    window.location.href = '/admin/logout';
+  };
+
   return (
     <div className="relative">
       <div
-        className={`container flex justify-center fixed items-center w-full backdrop-blur ${drop && 'bg-[#1B1130]/90'} top-0 z-[99] text-white`}
+        className={`container flex justify-center fixed items-center w-full backdrop-blur ${
+          drop && 'bg-[#1B1130]/90'
+        } top-0 z-[99] text-white`}
       >
         <div className="p-5 flex justify-between h-[75px] w-full items-center">
           <div
@@ -121,6 +203,7 @@ function Navbar(): JSX.Element {
             </div>
           ) : (
             <div className="flex items-center">
+              {/* Liens publics existants */}
               {links.map((link: LinkItem) => (
                 <div key={link.title}>
                   <div
@@ -202,7 +285,11 @@ function Navbar(): JSX.Element {
                             ref={(el) => {
                               subMenuRefs.current[index] = el;
                             }}
-                            className={`flex items-center ${link.subMenu!.length === 1 ? 'justify-center' : 'justify-start'} min-h-[32px] text-[16px] hover:scale-95 hover:translate-x-1 transition-all focus:outline-none focus:bg-white focus:bg-opacity-20 focus:scale-95 focus:translate-x-1 rounded px-2 py-1`}
+                            className={`flex items-center ${
+                              link.subMenu!.length === 1
+                                ? 'justify-center'
+                                : 'justify-start'
+                            } min-h-[32px] text-[16px] hover:scale-95 hover:translate-x-1 transition-all focus:outline-none focus:bg-white focus:bg-opacity-20 focus:scale-95 focus:translate-x-1 rounded px-2 py-1`}
                             data-test={`nav-sub-${subL.title}`}
                             onKeyDown={(e) => {
                               const currentIndex = index;
@@ -253,6 +340,68 @@ function Navbar(): JSX.Element {
                   </div>
                 </div>
               ))}
+
+              {/* ------------------------------------------------
+                  🔐 Zone Admin / Connexion staff (desktop only)
+                 ------------------------------------------------ */}
+              <div className="ml-10">
+                {!adminLoading && (
+                  <>
+                    {!isStaff && (
+                      <Link
+                        href="/admin/login"
+                        className="text-sm border border-purple-400/70 rounded-full px-3 py-1 hover:bg-purple-500/20 hover:border-purple-300 transition-colors"
+                      >
+                        Connexion staff
+                      </Link>
+                    )}
+
+                    {isStaff && (
+                      <div className="relative">
+                        {/* Bouton identique dans l’esprit à NavDrop (nom staff + chevron) */}
+                        <button
+                          type="button"
+                          onClick={() => setAdminMenuOpen((v) => !v)}
+                          className="flex items-center gap-2 text-sm border border-emerald-400/70 rounded-full px-3 py-1 hover:bg-emerald-500/20 hover:border-emerald-300 transition-colors"
+                        >
+                          <span>{staffName || 'Staff'}</span>
+                          <Dropdown
+                            fill="white"
+                            className={`ml-1 transition-transform duration-300 ${
+                              adminMenuOpen ? 'rotate-180' : 'rotate-0'
+                            }`}
+                          />
+                        </button>
+
+                        {/* Dropdown Admin desktop */}
+                        {adminMenuOpen && (
+                          <div className="absolute right-0 mt-2 min-w-[220px] rounded-md bg-[#1B1130]/95 border border-white/10 shadow-xl py-1 z-[999]">
+                            <div className="flex flex-col">
+                              {adminLinks.map((item) => (
+                                <Link
+                                  key={item.ref}
+                                  href={item.ref}
+                                  className="block px-4 py-2 text-sm text-white hover:bg-white/10"
+                                  onClick={() => setAdminMenuOpen(false)}
+                                >
+                                  {item.title}
+                                </Link>
+                              ))}
+
+                              <button
+                                className="w-full text-left px-4 py-2 text-xs text-red-200 hover:bg-red-500/20 border-t border-white/10 mt-1"
+                                onClick={handleLogout}
+                              >
+                                Déconnexion
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           )}
           {isTablet && (
@@ -263,7 +412,17 @@ function Navbar(): JSX.Element {
                   : 'opacity-0 -translate-y-full pointer-events-none'
               }`}
             >
-              {drop && <NavDrop setDrop={setDrop} ref={menuRef} />}
+              {drop && (
+                <NavDrop
+                  setDrop={setDrop}
+                  ref={menuRef}
+                  isStaff={isStaff}
+                  staffName={staffName}
+                  adminLinks={adminLinks}
+                  adminLoading={adminLoading}
+                  onLogout={handleLogout}
+                />
+              )}
             </div>
           )}
         </div>
