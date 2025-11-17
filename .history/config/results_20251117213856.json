@@ -1,7 +1,7 @@
 {
   "R1-M1": { "home": 0, "away": 2 },
-  "R1-M2": { "home": 2, "away": 1 },
-  "R2-M1": { "home": 2, "away": 0 },
+  "R1-M2": { "home": 0, "away": 0 },
+  "R2-M1": { "home": 0, "away": 0 },
   "R2-M2": { "home": 0, "away": 0 },
   "R3-M1": { "home": 0, "away": 0 },
   "R3-M2": { "home": 0, "away": 0 },
