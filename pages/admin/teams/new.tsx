@@ -6,10 +6,14 @@ import { useRouter } from "next/router";
 import { withStaffPage } from "@/utils/staff";
 import { StaffRoleBadge } from "@/components/admin/StaffRoleBadge";
 
-type StaffProps= {
-  id: string;                // plus de `| null`
+type StaffShape = {
+  id: string;
   role: string;
   display_name: string | null;
+};
+
+type StaffProps = {
+  staff: StaffShape;
 };
 type CreateTeamResponse = {
   team: {
