@@ -331,7 +331,7 @@ export default function TeamStatsPage({
                   />
                 </div>
                 <Paragraph
-                  typeStyle="body-xs"
+                  typeStyle="body-sm"
                   textColor="text-gray-400"
                 >
                   Les statistiques sont calculées sur l&apos;ensemble
