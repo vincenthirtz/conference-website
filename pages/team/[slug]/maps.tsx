@@ -2,9 +2,9 @@
 import type { GetServerSideProps, NextPage } from "next";
 import Head from "next/head";
 import Link from "next/link";
-import Heading from "../../components/Typography/heading";
-import Paragraph from "../../components/Typography/paragraph";
-import { supabaseAdmin } from "@/lib/supabase"; // adapte le chemin si besoin
+import Heading from "@/components/Typography/heading";
+import Paragraph from "@/components/Typography/paragraph";
+import { supabaseAdmin } from "@/utils/supabase"; // adapte le chemin si besoin
 
 type Team = {
   id: string;

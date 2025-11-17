@@ -7,12 +7,10 @@ import Link from "next/link";
 import { withStaffPage } from "@/utils/staff";
 import { StaffRoleBadge } from "@/components/admin/StaffRoleBadge";
 
-type StaffProps = {
-  staff: {
-    id: string | null;
-    role: string;
-    display_name: string | null;
-  };
+type StaffShape = {
+  id: string;                // plus de `| null`
+  role: string;
+  display_name: string | null;
 };
 
 type MatchStatus = "pending" | "ongoing" | "finished" | "cancelled";
