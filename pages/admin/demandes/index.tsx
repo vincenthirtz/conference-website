@@ -139,7 +139,7 @@ function AdminDemandesPage() {
 
   // 🔐 Guard auth côté client
   const [guardLoading, setGuardLoading] = useState(true);
-  const [staff, setStaff] = useState<StaffShape | null>(null);
+  const [staff, setStaff] = useState<StaffProps | null>(null);
   const [token, setToken] = useState<string | null>(null);
 
   // Données page
