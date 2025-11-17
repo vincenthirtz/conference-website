@@ -110,7 +110,7 @@ function Navbar(): JSX.Element {
 
         if (!session?.access_token) {
           setIsStaff(false);
-          setStaffName(null);
+          setStaffName("");
           return;
         }
 
@@ -122,7 +122,7 @@ function Navbar(): JSX.Element {
 
         if (!res.ok) {
           setIsStaff(false);
-          setStaffName(null);
+          setStaffName("");
           return;
         }
 
@@ -133,12 +133,12 @@ function Navbar(): JSX.Element {
           setStaffName(me.display_name || me.email || 'Staff');
         } else {
           setIsStaff(false);
-          setStaffName(null);
+          setStaffName("");
         }
       } catch (e) {
         console.error('Navbar staff check error:', e);
         setIsStaff(false);
-        setStaffName(null);
+        setStaffName("");
       } finally {
         setAdminLoading(false);
       }
