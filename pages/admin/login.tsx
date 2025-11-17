@@ -208,7 +208,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 
             <div className="mt-4 border-t border-white/5 pt-3">
               <Paragraph
-                typeStyle="body-xs"
+                typeStyle="body-sm"
                 textColor="text-gray-400"
                 className="text-center"
               >
