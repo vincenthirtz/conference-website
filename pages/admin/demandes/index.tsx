@@ -9,11 +9,10 @@ import { supabaseClient } from "@/utils/supabase";
 import { withStaffPage } from '@/utils/staff';
 
 type StaffShape = {
-  id: string | null;
+  id: string;                // plus de `| null`
   role: string;
   display_name: string | null;
 };
-
 type DemandeType = "join_team" | "leave_team";
 
 type DemandeStatus = "pending" | "approved" | "rejected" | "cancelled";
@@ -198,11 +197,11 @@ function AdminDemandesPage() {
           return;
         }
 
-        setStaff({
-          id: me.id ?? null,
-          role: me.role ?? "helper",
-          display_name: me.display_name ?? null,
-        });
+       setStaff({
+ id: (me.id as string) ?? "",       // on force le type string pour coller à StaffRoleBadge
+  role: me.role ?? "helper",
+  display_name: me.display_name ?? null,
+});
       } catch (e) {
         console.error("staff guard error", e);
         router.push("/admin/login");
