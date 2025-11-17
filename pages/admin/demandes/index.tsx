@@ -8,12 +8,11 @@ import { StaffRoleBadge } from "@/components/admin/StaffRoleBadge";
 import { supabaseClient } from "@/utils/supabase";
 import { withStaffPage } from '@/utils/staff';
 
-type StaffShape = {
+type StaffProps= {
   id: string;                // plus de `| null`
   role: string;
   display_name: string | null;
-};
-type DemandeType = "join_team" | "leave_team";
+};type DemandeType = "join_team" | "leave_team";
 
 type DemandeStatus = "pending" | "approved" | "rejected" | "cancelled";
 
