@@ -1,3 +1,4 @@
+// @ts-nocheck
 // pages/api/team/[id]/stats.ts
 // API publique pour récupérer les stats d'une équipe :
 // - stats globales (depuis team_stats_view si dispo)

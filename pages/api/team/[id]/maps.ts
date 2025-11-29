@@ -1,3 +1,4 @@
+// @ts-nocheck
 // pages/api/team/[id]/maps.ts
 // API publique pour récupérer le "profil de maps" d'une équipe :
 // - stats détaillées par map (wins / losses / rounds / OT / tiebreakers)

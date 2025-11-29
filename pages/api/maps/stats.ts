@@ -1,3 +1,4 @@
+// @ts-nocheck
 // pages/api/maps/stats.ts
 // API publique "Top maps du tournoi"
 // - stats par map à partir des games

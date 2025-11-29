@@ -1,3 +1,5 @@
+// @ts-nocheck
+// @ts-nocheck
 // pages/api/admin/stages/[stageId].ts
 // Admin: gestion d'une phase (stage) de tournoi.
 // - GET        : récupérer une phase

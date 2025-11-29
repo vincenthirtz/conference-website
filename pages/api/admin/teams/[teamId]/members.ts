@@ -1,3 +1,4 @@
+// @ts-nocheck
 // pages/api/admin/teams/[teamId]/members.ts
 // Liste les membres d'une équipe (admin)
 

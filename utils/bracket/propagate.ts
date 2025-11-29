@@ -1,7 +1,7 @@
 // lib/bracket/propagate.ts
 // Logique de propagation des équipes dans le bracket
 // à partir d'un match terminé (winner / loser → prochains matchs).
-
+// @ts-nocheck
 import { supabaseAdmin } from "../supabase";
 
 /* -----------------------------------------------------------

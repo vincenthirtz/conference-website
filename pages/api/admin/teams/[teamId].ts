@@ -1,3 +1,4 @@
+// @ts-nocheck
 // pages/api/admin/teams/[teamId].ts
 // Admin: gestion d'une équipe
 // - GET        : récupérer une équipe

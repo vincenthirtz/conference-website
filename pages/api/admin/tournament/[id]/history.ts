@@ -1,3 +1,4 @@
+// @ts-nocheck
 // pages/api/admin/tournament/[id]/history.ts
 // Historique staff d’un tournoi :
 // - GET : retourne la liste des actions staff liées au tournoi

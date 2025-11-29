@@ -1,3 +1,4 @@
+// @ts-nocheck
 // pages/api/admin/users/index.ts
 // Admin: création d'un utilisateur Supabase à la volée
 

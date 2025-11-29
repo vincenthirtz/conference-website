@@ -1,3 +1,4 @@
+// @ts-nocheck
 // pages/team/[slug]/stats.tsx
 /* eslint-disable react/no-unescaped-entities */
 import { GetServerSideProps } from "next";

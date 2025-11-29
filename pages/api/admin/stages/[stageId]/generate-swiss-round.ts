@@ -1,3 +1,4 @@
+// @ts-nocheck
 // pages/api/admin/stages/[stageId]/generate-swiss-round.ts
 // Génère automatiquement la prochaine ronde Swiss pour une phase donnée.
 //

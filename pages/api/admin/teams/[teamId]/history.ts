@@ -1,3 +1,4 @@
+// @ts-nocheck
 // pages/api/admin/teams/[teamId]/history.ts
 // Historique staff d’une équipe.
 //

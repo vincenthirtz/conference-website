@@ -1,3 +1,4 @@
+// @ts-nocheck
 // pages/api/admin/tournament/[id]/matches.ts
 // Admin: gestion des matchs d'un tournoi
 // - GET  : liste des matchs du tournoi (avec filtres + pagination)

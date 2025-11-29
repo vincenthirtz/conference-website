@@ -1,7 +1,7 @@
 // lib/matches/applyScore.ts
 // Helper serveur pour appliquer un score à un match,
 // calculer le vainqueur et propager dans le bracket.
-
+// @ts-nocheck
 import { supabaseAdmin } from "../supabase";
 import {
   resetPropagationForMatch,

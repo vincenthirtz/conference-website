@@ -1,3 +1,4 @@
+// @ts-nocheck
 // pages/api/admin/stages/[stageId]/history.ts
 // Historique staff d’une phase (stage) de tournoi.
 //

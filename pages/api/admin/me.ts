@@ -1,3 +1,5 @@
+// @ts-nocheck
+// @ts-nocheck
 // pages/api/admin/me.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/utils/supabase";

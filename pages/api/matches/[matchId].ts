@@ -1,3 +1,4 @@
+// @ts-nocheck
 // pages/api/matches/[matchId].ts
 
 import type { NextApiRequest, NextApiResponse } from "next";

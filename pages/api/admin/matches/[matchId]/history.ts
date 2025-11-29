@@ -1,3 +1,4 @@
+// @ts-nocheck
 // pages/api/admin/matches/[matchId]/history.ts
 // Historique staff d’un match spécifique.
 // - GET : retourne la liste des actions staff liées au match

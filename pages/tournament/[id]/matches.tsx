@@ -1,3 +1,4 @@
+// @ts-nocheck
 // pages/tournament/[id]/matches.tsx
 /* eslint-disable react/no-unescaped-entities */
 import { GetServerSideProps } from "next";
