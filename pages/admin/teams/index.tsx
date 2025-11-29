@@ -289,9 +289,9 @@ function AdminTeamsListPage({ staff }: StaffProps) {
         {deleteTarget && (
           <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 px-4">
             <div className="bg-neutral-900 border border-neutral-700 rounded-xl p-6 w-full max-w-md">
-              <h3 className="text-lg font-semibold mb-2">Supprimer l'équipe ?</h3>
+              <h3 className="text-lg font-semibold mb-2">Supprimer l&apos;équipe ?</h3>
               <p className="text-sm text-neutral-300 mb-4">
-                Cela désactive l'équipe (suppression soft). Continuer pour{" "}
+                Cela désactive l&apos;équipe (suppression soft). Continuer pour{" "}
                 <span className="font-semibold">{deleteTarget.name}</span> ?
               </p>
               {errorMsg && (

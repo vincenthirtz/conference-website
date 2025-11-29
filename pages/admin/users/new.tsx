@@ -55,7 +55,7 @@ function AdminCreateUserPage({ staff }: StaffProps) {
       const json: CreateUserResponse & { error?: string } = await res.json();
 
       if (!res.ok || json.error) {
-        throw new Error(json.error || "Impossible de créer l'utilisateur");
+        throw new Error(json.error || "Impossible de créer l&apos;utilisateur");
       }
 
       setSuccess(json);
@@ -171,7 +171,7 @@ function AdminCreateUserPage({ staff }: StaffProps) {
                       : "bg-blue-600 hover:bg-blue-500"
                   }`}
                 >
-                  {loading ? "Création..." : "Créer l'utilisateur"}
+                  {loading ? "Création..." : "Créer l&apos;utilisateur"}
                 </button>
 
                 <Link
@@ -189,7 +189,7 @@ function AdminCreateUserPage({ staff }: StaffProps) {
             <ul className="space-y-2 text-sm text-neutral-300">
               <li>• Le compte est créé via le rôle service Supabase.</li>
               <li>• Le mot de passe est généré si tu laisses le champ vide.</li>
-              <li>• L'email est marqué comme confirmé.</li>
+              <li>• L&apos;email est marqué comme confirmé.</li>
               <li>
                 • Ajoute ensuite la personne à une équipe via la page équipe ou
                 team_members.

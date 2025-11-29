@@ -93,7 +93,7 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
 
       const json: AddMemberResponse & { error?: string } = await res.json();
       if (!res.ok || json.error) {
-        throw new Error(json.error || "Impossible d'ajouter le membre");
+        throw new Error(json.error || "Impossible d&apos;ajouter le membre");
       }
 
       setSuccess(json);
@@ -109,7 +109,7 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Ajouter un membre d'équipe</title>
+        <title>Admin – Ajouter un membre d&apos;équipe</title>
       </Head>
 
       <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
@@ -167,7 +167,7 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
                     placeholder="user@email.tld"
                   />
                   <p className="text-xs text-neutral-500 mt-1">
-                    L'API trouvera l'utilisateur par email si userId n'est pas fourni.
+                    L&apos;API trouvera l&apos;utilisateur par email si userId n&apos;est pas fourni.
                   </p>
                 </div>
 
@@ -180,7 +180,7 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
                     value={userId}
                     onChange={(e) => setUserId(e.target.value)}
                     className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                    placeholder="Prioritaire sur l'email si rempli"
+                    placeholder="Prioritaire sur l&apos;email si rempli"
                   />
                 </div>
               </div>
@@ -260,14 +260,14 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
               </div>
             ) : (
               <p className="text-sm text-neutral-300">
-                Après validation, l'ID membre, l'user_id et le statut capitaine seront affichés ici.
+                Après validation, l&apos;ID membre, l&apos;user_id et le statut capitaine seront affichés ici.
               </p>
             )}
 
             <div className="text-xs text-neutral-400 space-y-1">
-              <p>• L'API ajoute à team_members (role par défaut: player).</p>
-              <p>• Si l'option capitaine est cochée, teams.captain_id est mis à jour.</p>
-              <p>• Fournis soit l'email (recherche) soit le userId (prioritaire).</p>
+              <p>• L&apos;API ajoute à team_members (role par défaut: player).</p>
+              <p>• Si l&apos;option capitaine est cochée, teams.captain_id est mis à jour.</p>
+              <p>• Fournis soit l&apos;email (recherche) soit le userId (prioritaire).</p>
             </div>
           </aside>
         </div>
