@@ -3,6 +3,7 @@
 import { GetServerSideProps } from "next";
 import Head from "next/head";
 import Link from "next/link";
+import Image from "next/image";
 import Heading from "@/components/Typography/heading";
 import Paragraph from "@/components/Typography/paragraph";
 import Button from "@/components/Buttons/button";
@@ -202,11 +203,12 @@ export default function TeamStatsPage({
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-full bg-black/60 border border-white/15 flex items-center justify-center overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 {logo ? (
-                  <img
+                  <Image
                     src={logo}
                     alt={name}
+                    width={56}
+                    height={56}
                     className="w-full h-full object-cover"
                   />
                 ) : (

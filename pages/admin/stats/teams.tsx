@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Head from "next/head";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/router";
 import { withStaffPage } from "@/utils/staff";
 import { StaffRoleBadge } from "@/components/admin/StaffRoleBadge";
@@ -363,9 +364,11 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
                         <td className="px-3 py-2">
                           <div className="flex items-center gap-2">
                             {row.team?.logo_url && (
-                              <img
+                              <Image
                                 src={row.team.logo_url}
                                 alt={teamName}
+                                width={28}
+                                height={28}
                                 className="w-7 h-7 rounded object-cover border border-neutral-700"
                               />
                             )}

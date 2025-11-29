@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import Link from "next/link";
+import Image from "next/image";
 import { withStaffPage } from "@/utils/staff";
 import { StaffRoleBadge } from "@/components/admin/StaffRoleBadge";
 
@@ -579,9 +580,11 @@ function TeamSummaryCard({ label, team, teamId, score, isWinner }: TeamSummaryPr
   return (
     <div className="flex items-center gap-3">
       {team?.logo_url && (
-        <img
+        <Image
           src={team.logo_url}
           alt={team.name}
+          width={32}
+          height={32}
           className="w-8 h-8 rounded object-cover border border-neutral-700"
         />
       )}

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Head from "next/head";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/router";
 import { withStaffPage } from "@/utils/staff";
 import { StaffRoleBadge } from "@/components/admin/StaffRoleBadge";
@@ -141,9 +142,11 @@ function AdminTournamentPage({ staff }: StaffProps) {
             </button>
             <div className="flex items-center gap-3">
               {tournament?.logo_url && (
-                <img
+                <Image
                   src={tournament.logo_url}
                   alt={tournament.name}
+                  width={40}
+                  height={40}
                   className="w-10 h-10 rounded-md object-cover border border-neutral-700"
                 />
               )}

@@ -80,6 +80,10 @@ async function handler(
       includeTotal === "1" ||
       includeTotal === "true";
 
+    if (!supabaseAdmin) {
+      return res.status(500).json({ error: "Supabase admin not configured" });
+    }
+
     let query = supabaseAdmin
       .from("staff_logs")
       .select(
@@ -100,7 +104,7 @@ async function handler(
           avatar_url
         )
       `,
-        { count: wantTotal ? "exact" : "none" }
+        { count: wantTotal ? "exact" : undefined }
       );
 
     if (staffId && !Array.isArray(staffId)) {
@@ -168,7 +172,7 @@ async function handler(
       });
     }
 
-    const rawLogs = (data || []) as StaffLog[];
+    const rawLogs = ((data as unknown) || []) as StaffLog[];
     const formatted = rawLogs.map((log) =>
       formatStaffLog(log)
     );

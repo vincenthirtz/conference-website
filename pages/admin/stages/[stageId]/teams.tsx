@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Head from "next/head";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/router";
 import { withStaffPage } from "@/utils/staff";
 import { StaffRoleBadge } from "@/components/admin/StaffRoleBadge";
@@ -646,16 +647,12 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
                         {/* Team info */}
                         <td className="px-4 py-2 align-middle">
                           <div className="flex items-center gap-3">
-                            {st.team
-                              ?.logo_url && (
-                              <img
-                                src={
-                                  st.team
-                                    .logo_url
-                                }
-                                alt={
-                                  st.team.name
-                                }
+                            {st.team?.logo_url && (
+                              <Image
+                                src={st.team.logo_url}
+                                alt={st.team.name}
+                                width={32}
+                                height={32}
                                 className="w-8 h-8 rounded object-cover border border-neutral-700"
                               />
                             )}

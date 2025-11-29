@@ -220,6 +220,10 @@ async function handleGet(
     `;
   }
 
+  if (!supabaseAdmin) {
+    return res.status(500).json({ error: "Supabase admin not configured" });
+  }
+
   let query = supabaseAdmin
     .from("demandes")
     .select(select, {
@@ -227,7 +231,7 @@ async function handleGet(
         includeTotal === "1" ||
         includeTotal === "true"
           ? "exact"
-          : "none",
+          : undefined,
     });
 
   if (type && !Array.isArray(type)) {
@@ -290,11 +294,11 @@ async function handleGet(
     });
   }
 
+  const safeDemandes = (Array.isArray(data) ? data : []) as unknown as DemandeWithRelations[];
+
   return res.status(200).json({
-    demandes: (data ||
-      []) as DemandeWithRelations[],
-    total:
-      typeof count === "number" ? count : null,
+    demandes: safeDemandes,
+    total: typeof count === "number" ? count : null,
   });
 }
 
@@ -315,6 +319,10 @@ async function handlePost(
   res: NextApiResponse,
   ctx: any
 ) {
+  if (!supabaseAdmin) {
+    return res.status(500).json({ error: "Supabase admin not configured" });
+  }
+
   const body = req.body as PostBody;
 
   if (!body?.action) {

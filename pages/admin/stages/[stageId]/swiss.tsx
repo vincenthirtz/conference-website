@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Head from "next/head";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/router";
 import { withStaffPage } from "@/utils/staff";
 import { StaffRoleBadge } from "@/components/admin/StaffRoleBadge";
@@ -391,9 +392,11 @@ function AdminSwissStagePage({ staff }: StaffProps) {
                             <td className="px-3 py-2">
                               <div className="flex items-center gap-2">
                                 {s.team?.logo_url && (
-                                  <img
+                                  <Image
                                     src={s.team.logo_url}
                                     alt={display}
+                                    width={24}
+                                    height={24}
                                     className="w-6 h-6 rounded object-cover border border-neutral-700"
                                   />
                                 )}
@@ -540,18 +543,22 @@ function SwissMatchRow({ match }: SwissMatchRowProps) {
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             {match.team1?.logo_url && (
-              <img
+              <Image
                 src={match.team1.logo_url}
                 alt={label1}
+                width={20}
+                height={20}
                 className="w-5 h-5 rounded object-cover border border-neutral-700"
               />
             )}
             <span className="font-semibold text-neutral-50">{label1}</span>
             <span className="text-neutral-400">vs</span>
             {match.team2?.logo_url && (
-              <img
+              <Image
                 src={match.team2.logo_url}
                 alt={label2}
+                width={20}
+                height={20}
                 className="w-5 h-5 rounded object-cover border border-neutral-700"
               />
             )}

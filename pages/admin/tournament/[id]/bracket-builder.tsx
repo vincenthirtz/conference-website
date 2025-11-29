@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Head from "next/head";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/router";
 import { withStaffPage } from "@/utils/staff";
 import { StaffRoleBadge } from "@/components/admin/StaffRoleBadge";
@@ -603,9 +604,11 @@ function TeamSlot({
         }
       >
         {team?.logo_url && (
-          <img
+          <Image
             src={team.logo_url}
             alt={team.name}
+            width={24}
+            height={24}
             className="w-6 h-6 rounded object-cover border border-neutral-700"
           />
         )}

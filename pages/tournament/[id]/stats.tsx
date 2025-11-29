@@ -3,6 +3,7 @@
 import { GetServerSideProps } from "next";
 import Head from "next/head";
 import Link from "next/link";
+import Image from "next/image";
 import Heading from "@/components/Typography/heading";
 import Paragraph from "@/components/Typography/paragraph";
 import Button from "@/components/Buttons/button";
@@ -423,11 +424,12 @@ export default function TournamentStatsPage({
                         <td className="py-1.5 pr-3">
                           <div className="flex items-center gap-2">
                             <div className="w-6 h-6 rounded-full bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
                               {t.logoUrl ? (
-                                <img
+                                <Image
                                   src={t.logoUrl}
                                   alt={t.teamName}
+                                  width={24}
+                                  height={24}
                                   className="w-full h-full object-cover"
                                 />
                               ) : (
@@ -651,11 +653,12 @@ function TopTeamCard({
 
       <div className="flex items-center gap-2">
         <div className="w-7 h-7 rounded-full bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           {stat.logoUrl ? (
-            <img
+            <Image
               src={stat.logoUrl}
               alt={stat.teamName}
+              width={28}
+              height={28}
               className="w-full h-full object-cover"
             />
           ) : (

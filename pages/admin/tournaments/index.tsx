@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Head from "next/head";
 import Link from "next/link";
 import { withStaffPage } from "@/utils/staff";
@@ -41,7 +41,7 @@ function AdminTournamentsPage({ staff }: Props) {
   const [limit] = useState(20);
   const [offset, setOffset] = useState(0);
 
-  async function fetchData() {
+  const fetchData = useCallback(async () => {
     setLoading(true);
 
     const params = new URLSearchParams();
@@ -58,11 +58,11 @@ function AdminTournamentsPage({ staff }: Props) {
     setTournaments(json.tournaments || []);
     setTotal(json.total);
     setLoading(false);
-  }
+  }, [limit, offset, search, status]);
 
   useEffect(() => {
     fetchData();
-  }, [offset, status]);
+  }, [fetchData]);
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();

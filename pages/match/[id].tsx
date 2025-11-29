@@ -3,6 +3,7 @@
 import { GetServerSideProps } from "next";
 import Head from "next/head";
 import Link from "next/link";
+import Image from "next/image";
 import Heading from "@/components/Typography/heading";
 import Paragraph from "@/components/Typography/paragraph";
 import Button from "@/components/Buttons/button";
@@ -536,11 +537,12 @@ function TeamLogo({
 }) {
   return (
     <div className="w-10 h-10 rounded-full bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
       {logo ? (
-        <img
+        <Image
           src={logo}
           alt={name}
+          width={40}
+          height={40}
           className="w-full h-full object-cover"
         />
       ) : (

@@ -3,6 +3,7 @@
 import { GetServerSideProps } from "next";
 import Head from "next/head";
 import Link from "next/link";
+import Image from "next/image";
 import { supabaseAdmin as supabase } from "@/utils/supabase";
 import { StaffRoleBadge } from "@/components/admin/StaffRoleBadge"; // optionnel si tu veux l'afficher
 import { useRouter } from "next/router";
@@ -122,9 +123,11 @@ export default function TeamPage({
             </button>
             <h1 className="text-3xl font-bold flex items-center gap-3">
               {team.logo_url && (
-                <img
+                <Image
                   src={team.logo_url}
                   alt={team.name}
+                  width={40}
+                  height={40}
                   className="w-10 h-10 rounded object-cover border border-neutral-700"
                 />
               )}
@@ -166,8 +169,11 @@ export default function TeamPage({
                   className="py-3 flex items-center gap-4"
                 >
                   {p.avatar_url && (
-                    <img
+                    <Image
                       src={p.avatar_url}
+                      alt={p.display_name || "Joueuse"}
+                      width={40}
+                      height={40}
                       className="w-10 h-10 rounded-full border border-neutral-700"
                     />
                   )}
