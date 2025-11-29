@@ -102,7 +102,14 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(
           {/* ----------------------------------------------------
               🌐 Liens publics déjà existants
              ---------------------------------------------------- */}
-          {links.map((link: LinkItem) => {
+          {links
+            .filter(
+              (link: LinkItem) =>
+                !['À propos', 'Cast', 'Sponsors', 'Équipes', 'Equipes'].includes(
+                  link.title
+                )
+            )
+            .map((link: LinkItem) => {
             return (
               <Link href={link.ref || '#'} key={link.title}>
                 <div
@@ -148,7 +155,7 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(
                 </div>
               </Link>
             );
-          })}
+            })}
         </div>
       </div>
     );

@@ -110,7 +110,7 @@ function Navbar(): JSX.Element {
 
         if (!session?.access_token) {
           setIsStaff(false);
-          setStaffName("");
+          setStaffName('');
           return;
         }
 
@@ -122,7 +122,7 @@ function Navbar(): JSX.Element {
 
         if (!res.ok) {
           setIsStaff(false);
-          setStaffName("");
+          setStaffName('');
           return;
         }
 
@@ -133,12 +133,12 @@ function Navbar(): JSX.Element {
           setStaffName(me.display_name || me.email || 'Staff');
         } else {
           setIsStaff(false);
-          setStaffName("");
+          setStaffName('');
         }
       } catch (e) {
         console.error('Navbar staff check error:', e);
         setIsStaff(false);
-        setStaffName("");
+        setStaffName('');
       } finally {
         setAdminLoading(false);
       }
@@ -152,7 +152,10 @@ function Navbar(): JSX.Element {
     { title: 'Dashboard admin', ref: '/admin' },
     { title: 'Tournois – liste', ref: '/admin/tournaments' },
     { title: 'Créer un tournoi', ref: '/admin/tournaments/create' },
+    { title: 'Équipes – liste', ref: '/admin/teams' },
     { title: 'Créer une équipe', ref: '/admin/teams/new' },
+    { title: 'Ajouter membre équipe', ref: '/admin/teams/add-member' },
+    { title: 'Créer un utilisateur', ref: '/admin/users/new' },
     { title: 'Demandes joueurs / équipes', ref: '/admin/demandes' },
     { title: 'Logs staff', ref: '/admin/logs' },
     { title: 'Stats équipes', ref: '/admin/stats/teams' },
@@ -204,7 +207,14 @@ function Navbar(): JSX.Element {
           ) : (
             <div className="flex items-center">
               {/* Liens publics existants */}
-              {links.map((link: LinkItem) => (
+              {links
+                .filter(
+                  (link: LinkItem) =>
+                    !['À propos', 'Cast', 'Sponsors', 'Équipes', 'Equipes'].includes(
+                      link.title
+                    )
+                )
+                .map((link: LinkItem) => (
                 <div key={link.title}>
                   <div
                     onMouseEnter={() => handleMouseEnter(link.title)}
@@ -339,7 +349,7 @@ function Navbar(): JSX.Element {
                     )}
                   </div>
                 </div>
-              ))}
+                ))}
 
               {/* ------------------------------------------------
                   🔐 Zone Admin / Connexion staff (desktop only)
@@ -352,7 +362,7 @@ function Navbar(): JSX.Element {
                         href="/admin/login"
                         className="text-sm border border-purple-400/70 rounded-full px-3 py-1 hover:bg-purple-500/20 hover:border-purple-300 transition-colors"
                       >
-                        Connexion staff
+                        Connexion
                       </Link>
                     )}
 

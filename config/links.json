@@ -1,22 +1,18 @@
 [
   {
-    "title": "A propos",
-    "ref": "/#about"
-  },
-  {
-    "title": "Cast",
-    "ref": "/#speakers"
-  },
-  {
-    "title": "Equipes",
-    "ref": "/#teams"
+    "title": "Accueil",
+    "ref": "/"
   },
   {
     "title": "Tournoi",
     "ref": "/tournoi"
   },
   {
-    "title": "Sponsors",
-    "ref": "/#sponsors"
+    "title": "Timeline 2026",
+    "ref": "/timeline-2026"
+  },
+  {
+    "title": "Rediffusions",
+    "ref": "/rediffusions"
   }
 ]

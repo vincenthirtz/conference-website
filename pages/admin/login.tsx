@@ -182,7 +182,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                 </label>
 
                 <Link
-                  href="#"
+                  href="/admin/forgot-password"
                   className="text-xs text-purple-300 hover:text-purple-200 hover:underline"
                 >
                   Mot de passe oublié ?
@@ -216,6 +216,13 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                 <span className="text-gray-200">
                   Contacte l&apos;équipe à owwomenscup@gmail.com.
                 </span>
+                {"  "}
+                <Link
+                  href="/register"
+                  className="text-purple-300 hover:text-purple-200 underline ml-1"
+                >
+                  Créer mon compte
+                </Link>
               </Paragraph>
             </div>
           </div>

@@ -282,20 +282,19 @@ export default function Tournoi() {
       if (!standings || standings.length < 2) return;
       const [t1, t2] = standings;
 
-      // Date de la finale = lendemain du dernier match RR à 20:00
+      // Date de la finale : mercredi 10 décembre à 21h (année basée sur les poules)
       const lastRRDate = matches.reduce(
         (max, m) => Math.max(max, new Date(m.date).getTime()),
         0
       );
-      const finalDate = new Date(lastRRDate);
-      finalDate.setDate(finalDate.getDate() + 1);
-      finalDate.setHours(20, 0, 0, 0);
+      const rrYear = new Date(lastRRDate).getFullYear();
+      const finalDate = new Date(rrYear, 11, 10, 21, 0, 0, 0);
 
       setFinalMatch({
         id: 'FINAL',
         round: standings.length + 1,
         date: finalDate.toISOString(),
-        timeLabel: '20:00',
+        timeLabel: '21:00',
         home: { name: t1.name },
         away: { name: t2.name },
         bo: 5,

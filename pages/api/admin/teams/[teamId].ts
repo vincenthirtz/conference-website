@@ -80,24 +80,7 @@ async function handleGet(
 ) {
   const { data, error } = await supabaseAdmin
     .from("teams")
-    .select(
-      `
-      id,
-      name,
-      slug,
-      short_name,
-      logo_url,
-      banner_url,
-      country,
-      description,
-      twitter,
-      discord,
-      website,
-      is_active,
-      created_at,
-      updated_at
-    `
-    )
+    .select("*")
     .eq("id", id)
     .maybeSingle();
 
