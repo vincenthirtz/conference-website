@@ -14,9 +14,7 @@ type StaffShape = {
   display_name: string | null;
 };
 
-type StaffProps = {
-  staff: StaffShape;
-};type DemandeType = "join_team" | "leave_team";
+type DemandeType = "join_team" | "leave_team";
 
 type DemandeStatus = "pending" | "approved" | "rejected" | "cancelled";
 
@@ -143,7 +141,7 @@ function AdminDemandesPage() {
 
   // 🔐 Guard auth côté client
   const [guardLoading, setGuardLoading] = useState(true);
-  const [staff, setStaff] = useState<StaffProps | null>(null);
+  const [staff, setStaff] = useState<StaffShape | null>(null);
   const [token, setToken] = useState<string | null>(null);
 
   // Données page
@@ -200,11 +198,11 @@ function AdminDemandesPage() {
           return;
         }
 
-       setStaff({
- id: (me.id as string) ?? "",       // on force le type string pour coller à StaffRoleBadge
-  role: me.role ?? "helper",
-  display_name: me.display_name ?? null,
-});
+        setStaff({
+          id: (me.id as string) ?? "",
+          role: me.role ?? "helper",
+          display_name: me.display_name ?? null,
+        });
       } catch (e) {
         console.error("staff guard error", e);
         router.push("/admin/login");
