@@ -36,7 +36,7 @@ export default function RediffusionsPage() {
           <div className="absolute right-10 top-10 w-[360px] h-[360px] rounded-full bg-pink-500/20 blur-3xl" />
         </div>
 
-        <div className="max-w-5xl mx-auto px-6 pt-24 pb-14 relative">
+        <div className="max-w-5xl mx-auto px-6 pt-32 pb-14 relative">
           <p className="text-xs uppercase tracking-[0.24em] text-purple-200/80">
             Rediffusions
           </p>
@@ -49,7 +49,7 @@ export default function RediffusionsPage() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-6 pb-20">
+      <div className="max-w-5xl mx-auto px-6 pb-20 mt-6">
         {replays.length === 0 ? (
           <p className="text-neutral-400 text-sm">
             Aucune rediffusion n&apos;est disponible pour le moment.

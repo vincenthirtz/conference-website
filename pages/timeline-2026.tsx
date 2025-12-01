@@ -1,4 +1,5 @@
 import Head from 'next/head';
+import Link from 'next/link';
 
 type TimelineItem = {
   id: string;
@@ -95,7 +96,7 @@ export default function Timeline2026Page() {
           <div className="absolute right-10 top-10 w-[360px] h-[360px] rounded-full bg-pink-500/20 blur-3xl" />
         </div>
 
-        <div className="max-w-6xl mx-auto px-6 pt-24 pb-16 relative">
+        <div className="max-w-6xl mx-auto px-6 pt-32 pb-16 relative">
           <p className="text-xs uppercase tracking-[0.24em] text-purple-200/80">
             Roadmap 2026
           </p>
@@ -144,13 +145,13 @@ export default function Timeline2026Page() {
                         : 'left-[-1.2rem] md:left-[-0.4rem]'
                     } ${isCurrent ? 'scale-110 ring-4 ring-pink-400/40 animate-pulse' : ''}`}
                   />
-                  <div
-                    className={`bg-neutral-900 border rounded-2xl p-6 shadow-xl shadow-black/20 backdrop-blur ${
-                      isCurrent
-                        ? 'border-pink-400/40 shadow-[0_0_30px_rgba(236,72,153,0.3)]'
-                        : 'border-white/10'
-                    }`}
-                  >
+                <div
+                  className={`bg-neutral-900 border rounded-2xl p-6 shadow-xl shadow-black/20 backdrop-blur ${
+                    isCurrent
+                      ? 'border-pink-400/40 shadow-[0_0_30px_rgba(236,72,153,0.3)]'
+                      : 'border-white/10'
+                  }`}
+                >
                     <div className="flex items-center justify-between gap-3 flex-wrap">
                       <span
                         className={`text-xs uppercase tracking-[0.18em] ${
@@ -181,6 +182,16 @@ export default function Timeline2026Page() {
                     <p className="text-neutral-300 text-sm mt-3 leading-relaxed">
                       {item.description}
                     </p>
+                    {item.id === 'signup' && (
+                      <div className="mt-4">
+                        <Link
+                          href="/team/create"
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-500 text-black hover:bg-emerald-400 transition"
+                        >
+                          Inscrire mon équipe ↗
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 </div>
               );

@@ -398,135 +398,145 @@ export default function Tournoi() {
   }
 
   return (
-    <div className="container mx-auto px-4">
+    <div className="min-h-screen bg-neutral-950 text-white">
       <Head>
         <title>Tournoi – Round Robin (BO3) + Finale (BO5)</title>
       </Head>
 
-      <section className="mt-40">
-        <h1 className="text-3xl md:text-4xl font-extrabold text-gradient">
-          Gestion du tournoi
-        </h1>
-        <p className="text-gray-300 mt-2">
-          Format: 4 équipes · Round Robin en BO3 (6 matchs) · Top 2 en finale
-          BO5.
-        </p>
-      </section>
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute -left-32 -top-32 w-[420px] h-[420px] rounded-full bg-purple-600/30 blur-3xl" />
+          <div className="absolute right-10 top-10 w-[360px] h-[360px] rounded-full bg-pink-500/20 blur-3xl" />
+        </div>
 
-      {/* Classement */}
-      <section className="mt-8">
-        <div className="p-5 rounded-2xl bg-white/5 border border-white/10">
+        <div className="max-w-6xl mx-auto px-6 pt-32 pb-14 relative">
+          <p className="text-xs uppercase tracking-[0.24em] text-purple-200/80">
+            Tournoi
+          </p>
+          <h1 className="text-4xl md:text-5xl font-bold mt-3 leading-tight">
+            Round Robin &amp; Finale
+          </h1>
+          <p className="text-neutral-300 text-lg mt-4 max-w-2xl">
+            4 équipes, 6 matchs de poules en BO3, puis une grande finale en BO5 pour couronner la championne.
+          </p>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-6 pb-20">
+        <section className="mt-6">
           <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white mb-4">
             Classement (Round Robin)
           </h2>
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-base md:text-[17px]">
-              <thead className="text-left text-gray-200 uppercase tracking-wider text-[11px] md:text-xs">
-                <tr className="text-gray-300">
-                  <th className="py-2">#</th>
-                  <th className="py-2">Équipe</th>
-                  <th className="py-2">
-                    <abbr title="Matchs joués">MJ</abbr>
-                  </th>
-                  <th className="py-2">
-                    <abbr title="Victoires">V</abbr>
-                  </th>
-                  <th className="py-2">
-                    <abbr title="Défaites">D</abbr>
-                  </th>
-                  <th className="py-2">
-                    <abbr title="Maps gagnées-perdues">Maps</abbr>
-                  </th>
-                  <th className="py-2">
-                    <abbr title="Différence de maps">Diff</abbr>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/10">
-                {standings.map((r, idx) => (
-                  <tr key={r.name} className="hover:bg-white/5 transition">
-                    <td className="py-2 text-gray-300 tabular-nums">
-                      {idx + 1}
-                    </td>
-                    <td className="py-2">
-                      <TeamBadge
-                        team={
-                          teams.find((t) => t.name === r.name) ?? {
-                            name: r.name,
-                          }
-                        }
-                      />
-                    </td>
-                    <td className="py-2 tabular-nums text-gray-200">{r.mp}</td>
-                    <td className="py-2 font-semibold tabular-nums text-gray-100">
-                      {r.w}
-                    </td>
-                    <td className="py-2 tabular-nums text-gray-300">{r.l}</td>
-                    <td className="py-2">
-                      <MapsChip maps={r.maps} />
-                    </td>
-                    <td className="py-2">
-                      <DiffChip diff={r.diff} />
-                    </td>
+          <div className="p-5 rounded-2xl bg-white/5 border border-white/10">
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-base md:text-[17px]">
+                <thead className="text-left text-gray-200 uppercase tracking-wider text-[11px] md:text-xs">
+                  <tr className="text-gray-300">
+                    <th className="py-2">#</th>
+                    <th className="py-2">Équipe</th>
+                    <th className="py-2">
+                      <abbr title="Matchs joués">MJ</abbr>
+                    </th>
+                    <th className="py-2">
+                      <abbr title="Victoires">V</abbr>
+                    </th>
+                    <th className="py-2">
+                      <abbr title="Défaites">D</abbr>
+                    </th>
+                    <th className="py-2">
+                      <abbr title="Maps gagnées-perdues">Maps</abbr>
+                    </th>
+                    <th className="py-2">
+                      <abbr title="Différence de maps">Diff</abbr>
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-white/10">
+                  {standings.map((r, idx) => (
+                    <tr key={r.name} className="hover:bg-white/5 transition">
+                      <td className="py-2 text-gray-300 tabular-nums">
+                        {idx + 1}
+                      </td>
+                      <td className="py-2">
+                        <TeamBadge
+                          team={
+                            teams.find((t) => t.name === r.name) ?? {
+                              name: r.name,
+                            }
+                          }
+                        />
+                      </td>
+                      <td className="py-2 tabular-nums text-gray-200">{r.mp}</td>
+                      <td className="py-2 font-semibold tabular-nums text-gray-100">
+                        {r.w}
+                      </td>
+                      <td className="py-2 tabular-nums text-gray-300">{r.l}</td>
+                      <td className="py-2">
+                        <MapsChip maps={r.maps} />
+                      </td>
+                      <td className="py-2">
+                        <DiffChip diff={r.diff} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs text-gray-400 mt-3">
+              Tiebreakers: Victoires &gt; Différence de maps &gt; Maps gagnées.
+            </p>
           </div>
-          <p className="text-xs text-gray-400 mt-3">
-            Tiebreakers: Victoires &gt; Différence de maps &gt; Maps gagnées.
-          </p>
-        </div>
-      </section>
+        </section>
 
-      {/* Matchs */}
-      <section className="mt-10">
-        <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white mb-4">
-          Calendrier – Phase de poules (BO3)
-        </h2>
-        <div className="grid md:grid-cols-2 gap-4">
-          {matches.map((m) => (
-            <MatchCard key={m.id} m={m} />
-          ))}
-        </div>
-      </section>
+        {/* Matchs */}
+        <section className="mt-12">
+          <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white mb-4">
+            Calendrier – Phase de poules (BO3)
+          </h2>
+          <div className="grid md:grid-cols-2 gap-4">
+            {matches.map((m) => (
+              <MatchCard key={m.id} m={m} />
+            ))}
+          </div>
+        </section>
 
-      {/* Finale */}
-      <section className="mt-10 mb-20">
-        <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white mb-2">
-          Finale (BO5)
-        </h2>
-        {!finalMatch ? (
-          <p className="text-gray-300">En attente des 6 résultats de poules…</p>
-        ) : (
-          <div className="space-y-3">
-            <div className="text-gray-300">
-              {formatDateHuman(finalMatch.date)}
-            </div>
-            <div className="p-4 rounded-2xl bg-yellow-500/10 border border-yellow-500/20">
-              <div className="text-sm uppercase tracking-wider text-yellow-300 mb-2">
-                BO5 – Premier à 3
+        {/* Finale */}
+        <section className="mt-12">
+          <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white mb-2">
+            Finale (BO5)
+          </h2>
+          {!finalMatch ? (
+            <p className="text-gray-300">En attente des 6 résultats de poules…</p>
+          ) : (
+            <div className="space-y-3">
+              <div className="text-gray-300">
+                {formatDateHuman(finalMatch.date)}
               </div>
-              <div className="flex items-center justify-between gap-4">
-                <TeamBadge team={finalMatch.home} />
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-white/10 border border-white/15 font-mono text-sm tabular-nums">
-                  {isCountable(finalMatch)
-                    ? `${finalMatch.result!.home}–${finalMatch.result!.away}`
-                    : '—'}
-                </span>
-                <TeamBadge team={finalMatch.away} />
-              </div>
-            </div>
-            {champion && (
-              <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
-                <div className="text-emerald-300 font-semibold">
-                  🏆 Champion: {champion}
+              <div className="p-4 rounded-2xl bg-yellow-500/10 border border-yellow-500/20">
+                <div className="text-sm uppercase tracking-wider text-yellow-300 mb-2">
+                  BO5 – Premier à 3
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <TeamBadge team={finalMatch.home} />
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-white/10 border border-white/15 font-mono text-sm tabular-nums">
+                    {isCountable(finalMatch)
+                      ? `${finalMatch.result!.home}–${finalMatch.result!.away}`
+                      : '—'}
+                  </span>
+                  <TeamBadge team={finalMatch.away} />
                 </div>
               </div>
-            )}
-          </div>
-        )}
-      </section>
+              {champion && (
+                <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
+                  <div className="text-emerald-300 font-semibold">
+                    🏆 Champion: {champion}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

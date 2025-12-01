@@ -172,11 +172,11 @@ function Navbar(): JSX.Element {
   return (
     <div className="relative">
       <div
-        className={`container flex justify-center fixed items-center w-full backdrop-blur ${
+        className={`fixed inset-x-0 top-0 z-[99] text-white backdrop-blur ${
           drop && 'bg-[#1B1130]/90'
-        } top-0 z-[99] text-white`}
+        }`}
       >
-        <div className="p-5 flex justify-between h-[75px] w-full items-center">
+        <div className="mx-auto max-w-7xl px-4 py-5 flex justify-between h-[75px] w-full items-center">
           <div
             className="flex items-center sm:justify-between sm:w-full z-[99]"
             data-test="nav-Home"
