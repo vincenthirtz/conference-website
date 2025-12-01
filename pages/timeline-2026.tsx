@@ -103,9 +103,8 @@ export default function Timeline2026Page() {
             Toutes les étapes jusqu&apos;aux finales 2026
           </h1>
           <p className="text-neutral-300 text-lg mt-4 max-w-2xl">
-            Suis le déroulé de la saison : inscriptions, qualifiers, playoffs et
-            grande finale. Chaque jalon sera détaillé et mis à jour en temps
-            réel.
+            Suis le déroulé de la saison : inscriptions, playoffs et grande
+            finale. Chaque jalon sera détaillé et mis à jour en temps réel.
           </p>
         </div>
       </div>
