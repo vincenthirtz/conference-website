@@ -44,9 +44,7 @@ export default function RediffusionsPage() {
             Revivez l&apos;édition 2025
           </h1>
           <p className="text-neutral-300 text-lg mt-4 max-w-2xl">
-            Finales, meilleurs moments et VOD officielles. Remplace les IDs
-            YouTube dans le tableau <code className="font-mono">replays</code>{' '}
-            si une vidéo ne s&apos;affiche pas.
+            Finales, meilleurs moments et VOD officielles.
           </p>
         </div>
       </div>
