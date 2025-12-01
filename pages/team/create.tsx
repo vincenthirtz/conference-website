@@ -91,7 +91,7 @@ export default function PublicCreateTeamPage() {
   return (
     <>
       <Head>
-        <title>Créer une équipe | OW Women's Cup</title>
+        <title>Créer une équipe | OW Women&apos;s Cup</title>
         <meta
           name="description"
           content="Crée une équipe et ajoute rapidement ton premier membre."
@@ -140,14 +140,14 @@ export default function PublicCreateTeamPage() {
                     <h2 className="text-xl font-semibold">Détails principaux</h2>
                   </div>
                   <Link href="/" className="text-sm text-gray-300 hover:text-white">
-                    ← Retour à l'accueil
+                    ← Retour à l&apos;accueil
                   </Link>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-gray-300 mb-2">
-                      Nom de l'équipe *
+                      Nom de l&apos;équipe *
                     </label>
                     <input
                       required
@@ -241,7 +241,7 @@ export default function PublicCreateTeamPage() {
                 <div className="flex items-center justify-between flex-wrap gap-3">
                   <div>
                     <p className="text-[11px] uppercase tracking-[0.14em] text-gray-400">Premier membre</p>
-                    <h3 className="text-lg font-semibold">Ajouter quelqu'un tout de suite</h3>
+                    <h3 className="text-lg font-semibold">Ajouter quelqu&apos;un tout de suite</h3>
                   </div>
                   <span className="text-xs text-gray-400">Optionnel mais recommandé</span>
                 </div>
@@ -259,7 +259,7 @@ export default function PublicCreateTeamPage() {
                       placeholder="utilisateur@email.tld"
                     />
                     <p className="text-xs text-gray-400 mt-1">
-                      L'utilisateur doit déjà avoir un compte; nous le recherchons par email.
+                      L&apos;utilisateur doit déjà avoir un compte; nous le recherchons par email.
                     </p>
                   </div>
 
@@ -304,11 +304,11 @@ export default function PublicCreateTeamPage() {
                       : "bg-emerald-500 hover:bg-emerald-400 text-black"
                   }`}
                 >
-                  {loading ? "Création..." : "Créer l'équipe"}
+                  {loading ? "Création..." : "Créer l&apos;équipe"}
                 </button>
 
                 <Link href="/" className="text-sm text-gray-300 hover:text-white">
-                  Retour à l'accueil
+                  Retour à l&apos;accueil
                 </Link>
               </div>
             </form>
@@ -349,13 +349,13 @@ export default function PublicCreateTeamPage() {
                 </div>
               ) : (
                 <p className="text-sm text-gray-300">
-                  Après validation, l'équipe créée et le membre lié (si fourni) s'afficheront ici.
+                  Après validation, l&apos;équipe créée et le membre lié (si fourni) s&apos;afficheront ici.
                 </p>
               )}
 
               <div className="text-xs text-gray-400 space-y-1">
                 <p>• Le membre est recherché par email dans Supabase auth.</p>
-                <p>• Active "Capitaine" uniquement si un email est renseigné.</p>
+                <p>• Active &quot;Capitaine&quot; uniquement si un email est renseigné.</p>
                 <p>• Le slug est généré automatiquement à partir du nom.</p>
               </div>
             </aside>
