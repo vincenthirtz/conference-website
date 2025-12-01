@@ -16,15 +16,17 @@ type Body = {
   set_captain?: boolean;
 };
 
+type MemberResult = {
+  id: string | null;
+  user_id: string;
+  role: string;
+  captain: boolean;
+};
+
 type ApiResponse =
   | {
       team: Record<string, any>;
-      member?: {
-        id: string | null;
-        user_id: string;
-        role: string;
-        captain: boolean;
-      };
+      member?: MemberResult;
       info?: string;
     }
   | { error: string };
@@ -151,7 +153,7 @@ export default async function handler(
     });
   }
 
-  let memberResult: ApiResponse["member"] | undefined;
+  let memberResult: MemberResult | undefined;
 
   if (resolvedUserId) {
     const role = body.member_role?.trim() || "player";
