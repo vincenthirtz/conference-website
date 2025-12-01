@@ -36,6 +36,16 @@ You can start editing the page by modifying `pages/index.js`. The page auto-upda
 
 The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/api-routes/introduction) instead of React pages.
 
+## Environment variables
+
+- Copy `example.env.local` to `.env.local` and fill it with your project values.
+- Required keys:
+  - `NEXT_PUBLIC_SUPABASE_URL`: Supabase project URL.
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Supabase public anon key.
+  - `SUPABASE_SERVICE_ROLE_KEY`: Supabase service role key (server only, keep it secret).
+  - `NEXT_PUBLIC_FORMSPREE_ID`: Formspree form id (e.g. `f/xxxxxxx`).
+- Netlify/CI: add the same variables in your build environment. `NEXT_PUBLIC_*` values must exist at build time or `next build` will fail with the Supabase env error.
+
 ## AsyncAPI Contributors ✨
 
 Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
