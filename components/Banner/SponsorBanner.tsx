@@ -4,6 +4,7 @@ import Link from 'next/link';
 import teams from '@/config/teams.json';
 
 export default function TeamsBanner() {
+  const teamsWithoutPub = teams.filter((t) => !t.pub);
   return (
     <div className="sponsor-bg  text-center" data-test="sponsor-section">
       <div className="flex flex-col items-center">
@@ -17,7 +18,7 @@ export default function TeamsBanner() {
               ease: 'linear',
             }}
           >
-            {[...teams, ...teams].map((team, index) => (
+            {[...teamsWithoutPub].map((team, index) => (
               <Link
                 key={index}
                 href={team.link}
