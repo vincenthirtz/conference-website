@@ -290,20 +290,23 @@ export default function Tournoi() {
       const rrYear = new Date(lastRRDate).getFullYear();
       const finalDate = new Date(rrYear, 11, 10, 21, 0, 0, 0);
 
+      const homeTeam = teams.find((t) => t.name === t1.name) || { name: t1.name };
+      const awayTeam = teams.find((t) => t.name === t2.name) || { name: t2.name };
+
       setFinalMatch({
         id: 'FINAL',
         round: standings.length + 1,
         date: finalDate.toISOString(),
         timeLabel: '21:00',
-        home: { name: t1.name },
-        away: { name: t2.name },
+        home: homeTeam,
+        away: awayTeam,
         bo: 5,
         result: finalResult || undefined,
       });
     } catch (err) {
       console.error('Erreur génération finale:', err);
     }
-  }, [matches, standings]);
+  }, [matches, standings, teams]);
 
   const champion = useMemo(() => {
     if (!finalMatch?.result) return null;
