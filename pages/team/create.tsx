@@ -1,6 +1,6 @@
-import { useState } from "react";
-import Head from "next/head";
-import Link from "next/link";
+import { useState } from 'react';
+import Head from 'next/head';
+import Link from 'next/link';
 
 type CreateResponse = {
   team: {
@@ -8,32 +8,77 @@ type CreateResponse = {
     name: string;
     slug?: string | null;
   };
-  member?: {
+  members?: {
     id: string | null;
     user_id: string;
     role: string;
     captain: boolean;
-  };
+  }[];
   info?: string;
   error?: string;
 };
 
-export default function PublicCreateTeamPage() {
-  const [name, setName] = useState("");
-  const [shortName, setShortName] = useState("");
-  const [country, setCountry] = useState("");
-  const [logoUrl, setLogoUrl] = useState("");
-  const [website, setWebsite] = useState("");
-  const [description, setDescription] = useState("");
-  const [discord, setDiscord] = useState("");
+type MemberForm = {
+  id: string;
+  email: string;
+  role: string;
+};
 
-  const [memberEmail, setMemberEmail] = useState("");
-  const [memberRole, setMemberRole] = useState("player");
-  const [setCaptain, setSetCaptain] = useState(true);
+export default function PublicCreateTeamPage() {
+  const [name, setName] = useState('');
+  const [shortName, setShortName] = useState('');
+  const [country, setCountry] = useState('');
+  const [logoUrl, setLogoUrl] = useState('');
+  const [website, setWebsite] = useState('');
+  const [description, setDescription] = useState('');
+  const [discord, setDiscord] = useState('');
+  const [members, setMembers] = useState<MemberForm[]>([
+    { id: 'm-0', email: '', role: 'player' },
+  ]);
+  const [captainIndex, setCaptainIndex] = useState<number | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [result, setResult] = useState<CreateResponse | null>(null);
+
+  function addMemberRow() {
+    setMembers((prev) => {
+      if (prev.length >= 5) return prev;
+      return [
+        ...prev,
+        {
+          id: `m-${Date.now().toString(36)}-${prev.length}`,
+          email: '',
+          role: 'player',
+        },
+      ];
+    });
+  }
+
+  function removeMemberRow(index: number) {
+    setMembers((prev) => {
+      if (prev.length === 1) return prev;
+      const next = prev.filter((_, i) => i !== index);
+      if (captainIndex !== null) {
+        if (captainIndex === index) {
+          setCaptainIndex(null);
+        } else if (index < captainIndex) {
+          setCaptainIndex(captainIndex - 1);
+        }
+      }
+      return next;
+    });
+  }
+
+  function handleMemberChange(
+    index: number,
+    field: keyof MemberForm,
+    value: string
+  ) {
+    setMembers((prev) =>
+      prev.map((m, i) => (i === index ? { ...m, [field]: value } : m))
+    );
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -42,6 +87,14 @@ export default function PublicCreateTeamPage() {
     setResult(null);
 
     try {
+      const preparedMembers = members
+        .map((m, idx) => ({
+          email: m.email.trim(),
+          role: m.role.trim() || 'player',
+          set_captain: captainIndex === idx,
+        }))
+        .filter((m) => m.email.length > 0);
+
       const payload = {
         name,
         short_name: shortName || null,
@@ -50,14 +103,12 @@ export default function PublicCreateTeamPage() {
         website: website || null,
         description: description || null,
         discord: discord || null,
-        member_email: memberEmail.trim() || null,
-        member_role: memberRole.trim() || null,
-        set_captain: Boolean(memberEmail.trim()) && setCaptain,
+        members: preparedMembers,
       };
 
-      const res = await fetch("/api/teams/create-with-member", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/teams/create-with-member', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
@@ -69,18 +120,17 @@ export default function PublicCreateTeamPage() {
       }
 
       setResult(json);
-      setName("");
-      setShortName("");
-      setCountry("");
-      setLogoUrl("");
-      setWebsite("");
-      setDescription("");
-      setDiscord("");
-      setMemberEmail("");
-      setMemberRole("player");
-      setSetCaptain(true);
+      setName('');
+      setShortName('');
+      setCountry('');
+      setLogoUrl('');
+      setWebsite('');
+      setDescription('');
+      setDiscord('');
+      setMembers([{ id: 'm-0', email: '', role: 'player' }]);
+      setCaptainIndex(null);
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur inattendue");
+      setErrorMsg(err?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
@@ -94,7 +144,7 @@ export default function PublicCreateTeamPage() {
         <title>Créer une équipe | OW Women&apos;s Cup</title>
         <meta
           name="description"
-          content="Crée une équipe et ajoute rapidement ton premier membre."
+          content="Crée une équipe et ajoute rapidement ton roster complet."
         />
       </Head>
 
@@ -109,15 +159,20 @@ export default function PublicCreateTeamPage() {
             </div>
             <h1 className="text-3xl md:text-4xl font-bold">Créer une équipe</h1>
             <p className="text-sm text-gray-300 max-w-2xl mx-auto">
-              Ajoute les infos principales de ton équipe et lie directement un premier membre (email déjà enregistré sur la plateforme).
+              Ajoute les infos principales de ton équipe et, si tu veux,
+              renseigne tout le roster (emails existants ou comptes créés
+              automatiquement) en une seule fois.
             </p>
           </header>
 
           <div className="mb-8 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.14em] text-emerald-200/80">Inscriptions équipes</p>
+              <p className="text-[11px] uppercase tracking-[0.14em] text-emerald-200/80">
+                Inscriptions équipes
+              </p>
               <p className="text-sm text-emerald-50/90">
-                Les jalons et dates clés sont détaillés dans la roadmap. Consulte la timeline 2026 pour anticiper les prochaines étapes.
+                Les jalons et dates clés sont détaillés dans la roadmap.
+                Consulte la timeline 2026 pour anticiper les prochaines étapes.
               </p>
             </div>
             <Link
@@ -136,10 +191,17 @@ export default function PublicCreateTeamPage() {
               <section className="space-y-4">
                 <div className="flex items-center justify-between flex-wrap gap-3">
                   <div>
-                    <p className="text-[11px] uppercase tracking-[0.14em] text-gray-400">Informations équipe</p>
-                    <h2 className="text-xl font-semibold">Détails principaux</h2>
+                    <p className="text-[11px] uppercase tracking-[0.14em] text-gray-400">
+                      Informations équipe
+                    </p>
+                    <h2 className="text-xl font-semibold">
+                      Détails principaux
+                    </h2>
                   </div>
-                  <Link href="/" className="text-sm text-gray-300 hover:text-white">
+                  <Link
+                    href="/"
+                    className="text-sm text-gray-300 hover:text-white"
+                  >
                     ← Retour à l&apos;accueil
                   </Link>
                 </div>
@@ -240,52 +302,97 @@ export default function PublicCreateTeamPage() {
               <section className="space-y-4">
                 <div className="flex items-center justify-between flex-wrap gap-3">
                   <div>
-                    <p className="text-[11px] uppercase tracking-[0.14em] text-gray-400">Premier membre</p>
-                    <h3 className="text-lg font-semibold">Ajouter quelqu&apos;un tout de suite</h3>
-                  </div>
-                  <span className="text-xs text-gray-400">Optionnel mais recommandé</span>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-gray-300 mb-2">
-                      Email du membre
-                    </label>
-                    <input
-                      type="email"
-                      value={memberEmail}
-                      onChange={(e) => setMemberEmail(e.target.value)}
-                      className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/70 focus:border-emerald-400/70 transition"
-                      placeholder="utilisateur@email.tld"
-                    />
-                    <p className="text-xs text-gray-400 mt-1">
-                      L&apos;utilisateur doit déjà avoir un compte; nous le recherchons par email.
+                    <p className="text-[11px] uppercase tracking-[0.14em] text-gray-400">
+                      Roster (optionnel)
                     </p>
+                    <h3 className="text-lg font-semibold">
+                      Ajouter plusieurs joueuses
+                    </h3>
                   </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-gray-300 mb-2">
-                      Rôle
-                    </label>
-                    <input
-                      value={memberRole}
-                      onChange={(e) => setMemberRole(e.target.value)}
-                      className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/70 focus:border-emerald-400/70 transition"
-                      placeholder="player / coach / sub"
-                    />
-                  </div>
+                  <span className="text-xs text-gray-400">
+                    Jusqu&apos;à 5 personnes
+                  </span>
                 </div>
 
-                <label className="inline-flex items-center gap-2 text-sm text-gray-200">
-                  <input
-                    type="checkbox"
-                    checked={setCaptain}
-                    onChange={(e) => setSetCaptain(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-500 bg-black/60"
-                    disabled={!memberEmail.trim()}
-                  />
-                  <span>Désigner ce membre comme capitaine</span>
-                </label>
+                <div className="space-y-3">
+                  {members.map((member, idx) => (
+                    <div
+                      key={member.id}
+                      className="rounded-xl border border-white/10 bg-white/5 p-3 grid gap-3 md:grid-cols-[1.2fr_0.9fr_auto] items-center"
+                    >
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-gray-300 mb-1">
+                          Email {idx + 1}
+                        </label>
+                        <input
+                          type="email"
+                          value={member.email}
+                          onChange={(e) =>
+                            handleMemberChange(idx, 'email', e.target.value)
+                          }
+                          className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/70 focus:border-emerald-400/70 transition"
+                          placeholder="joueuse@email.tld"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-gray-300 mb-1">
+                          Rôle
+                        </label>
+                        <input
+                          value={member.role}
+                          onChange={(e) =>
+                            handleMemberChange(idx, 'role', e.target.value)
+                          }
+                          className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/70 focus:border-emerald-400/70 transition"
+                          placeholder="player / coach / sub"
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-2 justify-between">
+                        <label className="inline-flex items-center gap-2 text-xs text-gray-200">
+                          <input
+                            type="radio"
+                            name="captain"
+                            checked={captainIndex === idx}
+                            onChange={() => setCaptainIndex(idx)}
+                            className="h-4 w-4 rounded-full border-gray-500 bg-black/60"
+                          />
+                          <span>Capitaine</span>
+                        </label>
+                        {members.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeMemberRow(idx)}
+                            className="text-xs text-gray-400 hover:text-white"
+                          >
+                            Retirer
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={addMemberRow}
+                    disabled={members.length >= 5}
+                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
+                      members.length >= 5
+                        ? 'bg-neutral-800 text-neutral-500 cursor-not-allowed'
+                        : 'bg-emerald-500/20 border border-emerald-400/40 text-emerald-100'
+                    }`}
+                  >
+                    Ajouter une personne
+                  </button>
+                  <p className="text-xs text-gray-400">
+                    On recherche l&apos;utilisateur par email ; si aucun compte
+                    n&apos;existe, il est créé automatiquement avant d&apos;être
+                    ajouté.
+                  </p>
+                </div>
               </section>
 
               {errorMsg && (
@@ -300,14 +407,17 @@ export default function PublicCreateTeamPage() {
                   disabled={loading}
                   className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition ${
                     loading
-                      ? "bg-neutral-700 cursor-not-allowed"
-                      : "bg-emerald-500 hover:bg-emerald-400 text-black"
+                      ? 'bg-neutral-700 cursor-not-allowed'
+                      : 'bg-emerald-500 hover:bg-emerald-400 text-black'
                   }`}
                 >
-                  {loading ? "Création..." : "Créer l&apos;équipe"}
+                  {loading ? 'Création...' : "Créer l'équipe"}
                 </button>
 
-                <Link href="/" className="text-sm text-gray-300 hover:text-white">
+                <Link
+                  href="/"
+                  className="text-sm text-gray-300 hover:text-white"
+                >
                   Retour à l&apos;accueil
                 </Link>
               </div>
@@ -319,12 +429,15 @@ export default function PublicCreateTeamPage() {
               {result ? (
                 <div className="space-y-2 text-sm">
                   <div className="rounded-xl border border-emerald-500/60 bg-emerald-500/10 px-3 py-2 text-emerald-100">
-                    {result.info || "Équipe créée"}
+                    {result.info || 'Équipe créée'}
                   </div>
                   <p className="text-gray-300">
-                    Équipe : <span className="font-semibold">{result.team.name}</span>
+                    Équipe :{' '}
+                    <span className="font-semibold">{result.team.name}</span>
                   </p>
-                  <p className="text-gray-400 text-xs break-all">ID : {result.team.id}</p>
+                  <p className="text-gray-400 text-xs break-all">
+                    ID : {result.team.id}
+                  </p>
                   {teamSlug && (
                     <Link
                       href={`/team/${teamSlug}`}
@@ -334,28 +447,41 @@ export default function PublicCreateTeamPage() {
                     </Link>
                   )}
 
-                  {result.member && (
-                    <div className="mt-3 rounded-xl border border-white/10 bg-white/5 px-3 py-3 space-y-1">
-                      <p className="text-sm font-semibold">Membre ajouté</p>
-                      <p className="text-xs text-gray-300">
-                        user_id : <span className="font-mono break-all">{result.member.user_id}</span>
-                      </p>
-                      <p className="text-xs text-gray-300">role : {result.member.role}</p>
-                      <p className="text-xs text-gray-300">
-                        capitaine : {result.member.captain ? "oui" : "non"}
-                      </p>
+                  {result.members && result.members.length > 0 && (
+                    <div className="mt-3 rounded-xl border border-white/10 bg-white/5 px-3 py-3 space-y-2">
+                      <p className="text-sm font-semibold">Membres ajoutés</p>
+                      <ul className="space-y-1 text-xs text-gray-300">
+                        {result.members.map((m) => (
+                          <li
+                            key={`${m.user_id}-${m.id ?? 'new'}`}
+                            className="flex flex-wrap items-center gap-2"
+                          >
+                            <span className="font-mono break-all">
+                              {m.user_id}
+                            </span>
+                            <span className="text-gray-400">·</span>
+                            <span>role : {m.role}</span>
+                            <span className="text-gray-400">·</span>
+                            <span>capitaine : {m.captain ? 'oui' : 'non'}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   )}
                 </div>
               ) : (
                 <p className="text-sm text-gray-300">
-                  Après validation, l&apos;équipe créée et le membre lié (si fourni) s&apos;afficheront ici.
+                  Après validation, l&apos;équipe créée et les membres liés (si
+                  fournis) s&apos;afficheront ici.
                 </p>
               )}
 
               <div className="text-xs text-gray-400 space-y-1">
-                <p>• Le membre est recherché par email dans Supabase auth.</p>
-                <p>• Active &quot;Capitaine&quot; uniquement si un email est renseigné.</p>
+                <p>
+                  • Les membres sont recherchés par email dans Supabase auth; un
+                  compte est créé si besoin.
+                </p>
+                <p>• Sélectionne un capitaine dans la liste si besoin.</p>
                 <p>• Le slug est généré automatiquement à partir du nom.</p>
               </div>
             </aside>
