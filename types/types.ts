@@ -44,7 +44,7 @@ export interface Speaker {
   img: string;
   id: number;
   city: string[];
-  pub: Boolean;
+  pub?: boolean;
 }
 
 export interface Social {
@@ -61,5 +61,5 @@ export interface Team {
   id: number;
   city: string[];
   color?: string;
-  pub: Boolean;
+  pub?: boolean;
 }
