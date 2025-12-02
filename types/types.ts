@@ -51,3 +51,13 @@ export interface Social {
   href: string;
   imgUrl: string;
 }
+
+export interface Team {
+  name: string;
+  title: string;
+  link: string;
+  img: string;
+  id: number;
+  city: string[];
+  color?: string;
+}

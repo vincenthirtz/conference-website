@@ -9,12 +9,6 @@ interface ISpeaker {
 }
 
 function Speaker({ details, location, className }: ISpeaker): JSX.Element {
-  function getName(names: string[]) {
-    return `${names[0]} ${names[1]}`;
-  }
-  const shortenedName =
-    details.name.length > 20 ? getName(details.name.split(' ')) : details.name;
-
   return (
     <div
       className={`w-auto text-center flex flex-col items-center card rounded-md p-[27px] ${className}`}
@@ -31,15 +25,30 @@ function Speaker({ details, location, className }: ISpeaker): JSX.Element {
         />
       </div>
       <div className="mt-[19px]">
-        <a href={details.link} target="_blank" rel="noreferrer">
-          <h3 className="text-[23px] text-white">{shortenedName}</h3>
-        </a>
+        {!details.pub ? (
+          <a href={details.link} target="_blank" rel="noreferrer">
+            <h3 className="text-[23px] text-white">{details.name}</h3>
+          </a>
+        ) : (
+          <a href={details.link} rel="noreferrer">
+            <h3 className="text-[23px] text-white">{details.name}</h3>
+          </a>
+        )}
+
         <div className={`flex flex-col ${'min-h-[150px]'} justify-between`}>
           <div>
             {' '}
-            <p className="mt-[6.6px] text-[18px] text-gray-500">
-              {details.title}
-            </p>
+            {!details.pub ? (
+              <p className="mt-[6.6px] text-[18px] text-gray-500">
+                {details.title}
+              </p>
+            ) : (
+              <a href={details.link} rel="noreferrer">
+                <p className="mt-[6.6px] text-[18px] text-gray-500">
+                  Cliques ici
+                </p>
+              </a>
+            )}
           </div>
           <div>
             <p className="mt-[6.6px] text-[20px] text-gradient">{location}</p>

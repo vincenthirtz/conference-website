@@ -3,7 +3,7 @@
     "name": "Phénix",
     "title": "LiliOtpMercy ImBanshee PandaPop MissDibule LaKiiroi (c)",
     "img": "/img/teams-images/phenix.png",
-    "link": "https://battlefy.com/teams/68f275eac45c74002805e2fe",
+    "link": "",
     "id": 1,
     "city": ["France"],
     "color": "#A855F7"
@@ -12,7 +12,7 @@
     "name": "Avoidgers",
     "title": "Shaki Tanouille18 Yamatorochii Eiko Claro (c)",
     "img": "/img/teams-images/avoidgers.png",
-    "link": "https://battlefy.com/teams/68f7972567dabd0117d8303d",
+    "link": "",
     "id": 2,
     "city": ["France", "Suisse"],
     "color": "#EC4899"
@@ -21,7 +21,7 @@
     "name": "Onna Bugeisha",
     "title": "ZezzDeCitron Sayhun Miks38 Jaz Hyuuka (c)",
     "img": "/img/teams-images/onna.png",
-    "link": "https://battlefy.com/teams/68f275eac45c74002805e2fe",
+    "link": "",
     "id": 3,
     "city": ["France"],
     "color": "#38BDF8"
@@ -30,9 +30,19 @@
     "name": "Sparkles",
     "title": "Asa Saro Mawell LuxuWu MissKiwiii (c)",
     "img": "/img/teams-images/sparkles.png",
-    "link": "https://battlefy.com/teams/68f275eac45c74002805e2fe",
+    "link": "",
     "id": 4,
     "city": ["France"],
     "color": "#FACC15"
+  },
+   {
+    "name": "Envie de rejoindre le tournoi ?",
+    "title": "",
+    "img": "/img/esport.jpg",
+    "link": "",
+    "id": 5,
+    "city": [""],
+    "color": "#FACC15",
+    "pub": true
   }
 ]

@@ -1,6 +1,6 @@
 /* eslint-disable react/no-unescaped-entities */
 /* eslint-disable @next/next/no-img-element */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useMediaQuery } from 'react-responsive';
 import Header from '@/components/Header/header';
@@ -9,13 +9,12 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Subscription from '@/components/Form/subscription';
 import Speaker from '@/components/Speaker/speaker';
+import Team from '@/components/Team/Team';
 import teams from '@/config/teams.json';
 import speakers from '@/config/speakers.json';
 import Link from 'next/link';
 import Button from '@/components/Buttons/button';
-import Dropdown from '@/components/Dropdown/dropdown';
 import { City } from '../types/types';
-import Popup from '@/components/Popup/popup';
 import Contact from '@/components/Form/Contact';
 import SponsorBanner from '@/components/Banner/SponsorBanner';
 
@@ -26,6 +25,13 @@ export default function Home() {
   const [currentCity, setCurrentCity] = useState<Partial<City>>({
     name: 'All',
   });
+  const [twitchParent, setTwitchParent] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setTwitchParent(window.location.hostname);
+    }
+  }, []);
 
   const handleSpeakers = (city: string) => {
     if (city && city !== 'all') {
@@ -196,11 +202,11 @@ export default function Home() {
                       return (
                         <Link
                           key={`team-${team.name}`} // ✅ la clé est au niveau racine retourné
-                          href={`/team/${slug}`}
+                          href={!team.pub ? `/team/${slug}` : '#contact'}
                           className="group relative"
                         >
                           <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition blur-2xl bg-white/10 pointer-events-none" />
-                          <Speaker
+                          <Team
                             details={team}
                             location={
                               currentCity.name !== 'All'
@@ -281,6 +287,39 @@ export default function Home() {
                   A suivre prochainement sur Twitch gratuitement
                 </Paragraph>
               </div>
+              {twitchParent && (
+                <div className="mt-8 grid gap-6 md:grid-cols-2 w-full">
+                  {[
+                    { channel: 'crocheh', label: 'Crocheh' },
+                    { channel: 'arukdo', label: 'Arukdo' },
+                  ].map(({ channel, label }) => (
+                    <div
+                      key={channel}
+                      className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
+                    >
+                      <div className="flex items-center justify-between px-4 py-3 bg-white/5 border-b border-white/10">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                          <span
+                            className="w-2 h-2 rounded-full bg-red-400 animate-pulse"
+                            aria-hidden
+                          />
+                          <span>Live {label}</span>
+                        </div>
+                        <span className="text-xs text-gray-300">Twitch</span>
+                      </div>
+                      <div className="relative w-full pt-[56.25%] bg-black">
+                        <iframe
+                          title={`Twitch live ${label}`}
+                          src={`https://player.twitch.tv/?channel=${channel}&parent=${twitchParent}&muted=true`}
+                          allowFullScreen
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          className="absolute inset-0 w-full h-full"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

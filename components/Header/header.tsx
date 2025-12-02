@@ -33,7 +33,7 @@ function Header(): JSX.Element {
               </div>
               <div className="mt-[54px] relative flex items-center justify-center">
                 <Link
-                  href="https://battlefy.com/ow-women’s-cup/ow-women’s-cup-2025/68e762e82fb71c00210da40b/info"
+                  href="https://discord.gg/gERSsjC3Vd"
                   target="_blank"
                 >
                   <Button type="button" className="w-[250px]">

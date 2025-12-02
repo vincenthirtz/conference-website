@@ -14,5 +14,14 @@
     "link": "https://www.twitch.tv/crocheh",
     "id": 3,
     "city": ["Suisse"]
+  },
+   {
+    "name": "Envie de rejoindre le cast ?",
+    "title": "",
+    "img": "/img/mic.jpg",
+    "link": "#contact",
+    "id": 3,
+    "city": [""],
+    "pub": true
   }
 ]

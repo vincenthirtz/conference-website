@@ -154,13 +154,22 @@ export default function Contact({ className = '' }: { className?: string }) {
             <label htmlFor="subject" className="text-gray-200">
               Sujet
             </label>
-            <input
+            <select
               id="subject"
               name="subject"
               required
-              className="w-full rounded-xl bg-[#0b1020] border border-white/10 px-4 py-3 text-white outline-none focus:ring-2 focus:ring-blue-400/70 focus:border-transparent"
-              placeholder="Demande d’informations"
-            />
+              className="w-full rounded-xl bg-[#0b1020] border border-white/10 px-4 py-3 text-white outline-none focus:ring-2 focus:ring-blue-400/70 focus:border-transparent cursor-pointer"
+              defaultValue=""
+            >
+              <option value="" disabled>
+                Choisir un sujet
+              </option>
+              <option value="cast">Rejoindre le cast / desk</option>
+              <option value="tournoi">Infos tournoi / règles</option>
+              <option value="teams">Inscription équipe</option>
+              <option value="partenariat">Partenariat / sponsor</option>
+              <option value="autre">Autre question</option>
+            </select>
           </div>
 
           <div className="grid gap-2">
