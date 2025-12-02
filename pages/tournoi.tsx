@@ -77,13 +77,11 @@ function isCountable(m: Match): boolean {
 
 export default function Tournoi() {
   const teams: Team[] = useMemo<Team[]>(() => {
-    const base = (teamsData as any[])
-      .slice(0, 4)
-      .map((t) => ({
-        name: t.name as string,
-        img: t.img as string,
-        color: (t as any).color as string,
-      }));
+    const base = (teamsData as any[]).slice(0, 4).map((t) => ({
+      name: t.name as string,
+      img: t.img as string,
+      color: (t as any).color as string,
+    }));
     while (base.length < 4)
       base.push({
         name: `Équipe ${base.length + 1}`,
@@ -290,8 +288,12 @@ export default function Tournoi() {
       const rrYear = new Date(lastRRDate).getFullYear();
       const finalDate = new Date(rrYear, 11, 10, 21, 0, 0, 0);
 
-      const homeTeam = teams.find((t) => t.name === t1.name) || { name: t1.name };
-      const awayTeam = teams.find((t) => t.name === t2.name) || { name: t2.name };
+      const homeTeam = teams.find((t) => t.name === t1.name) || {
+        name: t1.name,
+      };
+      const awayTeam = teams.find((t) => t.name === t2.name) || {
+        name: t2.name,
+      };
 
       setFinalMatch({
         id: 'FINAL',
@@ -420,7 +422,8 @@ export default function Tournoi() {
             Round Robin &amp; Finale
           </h1>
           <p className="text-neutral-300 text-lg mt-4 max-w-2xl">
-            4 équipes, 6 matchs de poules en BO3, puis une grande finale en BO5 pour couronner la championne.
+            4 équipes, 6 matchs de poules en BO3, puis une grande finale en BO5
+            pour couronner la championne.
           </p>
         </div>
       </div>
@@ -469,7 +472,9 @@ export default function Tournoi() {
                           }
                         />
                       </td>
-                      <td className="py-2 tabular-nums text-gray-200">{r.mp}</td>
+                      <td className="py-2 tabular-nums text-gray-200">
+                        {r.mp}
+                      </td>
                       <td className="py-2 font-semibold tabular-nums text-gray-100">
                         {r.w}
                       </td>
@@ -509,14 +514,16 @@ export default function Tournoi() {
             Finale (BO5)
           </h2>
           {!finalMatch ? (
-            <p className="text-gray-300">En attente des 6 résultats de poules…</p>
+            <p className="text-gray-300">
+              En attente des 6 résultats de poules…
+            </p>
           ) : (
             <div className="space-y-3">
               <div className="text-gray-300">
                 {formatDateHuman(finalMatch.date)}
               </div>
               <div className="p-4 rounded-2xl bg-yellow-500/10 border border-yellow-500/20">
-                <div className="text-sm uppercase tracking-wider text-yellow-300 mb-2">
+                <div className="text-sm uppercase tracking-wider mb-2">
                   BO5 – Premier à 3
                 </div>
                 <div className="flex items-center justify-between gap-4">
