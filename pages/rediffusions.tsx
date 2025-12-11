@@ -62,9 +62,7 @@ https://www.tiktok.com/@owgwadael
 Arukdo:
 https://www.twitch.tv/arukdo
 https://www.instagram.com/madebynormandy
-https://www.tiktok.com/@alukaard
-
-https://owwomenscup.fr/`,
+https://www.tiktok.com/@alukaard`,
     date: '17 novembre 2025',
   },
   {
@@ -96,16 +94,14 @@ https://www.tiktok.com/@owgwadael
 Arukdo:
 https://www.twitch.tv/arukdo
 https://www.instagram.com/madebynormandy
-https://www.tiktok.com/@alukaard
-
-https://owwomenscup.fr/`,
+https://www.tiktok.com/@alukaard`,
     date: '24 novembre 2025',
   },
   {
     title: 'Finale – OW Women’s Cup',
     youtubeId: 'XZQjy5bylP0',
     description: `Finale - Sparkles 3–0 Onna Bugeisha
-    
+
     CAST TEAM
 Crocheh:
 https://www.twitch.tv/crocheh
@@ -120,9 +116,7 @@ https://www.tiktok.com/@owgwadael
 Arukdo:
 https://www.twitch.tv/arukdo
 https://www.instagram.com/madebynormandy
-https://www.tiktok.com/@alukaard
-
-https://owwomenscup.fr/`,
+https://www.tiktok.com/@alukaard`,
     date: '10 décembre 2025',
   },
 ];
