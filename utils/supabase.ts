@@ -92,13 +92,6 @@ export function getServerClient(req: SupabaseServerReq, res: SupabaseServerRes) 
         );
       },
     },
-    headers: {
-      get(key: string) {
-        const header = req.headers?.[key];
-        if (Array.isArray(header)) return header.join(", ");
-        return header ?? null;
-      },
-    },
   });
 }
 
