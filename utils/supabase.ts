@@ -1,10 +1,16 @@
 // utils/supabase.ts (ou lib/supabase.ts)
 import { createClient } from "@supabase/supabase-js";
 import {
-  createPagesBrowserClient,
-  createPagesServerClient,
-} from "@supabase/auth-helpers-nextjs";
-import type { NextApiRequest, NextApiResponse } from "next";
+  createBrowserClient,
+  createServerClient,
+  type CookieOptions,
+} from "@supabase/ssr";
+import { serialize } from "cookie";
+import type {
+  GetServerSidePropsContext,
+  NextApiRequest,
+  NextApiResponse,
+} from "next";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -29,13 +35,13 @@ if (!SUPABASE_SERVICE_ROLE) {
 
 /* -----------------------------------------------------------
  * 1) Client PUBLIC (client-side)
- *    - Géré par auth-helpers → cookies + localStorage
+ *    - Géré par auth-helpers SSR → cookies + localStorage
  * ---------------------------------------------------------*/
 
-export const supabaseClient = createPagesBrowserClient({
-  supabaseUrl: SUPABASE_URL,
-  supabaseKey: SUPABASE_ANON_KEY,
-});
+export const supabaseClient = createBrowserClient(
+  SUPABASE_URL!,
+  SUPABASE_ANON_KEY!
+);
 
 /* -----------------------------------------------------------
  * 2) Client SERVER (SSR / API) basé sur les cookies
@@ -43,14 +49,57 @@ export const supabaseClient = createPagesBrowserClient({
  *    - C'est celui que tu utilises via getServerClient(req, res)
  * ---------------------------------------------------------*/
 
-export function getServerClient(req: NextApiRequest, res: NextApiResponse) {
-  return createPagesServerClient(
-    { req, res },
-    {
-      supabaseUrl: SUPABASE_URL!,
-      supabaseKey: SUPABASE_ANON_KEY!,
-    }
-  );
+type SupabaseServerReq =
+  | NextApiRequest
+  | GetServerSidePropsContext["req"];
+
+type SupabaseServerRes =
+  | NextApiResponse
+  | GetServerSidePropsContext["res"];
+
+function appendSetCookie(res: SupabaseServerRes, cookie: string) {
+  const existing = res.getHeader("Set-Cookie");
+
+  if (!existing) {
+    res.setHeader("Set-Cookie", cookie);
+    return;
+  }
+
+  if (Array.isArray(existing)) {
+    res.setHeader("Set-Cookie", [...existing, cookie]);
+    return;
+  }
+
+  res.setHeader("Set-Cookie", [existing.toString(), cookie]);
+}
+
+export function getServerClient(req: SupabaseServerReq, res: SupabaseServerRes) {
+  return createServerClient(SUPABASE_URL!, SUPABASE_ANON_KEY!, {
+    cookies: {
+      get(name: string) {
+        return req.cookies?.[name];
+      },
+      set(name: string, value: string, options: CookieOptions) {
+        appendSetCookie(res, serialize(name, value, options));
+      },
+      remove(name: string, options: CookieOptions) {
+        appendSetCookie(
+          res,
+          serialize(name, "", {
+            ...options,
+            maxAge: 0,
+          })
+        );
+      },
+    },
+    headers: {
+      get(key: string) {
+        const header = req.headers?.[key];
+        if (Array.isArray(header)) return header.join(", ");
+        return header ?? null;
+      },
+    },
+  });
 }
 
 /* -----------------------------------------------------------

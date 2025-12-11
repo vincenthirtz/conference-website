@@ -539,7 +539,7 @@ export default function Tournoi() {
               {champion && (
                 <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
                   <div className="text-emerald-300 font-semibold">
-                    🏆 Champion: {champion}
+                    🏆 Champion 2025: {champion} 🏆
                   </div>
                 </div>
               )}

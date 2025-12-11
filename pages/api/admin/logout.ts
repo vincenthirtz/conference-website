@@ -21,7 +21,7 @@ export default async function handler(
       return res.status(500).json({ error: "Failed to sign out" });
     }
 
-    // Les cookies sont nettoyés par auth-helpers via la réponse
+    // Les cookies sont nettoyés par le client SSR via la réponse
     return res.status(200).json({ success: true });
   } catch (err) {
     console.error("[/api/admin/logout] internal error:", err);
