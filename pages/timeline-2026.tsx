@@ -108,38 +108,33 @@ function Timeline2026Page() {
 
       {/* Timeline */}
       <div className="relative max-w-7xl mx-auto px-6 pb-20">
-        <div className="">
+        <div className="relative">
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-y-0 md:left-[calc(50%-8px)] w-[16px] rounded-full bg-gradient-to-b from-purple-400 via-purple-300/40 to-pink-500 shadow-[0_0_25px_rgba(168,85,247,0.4)] z-10"
+            className="pointer-events-none absolute inset-y-0 left-4 w-2 rounded-full bg-gradient-to-b from-purple-400 via-purple-300/40 to-pink-500 shadow-[0_0_25px_rgba(168,85,247,0.4)]"
           />
           {highlightPercent !== null && (
             <div
               aria-hidden
-              className="pointer-events-none absolute md:left-[calc(50%-8px)] w-3 h-24 -translate-y-1/2 z-20"
+              className="pointer-events-none absolute left-4 w-3 h-20 -translate-y-1/2 rounded-full bg-gradient-to-b from-amber-300 via-pink-400 to-amber-200 blur-md opacity-70"
               style={{ top: `${highlightPercent}%` }}
-            >
-              <div className="absolute inset-0 rounded-full bg-gradient-to-b from-amber-300 via-pink-400 to-amber-200 blur-md opacity-80" />
-            </div>
+            />
           )}
-          <div className="grid justify-center max-w-6xl md:grid-cols-2 gap-12">
+
+          <div className="grid max-w-6xl grid-cols-1 gap-10">
             {timeline.map((item, idx) => {
-              const isLeft = idx % 2 === 0;
               const isCurrent = idx === currentIdx;
               return (
                 <div
                   key={item.id}
-                  className={` md:col-span-1 ${
-                    isLeft ? 'md:pr-10' : 'md:pl-10 md:translate-y-10'
-                  }`}
+                  className="relative pl-14"
                 >
                   <div
-                    className={`absolute w-4 h-4 rounded-full bg-gradient-to-br from-purple-300 to-pink-500 border-2 border-white/60 shadow-[0_0_15px_rgba(219,39,119,0.65)] ${
-                      isLeft
-                        ? 'left-6 md:left-auto md:-right-4'
-                        : 'left-6 md:-left-8'
+                    className={`absolute top-6 h-4 w-4 rounded-full bg-gradient-to-br from-purple-300 to-pink-500 border-2 border-white/60 shadow-[0_0_15px_rgba(219,39,119,0.65)] ${
+                      'left-3'
                     } ${isCurrent ? 'scale-110 ring-4 ring-pink-400/40 animate-pulse' : ''}`}
                   />
+
                   <div
                     className={`bg-neutral-900 border rounded-2xl p-6 shadow-xl shadow-black/20 backdrop-blur ${
                       isCurrent
