@@ -20,11 +20,15 @@ function Footer(): JSX.Element {
                 </span>
               </div>
             </Link>
-            <Link href="/sitemap.xml">
-              <div className="hover:underline text-white duration-200 ease-in-out flex items-center">
-                <span> Plan du site </span>
-              </div>
-            </Link>
+            <a
+              href="/sitemap.xml"
+              className="hover:underline text-white duration-200 ease-in-out flex items-center"
+            >
+              <span> Plan du site </span>
+              <span>
+                <ILink className="w-4 ml-2" fill="white" />
+              </span>
+            </a>
           </div>
         </div>
         <div></div>
