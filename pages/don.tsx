@@ -24,22 +24,26 @@ const tiers = [
   {
     label: 'Coup de pouce',
     amount: '25 €',
-    impact: 'Aide à financer un kit repas + boissons pour une bénévole sur un jour d’événement.',
+    impact:
+      'Aide à payer le site web (nom de domaine, serveur) ou des frais bancaires.',
   },
   {
     label: 'Supporter·rice',
     amount: '50 €',
-    impact: 'Couvre la création de visuels dédiés aux joueuses et la modération d’une soirée de stream.',
+    impact:
+      'Couvre la création de visuels dédiés aux live et la modération d’une soirée de stream.',
   },
   {
     label: 'Allié·e',
     amount: '100 €',
-    impact: 'Participe au transport ou à l’hébergement d’une équipe qui n’a pas de budget.',
+    impact:
+      'Participe au cashprize du futur tournoi et offir des goodies à toutes les joueuses.',
   },
   {
     label: 'Mécène',
     amount: '250 €+',
-    impact: 'Permet de lancer un atelier inclusif (matériel + encadrement) ou de sécuriser une captation entière.',
+    impact:
+      'Permet de lancer un live (matériel + encadrement) dans une salle ou de sécuriser une captation entière.',
   },
 ];
 
@@ -63,8 +67,9 @@ function DonationPage() {
             Faites un don pour faire grandir l&apos;esport féminin
           </h1>
           <p className="mx-auto mt-4 max-w-3xl text-lg text-gray-200">
-            Chaque contribution nous aide à ouvrir plus de places pour les joueuses, sécuriser les
-            événements et montrer que la performance féminine mérite un cadre ambitieux.
+            Chaque contribution nous aide à ouvrir plus de places pour les
+            joueuses, sécuriser les événements et montrer que la performance
+            féminine mérite un cadre ambitieux.
           </p>
 
           <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
@@ -94,8 +99,12 @@ function DonationPage() {
                       key={item.title}
                       className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"
                     >
-                      <p className="text-lg font-semibold text-white">{item.title}</p>
-                      <p className="mt-2 text-sm text-gray-200">{item.detail}</p>
+                      <p className="text-lg font-semibold text-white">
+                        {item.title}
+                      </p>
+                      <p className="mt-2 text-sm text-gray-200">
+                        {item.detail}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -123,8 +132,12 @@ function DonationPage() {
         <section className="space-y-8">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="text-sm uppercase tracking-[0.14em] text-gray-300">Choisir un montant</p>
-              <h2 className="text-3xl font-bold">Un geste, un impact concret</h2>
+              <p className="text-sm uppercase tracking-[0.14em] text-gray-300">
+                Choisir un montant
+              </p>
+              <h2 className="text-3xl font-bold">
+                Un geste, un impact concret
+              </h2>
             </div>
             <p className="text-sm text-gray-300">
               Les montants ci-dessous sont indicatifs : chaque don compte.
@@ -137,8 +150,12 @@ function DonationPage() {
                 key={tier.label}
                 className="group rounded-2xl border border-white/10 bg-white/[0.04] p-5 shadow-xl transition hover:-translate-y-1 hover:border-purple-300/40 hover:bg-white/[0.07]"
               >
-                <p className="text-xs uppercase tracking-[0.14em] text-gray-300">{tier.label}</p>
-                <p className="mt-3 text-3xl font-bold text-white">{tier.amount}</p>
+                <p className="text-xs uppercase tracking-[0.14em] text-gray-300">
+                  {tier.label}
+                </p>
+                <p className="mt-3 text-3xl font-bold text-white">
+                  {tier.amount}
+                </p>
                 <p className="mt-4 text-sm text-gray-200">{tier.impact}</p>
               </div>
             ))}
@@ -152,10 +169,12 @@ function DonationPage() {
                 <p className="text-sm uppercase tracking-[0.14em] text-gray-200">
                   Comment donner
                 </p>
-                <h3 className="mt-2 text-2xl font-bold">Choisissez votre manière</h3>
+                <h3 className="mt-2 text-2xl font-bold">
+                  Choisissez votre manière
+                </h3>
                 <p className="mt-3 text-sm text-gray-100">
-                  Nous revenons vers vous sous 24h pour partager le RIB, un lien de paiement ou
-                  préparer une convention de mécénat.
+                  Nous revenons vers vous sous 24h pour partager le RIB, un lien
+                  de paiement ou préparer une convention de mécénat.
                 </p>
               </div>
 
@@ -163,8 +182,8 @@ function DonationPage() {
                 <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
                   <p className="text-lg font-semibold text-white">Virement</p>
                   <p className="mt-2 text-sm text-gray-200">
-                    Recevez le RIB de l&apos;association et une confirmation dès réception de votre
-                    don.
+                    Recevez le RIB de l&apos;association et une confirmation dès
+                    réception de votre don.
                   </p>
                   <Button
                     overlay
@@ -177,10 +196,12 @@ function DonationPage() {
                 </div>
 
                 <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
-                  <p className="text-lg font-semibold text-white">Entreprises</p>
+                  <p className="text-lg font-semibold text-white">
+                    Entreprises
+                  </p>
                   <p className="mt-2 text-sm text-gray-200">
-                    Vous souhaitez soutenir ou sponsoriser ? Parlons visibilité, ateliers et
-                    mécénat.
+                    Vous souhaitez soutenir ou sponsoriser ? Parlons visibilité,
+                    ateliers et mécénat.
                   </p>
                   <Button
                     overlay
@@ -202,11 +223,14 @@ function DonationPage() {
 
         <section className="max-w-5xl">
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 sm:p-8 text-center">
-            <p className="text-sm uppercase tracking-[0.14em] text-gray-300">Une question ?</p>
+            <p className="text-sm uppercase tracking-[0.14em] text-gray-300">
+              Une question ?
+            </p>
             <h4 className="mt-2 text-2xl font-semibold">On reste disponible</h4>
             <p className="mt-3 text-sm text-gray-200">
-              Besoin d&apos;un reçu, de comprendre l&apos;affectation des dons ou de connaître les
-              prochaines actions ? Écrivez-nous, on vous répond vite.
+              Besoin d&apos;un reçu, de comprendre l&apos;affectation des dons
+              ou de connaître les prochaines actions ? Écrivez-nous, on vous
+              répond vite.
             </p>
             <div className="mt-5 flex justify-center">
               <a

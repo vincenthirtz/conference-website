@@ -4,8 +4,14 @@
     "ref": "/"
   },
   {
-    "title": "Tournoi",
-    "ref": "/tournoi"
+    "title": "L'association",
+    "ref": "/association"
+  },
+  {
+    "title": "Éditions",
+    "subMenu": [
+      { "title": "2025", "ref": "/tournoi" }
+    ]
   },
   {
     "title": "Faire un don",
