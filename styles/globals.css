@@ -1,7 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&family=Inter:wght@300;400&family=Work+Sans:wght@300;400;500;600;700&display=swap');
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 :root {
   --bg-color: white;
@@ -55,6 +53,14 @@ body {
   }
 }
 
+/* Reset Tailwind v4 container behavior to preserve previous centering */
+.container {
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+  max-width: 1200px;
+}
+
 .slick-slide {
   margin-left: 20px;
   margin-right: 20px;
@@ -68,104 +74,118 @@ body {
   bottom: 0 !important;
 }
 
-.gradient-bg {
-  background-image: linear-gradient(
-    225deg,
-    #2dccfd 9.35%,
-    #ad20e2 88.41%
-  ) !important;
-  -webkit-mask-image: linear-gradient(
-    45deg,
-    #000 25%,
-    rgba(0, 0, 0, 0.2) 50%,
-    #000 75%
-  );
-  mask-image: linear-gradient(
-    45deg,
-    #000 25%,
-    rgba(0, 0, 0, 0.2) 50%,
-    #000 75%
-  );
-  -webkit-mask-size: 800%;
-  mask-size: 800%;
-  -webkit-mask-position: 0;
-  mask-position: 0;
-}
-.gradient-bg:hover {
-  transition:
-    mask-position 2s ease,
-    -webkit-mask-position 2s ease;
-  -webkit-mask-position: 120%;
-  mask-position: 120%;
-  opacity: 1;
-}
+@layer utilities {
+  .gradient-bg {
+    background-image: linear-gradient(
+      225deg,
+      #2dccfd 9.35%,
+      #ad20e2 88.41%
+    ) !important;
+    -webkit-mask-image: linear-gradient(
+      45deg,
+      #000 25%,
+      rgba(0, 0, 0, 0.2) 50%,
+      #000 75%
+    );
+    mask-image: linear-gradient(
+      45deg,
+      #000 25%,
+      rgba(0, 0, 0, 0.2) 50%,
+      #000 75%
+    );
+    -webkit-mask-size: 800%;
+    mask-size: 800%;
+    -webkit-mask-position: 0;
+    mask-position: 0;
+  }
+  .gradient-bg:hover {
+    transition:
+      mask-position 2s ease,
+      -webkit-mask-position 2s ease;
+    -webkit-mask-position: 120%;
+    mask-position: 120%;
+    opacity: 1;
+  }
 
-.transparent-bg {
-  @apply w-56 h-48 rounded gradient-bg absolute bottom-0 left-0 translate-x-full ease-out duration-500 transition-all translate-y-full mb-9 ml-9 group-hover:ml-0 group-hover:mb-32 group-hover:translate-x-0;
-}
-.navbg:hover,
-.navbg:focus {
-  background: linear-gradient(225deg, #ad20e2 9.35%, #2dccfd 88.41%);
-}
+  .transparent-bg {
+    width: 14rem;
+    height: 12rem;
+    border-radius: 0.75rem;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    background-image: linear-gradient(225deg, #2dccfd 9.35%, #ad20e2 88.41%);
+    transform: translateX(100%) translateY(100%);
+    transition: all 0.5s ease-out;
+    margin-bottom: 2.25rem;
+    margin-left: 2.25rem;
+  }
+  .group:hover .transparent-bg,
+  .group:focus .transparent-bg,
+  .group:focus-visible .transparent-bg {
+    transform: translateX(0) translateY(0);
+    margin-left: 0;
+    margin-bottom: 8rem;
+  }
 
-.kinda-dark {
-  background: rgba(0, 0, 0, 0.75);
-}
+  .navbg:hover,
+  .navbg:focus {
+    background: linear-gradient(225deg, #ad20e2 9.35%, #2dccfd 88.41%);
+  }
 
-.sponsor-bg {
-  background: linear-gradient(225deg, #ad20e2 9.35%, #2dccfd 88.41%);
-  mix-blend-mode: normal;
-}
+  .kinda-dark {
+    background: rgba(0, 0, 0, 0.75);
+  }
 
-.dropDown {
-  box-shadow:
-    0px 59px 100px rgba(0, 0, 0, 0.25),
-    0px 44px 94px rgba(0, 0, 0, 0.15);
-}
+  .sponsor-bg {
+    background: linear-gradient(225deg, #ad20e2 9.35%, #2dccfd 88.41%);
+    mix-blend-mode: normal;
+  }
 
-.no-border {
-  border: none !important;
-}
+  .dropDown {
+    box-shadow:
+      0px 59px 100px rgba(0, 0, 0, 0.25),
+      0px 44px 94px rgba(0, 0, 0, 0.15);
+  }
 
-.header-bg {
-  background: linear-gradient(320deg, #2db4fd 10.35%, #410854 88.41%);
-}
+  .no-border {
+    border: none !important;
+  }
 
-.card-bg {
-  /* background: linear-gradient(119.66deg, rgba(255, 255, 255, 0.18) 6.74%, rgba(255, 255, 255, 0.06) 98.36%);
-border: 2px solid rgba(255, 255, 255, 0.64); */
-  /* box-shadow: 0px 40px 20px rgba(0, 0, 0, 0.05);
-backdrop-filter: blur(10px); */
-  /* Note: backdrop-filter has minimal browser support */
-  background-position: center;
-  background-size: cover;
-  background-color: rgba(228, 228, 228, 0.046);
-  opacity: 1;
-  border-radius: 30px;
-}
+  .header-bg {
+    background: linear-gradient(320deg, #2db4fd 10.35%, #410854 88.41%);
+  }
 
-.card {
-  background: linear-gradient(
-    119.66deg,
-    rgba(255, 255, 255, 0.18) 6.74%,
-    rgba(255, 255, 255, 0.06) 98.36%
-  );
-  border: 2px solid rgba(255, 255, 255, 0.64);
-  box-shadow: 0px 40px 20px rgba(0, 0, 0, 0.05);
-  backdrop-filter: blur(10px);
-  /* Note: backdrop-filter has minimal browser support */
-  border-radius: 8px;
-}
+  .card-bg {
+    background-position: center;
+    background-size: cover;
+    background-color: rgba(228, 228, 228, 0.046);
+    opacity: 1;
+    border-radius: 30px;
+  }
 
-.subscription {
-  background: linear-gradient(
-    119.66deg,
-    rgba(255, 255, 255, 0.054) 6.74%,
-    rgba(255, 255, 255, 0.018) 98.36%
-  );
-  box-shadow: 0px 33.2278px 16.6139px rgba(0, 0, 0, 0.05);
-  backdrop-filter: blur(8.30696px);
-  mix-blend-mode: lighten;
+  .card {
+    background: linear-gradient(
+      119.66deg,
+      rgba(255, 255, 255, 0.18) 6.74%,
+      rgba(255, 255, 255, 0.06) 98.36%
+    );
+    border: 2px solid rgba(255, 255, 255, 0.64);
+    box-shadow: 0px 40px 20px rgba(0, 0, 0, 0.05);
+    backdrop-filter: blur(10px);
+    border-radius: 8px;
+  }
+
+  .subscription {
+    background: linear-gradient(
+      119.66deg,
+      rgba(255, 255, 255, 0.054) 6.74%,
+      rgba(255, 255, 255, 0.018) 98.36%
+    );
+    box-shadow: 0px 33.2278px 16.6139px rgba(0, 0, 0, 0.05);
+    backdrop-filter: blur(8.30696px);
+    mix-blend-mode: lighten;
+  }
 }
 
 .color-effect {

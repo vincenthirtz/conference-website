@@ -11,11 +11,11 @@ function About(): JSX.Element {
       className="p-24 lg:pt-8 container flex items-center justify-center w-full"
       data-test="about-section"
     >
-      <div className="w-[1120px] lg:w-full flex lg:flex-col-reverse items-center justify-between">
-        <div className="lg:mt-16 bg-[url('/img/fourplayers.png')]  bg-left bg-cover w-[450px] h-[550px] sm:w-[100%] sm:h-[500px] rounded-[30px]"></div>
-        <div className="w-[600px] ml-10 lg:ml-0 lg:w-full lg:text-center">
+      <div className="w-[1120px] lg:w-full flex lg:flex-col items-center justify-between">
+        <div className="lg:mt-16 bg-[url('/img/fourplayers.png')] bg-left bg-cover w-[450px] h-[550px] sm:w-[100%] sm:h-[500px] rounded-[30px]" />
+        <div className="w-[600px] ml-10 lg:ml-0 lg:w-full lg:text-center lg:mt-10">
           <div className="flex items-center lg:justify-center">
-            <div className="text-lg sm:text-sm text-white font-semi-bold border-b-2 border-blue-400 mb-1">
+            <div className="text-xl text-white font-semibold border-b-2 border-blue-400 mb-1">
               A propos du tournoi
             </div>
           </div>

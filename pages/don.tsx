@@ -88,23 +88,28 @@ function DonationPage() {
           </div>
 
           <div className="mx-auto mt-10 max-w-4xl rounded-3xl border border-white/10 bg-white/[0.03] p-6 sm:p-10 backdrop-blur-xl shadow-2xl shadow-black/40">
-            <div className="grid gap-6 sm:grid-cols-3">
-              <div className="col-span-2 space-y-4 text-left">
+            <div className="flex flex-col gap-4 sm:grid sm:grid-cols-3">
+              <div className="space-y-4 text-left sm:col-span-2">
                 <p className="text-sm uppercase tracking-[0.14em] text-gray-300">
                   Ce que votre don rend possible
                 </p>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-3 sm:grid sm:grid-cols-2 sm:gap-4">
                   {uses.map((item) => (
                     <div
                       key={item.title}
                       className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"
                     >
-                      <p className="text-lg font-semibold text-white">
-                        {item.title}
-                      </p>
-                      <p className="mt-2 text-sm text-gray-200">
-                        {item.detail}
-                      </p>
+                      <div className="flex items-start gap-3">
+                        <div className="mt-1 h-2 w-2 flex-none rounded-full bg-gradient-to-r from-purple-400 to-pink-400" />
+                        <div>
+                          <p className="text-lg font-semibold text-white">
+                            {item.title}
+                          </p>
+                          <p className="mt-2 text-sm text-gray-200">
+                            {item.detail}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>

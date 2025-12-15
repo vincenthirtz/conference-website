@@ -3,19 +3,19 @@ import Button from '../Buttons/button';
 
 function Subscription(): JSX.Element {
   return (
-    <div className="mt-0 md:mt-[106px] subscription container flex justify-center">
-      <div className="mt-[106px] lg:mt-0 w-[1024px] min-h-[253px] lg:py-10 lg:w-full flex flex-col items-center">
-        <h3 className="text-[32px] text-white lg:text-center">
+    <div className="mt-0 md:mt-[106px] subscription w-full">
+      <div className="mx-auto flex w-full max-w-4xl flex-col items-center px-4 py-12 sm:px-6">
+        <h3 className="text-center text-3xl font-semibold text-white sm:text-[32px]">
           Rejoindre le Discord pour plus d&apos;informations
         </h3>
         <a
           href="https://discord.gg/gERSsjC3Vd"
           target="_blank"
           rel="noreferrer"
-          className="sm:w-full"
+          className="w-full sm:w-auto"
           data-test="subscribe-button"
         >
-          <Button type="submit" className="w-full md:w-[200px] mt-8 px-10">
+          <Button type="submit" className="mt-8 w-full justify-center px-10 sm:w-[220px]">
             Rejoindre
           </Button>
         </a>
@@ -23,4 +23,5 @@ function Subscription(): JSX.Element {
     </div>
   );
 }
+
 export default Subscription;

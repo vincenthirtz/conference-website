@@ -77,7 +77,7 @@ function Home() {
           >
             <div className="text-center">
               <div className="flex items-center justify-center">
-                <div className="text-lg sm:text-sm text-white font-semi-bold border-b-2 border-blue-400 mb-1">
+                <div className="text-xl text-white font-semibold border-b-2 border-blue-400 mb-1">
                   Cast
                 </div>
               </div>
@@ -168,7 +168,7 @@ function Home() {
           >
             <div className="text-center">
               <div className="flex items-center justify-center">
-                <div className="text-lg sm:text-sm text-white font-semi-bold border-b-2 border-blue-400 mb-1">
+                <div className="text-xl text-white font-semibold border-b-2 border-blue-400 mb-1">
                   Equipes
                 </div>
               </div>
@@ -260,7 +260,7 @@ function Home() {
             id="tickets"
             className="flex items-center flex-col justify-center pt-20 lg:pt-0"
           >
-            <div className="text-lg sm:text-sm text-white font-semi-bold border-b-2 border-blue-400 mb-1">
+            <div className="text-xl text-white font-semibold border-b-2 border-blue-400 mb-1">
               Tickets
             </div>
             <div
@@ -283,7 +283,7 @@ function Home() {
                 </Paragraph>
               </div>
               {twitchParent && (
-                <div className="mt-8 grid gap-6 md:grid-cols-2 w-full">
+                <div className="mt-8 grid gap-6 w-full md:grid-cols-2">
                   {[
                     { channel: 'crocheh', label: 'Crocheh' },
                     { channel: 'arukdo', label: 'Arukdo' },
@@ -293,7 +293,7 @@ function Home() {
                       className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
                     >
                       <div className="flex items-center justify-between px-4 py-3 bg-white/5 border-b border-white/10">
-                        <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                        <div className="flex items-center gap-2 text-base font-semibold text-white">
                           <span
                             className="w-2 h-2 rounded-full bg-red-400 animate-pulse"
                             aria-hidden
@@ -327,7 +327,7 @@ function Home() {
         id="contact"
         className="flex items-center flex-col justify-center pt-20 lg:pt-0"
       >
-        <div className="text-lg sm:text-sm text-white font-semi-bold border-b-2 border-blue-400 mb-1">
+        <div className="text-xl text-white font-semibold border-b-2 border-blue-400 mb-1">
           Contact
         </div>
         <Heading

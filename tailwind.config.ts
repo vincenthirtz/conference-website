@@ -1,4 +1,4 @@
-/** @type {import('tailwindcss').Config} */
+import type { Config } from 'tailwindcss';
 
 const dark = {
   300: '#E8E2F4',
@@ -8,11 +8,8 @@ const dark = {
   700: '#453763',
 };
 
-module.exports = {
-  content: [
-    './pages/**/*.{js,ts,jsx,tsx}',
-    './components/**/*.{js,ts,jsx,tsx}',
-  ],
+const config: Config = {
+  content: ['./pages/**/*.{js,ts,jsx,tsx}', './components/**/*.{js,ts,jsx,tsx}'],
   theme: {
     container: {
       padding: {
@@ -30,18 +27,20 @@ module.exports = {
     },
     extend: {
       colors: {
-        dark: dark,
+        dark,
       },
-    },
-    screens: {
-      xl: { max: '1279px' },
-      lg: { max: '1118px' },
-      sm: { max: '715px' },
-    },
-    fontFamily: {
-      secondary: ['Fira Code', 'monospace'],
-      workSans: ['Work Sans', 'monospace'],
+      fontFamily: {
+        secondary: ['Fira Code', 'monospace'],
+        workSans: ['Work Sans', 'monospace'],
+      },
+      screens: {
+        xl: { max: '1279px' },
+        lg: { max: '1118px' },
+        sm: { max: '715px' },
+      },
     },
   },
   plugins: [],
 };
+
+export default config;

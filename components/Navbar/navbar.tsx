@@ -233,13 +233,13 @@ function Navbar(): JSX.Element {
                   <div
                     onMouseEnter={() => handleMouseEnter(link.title)}
                     onMouseLeave={handleMouseLeave}
-                    className="ml-16 text-[14px] group cursor-pointer relative flex flex-col"
+                    className="ml-16 text-[14px] group cursor-pointer relative flex flex-col whitespace-nowrap"
                     data-test={`nav-${link.title}`}
                   >
                     <div>
                       {link.subMenu ? (
                         <button
-                          className="flex items-center focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 rounded px-1 py-1"
+                          className="flex items-center focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 rounded px-1 py-1 whitespace-nowrap"
                           onClick={() =>
                             setShow(show === link.title ? null : link.title)
                           }
@@ -290,7 +290,9 @@ function Navbar(): JSX.Element {
                           )}
                         </button>
                       ) : (
-                        <Link href={link.ref ?? '#'}>{link.title}</Link>
+                        <Link href={link.ref ?? '#'} className="whitespace-nowrap">
+                          {link.title}
+                        </Link>
                       )}
                     </div>
                     <span className="after:absolute after:-bottom-1 after:left-1/2 after:w-0 after:transition-all after:h-0.5 after:bg-white after:group-hover:w-3/6  "></span>

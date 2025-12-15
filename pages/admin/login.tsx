@@ -92,17 +92,10 @@ const AdminLoginPage = () => {
         <title>Connexion | OW Women&apos;s Cup</title>
       </Head>
 
-      <main className="flex items-center justify-center px-4 py-10">
+      <main className="flex items-center justify-center px-4 py-20 md:py-10">
         <div className="w-full max-w-md">
           {/* Logo / titre */}
           <div className="flex flex-col items-center mb-8">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] uppercase tracking-[0.16em] text-gray-300">
-              <span className="px-1.5 py-[2px] rounded-full bg-gradient-to-r from-purple-400/90 to-pink-400/90 text-black font-semibold">
-                Staff
-              </span>
-              <span className="text-[10px]">Accès interne</span>
-            </div>
-
             <Heading
               typeStyle="heading-md"
               className="text-gradient text-center mt-4"
@@ -121,7 +114,7 @@ const AdminLoginPage = () => {
           </div>
 
           {/* Carte de login */}
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-2xl shadow-black/40 p-6 pt-20">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-2xl shadow-black/40 p-6 pt-10">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label
