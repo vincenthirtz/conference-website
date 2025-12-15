@@ -1,5 +1,5 @@
-import Head from 'next/head';
 import Link from 'next/link';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 type TimelineItem = {
   id: string;
@@ -65,7 +65,7 @@ const timeline: TimelineItem[] = [
   },
 ];
 
-export default function Timeline2026Page() {
+function Timeline2026Page() {
   const now = new Date();
   const currentIdx = timeline.findIndex((item) => {
     const [monthLabel, yearLabel] = item.period.split(' ');
@@ -85,10 +85,6 @@ export default function Timeline2026Page() {
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
-      <Head>
-        <title>Chronologie 2026 | OW Women&apos;s Cup</title>
-      </Head>
-
       {/* Hero */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
@@ -201,3 +197,13 @@ export default function Timeline2026Page() {
     </div>
   );
 }
+
+const timelineSeo: SeoProps = {
+  title: 'Timeline 2026',
+  description:
+    "Feuille de route OW Women's Cup 2026 : inscriptions, rounds suisses, playoffs et grandes finales avec mises à jour en temps réel.",
+};
+
+Timeline2026Page.seo = timelineSeo;
+
+export default Timeline2026Page;

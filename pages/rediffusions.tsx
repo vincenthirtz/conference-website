@@ -1,4 +1,4 @@
-import Head from 'next/head';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 type Replay = {
   title: string;
@@ -121,13 +121,9 @@ https://www.tiktok.com/@alukaard`,
   },
 ];
 
-export default function RediffusionsPage() {
+function RediffusionsPage() {
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
-      <Head>
-        <title>Rediffusions 2025 | OW Women&apos;s Cup</title>
-      </Head>
-
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute -left-32 -top-32 w-[420px] h-[420px] rounded-full bg-purple-600/30 blur-3xl" />
@@ -197,3 +193,13 @@ export default function RediffusionsPage() {
     </div>
   );
 }
+
+const rediffusionsSeo: SeoProps = {
+  title: "Rediffusions OW Women's Cup 2025",
+  description:
+    "Revivez l'édition 2025 de l'OW Women's Cup : VOD officielles, highlights et meilleures actions des équipes féminines.",
+};
+
+RediffusionsPage.seo = rediffusionsSeo;
+
+export default RediffusionsPage;

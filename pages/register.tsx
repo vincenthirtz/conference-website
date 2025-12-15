@@ -1,7 +1,7 @@
 import { useState } from "react";
-import Head from "next/head";
 import Link from "next/link";
 import { supabaseClient } from "@/utils/supabase";
+import type { SeoProps } from "@/components/Seo/DefaultSeo";
 
 function RegisterPage() {
   const [email, setEmail] = useState("");
@@ -60,10 +60,6 @@ function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-      <Head>
-        <title>Inscription | OW Women&apos;s Cup</title>
-      </Head>
-
       <main className="flex items-center justify-center px-4 py-10">
         <div className="w-full max-w-md">
           <div className="flex flex-col items-center mb-8">
@@ -198,5 +194,13 @@ function RegisterPage() {
     </div>
   );
 }
+
+const registerSeo: SeoProps = {
+  title: "Inscription",
+  description:
+    "Crée ton compte OW Women's Cup pour t'inscrire aux tournois, rejoindre le staff ou gérer ton équipe.",
+};
+
+RegisterPage.seo = registerSeo;
 
 export default RegisterPage;

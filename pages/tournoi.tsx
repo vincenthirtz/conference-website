@@ -1,8 +1,8 @@
 /* eslint-disable @next/next/no-img-element */
-import Head from 'next/head';
 import { useEffect, useMemo, useState } from 'react';
 import teamsData from '@/config/teams.json';
 import resultsData from '@/config/results.json';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 // Types
 type Team = {
@@ -75,7 +75,7 @@ function isCountable(m: Match): boolean {
   return home >= needed || away >= needed;
 }
 
-export default function Tournoi() {
+function Tournoi() {
   const teams: Team[] = useMemo<Team[]>(() => {
     const base = (teamsData as any[]).slice(0, 4).map((t) => ({
       name: t.name as string,
@@ -404,10 +404,6 @@ export default function Tournoi() {
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
-      <Head>
-        <title>Tournoi – Round Robin (BO3) + Finale (BO5)</title>
-      </Head>
-
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute -left-32 -top-32 w-[420px] h-[420px] rounded-full bg-purple-600/30 blur-3xl" />
@@ -550,3 +546,13 @@ export default function Tournoi() {
     </div>
   );
 }
+
+const tournoiSeo: SeoProps = {
+  title: 'Tournoi Round Robin & Finale',
+  description:
+    "Calendrier, scores et classement du tournoi OW Women's Cup : phases de poules en BO3 puis grande finale BO5.",
+};
+
+Tournoi.seo = tournoiSeo;
+
+export default Tournoi;

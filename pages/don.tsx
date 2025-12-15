@@ -1,6 +1,6 @@
-import Head from 'next/head';
 import Link from 'next/link';
 import Button from '@/components/Buttons/button';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 const uses = [
   {
@@ -46,17 +46,9 @@ const tiers = [
 const donationMail =
   'mailto:owwomenscup@gmail.com?subject=Don%20pour%20l%27association%20OW%20Women%27s%20Cup&body=Bonjour%20%21%0AJe%20souhaite%20faire%20un%20don.%20Merci%20de%20m%27indiquer%20la%20marche%20%C3%A0%20suivre.%0A';
 
-export default function DonationPage() {
+function DonationPage() {
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
-      <Head>
-        <title>Faire un don | OW Women&apos;s Cup</title>
-        <meta
-          name="description"
-          content="Soutenez l'association OW Women's Cup et aidez-nous à rendre l'esport plus inclusif."
-        />
-      </Head>
-
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute -left-32 -top-32 h-[420px] w-[420px] rounded-full bg-purple-600/30 blur-3xl" />
@@ -230,3 +222,13 @@ export default function DonationPage() {
     </div>
   );
 }
+
+const donationSeo: SeoProps = {
+  title: 'Faire un don',
+  description:
+    "Soutenez l'association OW Women's Cup : financez les déplacements des équipes, la production et les actions inclusives autour de l'esport féminin.",
+};
+
+DonationPage.seo = donationSeo;
+
+export default DonationPage;
