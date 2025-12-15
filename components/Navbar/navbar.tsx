@@ -101,51 +101,65 @@ function Navbar(): JSX.Element {
   // ----------------------------------------------------
   // 🔐 Vérifier si un staff est connecté (source de vérité)
   // ----------------------------------------------------
-  useEffect(() => {
-    const checkStaff = async () => {
+  const checkStaff = useCallback(
+    async (accessToken?: string | null) => {
+      setAdminLoading(true);
       try {
-        const {
-          data: { session },
-        } = await supabaseClient.auth.getSession();
+        let token = accessToken ?? null;
 
-        if (!session?.access_token) {
+        if (!token) {
+          const {
+            data: { session },
+          } = await supabaseClient.auth.getSession();
+          token = session?.access_token ?? null;
+        }
+
+        if (!token) {
           setIsStaff(false);
-          setStaffName('');
+          setStaffName(null);
           return;
         }
 
         const res = await fetch('/api/admin/me', {
           headers: {
-            Authorization: `Bearer ${session.access_token}`,
+            Authorization: `Bearer ${token}`,
           },
         });
 
-        if (!res.ok) {
+        const me = await res.json().catch(() => null);
+
+        if (!res.ok || me?.error || !me?.role) {
           setIsStaff(false);
-          setStaffName('');
+          setStaffName(null);
           return;
         }
 
-        const me = await res.json();
-
-        if (me?.role) {
-          setIsStaff(true);
-          setStaffName(me.display_name || me.email || 'Staff');
-        } else {
-          setIsStaff(false);
-          setStaffName('');
-        }
+        setIsStaff(true);
+        setStaffName(me.display_name || me.email || 'Staff');
       } catch (e) {
         console.error('Navbar staff check error:', e);
         setIsStaff(false);
-        setStaffName('');
+        setStaffName(null);
       } finally {
         setAdminLoading(false);
       }
-    };
+    },
+    []
+  );
 
+  useEffect(() => {
     checkStaff();
-  }, []);
+
+    const { data: authListener } = supabaseClient.auth.onAuthStateChange(
+      (_event, session) => {
+        checkStaff(session?.access_token ?? null);
+      }
+    );
+
+    return () => {
+      authListener?.subscription?.unsubscribe();
+    };
+  }, [checkStaff]);
 
   // Liens du menu Admin (partagés avec NavDrop)
   const adminLinks: AdminLink[] = [

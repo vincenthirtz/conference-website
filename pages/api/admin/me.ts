@@ -23,6 +23,17 @@ export default async function handler(
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  // 0) Vérifier que le client admin est dispo (service role non configuré)
+  const adminClient = supabaseAdmin;
+  if (!adminClient) {
+    console.error(
+      "[/api/admin/me] supabaseAdmin non configuré. Vérifie SUPABASE_SERVICE_ROLE_KEY."
+    );
+    return res.status(500).json({
+      error: "Configuration Supabase incomplète (service role manquant).",
+    });
+  }
+
   // 1) Récupérer le token envoyé par le frontend
   //    (en général: Authorization: Bearer <access_token>)
   const authHeader = req.headers.authorization;
@@ -38,7 +49,7 @@ export default async function handler(
   const {
     data: { user },
     error: userError,
-  } = await supabaseAdmin.auth.getUser(token);
+  } = await adminClient.auth.getUser(token);
 
   if (userError || !user) {
     console.error("[/api/admin/me] getUser error:", userError);
@@ -46,7 +57,7 @@ export default async function handler(
   }
 
   // 3) Chercher l'entrée dans la table staff liée à cet utilisateur
-  const { data: staff, error: staffError } = await supabaseAdmin
+  const { data: staff, error: staffError } = await adminClient
     .from("staff")
     .select("id, auth_user_id, email, display_name, role, created_at")
     .eq("auth_user_id", user.id)

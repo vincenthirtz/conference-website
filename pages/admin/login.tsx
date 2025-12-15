@@ -1,82 +1,90 @@
 /* eslint-disable @next/next/no-img-element */
-import { useState } from "react";
-import Head from "next/head";
-import Link from "next/link";
-import { useRouter } from "next/router";
+import { useState } from 'react';
+import Head from 'next/head';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
 
-import Heading from "@/components/Typography/heading";
-import Paragraph from "@/components/Typography/paragraph";
-import Button from "@/components/Buttons/button";
-import { supabaseClient } from "@/utils/supabase";
+import Heading from '@/components/Typography/heading';
+import Paragraph from '@/components/Typography/paragraph';
+import Button from '@/components/Buttons/button';
+import { supabaseClient } from '@/utils/supabase';
 
 const AdminLoginPage = () => {
   const router = useRouter();
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-  e.preventDefault();
-  setError(null);
-  setIsSubmitting(true);
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
 
-  try {
-    const { data, error: authError } =
-      await supabaseClient.auth.signInWithPassword({ email, password });
+    try {
+      const { data, error: authError } =
+        await supabaseClient.auth.signInWithPassword({ email, password });
 
-    if (authError) {
-      setError("Email ou mot de passe incorrect.");
-      return;
+      if (authError) {
+        setError('Email ou mot de passe incorrect.');
+        return;
+      }
+
+      const {
+        data: { session },
+      } = await supabaseClient.auth.getSession();
+
+      if (!session?.access_token) {
+        setError('Impossible de récupérer la session.');
+        return;
+      }
+
+      const res = await fetch('/api/admin/me', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      const me = await res.json().catch(() => null);
+
+      if (!res.ok || me?.error) {
+        if (res.status === 401 || res.status === 403) {
+          await supabaseClient.auth.signOut();
+        }
+
+        throw new Error(
+          me?.error ||
+            (res.status === 401
+              ? 'Session expirée. Merci de te reconnecter.'
+              : res.status === 403
+                ? "Ton compte n'a pas d'accès staff."
+                : 'Impossible de vérifier ton rôle staff.')
+        );
+      }
+
+      if (!me?.role) {
+        await supabaseClient.auth.signOut();
+        setError("Ton compte n'a pas d'accès staff.");
+        return;
+      }
+
+      if (data?.user) {
+        await router.push('/admin');
+      } else {
+        setError('Utilisateur non trouvé après la connexion.');
+      }
+    } catch (err: any) {
+      console.error('[staff login] error:', err);
+      setError(
+        err?.message ||
+          'Une erreur est survenue pendant la connexion. Réessaie dans un instant.'
+      );
+    } finally {
+      setIsSubmitting(false);
     }
-
-    const {
-      data: { session },
-    } = await supabaseClient.auth.getSession();
-
-    if (!session?.access_token) {
-      setError("Impossible de récupérer la session.");
-      return;
-    }
-
-    const res = await fetch("/api/admin/me", {
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-      },
-    });
-
-    if (!res.ok) {
-      throw new Error("Impossible de vérifier ton rôle staff.");
-    }
-
-    const me = await res.json();
-
-    if (!me.role) {
-      await supabaseClient.auth.signOut();
-      setError("Ton compte n'a pas d'accès staff.");
-      return;
-    }
-
-    if (data?.user) {
-      await router.push("/admin/demandes");
-    } else {
-      setError("Utilisateur non trouvé après la connexion.");
-    }
-  } catch (err: any) {
-    console.error("[staff login] error:", err);
-    setError(
-      err?.message ||
-        "Une erreur est survenue pendant la connexion. Réessaie dans un instant."
-    );
-  } finally {
-    setIsSubmitting(false);
-  }
-};
-
-
-
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
@@ -107,8 +115,8 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
               className="mt-2 text-center max-w-sm"
               textColor="text-gray-300"
             >
-              Accès réservé aux organisateur·rices, admins et bénévoles de la
-              OW Women&apos;s Cup.
+              Accès réservé aux organisateur·rices, admins et bénévoles de la OW
+              Women&apos;s Cup.
             </Paragraph>
           </div>
 
@@ -120,7 +128,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                   htmlFor="email"
                   className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
                 >
-                  Email 
+                  Email
                 </label>
                 <input
                   id="email"
@@ -201,7 +209,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                   className="w-full justify-center px-4 py-2 text-sm font-medium bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 border-0 shadow-lg shadow-purple-900/40"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? "Connexion en cours…" : "Se connecter"}
+                  {isSubmitting ? 'Connexion en cours…' : 'Se connecter'}
                 </Button>
               </div>
             </form>
@@ -212,11 +220,11 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                 textColor="text-gray-400"
                 className="text-center"
               >
-                Besoin d&apos;un accès staff ?{" "}
+                Besoin d&apos;un accès staff ?{' '}
                 <span className="text-gray-200">
                   Contacte l&apos;équipe à owwomenscup@gmail.com.
                 </span>
-                {"  "}
+                {'  '}
                 <Link
                   href="/register"
                   className="text-purple-300 hover:text-purple-200 underline ml-1"
