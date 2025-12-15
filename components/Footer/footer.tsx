@@ -11,14 +11,21 @@ function Footer(): JSX.Element {
         data-test="footer-asyncAPI-logo"
       >
         <div className="mt-2 text-[14px] text-gray-100 ">
-          <Link href="/rules">
-            <div className="hover:underline text-white duration-200 ease-in-out flex items-center">
-              <span> Règlement </span>
-              <span>
-                <ILink className="w-4 ml-2" fill="white" />
-              </span>
-            </div>
-          </Link>
+          <div className="flex items-center gap-6">
+            <Link href="/rules">
+              <div className="hover:underline text-white duration-200 ease-in-out flex items-center">
+                <span> Règlement </span>
+                <span>
+                  <ILink className="w-4 ml-2" fill="white" />
+                </span>
+              </div>
+            </Link>
+            <Link href="/sitemap.xml">
+              <div className="hover:underline text-white duration-200 ease-in-out flex items-center">
+                <span> Plan du site </span>
+              </div>
+            </Link>
+          </div>
         </div>
         <div></div>
         <div className="flex items-center justify-between sm:flex-col sm:items-center">
