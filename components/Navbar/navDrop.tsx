@@ -104,7 +104,7 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(
              ---------------------------------------------------- */}
           {links
             .filter(
-              (link: LinkItem) =>
+              (link) =>
                 !['À propos', 'Cast', 'Sponsors', 'Équipes', 'Equipes'].includes(
                   link.title
                 )
@@ -135,7 +135,7 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(
                       {show && show === link.title && (
                         <div className="flex flex-col py-6 w-full">
                           {link.subMenu.map((sub) => (
-                            <Link href={sub.ref} key={sub.ref}>
+                            <Link href={sub.ref || '#'} key={sub.ref}>
                               <div
                                 onClick={() => setDrop(false)}
                                 className="h-[40px] flex items-center p-6 text-white hover:text-black cursor-pointer"

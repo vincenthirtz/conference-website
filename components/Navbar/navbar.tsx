@@ -223,7 +223,7 @@ function Navbar(): JSX.Element {
               {/* Liens publics existants */}
               {links
                 .filter(
-                  (link: LinkItem) =>
+                  (link) =>
                     !['À propos', 'Cast', 'Sponsors', 'Équipes', 'Equipes'].includes(
                       link.title
                     )
@@ -290,7 +290,7 @@ function Navbar(): JSX.Element {
                           )}
                         </button>
                       ) : (
-                        <Link href={link.ref}>{link.title}</Link>
+                        <Link href={link.ref ?? '#'}>{link.title}</Link>
                       )}
                     </div>
                     <span className="after:absolute after:-bottom-1 after:left-1/2 after:w-0 after:transition-all after:h-0.5 after:bg-white after:group-hover:w-3/6  "></span>
@@ -303,7 +303,7 @@ function Navbar(): JSX.Element {
                       >
                         {link.subMenu.map((subL: LinkItem, index: number) => (
                           <Link
-                            href={subL.ref}
+                            href={subL.ref ?? '#'}
                             key={subL.title}
                             rel="noopener noreferrer"
                             ref={(el) => {

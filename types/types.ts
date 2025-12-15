@@ -7,7 +7,7 @@ export interface SVGTypes {
 
 export interface LinkItem {
   title: string;
-  ref: string;
+  ref?: string;
   subMenu?: LinkItem[];
 }
 
