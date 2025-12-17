@@ -121,7 +121,7 @@ export default function Contact({ className = '' }: { className?: string }) {
             aria-hidden="true"
           />
 
-          <div className="grid sm:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="grid gap-2">
               <label htmlFor="name" className="text-gray-200">
                 Nom

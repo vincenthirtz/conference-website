@@ -14,10 +14,7 @@ function Header(): JSX.Element {
           <div className="flex justify-center w-full mt-32">
             <div className="flex flex-col justify-center items-center w-full">
               <div className="my-10">{/*     <Announcement /> */}</div>
-              <div
-                className="sm:w-full text-center"
-                data-test="landing-heading"
-              >
+              <div className="w-full max-w-[640px] px-4 text-center" data-test="landing-heading">
                 <Heading
                   className="leading-normal sm:leading-38px tracking-[-3px] sm:tracking-[-0.02em] font-extrabold text-gradient"
                   level="h1"
@@ -26,7 +23,7 @@ function Header(): JSX.Element {
                   OW WOMEN&apos;S CUP 2025
                 </Heading>
               </div>
-              <div className="w-[640px] sm:w-full text-center">
+              <div className="w-full max-w-[640px] px-4 text-center">
                 <Paragraph className="mt-[16px]" textColor="text-gray-200">
                   Rejoins le tournoi 100% féminin et francophone sur Overwatch 2
                 </Paragraph>

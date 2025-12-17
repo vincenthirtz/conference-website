@@ -97,10 +97,10 @@ function Home() {
                 Joueuses et streameuses récurrentes de la scène francophone
               </Paragraph>
             </div>
-            <div className="lg:py-20 w-[1130px] lg:w-full">
-              <div className="mt-[64px] pb-[181px] lg:pb-[80px]">
+            <div className="w-full max-w-[1130px] px-4 md:px-0 md:py-12">
+              <div className="mt-12 md:mt-16 pb-16 md:pb-[120px]">
                 {speakersList.length > 0 ? (
-                  <div className="w-full grid grid-cols-3 lg:grid-cols-2 sm:grid-cols-1 gap-4">
+                  <div className="w-full grid grid-cols-1 md:grid-cols-2 min-[1200px]:grid-cols-3 gap-6">
                     {speakersList.map((speaker) => {
                       return (
                         <Speaker
@@ -119,8 +119,8 @@ function Home() {
                     })}
                   </div>
                 ) : (
-                  <div className="mt-[64px] pb-[181px] flex items-center justify-center text-center">
-                    <div className="w-[720px] lg:w-full">
+                  <div className="mt-12 md:mt-16 pb-16 md:pb-[120px] flex items-center justify-center text-center">
+                    <div className="w-full max-w-[720px] px-4 md:px-0">
                       {typeof currentCity !== 'string' && currentCity.cfp ? (
                         <div>
                           <Paragraph className="text-gray-200">
@@ -188,10 +188,10 @@ function Home() {
                 Tout niveau et de plusieurs nationalités
               </Paragraph>
             </div>
-            <div className="lg:py-20 w-[1130px] lg:w-full">
-              <div className="mt-[64px] pb-[181px] lg:pb-[80px]">
+            <div className="w-full max-w-[1130px] px-4 md:px-0 md:py-12">
+              <div className="mt-12 md:mt-16 pb-16 md:pb-[120px]">
                 {teamsList.length > 0 ? (
-                  <div className="w-full grid grid-cols-3 lg:grid-cols-2 sm:grid-cols-1 gap-4">
+                  <div className="w-full grid grid-cols-1 md:grid-cols-2 min-[1200px]:grid-cols-3 gap-6">
                     {teamsList.map((team) => {
                       const slug = team.name.replace(/\s+/g, '-').toLowerCase();
                       return (
@@ -217,8 +217,8 @@ function Home() {
                     })}
                   </div>
                 ) : (
-                  <div className="mt-[64px] pb-[181px] flex items-center justify-center text-center">
-                    <div className="w-[720px] lg:w-full">
+                  <div className="mt-12 md:mt-16 pb-16 md:pb-[120px] flex items-center justify-center text-center">
+                    <div className="w-full max-w-[720px] px-4 md:px-0">
                       {typeof currentCity !== 'string' && currentCity.cfp ? (
                         <div>
                           <Paragraph className="text-gray-200">
@@ -283,7 +283,7 @@ function Home() {
                 </Paragraph>
               </div>
               {twitchParent && (
-                <div className="mt-8 grid gap-6 w-full md:grid-cols-2">
+                <div className="mt-8 grid gap-6 w-full grid-cols-1 md:grid-cols-2">
                   {[
                     { channel: 'crocheh', label: 'Crocheh' },
                     { channel: 'arukdo', label: 'Arukdo' },
@@ -325,7 +325,7 @@ function Home() {
       {/* Formulaire de contact */}
       <div
         id="contact"
-        className="flex items-center flex-col justify-center pt-20 lg:pt-0"
+        className="flex items-center flex-col justify-center pt-20 lg:pt-0 px-4"
       >
         <div className="text-xl text-white font-semibold border-b-2 border-blue-400 mb-1">
           Contact

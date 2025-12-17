@@ -8,13 +8,13 @@ import Image from 'next/image';
 function About(): JSX.Element {
   return (
     <div
-      className="p-24 lg:pt-8 container flex items-center justify-center w-full"
+      className="container w-full px-4 py-16 md:py-20"
       data-test="about-section"
     >
-      <div className="w-[1120px] lg:w-full flex lg:flex-col items-center justify-between">
-        <div className="lg:mt-16 bg-[url('/img/fourplayers.png')] bg-left bg-cover w-[450px] h-[550px] sm:w-[100%] sm:h-[500px] rounded-[30px]" />
-        <div className="w-[600px] ml-10 lg:ml-0 lg:w-full lg:text-center lg:mt-10">
-          <div className="flex items-center lg:justify-center">
+      <div className="w-full max-w-[1120px] mx-auto flex flex-col items-center justify-between gap-10 min-[1024px]:flex-row min-[1024px]:items-start min-[1024px]:gap-12">
+        <div className="bg-[url('/img/fourplayers.png')] bg-left bg-cover w-full max-w-[480px] h-[320px] md:h-[420px] min-[1100px]:h-[550px] rounded-[30px]" />
+        <div className="w-full max-w-[620px] text-center min-[1024px]:text-left min-[1024px]:mt-6 min-[1024px]:ml-4">
+          <div className="flex items-center justify-center min-[1024px]:justify-start">
             <div className="text-xl text-white font-semibold border-b-2 border-blue-400 mb-1">
               A propos du tournoi
             </div>
@@ -39,7 +39,7 @@ function About(): JSX.Element {
             Nous sommes à le recherche d'un premier sponsor officiel
           </Paragraph>
           <div
-            className="mt-10 flex gap-4 sm:flex-col lg:justify-center"
+            className="mt-10 flex flex-col gap-4 md:flex-row md:justify-center min-[1024px]:justify-start"
             data-test="prospectus-download"
           >
             <a
