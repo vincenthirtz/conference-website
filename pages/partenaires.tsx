@@ -103,6 +103,13 @@ const partnerCategories: PartnerCategory[] = [
         description:
           'Relais éditorial, portraits de joueuses, ateliers média-training et journées de sensibilisation.',
       },
+      {
+        name: 'Vous ?',
+        description:
+          'Contactez-nous pour choisir un soutien culturel ou autre.',
+        url: contactMail,
+        pub: true,
+      },
     ],
   },
 ];
