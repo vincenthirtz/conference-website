@@ -52,8 +52,8 @@ function ContactPage() {
             Nous contacter
           </h1>
           <p className="mx-auto mt-4 max-w-3xl text-lg text-gray-200">
-            Choisis le canal le plus rapide pour joindre l’équipe OW Women&apos;s Cup : email, Discord
-            ou formulaire direct.
+            Choisis le canal le plus rapide pour joindre l’équipe OW
+            Women&apos;s Cup : email, Discord ou formulaire direct.
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
             <a
@@ -79,8 +79,12 @@ function ContactPage() {
               key={channel.title}
               className="rounded-2xl border border-white/10 bg-white/[0.05] p-5 shadow-xl shadow-black/20"
             >
-              <p className="text-xs uppercase tracking-[0.18em] text-purple-200">{channel.title}</p>
-              <h2 className="mt-2 text-xl font-semibold text-white">{channel.title}</h2>
+              <p className="text-xs uppercase tracking-[0.18em] text-purple-200">
+                {channel.title}
+              </p>
+              <h2 className="mt-2 text-xl font-semibold text-white">
+                {channel.title}
+              </h2>
               <p className="mt-2 text-sm text-gray-200">{channel.desc}</p>
               <a
                 href={channel.cta.href}
@@ -95,26 +99,35 @@ function ContactPage() {
         <section className="rounded-3xl border border-white/10 bg-gradient-to-r from-[#0F1F3A] via-[#1A0F2E] to-[#2C0B2C] p-6 sm:p-10 shadow-2xl">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-gray-200">Support</p>
+              <p className="text-xs uppercase tracking-[0.18em] text-gray-200">
+                Support
+              </p>
               <h3 className="text-2xl font-bold">Ce que tu peux attendre</h3>
             </div>
             <p className="text-sm text-gray-200">
-              Nous centralisons les demandes via l’email et le formulaire pour garantir une réponse.
+              Nous centralisons les demandes via l’email et le formulaire pour
+              garantir une réponse.
             </p>
           </div>
           <ul className="mt-6 space-y-3 text-sm text-gray-100">
             {helpPoints.map((item) => (
               <li key={item} className="flex items-start gap-2">
-                <span className="mt-[6px] h-2 w-2 rounded-full bg-emerald-400" aria-hidden />
+                <span
+                  className="mt-[6px] h-2 w-2 rounded-full bg-emerald-400"
+                  aria-hidden
+                />
                 <span>{item}</span>
               </li>
             ))}
           </ul>
           <div className="mt-6 rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-gray-100">
-            <p className="font-semibold text-white">À prévoir dans ton message</p>
+            <p className="font-semibold text-white">
+              À prévoir dans ton message
+            </p>
             <p className="mt-2">
-              Pour les demandes d’équipes : nom de l’équipe, BattleTag/Twitter des capitaines,
-              disponibilité. Pour les partenariats : objectifs, budget ou contreparties envisagées.
+              Pour les demandes d’équipes : nom de l’équipe, BattleTag/Twitter
+              des capitaines, disponibilité. Pour les partenariats : objectifs,
+              budget ou contreparties envisagées.
             </p>
           </div>
         </section>
@@ -124,18 +137,19 @@ function ContactPage() {
           className="rounded-2xl border border-white/10 bg-white/[0.05] p-6 sm:p-8 shadow-xl shadow-black/20"
         >
           <div className="flex flex-col gap-2 text-center">
-            <p className="text-xs uppercase tracking-[0.18em] text-gray-300">Formulaire</p>
-            <h3 className="text-2xl font-bold text-white">Envoyer un message</h3>
-            <p className="text-sm text-gray-300">
-              Même composant que sur la page d’accueil, avec toutes les options de sujet.
+            <p className="text-xs uppercase tracking-[0.18em] text-gray-300">
+              Formulaire
             </p>
+            <h3 className="text-2xl font-bold text-white">
+              Envoyer un message
+            </h3>
           </div>
           <div className="mt-8">
             <Contact />
           </div>
           <div className="mt-4 text-center text-xs text-gray-400">
-            En soumettant ce formulaire, tu acceptes que les informations fournies soient utilisées pour
-            répondre à ta demande. Voir les{' '}
+            En soumettant ce formulaire, tu acceptes que les informations
+            fournies soient utilisées pour répondre à ta demande. Voir les{' '}
             <Link
               href="/mentions-legales"
               className="text-purple-200 underline decoration-purple-400/60 underline-offset-4 hover:text-white"
