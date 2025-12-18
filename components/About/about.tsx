@@ -36,7 +36,8 @@ function About(): JSX.Element {
             className="mt-6"
             textColor="text-gray-200"
           >
-            Nous sommes à le recherche d'un premier sponsor officiel
+            Nous sommes à le recherche d'un super sponsor sur le long terme.
+            Nous avons déjà deux partenaires pour l'édition 2026.
           </Paragraph>
           <div
             className="mt-10 flex flex-col gap-4 md:flex-row md:justify-center min-[1024px]:justify-start"
@@ -44,7 +45,7 @@ function About(): JSX.Element {
           >
             <a
               className="flex justify-center"
-              href="https://discord.gg/gERSsjC3Vd"
+              href="/partenaires"
               target="_blank"
               rel="noreferrer"
             >
