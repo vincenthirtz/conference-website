@@ -5,6 +5,7 @@ const publicRoutes = [
   '/tournoi',
   '/timeline-2026',
   '/association',
+  '/contact',
   '/mentions-legales',
   '/don',
   '/register',

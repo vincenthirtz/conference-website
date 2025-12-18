@@ -20,6 +20,14 @@ function Footer(): JSX.Element {
                 </span>
               </div>
             </Link>
+            <Link href="/contact">
+              <div className="hover:underline text-white duration-200 ease-in-out flex items-center">
+                <span> Nous contacter </span>
+                <span>
+                  <ILink className="w-4 ml-2" fill="white" />
+                </span>
+              </div>
+            </Link>
             <Link href="/mentions-legales">
               <div className="hover:underline text-white duration-200 ease-in-out flex items-center">
                 <span> Mentions légales </span>
