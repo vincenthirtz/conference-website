@@ -21,7 +21,7 @@ function About(): JSX.Element {
           />
           <video
             className="absolute inset-0 w-full h-full object-cover hidden md:block"
-            src="/video/OW_W_C.mp4"
+            src="/video/bestof.mp4"
             poster="/img/fourplayers.png"
             autoPlay
             loop
