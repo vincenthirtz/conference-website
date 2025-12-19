@@ -316,3 +316,87 @@ body {
 .animate-pulse {
   animation: confettiPulse 3s infinite ease-in-out;
 }
+
+.footer-season-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.footer-season-overlay .season-layer {
+  position: absolute;
+  top: -10%;
+  left: -5%;
+  right: -5%;
+  bottom: -5%;
+  mix-blend-mode: screen;
+  opacity: 0.6;
+}
+
+.footer-season-overlay .snow-layer {
+  background-image:
+    radial-gradient(1.6px 1.6px at 20px 30px, rgba(255, 255, 255, 0.9) 50%, transparent 60%),
+    radial-gradient(2px 2px at 80px 10px, rgba(255, 255, 255, 0.7) 50%, transparent 60%),
+    radial-gradient(2.4px 2.4px at 40px 90px, rgba(255, 255, 255, 0.55) 50%, transparent 60%);
+  background-size: 140px 160px, 200px 200px, 240px 260px;
+  animation: snowFall 18s linear infinite;
+}
+
+.footer-season-overlay .snow-layer--slow {
+  background-size: 200px 210px, 260px 260px, 320px 320px;
+  animation-duration: 26s;
+  opacity: 0.4;
+}
+
+@keyframes snowFall {
+  to {
+    background-position: 0 200px, 0 220px, 0 260px;
+  }
+}
+
+.footer-season-overlay .rain-layer {
+  background-image: linear-gradient(180deg, rgba(173, 32, 226, 0.18) 0%, rgba(173, 32, 226, 0) 70%);
+  background-size: 2px 16px;
+  background-repeat: repeat;
+  transform: skewX(-12deg);
+  animation: rainFall 1.2s linear infinite;
+  opacity: 0.45;
+  filter: drop-shadow(0 0 6px rgba(173, 32, 226, 0.25));
+}
+
+.footer-season-overlay .autumn-rain {
+  background-image: linear-gradient(180deg, rgba(255, 170, 86, 0.25) 0%, rgba(255, 170, 86, 0) 70%);
+}
+
+.footer-season-overlay .spring-rain {
+  background-image: linear-gradient(180deg, rgba(88, 190, 255, 0.22) 0%, rgba(88, 190, 255, 0) 70%);
+  opacity: 0.35;
+}
+
+@keyframes rainFall {
+  to {
+    background-position: 8px 18px;
+  }
+}
+
+.footer-season-overlay .sun-layer {
+  background:
+    radial-gradient(circle at 18% 25%, rgba(255, 204, 102, 0.32), transparent 38%),
+    radial-gradient(circle at 22% 30%, rgba(255, 255, 255, 0.18), transparent 32%),
+    radial-gradient(circle at 80% 0%, rgba(255, 79, 164, 0.1), transparent 35%);
+  animation: sunPulse 9s ease-in-out infinite;
+  filter: drop-shadow(0 0 18px rgba(255, 195, 88, 0.3));
+  opacity: 0.55;
+}
+
+@keyframes sunPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}

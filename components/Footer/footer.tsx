@@ -3,6 +3,8 @@ import Link from 'next/link';
 import type { SVGTypes } from '@/types/types';
 import socials, { SocialWithIcon } from '@/config/socials';
 
+type Season = 'winter' | 'spring' | 'summer' | 'autumn';
+
 function RulesIcon({ className, fill }: Readonly<SVGTypes>): JSX.Element {
   const stroke = fill || 'currentColor';
   return (
@@ -204,72 +206,138 @@ type FooterLink = {
 const footerLinks: FooterLink[] = [
   { label: 'Règlement', href: '/rules', Icon: RulesIcon },
   { label: 'Nous contacter', href: '/contact', Icon: MailIcon },
-  { label: 'Mentions légales', href: '/mentions-legales', Icon: LegalShieldIcon },
-  { label: 'Plan du site', href: '/sitemap.xml', Icon: SitemapIcon, external: true },
+  {
+    label: 'Mentions légales',
+    href: '/mentions-legales',
+    Icon: LegalShieldIcon,
+  },
+  {
+    label: 'Plan du site',
+    href: '/sitemap.xml',
+    Icon: SitemapIcon,
+    external: true,
+  },
 ];
 
-function Footer(): JSX.Element {
+function getSeasonFromMonth(month: number): Season {
+  if (month === 11 || month === 0 || month === 1) {
+    return 'winter';
+  }
+  if (month >= 2 && month <= 4) {
+    return 'spring';
+  }
+  if (month >= 5 && month <= 7) {
+    return 'summer';
+  }
+  return 'autumn';
+}
+
+function SeasonalBackdrop({ season }: { season: Season }): JSX.Element {
+  if (season === 'spring') {
+    return (
+      <div className="footer-season-overlay" aria-hidden>
+        <div className="season-layer sun-layer" />
+        <div className="season-layer rain-layer spring-rain" />
+      </div>
+    );
+  }
+
+  if (season === 'winter') {
+    return (
+      <div className="footer-season-overlay" aria-hidden>
+        <div className="season-layer snow-layer" />
+        <div className="season-layer snow-layer snow-layer--slow" />
+      </div>
+    );
+  }
+
+  if (season === 'summer') {
+    return (
+      <div className="footer-season-overlay" aria-hidden>
+        <div className="season-layer sun-layer" />
+      </div>
+    );
+  }
+
   return (
-    <div className="container" data-test="footer">
-      <div
-        className="w-full flex justify-between items-center p-4 sm:flex-col sm:gap-3"
-        data-test="footer-asyncAPI-logo"
-      >
-        <div className="mt-2 text-[14px] text-gray-100 ">
-          <div className="flex items-center gap-6">
-            {footerLinks.map(({ label, href, Icon, external }) => {
-              const linkContent = (
-                <>
-                  <span>{label}</span>
-                  <Icon className="w-4 h-4 ml-2" fill="white" />
-                </>
-              );
+    <div className="footer-season-overlay" aria-hidden>
+      <div className="season-layer rain-layer autumn-rain" />
+    </div>
+  );
+}
 
-              const linkClass =
-                'hover:underline text-white duration-200 ease-in-out flex items-center';
+function Footer(): JSX.Element {
+  const season = getSeasonFromMonth(new Date().getMonth());
 
-              return external ? (
-                <a key={label} href={href} className={linkClass}>
-                  {linkContent}
-                </a>
-              ) : (
-                <Link key={label} href={href} className={linkClass}>
-                  {linkContent}
-                </Link>
-              );
-            })}
+  return (
+    <div
+      className="container relative overflow-hidden"
+      data-test="footer"
+      data-season={season}
+    >
+      <SeasonalBackdrop season={season} />
+      <div className="relative z-10">
+        <div
+          className="w-full flex justify-between items-center p-4 sm:flex-col sm:gap-3"
+          data-test="footer-asyncAPI-logo"
+        >
+          <div className="mt-2 text-[14px] text-gray-100 ">
+            <div className="flex items-center gap-6">
+              {footerLinks.map(({ label, href, Icon, external }) => {
+                const linkContent = (
+                  <>
+                    <span>{label}</span>
+                    <Icon className="w-4 h-4 ml-2" fill="white" />
+                  </>
+                );
+
+                const linkClass =
+                  'hover:underline text-white duration-200 ease-in-out flex items-center';
+
+                return external ? (
+                  <a key={label} href={href} className={linkClass}>
+                    {linkContent}
+                  </a>
+                ) : (
+                  <Link key={label} href={href} className={linkClass}>
+                    {linkContent}
+                  </Link>
+                );
+              })}
+            </div>
           </div>
-        </div>
-        <div></div>
-        <div className="flex items-center justify-between sm:flex-col sm:items-center">
-          <div className="text-white text-center">
-            Fait avec ❤️ par AsyncAPI contributors. Repris par{' '}
-            <a
-              href="https://www.twitch.tv/arukdo"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Arukdo
-            </a>
-            .
-          </div>
-          <div className="w-[0.9px] h-4 bg-white ml-4 sm:hidden" />
-          <div className="ml-4 flex justify-between items-center gap-2 sm:mt-4">
-            {socials.map((social: SocialWithIcon) => {
-              const IconComponent = social.icon;
-              return (
-                <a
-                  key={social.name}
-                  href={social.href}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-lg flex items-center justify-center hover:border-[#AD20E2] duration-150 ease-in-out"
-                  data-test={`footer-${social.name}`}
-                >
-                  <IconComponent className="w-[20px] h-[20px]" fill="white" />
-                </a>
-              );
-            })}
+          <div></div>
+          <div className="flex items-center justify-between sm:flex-col sm:items-center">
+            <div className="text-white text-center">
+              Association OW WOMEN'S CUP - Tous droits réservés - Fait avec ❤️
+              par{' '}
+              <a
+                href="https://www.twitch.tv/arukdo"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Arukdo
+              </a>
+              .
+            </div>
+            <div className="w-[0.9px] h-4 bg-white ml-4 sm:hidden" />
+            <div className="ml-4 flex justify-between items-center gap-2 sm:mt-4">
+              {socials.map((social: SocialWithIcon) => {
+                const IconComponent = social.icon;
+                return (
+                  <a
+                    key={social.name}
+                    href={social.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-lg flex items-center justify-center hover:border-[#AD20E2] duration-150 ease-in-out"
+                    data-test={`footer-${social.name}`}
+                  >
+                    <IconComponent className="w-[20px] h-[20px]" fill="white" />
+                  </a>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
