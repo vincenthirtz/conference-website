@@ -3,7 +3,6 @@ import React, { JSX } from 'react';
 import Heading from '../Typography/heading';
 import Paragraph from '../Typography/paragraph';
 import Button from '../Buttons/button';
-import Image from 'next/image';
 
 function About(): JSX.Element {
   return (
@@ -12,7 +11,25 @@ function About(): JSX.Element {
       data-test="about-section"
     >
       <div className="w-full max-w-[1120px] mx-auto flex flex-col items-center justify-between gap-10 min-[1024px]:flex-row min-[1024px]:items-start min-[1024px]:gap-12">
-        <div className="bg-[url('/img/fourplayers.png')] bg-left bg-cover w-full max-w-[480px] h-[320px] md:h-[420px] min-[1100px]:h-[550px] rounded-[30px]" />
+        <div className="relative w-full max-w-[480px] h-[320px] md:h-[420px] min-[1100px]:h-[550px] rounded-[30px] overflow-hidden">
+          <img
+            src="/img/fourplayers.png"
+            alt="Joueuses Overwatch"
+            className="absolute inset-0 h-full w-full object-cover md:hidden"
+            loading="lazy"
+            draggable={false}
+          />
+          <video
+            className="absolute inset-0 w-full h-full object-cover hidden md:block"
+            src="/video/OW_W_C.mp4"
+            poster="/img/fourplayers.png"
+            autoPlay
+            loop
+            muted
+            playsInline
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/10 to-black/25 pointer-events-none" />
+        </div>
         <div className="w-full max-w-[620px] text-center min-[1024px]:text-left min-[1024px]:mt-6 min-[1024px]:ml-4">
           <div className="flex items-center justify-center min-[1024px]:justify-start">
             <div className="text-xl text-white font-semibold border-b-2 border-blue-400 mb-1">
