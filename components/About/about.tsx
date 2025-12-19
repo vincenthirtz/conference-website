@@ -5,6 +5,10 @@ import Paragraph from '../Typography/paragraph';
 import Button from '../Buttons/button';
 
 function About(): JSX.Element {
+  const aboutVideoUrl =
+    process.env.NEXT_PUBLIC_ABOUT_VIDEO_URL ||
+    'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4';
+
   return (
     <div
       className="container w-full px-4 py-16 md:py-20"
@@ -21,7 +25,7 @@ function About(): JSX.Element {
           />
           <video
             className="absolute inset-0 w-full h-full object-cover hidden md:block"
-            src="/video/bestof.mp4"
+            src={aboutVideoUrl}
             poster="/img/fourplayers.png"
             autoPlay
             loop
