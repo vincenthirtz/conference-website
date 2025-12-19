@@ -9,6 +9,15 @@ function About(): JSX.Element {
     process.env.NEXT_PUBLIC_ABOUT_VIDEO_URL ||
     'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4';
 
+  const isYouTube = /youtu\.?be/.test(aboutVideoUrl);
+  const youtubeId =
+    aboutVideoUrl.match(
+      /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]+)/
+    )?.[1] || null;
+  const youtubeEmbedUrl = youtubeId
+    ? `https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&loop=1&playlist=${youtubeId}`
+    : null;
+
   return (
     <div
       className="container w-full px-4 py-16 md:py-20"
@@ -23,15 +32,26 @@ function About(): JSX.Element {
             loading="lazy"
             draggable={false}
           />
-          <video
-            className="absolute inset-0 w-full h-full object-cover hidden md:block"
-            src={aboutVideoUrl}
-            poster="/img/fourplayers.png"
-            autoPlay
-            loop
-            muted
-            playsInline
-          />
+          {isYouTube && youtubeEmbedUrl ? (
+            <iframe
+              className="absolute inset-0 w-full h-full object-cover hidden md:block"
+              src={youtubeEmbedUrl}
+              title="OW Women's Cup vidéo"
+              allow="autoplay; fullscreen; picture-in-picture"
+              allowFullScreen
+              loading="lazy"
+            />
+          ) : (
+            <video
+              className="absolute inset-0 w-full h-full object-cover hidden md:block"
+              src={aboutVideoUrl}
+              poster="/img/fourplayers.png"
+              autoPlay
+              loop
+              muted
+              playsInline
+            />
+          )}
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/10 to-black/25 pointer-events-none" />
         </div>
         <div className="w-full max-w-[620px] text-center min-[1024px]:text-left min-[1024px]:mt-6 min-[1024px]:ml-4">
