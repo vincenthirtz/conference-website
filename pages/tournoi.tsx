@@ -1,16 +1,24 @@
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import teamsData from '@/config/teams.json';
 import resultsData from '@/config/results.json';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { Replay } from '@/config/replays';
 import { replays } from '@/config/replays';
+import TeamCard from '@/components/Team/Team';
+import Heading from '@/components/Typography/heading';
+import Paragraph from '@/components/Typography/paragraph';
 
 // Types
 type Team = {
   name: string;
   img?: string;
   color?: string;
+  city?: string[];
+  pub?: boolean;
+  link?: string;
+  title?: string;
 };
 
 type Match = {
@@ -102,6 +110,7 @@ function linkifyDescription(text: string) {
 }
 
 function Tournoi() {
+  const fullTeams = teamsData as Team[];
   const teams: Team[] = useMemo<Team[]>(() => {
     const base = (teamsData as any[]).slice(0, 4).map((t) => ({
       name: t.name as string,
@@ -451,6 +460,54 @@ function Tournoi() {
       </div>
 
       <div className="max-w-6xl mx-auto px-6 pb-20">
+        <section id="teams" className="mt-10">
+          <div className="flex flex-col items-center text-center">
+            <div className="text-xl text-white font-semibold border-b-2 border-blue-400 mb-1">
+              Equipes
+            </div>
+            <Heading
+              typeStyle="heading-md"
+              className="text-gradient text-center lg:mt-3"
+            >
+              Des équipes au rendez-vous
+            </Heading>
+            <div className="max-w-3xl">
+              <Paragraph
+                typeStyle="body-lg"
+                className="mt-4"
+                textColor="text-gray-200"
+              >
+                Tout niveau et de plusieurs nationalités.
+              </Paragraph>
+            </div>
+          </div>
+          <div className="mt-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {fullTeams.map((team) => {
+              const slug = team.name.replace(/\s+/g, '-').toLowerCase();
+              const location = team.city
+                ? team.city[1]
+                  ? `${team.city[0]} & ${team.city[1]}`
+                  : team.city[0]
+                : undefined;
+              const href = !team.pub ? `/team/${slug}` : '/contact';
+              return (
+                <Link
+                  key={`team-${team.name}`}
+                  href={href}
+                  className="group relative"
+                >
+                  <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition blur-2xl bg-white/10 pointer-events-none" />
+                  <TeamCard
+                    details={team}
+                    location={location}
+                    className="mt-8"
+                  />
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+
         <section className="mt-6">
           <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white mb-4">
             Classement (Round Robin)

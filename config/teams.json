@@ -34,15 +34,5 @@
     "id": 4,
     "city": ["France"],
     "color": "#FACC15"
-  },
-  {
-    "name": "Envie de rejoindre le tournoi ?",
-    "title": "",
-    "img": "/img/esport.jpg",
-    "link": "",
-    "id": 5,
-    "city": [""],
-    "color": "#FACC15",
-    "pub": true
   }
 ]
