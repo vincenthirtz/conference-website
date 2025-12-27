@@ -1,9 +1,6 @@
 import React, { JSX } from 'react';
 import ILink from '../illustration/link';
-
-interface PastEditonCardProp {
-  url: string;
-}
+import type { PastEditonCardProp } from '../../types/components';
 
 const PastEditonCard = ({ url }: PastEditonCardProp): JSX.Element => {
   let year = url.split('.')[1];

@@ -1,11 +1,11 @@
 // pages/admin/tournament/[id]/edit.tsx
 
-import { useEffect, useState } from "react";
-import Head from "next/head";
-import { useRouter } from "next/router";
-import Link from "next/link";
-import { withStaffPage } from "@/utils/staff";
-import { StaffRoleBadge } from "@/components/admin/StaffRoleBadge";
+import { useEffect, useState } from 'react';
+import Head from 'next/head';
+import { useRouter } from 'next/router';
+import Link from 'next/link';
+import { withStaffPage } from '@/utils/staff';
+import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
 type StaffShape = {
   id: string;
@@ -38,7 +38,7 @@ type ApiResponse = {
   tournament: Tournament;
 };
 
-export const getServerSideProps = withStaffPage("manager");
+export const getServerSideProps = withStaffPage('manager');
 
 function AdminTournamentEditPage({ staff }: StaffProps) {
   const router = useRouter();
@@ -65,18 +65,18 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
     logo_url: string;
     banner_url: string;
   }>({
-    name: "",
-    slug: "",
-    game: "",
-    status: "draft",
-    start_date: "",
-    end_at: "",
-    format_type: "",
-    max_teams: "",
+    name: '',
+    slug: '',
+    game: '',
+    status: 'draft',
+    start_date: '',
+    end_at: '',
+    format_type: '',
+    max_teams: '',
     is_public: false,
     is_featured: false,
-    logo_url: "",
-    banner_url: "",
+    logo_url: '',
+    banner_url: '',
   });
 
   function updateField<K extends keyof typeof form>(
@@ -102,30 +102,32 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
       const res = await fetch(`/api/admin/tournament/${id}`);
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Impossible de charger le tournoi");
+        throw new Error(json.error || 'Impossible de charger le tournoi');
       }
       const json: ApiResponse = await res.json();
       const t = json.tournament;
 
       // Pré-remplir le formulaire
       setForm({
-        name: t.name || "",
-        slug: t.slug || "",
-        game: t.game || "",
-        status: t.status || "draft",
-        start_date: t.start_date ? toLocalInputValue(t.start_date) : "",
-        end_at: t.end_at ? toLocalInputValue(t.end_at) : "",
-        format_type: t.format_type || "",
-        max_teams: t.max_teams ? String(t.max_teams) : "",
+        name: t.name || '',
+        slug: t.slug || '',
+        game: t.game || '',
+        status: t.status || 'draft',
+        start_date: t.start_date ? toLocalInputValue(t.start_date) : '',
+        end_at: t.end_at ? toLocalInputValue(t.end_at) : '',
+        format_type: t.format_type || '',
+        max_teams: t.max_teams ? String(t.max_teams) : '',
         is_public: t.is_public,
         is_featured: t.is_featured,
-        logo_url: t.logo_url || "",
-        banner_url: t.banner_url || "",
+        logo_url: t.logo_url || '',
+        banner_url: t.banner_url || '',
       });
 
       setFormReady(true);
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur inattendue lors du chargement du tournoi");
+      setErrorMsg(
+        err?.message ?? 'Erreur inattendue lors du chargement du tournoi'
+      );
     } finally {
       setLoading(false);
     }
@@ -134,7 +136,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
   function toLocalInputValue(iso: string): string {
     try {
       const d = new Date(iso);
-      const pad = (n: number) => String(n).padStart(2, "0");
+      const pad = (n: number) => String(n).padStart(2, '0');
       const year = d.getFullYear();
       const month = pad(d.getMonth() + 1);
       const day = pad(d.getDate());
@@ -142,7 +144,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
       const minutes = pad(d.getMinutes());
       return `${year}-${month}-${day}T${hours}:${minutes}`;
     } catch {
-      return "";
+      return '';
     }
   }
 
@@ -154,7 +156,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
     setSuccessMsg(null);
 
     if (!form.name.trim()) {
-      setErrorMsg("Le nom du tournoi est obligatoire.");
+      setErrorMsg('Le nom du tournoi est obligatoire.');
       return;
     }
 
@@ -164,8 +166,10 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
       name: form.name.trim(),
       slug: form.slug.trim() || null,
       game: form.game.trim() || null,
-      status: form.status || "draft",
-      start_date: form.start_date ? new Date(form.start_date).toISOString() : null,
+      status: form.status || 'draft',
+      start_date: form.start_date
+        ? new Date(form.start_date).toISOString()
+        : null,
       end_at: form.end_at ? new Date(form.end_at).toISOString() : null,
       format_type: form.format_type || null,
       max_teams: form.max_teams ? Number(form.max_teams) : null,
@@ -177,25 +181,27 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
 
     try {
       const res = await fetch(`/api/admin/tournament/${id}`, {
-        method: "PUT",
+        method: 'PUT',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Erreur lors de la mise à jour du tournoi");
+        throw new Error(
+          json.error || 'Erreur lors de la mise à jour du tournoi'
+        );
       }
 
       await res.json(); // contient { tournament: ... } mais on n'en a pas strictement besoin ici
 
-      setSuccessMsg("Tournoi mis à jour avec succès.");
+      setSuccessMsg('Tournoi mis à jour avec succès.');
       // On peut éventuellement recharger les données
       fetchTournament();
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur inconnue lors de la mise à jour");
+      setErrorMsg(err?.message ?? 'Erreur inconnue lors de la mise à jour');
     } finally {
       setSaving(false);
     }
@@ -229,7 +235,9 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
         {/* Card */}
         <div className="max-w-3xl bg-neutral-800 border border-neutral-700 rounded-xl p-6 pt-20">
           {loading && !formReady && (
-            <div className="text-neutral-300">Chargement des données du tournoi…</div>
+            <div className="text-neutral-300">
+              Chargement des données du tournoi…
+            </div>
           )}
 
           {!loading && errorMsg && (
@@ -254,14 +262,13 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm mb-1 text-neutral-300">
-                      Nom du tournoi{" "}
-                      <span className="text-red-400">*</span>
+                      Nom du tournoi <span className="text-red-400">*</span>
                     </label>
                     <input
                       type="text"
                       className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       value={form.name}
-                      onChange={(e) => updateField("name", e.target.value)}
+                      onChange={(e) => updateField('name', e.target.value)}
                     />
                   </div>
 
@@ -273,7 +280,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                       type="text"
                       className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       value={form.slug}
-                      onChange={(e) => updateField("slug", e.target.value)}
+                      onChange={(e) => updateField('slug', e.target.value)}
                       placeholder="owl-womens-cup-1"
                     />
                     <p className="text-xs text-neutral-500 mt-1">
@@ -289,7 +296,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                       type="text"
                       className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       value={form.game}
-                      onChange={(e) => updateField("game", e.target.value)}
+                      onChange={(e) => updateField('game', e.target.value)}
                       placeholder="Overwatch 2"
                     />
                   </div>
@@ -301,7 +308,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                     <select
                       className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       value={form.status}
-                      onChange={(e) => updateField("status", e.target.value)}
+                      onChange={(e) => updateField('status', e.target.value)}
                     >
                       <option value="draft">Brouillon</option>
                       <option value="published">Publié</option>
@@ -315,9 +322,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
 
               {/* Dates & format */}
               <section className="space-y-4">
-                <h2 className="font-semibold text-lg">
-                  Planning & format
-                </h2>
+                <h2 className="font-semibold text-lg">Planning & format</h2>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -328,7 +333,9 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                       type="datetime-local"
                       className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       value={form.start_date}
-                      onChange={(e) => updateField("start_date", e.target.value)}
+                      onChange={(e) =>
+                        updateField('start_date', e.target.value)
+                      }
                     />
                   </div>
 
@@ -340,7 +347,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                       type="datetime-local"
                       className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       value={form.end_at}
-                      onChange={(e) => updateField("end_at", e.target.value)}
+                      onChange={(e) => updateField('end_at', e.target.value)}
                     />
                   </div>
 
@@ -352,27 +359,15 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                       className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       value={form.format_type}
                       onChange={(e) =>
-                        updateField("format_type", e.target.value)
+                        updateField('format_type', e.target.value)
                       }
                     >
-                      <option value="">
-                        (Ne pas modifier / à définir)
-                      </option>
-                      <option value="single_elim">
-                        Single Elim
-                      </option>
-                      <option value="double_elim">
-                        Double Elim
-                      </option>
-                      <option value="swiss">
-                        Swiss
-                      </option>
-                      <option value="round_robin">
-                        Round Robin
-                      </option>
-                      <option value="showmatch">
-                        Showmatch
-                      </option>
+                      <option value="">(Ne pas modifier / à définir)</option>
+                      <option value="single_elim">Single Elim</option>
+                      <option value="double_elim">Double Elim</option>
+                      <option value="swiss">Swiss</option>
+                      <option value="round_robin">Round Robin</option>
+                      <option value="showmatch">Showmatch</option>
                     </select>
                   </div>
 
@@ -385,7 +380,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                       min={2}
                       className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       value={form.max_teams}
-                      onChange={(e) => updateField("max_teams", e.target.value)}
+                      onChange={(e) => updateField('max_teams', e.target.value)}
                       placeholder="16"
                     />
                   </div>
@@ -394,9 +389,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
 
               {/* Visibilité & visuels */}
               <section className="space-y-4">
-                <h2 className="font-semibold text-lg">
-                  Visibilité & visuels
-                </h2>
+                <h2 className="font-semibold text-lg">Visibilité & visuels</h2>
 
                 <div className="flex flex-col gap-3">
                   <label className="inline-flex items-center gap-2 text-sm text-neutral-200">
@@ -405,7 +398,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                       className="rounded border-neutral-500 bg-neutral-700"
                       checked={form.is_public}
                       onChange={(e) =>
-                        updateField("is_public", e.target.checked)
+                        updateField('is_public', e.target.checked)
                       }
                     />
                     <span>Rendre le tournoi public sur le site</span>
@@ -417,7 +410,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                       className="rounded border-neutral-500 bg-neutral-700"
                       checked={form.is_featured}
                       onChange={(e) =>
-                        updateField("is_featured", e.target.checked)
+                        updateField('is_featured', e.target.checked)
                       }
                     />
                     <span>Mettre en avant (section &quot;featured&quot;)</span>
@@ -433,9 +426,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                       type="text"
                       className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       value={form.logo_url}
-                      onChange={(e) =>
-                        updateField("logo_url", e.target.value)
-                      }
+                      onChange={(e) => updateField('logo_url', e.target.value)}
                       placeholder="https://…"
                     />
                   </div>
@@ -448,7 +439,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                       className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       value={form.banner_url}
                       onChange={(e) =>
-                        updateField("banner_url", e.target.value)
+                        updateField('banner_url', e.target.value)
                       }
                       placeholder="https://…"
                     />
@@ -470,11 +461,13 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                   disabled={saving}
                   className={`px-5 py-2 rounded font-semibold text-sm ${
                     saving
-                      ? "bg-blue-800 cursor-wait"
-                      : "bg-blue-600 hover:bg-blue-700"
+                      ? 'bg-blue-800 cursor-wait'
+                      : 'bg-blue-600 hover:bg-blue-700'
                   }`}
                 >
-                  {saving ? "Enregistrement..." : "Enregistrer les modifications"}
+                  {saving
+                    ? 'Enregistrement...'
+                    : 'Enregistrer les modifications'}
                 </button>
               </div>
             </form>

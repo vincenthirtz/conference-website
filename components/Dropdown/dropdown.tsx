@@ -1,12 +1,5 @@
-import React, { useState, useRef, useEffect, SetStateAction, JSX } from 'react';
-import { City } from '../../types/types';
-
-interface IDropdown {
-  city: Partial<City>;
-  cities: City[];
-  setCity: React.Dispatch<SetStateAction<Partial<City>>>;
-  handleSpeakers: (arg0: string) => void;
-}
+import React, { useState, useRef, useEffect, JSX } from 'react';
+import type { IDropdown } from '../../types/components';
 
 function Dropdown({
   city,

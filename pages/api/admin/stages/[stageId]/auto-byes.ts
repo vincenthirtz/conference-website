@@ -16,20 +16,16 @@
 //   "propagate": true          // propage dans le bracket (défaut: true)
 // }
 
-import type { NextApiRequest, NextApiResponse } from "next";
-import { supabaseAdmin } from "@/utils/supabase";
-import { withStaffRoute } from "@/utils/staff";
-import { logStaffAction } from "@/utils/staffLogs";
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { supabaseAdmin } from '@/utils/supabase';
+import { withStaffRoute } from '@/utils/staff';
+import { logStaffAction } from '@/utils/staffLogs';
 import {
   resetPropagationForMatch,
   propagateBracketForMatch,
-} from "@/utils/bracket/propagate";
+} from '@/utils/bracket/propagate';
 
-type MatchStatus =
-  | "pending"
-  | "ongoing"
-  | "finished"
-  | "cancelled";
+type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
 
 type DbMatchRow = {
   id: string;
@@ -59,7 +55,7 @@ type AutoByesResult = {
   failed: { matchId: string; reason: string }[];
 };
 
-export default withStaffRoute(handler, "manager");
+export default withStaffRoute(handler, 'manager');
 
 async function handler(
   req: NextApiRequest,
@@ -69,15 +65,11 @@ async function handler(
   const { stageId } = req.query;
 
   if (!stageId || Array.isArray(stageId)) {
-    return res
-      .status(400)
-      .json({ error: "Invalid stageId" });
+    return res.status(400).json({ error: 'Invalid stageId' });
   }
 
-  if (req.method !== "POST") {
-    return res
-      .status(405)
-      .json({ error: "Method not allowed" });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const id = String(stageId);
@@ -85,36 +77,29 @@ async function handler(
   try {
     const body = (req.body || {}) as AutoByesBody;
     const roundFilter =
-      typeof body.roundNumber === "number"
-        ? body.roundNumber
-        : undefined;
+      typeof body.roundNumber === 'number' ? body.roundNumber : undefined;
     const scoreForBye =
-      typeof body.scoreForBye === "number"
-        ? body.scoreForBye
-        : 1;
-    const propagate =
-      body.propagate !== false; // défaut true
+      typeof body.scoreForBye === 'number' ? body.scoreForBye : 1;
+    const propagate = body.propagate !== false; // défaut true
 
     // 1) Récupérer le stage pour le tournament_id
-    const { data: stageRow, error: stageErr } =
-      await supabaseAdmin
-        .from("tournament_stages")
-        .select("id, tournament_id")
-        .eq("id", id)
-        .maybeSingle();
+    const { data: stageRow, error: stageErr } = await supabaseAdmin
+      .from('tournament_stages')
+      .select('id, tournament_id')
+      .eq('id', id)
+      .maybeSingle();
 
     if (stageErr || !stageRow) {
       return res.status(404).json({
-        error: "Stage not found",
+        error: 'Stage not found',
       });
     }
 
-    const tournamentId: string | null =
-      stageRow.tournament_id ?? null;
+    const tournamentId: string | null = stageRow.tournament_id ?? null;
 
     // 2) Récupérer les matchs du stage (optionnellement filtrés par round)
     let query = supabaseAdmin
-      .from("matches")
+      .from('matches')
       .select(
         `
         id,
@@ -130,28 +115,23 @@ async function handler(
         winner_team_id
       `
       )
-      .eq("stage_id", id)
-      .neq("status", "cancelled");
+      .eq('stage_id', id)
+      .neq('status', 'cancelled');
 
     if (roundFilter !== undefined) {
-      query = query.eq("round_number", roundFilter);
+      query = query.eq('round_number', roundFilter);
     }
 
-    const { data: matchesData, error: mErr } =
-      await query;
+    const { data: matchesData, error: mErr } = await query;
 
     if (mErr) {
-      console.error(
-        "auto-byes: fetch matches error",
-        mErr
-      );
+      console.error('auto-byes: fetch matches error', mErr);
       return res.status(500).json({
-        error: "Failed to fetch stage matches",
+        error: 'Failed to fetch stage matches',
       });
     }
 
-    const allMatches =
-      (matchesData || []) as DbMatchRow[];
+    const allMatches = (matchesData || []) as DbMatchRow[];
 
     // 3) Filtrer les matchs "éligibles BYE" :
     //    - pas déjà is_bye
@@ -182,43 +162,32 @@ async function handler(
     for (const m of candidates) {
       const matchId = m.id;
       try {
-        const winnerTeamId =
-          m.team1_id || m.team2_id;
+        const winnerTeamId = m.team1_id || m.team2_id;
 
         if (!winnerTeamId) {
-          throw new Error(
-            "Match has no team to receive BYE"
-          );
+          throw new Error('Match has no team to receive BYE');
         }
 
-        const nowIso =
-          new Date().toISOString();
+        const nowIso = new Date().toISOString();
 
         // calcul des scores : on donne scoreForBye à la team présente, 0 à l'autre (même si null)
-        const team1_score =
-          m.team1_id === winnerTeamId
-            ? scoreForBye
-            : 0;
-        const team2_score =
-          m.team2_id === winnerTeamId
-            ? scoreForBye
-            : 0;
+        const team1_score = m.team1_id === winnerTeamId ? scoreForBye : 0;
+        const team2_score = m.team2_id === winnerTeamId ? scoreForBye : 0;
 
         // Reset propagation avant de figer un vainqueur
         await resetPropagationForMatch(matchId);
 
-        const { error: updErr } =
-          await supabaseAdmin
-            .from("matches")
-            .update({
-              is_bye: true,
-              status: "finished",
-              winner_team_id: winnerTeamId,
-              team1_score,
-              team2_score,
-              completed_at: nowIso,
-            })
-            .eq("id", matchId);
+        const { error: updErr } = await supabaseAdmin
+          .from('matches')
+          .update({
+            is_bye: true,
+            status: 'finished',
+            winner_team_id: winnerTeamId,
+            team1_score,
+            team2_score,
+            completed_at: nowIso,
+          })
+          .eq('id', matchId);
 
         if (updErr) {
           throw updErr;
@@ -227,12 +196,10 @@ async function handler(
         // Propage dans le bracket
         if (propagate) {
           try {
-            await propagateBracketForMatch(
-              matchId
-            );
+            await propagateBracketForMatch(matchId);
           } catch (e: any) {
             console.error(
-              "auto-byes: propagateBracketForMatch error",
+              'auto-byes: propagateBracketForMatch error',
               matchId,
               e
             );
@@ -242,14 +209,10 @@ async function handler(
 
         updatedMatchIds.push(matchId);
       } catch (err: any) {
-        console.error(
-          "auto-byes: error processing match",
-          matchId,
-          err
-        );
+        console.error('auto-byes: error processing match', matchId, err);
         failed.push({
           matchId,
-          reason: err?.message ?? "unknown",
+          reason: err?.message ?? 'unknown',
         });
       }
     }
@@ -259,8 +222,8 @@ async function handler(
       try {
         await logStaffAction({
           staff_id: ctx.staff.id,
-          action: "staff_batch_action",
-          entity_type: "match_auto_byes",
+          action: 'staff_batch_action',
+          entity_type: 'match_auto_byes',
           entity_id: null,
           tournament_id: tournamentId,
           payload: {
@@ -273,10 +236,7 @@ async function handler(
           },
         });
       } catch (e) {
-        console.error(
-          "auto-byes: logStaffAction error",
-          e
-        );
+        console.error('auto-byes: logStaffAction error', e);
       }
     }
 
@@ -290,12 +250,9 @@ async function handler(
 
     return res.status(200).json(result);
   } catch (err: any) {
-    console.error(
-      "[/api/admin/stages/[stageId]/auto-byes] error:",
-      err
-    );
+    console.error('[/api/admin/stages/[stageId]/auto-byes] error:', err);
     return res.status(500).json({
-      error: "Internal server error",
+      error: 'Internal server error',
       detail: err?.message,
     });
   }

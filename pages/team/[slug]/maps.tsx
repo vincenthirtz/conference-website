@@ -1,11 +1,11 @@
 // @ts-nocheck
 /* eslint-disable @next/next/no-img-element */
-import type { GetServerSideProps, NextPage } from "next";
-import Head from "next/head";
-import Link from "next/link";
-import Heading from "@/components/Typography/heading";
-import Paragraph from "@/components/Typography/paragraph";
-import { supabaseAdmin } from "@/utils/supabase"; // adapte le chemin si besoin
+import type { GetServerSideProps, NextPage } from 'next';
+import Head from 'next/head';
+import Link from 'next/link';
+import Heading from '@/components/Typography/heading';
+import Paragraph from '@/components/Typography/paragraph';
+import { supabaseAdmin } from '@/utils/supabase'; // adapte le chemin si besoin
 
 type Team = {
   id: string;
@@ -62,9 +62,7 @@ const TeamMapsPage: NextPage<Props> = ({ team, mapStats }) => {
   return (
     <>
       <Head>
-        <title>
-          Stats maps – {team.name} | OW Women&apos;s Cup
-        </title>
+        <title>Stats maps – {team.name} | OW Women&apos;s Cup</title>
         <meta
           name="description"
           content={`Statistiques par carte de l'équipe ${team.name} – OW Women's Cup`}
@@ -177,17 +175,17 @@ const TeamMapsPage: NextPage<Props> = ({ team, mapStats }) => {
                   <tbody>
                     {mapStats.map((m) => {
                       const wr =
-                        typeof m.win_rate === "number"
+                        typeof m.win_rate === 'number'
                           ? m.win_rate
                           : m.games_played > 0
-                          ? (m.wins / m.games_played) * 100
-                          : 0;
+                            ? (m.wins / m.games_played) * 100
+                            : 0;
 
                       const roundedWr = Math.round(wr * 10) / 10;
                       const roundsInfo =
                         m.rounds_won != null && m.rounds_lost != null
                           ? `${m.rounds_won}-${m.rounds_lost}`
-                          : "—";
+                          : '—';
 
                       return (
                         <tr
@@ -241,34 +239,35 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   }
 
   // Même logique que ta page fusionnée [id]/[name] : si UUID → on cherche par id, sinon par name
-  const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/.test(
-    slug
-  );
-  const column = isUuid ? "id" : "name";
+  const isUuid =
+    /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/.test(
+      slug
+    );
+  const column = isUuid ? 'id' : 'name';
 
   // 1) Récupérer l'équipe
   const { data: team, error: teamError } = await supabaseAdmin
-    .from("teams")
-    .select<"*, id, name, short_name, logo_url, country, description">()
+    .from('teams')
+    .select<'*, id, name, short_name, logo_url, country, description'>()
     .eq(column, slug)
     .maybeSingle();
 
   if (teamError || !team) {
-    console.error("Erreur chargement équipe (maps):", teamError);
+    console.error('Erreur chargement équipe (maps):', teamError);
     return { notFound: true };
   }
 
   // 2) Récupérer les stats de maps
   const { data: mapStats, error: mapsError } = await supabaseAdmin
-    .from("team_map_stats")
+    .from('team_map_stats')
     .select(
-      "map_name, games_played, wins, losses, rounds_won, rounds_lost, win_rate"
+      'map_name, games_played, wins, losses, rounds_won, rounds_lost, win_rate'
     )
-    .eq("team_id", team.id)
-    .order("games_played", { ascending: false });
+    .eq('team_id', team.id)
+    .order('games_played', { ascending: false });
 
   if (mapsError) {
-    console.error("Erreur chargement team_map_stats:", mapsError);
+    console.error('Erreur chargement team_map_stats:', mapsError);
   }
 
   return {

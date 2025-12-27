@@ -1,14 +1,14 @@
 // @ts-nocheck
 // pages/tournament/[id]/stats.tsx
-/* eslint-disable react/no-unescaped-entities */
-import { GetServerSideProps } from "next";
-import Head from "next/head";
-import Link from "next/link";
-import Image from "next/image";
-import Heading from "@/components/Typography/heading";
-import Paragraph from "@/components/Typography/paragraph";
-import Button from "@/components/Buttons/button";
-import { supabaseAdmin } from "@/utils/supabase";
+ 
+import { GetServerSideProps } from 'next';
+import Head from 'next/head';
+import Link from 'next/link';
+import Image from 'next/image';
+import Heading from '@/components/Typography/heading';
+import Paragraph from '@/components/Typography/paragraph';
+import Button from '@/components/Buttons/button';
+import { supabaseAdmin } from '@/utils/supabase';
 
 type Tournament = {
   id: string;
@@ -63,9 +63,7 @@ type Props = {
   teamStats: TeamStat[];
 };
 
-export const getServerSideProps: GetServerSideProps<Props> = async (
-  ctx
-) => {
+export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   const { id } = ctx.query;
   if (!id || Array.isArray(id)) {
     return { notFound: true };
@@ -73,22 +71,22 @@ export const getServerSideProps: GetServerSideProps<Props> = async (
 
   // 1) Tournoi
   const { data: tournament, error: tErr } = await supabaseAdmin
-    .from("tournaments")
-    .select("*")
-    .eq("id", id)
+    .from('tournaments')
+    .select('*')
+    .eq('id', id)
     .single();
 
   if (tErr || !tournament) {
     return { notFound: true };
   }
 
-  if (tournament.visibility && tournament.visibility !== "public") {
+  if (tournament.visibility && tournament.visibility !== 'public') {
     return { notFound: true };
   }
 
   // 2) Récupérer les équipes engagées via tournament_stage_teams
   const { data: stageTeams, error: stErr } = await supabaseAdmin
-    .from("tournament_stage_teams")
+    .from('tournament_stage_teams')
     .select(
       `
       team:teams (
@@ -99,10 +97,10 @@ export const getServerSideProps: GetServerSideProps<Props> = async (
       )
     `
     )
-    .eq("stage_id.tournament_id", id); // si Supabase râle, remplace par un .in sur stage_id
+    .eq('stage_id.tournament_id', id); // si Supabase râle, remplace par un .in sur stage_id
 
   if (stErr) {
-    console.error("stats page stage_teams error:", stErr);
+    console.error('stats page stage_teams error:', stErr);
   }
 
   const teamMap = new Map<string, SimpleTeam>();
@@ -126,20 +124,16 @@ export const getServerSideProps: GetServerSideProps<Props> = async (
 
   // 3) Matches du tournoi (on exclut les annulés & BYE des stats "compétitives")
   const { data: matchesData, error: mErr } = await supabaseAdmin
-    .from("matches")
-    .select(
-      "id, status, is_bye, team1_id, team2_id, winner_team_id"
-    )
-    .eq("tournament_id", id)
-    .neq("status", "cancelled");
+    .from('matches')
+    .select('id, status, is_bye, team1_id, team2_id, winner_team_id')
+    .eq('tournament_id', id)
+    .neq('status', 'cancelled');
 
   if (mErr) {
-    console.error("stats page matches error:", mErr);
+    console.error('stats page matches error:', mErr);
   }
 
-  const matches = ((matchesData || []) as MatchRow[]).filter(
-    (m) => !m.is_bye
-  );
+  const matches = ((matchesData || []) as MatchRow[]).filter((m) => !m.is_bye);
 
   const matchIds = matches.map((m) => m.id);
   let games: GameRow[] = [];
@@ -147,12 +141,12 @@ export const getServerSideProps: GetServerSideProps<Props> = async (
   if (matchIds.length > 0) {
     // 4) Games de ces matches
     const { data: gamesData, error: gErr } = await supabaseAdmin
-      .from("games")
-      .select("match_id, team1_score, team2_score")
-      .in("match_id", matchIds);
+      .from('games')
+      .select('match_id, team1_score, team2_score')
+      .in('match_id', matchIds);
 
     if (gErr) {
-      console.error("stats page games error:", gErr);
+      console.error('stats page games error:', gErr);
     } else {
       games = (gamesData || []) as GameRow;
     }
@@ -168,10 +162,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (
   };
 };
 
-export default function TournamentStatsPage({
-  tournament,
-  teamStats,
-}: Props) {
+export default function TournamentStatsPage({ tournament, teamStats }: Props) {
   const dateRangeLabel = formatTournamentDates(
     tournament.start_date,
     tournament.end_date
@@ -180,10 +171,7 @@ export default function TournamentStatsPage({
   const statusColor = getStatusChipColor(tournament.status);
 
   const totalTeams = teamStats.length;
-  const totalMatches = teamStats.reduce(
-    (acc, t) => acc + t.matchesPlayed,
-    0
-  );
+  const totalMatches = teamStats.reduce((acc, t) => acc + t.matchesPlayed, 0);
 
   const sortedByWinrate = [...teamStats].sort((a, b) => {
     if (b.winrate !== a.winrate) {
@@ -194,16 +182,12 @@ export default function TournamentStatsPage({
 
   const topTeams = sortedByWinrate.slice(0, 3);
 
-  const bestMapDiff = [...teamStats].sort(
-    (a, b) => b.mapDiff - a.mapDiff
-  )[0];
+  const bestMapDiff = [...teamStats].sort((a, b) => b.mapDiff - a.mapDiff)[0];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <Head>
-        <title>
-          Stats équipes – {tournament.name} | OW Women&apos;s Cup
-        </title>
+        <title>Stats équipes – {tournament.name} | OW Women&apos;s Cup</title>
       </Head>
 
       <main className="container mx-auto px-4 pt-24 pb-16 max-w-6xl">
@@ -216,16 +200,13 @@ export default function TournamentStatsPage({
                   OW Women&apos;s Cup
                 </span>
                 <span className="text-gray-200">
-                  {tournament.game || "Overwatch 2"}
+                  {tournament.game || 'Overwatch 2'}
                 </span>
                 <span className="w-[1px] h-3 bg-white/20" />
                 <span className={statusColor}>{statusLabel}</span>
               </div>
 
-              <Heading
-                typeStyle="heading-md"
-                className="text-gradient mb-1"
-              >
+              <Heading typeStyle="heading-md" className="text-gradient mb-1">
                 Stats équipes – {tournament.name}
               </Heading>
               {dateRangeLabel && (
@@ -233,11 +214,9 @@ export default function TournamentStatsPage({
                   {dateRangeLabel}
                   {tournament.format && (
                     <>
-                      {" "}
-                      ·{" "}
-                      <span className="text-gray-100">
-                        {tournament.format}
-                      </span>
+                      {' '}
+                      ·{' '}
+                      <span className="text-gray-100">{tournament.format}</span>
                     </>
                   )}
                 </p>
@@ -247,10 +226,9 @@ export default function TournamentStatsPage({
                 textColor="text-gray-200"
                 className="max-w-xl"
               >
-                Classement des équipes sur ce tournoi selon leurs
-                victoires, leur différence de maps et leur
-                régularité. Parfait pour préparer un cast ou une
-                analyse desk.
+                Classement des équipes sur ce tournoi selon leurs victoires,
+                leur différence de maps et leur régularité. Parfait pour
+                préparer un cast ou une analyse desk.
               </Paragraph>
             </div>
 
@@ -295,22 +273,16 @@ export default function TournamentStatsPage({
         <section className="mb-6">
           <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
             {teamStats.length === 0 && (
-              <Paragraph
-                typeStyle="body-sm"
-                textColor="text-gray-300"
-              >
-                Aucune statistique n&apos;est disponible pour ce
-                tournoi pour l&apos;instant. Les stats apparaîtront dès que
-                des matchs auront été joués et enregistrés.
+              <Paragraph typeStyle="body-sm" textColor="text-gray-300">
+                Aucune statistique n&apos;est disponible pour ce tournoi pour
+                l&apos;instant. Les stats apparaîtront dès que des matchs auront
+                été joués et enregistrés.
               </Paragraph>
             )}
 
             {teamStats.length > 0 && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <StatCard
-                  label="Équipes"
-                  value={totalTeams}
-                />
+                <StatCard label="Équipes" value={totalTeams} />
                 <StatCard
                   label="Matchs joués"
                   value={Math.round(totalMatches / 2)}
@@ -320,15 +292,12 @@ export default function TournamentStatsPage({
                   label="Top winrate"
                   value={
                     topTeams[0]
-                      ? `${(topTeams[0].winrate * 100).toFixed(
-                          0
-                        )}%`
-                      : "—"
+                      ? `${(topTeams[0].winrate * 100).toFixed(0)}%`
+                      : '—'
                   }
                   hint={
                     topTeams[0]
-                      ? topTeams[0].teamShortName ||
-                        topTeams[0].teamName
+                      ? topTeams[0].teamShortName || topTeams[0].teamName
                       : undefined
                   }
                 />
@@ -339,12 +308,11 @@ export default function TournamentStatsPage({
                       ? bestMapDiff.mapDiff > 0
                         ? `+${bestMapDiff.mapDiff}`
                         : bestMapDiff.mapDiff.toString()
-                      : "—"
+                      : '—'
                   }
                   hint={
                     bestMapDiff
-                      ? bestMapDiff.teamShortName ||
-                        bestMapDiff.teamName
+                      ? bestMapDiff.teamShortName || bestMapDiff.teamName
                       : undefined
                   }
                 />
@@ -362,11 +330,7 @@ export default function TournamentStatsPage({
               </p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {topTeams.map((t, index) => (
-                  <TopTeamCard
-                    key={t.teamId}
-                    rank={index + 1}
-                    stat={t}
-                  />
+                  <TopTeamCard key={t.teamId} rank={index + 1} stat={t} />
                 ))}
               </div>
             </div>
@@ -385,27 +349,13 @@ export default function TournamentStatsPage({
                 <table className="min-w-full text-[11px]">
                   <thead>
                     <tr className="text-gray-400 border-b border-white/10">
-                      <th className="text-left py-1.5 pr-3">
-                        #
-                      </th>
-                      <th className="text-left py-1.5 pr-3">
-                        Équipe
-                      </th>
-                      <th className="text-right py-1.5 px-3">
-                        Matchs
-                      </th>
-                      <th className="text-right py-1.5 px-3">
-                        V
-                      </th>
-                      <th className="text-right py-1.5 px-3">
-                        D
-                      </th>
-                      <th className="text-right py-1.5 px-3">
-                        Winrate
-                      </th>
-                      <th className="text-right py-1.5 px-3">
-                        Maps (+/-)
-                      </th>
+                      <th className="text-left py-1.5 pr-3">#</th>
+                      <th className="text-left py-1.5 pr-3">Équipe</th>
+                      <th className="text-right py-1.5 px-3">Matchs</th>
+                      <th className="text-right py-1.5 px-3">V</th>
+                      <th className="text-right py-1.5 px-3">D</th>
+                      <th className="text-right py-1.5 px-3">Winrate</th>
+                      <th className="text-right py-1.5 px-3">Maps (+/-)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -413,15 +363,11 @@ export default function TournamentStatsPage({
                       <tr
                         key={t.teamId}
                         className={
-                          "border-b border-white/5" +
-                          (idx % 2 === 0
-                            ? " bg-white/0"
-                            : " bg-white/[0.02]")
+                          'border-b border-white/5' +
+                          (idx % 2 === 0 ? ' bg-white/0' : ' bg-white/[0.02]')
                         }
                       >
-                        <td className="py-1.5 pr-3 text-gray-400">
-                          {idx + 1}
-                        </td>
+                        <td className="py-1.5 pr-3 text-gray-400">{idx + 1}</td>
                         <td className="py-1.5 pr-3">
                           <div className="flex items-center gap-2">
                             <div className="w-6 h-6 rounded-full bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden">
@@ -435,9 +381,7 @@ export default function TournamentStatsPage({
                                 />
                               ) : (
                                 <span className="text-[9px] text-gray-400">
-                                  {initials(
-                                    t.teamShortName || t.teamName
-                                  )}
+                                  {initials(t.teamShortName || t.teamName)}
                                 </span>
                               )}
                             </div>
@@ -466,23 +410,22 @@ export default function TournamentStatsPage({
                           {(t.winrate * 100).toFixed(0)}%
                         </td>
                         <td className="py-1.5 px-3 text-right text-gray-100">
-                          {t.mapsWon}-
-                          {t.mapsLost}{" "}
+                          {t.mapsWon}-{t.mapsLost}{' '}
                           <span
                             className={
-                              "ml-1 " +
+                              'ml-1 ' +
                               (t.mapDiff > 0
-                                ? "text-emerald-300"
+                                ? 'text-emerald-300'
                                 : t.mapDiff < 0
-                                ? "text-red-300"
-                                : "text-gray-300")
+                                  ? 'text-red-300'
+                                  : 'text-gray-300')
                             }
                           >
                             {t.mapDiff > 0
                               ? `(+${t.mapDiff})`
                               : t.mapDiff < 0
-                              ? `(${t.mapDiff})`
-                              : "(0)"}
+                                ? `(${t.mapDiff})`
+                                : '(0)'}
                           </span>
                         </td>
                       </tr>
@@ -492,9 +435,8 @@ export default function TournamentStatsPage({
               </div>
 
               <p className="mt-2 text-[10px] text-gray-500">
-                Les statistiques sont calculées à partir des matchs
-                joués sur ce tournoi, en excluant les matchs
-                automatiquement gagnés par bye.
+                Les statistiques sont calculées à partir des matchs joués sur ce
+                tournoi, en excluant les matchs automatiquement gagnés par bye.
               </p>
             </div>
           </section>
@@ -523,11 +465,10 @@ function computeTeamStats(
   >();
   for (const g of games) {
     const mId = g.match_id;
-    const entry =
-      gameAgg.get(mId) || {
-        team1Rounds: 0,
-        team2Rounds: 0,
-      };
+    const entry = gameAgg.get(mId) || {
+      team1Rounds: 0,
+      team2Rounds: 0,
+    };
     entry.team1Rounds += g.team1_score ?? 0;
     entry.team2Rounds += g.team2_score ?? 0;
     gameAgg.set(mId, entry);
@@ -567,8 +508,7 @@ function computeTeamStats(
       }
     }
 
-    const winrate =
-      matchesPlayed > 0 ? wins / matchesPlayed : 0;
+    const winrate = matchesPlayed > 0 ? wins / matchesPlayed : 0;
 
     return {
       teamId: t.id,
@@ -608,40 +548,29 @@ function StatCard({
         {label}
       </p>
       <p className="text-xl font-semibold text-white">
-        {typeof value === "number" ? value.toString() : value}
+        {typeof value === 'number' ? value.toString() : value}
       </p>
-      {hint && (
-        <p className="text-[10px] text-gray-400 mt-[2px]">
-          {hint}
-        </p>
-      )}
+      {hint && <p className="text-[10px] text-gray-400 mt-[2px]">{hint}</p>}
     </div>
   );
 }
 
-function TopTeamCard({
-  rank,
-  stat,
-}: {
-  rank: number;
-  stat: TeamStat;
-}) {
-  const rankLabel =
-    rank === 1 ? "1er" : rank === 2 ? "2e" : "3e";
+function TopTeamCard({ rank, stat }: { rank: number; stat: TeamStat }) {
+  const rankLabel = rank === 1 ? '1er' : rank === 2 ? '2e' : '3e';
 
   const chipClass =
     rank === 1
-      ? "bg-yellow-500/20 border-yellow-400/60 text-yellow-100"
+      ? 'bg-yellow-500/20 border-yellow-400/60 text-yellow-100'
       : rank === 2
-      ? "bg-gray-300/15 border-gray-200/60 text-gray-100"
-      : "bg-amber-800/30 border-amber-500/60 text-amber-100";
+        ? 'bg-gray-300/15 border-gray-200/60 text-gray-100'
+        : 'bg-amber-800/30 border-amber-500/60 text-amber-100';
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.02] px-3 py-3 flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <span
           className={
-            "inline-flex items-center justify-center text-[10px] px-2 py-[2px] rounded-full border " +
+            'inline-flex items-center justify-center text-[10px] px-2 py-[2px] rounded-full border ' +
             chipClass
           }
         >
@@ -673,49 +602,38 @@ function TopTeamCard({
             {stat.teamShortName || stat.teamName}
           </span>
           {stat.teamShortName && (
-            <span className="text-[10px] text-gray-400">
-              {stat.teamName}
-            </span>
+            <span className="text-[10px] text-gray-400">{stat.teamName}</span>
           )}
         </div>
       </div>
 
       <div className="mt-1 flex flex-wrap gap-2 text-[10px] text-gray-300">
         <span>
-          Matchs :{" "}
-          <span className="text-gray-100">
-            {stat.matchesPlayed}
-          </span>
+          Matchs : <span className="text-gray-100">{stat.matchesPlayed}</span>
         </span>
         <span>
-          V/D :{" "}
-          <span className="text-emerald-300">
-            {stat.wins}
-          </span>
-          /
-          <span className="text-red-300">
-            {stat.losses}
-          </span>
+          V/D : <span className="text-emerald-300">{stat.wins}</span>/
+          <span className="text-red-300">{stat.losses}</span>
         </span>
         <span>
-          Maps :{" "}
+          Maps :{' '}
           <span className="text-gray-100">
             {stat.mapsWon}-{stat.mapsLost}
-          </span>{" "}
+          </span>{' '}
           <span
             className={
               stat.mapDiff > 0
-                ? "text-emerald-300"
+                ? 'text-emerald-300'
                 : stat.mapDiff < 0
-                ? "text-red-300"
-                : "text-gray-300"
+                  ? 'text-red-300'
+                  : 'text-gray-300'
             }
           >
             {stat.mapDiff > 0
               ? `(+${stat.mapDiff})`
               : stat.mapDiff < 0
-              ? `(${stat.mapDiff})`
-              : "(0)"}
+                ? `(${stat.mapDiff})`
+                : '(0)'}
           </span>
         </span>
       </div>
@@ -734,41 +652,41 @@ function formatTournamentDates(
   if (!start && !end) return null;
 
   const opts: Intl.DateTimeFormatOptions = {
-    day: "2-digit",
-    month: "2-digit",
+    day: '2-digit',
+    month: '2-digit',
   };
 
   if (start && end) {
     const s = new Date(start);
     const e = new Date(end);
     if (s.getTime() === e.getTime()) {
-      return `Le ${s.toLocaleDateString("fr-FR", opts)}`;
+      return `Le ${s.toLocaleDateString('fr-FR', opts)}`;
     }
     return `Du ${s.toLocaleDateString(
-      "fr-FR",
+      'fr-FR',
       opts
-    )} au ${e.toLocaleDateString("fr-FR", opts)}`;
+    )} au ${e.toLocaleDateString('fr-FR', opts)}`;
   }
 
   if (start) {
     const s = new Date(start);
-    return `À partir du ${s.toLocaleDateString("fr-FR", opts)}`;
+    return `À partir du ${s.toLocaleDateString('fr-FR', opts)}`;
   }
 
   const e = new Date(end!);
-  return `Jusqu'au ${e.toLocaleDateString("fr-FR", opts)}`;
+  return `Jusqu'au ${e.toLocaleDateString('fr-FR', opts)}`;
 }
 
 function getStatusLabel(status: string): string {
   switch (status) {
-    case "upcoming":
-      return "À venir";
-    case "running":
-    case "ongoing":
-      return "En cours";
-    case "finished":
-    case "completed":
-      return "Terminé";
+    case 'upcoming':
+      return 'À venir';
+    case 'running':
+    case 'ongoing':
+      return 'En cours';
+    case 'finished':
+    case 'completed':
+      return 'Terminé';
     default:
       return status;
   }
@@ -776,16 +694,16 @@ function getStatusLabel(status: string): string {
 
 function getStatusChipColor(status: string): string {
   switch (status) {
-    case "upcoming":
-      return "px-1.5 py-[2px] rounded-full bg-yellow-500/20 text-yellow-200 border border-yellow-500/60";
-    case "running":
-    case "ongoing":
-      return "px-1.5 py-[2px] rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/60";
-    case "finished":
-    case "completed":
-      return "px-1.5 py-[2px] rounded-full bg-gray-500/20 text-gray-200 border border-gray-500/60";
+    case 'upcoming':
+      return 'px-1.5 py-[2px] rounded-full bg-yellow-500/20 text-yellow-200 border border-yellow-500/60';
+    case 'running':
+    case 'ongoing':
+      return 'px-1.5 py-[2px] rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/60';
+    case 'finished':
+    case 'completed':
+      return 'px-1.5 py-[2px] rounded-full bg-gray-500/20 text-gray-200 border border-gray-500/60';
     default:
-      return "px-1.5 py-[2px] rounded-full bg-white/10 text-white border border-white/30";
+      return 'px-1.5 py-[2px] rounded-full bg-white/10 text-white border border-white/30';
   }
 }
 

@@ -6,21 +6,21 @@ import type {
   NextApiResponse,
   GetServerSideProps,
   GetServerSidePropsContext,
-} from "next";
-import type { User } from "@supabase/supabase-js";
-import { supabaseAdmin, getServerClient } from "./supabase";
+} from 'next';
+import type { User } from '@supabase/supabase-js';
+import { supabaseAdmin, getServerClient } from './supabase';
 
 /* -----------------------------------------------------------
  * Types & constantes
  * ---------------------------------------------------------*/
 
 export type StaffRole =
-  | "owner"
-  | "admin"
-  | "manager"
-  | "referee"
-  | "caster"
-  | "helper";
+  | 'owner'
+  | 'admin'
+  | 'manager'
+  | 'referee'
+  | 'caster'
+  | 'helper';
 
 export type StaffMember = {
   id: string;
@@ -40,17 +40,17 @@ export type StaffContext = {
 
 export class StaffUnauthorizedError extends Error {
   statusCode = 403;
-  constructor(message = "Accès staff non autorisé") {
+  constructor(message = 'Accès staff non autorisé') {
     super(message);
-    this.name = "StaffUnauthorizedError";
+    this.name = 'StaffUnauthorizedError';
   }
 }
 
 export class StaffUnauthenticatedError extends Error {
   statusCode = 401;
-  constructor(message = "Utilisateur non authentifié") {
+  constructor(message = 'Utilisateur non authentifié') {
     super(message);
-    this.name = "StaffUnauthenticatedError";
+    this.name = 'StaffUnauthenticatedError';
   }
 }
 
@@ -69,18 +69,18 @@ const ROLE_RANK: Record<StaffRole, number> = {
 
 export function formatStaffRoleLabel(role: StaffRole): string {
   switch (role) {
-    case "owner":
-      return "Owner";
-    case "admin":
-      return "Admin";
-    case "manager":
-      return "Manager";
-    case "referee":
-      return "Arbitre";
-    case "caster":
-      return "Caster";
-    case "helper":
-      return "Staff";
+    case 'owner':
+      return 'Owner';
+    case 'admin':
+      return 'Admin';
+    case 'manager':
+      return 'Manager';
+    case 'referee':
+      return 'Arbitre';
+    case 'caster':
+      return 'Caster';
+    case 'helper':
+      return 'Staff';
     default:
       return role;
   }
@@ -103,22 +103,20 @@ export async function getStaffByUserId(
 ): Promise<StaffMember | null> {
   // 🔁 Utilise bien la table "staff" + colonne "auth_user_id"
   const { data, error } = await supabaseAdmin
-    .from("staff")
-    .select("*")
-    .eq("auth_user_id", userId)
+    .from('staff')
+    .select('*')
+    .eq('auth_user_id', userId)
     .maybeSingle();
 
   if (error) {
-    console.error("getStaffByUserId error:", error);
+    console.error('getStaffByUserId error:', error);
     return null;
   }
 
   return (data as StaffMember) ?? null;
 }
 
-export async function getStaffRole(
-  userId: string
-): Promise<StaffRole | null> {
+export async function getStaffRole(userId: string): Promise<StaffRole | null> {
   const staff = await getStaffByUserId(userId);
   return staff?.role ?? null;
 }
@@ -140,8 +138,8 @@ export async function getStaffContextFromRequest(
   // 1) Essayer d'abord avec le token Bearer (cas API / fetch côté client)
   const authHeader = req.headers.authorization;
   const token =
-    authHeader && authHeader.startsWith("Bearer ")
-      ? authHeader.slice("Bearer ".length)
+    authHeader && authHeader.startsWith('Bearer ')
+      ? authHeader.slice('Bearer '.length)
       : undefined;
 
   if (token) {
@@ -151,7 +149,7 @@ export async function getStaffContextFromRequest(
     } = await supabaseAdmin.auth.getUser(token);
 
     if (tokenError) {
-      console.error("getStaffContextFromRequest token error:", tokenError);
+      console.error('getStaffContextFromRequest token error:', tokenError);
     } else {
       user = tokenUser;
     }
@@ -167,20 +165,19 @@ export async function getStaffContextFromRequest(
 
     if (cookieError) {
       // On ignore les erreurs "Auth session missing" qui sont normales
-      const msg = (cookieError as any)?.message || "";
+      const msg = (cookieError as any)?.message || '';
       const status = (cookieError as any)?.status;
 
       const isMissingSession =
-        msg.includes("Auth session missing") || status === 400;
+        msg.includes('Auth session missing') || status === 400;
 
       if (!isMissingSession) {
-        console.error("getStaffContextFromRequest cookie error:", cookieError);
+        console.error('getStaffContextFromRequest cookie error:', cookieError);
       }
     }
 
     user = cookieUser ?? null;
   }
-
 
   // 3) Pas d'utilisateur → pas de contexte staff
   if (!user) {
@@ -220,7 +217,7 @@ export async function requireStaffRoleFromRequest(
 
   if (!ctx.role || !hasAtLeastRole(ctx.role, minRole)) {
     throw new StaffUnauthorizedError(
-      `Rôle ${minRole} requis (actuel : ${ctx.role ?? "aucun"})`
+      `Rôle ${minRole} requis (actuel : ${ctx.role ?? 'aucun'})`
     );
   }
 
@@ -232,19 +229,19 @@ export async function requireStaffRoleFromRequest(
  * ---------------------------------------------------------*/
 
 export type StaffLogAction =
-  | "login"
-  | "logout"
-  | "view_admin_page"
-  | "update_tournament"
-  | "create_tournament"
-  | "delete_tournament"
-  | "update_match"
-  | "create_match"
-  | "delete_match"
-  | "update_bracket"
-  | "update_team"
-  | "staff_batch_action"
-  | "other";
+  | 'login'
+  | 'logout'
+  | 'view_admin_page'
+  | 'update_tournament'
+  | 'create_tournament'
+  | 'delete_tournament'
+  | 'update_match'
+  | 'create_match'
+  | 'delete_match'
+  | 'update_bracket'
+  | 'update_team'
+  | 'staff_batch_action'
+  | 'other';
 
 export type StaffLogPayload = Record<string, any>;
 
@@ -265,19 +262,17 @@ export async function logStaffAction(params: {
     payload = null,
   } = params;
 
-  const { error } = await supabaseAdmin
-    .from("staff_logs")
-    .insert({
-      staff_id,
-      action,
-      entity_type,
-      entity_id,
-      tournament_id,
-      payload,
-    });
+  const { error } = await supabaseAdmin.from('staff_logs').insert({
+    staff_id,
+    action,
+    entity_type,
+    entity_id,
+    tournament_id,
+    payload,
+  });
 
   if (error) {
-    console.error("logStaffAction error:", error, params);
+    console.error('logStaffAction error:', error, params);
   }
 }
 
@@ -291,14 +286,14 @@ export function withStaffRoute(
     res: NextApiResponse,
     ctx: StaffContext
   ) => Promise<void>,
-  minRole: StaffRole = "admin"
+  minRole: StaffRole = 'admin'
 ) {
   return async (req: NextApiRequest, res: NextApiResponse) => {
     try {
       const ctx = await requireStaffRoleFromRequest(req, res, minRole);
       await handler(req, res, ctx);
     } catch (err: any) {
-      console.error("withStaffRoute error:", err);
+      console.error('withStaffRoute error:', err);
 
       if (
         err instanceof StaffUnauthenticatedError ||
@@ -308,7 +303,7 @@ export function withStaffRoute(
         return;
       }
 
-      res.status(500).json({ error: "Erreur serveur" });
+      res.status(500).json({ error: 'Erreur serveur' });
     }
   };
 }
@@ -322,15 +317,15 @@ export function isStaff(role: StaffRole | null | undefined) {
 }
 
 export function isAdmin(role: StaffRole | null | undefined) {
-  return hasAtLeastRole(role, "admin");
+  return hasAtLeastRole(role, 'admin');
 }
 
 export function isManagerOrAbove(role: StaffRole | null | undefined) {
-  return hasAtLeastRole(role, "manager");
+  return hasAtLeastRole(role, 'manager');
 }
 
 export function withStaffPage(
-  minRole: StaffRole = "admin"
+  minRole: StaffRole = 'admin'
 ): GetServerSideProps {
   return async function (ctx: GetServerSidePropsContext) {
     const { req, res } = ctx;
@@ -356,7 +351,7 @@ export function withStaffPage(
       if (err instanceof StaffUnauthenticatedError) {
         return {
           redirect: {
-            destination: "/admin/login",
+            destination: '/admin/login',
             permanent: false,
           },
         };
@@ -366,17 +361,17 @@ export function withStaffPage(
       if (err instanceof StaffUnauthorizedError) {
         return {
           redirect: {
-            destination: "/403",
+            destination: '/403',
             permanent: false,
           },
         };
       }
 
       // Autre erreur → /500
-      console.error("withStaffPage error:", err);
+      console.error('withStaffPage error:', err);
       return {
         redirect: {
-          destination: "/500",
+          destination: '/500',
           permanent: false,
         },
       };

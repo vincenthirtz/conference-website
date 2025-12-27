@@ -8,13 +8,13 @@
  * la fonction essaiera de parser automatiquement.
  */
 export type MatchSeriesFormat =
-  | "bo1"
-  | "bo2"
-  | "bo3"
-  | "bo5"
-  | "bo7"
-  | "single_map"
-  | "map_decider"
+  | 'bo1'
+  | 'bo2'
+  | 'bo3'
+  | 'bo5'
+  | 'bo7'
+  | 'single_map'
+  | 'map_decider'
   | string
   | null
   | undefined;
@@ -31,15 +31,13 @@ export type MatchSeriesFormat =
  * - "bo9" → 5
  * - format inconnu → 1 (fallback safe)
  */
-export function computeRequiredWins(
-  format: MatchSeriesFormat
-): number {
+export function computeRequiredWins(format: MatchSeriesFormat): number {
   if (!format) return 1;
 
   const f = format.toLowerCase().trim();
 
   // Formats alias "single map"
-  if (f === "single_map" || f === "map_decider") {
+  if (f === 'single_map' || f === 'map_decider') {
     return 1;
   }
 
@@ -79,9 +77,7 @@ export function isSeriesFinished(
   format: MatchSeriesFormat
 ): boolean {
   const required = computeRequiredWins(format);
-  return (
-    team1Wins >= required || team2Wins >= required
-  );
+  return team1Wins >= required || team2Wins >= required;
 }
 
 /**
@@ -95,7 +91,7 @@ export function getSeriesWinnerFromScores(
   team1Wins: number,
   team2Wins: number,
   format: MatchSeriesFormat
-): "team1" | "team2" | "tie" | null {
+): 'team1' | 'team2' | 'tie' | null {
   const required = computeRequiredWins(format);
 
   const t1Reached = team1Wins >= required;
@@ -103,13 +99,13 @@ export function getSeriesWinnerFromScores(
 
   if (!t1Reached && !t2Reached) return null;
 
-  if (t1Reached && !t2Reached) return "team1";
-  if (!t1Reached && t2Reached) return "team2";
+  if (t1Reached && !t2Reached) return 'team1';
+  if (!t1Reached && t2Reached) return 'team2';
 
   if (t1Reached && t2Reached) {
-    if (team1Wins > team2Wins) return "team1";
-    if (team2Wins > team1Wins) return "team2";
-    return "tie";
+    if (team1Wins > team2Wins) return 'team1';
+    if (team2Wins > team1Wins) return 'team2';
+    return 'tie';
   }
 
   return null;

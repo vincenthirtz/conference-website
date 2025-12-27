@@ -1,16 +1,16 @@
 // utils/supabase.ts (ou lib/supabase.ts)
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from '@supabase/supabase-js';
 import {
   createBrowserClient,
   createServerClient,
   type CookieOptions,
-} from "@supabase/ssr";
-import { serialize } from "cookie";
+} from '@supabase/ssr';
+import { serialize } from 'cookie';
 import type {
   GetServerSidePropsContext,
   NextApiRequest,
   NextApiResponse,
-} from "next";
+} from 'next';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -29,7 +29,7 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 // ⚠️ On NE log PAS la service role, jamais.
 if (!SUPABASE_SERVICE_ROLE) {
   console.warn(
-    "Supabase: SUPABASE_SERVICE_ROLE_KEY manquant. supabaseAdmin ne fonctionnera pas (API / SSR)."
+    'Supabase: SUPABASE_SERVICE_ROLE_KEY manquant. supabaseAdmin ne fonctionnera pas (API / SSR).'
   );
 }
 
@@ -49,31 +49,30 @@ export const supabaseClient = createBrowserClient(
  *    - C'est celui que tu utilises via getServerClient(req, res)
  * ---------------------------------------------------------*/
 
-type SupabaseServerReq =
-  | NextApiRequest
-  | GetServerSidePropsContext["req"];
+type SupabaseServerReq = NextApiRequest | GetServerSidePropsContext['req'];
 
-type SupabaseServerRes =
-  | NextApiResponse
-  | GetServerSidePropsContext["res"];
+type SupabaseServerRes = NextApiResponse | GetServerSidePropsContext['res'];
 
 function appendSetCookie(res: SupabaseServerRes, cookie: string) {
-  const existing = res.getHeader("Set-Cookie");
+  const existing = res.getHeader('Set-Cookie');
 
   if (!existing) {
-    res.setHeader("Set-Cookie", cookie);
+    res.setHeader('Set-Cookie', cookie);
     return;
   }
 
   if (Array.isArray(existing)) {
-    res.setHeader("Set-Cookie", [...existing, cookie]);
+    res.setHeader('Set-Cookie', [...existing, cookie]);
     return;
   }
 
-  res.setHeader("Set-Cookie", [existing.toString(), cookie]);
+  res.setHeader('Set-Cookie', [existing.toString(), cookie]);
 }
 
-export function getServerClient(req: SupabaseServerReq, res: SupabaseServerRes) {
+export function getServerClient(
+  req: SupabaseServerReq,
+  res: SupabaseServerRes
+) {
   return createServerClient(SUPABASE_URL!, SUPABASE_ANON_KEY!, {
     cookies: {
       get(name: string) {
@@ -85,7 +84,7 @@ export function getServerClient(req: SupabaseServerReq, res: SupabaseServerRes) 
       remove(name: string, options: CookieOptions) {
         appendSetCookie(
           res,
-          serialize(name, "", {
+          serialize(name, '', {
             ...options,
             maxAge: 0,
           })

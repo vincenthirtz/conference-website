@@ -1,8 +1,5 @@
 import React, { forwardRef } from 'react';
-
-interface HamburgerProps {
-  className?: string;
-}
+import type { HamburgerProps } from '../../types/components';
 
 const Hamburger = forwardRef<SVGSVGElement, HamburgerProps>((props, ref) => {
   const { className } = props;

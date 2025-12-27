@@ -1,12 +1,12 @@
 // pages/admin/tournament/[id]/bracket-builder.tsx
 
-import { useEffect, useMemo, useState } from "react";
-import Head from "next/head";
-import Link from "next/link";
-import Image from "next/image";
-import { useRouter } from "next/router";
-import { withStaffPage } from "@/utils/staff";
-import { StaffRoleBadge } from "@/components/admin/StaffRoleBadge";
+import { useEffect, useMemo, useState } from 'react';
+import Head from 'next/head';
+import Link from 'next/link';
+import Image from 'next/image';
+import { useRouter } from 'next/router';
+import { withStaffPage } from '@/utils/staff';
+import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
 type StaffShape = {
   id: string;
@@ -17,15 +17,15 @@ type StaffShape = {
 type StaffProps = {
   staff: StaffShape;
 };
-type MatchStatus = "pending" | "ongoing" | "finished" | "cancelled";
+type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
 
 type StageType =
-  | "group"
-  | "bracket"
-  | "swiss"
-  | "round_robin"
-  | "showmatch"
-  | "other";
+  | 'group'
+  | 'bracket'
+  | 'swiss'
+  | 'round_robin'
+  | 'showmatch'
+  | 'other';
 
 type TeamMini = {
   id: string;
@@ -79,11 +79,11 @@ type BracketApiResponse = {
   matches: BracketMatch[];
 };
 
-export const getServerSideProps = withStaffPage("manager");
+export const getServerSideProps = withStaffPage('manager');
 
 /** Format date courte */
 function formatShortDate(iso: string | null) {
-  if (!iso) return "—";
+  if (!iso) return '—';
   try {
     return new Date(iso).toLocaleString();
   } catch {
@@ -93,9 +93,9 @@ function formatShortDate(iso: string | null) {
 
 /** Label de colonne / round */
 function roundLabel(columnIndex: number, totalColumns: number) {
-  if (columnIndex === totalColumns - 1) return "Finale";
-  if (columnIndex === totalColumns - 2) return "Demi-finales";
-  if (columnIndex === totalColumns - 3) return "Quarts";
+  if (columnIndex === totalColumns - 1) return 'Finale';
+  if (columnIndex === totalColumns - 2) return 'Demi-finales';
+  if (columnIndex === totalColumns - 3) return 'Quarts';
   return `Round ${columnIndex + 1}`;
 }
 
@@ -113,10 +113,9 @@ function AdminBracketBuilderPage({ staff }: StaffProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
-  const [tournament, setTournament] = useState<BracketApiResponse["tournament"]>(
-    null
-  );
-  const [stage, setStage] = useState<BracketApiResponse["stage"] | null>(null);
+  const [tournament, setTournament] =
+    useState<BracketApiResponse['tournament']>(null);
+  const [stage, setStage] = useState<BracketApiResponse['stage'] | null>(null);
   const [matches, setMatches] = useState<BracketMatch[]>([]);
 
   // Pour savoir si quelque chose a été modifié
@@ -144,7 +143,7 @@ function AdminBracketBuilderPage({ staff }: StaffProps) {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Impossible de charger le bracket");
+        throw new Error(json.error || 'Impossible de charger le bracket');
       }
 
       const json: BracketApiResponse = await res.json();
@@ -152,7 +151,7 @@ function AdminBracketBuilderPage({ staff }: StaffProps) {
       setStage(json.stage ?? null);
       setMatches(json.matches || []);
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur inattendue");
+      setErrorMsg(err?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
@@ -167,7 +166,7 @@ function AdminBracketBuilderPage({ staff }: StaffProps) {
 
     for (const m of matches) {
       const col =
-        (m.column_index ?? undefined) ??
+        m.column_index ??
         (m.round_number != null ? m.round_number - 1 : 0);
 
       if (!colMap.has(col)) colMap.set(col, []);
@@ -195,13 +194,13 @@ function AdminBracketBuilderPage({ staff }: StaffProps) {
     e: React.DragEvent<HTMLDivElement>,
     payload: DragPayload
   ) {
-    e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("application/json", JSON.stringify(payload));
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('application/json', JSON.stringify(payload));
   }
 
   function onDragOverSlot(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
+    e.dataTransfer.dropEffect = 'move';
   }
 
   function onDropOnSlot(
@@ -210,7 +209,7 @@ function AdminBracketBuilderPage({ staff }: StaffProps) {
     targetSlot: 1 | 2
   ) {
     e.preventDefault();
-    const raw = e.dataTransfer.getData("application/json");
+    const raw = e.dataTransfer.getData('application/json');
     if (!raw) return;
 
     let payload: DragPayload;
@@ -237,12 +236,16 @@ function AdminBracketBuilderPage({ staff }: StaffProps) {
       const sourceTeamId =
         sourceSlot === 1 ? sourceMatch.team1_id : sourceMatch.team2_id;
       const sourceTeamObj =
-        sourceSlot === 1 ? sourceMatch.team1 || null : sourceMatch.team2 || null;
+        sourceSlot === 1
+          ? sourceMatch.team1 || null
+          : sourceMatch.team2 || null;
 
       const targetTeamId =
         targetSlot === 1 ? targetMatch.team1_id : targetMatch.team2_id;
       const targetTeamObj =
-        targetSlot === 1 ? targetMatch.team1 || null : targetMatch.team2 || null;
+        targetSlot === 1
+          ? targetMatch.team1 || null
+          : targetMatch.team2 || null;
 
       // Échange entre source & target (swap)
       if (sourceSlot === 1) {
@@ -304,24 +307,24 @@ function AdminBracketBuilderPage({ staff }: StaffProps) {
 
       // 👉 Adapte si tu préfères PATCH /api/admin/tournament/[id]/matches
       const res = await fetch(`/api/admin/tournament/${id}/bracket`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         throw new Error(
-          json.error || "Erreur lors de l’enregistrement du bracket"
+          json.error || 'Erreur lors de l’enregistrement du bracket'
         );
       }
 
       await res.json();
-      setInfoMsg("Bracket enregistré avec succès.");
+      setInfoMsg('Bracket enregistré avec succès.');
       setDirty(false);
       fetchBracket(); // re-sync
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur inconnue lors de l’enregistrement");
+      setErrorMsg(err?.message ?? 'Erreur inconnue lors de l’enregistrement');
     } finally {
       setSaving(false);
     }
@@ -349,11 +352,11 @@ function AdminBracketBuilderPage({ staff }: StaffProps) {
             <h1 className="text-3xl font-bold">Bracket builder</h1>
             {tournament && (
               <p className="text-neutral-400 text-sm mt-1">
-                Tournoi :{" "}
+                Tournoi :{' '}
                 <span className="font-semibold">{tournament.name}</span>
                 {tournament.slug && (
                   <>
-                    {" "}
+                    {' '}
                     <span className="font-mono bg-neutral-800 border border-neutral-700 px-2 py-0.5 rounded text-xs">
                       {tournament.slug}
                     </span>
@@ -363,13 +366,13 @@ function AdminBracketBuilderPage({ staff }: StaffProps) {
             )}
             {stage && (
               <p className="text-neutral-400 text-xs mt-1">
-                Phase :{" "}
+                Phase :{' '}
                 <Link
                   href={`/admin/stages/${stage.id}`}
                   className="underline underline-offset-2 hover:text-white"
                 >
                   {stage.name}
-                </Link>{" "}
+                </Link>{' '}
                 {stage.stage_type && (
                   <span className="uppercase tracking-wide text-[10px] ml-1 bg-neutral-800 border border-neutral-700 px-1.5 py-0.5 rounded">
                     {stage.stage_type}
@@ -401,8 +404,8 @@ function AdminBracketBuilderPage({ staff }: StaffProps) {
             disabled={loading || saving}
             className={`px-4 py-2 rounded text-sm border border-neutral-600 ${
               loading
-                ? "bg-neutral-800 cursor-wait"
-                : "bg-neutral-800 hover:bg-neutral-700"
+                ? 'bg-neutral-800 cursor-wait'
+                : 'bg-neutral-800 hover:bg-neutral-700'
             }`}
           >
             Recharger depuis le serveur
@@ -414,15 +417,15 @@ function AdminBracketBuilderPage({ staff }: StaffProps) {
             disabled={saving || !dirty}
             className={`px-4 py-2 rounded text-sm font-semibold ${
               saving || !dirty
-                ? "bg-blue-900/70 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700"
+                ? 'bg-blue-900/70 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700'
             }`}
           >
             {saving
-              ? "Enregistrement…"
+              ? 'Enregistrement…'
               : dirty
-              ? "Enregistrer les changements"
-              : "Aucun changement"}
+                ? 'Enregistrer les changements'
+                : 'Aucun changement'}
           </button>
 
           <span className="text-xs text-neutral-500">
@@ -433,9 +436,7 @@ function AdminBracketBuilderPage({ staff }: StaffProps) {
 
         {/* Bracket */}
         {loading && (
-          <div className="text-neutral-300">
-            Chargement du bracket…
-          </div>
+          <div className="text-neutral-300">Chargement du bracket…</div>
         )}
 
         {!loading && columns.length === 0 && (
@@ -477,7 +478,10 @@ function AdminBracketBuilderPage({ staff }: StaffProps) {
 
 type BracketMatchCardProps = {
   match: BracketMatch;
-  onDragStart: (e: React.DragEvent<HTMLDivElement>, payload: DragPayload) => void;
+  onDragStart: (
+    e: React.DragEvent<HTMLDivElement>,
+    payload: DragPayload
+  ) => void;
   onDragOverSlot: (e: React.DragEvent<HTMLDivElement>) => void;
   onDropOnSlot: (
     e: React.DragEvent<HTMLDivElement>,
@@ -504,14 +508,12 @@ function BracketMatchCard({
           {match.round_number && (
             <span>
               R{match.round_number}
-              {match.position_in_round
-                ? ` • M${match.position_in_round}`
-                : ""}
+              {match.position_in_round ? ` • M${match.position_in_round}` : ''}
             </span>
           )}
         </div>
         <span className="text-[10px]">
-          {match.best_of ? `BO${match.best_of}` : ""}
+          {match.best_of ? `BO${match.best_of}` : ''}
         </span>
       </div>
 
@@ -558,7 +560,10 @@ type TeamSlotProps = {
   team: TeamMini | null | undefined;
   teamId: string | null;
   isWinner: boolean;
-  onDragStart: (e: React.DragEvent<HTMLDivElement>, payload: DragPayload) => void;
+  onDragStart: (
+    e: React.DragEvent<HTMLDivElement>,
+    payload: DragPayload
+  ) => void;
   onDragOverSlot: (e: React.DragEvent<HTMLDivElement>) => void;
   onDropOnSlot: (
     e: React.DragEvent<HTMLDivElement>,
@@ -586,8 +591,8 @@ function TeamSlot({
     <div
       className={`group relative flex items-center justify-between gap-2 px-2 py-1.5 rounded border text-xs ${
         hasTeam
-          ? "bg-neutral-900 border-neutral-600"
-          : "bg-neutral-900/40 border-dashed border-neutral-700"
+          ? 'bg-neutral-900 border-neutral-600'
+          : 'bg-neutral-900/40 border-dashed border-neutral-700'
       }`}
       onDragOver={onDragOverSlot}
       onDrop={(e) => onDropOnSlot(e, match.id, slot)}
@@ -616,7 +621,7 @@ function TeamSlot({
         <div className="flex flex-col">
           <span
             className={`font-semibold ${
-              isWinner ? "text-emerald-300" : "text-neutral-100"
+              isWinner ? 'text-emerald-300' : 'text-neutral-100'
             }`}
           >
             {team?.name || teamId || (

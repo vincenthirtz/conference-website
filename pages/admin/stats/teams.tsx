@@ -1,12 +1,12 @@
 // pages/admin/stats/teams.tsx
 
-import { useEffect, useState } from "react";
-import Head from "next/head";
-import Link from "next/link";
-import Image from "next/image";
-import { useRouter } from "next/router";
-import { withStaffPage } from "@/utils/staff";
-import { StaffRoleBadge } from "@/components/admin/StaffRoleBadge";
+import { useEffect, useState } from 'react';
+import Head from 'next/head';
+import Link from 'next/link';
+import Image from 'next/image';
+import { useRouter } from 'next/router';
+import { withStaffPage } from '@/utils/staff';
+import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
 type StaffShape = {
   id: string;
@@ -61,15 +61,15 @@ type TournamentsApiResponse = {
   total: number | null;
 };
 
-export const getServerSideProps = withStaffPage("manager");
+export const getServerSideProps = withStaffPage('manager');
 
 function formatPercent(v: number | null | undefined) {
-  if (v == null) return "—";
+  if (v == null) return '—';
   return `${(v * 100).toFixed(1)}%`;
 }
 
 function formatDateTime(iso: string | null) {
-  if (!iso) return "—";
+  if (!iso) return '—';
   try {
     return new Date(iso).toLocaleString();
   } catch {
@@ -90,11 +90,11 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
   const [loadingTournaments, setLoadingTournaments] = useState(false);
 
   // Filtres
-  const [tournamentId, setTournamentId] = useState<string>("");
-  const [minMatches, setMinMatches] = useState<string>("3");
-  const [search, setSearch] = useState<string>("");
-  const [sortBy, setSortBy] = useState<string>("winrate");
-  const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
+  const [tournamentId, setTournamentId] = useState<string>('');
+  const [minMatches, setMinMatches] = useState<string>('3');
+  const [search, setSearch] = useState<string>('');
+  const [sortBy, setSortBy] = useState<string>('winrate');
+  const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
 
   const [limit] = useState(100);
   const [offset, setOffset] = useState(0);
@@ -111,12 +111,12 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
   async function fetchTournaments() {
     try {
       setLoadingTournaments(true);
-      const res = await fetch("/api/admin/tournaments?limit=200");
+      const res = await fetch('/api/admin/tournaments?limit=200');
       if (!res.ok) return;
       const json: TournamentsApiResponse = await res.json();
       setTournaments(json.tournaments || []);
     } catch (err) {
-      console.error("Failed to load tournaments for stats filters", err);
+      console.error('Failed to load tournaments for stats filters', err);
     } finally {
       setLoadingTournaments(false);
     }
@@ -128,27 +128,29 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
 
     try {
       const params = new URLSearchParams();
-      params.set("limit", String(limit));
-      params.set("offset", String(offset));
-      if (tournamentId) params.set("tournamentId", tournamentId);
-      if (search.trim()) params.set("search", search.trim());
-      if (minMatches) params.set("minMatches", minMatches);
-      if (sortBy) params.set("sortBy", sortBy);
-      if (sortDir) params.set("sortDir", sortDir);
+      params.set('limit', String(limit));
+      params.set('offset', String(offset));
+      if (tournamentId) params.set('tournamentId', tournamentId);
+      if (search.trim()) params.set('search', search.trim());
+      if (minMatches) params.set('minMatches', minMatches);
+      if (sortBy) params.set('sortBy', sortBy);
+      if (sortDir) params.set('sortDir', sortDir);
 
       // Endpoint admin stats équipes – à implémenter côté API:
       // GET /api/admin/stats/teams
-      const res = await fetch("/api/admin/stats/teams?" + params.toString());
+      const res = await fetch('/api/admin/stats/teams?' + params.toString());
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Impossible de charger les stats équipes");
+        throw new Error(
+          json.error || 'Impossible de charger les stats équipes'
+        );
       }
 
       const json: TeamStatsApiResponse = await res.json();
       setStats(json.stats || []);
-      setTotal(typeof json.total === "number" ? json.total : null);
+      setTotal(typeof json.total === 'number' ? json.total : null);
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur inattendue");
+      setErrorMsg(err?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
@@ -162,19 +164,19 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
 
   function handleExportCsv() {
     const params = new URLSearchParams();
-    params.set("limit", "10000");
-    params.set("offset", "0");
-    params.set("export", "csv");
-    if (tournamentId) params.set("tournamentId", tournamentId);
-    if (search.trim()) params.set("search", search.trim());
-    if (minMatches) params.set("minMatches", minMatches);
-    if (sortBy) params.set("sortBy", sortBy);
-    if (sortDir) params.set("sortDir", sortDir);
+    params.set('limit', '10000');
+    params.set('offset', '0');
+    params.set('export', 'csv');
+    if (tournamentId) params.set('tournamentId', tournamentId);
+    if (search.trim()) params.set('search', search.trim());
+    if (minMatches) params.set('minMatches', minMatches);
+    if (sortBy) params.set('sortBy', sortBy);
+    if (sortDir) params.set('sortDir', sortDir);
 
-    window.location.href = "/api/admin/stats/teams?" + params.toString();
+    window.location.href = '/api/admin/stats/teams?' + params.toString();
   }
 
-  const backUrl = "/admin";
+  const backUrl = '/admin';
 
   return (
     <>
@@ -195,8 +197,8 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
             </button>
             <h1 className="text-3xl font-bold">Stats équipes</h1>
             <p className="text-neutral-400 text-sm mt-1">
-              Classement statistique des équipes (victoires, winrate, maps, points),
-              filtré par tournoi et volume de matchs.
+              Classement statistique des équipes (victoires, winrate, maps,
+              points), filtré par tournoi et volume de matchs.
             </p>
           </div>
           <StaffRoleBadge staff={staff} />
@@ -217,22 +219,20 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
             >
               <option value="">
                 {loadingTournaments
-                  ? "Chargement des tournois…"
-                  : "Tous les tournois"}
+                  ? 'Chargement des tournois…'
+                  : 'Tous les tournois'}
               </option>
               {tournaments.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
-                  {t.slug ? ` (${t.slug})` : ""}
+                  {t.slug ? ` (${t.slug})` : ''}
                 </option>
               ))}
             </select>
           </div>
 
           <div className="flex flex-col gap-1 w-36">
-            <label className="text-xs text-neutral-400">
-              Min. matchs
-            </label>
+            <label className="text-xs text-neutral-400">Min. matchs</label>
             <input
               type="number"
               min={0}
@@ -275,7 +275,7 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
               className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={sortDir}
               onChange={(e) =>
-                setSortDir(e.target.value === "asc" ? "asc" : "desc")
+                setSortDir(e.target.value === 'asc' ? 'asc' : 'desc')
               }
             >
               <option value="desc">Descendant</option>
@@ -311,11 +311,12 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
           <div className="px-4 py-3 border-b border-neutral-700 flex justify-between items-center">
             <span className="text-sm font-semibold">
               {loading
-                ? "Chargement..."
-                : `Équipes (${stats.length}${total != null ? ` / ${total}` : ""})`}
+                ? 'Chargement...'
+                : `Équipes (${stats.length}${total != null ? ` / ${total}` : ''})`}
             </span>
             <span className="text-xs text-neutral-400">
-              Classement calculé côté API (matchs officiels du tournoi sélectionné).
+              Classement calculé côté API (matchs officiels du tournoi
+              sélectionné).
             </span>
           </div>
 
@@ -352,7 +353,7 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
 
                     return (
                       <tr
-                        key={`${row.team_id}-${row.tournament_id || "global"}`}
+                        key={`${row.team_id}-${row.tournament_id || 'global'}`}
                         className="border-t border-neutral-700"
                       >
                         {/* Rank */}
@@ -420,17 +421,17 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
 
                         {/* Maps +/- */}
                         <td className="px-3 py-2 text-center">
-                          {row.maps_won} / {row.maps_lost}{" "}
+                          {row.maps_won} / {row.maps_lost}{' '}
                           <span
                             className={
                               diff > 0
-                                ? "text-emerald-300"
+                                ? 'text-emerald-300'
                                 : diff < 0
-                                ? "text-red-300"
-                                : "text-neutral-300"
+                                  ? 'text-red-300'
+                                  : 'text-neutral-300'
                             }
                           >
-                            ({diff > 0 ? "+" : ""}
+                            ({diff > 0 ? '+' : ''}
                             {diff})
                           </span>
                         </td>
@@ -442,7 +443,7 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
 
                         {/* Points */}
                         <td className="px-3 py-2 text-center font-semibold">
-                          {row.points != null ? row.points : "—"}
+                          {row.points != null ? row.points : '—'}
                         </td>
 
                         {/* Last match */}
@@ -493,8 +494,8 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
               onClick={() => setOffset(Math.max(0, offset - limit))}
               className={`px-3 py-2 rounded ${
                 offset === 0
-                  ? "bg-neutral-700 opacity-40 cursor-not-allowed"
-                  : "bg-neutral-700 hover:bg-neutral-600"
+                  ? 'bg-neutral-700 opacity-40 cursor-not-allowed'
+                  : 'bg-neutral-700 hover:bg-neutral-600'
               }`}
             >
               ← Précédent
@@ -502,7 +503,7 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
 
             <span className="text-neutral-400">
               {offset + 1} – {offset + stats.length}
-              {total ? ` / ${total}` : ""}
+              {total ? ` / ${total}` : ''}
             </span>
 
             <button
@@ -510,8 +511,8 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
               onClick={() => setOffset(offset + limit)}
               className={`px-3 py-2 rounded ${
                 total !== null && offset + limit >= total
-                  ? "bg-neutral-700 opacity-40 cursor-not-allowed"
-                  : "bg-neutral-700 hover:bg-neutral-600"
+                  ? 'bg-neutral-700 opacity-40 cursor-not-allowed'
+                  : 'bg-neutral-700 hover:bg-neutral-600'
               }`}
             >
               Suivant →

@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
-import Head from "next/head";
-import Link from "next/link";
-import { supabaseClient } from "@/utils/supabase";
+import { useEffect, useState } from 'react';
+import Head from 'next/head';
+import Link from 'next/link';
+import { supabaseClient } from '@/utils/supabase';
 
 export default function AdminResetPasswordPage() {
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -22,11 +22,11 @@ export default function AdminResetPasswordPage() {
     setSuccessMsg(null);
 
     if (password.trim().length < 6) {
-      setErrorMsg("Le mot de passe doit contenir au moins 6 caractères.");
+      setErrorMsg('Le mot de passe doit contenir au moins 6 caractères.');
       return;
     }
     if (password !== confirm) {
-      setErrorMsg("Les mots de passe ne correspondent pas.");
+      setErrorMsg('Les mots de passe ne correspondent pas.');
       return;
     }
 
@@ -37,14 +37,16 @@ export default function AdminResetPasswordPage() {
       });
 
       if (error) {
-        throw new Error(error.message || "Impossible de mettre à jour le mot de passe.");
+        throw new Error(
+          error.message || 'Impossible de mettre à jour le mot de passe.'
+        );
       }
 
-      setSuccessMsg("Mot de passe mis à jour. Tu peux te reconnecter.");
-      setPassword("");
-      setConfirm("");
+      setSuccessMsg('Mot de passe mis à jour. Tu peux te reconnecter.');
+      setPassword('');
+      setConfirm('');
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur inattendue");
+      setErrorMsg(err?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
@@ -70,13 +72,16 @@ export default function AdminResetPasswordPage() {
               Nouveau mot de passe
             </h1>
             <p className="text-sm text-gray-300 mt-2 text-center max-w-sm">
-              Saisis ton nouveau mot de passe après avoir ouvert le lien reçu par email.
+              Saisis ton nouveau mot de passe après avoir ouvert le lien reçu
+              par email.
             </p>
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-2xl shadow-black/40 p-6">
             {!sessionReady ? (
-              <p className="text-sm text-neutral-300">Chargement de la session…</p>
+              <p className="text-sm text-neutral-300">
+                Chargement de la session…
+              </p>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
@@ -132,11 +137,11 @@ export default function AdminResetPasswordPage() {
                     disabled={loading}
                     className={`w-full rounded-xl py-2 text-sm font-semibold transition ${
                       loading
-                        ? "bg-neutral-700 cursor-not-allowed"
-                        : "bg-purple-600 hover:bg-purple-500"
+                        ? 'bg-neutral-700 cursor-not-allowed'
+                        : 'bg-purple-600 hover:bg-purple-500'
                     }`}
                   >
-                    {loading ? "Mise à jour..." : "Mettre à jour"}
+                    {loading ? 'Mise à jour...' : 'Mettre à jour'}
                   </button>
                 </div>
               </form>

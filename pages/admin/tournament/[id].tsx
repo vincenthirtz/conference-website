@@ -1,12 +1,12 @@
 // pages/admin/tournament/[id].tsx
 
-import { useEffect, useState } from "react";
-import Head from "next/head";
-import Link from "next/link";
-import Image from "next/image";
-import { useRouter } from "next/router";
-import { withStaffPage } from "@/utils/staff";
-import { StaffRoleBadge } from "@/components/admin/StaffRoleBadge";
+import { useEffect, useState } from 'react';
+import Head from 'next/head';
+import Link from 'next/link';
+import Image from 'next/image';
+import { useRouter } from 'next/router';
+import { withStaffPage } from '@/utils/staff';
+import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
 type StaffShape = {
   id: string;
@@ -39,10 +39,10 @@ type ApiResponse = {
   tournament: Tournament;
 };
 
-export const getServerSideProps = withStaffPage("manager");
+export const getServerSideProps = withStaffPage('manager');
 
 function formatDate(d: string | null) {
-  if (!d) return "—";
+  if (!d) return '—';
   try {
     return new Date(d).toLocaleString();
   } catch {
@@ -52,35 +52,35 @@ function formatDate(d: string | null) {
 
 function statusLabel(status: string | null) {
   switch (status) {
-    case "draft":
-      return "Brouillon";
-    case "published":
-      return "Publié";
-    case "running":
-      return "En cours";
-    case "completed":
-      return "Terminé";
-    case "archived":
-      return "Archivé";
+    case 'draft':
+      return 'Brouillon';
+    case 'published':
+      return 'Publié';
+    case 'running':
+      return 'En cours';
+    case 'completed':
+      return 'Terminé';
+    case 'archived':
+      return 'Archivé';
     default:
-      return status || "Inconnu";
+      return status || 'Inconnu';
   }
 }
 
 function statusColor(status: string | null) {
   switch (status) {
-    case "draft":
-      return "bg-neutral-700 text-neutral-100";
-    case "published":
-      return "bg-blue-600/80 text-white";
-    case "running":
-      return "bg-emerald-600/80 text-white";
-    case "completed":
-      return "bg-purple-600/80 text-white";
-    case "archived":
-      return "bg-neutral-700 text-neutral-300";
+    case 'draft':
+      return 'bg-neutral-700 text-neutral-100';
+    case 'published':
+      return 'bg-blue-600/80 text-white';
+    case 'running':
+      return 'bg-emerald-600/80 text-white';
+    case 'completed':
+      return 'bg-purple-600/80 text-white';
+    case 'archived':
+      return 'bg-neutral-700 text-neutral-300';
     default:
-      return "bg-neutral-700 text-neutral-200";
+      return 'bg-neutral-700 text-neutral-200';
   }
 }
 
@@ -107,25 +107,26 @@ function AdminTournamentPage({ staff }: StaffProps) {
       const res = await fetch(`/api/admin/tournament/${id}`);
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Impossible de charger le tournoi");
+        throw new Error(json.error || 'Impossible de charger le tournoi');
       }
       const json: ApiResponse = await res.json();
       setTournament(json.tournament);
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur inattendue");
+      setErrorMsg(err?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
   }
 
-  const publicUrl =
-    tournament?.slug ? `/tournament/${tournament.slug}` : `/tournament/${tournament?.id}`;
+  const publicUrl = tournament?.slug
+    ? `/tournament/${tournament.slug}`
+    : `/tournament/${tournament?.id}`;
 
   return (
     <>
       <Head>
         <title>
-          Admin – Tournoi {tournament ? `: ${tournament.name}` : ""}
+          Admin – Tournoi {tournament ? `: ${tournament.name}` : ''}
         </title>
       </Head>
 
@@ -135,7 +136,7 @@ function AdminTournamentPage({ staff }: StaffProps) {
           <div>
             <button
               type="button"
-              onClick={() => router.push("/admin/tournaments")}
+              onClick={() => router.push('/admin/tournaments')}
               className="mb-3 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
             >
               ← Retour à la liste
@@ -152,11 +153,11 @@ function AdminTournamentPage({ staff }: StaffProps) {
               )}
               <div>
                 <h1 className="text-3xl font-bold">
-                  {tournament ? tournament.name : "Tournoi"}
+                  {tournament ? tournament.name : 'Tournoi'}
                 </h1>
                 {tournament?.slug && (
                   <p className="text-sm text-neutral-400">
-                    Slug :{" "}
+                    Slug :{' '}
                     <span className="font-mono text-xs bg-neutral-800 px-2 py-0.5 rounded">
                       {tournament.slug}
                     </span>
@@ -223,14 +224,14 @@ function AdminTournamentPage({ staff }: StaffProps) {
                   <div>
                     <div className="text-neutral-400">Jeu</div>
                     <div className="font-medium">
-                      {tournament.game || "Non spécifié"}
+                      {tournament.game || 'Non spécifié'}
                     </div>
                   </div>
 
                   <div>
                     <div className="text-neutral-400">Format</div>
                     <div className="font-medium">
-                      {tournament.format_type || "À définir"}
+                      {tournament.format_type || 'À définir'}
                     </div>
                   </div>
 
@@ -253,7 +254,7 @@ function AdminTournamentPage({ staff }: StaffProps) {
                       Nombre max. d&apos;équipes
                     </div>
                     <div className="font-medium">
-                      {tournament.max_teams ?? "Non défini"}
+                      {tournament.max_teams ?? 'Non défini'}
                     </div>
                   </div>
 
@@ -268,9 +269,7 @@ function AdminTournamentPage({ staff }: StaffProps) {
 
               {/* Actions / liens rapides */}
               <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5 space-y-3">
-                <h2 className="text-lg font-semibold">
-                  Actions rapides
-                </h2>
+                <h2 className="text-lg font-semibold">Actions rapides</h2>
                 <div className="flex flex-col gap-2 text-sm">
                   <Link
                     href={`/admin/tournament/${tournament.id}/stages`}
@@ -360,11 +359,9 @@ function AdminTournamentPage({ staff }: StaffProps) {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div>
-                    <div className="text-neutral-400 mb-1">
-                      URL du logo
-                    </div>
+                    <div className="text-neutral-400 mb-1">URL du logo</div>
                     <div className="font-mono text-xs break-all bg-neutral-900 px-3 py-2 rounded border border-neutral-700">
-                      {tournament.logo_url || "—"}
+                      {tournament.logo_url || '—'}
                     </div>
                   </div>
                   <div>
@@ -372,7 +369,7 @@ function AdminTournamentPage({ staff }: StaffProps) {
                       URL de la bannière
                     </div>
                     <div className="font-mono text-xs break-all bg-neutral-900 px-3 py-2 rounded border border-neutral-700">
-                      {tournament.banner_url || "—"}
+                      {tournament.banner_url || '—'}
                     </div>
                   </div>
                 </div>
@@ -380,14 +377,10 @@ function AdminTournamentPage({ staff }: StaffProps) {
 
               {/* Infos système */}
               <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5 space-y-3">
-                <h2 className="text-lg font-semibold mb-1">
-                  Meta & debug
-                </h2>
+                <h2 className="text-lg font-semibold mb-1">Meta & debug</h2>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between gap-4">
-                    <span className="text-neutral-400">
-                      ID du tournoi
-                    </span>
+                    <span className="text-neutral-400">ID du tournoi</span>
                     <span className="font-mono text-xs bg-neutral-900 px-2 py-1 rounded border border-neutral-700">
                       {tournament.id}
                     </span>
@@ -397,17 +390,19 @@ function AdminTournamentPage({ staff }: StaffProps) {
                       Dernière mise à jour
                     </span>
                     <span className="text-neutral-200">
-                      {formatDate(tournament.updated_at || tournament.created_at)}
+                      {formatDate(
+                        tournament.updated_at || tournament.created_at
+                      )}
                     </span>
                   </div>
                 </div>
 
                 <p className="mt-3 text-xs text-neutral-500">
                   Pour modifier en profondeur ce tournoi (statut, visibilité,
-                  etc.), utilise l&apos;API{" "}
+                  etc.), utilise l&apos;API{' '}
                   <code className="font-mono bg-neutral-900 px-1.5 py-0.5 rounded border border-neutral-700">
                     /api/admin/tournament/{tournament.id}
-                  </code>{" "}
+                  </code>{' '}
                   ou les pages dédiées.
                 </p>
               </section>

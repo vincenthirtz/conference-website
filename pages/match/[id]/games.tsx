@@ -1,15 +1,15 @@
 // @ts-nocheck
 // pages/match/[id]/games.tsx
-/* eslint-disable react/no-unescaped-entities */
-import { GetServerSideProps } from "next";
-import Head from "next/head";
-import Link from "next/link";
-import Heading from "@/components/Typography/heading";
-import Paragraph from "@/components/Typography/paragraph";
-import Button from "@/components/Buttons/button";
-import { supabaseAdmin } from "@/utils/supabase";
+ 
+import { GetServerSideProps } from 'next';
+import Head from 'next/head';
+import Link from 'next/link';
+import Heading from '@/components/Typography/heading';
+import Paragraph from '@/components/Typography/paragraph';
+import Button from '@/components/Buttons/button';
+import { supabaseAdmin } from '@/utils/supabase';
 
-type MatchStatus = "pending" | "ongoing" | "finished" | "cancelled";
+type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
 
 type SimpleTeam = {
   id: string;
@@ -67,16 +67,14 @@ type Props = {
   match: Match | null;
 };
 
-export const getServerSideProps: GetServerSideProps<Props> = async (
-  ctx
-) => {
+export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   const { id } = ctx.query;
   if (!id || Array.isArray(id)) {
     return { notFound: true };
   }
 
   const { data, error } = await supabaseAdmin
-    .from("matches")
+    .from('matches')
     .select(
       `
       id,
@@ -99,11 +97,11 @@ export const getServerSideProps: GetServerSideProps<Props> = async (
       games (*)
     `
     )
-    .eq("id", id)
+    .eq('id', id)
     .single();
 
   if (error || !data) {
-    console.error("match games page error:", error);
+    console.error('match games page error:', error);
     return { notFound: true };
   }
 
@@ -136,15 +134,12 @@ export default function MatchGamesPage({ match }: Props) {
   const t2 = match.team2;
   const isBye = match.is_bye;
 
-  const t1Name = t1?.short_name || t1?.name || "Équipe 1";
-  const t2Name =
-    t2?.short_name ||
-    t2?.name ||
-    (isBye ? "(bye)" : "Équipe 2");
+  const t1Name = t1?.short_name || t1?.name || 'Équipe 1';
+  const t2Name = t2?.short_name || t2?.name || (isBye ? '(bye)' : 'Équipe 2');
 
   const statusLabel = getMatchStatusLabel(match.status);
   const statusChipClass = getMatchStatusChipClass(match.status);
-  const formatLabel = match.match_format?.toUpperCase() || "BO?";
+  const formatLabel = match.match_format?.toUpperCase() || 'BO?';
 
   const roundsSummary = computeRoundsSummary(match.games);
 
@@ -152,8 +147,8 @@ export default function MatchGamesPage({ match }: Props) {
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <Head>
         <title>
-          Maps – {t1Name} vs {t2Name} | {match.tournament.name} |
-          OW Women&apos;s Cup
+          Maps – {t1Name} vs {t2Name} | {match.tournament.name} | OW
+          Women&apos;s Cup
         </title>
       </Head>
 
@@ -167,27 +162,19 @@ export default function MatchGamesPage({ match }: Props) {
                   OW Women&apos;s Cup
                 </span>
                 <span className="text-gray-200">
-                  {match.tournament.game || "Overwatch 2"}
+                  {match.tournament.game || 'Overwatch 2'}
                 </span>
                 <span className="w-[1px] h-3 bg-white/20" />
-                <span className={statusChipClass}>
-                  {statusLabel}
-                </span>
+                <span className={statusChipClass}>{statusLabel}</span>
                 <span className="w-[1px] h-3 bg-white/20" />
                 <span className="px-1.5 py-[2px] rounded-full bg-black/60 border border-white/15 text-[9px] text-gray-300">
                   {formatLabel}
                 </span>
               </div>
 
-              <Heading
-                typeStyle="heading-md"
-                className="mb-1 text-gradient"
-              >
-                Détail des maps – {t1Name}{" "}
-                {!isBye && (
-                  <span className="text-gray-400">vs</span>
-                )}{" "}
-                {t2Name}
+              <Heading typeStyle="heading-md" className="mb-1 text-gradient">
+                Détail des maps – {t1Name}{' '}
+                {!isBye && <span className="text-gray-400">vs</span>} {t2Name}
               </Heading>
 
               <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-300 mb-1">
@@ -195,8 +182,7 @@ export default function MatchGamesPage({ match }: Props) {
                   href={`/tournament/${match.tournament.id}`}
                   className="hover:text-white"
                 >
-                  {match.tournament.short_name ||
-                    match.tournament.name}
+                  {match.tournament.short_name || match.tournament.name}
                 </Link>
                 {match.stage && (
                   <>
@@ -223,9 +209,8 @@ export default function MatchGamesPage({ match }: Props) {
                 textColor="text-gray-200"
                 className="max-w-xl"
               >
-                Vue centrée sur les games de ce match : scores
-                détaillés carte par carte, overtimes, tiebreakers et
-                total de rounds.
+                Vue centrée sur les games de ce match : scores détaillés carte
+                par carte, overtimes, tiebreakers et total de rounds.
               </Paragraph>
             </div>
 
@@ -246,9 +231,7 @@ export default function MatchGamesPage({ match }: Props) {
                   Tournoi
                 </Button>
               </Link>
-              <Link
-                href={`/tournament/${match.tournament.id}/maps`}
-              >
+              <Link href={`/tournament/${match.tournament.id}/maps`}>
                 <Button
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-purple-400"
@@ -264,21 +247,14 @@ export default function MatchGamesPage({ match }: Props) {
         <section className="mb-6">
           <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
             {match.games.length === 0 && (
-              <Paragraph
-                typeStyle="body-sm"
-                textColor="text-gray-300"
-              >
-                Aucune carte n&apos;est encore enregistrée pour ce
-                match.
+              <Paragraph typeStyle="body-sm" textColor="text-gray-300">
+                Aucune carte n&apos;est encore enregistrée pour ce match.
               </Paragraph>
             )}
 
             {match.games.length > 0 && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <StatCard
-                  label="Maps jouées"
-                  value={match.games.length}
-                />
+                <StatCard label="Maps jouées" value={match.games.length} />
                 <StatCard
                   label={`Rounds ${t1Name}`}
                   value={roundsSummary.team1Rounds}
@@ -298,8 +274,8 @@ export default function MatchGamesPage({ match }: Props) {
                     roundsSummary.diff > 0
                       ? t1Name
                       : roundsSummary.diff < 0
-                      ? t2Name
-                      : "Équilibré"
+                        ? t2Name
+                        : 'Équilibré'
                   }
                 />
               </div>
@@ -317,8 +293,8 @@ export default function MatchGamesPage({ match }: Props) {
                 </p>
                 <span className="text-[10px] text-gray-500">
                   {match.games.length} map
-                  {match.games.length > 1 ? "s" : ""} enregistrée
-                  {match.games.length > 1 ? "s" : ""}
+                  {match.games.length > 1 ? 's' : ''} enregistrée
+                  {match.games.length > 1 ? 's' : ''}
                 </span>
               </div>
 
@@ -326,55 +302,38 @@ export default function MatchGamesPage({ match }: Props) {
                 <table className="min-w-full text-[11px]">
                   <thead>
                     <tr className="text-gray-400 border-b border-white/10">
-                      <th className="text-left py-1.5 pr-3">
-                        #
-                      </th>
-                      <th className="text-left py-1.5 pr-3">
-                        Map
-                      </th>
-                      <th className="text-right py-1.5 px-3">
-                        {t1Name}
-                      </th>
-                      <th className="text-right py-1.5 px-3">
-                        {t2Name}
-                      </th>
-                      <th className="text-right py-1.5 px-3">
-                        Total rounds
-                      </th>
-                      <th className="text-right py-1.5 pl-3">
-                        Tags
-                      </th>
+                      <th className="text-left py-1.5 pr-3">#</th>
+                      <th className="text-left py-1.5 pr-3">Map</th>
+                      <th className="text-right py-1.5 px-3">{t1Name}</th>
+                      <th className="text-right py-1.5 px-3">{t2Name}</th>
+                      <th className="text-right py-1.5 px-3">Total rounds</th>
+                      <th className="text-right py-1.5 pl-3">Tags</th>
                     </tr>
                   </thead>
                   <tbody>
                     {match.games.map((g, idx) => {
                       const order =
-                        typeof g.map_order === "number"
+                        typeof g.map_order === 'number'
                           ? g.map_order + 1
                           : idx + 1;
                       const s1 = g.team1_score ?? 0;
                       const s2 = g.team2_score ?? 0;
                       const total = s1 + s2;
                       const tags: string[] = [];
-                      if (g.is_tiebreaker) tags.push("Tiebreaker");
-                      if (g.went_overtime) tags.push("Overtime");
+                      if (g.is_tiebreaker) tags.push('Tiebreaker');
+                      if (g.went_overtime) tags.push('Overtime');
 
                       return (
                         <tr
                           key={g.id}
                           className={
-                            "border-b border-white/5" +
-                            (idx % 2 === 0
-                              ? " bg-white/0"
-                              : " bg-white/[0.02]")
+                            'border-b border-white/5' +
+                            (idx % 2 === 0 ? ' bg-white/0' : ' bg-white/[0.02]')
                           }
                         >
-                          <td className="py-1.5 pr-3 text-gray-400">
-                            {order}
-                          </td>
+                          <td className="py-1.5 pr-3 text-gray-400">{order}</td>
                           <td className="py-1.5 pr-3 text-gray-100">
-                            {g.map_name ||
-                              `Map ${order}`}
+                            {g.map_name || `Map ${order}`}
                           </td>
                           <td className="py-1.5 px-3 text-right text-gray-100">
                             {s1}
@@ -396,10 +355,10 @@ export default function MatchGamesPage({ match }: Props) {
                                 <span
                                   key={tag}
                                   className={
-                                    "px-1.5 py-[1px] rounded-full border text-[9px]" +
-                                    (tag === "Tiebreaker"
-                                      ? " bg-fuchsia-500/20 border-fuchsia-400/70 text-fuchsia-100"
-                                      : " bg-amber-500/20 border-amber-400/70 text-amber-100")
+                                    'px-1.5 py-[1px] rounded-full border text-[9px]' +
+                                    (tag === 'Tiebreaker'
+                                      ? ' bg-fuchsia-500/20 border-fuchsia-400/70 text-fuchsia-100'
+                                      : ' bg-amber-500/20 border-amber-400/70 text-amber-100')
                                   }
                                 >
                                   {tag}
@@ -415,9 +374,9 @@ export default function MatchGamesPage({ match }: Props) {
               </div>
 
               <p className="mt-2 text-[10px] text-gray-500">
-                Les scores correspondent aux manches cumulées
-                remportées par chaque équipe sur la carte
-                (rounds, points, etc. selon le mode de jeu).
+                Les scores correspondent aux manches cumulées remportées par
+                chaque équipe sur la carte (rounds, points, etc. selon le mode
+                de jeu).
               </p>
             </div>
           </section>
@@ -462,27 +421,23 @@ function StatCard({
         {label}
       </p>
       <p className="text-xl font-semibold text-white">
-        {typeof value === "number" ? value.toString() : value}
+        {typeof value === 'number' ? value.toString() : value}
       </p>
-      {hint && (
-        <p className="text-[10px] text-gray-400 mt-[2px]">
-          {hint}
-        </p>
-      )}
+      {hint && <p className="text-[10px] text-gray-400 mt-[2px]">{hint}</p>}
     </div>
   );
 }
 
 function getMatchStatusLabel(status: MatchStatus): string {
   switch (status) {
-    case "pending":
-      return "À venir";
-    case "ongoing":
-      return "En cours";
-    case "finished":
-      return "Terminé";
-    case "cancelled":
-      return "Annulé";
+    case 'pending':
+      return 'À venir';
+    case 'ongoing':
+      return 'En cours';
+    case 'finished':
+      return 'Terminé';
+    case 'cancelled':
+      return 'Annulé';
     default:
       return status;
   }
@@ -490,15 +445,15 @@ function getMatchStatusLabel(status: MatchStatus): string {
 
 function getMatchStatusChipClass(status: MatchStatus): string {
   switch (status) {
-    case "pending":
-      return "px-1.5 py-[2px] rounded-full bg-yellow-500/20 text-yellow-200 border border-yellow-500/60";
-    case "ongoing":
-      return "px-1.5 py-[2px] rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/60";
-    case "finished":
-      return "px-1.5 py-[2px] rounded-full bg-gray-500/20 text-gray-200 border border-gray-500/60";
-    case "cancelled":
-      return "px-1.5 py-[2px] rounded-full bg-red-500/20 text-red-200 border border-red-500/60";
+    case 'pending':
+      return 'px-1.5 py-[2px] rounded-full bg-yellow-500/20 text-yellow-200 border border-yellow-500/60';
+    case 'ongoing':
+      return 'px-1.5 py-[2px] rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/60';
+    case 'finished':
+      return 'px-1.5 py-[2px] rounded-full bg-gray-500/20 text-gray-200 border border-gray-500/60';
+    case 'cancelled':
+      return 'px-1.5 py-[2px] rounded-full bg-red-500/20 text-red-200 border border-red-500/60';
     default:
-      return "px-1.5 py-[2px] rounded-full bg-white/10 text-white border border-white/30";
+      return 'px-1.5 py-[2px] rounded-full bg-white/10 text-white border border-white/30';
   }
 }

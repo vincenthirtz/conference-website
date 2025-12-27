@@ -1,11 +1,11 @@
 // pages/admin/stats/maps.tsx
 
-import { useEffect, useState } from "react";
-import Head from "next/head";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { withStaffPage } from "@/utils/staff";
-import { StaffRoleBadge } from "@/components/admin/StaffRoleBadge";
+import { useEffect, useState } from 'react';
+import Head from 'next/head';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { withStaffPage } from '@/utils/staff';
+import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
 type StaffShape = {
   id: string;
@@ -59,15 +59,15 @@ type TournamentsApiResponse = {
   total: number | null;
 };
 
-export const getServerSideProps = withStaffPage("manager");
+export const getServerSideProps = withStaffPage('manager');
 
 function formatPercent(v: number | null | undefined) {
-  if (v == null) return "—";
+  if (v == null) return '—';
   return `${(v * 100).toFixed(1)}%`;
 }
 
 function formatNumber(v: number | null | undefined, decimals = 1) {
-  if (v == null) return "—";
+  if (v == null) return '—';
   return v.toFixed(decimals);
 }
 
@@ -84,11 +84,11 @@ function AdminMapsStatsPage({ staff }: StaffProps) {
   const [loadingTournaments, setLoadingTournaments] = useState(false);
 
   // Filtres
-  const [tournamentId, setTournamentId] = useState<string>("");
-  const [searchMap, setSearchMap] = useState<string>("");
-  const [minMatches, setMinMatches] = useState<string>("5");
-  const [sortBy, setSortBy] = useState<string>("pick_rate");
-  const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
+  const [tournamentId, setTournamentId] = useState<string>('');
+  const [searchMap, setSearchMap] = useState<string>('');
+  const [minMatches, setMinMatches] = useState<string>('5');
+  const [sortBy, setSortBy] = useState<string>('pick_rate');
+  const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
 
   const [limit] = useState(100);
   const [offset, setOffset] = useState(0);
@@ -105,12 +105,12 @@ function AdminMapsStatsPage({ staff }: StaffProps) {
   async function fetchTournaments() {
     try {
       setLoadingTournaments(true);
-      const res = await fetch("/api/admin/tournaments?limit=200");
+      const res = await fetch('/api/admin/tournaments?limit=200');
       if (!res.ok) return;
       const json: TournamentsApiResponse = await res.json();
       setTournaments(json.tournaments || []);
     } catch (err) {
-      console.error("Failed to load tournaments for map stats filters", err);
+      console.error('Failed to load tournaments for map stats filters', err);
     } finally {
       setLoadingTournaments(false);
     }
@@ -122,27 +122,27 @@ function AdminMapsStatsPage({ staff }: StaffProps) {
 
     try {
       const params = new URLSearchParams();
-      params.set("limit", String(limit));
-      params.set("offset", String(offset));
-      if (tournamentId) params.set("tournamentId", tournamentId);
-      if (searchMap.trim()) params.set("search", searchMap.trim());
-      if (minMatches) params.set("minMatches", minMatches);
-      if (sortBy) params.set("sortBy", sortBy);
-      if (sortDir) params.set("sortDir", sortDir);
+      params.set('limit', String(limit));
+      params.set('offset', String(offset));
+      if (tournamentId) params.set('tournamentId', tournamentId);
+      if (searchMap.trim()) params.set('search', searchMap.trim());
+      if (minMatches) params.set('minMatches', minMatches);
+      if (sortBy) params.set('sortBy', sortBy);
+      if (sortDir) params.set('sortDir', sortDir);
 
       // Endpoint admin stats maps – à implémenter côté API:
       // GET /api/admin/stats/maps
-      const res = await fetch("/api/admin/stats/maps?" + params.toString());
+      const res = await fetch('/api/admin/stats/maps?' + params.toString());
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Impossible de charger les stats maps");
+        throw new Error(json.error || 'Impossible de charger les stats maps');
       }
 
       const json: MapStatsApiResponse = await res.json();
       setStats(json.stats || []);
-      setTotal(typeof json.total === "number" ? json.total : null);
+      setTotal(typeof json.total === 'number' ? json.total : null);
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur inattendue");
+      setErrorMsg(err?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
@@ -156,19 +156,19 @@ function AdminMapsStatsPage({ staff }: StaffProps) {
 
   function handleExportCsv() {
     const params = new URLSearchParams();
-    params.set("limit", "10000");
-    params.set("offset", "0");
-    params.set("export", "csv");
-    if (tournamentId) params.set("tournamentId", tournamentId);
-    if (searchMap.trim()) params.set("search", searchMap.trim());
-    if (minMatches) params.set("minMatches", minMatches);
-    if (sortBy) params.set("sortBy", sortBy);
-    if (sortDir) params.set("sortDir", sortDir);
+    params.set('limit', '10000');
+    params.set('offset', '0');
+    params.set('export', 'csv');
+    if (tournamentId) params.set('tournamentId', tournamentId);
+    if (searchMap.trim()) params.set('search', searchMap.trim());
+    if (minMatches) params.set('minMatches', minMatches);
+    if (sortBy) params.set('sortBy', sortBy);
+    if (sortDir) params.set('sortDir', sortDir);
 
-    window.location.href = "/api/admin/stats/maps?" + params.toString();
+    window.location.href = '/api/admin/stats/maps?' + params.toString();
   }
 
-  const backUrl = "/admin";
+  const backUrl = '/admin';
 
   return (
     <>
@@ -211,13 +211,13 @@ function AdminMapsStatsPage({ staff }: StaffProps) {
             >
               <option value="">
                 {loadingTournaments
-                  ? "Chargement des tournois…"
-                  : "Tous les tournois"}
+                  ? 'Chargement des tournois…'
+                  : 'Tous les tournois'}
               </option>
               {tournaments.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
-                  {t.slug ? ` (${t.slug})` : ""}
+                  {t.slug ? ` (${t.slug})` : ''}
                 </option>
               ))}
             </select>
@@ -257,11 +257,15 @@ function AdminMapsStatsPage({ staff }: StaffProps) {
               <option value="ban_rate">Ban-rate</option>
               <option value="matches_played">Matchs joués</option>
               <option value="rounds_played">Manches jouées</option>
-              <option value="match_winrate_attack">Winrate match (attaque)</option>
+              <option value="match_winrate_attack">
+                Winrate match (attaque)
+              </option>
               <option value="match_winrate_defense">
                 Winrate match (défense)
               </option>
-              <option value="round_winrate_attack">Winrate round (attaque)</option>
+              <option value="round_winrate_attack">
+                Winrate round (attaque)
+              </option>
               <option value="round_winrate_defense">
                 Winrate round (défense)
               </option>
@@ -275,7 +279,7 @@ function AdminMapsStatsPage({ staff }: StaffProps) {
               className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={sortDir}
               onChange={(e) =>
-                setSortDir(e.target.value === "asc" ? "asc" : "desc")
+                setSortDir(e.target.value === 'asc' ? 'asc' : 'desc')
               }
             >
               <option value="desc">Descendant</option>
@@ -311,8 +315,8 @@ function AdminMapsStatsPage({ staff }: StaffProps) {
           <div className="px-4 py-3 border-b border-neutral-700 flex justify-between items-center">
             <span className="text-sm font-semibold">
               {loading
-                ? "Chargement..."
-                : `Maps (${stats.length}${total != null ? ` / ${total}` : ""})`}
+                ? 'Chargement...'
+                : `Maps (${stats.length}${total != null ? ` / ${total}` : ''})`}
             </span>
             <span className="text-xs text-neutral-400">
               Calcul effectué côté API à partir des matchs et des rounds joués.
@@ -336,7 +340,9 @@ function AdminMapsStatsPage({ staff }: StaffProps) {
                     <th className="px-3 py-2 text-center">Matchs</th>
                     <th className="px-3 py-2 text-center">Pick-rate</th>
                     <th className="px-3 py-2 text-center">Ban-rate</th>
-                    <th className="px-3 py-2 text-center">Winrate match A / D</th>
+                    <th className="px-3 py-2 text-center">
+                      Winrate match A / D
+                    </th>
                     <th className="px-3 py-2 text-center">Manches totales</th>
                     <th className="px-3 py-2 text-center">
                       Winrate round A / D
@@ -359,7 +365,10 @@ function AdminMapsStatsPage({ staff }: StaffProps) {
                     );
 
                     return (
-                      <tr key={`${row.map_name}-${row.tournament_id || "global"}`} className="border-t border-neutral-700">
+                      <tr
+                        key={`${row.map_name}-${row.tournament_id || 'global'}`}
+                        className="border-t border-neutral-700"
+                      >
                         {/* Rank */}
                         <td className="px-3 py-2 text-center font-semibold">
                           {rank}
@@ -386,7 +395,9 @@ function AdminMapsStatsPage({ staff }: StaffProps) {
                               )}
                             </div>
                           ) : (
-                            <span className="text-neutral-500">Tous tournois</span>
+                            <span className="text-neutral-500">
+                              Tous tournois
+                            </span>
                           )}
                         </td>
 
@@ -408,8 +419,8 @@ function AdminMapsStatsPage({ staff }: StaffProps) {
                           <div>
                             <span className="text-emerald-300">
                               {formatPercent(row.match_winrate_attack)}
-                            </span>{" "}
-                            /{" "}
+                            </span>{' '}
+                            /{' '}
                             <span className="text-sky-300">
                               {formatPercent(row.match_winrate_defense)}
                             </span>
@@ -440,8 +451,8 @@ function AdminMapsStatsPage({ staff }: StaffProps) {
                               <div>
                                 <span className="text-emerald-300">
                                   {totalRoundWinrateA}
-                                </span>{" "}
-                                /{" "}
+                                </span>{' '}
+                                /{' '}
                                 <span className="text-sky-300">
                                   {totalRoundWinrateD}
                                 </span>
@@ -495,8 +506,8 @@ function AdminMapsStatsPage({ staff }: StaffProps) {
               onClick={() => setOffset(Math.max(0, offset - limit))}
               className={`px-3 py-2 rounded ${
                 offset === 0
-                  ? "bg-neutral-700 opacity-40 cursor-not-allowed"
-                  : "bg-neutral-700 hover:bg-neutral-600"
+                  ? 'bg-neutral-700 opacity-40 cursor-not-allowed'
+                  : 'bg-neutral-700 hover:bg-neutral-600'
               }`}
             >
               ← Précédent
@@ -504,7 +515,7 @@ function AdminMapsStatsPage({ staff }: StaffProps) {
 
             <span className="text-neutral-400">
               {offset + 1} – {offset + stats.length}
-              {total ? ` / ${total}` : ""}
+              {total ? ` / ${total}` : ''}
             </span>
 
             <button
@@ -512,8 +523,8 @@ function AdminMapsStatsPage({ staff }: StaffProps) {
               onClick={() => setOffset(offset + limit)}
               className={`px-3 py-2 rounded ${
                 total !== null && offset + limit >= total
-                  ? "bg-neutral-700 opacity-40 cursor-not-allowed"
-                  : "bg-neutral-700 hover:bg-neutral-600"
+                  ? 'bg-neutral-700 opacity-40 cursor-not-allowed'
+                  : 'bg-neutral-700 hover:bg-neutral-600'
               }`}
             >
               Suivant →

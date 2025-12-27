@@ -101,51 +101,48 @@ function Navbar(): JSX.Element {
   // ----------------------------------------------------
   // 🔐 Vérifier si un staff est connecté (source de vérité)
   // ----------------------------------------------------
-  const checkStaff = useCallback(
-    async (accessToken?: string | null) => {
-      setAdminLoading(true);
-      try {
-        let token = accessToken ?? null;
+  const checkStaff = useCallback(async (accessToken?: string | null) => {
+    setAdminLoading(true);
+    try {
+      let token = accessToken ?? null;
 
-        if (!token) {
-          const {
-            data: { session },
-          } = await supabaseClient.auth.getSession();
-          token = session?.access_token ?? null;
-        }
+      if (!token) {
+        const {
+          data: { session },
+        } = await supabaseClient.auth.getSession();
+        token = session?.access_token ?? null;
+      }
 
-        if (!token) {
-          setIsStaff(false);
-          setStaffName(null);
-          return;
-        }
-
-        const res = await fetch('/api/admin/me', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        const me = await res.json().catch(() => null);
-
-        if (!res.ok || me?.error || !me?.role) {
-          setIsStaff(false);
-          setStaffName(null);
-          return;
-        }
-
-        setIsStaff(true);
-        setStaffName(me.display_name || me.email || 'Staff');
-      } catch (e) {
-        console.error('Navbar staff check error:', e);
+      if (!token) {
         setIsStaff(false);
         setStaffName(null);
-      } finally {
-        setAdminLoading(false);
+        return;
       }
-    },
-    []
-  );
+
+      const res = await fetch('/api/admin/me', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const me = await res.json().catch(() => null);
+
+      if (!res.ok || me?.error || !me?.role) {
+        setIsStaff(false);
+        setStaffName(null);
+        return;
+      }
+
+      setIsStaff(true);
+      setStaffName(me.display_name || me.email || 'Staff');
+    } catch (e) {
+      console.error('Navbar staff check error:', e);
+      setIsStaff(false);
+      setStaffName(null);
+    } finally {
+      setAdminLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     checkStaff();
@@ -224,147 +221,158 @@ function Navbar(): JSX.Element {
               {links
                 .filter(
                   (link) =>
-                    !['À propos', 'Cast', 'Sponsors', 'Équipes', 'Equipes'].includes(
-                      link.title
-                    )
+                    ![
+                      'À propos',
+                      'Cast',
+                      'Sponsors',
+                      'Équipes',
+                      'Equipes',
+                    ].includes(link.title)
                 )
                 .map((link: LinkItem) => (
-                <div key={link.title}>
-                  <div
-                    onMouseEnter={() => handleMouseEnter(link.title)}
-                    onMouseLeave={handleMouseLeave}
-                    className="ml-16 text-[14px] group cursor-pointer relative flex flex-col whitespace-nowrap"
-                    data-test={`nav-${link.title}`}
-                  >
-                    <div>
-                      {link.subMenu ? (
-                        <button
-                          className="flex items-center focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 rounded px-1 py-1 whitespace-nowrap"
-                          onClick={() =>
-                            setShow(show === link.title ? null : link.title)
-                          }
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              setShow(show === link.title ? null : link.title);
-                              if (show !== link.title) {
+                  <div key={link.title}>
+                    <div
+                      onMouseEnter={() => handleMouseEnter(link.title)}
+                      onMouseLeave={handleMouseLeave}
+                      className="ml-16 text-[14px] group cursor-pointer relative flex flex-col whitespace-nowrap"
+                      data-test={`nav-${link.title}`}
+                    >
+                      <div>
+                        {link.subMenu ? (
+                          <button
+                            className="flex items-center focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 rounded px-1 py-1 whitespace-nowrap"
+                            onClick={() =>
+                              setShow(show === link.title ? null : link.title)
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                setShow(
+                                  show === link.title ? null : link.title
+                                );
+                                if (show !== link.title) {
+                                  setFocusedSubMenuItem(0);
+                                  setTimeout(() => {
+                                    subMenuRefs.current[0]?.focus();
+                                  }, 50);
+                                }
+                              }
+                              if (e.key === 'ArrowDown') {
+                                e.preventDefault();
+                                setShow(link.title);
                                 setFocusedSubMenuItem(0);
                                 setTimeout(() => {
                                   subMenuRefs.current[0]?.focus();
                                 }, 50);
                               }
-                            }
-                            if (e.key === 'ArrowDown') {
-                              e.preventDefault();
-                              setShow(link.title);
-                              setFocusedSubMenuItem(0);
-                              setTimeout(() => {
-                                subMenuRefs.current[0]?.focus();
-                              }, 50);
-                            }
-                            if (e.key === 'ArrowUp') {
-                              e.preventDefault();
-                              setShow(link.title);
-                              const lastIndex = link.subMenu!.length - 1;
-                              setFocusedSubMenuItem(lastIndex);
-                              setTimeout(() => {
-                                subMenuRefs.current[lastIndex]?.focus();
-                              }, 50);
-                            }
-                            if (e.key === 'Escape') {
-                              setShow(null);
-                              setFocusedSubMenuItem(-1);
-                            }
-                          }}
-                          aria-expanded={show === link.title}
-                          aria-haspopup="true"
-                        >
-                          {link.title}{' '}
-                          {link.subMenu && (
-                            <Dropdown
-                              fill="white"
-                              className={`ml-2 transition-transform duration-700 ${
-                                show === link.title ? 'rotate-180' : 'rotate-0'
-                              }`}
-                            />
-                          )}
-                        </button>
-                      ) : (
-                        <Link href={link.ref ?? '#'} className="whitespace-nowrap">
-                          {link.title}
-                        </Link>
-                      )}
-                    </div>
-                    <span className="after:absolute after:-bottom-1 after:left-1/2 after:w-0 after:transition-all after:h-0.5 after:bg-white after:group-hover:w-3/6  "></span>
-                    <span className="after:absolute after:-bottom-1 after:right-1/2 after:w-0 after:transition-all after:h-0.5 after:bg-white after:group-hover:w-3/6"></span>
-                    {show === link.title && link.subMenu && (
-                      <div
-                        className="subMenu absolute z-[9] mt-8 min-w-[150px] whitespace-nowrap rounded-md left-[-15px] gradient-bg px-2 py-1 flex flex-col justify-center space-y-0"
-                        onMouseEnter={handleSubMenuEnter}
-                        onMouseLeave={handleSubMenuLeave}
-                      >
-                        {link.subMenu.map((subL: LinkItem, index: number) => (
-                          <Link
-                            href={subL.ref ?? '#'}
-                            key={subL.title}
-                            rel="noopener noreferrer"
-                            ref={(el) => {
-                              subMenuRefs.current[index] = el;
-                            }}
-                            className={`flex items-center ${
-                              link.subMenu!.length === 1
-                                ? 'justify-center'
-                                : 'justify-start'
-                            } min-h-[32px] text-[16px] hover:scale-95 hover:translate-x-1 transition-all focus:outline-none focus:bg-white focus:bg-opacity-20 focus:scale-95 focus:translate-x-1 rounded px-2 py-1`}
-                            data-test={`nav-sub-${subL.title}`}
-                            onKeyDown={(e) => {
-                              const currentIndex = index;
-                              const maxIndex = link.subMenu!.length - 1;
-
-                              if (e.key === 'ArrowDown') {
-                                e.preventDefault();
-                                const nextIndex =
-                                  currentIndex === maxIndex
-                                    ? 0
-                                    : currentIndex + 1;
-                                setFocusedSubMenuItem(nextIndex);
-                                subMenuRefs.current[nextIndex]?.focus();
-                              }
-
                               if (e.key === 'ArrowUp') {
                                 e.preventDefault();
-                                const prevIndex =
-                                  currentIndex === 0
-                                    ? maxIndex
-                                    : currentIndex - 1;
-                                setFocusedSubMenuItem(prevIndex);
-                                subMenuRefs.current[prevIndex]?.focus();
+                                setShow(link.title);
+                                const lastIndex = link.subMenu!.length - 1;
+                                setFocusedSubMenuItem(lastIndex);
+                                setTimeout(() => {
+                                  subMenuRefs.current[lastIndex]?.focus();
+                                }, 50);
                               }
-
                               if (e.key === 'Escape') {
-                                e.preventDefault();
-                                setShow(null);
-                                setFocusedSubMenuItem(-1);
-                                // Focus back to the main menu button
-                                const button = e.currentTarget
-                                  .closest('.subMenu')
-                                  ?.parentElement?.querySelector('button');
-                                (button as HTMLButtonElement)?.focus();
-                              }
-
-                              if (e.key === 'Tab') {
                                 setShow(null);
                                 setFocusedSubMenuItem(-1);
                               }
                             }}
+                            aria-expanded={show === link.title}
+                            aria-haspopup="true"
                           >
-                            {subL.title}
+                            {link.title}{' '}
+                            {link.subMenu && (
+                              <Dropdown
+                                fill="white"
+                                className={`ml-2 transition-transform duration-700 ${
+                                  show === link.title
+                                    ? 'rotate-180'
+                                    : 'rotate-0'
+                                }`}
+                              />
+                            )}
+                          </button>
+                        ) : (
+                          <Link
+                            href={link.ref ?? '#'}
+                            className="whitespace-nowrap"
+                          >
+                            {link.title}
                           </Link>
-                        ))}
+                        )}
                       </div>
-                    )}
+                      <span className="after:absolute after:-bottom-1 after:left-1/2 after:w-0 after:transition-all after:h-0.5 after:bg-white after:group-hover:w-3/6  "></span>
+                      <span className="after:absolute after:-bottom-1 after:right-1/2 after:w-0 after:transition-all after:h-0.5 after:bg-white after:group-hover:w-3/6"></span>
+                      {show === link.title && link.subMenu && (
+                        <div
+                          className="subMenu absolute z-[9] mt-8 min-w-[150px] whitespace-nowrap rounded-md left-[-15px] gradient-bg px-2 py-1 flex flex-col justify-center space-y-0"
+                          onMouseEnter={handleSubMenuEnter}
+                          onMouseLeave={handleSubMenuLeave}
+                        >
+                          {link.subMenu.map((subL: LinkItem, index: number) => (
+                            <Link
+                              href={subL.ref ?? '#'}
+                              key={subL.title}
+                              rel="noopener noreferrer"
+                              ref={(el) => {
+                                subMenuRefs.current[index] = el;
+                              }}
+                              className={`flex items-center ${
+                                link.subMenu!.length === 1
+                                  ? 'justify-center'
+                                  : 'justify-start'
+                              } min-h-[32px] text-[16px] hover:scale-95 hover:translate-x-1 transition-all focus:outline-none focus:bg-white focus:bg-opacity-20 focus:scale-95 focus:translate-x-1 rounded px-2 py-1`}
+                              data-test={`nav-sub-${subL.title}`}
+                              onKeyDown={(e) => {
+                                const currentIndex = index;
+                                const maxIndex = link.subMenu!.length - 1;
+
+                                if (e.key === 'ArrowDown') {
+                                  e.preventDefault();
+                                  const nextIndex =
+                                    currentIndex === maxIndex
+                                      ? 0
+                                      : currentIndex + 1;
+                                  setFocusedSubMenuItem(nextIndex);
+                                  subMenuRefs.current[nextIndex]?.focus();
+                                }
+
+                                if (e.key === 'ArrowUp') {
+                                  e.preventDefault();
+                                  const prevIndex =
+                                    currentIndex === 0
+                                      ? maxIndex
+                                      : currentIndex - 1;
+                                  setFocusedSubMenuItem(prevIndex);
+                                  subMenuRefs.current[prevIndex]?.focus();
+                                }
+
+                                if (e.key === 'Escape') {
+                                  e.preventDefault();
+                                  setShow(null);
+                                  setFocusedSubMenuItem(-1);
+                                  // Focus back to the main menu button
+                                  const button = e.currentTarget
+                                    .closest('.subMenu')
+                                    ?.parentElement?.querySelector('button');
+                                  (button as HTMLButtonElement)?.focus();
+                                }
+
+                                if (e.key === 'Tab') {
+                                  setShow(null);
+                                  setFocusedSubMenuItem(-1);
+                                }
+                              }}
+                            >
+                              {subL.title}
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
                 ))}
 
               {/* ------------------------------------------------

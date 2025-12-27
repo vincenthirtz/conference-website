@@ -27,10 +27,22 @@ const commitments = [
 ];
 
 const teamRoles = [
-  { title: 'Direction & admin', desc: 'Organisation générale, partenariats, suivi des budgets.' },
-  { title: 'Tournoi & arbitrage', desc: 'Règles, lobby settings, gestion des matchs et litiges.' },
-  { title: 'Production & cast', desc: 'Overlay, graphismes, casters et modération live.' },
-  { title: 'Communauté', desc: 'Mentorat, ateliers, communication et support joueuses/équipes.' },
+  {
+    title: 'Direction & admin',
+    desc: 'Organisation générale, partenariats, suivi des budgets.',
+  },
+  {
+    title: 'Tournoi & arbitrage',
+    desc: 'Règles, lobby settings, gestion des matchs et litiges.',
+  },
+  {
+    title: 'Production & cast',
+    desc: 'Overlay, graphismes, casters et modération live.',
+  },
+  {
+    title: 'Communauté',
+    desc: 'Mentorat, ateliers, communication et support joueuses/équipes.',
+  },
 ];
 
 function AssociationPage() {
@@ -50,8 +62,9 @@ function AssociationPage() {
             L&apos;association OW Women&apos;s Cup
           </h1>
           <p className="mx-auto mt-4 max-w-3xl text-lg text-gray-200">
-            Une équipe bénévole qui porte un tournoi Overwatch féminin, avec une mission claire :
-            créer des espaces inclusifs et ambitieux pour les talents de la scène.
+            Une équipe bénévole qui porte un tournoi Overwatch féminin, avec une
+            mission claire : créer des espaces inclusifs et ambitieux pour les
+            talents de la scène.
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
             <Link
@@ -77,8 +90,12 @@ function AssociationPage() {
               key={pillar.title}
               className="rounded-2xl border border-white/10 bg-white/[0.05] p-5 shadow-xl shadow-black/20"
             >
-              <p className="text-xs uppercase tracking-[0.16em] text-purple-200">{pillar.title}</p>
-              <h2 className="mt-2 text-xl font-semibold text-white">{pillar.title}</h2>
+              <p className="text-xs uppercase tracking-[0.16em] text-purple-200">
+                {pillar.title}
+              </p>
+              <h2 className="mt-2 text-xl font-semibold text-white">
+                {pillar.title}
+              </h2>
               <p className="mt-2 text-sm text-gray-200">{pillar.detail}</p>
             </div>
           ))}
@@ -87,17 +104,23 @@ function AssociationPage() {
         <section className="rounded-3xl border border-white/10 bg-gradient-to-r from-[#0F1F3A] via-[#1A0F2E] to-[#2C0B2C] p-6 sm:p-10 shadow-2xl">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-gray-200">Engagements</p>
+              <p className="text-xs uppercase tracking-[0.18em] text-gray-200">
+                Engagements
+              </p>
               <h3 className="text-2xl font-bold">Ce qui nous guide</h3>
             </div>
             <p className="text-sm text-gray-200">
-              Un cadre sain pour les joueuses, le staff et la communauté autour du tournoi.
+              Un cadre sain pour les joueuses, le staff et la communauté autour
+              du tournoi.
             </p>
           </div>
           <ul className="mt-6 space-y-3 text-sm text-gray-100">
             {commitments.map((item) => (
               <li key={item} className="flex items-start gap-2">
-                <span className="mt-[6px] h-2 w-2 rounded-full bg-emerald-400" aria-hidden />
+                <span
+                  className="mt-[6px] h-2 w-2 rounded-full bg-emerald-400"
+                  aria-hidden
+                />
                 <span>{item}</span>
               </li>
             ))}
@@ -106,10 +129,15 @@ function AssociationPage() {
 
         <section className="space-y-4">
           <div className="flex flex-col gap-2">
-            <p className="text-xs uppercase tracking-[0.18em] text-gray-300">Qui fait quoi</p>
-            <h3 className="text-2xl font-bold text-white">Les pôles de l&apos;équipe</h3>
+            <p className="text-xs uppercase tracking-[0.18em] text-gray-300">
+              Qui fait quoi
+            </p>
+            <h3 className="text-2xl font-bold text-white">
+              Les pôles de l&apos;équipe
+            </h3>
             <p className="text-sm text-gray-300">
-              Chacun peut proposer son aide : administration, arbitrage, production, communication.
+              Chacun peut proposer son aide : administration, arbitrage,
+              production, communication.
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -126,10 +154,15 @@ function AssociationPage() {
         </section>
 
         <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 sm:p-8 text-center">
-          <p className="text-sm uppercase tracking-[0.14em] text-gray-300">Nous contacter</p>
-          <h4 className="mt-2 text-2xl font-semibold">Envie d&apos;aider ou de collaborer ?</h4>
+          <p className="text-sm uppercase tracking-[0.14em] text-gray-300">
+            Nous contacter
+          </p>
+          <h4 className="mt-2 text-2xl font-semibold">
+            Envie d&apos;aider ou de collaborer ?
+          </h4>
           <p className="mt-3 text-sm text-gray-200">
-            Écris-nous pour rejoindre l&apos;asso, proposer un partenariat ou poser tes questions.
+            Écris-nous pour rejoindre l&apos;asso, proposer un partenariat ou
+            poser tes questions.
           </p>
           <div className="mt-5 flex justify-center gap-3">
             <a

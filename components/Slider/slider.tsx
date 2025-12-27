@@ -1,10 +1,7 @@
 import Slider from 'react-slick';
 import React, { useEffect, useState, useRef, JSX } from 'react';
 import { useMediaQuery } from 'react-responsive';
-
-interface ISlider {
-  children: React.ReactNode[];
-}
+import type { ISlider } from '../../types/components';
 
 function ReactSlider({ children }: ISlider): JSX.Element {
   const isMobile = useMediaQuery({ maxWidth: '260px' });

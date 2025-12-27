@@ -1,12 +1,6 @@
 import Image from 'next/image';
 import React, { JSX } from 'react';
-import { Speaker as SpeakerTypes } from '../../types/types';
-
-interface ISpeaker {
-  details: SpeakerTypes;
-  location?: string | undefined;
-  className?: string;
-}
+import type { ISpeaker } from '../../types/components';
 
 function Speaker({ details, location, className }: ISpeaker): JSX.Element {
   return (

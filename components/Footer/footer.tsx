@@ -309,8 +309,8 @@ function Footer(): JSX.Element {
           <div></div>
           <div className="flex items-center justify-between sm:flex-col sm:items-center">
             <div className="text-white text-center">
-              Association OW WOMEN'S CUP - Tous droits réservés - Fait avec ❤️
-              par{' '}
+              Association OW WOMEN&apos;S CUP - Tous droits réservés - Fait avec
+              ❤️ par{' '}
               <a
                 href="https://www.twitch.tv/arukdo"
                 target="_blank"

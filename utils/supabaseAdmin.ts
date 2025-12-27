@@ -1,5 +1,5 @@
 // lib/supabaseAdmin.ts
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from '@supabase/supabase-js';
 
 /**
  * Chargement des variables d'environnement
@@ -13,13 +13,9 @@ const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY!;
  * - Accès complet aux tables protégées (staff_logs, stages, matches…)
  * - Doit uniquement être utilisé côté serveur (API routes + SSR)
  */
-export const supabaseAdmin = createClient(
-  SUPABASE_URL,
-  SUPABASE_SERVICE_ROLE,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  }
-);
+export const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
+});

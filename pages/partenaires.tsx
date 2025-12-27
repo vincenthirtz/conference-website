@@ -229,6 +229,7 @@ function PartnersPage() {
                         </div>
                         {partner.logo && (
                           <div className="mt-3 flex items-center justify-center rounded-xl border border-white/10 bg-white/5 p-3">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={partner.logo}
                               alt={`Logo ${partner.name}`}

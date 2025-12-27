@@ -125,14 +125,9 @@ function Timeline2026Page() {
             {timeline.map((item, idx) => {
               const isCurrent = idx === currentIdx;
               return (
-                <div
-                  key={item.id}
-                  className="relative pl-14"
-                >
+                <div key={item.id} className="relative pl-14">
                   <div
-                    className={`absolute top-6 h-4 w-4 rounded-full bg-gradient-to-br from-purple-300 to-pink-500 border-2 border-white/60 shadow-[0_0_15px_rgba(219,39,119,0.65)] ${
-                      'left-3'
-                    } ${isCurrent ? 'scale-110 ring-4 ring-pink-400/40 animate-pulse' : ''}`}
+                    className={`absolute top-6 h-4 w-4 rounded-full bg-gradient-to-br from-purple-300 to-pink-500 border-2 border-white/60 shadow-[0_0_15px_rgba(219,39,119,0.65)] ${'left-3'} ${isCurrent ? 'scale-110 ring-4 ring-pink-400/40 animate-pulse' : ''}`}
                   />
 
                   <div

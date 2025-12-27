@@ -2,9 +2,9 @@
 // pages/api/admin/teams/add-member.ts
 // Ajout d'un membre à une équipe (option: le définir capitaine)
 
-import type { NextApiRequest, NextApiResponse } from "next";
-import { supabaseAdmin } from "@/utils/supabase";
-import { withStaffRoute } from "@/utils/staff";
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { supabaseAdmin } from '@/utils/supabase';
+import { withStaffRoute } from '@/utils/staff';
 
 type AddMemberResponse =
   | {
@@ -17,51 +17,49 @@ type AddMemberResponse =
     }
   | { error: string };
 
-export default withStaffRoute(handler, "manager");
+export default withStaffRoute(handler, 'manager');
 
 async function handler(
   req: NextApiRequest,
   res: NextApiResponse<AddMemberResponse>
 ) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   if (!supabaseAdmin) {
     return res
       .status(500)
-      .json({ error: "Supabase service role not configured" });
+      .json({ error: 'Supabase service role not configured' });
   }
 
   const { teamId, userId, email, role, setCaptain } = req.body || {};
 
-  if (!teamId || typeof teamId !== "string") {
-    return res.status(400).json({ error: "teamId is required" });
+  if (!teamId || typeof teamId !== 'string') {
+    return res.status(400).json({ error: 'teamId is required' });
   }
 
   let resolvedUserId =
-    typeof userId === "string" && userId.trim().length > 0
-      ? userId.trim()
-      : "";
+    typeof userId === 'string' && userId.trim().length > 0 ? userId.trim() : '';
 
   try {
     // Vérifier l'équipe
     const { data: team, error: teamErr } = await supabaseAdmin
-      .from("teams")
-      .select("id")
-      .eq("id", teamId)
+      .from('teams')
+      .select('id')
+      .eq('id', teamId)
       .maybeSingle();
 
     if (teamErr || !team) {
-      return res.status(404).json({ error: "Team not found" });
+      return res.status(404).json({ error: 'Team not found' });
     }
 
     // Résoudre l'utilisateur par email si nécessaire
     if (!resolvedUserId) {
-      if (!email || typeof email !== "string") {
+      if (!email || typeof email !== 'string') {
         return res
           .status(400)
-          .json({ error: "Provide userId or email to find the user" });
+          .json({ error: 'Provide userId or email to find the user' });
       }
 
       const emailLower = email.toLowerCase();
@@ -72,10 +70,10 @@ async function handler(
         });
 
       if (listErr) {
-        console.error("add-member listUsers error:", listErr);
+        console.error('add-member listUsers error:', listErr);
         return res
           .status(500)
-          .json({ error: listErr.message || "Failed to list users" });
+          .json({ error: listErr.message || 'Failed to list users' });
       }
 
       const found = usersData?.users?.find(
@@ -83,7 +81,7 @@ async function handler(
       );
 
       if (!found?.id) {
-        return res.status(404).json({ error: "User not found for this email" });
+        return res.status(404).json({ error: 'User not found for this email' });
       }
 
       resolvedUserId = found.id;
@@ -93,21 +91,21 @@ async function handler(
     const memberPayload = {
       team_id: teamId,
       user_id: resolvedUserId,
-      role: typeof role === "string" && role.trim() ? role.trim() : "player",
+      role: typeof role === 'string' && role.trim() ? role.trim() : 'player',
     };
 
     const { data: member, error: insertErr } = await supabaseAdmin
-      .from("team_members")
+      .from('team_members')
       .insert(memberPayload)
-      .select("id")
+      .select('id')
       .maybeSingle();
 
     if (insertErr) {
       const msg =
-        insertErr.message?.includes("duplicate") ||
-        insertErr.message?.includes("unique")
-          ? "User already in this team"
-          : "Failed to add member";
+        insertErr.message?.includes('duplicate') ||
+        insertErr.message?.includes('unique')
+          ? 'User already in this team'
+          : 'Failed to add member';
       return res.status(400).json({ error: msg });
     }
 
@@ -115,16 +113,16 @@ async function handler(
 
     if (setCaptain) {
       const { error: captainErr } = await supabaseAdmin
-        .from("teams")
+        .from('teams')
         .update({ captain_id: resolvedUserId })
-        .eq("id", teamId);
+        .eq('id', teamId);
 
       if (captainErr) {
-        console.error("add-member captain update error:", captainErr);
+        console.error('add-member captain update error:', captainErr);
         return res.status(500).json({
           error:
             captainErr.message ||
-            "Member added but failed to set as captain (check teams.captain_id column)",
+            'Member added but failed to set as captain (check teams.captain_id column)',
         });
       }
 
@@ -138,13 +136,13 @@ async function handler(
       role: memberPayload.role,
       captainSet,
       info: captainSet
-        ? "Member added and set as captain"
-        : "Member added to team",
+        ? 'Member added and set as captain'
+        : 'Member added to team',
     });
   } catch (err: any) {
-    console.error("[/api/admin/teams/add-member] error:", err);
+    console.error('[/api/admin/teams/add-member] error:', err);
     return res.status(500).json({
-      error: err?.message || "Internal server error",
+      error: err?.message || 'Internal server error',
     });
   }
 }

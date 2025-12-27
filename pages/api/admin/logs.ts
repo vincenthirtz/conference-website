@@ -23,13 +23,10 @@
 //   total: number | null
 // }
 
-import type { NextApiRequest, NextApiResponse } from "next";
-import { supabaseAdmin } from "@/utils/supabase";
-import { withStaffRoute } from "@/utils/staff";
-import {
-  StaffLog,
-  formatStaffLog,
-} from "@/utils/staffLogs";
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { supabaseAdmin } from '@/utils/supabase';
+import { withStaffRoute } from '@/utils/staff';
+import { StaffLog, formatStaffLog } from '@/utils/staffLogs';
 
 export type AdminLogsResponse = {
   logs: Array<ReturnType<typeof formatStaffLog>>;
@@ -37,17 +34,15 @@ export type AdminLogsResponse = {
 };
 
 // Rôle minimum : manager (vision globale du journal d'audit)
-export default withStaffRoute(handler, "manager");
+export default withStaffRoute(handler, 'manager');
 
 async function handler(
   req: NextApiRequest,
   res: NextApiResponse<AdminLogsResponse | { error: string; detail?: string }>,
   _ctx: any
 ) {
-  if (req.method !== "GET") {
-    return res
-      .status(405)
-      .json({ error: "Method not allowed" });
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
@@ -66,29 +61,24 @@ async function handler(
     } = req.query;
 
     const limitNum = parseInt(
-      (Array.isArray(limit) ? limit[0] : limit) ?? "100",
+      (Array.isArray(limit) ? limit[0] : limit) ?? '100',
       10
     );
     const offsetNum = parseInt(
-      (Array.isArray(offset) ? offset[0] : offset) ?? "0",
+      (Array.isArray(offset) ? offset[0] : offset) ?? '0',
       10
     );
 
-    const ascending =
-      orderDir === "asc" ? true : false;
+    const ascending = orderDir === 'asc' ? true : false;
 
-    const wantTotal =
-      includeTotal === "1" ||
-      includeTotal === "true";
+    const wantTotal = includeTotal === '1' || includeTotal === 'true';
 
     if (!supabaseAdmin) {
-      return res.status(500).json({ error: "Supabase admin not configured" });
+      return res.status(500).json({ error: 'Supabase admin not configured' });
     }
 
-    let query = supabaseAdmin
-      .from("staff_logs")
-      .select(
-        `
+    let query = supabaseAdmin.from('staff_logs').select(
+      `
         id,
         created_at,
         staff_id,
@@ -105,43 +95,31 @@ async function handler(
           avatar_url
         )
       `,
-        { count: wantTotal ? "exact" : undefined }
-      );
+      { count: wantTotal ? 'exact' : undefined }
+    );
 
     if (staffId && !Array.isArray(staffId)) {
-      query = query.eq("staff_id", staffId);
+      query = query.eq('staff_id', staffId);
     }
 
-    if (
-      tournamentId &&
-      !Array.isArray(tournamentId)
-    ) {
-      query = query.eq(
-        "tournament_id",
-        tournamentId
-      );
+    if (tournamentId && !Array.isArray(tournamentId)) {
+      query = query.eq('tournament_id', tournamentId);
     }
 
-    if (
-      entityType &&
-      !Array.isArray(entityType)
-    ) {
-      query = query.eq(
-        "entity_type",
-        entityType
-      );
+    if (entityType && !Array.isArray(entityType)) {
+      query = query.eq('entity_type', entityType);
     }
 
     if (action && !Array.isArray(action)) {
-      query = query.eq("action", action);
+      query = query.eq('action', action);
     }
 
     if (from && !Array.isArray(from)) {
-      query = query.gte("created_at", from);
+      query = query.gte('created_at', from);
     }
 
     if (to && !Array.isArray(to)) {
-      query = query.lte("created_at", to);
+      query = query.lte('created_at', to);
     }
 
     if (search && !Array.isArray(search)) {
@@ -154,44 +132,30 @@ async function handler(
     }
 
     query = query
-      .order("created_at", { ascending })
-      .range(
-        offsetNum,
-        offsetNum + limitNum - 1
-      );
+      .order('created_at', { ascending })
+      .range(offsetNum, offsetNum + limitNum - 1);
 
     const { data, error, count } = await query;
 
     if (error) {
-      console.error(
-        "admin logs GET error:",
-        error
-      );
+      console.error('admin logs GET error:', error);
       return res.status(500).json({
-        error: "Failed to fetch staff logs",
+        error: 'Failed to fetch staff logs',
         detail: error.message,
       });
     }
 
     const rawLogs = ((data as unknown) || []) as StaffLog[];
-    const formatted = rawLogs.map((log) =>
-      formatStaffLog(log)
-    );
+    const formatted = rawLogs.map((log) => formatStaffLog(log));
 
     return res.status(200).json({
       logs: formatted,
-      total:
-        typeof count === "number"
-          ? count
-          : null,
+      total: typeof count === 'number' ? count : null,
     });
   } catch (err: any) {
-    console.error(
-      "[/api/admin/logs] internal error:",
-      err
-    );
+    console.error('[/api/admin/logs] internal error:', err);
     return res.status(500).json({
-      error: "Internal server error",
+      error: 'Internal server error',
       detail: err?.message,
     });
   }

@@ -1,8 +1,8 @@
-import { useState } from "react";
-import Head from "next/head";
-import Link from "next/link";
-import { StaffRoleBadge } from "@/components/admin/StaffRoleBadge";
-import { withStaffPage } from "@/utils/staff";
+import { useState } from 'react';
+import Head from 'next/head';
+import Link from 'next/link';
+import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
+import { withStaffPage } from '@/utils/staff';
 
 type StaffShape = {
   id: string;
@@ -20,13 +20,13 @@ type CreateUserResponse = {
   tempPassword?: string;
 };
 
-export const getServerSideProps = withStaffPage("admin");
+export const getServerSideProps = withStaffPage('admin');
 
 function AdminCreateUserPage({ staff }: StaffProps) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [displayName, setDisplayName] = useState("");
-  const [role, setRole] = useState("player");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [role, setRole] = useState('player');
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -46,23 +46,23 @@ function AdminCreateUserPage({ staff }: StaffProps) {
       };
       if (password.trim()) payload.password = password.trim();
 
-      const res = await fetch("/api/admin/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
       const json: CreateUserResponse & { error?: string } = await res.json();
 
       if (!res.ok || json.error) {
-        throw new Error(json.error || "Impossible de créer l&apos;utilisateur");
+        throw new Error(json.error || 'Impossible de créer l&apos;utilisateur');
       }
 
       setSuccess(json);
-      setEmail("");
-      setPassword("");
+      setEmail('');
+      setPassword('');
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur inattendue");
+      setErrorMsg(err?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
@@ -86,7 +86,8 @@ function AdminCreateUserPage({ staff }: StaffProps) {
             </button>
             <h1 className="text-3xl font-bold">Créer un utilisateur</h1>
             <p className="text-sm text-neutral-400 mt-1">
-              Génère un compte Supabase (email confirmé) pour un joueur ou un staff.
+              Génère un compte Supabase (email confirmé) pour un joueur ou un
+              staff.
             </p>
           </div>
           <StaffRoleBadge staff={staff} />
@@ -167,11 +168,11 @@ function AdminCreateUserPage({ staff }: StaffProps) {
                   disabled={loading}
                   className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
                     loading
-                      ? "bg-neutral-700 cursor-not-allowed"
-                      : "bg-blue-600 hover:bg-blue-500"
+                      ? 'bg-neutral-700 cursor-not-allowed'
+                      : 'bg-blue-600 hover:bg-blue-500'
                   }`}
                 >
-                  {loading ? "Création..." : "Créer l&apos;utilisateur"}
+                  {loading ? 'Création...' : 'Créer l&apos;utilisateur'}
                 </button>
 
                 <Link
@@ -202,7 +203,7 @@ function AdminCreateUserPage({ staff }: StaffProps) {
                   Compte créé ✅
                 </p>
                 <p className="text-xs text-neutral-200">
-                  User ID :{" "}
+                  User ID :{' '}
                   <span className="font-mono break-all">{success.userId}</span>
                 </p>
                 <p className="text-xs text-neutral-200">
@@ -210,7 +211,7 @@ function AdminCreateUserPage({ staff }: StaffProps) {
                 </p>
                 {success.tempPassword && (
                   <p className="text-xs text-yellow-100">
-                    Mot de passe :{" "}
+                    Mot de passe :{' '}
                     <span className="font-mono">{success.tempPassword}</span>
                     <br />
                     Note-le, il ne sera pas affiché à nouveau.

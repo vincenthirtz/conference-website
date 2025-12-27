@@ -1,12 +1,12 @@
 // pages/admin/stages/[stageId]/swiss.tsx
 
-import { useEffect, useState } from "react";
-import Head from "next/head";
-import Link from "next/link";
-import Image from "next/image";
-import { useRouter } from "next/router";
-import { withStaffPage } from "@/utils/staff";
-import { StaffRoleBadge } from "@/components/admin/StaffRoleBadge";
+import { useEffect, useState } from 'react';
+import Head from 'next/head';
+import Link from 'next/link';
+import Image from 'next/image';
+import { useRouter } from 'next/router';
+import { withStaffPage } from '@/utils/staff';
+import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
 type StaffShape = {
   id: string;
@@ -17,15 +17,15 @@ type StaffShape = {
 type StaffProps = {
   staff: StaffShape;
 };
-type MatchStatus = "pending" | "ongoing" | "finished" | "cancelled";
+type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
 
 type StageType =
-  | "group"
-  | "bracket"
-  | "swiss"
-  | "round_robin"
-  | "showmatch"
-  | "other";
+  | 'group'
+  | 'bracket'
+  | 'swiss'
+  | 'round_robin'
+  | 'showmatch'
+  | 'other';
 
 type TeamMini = {
   id: string;
@@ -92,10 +92,10 @@ type SwissApiResponse = {
   rounds: SwissRound[];
 };
 
-export const getServerSideProps = withStaffPage("manager");
+export const getServerSideProps = withStaffPage('manager');
 
 function formatDateTime(iso: string | null) {
-  if (!iso) return "—";
+  if (!iso) return '—';
   try {
     return new Date(iso).toLocaleString();
   } catch {
@@ -105,14 +105,14 @@ function formatDateTime(iso: string | null) {
 
 function statusLabel(status: MatchStatus) {
   switch (status) {
-    case "pending":
-      return "À venir";
-    case "ongoing":
-      return "En cours";
-    case "finished":
-      return "Terminé";
-    case "cancelled":
-      return "Annulé";
+    case 'pending':
+      return 'À venir';
+    case 'ongoing':
+      return 'En cours';
+    case 'finished':
+      return 'Terminé';
+    case 'cancelled':
+      return 'Annulé';
     default:
       return status;
   }
@@ -120,16 +120,16 @@ function statusLabel(status: MatchStatus) {
 
 function statusColor(status: MatchStatus) {
   switch (status) {
-    case "pending":
-      return "bg-neutral-700 text-neutral-100";
-    case "ongoing":
-      return "bg-amber-600/80 text-neutral-900";
-    case "finished":
-      return "bg-emerald-600/80 text-white";
-    case "cancelled":
-      return "bg-red-700/80 text-white";
+    case 'pending':
+      return 'bg-neutral-700 text-neutral-100';
+    case 'ongoing':
+      return 'bg-amber-600/80 text-neutral-900';
+    case 'finished':
+      return 'bg-emerald-600/80 text-white';
+    case 'cancelled':
+      return 'bg-red-700/80 text-white';
     default:
-      return "bg-neutral-700 text-neutral-100";
+      return 'bg-neutral-700 text-neutral-100';
   }
 }
 
@@ -166,7 +166,9 @@ function AdminSwissStagePage({ staff }: StaffProps) {
       const res = await fetch(`/api/admin/stages/${stageId}/swiss`);
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Impossible de charger les données Swiss");
+        throw new Error(
+          json.error || 'Impossible de charger les données Swiss'
+        );
       }
 
       const json: SwissApiResponse = await res.json();
@@ -175,7 +177,7 @@ function AdminSwissStagePage({ staff }: StaffProps) {
       setStandings(json.standings || []);
       setRounds(json.rounds || []);
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur inattendue");
+      setErrorMsg(err?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
@@ -196,8 +198,8 @@ function AdminSwissStagePage({ staff }: StaffProps) {
       const res = await fetch(
         `/api/admin/stages/${stageId}/generate-swiss-round`,
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           // body vide = "next round auto" côté backend
           body: JSON.stringify({}),
         }
@@ -206,12 +208,12 @@ function AdminSwissStagePage({ staff }: StaffProps) {
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         throw new Error(
-          json.error || "Erreur lors de la génération de la ronde Swiss"
+          json.error || 'Erreur lors de la génération de la ronde Swiss'
         );
       }
 
       const json = await res.json();
-      const roundNumber = json.roundNumber ?? "?";
+      const roundNumber = json.roundNumber ?? '?';
       const createdCount = json.createdMatches?.length ?? 0;
 
       setInfoMsg(
@@ -219,15 +221,16 @@ function AdminSwissStagePage({ staff }: StaffProps) {
       );
       fetchSwissData();
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur lors de la génération de la ronde");
+      setErrorMsg(err?.message ?? 'Erreur lors de la génération de la ronde');
     } finally {
       setLoadingGenerate(false);
     }
   }
 
   const backStageUrl = `/admin/stages/${stageId}`;
-  const backTournamentUrl =
-    tournament?.id ? `/admin/tournament/${tournament.id}` : "/admin/tournaments";
+  const backTournamentUrl = tournament?.id
+    ? `/admin/tournament/${tournament.id}`
+    : '/admin/tournaments';
 
   return (
     <>
@@ -250,8 +253,7 @@ function AdminSwissStagePage({ staff }: StaffProps) {
 
             {stage && (
               <p className="text-neutral-400 text-sm mt-1">
-                Phase :{" "}
-                <span className="font-semibold">{stage.name}</span>
+                Phase : <span className="font-semibold">{stage.name}</span>
                 {stage.stage_type && (
                   <span className="ml-2 text-[10px] uppercase tracking-wide bg-neutral-800 border border-neutral-700 px-1.5 py-0.5 rounded">
                     {stage.stage_type}
@@ -259,8 +261,8 @@ function AdminSwissStagePage({ staff }: StaffProps) {
                 )}
                 {tournament && (
                   <>
-                    {" "}
-                    • Tournoi{" "}
+                    {' '}
+                    • Tournoi{' '}
                     <Link
                       href={backTournamentUrl}
                       className="font-semibold hover:underline"
@@ -300,8 +302,8 @@ function AdminSwissStagePage({ staff }: StaffProps) {
             disabled={loading || loadingGenerate}
             className={`px-4 py-2 rounded text-sm border border-neutral-600 ${
               loading
-                ? "bg-neutral-800 cursor-wait"
-                : "bg-neutral-800 hover:bg-neutral-700"
+                ? 'bg-neutral-800 cursor-wait'
+                : 'bg-neutral-800 hover:bg-neutral-700'
             }`}
           >
             Rafraîchir les données
@@ -313,18 +315,18 @@ function AdminSwissStagePage({ staff }: StaffProps) {
             disabled={loadingGenerate}
             className={`px-4 py-2 rounded text-sm font-semibold ${
               loadingGenerate
-                ? "bg-blue-800 cursor-wait"
-                : "bg-blue-600 hover:bg-blue-700"
+                ? 'bg-blue-800 cursor-wait'
+                : 'bg-blue-600 hover:bg-blue-700'
             }`}
           >
             {loadingGenerate
-              ? "Génération en cours…"
-              : "Générer la prochaine ronde Swiss"}
+              ? 'Génération en cours…'
+              : 'Générer la prochaine ronde Swiss'}
           </button>
 
           <p className="text-xs text-neutral-500">
-            La génération utilise le système de pairing Swiss (victoires, Buchholz,
-            etc.) et évite les rematches autant que possible.
+            La génération utilise le système de pairing Swiss (victoires,
+            Buchholz, etc.) et évite les rematches autant que possible.
           </p>
         </div>
 
@@ -346,7 +348,7 @@ function AdminSwissStagePage({ staff }: StaffProps) {
                 </h2>
                 <span className="text-xs text-neutral-400">
                   {standings.length} équipe
-                  {standings.length > 1 ? "s" : ""}
+                  {standings.length > 1 ? 's' : ''}
                 </span>
               </div>
 
@@ -374,12 +376,11 @@ function AdminSwissStagePage({ staff }: StaffProps) {
                     <tbody>
                       {standings.map((s) => {
                         const display = s.team?.name || s.team_id;
-                        const diff =
-                          (s.games_won ?? 0) - (s.games_lost ?? 0);
+                        const diff = (s.games_won ?? 0) - (s.games_lost ?? 0);
                         const wr =
                           s.opp_winrate != null
                             ? `${(s.opp_winrate * 100).toFixed(1)}%`
-                            : "—";
+                            : '—';
 
                         return (
                           <tr
@@ -412,41 +413,33 @@ function AdminSwissStagePage({ staff }: StaffProps) {
                                 </div>
                               </div>
                             </td>
-                            <td className="px-3 py-2 text-center">
-                              {s.wins}
-                            </td>
+                            <td className="px-3 py-2 text-center">{s.wins}</td>
                             <td className="px-3 py-2 text-center">
                               {s.losses}
                             </td>
-                            <td className="px-3 py-2 text-center">
-                              {s.draws}
-                            </td>
+                            <td className="px-3 py-2 text-center">{s.draws}</td>
                             <td className="px-3 py-2 text-center font-semibold">
                               {s.points}
                             </td>
                             <td className="px-3 py-2 text-center">
-                              {s.games_won} / {s.games_lost}{" "}
+                              {s.games_won} / {s.games_lost}{' '}
                               <span
                                 className={
                                   diff > 0
-                                    ? "text-emerald-300"
+                                    ? 'text-emerald-300'
                                     : diff < 0
-                                    ? "text-red-300"
-                                    : "text-neutral-300"
+                                      ? 'text-red-300'
+                                      : 'text-neutral-300'
                                 }
                               >
-                                ({diff > 0 ? "+" : ""}
+                                ({diff > 0 ? '+' : ''}
                                 {diff})
                               </span>
                             </td>
                             <td className="px-3 py-2 text-center">
-                              {s.buchholz != null
-                                ? s.buchholz.toFixed(1)
-                                : "—"}
+                              {s.buchholz != null ? s.buchholz.toFixed(1) : '—'}
                             </td>
-                            <td className="px-3 py-2 text-center">
-                              {wr}
-                            </td>
+                            <td className="px-3 py-2 text-center">{wr}</td>
                           </tr>
                         );
                       })}
@@ -464,7 +457,7 @@ function AdminSwissStagePage({ staff }: StaffProps) {
                 </h2>
                 <span className="text-xs text-neutral-400">
                   {rounds.length} ronde
-                  {rounds.length > 1 ? "s" : ""}
+                  {rounds.length > 1 ? 's' : ''}
                 </span>
               </div>
 
@@ -478,9 +471,7 @@ function AdminSwissStagePage({ staff }: StaffProps) {
                 <div className="max-h-[70vh] overflow-y-auto">
                   {rounds
                     .slice()
-                    .sort(
-                      (a, b) => a.round_number - b.round_number
-                    )
+                    .sort((a, b) => a.round_number - b.round_number)
                     .map((round) => (
                       <SwissRoundBlock key={round.round_number} round={round} />
                     ))}
@@ -507,7 +498,7 @@ function SwissRoundBlock({ round }: RoundBlockProps) {
         </div>
         <div className="text-xs text-neutral-400">
           {round.matches.length} match
-          {round.matches.length > 1 ? "es" : ""}
+          {round.matches.length > 1 ? 'es' : ''}
         </div>
       </div>
       <div className="divide-y divide-neutral-800">
@@ -524,15 +515,15 @@ type SwissMatchRowProps = {
 };
 
 function SwissMatchRow({ match }: SwissMatchRowProps) {
-  const label1 = match.team1?.name || match.team1_id || "TBD";
-  const label2 = match.team2?.name || match.team2_id || "TBD";
+  const label1 = match.team1?.name || match.team1_id || 'TBD';
+  const label2 = match.team2?.name || match.team2_id || 'TBD';
 
   const scoreStr =
-    match.status === "finished" || match.status === "ongoing"
+    match.status === 'finished' || match.status === 'ongoing'
       ? `${match.team1_score ?? 0} - ${match.team2_score ?? 0}`
-      : "—";
+      : '—';
 
-  const isBo = match.best_of ? `BO${match.best_of}` : "";
+  const isBo = match.best_of ? `BO${match.best_of}` : '';
 
   return (
     <div className="px-4 py-2 text-xs flex flex-col md:flex-row md:items-center md:justify-between gap-2">
@@ -566,11 +557,7 @@ function SwissMatchRow({ match }: SwissMatchRowProps) {
           </div>
           <div className="flex items-center gap-3 text-[11px] text-neutral-500">
             <span>
-              {isBo && (
-                <>
-                  {isBo} •{" "}
-                </>
-              )}
+              {isBo && <>{isBo} • </>}
               Score : <span className="text-neutral-200">{scoreStr}</span>
             </span>
             <span>|</span>

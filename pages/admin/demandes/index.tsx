@@ -1,11 +1,11 @@
 // pages/admin/demandes/index.tsx
 
-import { useEffect, useState } from "react";
-import Head from "next/head";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { StaffRoleBadge } from "@/components/admin/StaffRoleBadge";
-import { supabaseClient } from "@/utils/supabase";
+import { useEffect, useState } from 'react';
+import Head from 'next/head';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
+import { supabaseClient } from '@/utils/supabase';
 import { withStaffPage } from '@/utils/staff';
 
 type StaffShape = {
@@ -14,9 +14,9 @@ type StaffShape = {
   display_name: string | null;
 };
 
-type DemandeType = "join_team" | "leave_team";
+type DemandeType = 'join_team' | 'leave_team';
 
-type DemandeStatus = "pending" | "approved" | "rejected" | "cancelled";
+type DemandeStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
 type TournamentMini = {
   id: string;
@@ -76,7 +76,7 @@ type TournamentsApiResponse = {
 export const getServerSideProps = withStaffPage('manager');
 
 function formatDateTime(iso: string | null) {
-  if (!iso) return "—";
+  if (!iso) return '—';
   try {
     return new Date(iso).toLocaleString();
   } catch {
@@ -86,10 +86,10 @@ function formatDateTime(iso: string | null) {
 
 function typeLabel(type: DemandeType) {
   switch (type) {
-    case "join_team":
-      return "Rejoindre une équipe";
-    case "leave_team":
-      return "Quitter une équipe";
+    case 'join_team':
+      return 'Rejoindre une équipe';
+    case 'leave_team':
+      return 'Quitter une équipe';
     default:
       return type;
   }
@@ -97,25 +97,25 @@ function typeLabel(type: DemandeType) {
 
 function typeColor(type: DemandeType) {
   switch (type) {
-    case "join_team":
-      return "bg-emerald-700/80 text-white";
-    case "leave_team":
-      return "bg-amber-600/80 text-neutral-900";
+    case 'join_team':
+      return 'bg-emerald-700/80 text-white';
+    case 'leave_team':
+      return 'bg-amber-600/80 text-neutral-900';
     default:
-      return "bg-neutral-700 text-neutral-100";
+      return 'bg-neutral-700 text-neutral-100';
   }
 }
 
 function statusLabel(status: DemandeStatus) {
   switch (status) {
-    case "pending":
-      return "En attente";
-    case "approved":
-      return "Approuvée";
-    case "rejected":
-      return "Refusée";
-    case "cancelled":
-      return "Annulée";
+    case 'pending':
+      return 'En attente';
+    case 'approved':
+      return 'Approuvée';
+    case 'rejected':
+      return 'Refusée';
+    case 'cancelled':
+      return 'Annulée';
     default:
       return status;
   }
@@ -123,16 +123,16 @@ function statusLabel(status: DemandeStatus) {
 
 function statusColor(status: DemandeStatus) {
   switch (status) {
-    case "pending":
-      return "bg-neutral-700 text-neutral-100";
-    case "approved":
-      return "bg-emerald-600/80 text-white";
-    case "rejected":
-      return "bg-red-700/80 text-white";
-    case "cancelled":
-      return "bg-neutral-600 text-neutral-100";
+    case 'pending':
+      return 'bg-neutral-700 text-neutral-100';
+    case 'approved':
+      return 'bg-emerald-600/80 text-white';
+    case 'rejected':
+      return 'bg-red-700/80 text-white';
+    case 'cancelled':
+      return 'bg-neutral-600 text-neutral-100';
     default:
-      return "bg-neutral-700 text-neutral-100";
+      return 'bg-neutral-700 text-neutral-100';
   }
 }
 
@@ -154,12 +154,12 @@ function AdminDemandesPage() {
   const [loadingTournaments, setLoadingTournaments] = useState(false);
 
   // Filtres
-  const [typeFilter, setTypeFilter] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<string>("pending");
-  const [tournamentFilter, setTournamentFilter] = useState<string>("");
-  const [search, setSearch] = useState<string>("");
-  const [dateFrom, setDateFrom] = useState<string>("");
-  const [dateTo, setDateTo] = useState<string>("");
+  const [typeFilter, setTypeFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('pending');
+  const [tournamentFilter, setTournamentFilter] = useState<string>('');
+  const [search, setSearch] = useState<string>('');
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
 
   const [limit] = useState(50);
   const [offset, setOffset] = useState(0);
@@ -173,39 +173,39 @@ function AdminDemandesPage() {
         } = await supabaseClient.auth.getSession();
 
         if (!session?.access_token) {
-          router.push("/admin/login");
+          router.push('/admin/login');
           return;
         }
 
         const accessToken = session.access_token;
         setToken(accessToken);
 
-        const res = await fetch("/api/admin/me", {
+        const res = await fetch('/api/admin/me', {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
         });
 
         if (!res.ok) {
-          router.push("/admin/login");
+          router.push('/admin/login');
           return;
         }
 
         const me = await res.json();
 
         if (!me.role) {
-          router.push("/admin/login");
+          router.push('/admin/login');
           return;
         }
 
         setStaff({
-          id: (me.id as string) ?? "",
-          role: me.role ?? "helper",
+          id: (me.id as string) ?? '',
+          role: me.role ?? 'helper',
           display_name: me.display_name ?? null,
         });
       } catch (e) {
-        console.error("staff guard error", e);
-        router.push("/admin/login");
+        console.error('staff guard error', e);
+        router.push('/admin/login');
         return;
       } finally {
         setGuardLoading(false);
@@ -232,7 +232,7 @@ function AdminDemandesPage() {
   async function fetchTournaments() {
     try {
       setLoadingTournaments(true);
-      const res = await fetch("/api/admin/tournaments?limit=200", {
+      const res = await fetch('/api/admin/tournaments?limit=200', {
         headers: token
           ? {
               Authorization: `Bearer ${token}`,
@@ -243,7 +243,7 @@ function AdminDemandesPage() {
       const json: TournamentsApiResponse = await res.json();
       setTournaments(json.tournaments || []);
     } catch (e) {
-      console.error("Failed to load tournaments for filter", e);
+      console.error('Failed to load tournaments for filter', e);
     } finally {
       setLoadingTournaments(false);
     }
@@ -255,16 +255,16 @@ function AdminDemandesPage() {
 
     try {
       const params = new URLSearchParams();
-      params.set("limit", String(limit));
-      params.set("offset", String(offset));
-      if (statusFilter) params.set("status", statusFilter);
-      if (typeFilter) params.set("type", typeFilter);
-      if (tournamentFilter) params.set("tournamentId", tournamentFilter);
-      if (search.trim()) params.set("search", search.trim());
-      if (dateFrom) params.set("dateFrom", dateFrom);
-      if (dateTo) params.set("dateTo", dateTo);
+      params.set('limit', String(limit));
+      params.set('offset', String(offset));
+      if (statusFilter) params.set('status', statusFilter);
+      if (typeFilter) params.set('type', typeFilter);
+      if (tournamentFilter) params.set('tournamentId', tournamentFilter);
+      if (search.trim()) params.set('search', search.trim());
+      if (dateFrom) params.set('dateFrom', dateFrom);
+      if (dateTo) params.set('dateTo', dateTo);
 
-      const res = await fetch("/api/admin/demandes?" + params.toString(), {
+      const res = await fetch('/api/admin/demandes?' + params.toString(), {
         headers: token
           ? {
               Authorization: `Bearer ${token}`,
@@ -274,13 +274,13 @@ function AdminDemandesPage() {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Impossible de charger les demandes");
+        throw new Error(json.error || 'Impossible de charger les demandes');
       }
       const json: DemandesApiResponse = await res.json();
       setDemandes(json.demandes || []);
-      setTotal(typeof json.total === "number" ? json.total : null);
+      setTotal(typeof json.total === 'number' ? json.total : null);
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur inattendue");
+      setErrorMsg(err?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
@@ -294,17 +294,17 @@ function AdminDemandesPage() {
 
   function handleExportCsv() {
     const params = new URLSearchParams();
-    params.set("limit", "10000");
-    params.set("offset", "0");
-    params.set("export", "csv");
-    if (statusFilter) params.set("status", statusFilter);
-    if (typeFilter) params.set("type", typeFilter);
-    if (tournamentFilter) params.set("tournamentId", tournamentFilter);
-    if (search.trim()) params.set("search", search.trim());
-    if (dateFrom) params.set("dateFrom", dateFrom);
-    if (dateTo) params.set("dateTo", dateTo);
+    params.set('limit', '10000');
+    params.set('offset', '0');
+    params.set('export', 'csv');
+    if (statusFilter) params.set('status', statusFilter);
+    if (typeFilter) params.set('type', typeFilter);
+    if (tournamentFilter) params.set('tournamentId', tournamentFilter);
+    if (search.trim()) params.set('search', search.trim());
+    if (dateFrom) params.set('dateFrom', dateFrom);
+    if (dateTo) params.set('dateTo', dateTo);
 
-    const url = "/api/admin/demandes?" + params.toString();
+    const url = '/api/admin/demandes?' + params.toString();
 
     // on envoie aussi le token pour les routes protégées
     if (token) {
@@ -315,26 +315,28 @@ function AdminDemandesPage() {
       })
         .then((res) => res.blob())
         .then((blob) => {
-          const a = document.createElement("a");
+          const a = document.createElement('a');
           a.href = URL.createObjectURL(blob);
-          a.download = "demandes.csv";
+          a.download = 'demandes.csv';
           a.click();
         })
         .catch((e) => {
-          console.error("CSV export error", e);
+          console.error('CSV export error', e);
         });
     } else {
       window.location.href = url;
     }
   }
 
-  const backUrl = "/admin";
+  const backUrl = '/admin';
 
   // État de garde : pendant le check auth, on affiche un écran simple
   if (guardLoading) {
     return (
       <div className="min-h-screen bg-neutral-900 text-white flex items-center justify-center">
-        <span className="text-sm text-neutral-400">Vérification des droits…</span>
+        <span className="text-sm text-neutral-400">
+          Vérification des droits…
+        </span>
       </div>
     );
   }
@@ -418,14 +420,12 @@ function AdminDemandesPage() {
               onChange={(e) => setTournamentFilter(e.target.value)}
             >
               <option value="">Tous</option>
-              {loadingTournaments && (
-                <option disabled>Chargement...</option>
-              )}
+              {loadingTournaments && <option disabled>Chargement...</option>}
               {!loadingTournaments &&
                 tournaments.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name}
-                    {t.slug ? ` (${t.slug})` : ""}
+                    {t.slug ? ` (${t.slug})` : ''}
                   </option>
                 ))}
             </select>
@@ -483,9 +483,9 @@ function AdminDemandesPage() {
           <div className="px-4 py-3 border-b border-neutral-700 flex justify-between items-center">
             <span className="text-sm font-semibold">
               {loading
-                ? "Chargement..."
+                ? 'Chargement...'
                 : `Demandes (${demandes.length}${
-                    total != null ? ` / ${total}` : ""
+                    total != null ? ` / ${total}` : ''
                   })`}
             </span>
             <span className="text-xs text-neutral-400">
@@ -529,7 +529,7 @@ function AdminDemandesPage() {
                       <td className="px-3 py-2 text-xs">
                         <span
                           className={
-                            "inline-flex px-2 py-1 rounded-full text-[11px] font-semibold " +
+                            'inline-flex px-2 py-1 rounded-full text-[11px] font-semibold ' +
                             typeColor(d.type)
                           }
                         >
@@ -546,7 +546,7 @@ function AdminDemandesPage() {
                             </div>
                             {d.user.discord_tag && (
                               <div className="text-[10px] text-neutral-400">
-                                Discord:{" "}
+                                Discord:{' '}
                                 <span className="font-mono">
                                   {d.user.discord_tag}
                                 </span>
@@ -554,7 +554,7 @@ function AdminDemandesPage() {
                             )}
                             {d.user.battlefy_name && (
                               <div className="text-[10px] text-neutral-400">
-                                Battlefy:{" "}
+                                Battlefy:{' '}
                                 <span className="font-mono">
                                   {d.user.battlefy_name}
                                 </span>
@@ -583,9 +583,7 @@ function AdminDemandesPage() {
                               />
                             )}
                             <div>
-                              <div className="font-semibold">
-                                {d.team.name}
-                              </div>
+                              <div className="font-semibold">{d.team.name}</div>
                               {d.team.short_name && (
                                 <div className="text-[10px] text-neutral-400">
                                   {d.team.short_name}
@@ -640,7 +638,7 @@ function AdminDemandesPage() {
                         <div className="mb-1">
                           <span
                             className={
-                              "inline-flex px-2 py-1 rounded-full text-[11px] font-semibold " +
+                              'inline-flex px-2 py-1 rounded-full text-[11px] font-semibold ' +
                               statusColor(d.status)
                             }
                           >
@@ -649,15 +647,12 @@ function AdminDemandesPage() {
                         </div>
                         {d.handled_by && (
                           <div className="text-[10px] text-neutral-500">
-                            par{" "}
+                            par{' '}
                             <span className="font-medium">
                               {d.handled_by.display_name || d.handled_by.id}
                             </span>
                             {d.handled_at && (
-                              <>
-                                {" "}
-                                • {formatDateTime(d.handled_at)}
-                              </>
+                              <> • {formatDateTime(d.handled_at)}</>
                             )}
                           </div>
                         )}
@@ -706,8 +701,8 @@ function AdminDemandesPage() {
               onClick={() => setOffset(Math.max(0, offset - limit))}
               className={`px-3 py-2 rounded ${
                 offset === 0
-                  ? "bg-neutral-700 opacity-40 cursor-not-allowed"
-                  : "bg-neutral-700 hover:bg-neutral-600"
+                  ? 'bg-neutral-700 opacity-40 cursor-not-allowed'
+                  : 'bg-neutral-700 hover:bg-neutral-600'
               }`}
             >
               ← Précédent
@@ -715,7 +710,7 @@ function AdminDemandesPage() {
 
             <span className="text-neutral-400">
               {offset + 1} – {offset + demandes.length}
-              {total ? ` / ${total}` : ""}
+              {total ? ` / ${total}` : ''}
             </span>
 
             <button
@@ -723,8 +718,8 @@ function AdminDemandesPage() {
               onClick={() => setOffset(offset + limit)}
               className={`px-3 py-2 rounded ${
                 total !== null && offset + limit >= total
-                  ? "bg-neutral-700 opacity-40 cursor-not-allowed"
-                  : "bg-neutral-700 hover:bg-neutral-600"
+                  ? 'bg-neutral-700 opacity-40 cursor-not-allowed'
+                  : 'bg-neutral-700 hover:bg-neutral-600'
               }`}
             >
               Suivant →

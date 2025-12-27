@@ -1,13 +1,13 @@
 // @ts-nocheck
 // pages/api/matches/[matchId]/games.ts
 
-import type { NextApiRequest, NextApiResponse } from "next";
-import { supabaseAdmin } from "@/utils/supabase";
-import { withStaffRoute } from "@/utils/staff";
-import { applyMatchScore } from "@/utils/matches/applyScore";
-import { logStaffAction } from "@/utils/staffLogs";
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { supabaseAdmin } from '@/utils/supabase';
+import { withStaffRoute } from '@/utils/staff';
+import { applyMatchScore } from '@/utils/matches/applyScore';
+import { logStaffAction } from '@/utils/staffLogs';
 
-export default withStaffRoute(handler, "referee");
+export default withStaffRoute(handler, 'referee');
 
 /* -----------------------------------------------------------
  * Types
@@ -35,37 +35,33 @@ type GameInput = {
   went_overtime?: boolean | null;
 };
 
-type RecomputeMode = "none" | "from_games";
+type RecomputeMode = 'none' | 'from_games';
 
-async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse,
-  ctx: any
-) {
+async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
   const { matchId } = req.query;
 
   if (!matchId || Array.isArray(matchId)) {
-    return res.status(400).json({ error: "Invalid matchId" });
+    return res.status(400).json({ error: 'Invalid matchId' });
   }
 
   try {
     switch (req.method) {
-      case "GET":
+      case 'GET':
         return await handleGet(matchId, res);
-      case "POST":
+      case 'POST':
         return await handlePost(matchId, req, res, ctx);
-      case "PUT":
-      case "PATCH":
+      case 'PUT':
+      case 'PATCH':
         return await handlePut(matchId, req, res, ctx);
-      case "DELETE":
+      case 'DELETE':
         return await handleDelete(matchId, res, ctx);
       default:
-        return res.status(405).json({ error: "Method not allowed" });
+        return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (err: any) {
-    console.error("[/api/matches/[matchId]/games] error:", err);
+    console.error('[/api/matches/[matchId]/games] error:', err);
     return res.status(500).json({
-      error: "Internal server error",
+      error: 'Internal server error',
       detail: err?.message,
     });
   }
@@ -77,14 +73,14 @@ async function handler(
 
 async function handleGet(matchId: string, res: NextApiResponse) {
   const { data, error } = await supabaseAdmin
-    .from("games")
-    .select("*")
-    .eq("match_id", matchId)
-    .order("map_order", { ascending: true });
+    .from('games')
+    .select('*')
+    .eq('match_id', matchId)
+    .order('map_order', { ascending: true });
 
   if (error) {
-    console.error("GET games error:", error);
-    return res.status(500).json({ error: "Failed to fetch games" });
+    console.error('GET games error:', error);
+    return res.status(500).json({ error: 'Failed to fetch games' });
   }
 
   return res.status(200).json({
@@ -116,22 +112,22 @@ async function handlePost(
   };
 
   const { data, error } = await supabaseAdmin
-    .from("games")
+    .from('games')
     .insert(payload)
-    .select("*")
+    .select('*')
     .maybeSingle();
 
   if (error || !data) {
-    console.error("POST game error:", error);
-    return res.status(500).json({ error: "Failed to create game" });
+    console.error('POST game error:', error);
+    return res.status(500).json({ error: 'Failed to create game' });
   }
 
   // log staff
   if (ctx?.staff?.id) {
     await logStaffAction({
       staff_id: ctx.staff.id,
-      action: "update_match",
-      entity_type: "game",
+      action: 'update_match',
+      entity_type: 'game',
       entity_id: data.id,
       tournament_id: null,
       payload: {
@@ -168,14 +164,14 @@ async function handlePut(
 
   // 1) On supprime les games existantes du match (remplacement complet)
   const { error: delErr } = await supabaseAdmin
-    .from("games")
+    .from('games')
     .delete()
-    .eq("match_id", matchId);
+    .eq('match_id', matchId);
 
   if (delErr) {
-    console.error("DELETE existing games error:", delErr);
+    console.error('DELETE existing games error:', delErr);
     return res.status(500).json({
-      error: "Failed to clear existing games",
+      error: 'Failed to clear existing games',
     });
   }
 
@@ -183,10 +179,7 @@ async function handlePut(
   const insertPayload = games.map((g, idx) => ({
     match_id: matchId,
     map_name: g.map_name ?? null,
-    map_order:
-      typeof g.map_order === "number"
-        ? g.map_order
-        : idx,
+    map_order: typeof g.map_order === 'number' ? g.map_order : idx,
     team1_score: g.team1_score ?? 0,
     team2_score: g.team2_score ?? 0,
     is_tiebreaker: g.is_tiebreaker ?? false,
@@ -197,14 +190,14 @@ async function handlePut(
 
   if (insertPayload.length > 0) {
     const { data: inserted, error: insErr } = await supabaseAdmin
-      .from("games")
+      .from('games')
       .insert(insertPayload)
-      .select("*");
+      .select('*');
 
     if (insErr) {
-      console.error("INSERT games error:", insErr);
+      console.error('INSERT games error:', insErr);
       return res.status(500).json({
-        error: "Failed to insert games",
+        error: 'Failed to insert games',
       });
     }
 
@@ -214,7 +207,7 @@ async function handlePut(
   // 3) Optionnel : recalcul du score du match à partir des games
   let recomputeResult: any = null;
 
-  if (recomputeMode === "from_games") {
+  if (recomputeMode === 'from_games') {
     const total = computeTotalsFromGames(newGames);
     try {
       recomputeResult = await applyMatchScore({
@@ -227,10 +220,7 @@ async function handlePut(
         staffId: ctx.staff?.id ?? null,
       });
     } catch (e) {
-      console.error(
-        "Recompute match from games error:",
-        e
-      );
+      console.error('Recompute match from games error:', e);
       // On ne bloque pas forcément pour ça, les games sont quand même sauvegardées
     }
   }
@@ -239,15 +229,15 @@ async function handlePut(
   if (ctx?.staff?.id) {
     await logStaffAction({
       staff_id: ctx.staff.id,
-      action: "update_match",
-      entity_type: "game",
+      action: 'update_match',
+      entity_type: 'game',
       entity_id: null,
       tournament_id: null,
       payload: {
         match_id: matchId,
         replaced_all_games: true,
         games_count: newGames.length,
-        recompute_mode: recomputeMode ?? "none",
+        recompute_mode: recomputeMode ?? 'none',
       },
     });
   }
@@ -262,28 +252,24 @@ async function handlePut(
  * DELETE : supprimer toutes les games du match
  * ---------------------------------------------------------*/
 
-async function handleDelete(
-  matchId: string,
-  res: NextApiResponse,
-  ctx: any
-) {
+async function handleDelete(matchId: string, res: NextApiResponse, ctx: any) {
   const { error } = await supabaseAdmin
-    .from("games")
+    .from('games')
     .delete()
-    .eq("match_id", matchId);
+    .eq('match_id', matchId);
 
   if (error) {
-    console.error("DELETE games error:", error);
+    console.error('DELETE games error:', error);
     return res.status(500).json({
-      error: "Failed to delete games",
+      error: 'Failed to delete games',
     });
   }
 
   if (ctx?.staff?.id) {
     await logStaffAction({
       staff_id: ctx.staff.id,
-      action: "update_match",
-      entity_type: "game",
+      action: 'update_match',
+      entity_type: 'game',
       entity_id: null,
       tournament_id: null,
       payload: {

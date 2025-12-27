@@ -4,8 +4,8 @@
 // - stats détaillées par map (wins / losses / rounds / OT / tiebreakers)
 // - nombre total de matchs joués (hors BYE & annulés)
 
-import type { NextApiRequest, NextApiResponse } from "next";
-import { supabaseAdmin } from "@/utils/supabase";
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { supabaseAdmin } from '@/utils/supabase';
 
 /* -----------------------------------------------------------
  * Types
@@ -19,7 +19,7 @@ type Team = {
   country?: string | null;
 };
 
-type MatchStatus = "pending" | "ongoing" | "finished" | "cancelled";
+type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
 
 type MatchRow = {
   id: string;
@@ -65,11 +65,11 @@ export default async function handler(
   const { id } = req.query;
 
   if (!id || Array.isArray(id)) {
-    return res.status(400).json({ error: "Invalid team id" });
+    return res.status(400).json({ error: 'Invalid team id' });
   }
 
-  if (req.method !== "GET") {
-    return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
@@ -77,27 +77,24 @@ export default async function handler(
 
     // 1) Team
     const { data: team, error: tErr } = await supabaseAdmin
-      .from("teams")
-      .select("id, name, short_name, logo_url, country")
-      .eq("id", teamId)
+      .from('teams')
+      .select('id, name, short_name, logo_url, country')
+      .eq('id', teamId)
       .maybeSingle();
 
     if (tErr || !team) {
-      return res.status(404).json({ error: "Team not found" });
+      return res.status(404).json({ error: 'Team not found' });
     }
 
     // 2) Matches de l'équipe (hors annulés, hors BYE)
-    const { data: matchesData, error: mErr } =
-      await supabaseAdmin
-        .from("matches")
-        .select(
-          "id, status, is_bye, team1_id, team2_id"
-        )
-        .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
-        .neq("status", "cancelled");
+    const { data: matchesData, error: mErr } = await supabaseAdmin
+      .from('matches')
+      .select('id, status, is_bye, team1_id, team2_id')
+      .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
+      .neq('status', 'cancelled');
 
     if (mErr) {
-      console.error("team maps matches error:", mErr);
+      console.error('team maps matches error:', mErr);
     }
 
     const matches = ((matchesData || []) as MatchRow[]).filter(
@@ -108,31 +105,23 @@ export default async function handler(
     // 3) Games de ces matches
     let games: GameRow[] = [];
     if (matchIds.length > 0) {
-      const { data: gamesData, error: gErr } =
-        await supabaseAdmin
-          .from("games")
-          .select(
-            "match_id, map_name, team1_score, team2_score, is_tiebreaker, went_overtime"
-          )
-          .in("match_id", matchIds);
+      const { data: gamesData, error: gErr } = await supabaseAdmin
+        .from('games')
+        .select(
+          'match_id, map_name, team1_score, team2_score, is_tiebreaker, went_overtime'
+        )
+        .in('match_id', matchIds);
 
       if (gErr) {
-        console.error("team maps games error:", gErr);
+        console.error('team maps games error:', gErr);
       } else {
         games = (gamesData || []) as GameRow[];
       }
     }
 
-    const mapStats = computeMapStatsForTeam(
-      teamId,
-      matches,
-      games
-    );
+    const mapStats = computeMapStatsForTeam(teamId, matches, games);
     const totalMatches = matches.length;
-    const totalGames = mapStats.reduce(
-      (acc, m) => acc + m.gamesPlayed,
-      0
-    );
+    const totalGames = mapStats.reduce((acc, m) => acc + m.gamesPlayed, 0);
 
     const response: TeamMapsApiResponse = {
       team: team as Team,
@@ -143,12 +132,9 @@ export default async function handler(
 
     return res.status(200).json(response);
   } catch (err: any) {
-    console.error(
-      "[/api/team/[id]/maps] internal error:",
-      err
-    );
+    console.error('[/api/team/[id]/maps] internal error:', err);
     return res.status(500).json({
-      error: "Internal server error",
+      error: 'Internal server error',
       detail: err?.message,
     });
   }
@@ -189,16 +175,15 @@ function computeMapStatsForTeam(
     if (!isTeam1 && !isTeam2) continue;
 
     const key = g.map_name;
-    const entry =
-      agg.get(key) || {
-        games: 0,
-        wins: 0,
-        losses: 0,
-        roundsFor: 0,
-        roundsAgainst: 0,
-        overtimes: 0,
-        tiebreakers: 0,
-      };
+    const entry = agg.get(key) || {
+      games: 0,
+      wins: 0,
+      losses: 0,
+      roundsFor: 0,
+      roundsAgainst: 0,
+      overtimes: 0,
+      tiebreakers: 0,
+    };
 
     entry.games += 1;
 
@@ -223,23 +208,18 @@ function computeMapStatsForTeam(
     agg.set(key, entry);
   }
 
-  const list: MapStat[] = Array.from(agg.entries()).map(
-    ([mapName, entry]) => ({
-      mapName,
-      gamesPlayed: entry.games,
-      wins: entry.wins,
-      losses: entry.losses,
-      winrate:
-        entry.games > 0
-          ? entry.wins / entry.games
-          : 0,
-      roundsFor: entry.roundsFor,
-      roundsAgainst: entry.roundsAgainst,
-      diff: entry.roundsFor - entry.roundsAgainst,
-      overtimes: entry.overtimes,
-      tiebreakers: entry.tiebreakers,
-    })
-  );
+  const list: MapStat[] = Array.from(agg.entries()).map(([mapName, entry]) => ({
+    mapName,
+    gamesPlayed: entry.games,
+    wins: entry.wins,
+    losses: entry.losses,
+    winrate: entry.games > 0 ? entry.wins / entry.games : 0,
+    roundsFor: entry.roundsFor,
+    roundsAgainst: entry.roundsAgainst,
+    diff: entry.roundsFor - entry.roundsAgainst,
+    overtimes: entry.overtimes,
+    tiebreakers: entry.tiebreakers,
+  }));
 
   // Tri : d'abord nombre de games, puis winrate
   list.sort((a, b) => {

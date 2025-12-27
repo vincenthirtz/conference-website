@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
-import Head from "next/head";
-import Link from "next/link";
-import { StaffRoleBadge } from "@/components/admin/StaffRoleBadge";
-import { withStaffPage } from "@/utils/staff";
+import { useEffect, useState } from 'react';
+import Head from 'next/head';
+import Link from 'next/link';
+import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
+import { withStaffPage } from '@/utils/staff';
 
 type StaffShape = {
   id: string;
@@ -32,15 +32,15 @@ type AddMemberResponse = {
   info?: string;
 };
 
-export const getServerSideProps = withStaffPage("manager");
+export const getServerSideProps = withStaffPage('manager');
 
 function AdminAddTeamMemberPage({ staff }: StaffProps) {
   const [teams, setTeams] = useState<TeamOption[]>([]);
   const [loadingTeams, setLoadingTeams] = useState(false);
-  const [teamId, setTeamId] = useState("");
-  const [email, setEmail] = useState("");
-  const [userId, setUserId] = useState("");
-  const [role, setRole] = useState("player");
+  const [teamId, setTeamId] = useState('');
+  const [email, setEmail] = useState('');
+  const [userId, setUserId] = useState('');
+  const [role, setRole] = useState('player');
   const [setCaptain, setSetCaptain] = useState(true);
 
   const [submitting, setSubmitting] = useState(false);
@@ -54,12 +54,12 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
   async function loadTeams() {
     setLoadingTeams(true);
     try {
-      const res = await fetch("/api/admin/teams?limit=200&includeTotal=0");
+      const res = await fetch('/api/admin/teams?limit=200&includeTotal=0');
       if (!res.ok) return;
       const json: ApiTeams = await res.json();
       setTeams(json.teams || []);
     } catch (e) {
-      console.error("Failed to load teams list", e);
+      console.error('Failed to load teams list', e);
     } finally {
       setLoadingTeams(false);
     }
@@ -72,35 +72,35 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
     setSuccess(null);
 
     try {
-      if (!teamId) throw new Error("Choisis une équipe");
+      if (!teamId) throw new Error('Choisis une équipe');
       if (!email.trim() && !userId.trim()) {
-        throw new Error("Renseigne un email ou un userId");
+        throw new Error('Renseigne un email ou un userId');
       }
 
       const payload = {
         teamId,
         email: email.trim() || undefined,
         userId: userId.trim() || undefined,
-        role: role.trim() || "player",
+        role: role.trim() || 'player',
         setCaptain,
       };
 
-      const res = await fetch("/api/admin/teams/add-member", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/admin/teams/add-member', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
       const json: AddMemberResponse & { error?: string } = await res.json();
       if (!res.ok || json.error) {
-        throw new Error(json.error || "Impossible d&apos;ajouter le membre");
+        throw new Error(json.error || 'Impossible d&apos;ajouter le membre');
       }
 
       setSuccess(json);
-      setEmail("");
-      setUserId("");
+      setEmail('');
+      setUserId('');
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur inattendue");
+      setErrorMsg(err?.message ?? 'Erreur inattendue');
     } finally {
       setSubmitting(false);
     }
@@ -124,7 +124,8 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
             </button>
             <h1 className="text-3xl font-bold">Ajouter un membre</h1>
             <p className="text-sm text-neutral-400 mt-1">
-              Lier un utilisateur à une équipe et le définir comme capitaine si besoin.
+              Lier un utilisateur à une équipe et le définir comme capitaine si
+              besoin.
             </p>
           </div>
           <StaffRoleBadge staff={staff} />
@@ -150,7 +151,9 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
                   ))}
                 </select>
                 {loadingTeams && (
-                  <p className="text-xs text-neutral-400 mt-1">Chargement des équipes…</p>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    Chargement des équipes…
+                  </p>
                 )}
               </div>
 
@@ -167,7 +170,8 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
                     placeholder="user@email.tld"
                   />
                   <p className="text-xs text-neutral-500 mt-1">
-                    L&apos;API trouvera l&apos;utilisateur par email si userId n&apos;est pas fourni.
+                    L&apos;API trouvera l&apos;utilisateur par email si userId
+                    n&apos;est pas fourni.
                   </p>
                 </div>
 
@@ -180,14 +184,16 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
                     value={userId}
                     onChange={(e) => setUserId(e.target.value)}
                     className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                    placeholder="Prioritaire sur l&apos;email si rempli"
+                    placeholder="Prioritaire sur l'email si rempli"
                   />
                 </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2 items-center">
                 <div>
-                  <label className="block text-sm text-neutral-300 mb-1">Rôle</label>
+                  <label className="block text-sm text-neutral-300 mb-1">
+                    Rôle
+                  </label>
                   <input
                     type="text"
                     value={role}
@@ -220,14 +226,17 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
                   disabled={submitting}
                   className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
                     submitting
-                      ? "bg-neutral-700 cursor-not-allowed"
-                      : "bg-blue-600 hover:bg-blue-500"
+                      ? 'bg-neutral-700 cursor-not-allowed'
+                      : 'bg-blue-600 hover:bg-blue-500'
                   }`}
                 >
-                  {submitting ? "Ajout..." : "Ajouter le membre"}
+                  {submitting ? 'Ajout...' : 'Ajouter le membre'}
                 </button>
 
-                <Link href="/admin/teams" className="text-sm text-neutral-300 hover:text-white">
+                <Link
+                  href="/admin/teams"
+                  className="text-sm text-neutral-300 hover:text-white"
+                >
                   Liste des équipes
                 </Link>
               </div>
@@ -239,35 +248,50 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
             {success ? (
               <div className="rounded-lg border border-emerald-600 bg-emerald-900/50 px-3 py-3 space-y-2">
                 <p className="text-sm font-semibold text-white">
-                  {success.info || "Membre ajouté"}
+                  {success.info || 'Membre ajouté'}
                 </p>
                 {success.teamMemberId && (
                   <p className="text-xs text-neutral-200">
-                    team_member.id :{" "}
-                    <span className="font-mono break-all">{success.teamMemberId}</span>
+                    team_member.id :{' '}
+                    <span className="font-mono break-all">
+                      {success.teamMemberId}
+                    </span>
                   </p>
                 )}
                 <p className="text-xs text-neutral-200">
-                  user_id : <span className="font-mono break-all">{success.userId}</span>
+                  user_id :{' '}
+                  <span className="font-mono break-all">{success.userId}</span>
                 </p>
                 <p className="text-xs text-neutral-200">
-                  team_id : <span className="font-mono break-all">{success.teamId}</span>
+                  team_id :{' '}
+                  <span className="font-mono break-all">{success.teamId}</span>
                 </p>
-                <p className="text-xs text-neutral-200">role : {success.role}</p>
                 <p className="text-xs text-neutral-200">
-                  capitaine : {success.captainSet ? "oui" : "non"}
+                  role : {success.role}
+                </p>
+                <p className="text-xs text-neutral-200">
+                  capitaine : {success.captainSet ? 'oui' : 'non'}
                 </p>
               </div>
             ) : (
               <p className="text-sm text-neutral-300">
-                Après validation, l&apos;ID membre, l&apos;user_id et le statut capitaine seront affichés ici.
+                Après validation, l&apos;ID membre, l&apos;user_id et le statut
+                capitaine seront affichés ici.
               </p>
             )}
 
             <div className="text-xs text-neutral-400 space-y-1">
-              <p>• L&apos;API ajoute à team_members (role par défaut: player).</p>
-              <p>• Si l&apos;option capitaine est cochée, teams.captain_id est mis à jour.</p>
-              <p>• Fournis soit l&apos;email (recherche) soit le userId (prioritaire).</p>
+              <p>
+                • L&apos;API ajoute à team_members (role par défaut: player).
+              </p>
+              <p>
+                • Si l&apos;option capitaine est cochée, teams.captain_id est
+                mis à jour.
+              </p>
+              <p>
+                • Fournis soit l&apos;email (recherche) soit le userId
+                (prioritaire).
+              </p>
             </div>
           </aside>
         </div>

@@ -2,76 +2,17 @@
 // Helper serveur pour appliquer un score à un match,
 // calculer le vainqueur et propager dans le bracket.
 // @ts-nocheck
-import { supabaseAdmin } from "../supabase";
+import { supabaseAdmin } from '../supabase';
 import {
   resetPropagationForMatch,
   propagateBracketForMatch,
-} from "../bracket/propagate";
-import { logStaffAction } from "../staffLogs";
-
-/* -----------------------------------------------------------
- * Types
- * ---------------------------------------------------------*/
-
-export type MatchStatus =
-  | "pending"
-  | "ongoing"
-  | "finished"
-  | "cancelled";
-
-export interface ApplyMatchScoreInput {
-  /** ID du match à mettre à jour */
-  matchId: string;
-
-  /** Score global pour chaque équipe (maps / rounds gagnés, etc.) */
-  team1Score: number;
-  team2Score: number;
-
-  /**
-   * Status à appliquer :
-   * - si absent et markFinished=true, on passera automatiquement à "finished"
-   * - sinon on laisse le status tel quel (pas de changement).
-   */
-  status?: MatchStatus;
-
-  /**
-   * Forcer le vainqueur (utile pour des cas spéciaux, pénalités, FF, etc.).
-   * Si absent, on le déduit des scores (si non égalité).
-   * Si égalité et winnerTeamId non fourni → aucun vainqueur (pas de propagation bracket).
-   */
-  winnerTeamId?: string | null;
-
-  /**
-   * Si true, on force le match en "finished"
-   * (si status n'est pas fourni explicitement).
-   */
-  markFinished?: boolean;
-
-  /**
-   * Date de complétion (ISO). Si non fournie et match terminé,
-   * on utilise `new Date().toISOString()`.
-   */
-  completedAt?: string | null;
-
-  /**
-   * ID staff (staff_members.id) qui applique la modification,
-   * pour log dans staff_logs.
-   */
-  staffId?: string | null;
-
-  /**
-   * Si true (par défaut), on reset puis propage la progression
-   * dans le bracket (next_match_win/lose).
-   */
-  propagateBracket?: boolean;
-}
-
-export interface ApplyMatchScoreResult {
-  matchId: string;
-  updated: boolean;
-  match?: any;
-  winnerTeamId: string | null;
-}
+} from '../bracket/propagate';
+import { logStaffAction } from '../staffLogs';
+import type {
+  ApplyMatchScoreInput,
+  ApplyMatchScoreResult,
+  MatchStatus,
+} from '../../types/matches';
 
 /* -----------------------------------------------------------
  * Fonction principale
@@ -103,7 +44,7 @@ export async function applyMatchScore(
 
   // 1) Récupérer le match actuel
   const { data: match, error: fetchErr } = await supabaseAdmin
-    .from("matches")
+    .from('matches')
     .select(
       `
       id,
@@ -123,12 +64,12 @@ export async function applyMatchScore(
       next_match_lose_slot
     `
     )
-    .eq("id", matchId)
+    .eq('id', matchId)
     .maybeSingle();
 
   if (fetchErr || !match) {
-    console.error("applyMatchScore: fetch match error", fetchErr);
-    throw new Error("Match introuvable");
+    console.error('applyMatchScore: fetch match error', fetchErr);
+    throw new Error('Match introuvable');
   }
 
   const currentStatus: MatchStatus = match.status;
@@ -139,12 +80,12 @@ export async function applyMatchScore(
   if (status) {
     newStatus = status;
   } else if (markFinished) {
-    newStatus = "finished";
+    newStatus = 'finished';
   }
 
   // 3) Calculer le vainqueur si besoin
   let newWinnerTeamId: string | null =
-    typeof winnerTeamId !== "undefined"
+    typeof winnerTeamId !== 'undefined'
       ? winnerTeamId
       : computeWinnerFromScores(
           match.team1_id,
@@ -156,7 +97,7 @@ export async function applyMatchScore(
 
   // 4) Déterminer completed_at
   let newCompletedAt: string | null = match.completed_at;
-  if (newStatus === "finished") {
+  if (newStatus === 'finished') {
     newCompletedAt = completedAt || new Date().toISOString();
   }
 
@@ -171,7 +112,7 @@ export async function applyMatchScore(
     updatePayload.status = newStatus;
   }
 
-  if (newStatus === "finished") {
+  if (newStatus === 'finished') {
     updatePayload.completed_at = newCompletedAt;
   }
 
@@ -182,26 +123,23 @@ export async function applyMatchScore(
 
   // 7) Update du match
   const { data: updated, error: updateErr } = await supabaseAdmin
-    .from("matches")
+    .from('matches')
     .update(updatePayload)
-    .eq("id", matchId)
-    .select("*")
+    .eq('id', matchId)
+    .select('*')
     .maybeSingle();
 
   if (updateErr || !updated) {
-    console.error("applyMatchScore: update match error", updateErr);
-    throw new Error("Erreur lors de la mise à jour du match");
+    console.error('applyMatchScore: update match error', updateErr);
+    throw new Error('Erreur lors de la mise à jour du match');
   }
 
   // 8) Propagation du vainqueur/perdant dans le bracket
-  if (propagateBracket && newStatus === "finished") {
+  if (propagateBracket && newStatus === 'finished') {
     try {
       await propagateBracketForMatch(matchId);
     } catch (e) {
-      console.error(
-        "applyMatchScore: propagateBracketForMatch error",
-        e
-      );
+      console.error('applyMatchScore: propagateBracketForMatch error', e);
       // on n'échoue pas forcément l'API pour ça, mais on log
     }
   }
@@ -211,8 +149,8 @@ export async function applyMatchScore(
     try {
       await logStaffAction({
         staff_id: staffId,
-        action: "update_match",
-        entity_type: "match",
+        action: 'update_match',
+        entity_type: 'match',
         entity_id: matchId,
         tournament_id: match.tournament_id || null,
         payload: {
@@ -227,7 +165,7 @@ export async function applyMatchScore(
         },
       });
     } catch (e) {
-      console.error("applyMatchScore: logStaffAction error", e);
+      console.error('applyMatchScore: logStaffAction error', e);
     }
   }
 

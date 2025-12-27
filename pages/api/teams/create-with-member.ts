@@ -1,8 +1,8 @@
 // @ts-nocheck
-import type { NextApiRequest, NextApiResponse } from "next";
-import crypto from "crypto";
-import slugify from "slugify";
-import { supabaseAdmin } from "@/utils/supabase";
+import type { NextApiRequest, NextApiResponse } from 'next';
+import crypto from 'crypto';
+import slugify from 'slugify';
+import { supabaseAdmin } from '@/utils/supabase';
 
 type Body = {
   name?: string;
@@ -45,18 +45,18 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse>
 ) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   if (!supabaseAdmin) {
     return res
       .status(500)
-      .json({ error: "Supabase service role not configured" });
+      .json({ error: 'Supabase service role not configured' });
   }
 
   const body: Body = req.body || {};
-  const name = (body.name || "").trim();
+  const name = (body.name || '').trim();
 
   if (!name) {
     return res.status(400).json({ error: "Field 'name' is required" });
@@ -68,23 +68,27 @@ export default async function handler(
   const rawMembers = Array.isArray(body.members) ? body.members : [];
   const cleanedMembers = rawMembers
     .map((m) => ({
-      email: m.email?.toString().trim().toLowerCase() || "",
-      user_id: m.user_id?.toString().trim() || "",
-      role: m.role?.toString().trim() || "",
+      email: m.email?.toString().trim().toLowerCase() || '',
+      user_id: m.user_id?.toString().trim() || '',
+      role: m.role?.toString().trim() || '',
       set_captain: Boolean(m.set_captain),
     }))
     .filter((m) => m.email || m.user_id);
 
   if (cleanedMembers.length > 5) {
     return res.status(400).json({
-      error: "You can add up to 5 members in one request",
+      error: 'You can add up to 5 members in one request',
     });
   }
 
-  const wantsMember = Boolean(memberEmail || memberUserId || cleanedMembers.length);
+  const wantsMember = Boolean(
+    memberEmail || memberUserId || cleanedMembers.length
+  );
 
   if (body.set_captain && !wantsMember) {
-    return res.status(400).json({ error: "Provide a member to set as captain" });
+    return res
+      .status(400)
+      .json({ error: 'Provide a member to set as captain' });
   }
 
   let memberRecords: { user_id: string; role: string; captain: boolean }[] = [];
@@ -97,7 +101,7 @@ export default async function handler(
 
   if (cleanedMembers.length === 0 && wantsMember) {
     // Fallback to single member fields
-    const resolvedRole = body.member_role?.trim() || "player";
+    const resolvedRole = body.member_role?.trim() || 'player';
     if (memberUserId) {
       memberRecords.push({
         user_id: memberUserId,
@@ -120,13 +124,13 @@ export default async function handler(
         });
       } catch (err: any) {
         const message =
-          err?.message || "User lookup failed for the provided email";
+          err?.message || 'User lookup failed for the provided email';
         return res.status(500).json({ error: message });
       }
     }
   } else if (cleanedMembers.length > 0) {
     for (const m of cleanedMembers) {
-      const resolvedRole = m.role || "player";
+      const resolvedRole = m.role || 'player';
 
       if (m.user_id) {
         memberRecords.push({
@@ -155,7 +159,7 @@ export default async function handler(
       } catch (err: any) {
         const message =
           err?.message ||
-          "User could not be found or created for one of the provided emails";
+          'User could not be found or created for one of the provided emails';
         return res.status(500).json({ error: message });
       }
     }
@@ -183,17 +187,15 @@ export default async function handler(
 
   for (let i = 0; i < maxAttempts; i++) {
     const suffix =
-      i === 0
-        ? ""
-        : `-${Math.random().toString(36).slice(2, 6).toLowerCase()}`;
+      i === 0 ? '' : `-${Math.random().toString(36).slice(2, 6).toLowerCase()}`;
 
     const slug = `${baseSlug}${suffix}`;
     const payload = attemptPayload(slug);
 
     const { data, error } = await supabaseAdmin
-      .from("teams")
+      .from('teams')
       .insert(payload)
-      .select("*")
+      .select('*')
       .maybeSingle();
 
     if (!error && data) {
@@ -202,9 +204,9 @@ export default async function handler(
     }
 
     lastError = error;
-    const message = error?.message?.toLowerCase() || "";
+    const message = error?.message?.toLowerCase() || '';
     const isDuplicate =
-      message.includes("duplicate") || message.includes("unique");
+      message.includes('duplicate') || message.includes('unique');
 
     if (!isDuplicate) {
       break;
@@ -212,17 +214,18 @@ export default async function handler(
   }
 
   if (!createdTeam) {
-    console.error("[/api/teams/create-with-member] create error:", lastError);
+    console.error('[/api/teams/create-with-member] create error:', lastError);
     return res.status(500).json({
       error:
         lastError?.message ||
-        "Failed to create team. Try again with another name/slug.",
+        'Failed to create team. Try again with another name/slug.',
     });
   }
 
   // Ensure only one captain flag across bulk list
   const firstCaptainIdx = memberRecords.findIndex((m) => m.captain);
-  const captainUserId = firstCaptainIdx >= 0 ? memberRecords[firstCaptainIdx].user_id : null;
+  const captainUserId =
+    firstCaptainIdx >= 0 ? memberRecords[firstCaptainIdx].user_id : null;
   memberRecords = memberRecords.map((m, idx) => ({
     ...m,
     captain: firstCaptainIdx === idx && m.captain,
@@ -238,27 +241,29 @@ export default async function handler(
     };
 
     const { data: member, error: insertErr } = await supabaseAdmin
-      .from("team_members")
+      .from('team_members')
       .insert(memberPayload)
-      .select("id")
+      .select('id')
       .maybeSingle();
 
     if (insertErr) {
       console.error(
-        "[/api/teams/create-with-member] add-member error:",
+        '[/api/teams/create-with-member] add-member error:',
         insertErr
       );
-      await supabaseAdmin.from("team_members").delete().eq("team_id", createdTeam.id);
-      await supabaseAdmin.from("teams").delete().eq("id", createdTeam.id);
+      await supabaseAdmin
+        .from('team_members')
+        .delete()
+        .eq('team_id', createdTeam.id);
+      await supabaseAdmin.from('teams').delete().eq('id', createdTeam.id);
 
-      const msg = insertErr.message?.toLowerCase() || "";
-      const isDuplicate =
-        msg.includes("duplicate") || msg.includes("unique");
+      const msg = insertErr.message?.toLowerCase() || '';
+      const isDuplicate = msg.includes('duplicate') || msg.includes('unique');
 
       return res.status(400).json({
         error: isDuplicate
-          ? "One of the users already belongs to this team"
-          : "Member(s) could not be added. The team was not saved.",
+          ? 'One of the users already belongs to this team'
+          : 'Member(s) could not be added. The team was not saved.',
       });
     }
 
@@ -272,19 +277,19 @@ export default async function handler(
 
   if (captainUserId) {
     const { error: captainErr } = await supabaseAdmin
-      .from("teams")
+      .from('teams')
       .update({ captain_id: captainUserId })
-      .eq("id", createdTeam.id);
+      .eq('id', createdTeam.id);
 
     if (captainErr) {
       console.error(
-        "[/api/teams/create-with-member] captain update error:",
+        '[/api/teams/create-with-member] captain update error:',
         captainErr
       );
       return res.status(500).json({
         error:
           captainErr.message ||
-          "Members added but failed to set captain (check teams.captain_id)",
+          'Members added but failed to set captain (check teams.captain_id)',
       });
     }
   }
@@ -293,8 +298,8 @@ export default async function handler(
     team: createdTeam,
     members: insertedMembers.length ? insertedMembers : undefined,
     info: insertedMembers.length
-      ? "Team created and members added (users auto-created if needed)"
-      : "Team created",
+      ? 'Team created and members added (users auto-created if needed)'
+      : 'Team created',
   });
 }
 
@@ -312,10 +317,10 @@ async function listUsersEmailMap() {
 
     if (listErr) {
       console.error(
-        "[/api/teams/create-with-member] listUsers error:",
+        '[/api/teams/create-with-member] listUsers error:',
         listErr
       );
-      throw new Error(listErr.message || "Failed to list users");
+      throw new Error(listErr.message || 'Failed to list users');
     }
 
     usersData?.users?.forEach((u) => {
@@ -338,7 +343,7 @@ async function findOrCreateUserByEmail(
 ): Promise<{ userId: string; created: boolean }> {
   const normalizedEmail = email.trim().toLowerCase();
   if (!normalizedEmail) {
-    throw new Error("Email is required to create a user");
+    throw new Error('Email is required to create a user');
   }
 
   const existingId = emailMap.get(normalizedEmail);
@@ -352,16 +357,13 @@ async function findOrCreateUserByEmail(
     password: generatedPassword,
     email_confirm: true,
     user_metadata: {
-      role: role || "player",
+      role: role || 'player',
     },
   });
 
   if (error || !data?.user?.id) {
-    console.error(
-      "[/api/teams/create-with-member] createUser error:",
-      error
-    );
-    throw new Error(error?.message || "Failed to create user");
+    console.error('[/api/teams/create-with-member] createUser error:', error);
+    throw new Error(error?.message || 'Failed to create user');
   }
 
   emailMap.set(normalizedEmail, data.user.id);
@@ -375,9 +377,9 @@ async function findOrCreateUserByEmail(
 function generatePassword(length = 16) {
   const buffer = crypto.randomBytes(length);
   const alphabet =
-    "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz0123456789!@$%^*";
+    'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz0123456789!@$%^*';
   return Array.from(buffer)
     .map((byte) => alphabet[byte % alphabet.length])
-    .join("")
+    .join('')
     .slice(0, length);
 }

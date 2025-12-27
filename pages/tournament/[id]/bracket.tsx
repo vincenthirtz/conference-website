@@ -1,7 +1,7 @@
-import Head from "next/head";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { useEffect } from "react";
+import Head from 'next/head';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { useEffect } from 'react';
 
 // Placeholder page to keep the route valid and avoid build failures.
 // If a dedicated bracket view is added later, replace this stub.

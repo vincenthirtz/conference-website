@@ -1,17 +1,17 @@
 // @ts-nocheck
 // pages/match/[id].tsx
-/* eslint-disable react/no-unescaped-entities */
-import { GetServerSideProps } from "next";
-import Head from "next/head";
-import Link from "next/link";
-import Image from "next/image";
-import Heading from "@/components/Typography/heading";
-import Paragraph from "@/components/Typography/paragraph";
-import Button from "@/components/Buttons/button";
-import { supabaseAdmin } from "@/utils/supabase";
+ 
+import { GetServerSideProps } from 'next';
+import Head from 'next/head';
+import Link from 'next/link';
+import Image from 'next/image';
+import Heading from '@/components/Typography/heading';
+import Paragraph from '@/components/Typography/paragraph';
+import Button from '@/components/Buttons/button';
+import { supabaseAdmin } from '@/utils/supabase';
 
-type MatchStatus = "pending" | "ongoing" | "finished" | "cancelled";
-type BracketSide = "wb" | "lb" | "final" | "none";
+type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
+type BracketSide = 'wb' | 'lb' | 'final' | 'none';
 
 type SimpleTeam = {
   id: string;
@@ -72,16 +72,14 @@ type Props = {
   match: Match | null;
 };
 
-export const getServerSideProps: GetServerSideProps<Props> = async (
-  ctx
-) => {
+export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   const { id } = ctx.query;
   if (!id || Array.isArray(id)) {
     return { notFound: true };
   }
 
   const { data, error } = await supabaseAdmin
-    .from("matches")
+    .from('matches')
     .select(
       `
       id,
@@ -108,11 +106,11 @@ export const getServerSideProps: GetServerSideProps<Props> = async (
       games (*)
     `
     )
-    .eq("id", id)
+    .eq('id', id)
     .single();
 
   if (error || !data) {
-    console.error("match page error:", error);
+    console.error('match page error:', error);
     return { notFound: true };
   }
 
@@ -146,25 +144,22 @@ export default function MatchPage({ match }: Props) {
   const t2 = match.team2;
   const isBye = match.is_bye;
 
-  const t1Name = t1?.short_name || t1?.name || "Équipe 1";
-  const t2Name =
-    t2?.short_name ||
-    t2?.name ||
-    (isBye ? "(bye)" : "Équipe 2");
+  const t1Name = t1?.short_name || t1?.name || 'Équipe 1';
+  const t2Name = t2?.short_name || t2?.name || (isBye ? '(bye)' : 'Équipe 2');
 
   const t1Logo = t1?.logo_url || null;
   const t2Logo = t2?.logo_url || null;
 
   const statusLabel = getMatchStatusLabel(match.status);
   const statusChipClass = getMatchStatusChipClass(match.status);
-  const formatLabel = match.match_format?.toUpperCase() || "BO?";
+  const formatLabel = match.match_format?.toUpperCase() || 'BO?';
   const dateLabel = formatMatchDate(match.scheduled_at);
   const completedLabel = formatMatchDate(match.completed_at);
 
   const gameCount = match.games.length;
 
   const scoreLabel =
-    match.status === "finished" &&
+    match.status === 'finished' &&
     (match.team1_score !== null || match.team2_score !== null)
       ? `${match.team1_score ?? 0} - ${match.team2_score ?? 0}`
       : null;
@@ -173,8 +168,7 @@ export default function MatchPage({ match }: Props) {
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <Head>
         <title>
-          {t1Name} vs {t2Name} – {match.tournament.name} | OW
-          Women&apos;s Cup
+          {t1Name} vs {t2Name} – {match.tournament.name} | OW Women&apos;s Cup
         </title>
       </Head>
 
@@ -188,26 +182,18 @@ export default function MatchPage({ match }: Props) {
                   OW Women&apos;s Cup
                 </span>
                 <span className="text-gray-200">
-                  {match.tournament.game || "Overwatch 2"}
+                  {match.tournament.game || 'Overwatch 2'}
                 </span>
                 <span className="w-[1px] h-3 bg-white/20" />
-                <span className={statusChipClass}>
-                  {statusLabel}
-                </span>
+                <span className={statusChipClass}>{statusLabel}</span>
                 <span className="w-[1px] h-3 bg-white/20" />
                 <span className="px-1.5 py-[2px] rounded-full bg-black/60 border border-white/15 text-[9px] text-gray-300">
                   {formatLabel}
                 </span>
               </div>
 
-              <Heading
-                typeStyle="heading-md"
-                className="mb-1 text-gradient"
-              >
-                {t1Name}{" "}
-                {!isBye && (
-                  <span className="text-gray-400">vs</span>
-                )}{" "}
+              <Heading typeStyle="heading-md" className="mb-1 text-gradient">
+                {t1Name} {!isBye && <span className="text-gray-400">vs</span>}{' '}
                 {t2Name}
               </Heading>
 
@@ -216,8 +202,7 @@ export default function MatchPage({ match }: Props) {
                   href={`/tournament/${match.tournament.id}`}
                   className="hover:text-white"
                 >
-                  {match.tournament.short_name ||
-                    match.tournament.name}
+                  {match.tournament.short_name || match.tournament.name}
                 </Link>
                 {match.stage && (
                   <>
@@ -239,12 +224,9 @@ export default function MatchPage({ match }: Props) {
                 )}
               </div>
 
-              <Paragraph
-                typeStyle="body-sm"
-                textColor="text-gray-200"
-              >
-                Résumé complet du match, carte par carte : scores,
-                overtimes, tiebreakers, et infos pratiques.
+              <Paragraph typeStyle="body-sm" textColor="text-gray-200">
+                Résumé complet du match, carte par carte : scores, overtimes,
+                tiebreakers, et infos pratiques.
               </Paragraph>
             </div>
 
@@ -257,9 +239,7 @@ export default function MatchPage({ match }: Props) {
                   ← Tournoi
                 </Button>
               </Link>
-              <Link
-                href={`/tournament/${match.tournament.id}/matches`}
-              >
+              <Link href={`/tournament/${match.tournament.id}/matches`}>
                 <Button
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-emerald-400"
@@ -267,9 +247,7 @@ export default function MatchPage({ match }: Props) {
                   Tous les matchs
                 </Button>
               </Link>
-              <Link
-                href={`/tournament/${match.tournament.id}/bracket`}
-              >
+              <Link href={`/tournament/${match.tournament.id}/bracket`}>
                 <Button
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-purple-400"
@@ -286,11 +264,7 @@ export default function MatchPage({ match }: Props) {
           <div className="bg-black/60 border border-white/10 rounded-2xl px-4 py-4">
             <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1.5fr)_minmax(0,1.4fr)] gap-3 items-center">
               {/* Team 1 */}
-              <TeamHeader
-                team={t1}
-                fallbackName="Équipe 1"
-                align="left"
-              />
+              <TeamHeader team={t1} fallbackName="Équipe 1" align="left" />
 
               {/* Score & meta */}
               <div className="flex flex-col items-center">
@@ -303,17 +277,13 @@ export default function MatchPage({ match }: Props) {
                   <span className="text-3xl font-semibold text-white">
                     {match.team1_score ?? 0}
                   </span>
-                  <span className="text-lg text-gray-400">
-                    –
-                  </span>
+                  <span className="text-lg text-gray-400">–</span>
                   <span className="text-3xl font-semibold text-white">
                     {match.team2_score ?? 0}
                   </span>
                 </div>
                 <div className="mt-1 flex flex-wrap justify-center gap-2 text-[10px] text-gray-400">
-                  {dateLabel && (
-                    <span>{dateLabel}</span>
-                  )}
+                  {dateLabel && <span>{dateLabel}</span>}
                   {completedLabel && (
                     <>
                       <span className="text-gray-600">·</span>
@@ -332,7 +302,7 @@ export default function MatchPage({ match }: Props) {
               {/* Team 2 */}
               <TeamHeader
                 team={t2}
-                fallbackName={isBye ? "(bye)" : "Équipe 2"}
+                fallbackName={isBye ? '(bye)' : 'Équipe 2'}
                 align="right"
               />
             </div>
@@ -350,19 +320,16 @@ export default function MatchPage({ match }: Props) {
               {gameCount > 0 && (
                 <span className="text-[10px] text-gray-500">
                   {gameCount} map
-                  {gameCount > 1 ? "s" : ""} enregistrée
-                  {gameCount > 1 ? "s" : ""}
+                  {gameCount > 1 ? 's' : ''} enregistrée
+                  {gameCount > 1 ? 's' : ''}
                 </span>
               )}
             </div>
 
             {match.games.length === 0 && (
-              <Paragraph
-                typeStyle="body-sm"
-                textColor="text-gray-300"
-              >
-                Les détails par carte ne sont pas encore disponibles
-                pour ce match.
+              <Paragraph typeStyle="body-sm" textColor="text-gray-300">
+                Les détails par carte ne sont pas encore disponibles pour ce
+                match.
               </Paragraph>
             )}
 
@@ -396,33 +363,20 @@ export default function MatchPage({ match }: Props) {
                       href={`/tournament/${match.tournament.id}`}
                       className="text-blue-300 hover:text-blue-100"
                     >
-                      {match.tournament.short_name ||
-                        match.tournament.name}
+                      {match.tournament.short_name || match.tournament.name}
                     </Link>
                   }
                 />
                 {match.stage && (
-                  <InfoRow
-                    label="Phase"
-                    value={match.stage.name}
-                  />
+                  <InfoRow label="Phase" value={match.stage.name} />
                 )}
                 {match.round_name && (
-                  <InfoRow
-                    label="Round"
-                    value={match.round_name}
-                  />
+                  <InfoRow label="Round" value={match.round_name} />
                 )}
                 {match.group_key && (
-                  <InfoRow
-                    label="Poule"
-                    value={match.group_key}
-                  />
+                  <InfoRow label="Poule" value={match.group_key} />
                 )}
-                <InfoRow
-                  label="Format"
-                  value={formatLabel}
-                />
+                <InfoRow label="Format" value={formatLabel} />
                 {match.lobby_code && (
                   <InfoRow
                     label="Lobby"
@@ -448,10 +402,7 @@ export default function MatchPage({ match }: Props) {
                     }
                   />
                 )}
-                <InfoRow
-                  label="Bye"
-                  value={isBye ? "Oui" : "Non"}
-                />
+                <InfoRow label="Bye" value={isBye ? 'Oui' : 'Non'} />
               </dl>
             </div>
 
@@ -483,32 +434,24 @@ function TeamHeader({
 }: {
   team: SimpleTeam | null;
   fallbackName: string;
-  align: "left" | "right";
+  align: 'left' | 'right';
 }) {
-  const name =
-    team?.short_name || team?.name || fallbackName;
+  const name = team?.short_name || team?.name || fallbackName;
   const fullName = team?.name || null;
   const logo = team?.logo_url || null;
 
   const containerClass =
-    "flex items-center gap-3 " +
-    (align === "right"
-      ? "justify-end text-right"
-      : "justify-start text-left");
+    'flex items-center gap-3 ' +
+    (align === 'right' ? 'justify-end text-right' : 'justify-start text-left');
 
   return (
     <div className={containerClass}>
-      {align === "left" && (
-        <TeamLogo logo={logo} name={name} />
-      )}
+      {align === 'left' && <TeamLogo logo={logo} name={name} />}
 
       <div className="flex flex-col">
         <span className="text-sm font-semibold text-white">
           {team ? (
-            <Link
-              href={`/team/${team.id}`}
-              className="hover:text-emerald-300"
-            >
+            <Link href={`/team/${team.id}`} className="hover:text-emerald-300">
               {name}
             </Link>
           ) : (
@@ -516,26 +459,16 @@ function TeamHeader({
           )}
         </span>
         {fullName && fullName !== name && (
-          <span className="text-[10px] text-gray-400">
-            {fullName}
-          </span>
+          <span className="text-[10px] text-gray-400">{fullName}</span>
         )}
       </div>
 
-      {align === "right" && (
-        <TeamLogo logo={logo} name={name} />
-      )}
+      {align === 'right' && <TeamLogo logo={logo} name={name} />}
     </div>
   );
 }
 
-function TeamLogo({
-  logo,
-  name,
-}: {
-  logo: string | null;
-  name: string;
-}) {
+function TeamLogo({ logo, name }: { logo: string | null; name: string }) {
   return (
     <div className="w-10 h-10 rounded-full bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden">
       {logo ? (
@@ -547,9 +480,7 @@ function TeamLogo({
           className="w-full h-full object-cover"
         />
       ) : (
-        <span className="text-[10px] text-gray-400">
-          {initials(name)}
-        </span>
+        <span className="text-[10px] text-gray-400">{initials(name)}</span>
       )}
     </div>
   );
@@ -568,7 +499,7 @@ function MapRow({
 }) {
   const label = game.map_name || `Map ${index + 1}`;
   const orderLabel =
-    typeof game.map_order === "number"
+    typeof game.map_order === 'number'
       ? `#${game.map_order + 1}`
       : `#${index + 1}`;
 
@@ -585,9 +516,7 @@ function MapRow({
           <span className="px-1.5 py-[1px] rounded-full bg-black/60 border border-white/10 text-[9px] text-gray-300">
             {orderLabel}
           </span>
-          <span className="text-gray-100 text-xs">
-            {label}
-          </span>
+          <span className="text-gray-100 text-xs">{label}</span>
         </div>
         <div className="flex items-center gap-1 text-[10px] text-gray-300">
           <span>{s1}</span>
@@ -618,19 +547,11 @@ function MapRow({
   );
 }
 
-function InfoRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: React.ReactNode;
-}) {
+function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex justify-between gap-3">
       <dt className="text-gray-400">{label}</dt>
-      <dd className="text-gray-100 text-right">
-        {value}
-      </dd>
+      <dd className="text-gray-100 text-right">{value}</dd>
     </div>
   );
 }
@@ -643,24 +564,24 @@ function formatMatchDate(iso: string | null): string | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (isNaN(d.getTime())) return null;
-  return d.toLocaleString("fr-FR", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
+  return d.toLocaleString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
   });
 }
 
 function getMatchStatusLabel(status: MatchStatus): string {
   switch (status) {
-    case "pending":
-      return "À venir";
-    case "ongoing":
-      return "En cours";
-    case "finished":
-      return "Terminé";
-    case "cancelled":
-      return "Annulé";
+    case 'pending':
+      return 'À venir';
+    case 'ongoing':
+      return 'En cours';
+    case 'finished':
+      return 'Terminé';
+    case 'cancelled':
+      return 'Annulé';
     default:
       return status;
   }
@@ -668,16 +589,16 @@ function getMatchStatusLabel(status: MatchStatus): string {
 
 function getMatchStatusChipClass(status: MatchStatus): string {
   switch (status) {
-    case "pending":
-      return "px-1.5 py-[2px] rounded-full bg-yellow-500/20 text-yellow-200 border border-yellow-500/60";
-    case "ongoing":
-      return "px-1.5 py-[2px] rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/60";
-    case "finished":
-      return "px-1.5 py-[2px] rounded-full bg-gray-500/20 text-gray-200 border border-gray-500/60";
-    case "cancelled":
-      return "px-1.5 py-[2px] rounded-full bg-red-500/20 text-red-200 border border-red-500/60";
+    case 'pending':
+      return 'px-1.5 py-[2px] rounded-full bg-yellow-500/20 text-yellow-200 border border-yellow-500/60';
+    case 'ongoing':
+      return 'px-1.5 py-[2px] rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/60';
+    case 'finished':
+      return 'px-1.5 py-[2px] rounded-full bg-gray-500/20 text-gray-200 border border-gray-500/60';
+    case 'cancelled':
+      return 'px-1.5 py-[2px] rounded-full bg-red-500/20 text-red-200 border border-red-500/60';
     default:
-      return "px-1.5 py-[2px] rounded-full bg-white/10 text-white border border-white/30";
+      return 'px-1.5 py-[2px] rounded-full bg-white/10 text-white border border-white/30';
   }
 }
 

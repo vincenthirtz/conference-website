@@ -1,11 +1,11 @@
 // pages/admin/stages/[stageId].tsx
 
-import { useEffect, useState } from "react";
-import Head from "next/head";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { withStaffPage } from "@/utils/staff";
-import { StaffRoleBadge } from "@/components/admin/StaffRoleBadge";
+import { useEffect, useState } from 'react';
+import Head from 'next/head';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { withStaffPage } from '@/utils/staff';
+import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
 type StaffShape = {
   id: string;
@@ -17,12 +17,12 @@ type StaffProps = {
   staff: StaffShape;
 };
 type StageType =
-  | "group"
-  | "bracket"
-  | "swiss"
-  | "round_robin"
-  | "showmatch"
-  | "other";
+  | 'group'
+  | 'bracket'
+  | 'swiss'
+  | 'round_robin'
+  | 'showmatch'
+  | 'other';
 
 type Stage = {
   id: string;
@@ -54,10 +54,10 @@ type TournamentApiResponse = {
   tournament: Tournament;
 };
 
-export const getServerSideProps = withStaffPage("manager");
+export const getServerSideProps = withStaffPage('manager');
 
 function formatDateTime(iso: string | null) {
-  if (!iso) return "—";
+  if (!iso) return '—';
   try {
     return new Date(iso).toLocaleString();
   } catch {
@@ -67,20 +67,20 @@ function formatDateTime(iso: string | null) {
 
 function stageTypeLabel(type: StageType | null) {
   switch (type) {
-    case "group":
-      return "Groupes";
-    case "bracket":
-      return "Bracket";
-    case "swiss":
-      return "Swiss";
-    case "round_robin":
-      return "Round Robin";
-    case "showmatch":
-      return "Showmatch";
-    case "other":
-      return "Autre";
+    case 'group':
+      return 'Groupes';
+    case 'bracket':
+      return 'Bracket';
+    case 'swiss':
+      return 'Swiss';
+    case 'round_robin':
+      return 'Round Robin';
+    case 'showmatch':
+      return 'Showmatch';
+    case 'other':
+      return 'Autre';
     default:
-      return "Non défini";
+      return 'Non défini';
   }
 }
 
@@ -112,7 +112,7 @@ function AdminStagePage({ staff }: StaffProps) {
       const res = await fetch(`/api/admin/stages/${stageId}`);
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Impossible de charger la phase");
+        throw new Error(json.error || 'Impossible de charger la phase');
       }
       const json: StageApiResponse = await res.json();
       const s = json.stage;
@@ -128,11 +128,11 @@ function AdminStagePage({ staff }: StaffProps) {
           }
         } catch (e) {
           // non bloquant
-          console.error("fetch parent tournament error", e);
+          console.error('fetch parent tournament error', e);
         }
       }
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur inattendue");
+      setErrorMsg(err?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
@@ -144,10 +144,10 @@ function AdminStagePage({ staff }: StaffProps) {
     setActionMsg(null);
     setErrorMsg(null);
 
-    try{
+    try {
       const res = await fetch(`/api/admin/stages/${stageId}/auto-byes`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}), // utilise les valeurs par défaut de l'API
       });
 
@@ -168,7 +168,7 @@ function AdminStagePage({ staff }: StaffProps) {
   }
 
   async function handleGenerateSwissRound() {
-    if (!stageId || stage?.stage_type !== "swiss") return;
+    if (!stageId || stage?.stage_type !== 'swiss') return;
     setLoadingActions(true);
     setActionMsg(null);
     setErrorMsg(null);
@@ -177,15 +177,17 @@ function AdminStagePage({ staff }: StaffProps) {
       const res = await fetch(
         `/api/admin/stages/${stageId}/generate-swiss-round`,
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({}), // roundNumber sera nextRound auto
         }
       );
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Erreur lors de la génération de la ronde Swiss");
+        throw new Error(
+          json.error || 'Erreur lors de la génération de la ronde Swiss'
+        );
       }
 
       const json = await res.json();
@@ -193,7 +195,7 @@ function AdminStagePage({ staff }: StaffProps) {
         `Nouvelle ronde Swiss #${json.roundNumber} générée : ${json.createdMatches?.length ?? 0} matchs.`
       );
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur lors de la génération Swiss");
+      setErrorMsg(err?.message ?? 'Erreur lors de la génération Swiss');
     } finally {
       setLoadingActions(false);
     }
@@ -202,8 +204,8 @@ function AdminStagePage({ staff }: StaffProps) {
   const tournamentDashboardUrl = tournament
     ? `/admin/tournament/${tournament.id}`
     : stage
-    ? `/admin/tournament/${stage.tournament_id}`
-    : "/admin/tournaments";
+      ? `/admin/tournament/${stage.tournament_id}`
+      : '/admin/tournaments';
 
   const matchesUrl =
     stage && stage.tournament_id
@@ -227,9 +229,7 @@ function AdminStagePage({ staff }: StaffProps) {
             >
               ← Retour au tournoi
             </button>
-            <h1 className="text-3xl font-bold">
-              Phase du tournoi
-            </h1>
+            <h1 className="text-3xl font-bold">Phase du tournoi</h1>
             <p className="text-neutral-400 text-sm mt-1">
               Overview et actions rapides pour cette phase (stage).
             </p>
@@ -251,15 +251,11 @@ function AdminStagePage({ staff }: StaffProps) {
         )}
 
         {loading && !stage && (
-          <div className="text-neutral-300">
-            Chargement de la phase…
-          </div>
+          <div className="text-neutral-300">Chargement de la phase…</div>
         )}
 
         {!loading && !stage && !errorMsg && (
-          <div className="text-neutral-300">
-            Phase introuvable.
-          </div>
+          <div className="text-neutral-300">Phase introuvable.</div>
         )}
 
         {stage && (
@@ -270,12 +266,10 @@ function AdminStagePage({ staff }: StaffProps) {
               <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5 space-y-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <h2 className="text-xl font-semibold">
-                      {stage.name}
-                    </h2>
+                    <h2 className="text-xl font-semibold">{stage.name}</h2>
                     {stage.slug && (
                       <p className="text-xs text-neutral-400 mt-1">
-                        Slug :{" "}
+                        Slug :{' '}
                         <span className="font-mono bg-neutral-900 border border-neutral-700 px-2 py-0.5 rounded">
                           {stage.slug}
                         </span>
@@ -286,20 +280,22 @@ function AdminStagePage({ staff }: StaffProps) {
                     <span
                       className={`px-2 py-0.5 rounded-full font-semibold ${
                         stage.is_active
-                          ? "bg-emerald-600/80 text-white"
-                          : "bg-neutral-700 text-neutral-200"
+                          ? 'bg-emerald-600/80 text-white'
+                          : 'bg-neutral-700 text-neutral-200'
                       }`}
                     >
-                      {stage.is_active ? "Active" : "Inactive"}
+                      {stage.is_active ? 'Active' : 'Inactive'}
                     </span>
                     <span
                       className={`px-2 py-0.5 rounded-full ${
                         stage.is_public
-                          ? "bg-blue-600/80 text-white"
-                          : "bg-neutral-800 text-neutral-300 border border-neutral-600"
+                          ? 'bg-blue-600/80 text-white'
+                          : 'bg-neutral-800 text-neutral-300 border border-neutral-600'
                       }`}
                     >
-                      {stage.is_public ? "Visible publiquement" : "Non publique"}
+                      {stage.is_public
+                        ? 'Visible publiquement'
+                        : 'Non publique'}
                     </span>
                   </div>
                 </div>
@@ -336,32 +332,26 @@ function AdminStagePage({ staff }: StaffProps) {
                       Ordre dans le tournoi
                     </div>
                     <div className="font-medium">
-                      {stage.order_index ?? "Non défini"}
+                      {stage.order_index ?? 'Non défini'}
                     </div>
                   </div>
 
                   <div>
-                    <div className="text-neutral-400">
-                      Début de la phase
-                    </div>
+                    <div className="text-neutral-400">Début de la phase</div>
                     <div className="font-medium">
                       {formatDateTime(stage.start_date)}
                     </div>
                   </div>
 
                   <div>
-                    <div className="text-neutral-400">
-                      Fin de la phase
-                    </div>
+                    <div className="text-neutral-400">Fin de la phase</div>
                     <div className="font-medium">
                       {formatDateTime(stage.end_at)}
                     </div>
                   </div>
 
                   <div>
-                    <div className="text-neutral-400">
-                      Créée le
-                    </div>
+                    <div className="text-neutral-400">Créée le</div>
                     <div className="font-medium">
                       {formatDateTime(stage.created_at)}
                     </div>
@@ -371,9 +361,7 @@ function AdminStagePage({ staff }: StaffProps) {
 
               {/* Actions rapides */}
               <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5 space-y-3">
-                <h2 className="text-lg font-semibold">
-                  Actions rapides
-                </h2>
+                <h2 className="text-lg font-semibold">Actions rapides</h2>
 
                 <div className="flex flex-col gap-2 text-sm">
                   {matchesUrl && (
@@ -400,9 +388,7 @@ function AdminStagePage({ staff }: StaffProps) {
                 </div>
 
                 <div className="pt-3 border-t border-neutral-700 mt-3 space-y-2">
-                  <h3 className="text-sm font-semibold">
-                    Outils automatiques
-                  </h3>
+                  <h3 className="text-sm font-semibold">Outils automatiques</h3>
 
                   <button
                     type="button"
@@ -410,29 +396,29 @@ function AdminStagePage({ staff }: StaffProps) {
                     disabled={loadingActions}
                     className={`w-full px-3 py-2 rounded text-sm font-semibold ${
                       loadingActions
-                        ? "bg-neutral-700 cursor-wait"
-                        : "bg-neutral-700 hover:bg-neutral-600"
+                        ? 'bg-neutral-700 cursor-wait'
+                        : 'bg-neutral-700 hover:bg-neutral-600'
                     }`}
                   >
                     {loadingActions
-                      ? "Traitement des BYE…"
-                      : "Détecter et valider les matches BYE"}
+                      ? 'Traitement des BYE…'
+                      : 'Détecter et valider les matches BYE'}
                   </button>
 
-                  {stage.stage_type === "swiss" && (
+                  {stage.stage_type === 'swiss' && (
                     <button
                       type="button"
                       onClick={handleGenerateSwissRound}
                       disabled={loadingActions}
                       className={`w-full px-3 py-2 rounded text-sm font-semibold ${
                         loadingActions
-                          ? "bg-blue-800 cursor-wait"
-                          : "bg-blue-600 hover:bg-blue-700"
+                          ? 'bg-blue-800 cursor-wait'
+                          : 'bg-blue-600 hover:bg-blue-700'
                       }`}
                     >
                       {loadingActions
-                        ? "Génération Swiss…"
-                        : "Générer la prochaine ronde Swiss"}
+                        ? 'Génération Swiss…'
+                        : 'Générer la prochaine ronde Swiss'}
                     </button>
                   )}
                 </div>
@@ -448,8 +434,8 @@ function AdminStagePage({ staff }: StaffProps) {
                 </h2>
                 <p className="text-xs text-neutral-400">
                   Ce JSON contient la configuration avancée de la phase (ex:
-                  format Swiss, options de bracket, etc.). Modifiable via l&apos;API
-                  ou un écran dédié.
+                  format Swiss, options de bracket, etc.). Modifiable via
+                  l&apos;API ou un écran dédié.
                 </p>
                 <pre className="mt-2 bg-neutral-900 border border-neutral-800 rounded p-3 text-[11px] overflow-x-auto text-neutral-200">
                   {JSON.stringify(stage.settings ?? {}, null, 2)}
@@ -458,22 +444,16 @@ function AdminStagePage({ staff }: StaffProps) {
 
               {/* Meta / debug */}
               <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5 space-y-3">
-                <h2 className="text-lg font-semibold">
-                  Meta & debug
-                </h2>
+                <h2 className="text-lg font-semibold">Meta & debug</h2>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between gap-4">
-                    <span className="text-neutral-400">
-                      ID du stage
-                    </span>
+                    <span className="text-neutral-400">ID du stage</span>
                     <span className="font-mono text-xs bg-neutral-900 px-2 py-1 rounded border border-neutral-700">
                       {stage.id}
                     </span>
                   </div>
                   <div className="flex justify-between gap-4">
-                    <span className="text-neutral-400">
-                      ID du tournoi
-                    </span>
+                    <span className="text-neutral-400">ID du tournoi</span>
                     <span className="font-mono text-xs bg-neutral-900 px-2 py-1 rounded border border-neutral-700">
                       {stage.tournament_id}
                     </span>
@@ -483,17 +463,15 @@ function AdminStagePage({ staff }: StaffProps) {
                       Dernière mise à jour
                     </span>
                     <span className="text-neutral-200">
-                      {formatDateTime(
-                        stage.updated_at || stage.created_at
-                      )}
+                      {formatDateTime(stage.updated_at || stage.created_at)}
                     </span>
                   </div>
                 </div>
                 <p className="mt-3 text-xs text-neutral-500">
-                  API liée :{" "}
+                  API liée :{' '}
                   <code className="font-mono bg-neutral-900 px-1.5 py-0.5 rounded border border-neutral-700">
                     /api/admin/stages/{stage.id}
-                  </code>{" "}
+                  </code>{' '}
                   (GET / PUT / DELETE).
                 </p>
               </section>

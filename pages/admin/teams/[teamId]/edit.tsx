@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
-import Head from "next/head";
-import { useRouter } from "next/router";
-import Link from "next/link";
-import { StaffRoleBadge } from "@/components/admin/StaffRoleBadge";
-import { withStaffPage } from "@/utils/staff";
+import { useEffect, useState } from 'react';
+import Head from 'next/head';
+import { useRouter } from 'next/router';
+import Link from 'next/link';
+import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
+import { withStaffPage } from '@/utils/staff';
 
 type StaffShape = {
   id: string;
@@ -37,7 +37,7 @@ type TeamMemberRow = {
   created_at: string;
 };
 
-export const getServerSideProps = withStaffPage("manager");
+export const getServerSideProps = withStaffPage('manager');
 
 function AdminEditTeamPage({ staff }: StaffProps) {
   const router = useRouter();
@@ -53,15 +53,15 @@ function AdminEditTeamPage({ staff }: StaffProps) {
   const [membersLoading, setMembersLoading] = useState(false);
   const [membersError, setMembersError] = useState<string | null>(null);
 
-  const [name, setName] = useState("");
-  const [shortName, setShortName] = useState("");
-  const [logoUrl, setLogoUrl] = useState("");
-  const [bannerUrl, setBannerUrl] = useState("");
-  const [country, setCountry] = useState("");
-  const [description, setDescription] = useState("");
-  const [twitter, setTwitter] = useState("");
-  const [discord, setDiscord] = useState("");
-  const [website, setWebsite] = useState("");
+  const [name, setName] = useState('');
+  const [shortName, setShortName] = useState('');
+  const [logoUrl, setLogoUrl] = useState('');
+  const [bannerUrl, setBannerUrl] = useState('');
+  const [country, setCountry] = useState('');
+  const [description, setDescription] = useState('');
+  const [twitter, setTwitter] = useState('');
+  const [discord, setDiscord] = useState('');
+  const [website, setWebsite] = useState('');
   const [isActive, setIsActive] = useState(true);
 
   useEffect(() => {
@@ -80,23 +80,23 @@ function AdminEditTeamPage({ staff }: StaffProps) {
       const res = await fetch(`/api/admin/teams/${teamId}`);
       const json = await res.json();
       if (!res.ok || json.error) {
-        throw new Error(json.error || "Impossible de charger l&apos;équipe");
+        throw new Error(json.error || 'Impossible de charger l&apos;équipe');
       }
 
       const t: TeamRow = json.team;
       setTeam(t);
-      setName(t.name || "");
-      setShortName(t.short_name || "");
-      setLogoUrl(t.logo_url || "");
-      setBannerUrl(t.banner_url || "");
-      setCountry(t.country || "");
-      setDescription(t.description || "");
-      setTwitter(t.twitter || "");
-      setDiscord(t.discord || "");
-      setWebsite(t.website || "");
+      setName(t.name || '');
+      setShortName(t.short_name || '');
+      setLogoUrl(t.logo_url || '');
+      setBannerUrl(t.banner_url || '');
+      setCountry(t.country || '');
+      setDescription(t.description || '');
+      setTwitter(t.twitter || '');
+      setDiscord(t.discord || '');
+      setWebsite(t.website || '');
       setIsActive(t.is_active !== false);
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur inattendue");
+      setErrorMsg(err?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
@@ -124,20 +124,20 @@ function AdminEditTeamPage({ staff }: StaffProps) {
       };
 
       const res = await fetch(`/api/admin/teams/${teamId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
       const json = await res.json();
       if (!res.ok || json.error) {
-        throw new Error(json.error || "Échec de la mise à jour");
+        throw new Error(json.error || 'Échec de la mise à jour');
       }
 
-      setSuccessMsg("Équipe mise à jour ✅");
+      setSuccessMsg('Équipe mise à jour ✅');
       setTeam(json.team);
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur inattendue");
+      setErrorMsg(err?.message ?? 'Erreur inattendue');
     } finally {
       setSaving(false);
     }
@@ -151,11 +151,11 @@ function AdminEditTeamPage({ staff }: StaffProps) {
       const res = await fetch(`/api/admin/teams/${teamId}/members`);
       const json = await res.json();
       if (!res.ok || json.error) {
-        throw new Error(json.error || "Impossible de charger les membres");
+        throw new Error(json.error || 'Impossible de charger les membres');
       }
       setMembers(json.members || []);
     } catch (err: any) {
-      setMembersError(err?.message ?? "Erreur inattendue");
+      setMembersError(err?.message ?? 'Erreur inattendue');
     } finally {
       setMembersLoading(false);
     }
@@ -172,13 +172,13 @@ function AdminEditTeamPage({ staff }: StaffProps) {
           <div>
             <button
               type="button"
-              onClick={() => router.push("/admin/teams")}
+              onClick={() => router.push('/admin/teams')}
               className="mb-2 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
             >
               ← Retour à la liste des équipes
             </button>
             <h1 className="text-3xl font-bold">
-              Éditer l&apos;équipe {team?.name ? `: ${team.name}` : ""}
+              Éditer l&apos;équipe {team?.name ? `: ${team.name}` : ''}
             </h1>
             <p className="text-sm text-neutral-400 mt-1">
               Mets à jour les informations générales de l&apos;équipe.
@@ -190,7 +190,9 @@ function AdminEditTeamPage({ staff }: StaffProps) {
         <div className="grid gap-6 lg:grid-cols-[2fr,1.2fr] items-start">
           <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-6">
             {loading ? (
-              <p className="text-neutral-300 text-sm">Chargement de l&apos;équipe…</p>
+              <p className="text-neutral-300 text-sm">
+                Chargement de l&apos;équipe…
+              </p>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="grid gap-4 md:grid-cols-2">
@@ -204,7 +206,7 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Nom de l&apos;équipe"
+                      placeholder="Nom de l'équipe"
                     />
                   </div>
 
@@ -272,7 +274,10 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                       onChange={(e) => setIsActive(e.target.checked)}
                       className="h-4 w-4 rounded border-neutral-600 bg-neutral-900"
                     />
-                    <label htmlFor="active" className="text-sm text-neutral-300">
+                    <label
+                      htmlFor="active"
+                      className="text-sm text-neutral-300"
+                    >
                       Équipe active
                     </label>
                   </div>
@@ -286,7 +291,7 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm min-h-[100px] resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Présentation de l&apos;équipe"
+                    placeholder="Présentation de l'équipe"
                   />
                 </div>
 
@@ -346,11 +351,13 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                     disabled={saving}
                     className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
                       saving
-                        ? "bg-neutral-700 cursor-not-allowed"
-                        : "bg-blue-600 hover:bg-blue-500"
+                        ? 'bg-neutral-700 cursor-not-allowed'
+                        : 'bg-blue-600 hover:bg-blue-500'
                     }`}
                   >
-                    {saving ? "Enregistrement..." : "Mettre à jour l&apos;équipe"}
+                    {saving
+                      ? 'Enregistrement...'
+                      : 'Mettre à jour l&apos;équipe'}
                   </button>
 
                   <Link
@@ -370,7 +377,8 @@ function AdminEditTeamPage({ staff }: StaffProps) {
               <li>• Les champs vides ne remplaceront rien dans le back-end.</li>
               <li>• Le statut actif est envoyé dans le payload si activé.</li>
               <li>
-                • Utilise les URLs complètes pour le logo/bannière si tu veux un affichage public.
+                • Utilise les URLs complètes pour le logo/bannière si tu veux un
+                affichage public.
               </li>
               <li>• Les réseaux sont optionnels.</li>
             </ul>
@@ -383,7 +391,8 @@ function AdminEditTeamPage({ staff }: StaffProps) {
           <div>
             <h2 className="text-xl font-semibold">Membres de l&apos;équipe</h2>
             <p className="text-sm text-neutral-400">
-              Liste des membres dans <code className="font-mono">team_members</code>.
+              Liste des membres dans{' '}
+              <code className="font-mono">team_members</code>.
             </p>
           </div>
           <Link
@@ -401,7 +410,9 @@ function AdminEditTeamPage({ staff }: StaffProps) {
             {membersError}
           </div>
         ) : members.length === 0 ? (
-          <p className="text-sm text-neutral-400">Aucun membre pour cette équipe.</p>
+          <p className="text-sm text-neutral-400">
+            Aucun membre pour cette équipe.
+          </p>
         ) : (
           <div className="overflow-auto">
             <table className="w-full text-left min-w-[520px]">
@@ -422,7 +433,7 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                     <td className="px-3 py-2 text-sm text-neutral-300">
                       {m.created_at
                         ? new Date(m.created_at).toLocaleString()
-                        : "—"}
+                        : '—'}
                     </td>
                   </tr>
                 ))}

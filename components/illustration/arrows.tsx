@@ -1,9 +1,5 @@
 import React, { JSX } from 'react';
-import { SVGTypes } from '../../types/types';
-
-interface IArrows extends SVGTypes {
-  direction: string;
-}
+import type { IArrows } from '../../types/components';
 
 function Arrows({
   className,

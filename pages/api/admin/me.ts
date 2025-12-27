@@ -1,8 +1,8 @@
 // @ts-nocheck
 // @ts-nocheck
 // pages/api/admin/me.ts
-import type { NextApiRequest, NextApiResponse } from "next";
-import { supabaseAdmin } from "@/utils/supabase";
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { supabaseAdmin } from '@/utils/supabase';
 
 type MeResponse =
   | {
@@ -19,30 +19,30 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<MeResponse>
 ) {
-  if (req.method !== "GET") {
-    return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   // 0) Vérifier que le client admin est dispo (service role non configuré)
   const adminClient = supabaseAdmin;
   if (!adminClient) {
     console.error(
-      "[/api/admin/me] supabaseAdmin non configuré. Vérifie SUPABASE_SERVICE_ROLE_KEY."
+      '[/api/admin/me] supabaseAdmin non configuré. Vérifie SUPABASE_SERVICE_ROLE_KEY.'
     );
     return res.status(500).json({
-      error: "Configuration Supabase incomplète (service role manquant).",
+      error: 'Configuration Supabase incomplète (service role manquant).',
     });
   }
 
   // 1) Récupérer le token envoyé par le frontend
   //    (en général: Authorization: Bearer <access_token>)
   const authHeader = req.headers.authorization;
-  const token = authHeader?.startsWith("Bearer ")
-    ? authHeader.replace("Bearer ", "")
+  const token = authHeader?.startsWith('Bearer ')
+    ? authHeader.replace('Bearer ', '')
     : undefined;
 
   if (!token) {
-    return res.status(401).json({ error: "Missing auth token" });
+    return res.status(401).json({ error: 'Missing auth token' });
   }
 
   // 2) Vérifier la validité du token et récupérer l'utilisateur
@@ -52,20 +52,20 @@ export default async function handler(
   } = await adminClient.auth.getUser(token);
 
   if (userError || !user) {
-    console.error("[/api/admin/me] getUser error:", userError);
-    return res.status(401).json({ error: "Invalid or expired token" });
+    console.error('[/api/admin/me] getUser error:', userError);
+    return res.status(401).json({ error: 'Invalid or expired token' });
   }
 
   // 3) Chercher l'entrée dans la table staff liée à cet utilisateur
   const { data: staff, error: staffError } = await adminClient
-    .from("staff")
-    .select("id, auth_user_id, email, display_name, role, created_at")
-    .eq("auth_user_id", user.id)
+    .from('staff')
+    .select('id, auth_user_id, email, display_name, role, created_at')
+    .eq('auth_user_id', user.id)
     .single();
 
   if (staffError || !staff) {
-    console.error("[/api/admin/me] staff error:", staffError);
-    return res.status(403).json({ error: "Not a staff member" });
+    console.error('[/api/admin/me] staff error:', staffError);
+    return res.status(403).json({ error: 'Not a staff member' });
   }
 
   // 4) OK : renvoyer les infos staff (c’est ce que tu consommeras côté front)

@@ -31,8 +31,9 @@ function MentionsLegalesPage() {
             Mentions légales & confidentialité
           </h1>
           <p className="mx-auto mt-4 max-w-3xl text-lg text-gray-200">
-            Informations légales de l’association OW Women&apos;s Cup, cadre d’utilisation du site et
-            rappel des droits des utilisatrices et partenaires.
+            Informations légales de l’association OW Women&apos;s Cup, cadre
+            d’utilisation du site et rappel des droits des utilisatrices et
+            partenaires.
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
             <a
@@ -54,14 +55,22 @@ function MentionsLegalesPage() {
       <main className="mx-auto max-w-5xl space-y-12 px-4 pb-20 sm:px-6">
         <section className="grid gap-4 md:grid-cols-2">
           <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-5 shadow-xl shadow-black/20">
-            <p className="text-xs uppercase tracking-[0.18em] text-purple-200">Éditeur du site</p>
-            <h2 className="mt-2 text-xl font-semibold">Association OW Women&apos;s Cup</h2>
+            <p className="text-xs uppercase tracking-[0.18em] text-purple-200">
+              Éditeur du site
+            </p>
+            <h2 className="mt-2 text-xl font-semibold">
+              Association OW Women&apos;s Cup
+            </h2>
             <p className="mt-2 text-sm text-gray-200">
-              Site édité par l’association OW Women&apos;s Cup, organisation à but non lucratif (loi
-              1901) animée par une équipe bénévole pour promouvoir l’esport féminin.
+              Site édité par l’association OW Women&apos;s Cup, organisation à
+              but non lucratif (loi 1901) animée par une équipe bénévole pour
+              promouvoir l’esport féminin.
             </p>
             <ul className="mt-3 space-y-2 text-sm text-gray-200">
-              <li>Responsable de la publication : cellule communication OW Women&apos;s Cup.</li>
+              <li>
+                Responsable de la publication : cellule communication OW
+                Women&apos;s Cup.
+              </li>
               <li>
                 Contact principal :{' '}
                 <a
@@ -73,21 +82,25 @@ function MentionsLegalesPage() {
                 .
               </li>
               <li>
-                Correspondance postale : transmise sur demande pour éviter la diffusion publique
-                d’adresses personnelles.
+                Correspondance postale : transmise sur demande pour éviter la
+                diffusion publique d’adresses personnelles.
               </li>
             </ul>
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-5 shadow-xl shadow-black/20">
-            <p className="text-xs uppercase tracking-[0.18em] text-purple-200">Hébergement</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-purple-200">
+              Hébergement
+            </p>
             <h2 className="mt-2 text-xl font-semibold">Netlify</h2>
             <p className="mt-2 text-sm text-gray-200">
-              Le site est hébergé par Netlify, Inc. – www.netlify.com (hébergement statique et CDN).
+              Le site est hébergé par Netlify, Inc. – www.netlify.com
+              (hébergement statique et CDN).
             </p>
             <p className="mt-2 text-xs text-gray-300">
-              Services techniques utilisés : Supabase (authentification et base de données), Formspree
-              (formulaire de contact) et outils internes pour la gestion des tournois.
+              Services techniques utilisés : Supabase (authentification et base
+              de données), Formspree (formulaire de contact) et outils internes
+              pour la gestion des tournois.
             </p>
           </div>
         </section>
@@ -95,34 +108,49 @@ function MentionsLegalesPage() {
         <section className="rounded-3xl border border-white/10 bg-gradient-to-r from-[#0F1F3A] via-[#1A0F2E] to-[#2C0B2C] p-6 sm:p-10 shadow-2xl">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-gray-200">Responsabilités</p>
+              <p className="text-xs uppercase tracking-[0.18em] text-gray-200">
+                Responsabilités
+              </p>
               <h3 className="text-2xl font-bold">Utilisation du site</h3>
             </div>
             <p className="text-sm text-gray-200">
-              Informations fournies à titre indicatif. Les règles de tournoi publiées font foi pour les
-              participantes.
+              Informations fournies à titre indicatif. Les règles de tournoi
+              publiées font foi pour les participantes.
             </p>
           </div>
           <ul className="mt-6 space-y-3 text-sm text-gray-100">
             <li className="flex items-start gap-2">
-              <span className="mt-[6px] h-2 w-2 rounded-full bg-purple-400" aria-hidden />
+              <span
+                className="mt-[6px] h-2 w-2 rounded-full bg-purple-400"
+                aria-hidden
+              />
               <span>
-                L’association met tout en œuvre pour publier des informations exactes mais ne peut
-                garantir l’absence totale d’erreurs ou d’omissions.
+                L’association met tout en œuvre pour publier des informations
+                exactes mais ne peut garantir l’absence totale d’erreurs ou
+                d’omissions.
               </span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="mt-[6px] h-2 w-2 rounded-full bg-purple-400" aria-hidden />
+              <span
+                className="mt-[6px] h-2 w-2 rounded-full bg-purple-400"
+                aria-hidden
+              />
               <span>
-                Les liens externes présents sur le site sont fournis pour faciliter l’accès à des
-                ressources. L’association n’est pas responsable de leur contenu.
+                Les liens externes présents sur le site sont fournis pour
+                faciliter l’accès à des ressources. L’association n’est pas
+                responsable de leur contenu.
               </span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="mt-[6px] h-2 w-2 rounded-full bg-purple-400" aria-hidden />
+              <span
+                className="mt-[6px] h-2 w-2 rounded-full bg-purple-400"
+                aria-hidden
+              />
               <span>
-                Toute signalisation d’un contenu problématique ou d’un dysfonctionnement peut être
-                adressée à <a href="mailto:owwomenscup@gmail.com">owwomenscup@gmail.com</a>.
+                Toute signalisation d’un contenu problématique ou d’un
+                dysfonctionnement peut être adressée à{' '}
+                <a href="mailto:owwomenscup@gmail.com">owwomenscup@gmail.com</a>
+                .
               </span>
             </li>
           </ul>
@@ -133,11 +161,15 @@ function MentionsLegalesPage() {
           className="rounded-2xl border border-white/10 bg-white/[0.05] p-6 sm:p-8 shadow-xl shadow-black/20"
         >
           <div className="flex flex-col gap-2">
-            <p className="text-xs uppercase tracking-[0.18em] text-gray-300">Données personnelles</p>
-            <h3 className="text-2xl font-bold text-white">Protection des données</h3>
+            <p className="text-xs uppercase tracking-[0.18em] text-gray-300">
+              Données personnelles
+            </p>
+            <h3 className="text-2xl font-bold text-white">
+              Protection des données
+            </h3>
             <p className="text-sm text-gray-300">
-              Les données collectées sont limitées au strict nécessaire pour faire vivre le tournoi et
-              la communauté.
+              Les données collectées sont limitées au strict nécessaire pour
+              faire vivre le tournoi et la communauté.
             </p>
           </div>
           <div className="mt-5 grid gap-6 md:grid-cols-2">
@@ -146,7 +178,10 @@ function MentionsLegalesPage() {
               <ul className="mt-3 space-y-2 text-sm text-gray-200">
                 {dataUses.map((item) => (
                   <li key={item} className="flex items-start gap-2">
-                    <span className="mt-[6px] h-2 w-2 rounded-full bg-emerald-400" aria-hidden />
+                    <span
+                      className="mt-[6px] h-2 w-2 rounded-full bg-emerald-400"
+                      aria-hidden
+                    />
                     <span>{item}</span>
                   </li>
                 ))}
@@ -157,7 +192,10 @@ function MentionsLegalesPage() {
               <ul className="mt-3 space-y-2 text-sm text-gray-200">
                 {rights.map((item) => (
                   <li key={item} className="flex items-start gap-2">
-                    <span className="mt-[6px] h-2 w-2 rounded-full bg-emerald-400" aria-hidden />
+                    <span
+                      className="mt-[6px] h-2 w-2 rounded-full bg-emerald-400"
+                      aria-hidden
+                    />
                     <span>{item}</span>
                   </li>
                 ))}
@@ -170,41 +208,47 @@ function MentionsLegalesPage() {
                 >
                   owwomenscup@gmail.com
                 </a>
-                . Les données sont conservées le temps strictement nécessaire à l’organisation des
-                événements.
+                . Les données sont conservées le temps strictement nécessaire à
+                l’organisation des événements.
               </p>
             </div>
           </div>
           <div className="mt-5 rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-gray-200">
             <p className="font-semibold text-white">Cookies & traceurs</p>
             <p className="mt-2">
-              Aucun cookie publicitaire n’est utilisé. Les éventuels cookies techniques servent au
-              fonctionnement des formulaires, de l’authentification et à la sécurité de l’espace
-              d’administration.
+              Aucun cookie publicitaire n’est utilisé. Les éventuels cookies
+              techniques servent au fonctionnement des formulaires, de
+              l’authentification et à la sécurité de l’espace d’administration.
             </p>
           </div>
         </section>
 
         <section className="rounded-2xl border border-white/10 bg-white/[0.05] p-6 sm:p-8 shadow-xl shadow-black/20">
           <div className="flex flex-col gap-2">
-            <p className="text-xs uppercase tracking-[0.18em] text-gray-300">Propriété intellectuelle</p>
-            <h3 className="text-2xl font-bold text-white">Contenus & crédits</h3>
+            <p className="text-xs uppercase tracking-[0.18em] text-gray-300">
+              Propriété intellectuelle
+            </p>
+            <h3 className="text-2xl font-bold text-white">
+              Contenus & crédits
+            </h3>
             <p className="text-sm text-gray-300">
-              Textes, visuels, identité graphique et logo OW Women&apos;s Cup sont la propriété de
-              l’association ou utilisés avec l’autorisation de leurs propriétaires.
+              Textes, visuels, identité graphique et logo OW Women&apos;s Cup
+              sont la propriété de l’association ou utilisés avec l’autorisation
+              de leurs propriétaires.
             </p>
           </div>
           <ul className="mt-4 space-y-2 text-sm text-gray-200">
             <li>
-              Toute reproduction ou diffusion des contenus est autorisée uniquement pour un usage non
-              commercial avec mention de la source.
+              Toute reproduction ou diffusion des contenus est autorisée
+              uniquement pour un usage non commercial avec mention de la source.
             </li>
             <li>
-              Les marques ou ressources d’Overwatch et Blizzard restent la propriété exclusive de leurs
-              titulaires respectifs.
+              Les marques ou ressources d’Overwatch et Blizzard restent la
+              propriété exclusive de leurs titulaires respectifs.
             </li>
             <li>
-              Pour toute demande d’utilisation de contenus (partenariat, presse, médias), écrivez à{' '}
+              Pour toute demande d’utilisation de contenus (partenariat, presse,
+              médias), écrivez à{' '}
               <a
                 href="mailto:owwomenscup@gmail.com"
                 className="underline decoration-purple-400/60 underline-offset-4 hover:text-white"

@@ -5,13 +5,10 @@
 //   * logs avec tournament_id = [id]
 //   * + éventuellement filtrage par entity_type si besoin côté front
 
-import type { NextApiRequest, NextApiResponse } from "next";
-import { supabaseAdmin } from "@/utils/supabase";
-import { withStaffRoute } from "@/utils/staff";
-import {
-  StaffLog,
-  formatStaffLog,
-} from "@/utils/staffLogs";
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { supabaseAdmin } from '@/utils/supabase';
+import { withStaffRoute } from '@/utils/staff';
+import { StaffLog, formatStaffLog } from '@/utils/staffLogs';
 
 type TournamentHistoryResponse = {
   tournamentId: string;
@@ -19,7 +16,7 @@ type TournamentHistoryResponse = {
 };
 
 // Rôle minimum : manager (vision globale du tournoi)
-export default withStaffRoute(handler, "manager");
+export default withStaffRoute(handler, 'manager');
 
 async function handler(
   req: NextApiRequest,
@@ -31,15 +28,11 @@ async function handler(
   const { id } = req.query;
 
   if (!id || Array.isArray(id)) {
-    return res
-      .status(400)
-      .json({ error: "Invalid tournament id" });
+    return res.status(400).json({ error: 'Invalid tournament id' });
   }
 
-  if (req.method !== "GET") {
-    return res
-      .status(405)
-      .json({ error: "Method not allowed" });
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
@@ -54,12 +47,12 @@ async function handler(
     const { entityType, action, limit } = req.query;
 
     const limitNum = parseInt(
-      (Array.isArray(limit) ? limit[0] : limit) ?? "200",
+      (Array.isArray(limit) ? limit[0] : limit) ?? '200',
       10
     );
 
     let query = supabaseAdmin
-      .from("staff_logs")
+      .from('staff_logs')
       .select(
         `
         id,
@@ -79,48 +72,40 @@ async function handler(
         )
       `
       )
-      .eq("tournament_id", tournamentId)
-      .order("created_at", { ascending: false })
+      .eq('tournament_id', tournamentId)
+      .order('created_at', { ascending: false })
       .limit(limitNum);
 
     if (entityType && !Array.isArray(entityType)) {
-      query = query.eq("entity_type", entityType);
+      query = query.eq('entity_type', entityType);
     }
 
     if (action && !Array.isArray(action)) {
-      query = query.eq("action", action);
+      query = query.eq('action', action);
     }
 
     const { data, error } = await query;
 
     if (error) {
-      console.error(
-        "tournament history logs error:",
-        error
-      );
+      console.error('tournament history logs error:', error);
       return res.status(500).json({
-        error: "Failed to fetch tournament history",
+        error: 'Failed to fetch tournament history',
       });
     }
 
     const rawLogs = (data || []) as StaffLog[];
 
     // Formatage human-readable
-    const formatted = rawLogs.map((log) =>
-      formatStaffLog(log)
-    );
+    const formatted = rawLogs.map((log) => formatStaffLog(log));
 
     return res.status(200).json({
       tournamentId,
       logs: formatted,
     });
   } catch (err: any) {
-    console.error(
-      "[/api/admin/tournament/[id]/history] error:",
-      err
-    );
+    console.error('[/api/admin/tournament/[id]/history] error:', err);
     return res.status(500).json({
-      error: "Internal server error",
+      error: 'Internal server error',
       detail: err?.message,
     });
   }

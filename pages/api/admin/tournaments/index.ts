@@ -4,17 +4,17 @@
 // - GET  : liste des tournois avec filtres + pagination
 // - POST : création d'un tournoi (minimal)
 
-import type { NextApiRequest, NextApiResponse } from "next";
-import { supabaseAdmin } from "@/utils/supabase";
-import { withStaffRoute, logStaffAction } from "@/utils/staff"; // adapte les paths si besoin
-import slugify from "slugify";
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { supabaseAdmin } from '@/utils/supabase';
+import { withStaffRoute, logStaffAction } from '@/utils/staff'; // adapte les paths si besoin
+import slugify from 'slugify';
 
 export type TournamentRow = {
   id: string;
   name: string;
   slug: string | null;
   game: string | null;
-  status: string | null;       // "draft" | "published" | ...
+  status: string | null; // "draft" | "published" | ...
   start_date: string | null;
   end_date: string | null;
   max_teams: number | null;
@@ -33,26 +33,22 @@ export type TournamentCreateInput = {
 };
 
 // Rôle minimum : manager (gestion tournois)
-export default withStaffRoute(handler, "manager");
+export default withStaffRoute(handler, 'manager');
 
-async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse,
-  ctx: any
-) {
+async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
   try {
     switch (req.method) {
-      case "GET":
+      case 'GET':
         return await handleGet(req, res);
-      case "POST":
+      case 'POST':
         return await handlePost(req, res, ctx);
       default:
-        return res.status(405).json({ error: "Method not allowed" });
+        return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (err: any) {
-    console.error("[/api/admin/tournaments] internal error:", err);
+    console.error('[/api/admin/tournaments] internal error:', err);
     return res.status(500).json({
-      error: "Internal server error",
+      error: 'Internal server error',
       detail: err?.message,
     });
   }
@@ -63,33 +59,26 @@ async function handler(
  * ---------------------------------------------------------*/
 
 async function handleGet(req: NextApiRequest, res: NextApiResponse) {
-  const {
-    status,
-    search,
-    limit,
-    offset,
-    orderBy,
-    orderDir,
-    includeTotal,
-  } = req.query;
+  const { status, search, limit, offset, orderBy, orderDir, includeTotal } =
+    req.query;
 
   const limitNum = parseInt(
-    (Array.isArray(limit) ? limit[0] : limit) ?? "50",
+    (Array.isArray(limit) ? limit[0] : limit) ?? '50',
     10
   );
   const offsetNum = parseInt(
-    (Array.isArray(offset) ? offset[0] : offset) ?? "0",
+    (Array.isArray(offset) ? offset[0] : offset) ?? '0',
     10
   );
 
   const orderByParam = Array.isArray(orderBy) ? orderBy[0] : orderBy;
   const orderByField =
-    orderByParam === "start_date" || orderByParam === "start_date"
-      ? "start_date"
-      : "created_at";
+    orderByParam === 'start_date' || orderByParam === 'start_date'
+      ? 'start_date'
+      : 'created_at';
 
   const orderDirection =
-    orderDir === "asc" ? { ascending: true } : { ascending: false };
+    orderDir === 'asc' ? { ascending: true } : { ascending: false };
 
   const selectColumns = `
     id,
@@ -104,17 +93,12 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
     updated_at
   `;
 
-  let query = supabaseAdmin!
-    .from("tournaments")
-    .select(selectColumns, {
-      count:
-        includeTotal === "1" || includeTotal === "true"
-          ? "exact"
-          : "none",
-    });
+  let query = supabaseAdmin!.from('tournaments').select(selectColumns, {
+    count: includeTotal === '1' || includeTotal === 'true' ? 'exact' : 'none',
+  });
 
   if (status && !Array.isArray(status)) {
-    query = query.eq("status", status);
+    query = query.eq('status', status);
   }
 
   if (search && !Array.isArray(search)) {
@@ -129,15 +113,15 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
   const { data, error, count } = await query;
 
   if (error) {
-    console.error("admin GET tournaments error:", error);
+    console.error('admin GET tournaments error:', error);
     return res.status(500).json({
-      error: "Failed to fetch tournaments",
+      error: 'Failed to fetch tournaments',
     });
   }
 
   return res.status(200).json({
     tournaments: (data || []) as TournamentRow[],
-    total: typeof count === "number" ? count : null,
+    total: typeof count === 'number' ? count : null,
   });
 }
 
@@ -146,11 +130,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
  * Body: TournamentCreateInput
  * ---------------------------------------------------------*/
 
-async function handlePost(
-  req: NextApiRequest,
-  res: NextApiResponse,
-  ctx: any
-) {
+async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: any) {
   const body = req.body as TournamentCreateInput;
 
   if (!body?.name) {
@@ -160,7 +140,7 @@ async function handlePost(
   }
 
   const slug =
-    typeof body.slug === "string" && body.slug.trim().length > 0
+    typeof body.slug === 'string' && body.slug.trim().length > 0
       ? body.slug.trim()
       : slugify(body.name, { lower: true, strict: true });
 
@@ -168,22 +148,22 @@ async function handlePost(
     name: body.name,
     slug,
     game: body.game ?? null,
-    status: body.status ?? "draft",
+    status: body.status ?? 'draft',
     start_date: body.start_date ?? null,
     end_date: body.end_date ?? null,
     max_teams: body.max_teams ?? null,
   };
 
   const { data, error } = await supabaseAdmin!
-    .from("tournaments")
+    .from('tournaments')
     .insert(payload)
-    .select("*")
+    .select('*')
     .maybeSingle();
 
   if (error || !data) {
-    console.error("admin POST tournaments error:", error);
+    console.error('admin POST tournaments error:', error);
     return res.status(500).json({
-      error: "Failed to create tournament",
+      error: 'Failed to create tournament',
     });
   }
 
@@ -191,14 +171,14 @@ async function handlePost(
     try {
       await logStaffAction({
         staff_id: ctx.staff.id,
-        action: "create_tournament",
-        entity_type: "tournament",
+        action: 'create_tournament',
+        entity_type: 'tournament',
         entity_id: data.id,
         tournament_id: data.id,
         payload: { name: data.name, slug: data.slug },
       });
     } catch (logErr) {
-      console.error("logStaffAction(create_tournament) error:", logErr);
+      console.error('logStaffAction(create_tournament) error:', logErr);
     }
   }
 

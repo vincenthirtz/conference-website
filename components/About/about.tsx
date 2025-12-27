@@ -25,6 +25,7 @@ function About(): JSX.Element {
     >
       <div className="w-full max-w-[1120px] mx-auto flex flex-col items-center justify-between gap-10 min-[1024px]:flex-row min-[1024px]:items-start min-[1024px]:gap-12">
         <div className="relative w-full max-w-[480px] h-[320px] md:h-[420px] min-[1100px]:h-[550px] rounded-[30px] overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/img/fourplayers.png"
             alt="Joueuses Overwatch"

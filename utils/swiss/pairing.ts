@@ -7,57 +7,13 @@
 /* -----------------------------------------------------------
  * Types publics
  * ---------------------------------------------------------*/
-
-export interface SwissParticipant {
-  /** ID unique (team_id, player_id, etc.) */
-  id: string;
-  /** Score actuel (points de tournoi : 3/1/0, 1/0.5/0, etc.) */
-  score: number;
-  /** Seed initial (plus petit = mieux classé au départ) */
-  seed: number;
-  /** A-t-il déjà reçu un bye ? (optionnel, mais recommandé) */
-  hadBye?: boolean;
-}
-
-/**
- * Match passé (utilisé pour éviter les rematches)
- */
-export interface SwissPastMatch {
-  round: number;
-  player1Id: string;
-  player2Id: string | null; // null = bye
-}
-
-/**
- * Pairing pour un round Swiss
- */
-export interface SwissPairing {
-  /** Joueur / équipe 1 */
-  player1Id: string;
-  /** Joueur / équipe 2 (null = bye) */
-  player2Id: string | null;
-  /** Est-ce un bye ? */
-  isBye: boolean;
-}
-
-/**
- * Options pour générer un round Swiss
- */
-export interface GenerateSwissPairingsOptions {
-  participants: SwissParticipant[];
-  pastMatches: SwissPastMatch[];
-  /** Si true, l'algo peut tomber en fallback et autoriser des rematches si aucune solution "parfaite" n'existe. */
-  allowRematchesFallback?: boolean;
-}
-
-/**
- * Résultat complet de génération
- */
-export interface SwissPairingResult {
-  pairings: SwissPairing[];
-  /** True si l'algo a dû autoriser un (ou plusieurs) rematches pour trouver une solution */
-  hasRematches: boolean;
-}
+import type {
+  GenerateSwissPairingsOptions,
+  SwissParticipant,
+  SwissPairing,
+  SwissPairingResult,
+  SwissPastMatch,
+} from '../../types/swiss';
 
 /* -----------------------------------------------------------
  * Public API
@@ -71,8 +27,7 @@ export interface SwissPairingResult {
 export function generateSwissPairings(
   options: GenerateSwissPairingsOptions
 ): SwissPairingResult {
-  const { participants, pastMatches, allowRematchesFallback = true } =
-    options;
+  const { participants, pastMatches, allowRematchesFallback = true } = options;
 
   if (participants.length === 0) {
     return { pairings: [], hasRematches: false };
@@ -106,7 +61,7 @@ export function generateSwissPairings(
     greedyPairingsAllowRematch(ids, pairingIds);
   } else if (!success && !allowRematchesFallback) {
     throw new Error(
-      "Impossible de trouver un pairing Swiss sans rematches et fallback désactivé."
+      'Impossible de trouver un pairing Swiss sans rematches et fallback désactivé.'
     );
   }
 
@@ -167,9 +122,7 @@ function buildAlreadyPlayedMap(
  *   puis le seed le plus haut (ou plus bas au choix, ici seed le plus grand pour "récompenser" moins)
  * - si tous ont déjà eu un bye, on regarde tous les participants.
  */
-function pickByeIfNeeded(
-  pool: SwissParticipant[]
-): SwissPairing | null {
+function pickByeIfNeeded(pool: SwissParticipant[]): SwissPairing | null {
   if (pool.length % 2 === 0) return null;
 
   const neverBye = pool.filter((p) => !p.hadBye);

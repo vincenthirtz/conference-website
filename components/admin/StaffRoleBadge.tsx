@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 
 type Props = {
   staff: {
@@ -32,18 +32,18 @@ export function StaffRoleBadge({ staff }: Props) {
  */
 function roleToLabel(role: string): string {
   switch (role) {
-    case "owner":
-      return "Owner";
-    case "admin":
-      return "Admin";
-    case "manager":
-      return "Manager";
-    case "referee":
-      return "Arbitre";
-    case "helper":
-      return "Staff Support";
-    case "viewer":
-      return "Lecteur";
+    case 'owner':
+      return 'Owner';
+    case 'admin':
+      return 'Admin';
+    case 'manager':
+      return 'Manager';
+    case 'referee':
+      return 'Arbitre';
+    case 'helper':
+      return 'Staff Support';
+    case 'viewer':
+      return 'Lecteur';
     default:
       return role;
   }

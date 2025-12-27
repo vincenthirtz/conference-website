@@ -5,25 +5,17 @@
 // - génération de SwissPastMatch à partir de résultats
 // - helpers pour analyser l'historique des joueurs
 
-import { SwissMatchResult } from "./standings";
-import { SwissPastMatch } from "./pairing";
+import type {
+  MatchOutcome,
+  RawOutcomeInput,
+  SwissMatchResult,
+  SwissPastMatch,
+  SwissScoreConfig,
+} from '../../types/swiss';
 
 /* -----------------------------------------------------------
  * Config de points
  * ---------------------------------------------------------*/
-
-/**
- * Configuration des points pour le système Swiss.
- * Exemples :
- * - Style "3/1/0" : win=3, draw=1, loss=0, bye=3
- * - Style "1/0.5/0" : win=1, draw=0.5, loss=0, bye=1
- */
-export interface SwissScoreConfig {
-  win: number;
-  draw: number;
-  loss: number;
-  bye: number;
-}
 
 /**
  * Config par défaut classique en e-sport :
@@ -40,19 +32,6 @@ export const defaultSwissScoreConfig: SwissScoreConfig = {
  * Outcome → SwissMatchResult
  * ---------------------------------------------------------*/
 
-export type MatchOutcome = "win" | "loss" | "draw" | "bye";
-
-/**
- * Input minimal pour décrire un résultat de match avant conversion.
- * - Si player2Id est null → bye automatique pour player1.
- */
-export interface RawOutcomeInput {
-  round: number;
-  player1Id: string;
-  player2Id: string | null;
-  outcomeForP1: MatchOutcome;
-}
-
 /**
  * Convertit un résultat "brut" (win / loss / draw / bye pour player1)
  * en SwissMatchResult avec points calculés.
@@ -63,7 +42,7 @@ export function outcomeToSwissResult(
 ): SwissMatchResult {
   const { round, player1Id, player2Id, outcomeForP1 } = input;
 
-  if (!player2Id || outcomeForP1 === "bye") {
+  if (!player2Id || outcomeForP1 === 'bye') {
     // Bye : player2Id peut rester null, points de bye pour P1
     return {
       round,
@@ -75,7 +54,7 @@ export function outcomeToSwissResult(
   }
 
   switch (outcomeForP1) {
-    case "win":
+    case 'win':
       return {
         round,
         player1Id,
@@ -83,7 +62,7 @@ export function outcomeToSwissResult(
         player1Score: config.win,
         player2Score: config.loss,
       };
-    case "loss":
+    case 'loss':
       return {
         round,
         player1Id,
@@ -91,7 +70,7 @@ export function outcomeToSwissResult(
         player1Score: config.loss,
         player2Score: config.win,
       };
-    case "draw":
+    case 'draw':
       return {
         round,
         player1Id,
@@ -111,9 +90,7 @@ export function outcomesToSwissResults(
   inputs: RawOutcomeInput[],
   config: SwissScoreConfig = defaultSwissScoreConfig
 ): SwissMatchResult[] {
-  return inputs.map((input) =>
-    outcomeToSwissResult(input, config)
-  );
+  return inputs.map((input) => outcomeToSwissResult(input, config));
 }
 
 /* -----------------------------------------------------------
@@ -123,9 +100,7 @@ export function outcomesToSwissResults(
 /**
  * Convertit un SwissMatchResult en SwissPastMatch pour l'anti-rematch.
  */
-export function resultToPastMatch(
-  result: SwissMatchResult
-): SwissPastMatch {
+export function resultToPastMatch(result: SwissMatchResult): SwissPastMatch {
   return {
     round: result.round,
     player1Id: result.player1Id,
@@ -154,9 +129,7 @@ export function getPlayerMatchHistory(
   playerId: string
 ): SwissMatchResult[] {
   return results.filter(
-    (m) =>
-      m.player1Id === playerId ||
-      m.player2Id === playerId
+    (m) => m.player1Id === playerId || m.player2Id === playerId
   );
 }
 

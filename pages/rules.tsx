@@ -90,9 +90,9 @@ function RulesPage() {
             Règles officielles Overwatch 2
           </h1>
           <p className="mx-auto mt-4 max-w-3xl text-lg text-gray-200">
-            Résumé des paramètres compétitifs Overwatch 2 utilisés pour l’OW Women&apos;s Cup. Toute
-            l’organisation se base sur les règles officielles Blizzard, adaptées au format du
-            tournoi.
+            Résumé des paramètres compétitifs Overwatch 2 utilisés pour l’OW
+            Women&apos;s Cup. Toute l’organisation se base sur les règles
+            officielles Blizzard, adaptées au format du tournoi.
           </p>
         </div>
       </div>
@@ -104,11 +104,16 @@ function RulesPage() {
               key={section.title}
               className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 shadow-xl shadow-black/20"
             >
-              <h2 className="text-xl font-semibold text-white">{section.title}</h2>
+              <h2 className="text-xl font-semibold text-white">
+                {section.title}
+              </h2>
               <ul className="mt-3 space-y-2 text-sm text-gray-200">
                 {section.items.map((item) => (
                   <li key={item} className="flex items-start gap-2">
-                    <span className="mt-[6px] h-2 w-2 rounded-full bg-purple-400" aria-hidden />
+                    <span
+                      className="mt-[6px] h-2 w-2 rounded-full bg-purple-400"
+                      aria-hidden
+                    />
                     <span>{item}</span>
                   </li>
                 ))}
@@ -120,11 +125,16 @@ function RulesPage() {
         <section className="rounded-3xl border border-white/10 bg-gradient-to-r from-[#0F1F3A] via-[#1A0F2E] to-[#2C0B2C] p-6 sm:p-10 shadow-2xl">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-gray-200">Modes de jeu</p>
-              <h3 className="text-2xl font-bold">Conditions de victoire par mode</h3>
+              <p className="text-xs uppercase tracking-[0.18em] text-gray-200">
+                Modes de jeu
+              </p>
+              <h3 className="text-2xl font-bold">
+                Conditions de victoire par mode
+              </h3>
             </div>
             <p className="text-sm text-gray-200">
-              S’applique avec le préréglage « Règles de compétition » dans les salons personnalisés.
+              S’applique avec le préréglage « Règles de compétition » dans les
+              salons personnalisés.
             </p>
           </div>
 
@@ -134,7 +144,9 @@ function RulesPage() {
                 key={item.mode}
                 className="rounded-2xl border border-white/10 bg-white/[0.06] p-4"
               >
-                <p className="text-sm uppercase tracking-[0.14em] text-purple-200">{item.mode}</p>
+                <p className="text-sm uppercase tracking-[0.14em] text-purple-200">
+                  {item.mode}
+                </p>
                 <p className="mt-2 text-sm text-gray-100">{item.rules}</p>
               </div>
             ))}
@@ -143,11 +155,13 @@ function RulesPage() {
 
         <section className="space-y-4">
           <div className="flex flex-col gap-2">
-            <p className="text-xs uppercase tracking-[0.18em] text-gray-300">Références officielles</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-gray-300">
+              Références officielles
+            </p>
             <h3 className="text-2xl font-bold text-white">Sources Blizzard</h3>
             <p className="text-sm text-gray-300">
-              Consultez les documents officiels pour les mises à jour de règles, de maps ou de
-              patchs.
+              Consultez les documents officiels pour les mises à jour de règles,
+              de maps ou de patchs.
             </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">

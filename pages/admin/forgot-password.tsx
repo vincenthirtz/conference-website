@@ -1,10 +1,10 @@
-import { useState } from "react";
-import Head from "next/head";
-import Link from "next/link";
-import { supabaseClient } from "@/utils/supabase";
+import { useState } from 'react';
+import Head from 'next/head';
+import Link from 'next/link';
+import { supabaseClient } from '@/utils/supabase';
 
 export default function AdminForgotPasswordPage() {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState('');
   const [sending, setSending] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -16,10 +16,10 @@ export default function AdminForgotPasswordPage() {
     setSending(true);
 
     try {
-      if (!email.trim()) throw new Error("Merci de renseigner ton email.");
+      if (!email.trim()) throw new Error('Merci de renseigner ton email.');
 
       const redirectTo =
-        typeof window !== "undefined"
+        typeof window !== 'undefined'
           ? `${window.location.origin}/admin/reset-password`
           : undefined;
 
@@ -37,10 +37,10 @@ export default function AdminForgotPasswordPage() {
       }
 
       setSuccessMsg(
-        "Si un compte existe avec cet email, un lien de réinitialisation a été envoyé."
+        'Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.'
       );
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur inattendue");
+      setErrorMsg(err?.message ?? 'Erreur inattendue');
     } finally {
       setSending(false);
     }
@@ -66,8 +66,8 @@ export default function AdminForgotPasswordPage() {
               Mot de passe oublié
             </h1>
             <p className="text-sm text-gray-300 mt-2 text-center max-w-sm">
-              Entre ton email staff. Nous t&apos;envoyons un lien pour définir un
-              nouveau mot de passe.
+              Entre ton email staff. Nous t&apos;envoyons un lien pour définir
+              un nouveau mot de passe.
             </p>
           </div>
 
@@ -109,11 +109,11 @@ export default function AdminForgotPasswordPage() {
                   disabled={sending}
                   className={`w-full rounded-xl py-2 text-sm font-semibold transition ${
                     sending
-                      ? "bg-neutral-700 cursor-not-allowed"
-                      : "bg-purple-600 hover:bg-purple-500"
+                      ? 'bg-neutral-700 cursor-not-allowed'
+                      : 'bg-purple-600 hover:bg-purple-500'
                   }`}
                 >
-                  {sending ? "Envoi..." : "Envoyer le lien"}
+                  {sending ? 'Envoi...' : 'Envoyer le lien'}
                 </button>
               </div>
             </form>

@@ -1,14 +1,14 @@
 // @ts-nocheck
 // pages/tournament/[id].tsx
-/* eslint-disable react/no-unescaped-entities */
-import { GetServerSideProps } from "next";
-import Head from "next/head";
-import Link from "next/link";
-import { useMemo } from "react";
-import Heading from "@/components/Typography/heading";
-import Paragraph from "@/components/Typography/paragraph";
-import Button from "@/components/Buttons/button";
-import { supabaseAdmin } from "@/utils/supabase";
+ 
+import { GetServerSideProps } from 'next';
+import Head from 'next/head';
+import Link from 'next/link';
+import { useMemo } from 'react';
+import Heading from '@/components/Typography/heading';
+import Paragraph from '@/components/Typography/paragraph';
+import Button from '@/components/Buttons/button';
+import { supabaseAdmin } from '@/utils/supabase';
 
 type Tournament = {
   id: string;
@@ -45,7 +45,7 @@ type SimpleTeam = {
   logo_url?: string | null;
 };
 
-type MatchStatus = "pending" | "ongoing" | "finished" | "cancelled";
+type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
 
 type SimpleMatch = {
   id: string;
@@ -83,9 +83,9 @@ export const getServerSideProps: GetServerSideProps<
 
   // 1) Tournoi
   const { data: tournament, error: tErr } = await supabaseAdmin
-    .from("tournaments")
-    .select("*")
-    .eq("id", id)
+    .from('tournaments')
+    .select('*')
+    .eq('id', id)
     .single();
 
   if (tErr || !tournament) {
@@ -93,24 +93,24 @@ export const getServerSideProps: GetServerSideProps<
   }
 
   // Si visibilité non publique, tu peux choisir de renvoyer 404
-  if (tournament.visibility && tournament.visibility !== "public") {
+  if (tournament.visibility && tournament.visibility !== 'public') {
     return { notFound: true };
   }
 
   // 2) Stages
   const { data: stages, error: sErr } = await supabaseAdmin
-    .from("tournament_stages")
-    .select("*")
-    .eq("tournament_id", id)
-    .order("created_at", { ascending: true });
+    .from('tournament_stages')
+    .select('*')
+    .eq('tournament_id', id)
+    .order('created_at', { ascending: true });
 
   if (sErr) {
-    console.error("tournament stages error:", sErr);
+    console.error('tournament stages error:', sErr);
   }
 
   // 3) Matches (limités)
   const { data: matchesData, error: mErr } = await supabaseAdmin
-    .from("matches")
+    .from('matches')
     .select(
       `
       id,
@@ -127,13 +127,13 @@ export const getServerSideProps: GetServerSideProps<
       stage:tournament_stages ( id, name, stage_type )
     `
     )
-    .eq("tournament_id", id)
-    .neq("status", "cancelled")
-    .order("scheduled_at", { ascending: false })
+    .eq('tournament_id', id)
+    .neq('status', 'cancelled')
+    .order('scheduled_at', { ascending: false })
     .limit(40);
 
   if (mErr) {
-    console.error("tournament matches error:", mErr);
+    console.error('tournament matches error:', mErr);
   }
 
   const matches = (matchesData || []) as any as SimpleMatch[];
@@ -144,16 +144,16 @@ export const getServerSideProps: GetServerSideProps<
   if (stages && stages.length > 0) {
     const stageIds = stages.map((s: any) => s.id);
     const { data: stageTeams, error: stErr } = await supabaseAdmin
-      .from("tournament_stage_teams")
+      .from('tournament_stage_teams')
       .select(
         `
         team:teams ( id, name, short_name, logo_url )
       `
       )
-      .in("stage_id", stageIds);
+      .in('stage_id', stageIds);
 
     if (stErr) {
-      console.error("tournament stage teams error:", stErr);
+      console.error('tournament stage teams error:', stErr);
     } else {
       const map = new Map<string, SimpleTeam>();
       (stageTeams || []).forEach((row: any) => {
@@ -182,7 +182,7 @@ export default function TournamentPage({
 }: TournamentPageProps) {
   const totalTeams = teams.length;
   const now = useMemo(() => new Date(), []);
-  const finishedMatches = matches.filter((m) => m.status === "finished");
+  const finishedMatches = matches.filter((m) => m.status === 'finished');
   const totalMatches = matches.length;
 
   const upcomingMatches = useMemo(
@@ -190,7 +190,7 @@ export default function TournamentPage({
       matches
         .filter(
           (m) =>
-            (m.status === "pending" || m.status === "ongoing") &&
+            (m.status === 'pending' || m.status === 'ongoing') &&
             m.scheduled_at &&
             new Date(m.scheduled_at) >= now
         )
@@ -205,13 +205,13 @@ export default function TournamentPage({
           const da = a.completed_at
             ? new Date((a as any).completed_at)
             : a.scheduled_at
-            ? new Date(a.scheduled_at)
-            : new Date(0);
+              ? new Date(a.scheduled_at)
+              : new Date(0);
           const db = b.completed_at
             ? new Date((b as any).completed_at)
             : b.scheduled_at
-            ? new Date(b.scheduled_at)
-            : new Date(0);
+              ? new Date(b.scheduled_at)
+              : new Date(0);
           return db.getTime() - da.getTime();
         })
         .slice(0, 6),
@@ -231,9 +231,7 @@ export default function TournamentPage({
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <Head>
-        <title>
-          {tournament.name} | OW Women&apos;s Cup
-        </title>
+        <title>{tournament.name} | OW Women&apos;s Cup</title>
       </Head>
 
       <main className="container mx-auto px-4 pt-24 pb-16 max-w-6xl">
@@ -247,16 +245,13 @@ export default function TournamentPage({
                   OW Women&apos;s Cup
                 </span>
                 <span className="text-gray-200">
-                  {tournament.game || "Overwatch 2"}
+                  {tournament.game || 'Overwatch 2'}
                 </span>
                 <span className="w-[1px] h-3 bg-white/20" />
                 <span className={statusColor}>{statusLabel}</span>
               </div>
 
-              <Heading
-                typeStyle="heading-lg"
-                className="text-gradient mb-1"
-              >
+              <Heading typeStyle="heading-lg" className="text-gradient mb-1">
                 {tournament.name}
               </Heading>
 
@@ -265,10 +260,9 @@ export default function TournamentPage({
                   {dateRangeLabel}
                   {tournament.format && (
                     <>
-                      {" "}
-                      · <span className="text-gray-100">
-                        {tournament.format}
-                      </span>
+                      {' '}
+                      ·{' '}
+                      <span className="text-gray-100">{tournament.format}</span>
                     </>
                   )}
                 </p>
@@ -279,10 +273,9 @@ export default function TournamentPage({
                 textColor="text-gray-200"
                 className="max-w-xl"
               >
-                Suivez le bracket, les résultats, les maps et les
-                équipes de cette édition de la OW Women&apos;s Cup. Tout
-                ce qu&apos;il faut pour caster, analyser ou simplement
-                vibrer avec le tournoi.
+                Suivez le bracket, les résultats, les maps et les équipes de
+                cette édition de la OW Women&apos;s Cup. Tout ce qu&apos;il faut
+                pour caster, analyser ou simplement vibrer avec le tournoi.
               </Paragraph>
 
               <div className="mt-5 flex flex-wrap gap-3">
@@ -332,7 +325,7 @@ export default function TournamentPage({
             <div className="grid grid-cols-2 gap-2 md:gap-3">
               <StatCard
                 label="Équipes"
-                value={totalTeams || "—"}
+                value={totalTeams || '—'}
                 hint={
                   tournament.max_teams
                     ? `${totalTeams}/${tournament.max_teams} inscrites`
@@ -341,7 +334,7 @@ export default function TournamentPage({
               />
               <StatCard
                 label="Matchs"
-                value={totalMatches || "—"}
+                value={totalMatches || '—'}
                 hint={
                   totalMatches > 0
                     ? `${finishedMatches.length} terminés`
@@ -350,12 +343,12 @@ export default function TournamentPage({
               />
               <StatCard
                 label="Stages"
-                value={stages.length || "—"}
+                value={stages.length || '—'}
                 hint={mainStage ? mainStage.name : undefined}
               />
               <StatCard
                 label="Format"
-                value={tournament.format || "—"}
+                value={tournament.format || '—'}
                 hint={tournament.game || undefined}
               />
             </div>
@@ -373,16 +366,13 @@ export default function TournamentPage({
               {stages.length > 0 && (
                 <span className="text-[11px] text-gray-500">
                   {stages.length} phase
-                  {stages.length > 1 ? "s" : ""}
+                  {stages.length > 1 ? 's' : ''}
                 </span>
               )}
             </div>
 
             {stages.length === 0 && (
-              <Paragraph
-                typeStyle="body-sm"
-                textColor="text-gray-400"
-              >
+              <Paragraph typeStyle="body-sm" textColor="text-gray-400">
                 Les phases de ce tournoi ne sont pas encore publiées.
               </Paragraph>
             )}
@@ -399,10 +389,10 @@ export default function TournamentPage({
                         {s.name}
                       </p>
                       <p className="text-[11px] text-gray-300">
-                        {formatStageType(s.stage_type)}{" "}
-                        {s.stage_type === "swiss" && s.swiss_rounds
+                        {formatStageType(s.stage_type)}{' '}
+                        {s.stage_type === 'swiss' && s.swiss_rounds
                           ? `· ${s.swiss_rounds} rounds`
-                          : ""}
+                          : ''}
                       </p>
                       {s.default_match_format && (
                         <p className="text-[10px] text-gray-500">
@@ -487,18 +477,14 @@ export default function TournamentPage({
               {totalTeams > 0 && (
                 <span className="text-[11px] text-gray-500">
                   {totalTeams} équipe
-                  {totalTeams > 1 ? "s" : ""}
+                  {totalTeams > 1 ? 's' : ''}
                 </span>
               )}
             </div>
 
             {totalTeams === 0 && (
-              <Paragraph
-                typeStyle="body-sm"
-                textColor="text-gray-400"
-              >
-                Les équipes ne sont pas encore affichées pour ce
-                tournoi.
+              <Paragraph typeStyle="body-sm" textColor="text-gray-400">
+                Les équipes ne sont pas encore affichées pour ce tournoi.
               </Paragraph>
             )}
 
@@ -560,20 +546,16 @@ export default function TournamentPage({
               textColor="text-gray-300"
               className="mb-3"
             >
-              Consultez les cartes les plus jouées du tournoi, les
-              overtimes et les tiebreakers pour analyser la meta des
-              maps.
+              Consultez les cartes les plus jouées du tournoi, les overtimes et
+              les tiebreakers pour analyser la meta des maps.
             </Paragraph>
 
             {/* Mini "fake" list – tu peux plus tard brancher un fetch vers /api/tournament/[id]/maps et afficher les top 3 */}
             <div className="border border-white/10 rounded-xl px-3 py-2 text-[11px] text-gray-400">
               <p>
-                Les stats détaillées (popularité, overtimes, rounds
-                moyens) sont visibles sur la page{" "}
-                <span className="text-blue-300">
-                  Top maps
-                </span>
-                .
+                Les stats détaillées (popularité, overtimes, rounds moyens) sont
+                visibles sur la page{' '}
+                <span className="text-blue-300">Top maps</span>.
               </p>
             </div>
           </div>
@@ -602,13 +584,9 @@ function StatCard({
         {label}
       </p>
       <p className="text-xl font-semibold text-white">
-        {typeof value === "number" ? value.toString() : value}
+        {typeof value === 'number' ? value.toString() : value}
       </p>
-      {hint && (
-        <p className="text-[10px] text-gray-400 mt-[2px]">
-          {hint}
-        </p>
-      )}
+      {hint && <p className="text-[10px] text-gray-400 mt-[2px]">{hint}</p>}
     </div>
   );
 }
@@ -622,16 +600,16 @@ function MatchLine({
   compact?: boolean;
   showScore?: boolean;
 }) {
-  const t1 = match.team1?.short_name || match.team1?.name || "Équipe 1";
+  const t1 = match.team1?.short_name || match.team1?.name || 'Équipe 1';
   const t2 =
     match.team2?.short_name ||
     match.team2?.name ||
-    (match.is_bye ? "(bye)" : "Équipe 2");
+    (match.is_bye ? '(bye)' : 'Équipe 2');
 
   const when = formatMatchDate(match.scheduled_at);
-  const isFinished = match.status === "finished";
+  const isFinished = match.status === 'finished';
 
-  let scoreLabel = "";
+  let scoreLabel = '';
   if (showScore && isFinished) {
     const s1 = match.team1_score ?? 0;
     const s2 = match.team2_score ?? 0;
@@ -643,15 +621,13 @@ function MatchLine({
       <div className="group flex flex-col gap-[2px] px-2 py-1.5 rounded-xl bg-white/3 border border-white/10 hover:border-emerald-400/70 hover:bg-emerald-500/5 cursor-pointer transition-colors text-[11px]">
         <div className="flex items-center justify-between gap-1">
           <p className="text-gray-100 truncate">
-            {t1}{" "}
+            {t1}{' '}
             {!match.is_bye && (
               <>
                 <span className="text-gray-500">vs</span> {t2}
               </>
             )}
-            {match.is_bye && (
-              <span className="text-gray-500"> (bye)</span>
-            )}
+            {match.is_bye && <span className="text-gray-500"> (bye)</span>}
           </p>
           {match.match_format && (
             <span className="px-1.5 py-[1px] rounded-full bg-black/60 border border-white/10 text-[9px] text-gray-300">
@@ -671,9 +647,7 @@ function MatchLine({
             {match.stage && (
               <>
                 <span className="text-gray-600">·</span>
-                <span className="text-gray-500">
-                  {match.stage.name}
-                </span>
+                <span className="text-gray-500">{match.stage.name}</span>
               </>
             )}
           </div>
@@ -695,53 +669,53 @@ function formatTournamentDates(
   if (!start && !end) return null;
 
   const opts: Intl.DateTimeFormatOptions = {
-    day: "2-digit",
-    month: "2-digit",
+    day: '2-digit',
+    month: '2-digit',
   };
 
   if (start && end) {
     const s = new Date(start);
     const e = new Date(end);
     if (s.getTime() === e.getTime()) {
-      return `Le ${s.toLocaleDateString("fr-FR", opts)}`;
+      return `Le ${s.toLocaleDateString('fr-FR', opts)}`;
     }
     return `Du ${s.toLocaleDateString(
-      "fr-FR",
+      'fr-FR',
       opts
-    )} au ${e.toLocaleDateString("fr-FR", opts)}`;
+    )} au ${e.toLocaleDateString('fr-FR', opts)}`;
   }
 
   if (start) {
     const s = new Date(start);
-    return `À partir du ${s.toLocaleDateString("fr-FR", opts)}`;
+    return `À partir du ${s.toLocaleDateString('fr-FR', opts)}`;
   }
 
   const e = new Date(end!);
-  return `Jusqu'au ${e.toLocaleDateString("fr-FR", opts)}`;
+  return `Jusqu'au ${e.toLocaleDateString('fr-FR', opts)}`;
 }
 
 function formatMatchDate(iso: string | null): string | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (isNaN(d.getTime())) return null;
-  return d.toLocaleString("fr-FR", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
+  return d.toLocaleString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
   });
 }
 
 function getStatusLabel(status: string): string {
   switch (status) {
-    case "upcoming":
-      return "À venir";
-    case "running":
-    case "ongoing":
-      return "En cours";
-    case "finished":
-    case "completed":
-      return "Terminé";
+    case 'upcoming':
+      return 'À venir';
+    case 'running':
+    case 'ongoing':
+      return 'En cours';
+    case 'finished':
+    case 'completed':
+      return 'Terminé';
     default:
       return status;
   }
@@ -749,16 +723,16 @@ function getStatusLabel(status: string): string {
 
 function getStatusChipColor(status: string): string {
   switch (status) {
-    case "upcoming":
-      return "px-1.5 py-[2px] rounded-full bg-yellow-500/20 text-yellow-200 border border-yellow-500/60";
-    case "running":
-    case "ongoing":
-      return "px-1.5 py-[2px] rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/60";
-    case "finished":
-    case "completed":
-      return "px-1.5 py-[2px] rounded-full bg-gray-500/20 text-gray-200 border border-gray-500/60";
+    case 'upcoming':
+      return 'px-1.5 py-[2px] rounded-full bg-yellow-500/20 text-yellow-200 border border-yellow-500/60';
+    case 'running':
+    case 'ongoing':
+      return 'px-1.5 py-[2px] rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/60';
+    case 'finished':
+    case 'completed':
+      return 'px-1.5 py-[2px] rounded-full bg-gray-500/20 text-gray-200 border border-gray-500/60';
     default:
-      return "px-1.5 py-[2px] rounded-full bg-white/10 text-white border border-white/30";
+      return 'px-1.5 py-[2px] rounded-full bg-white/10 text-white border border-white/30';
   }
 }
 

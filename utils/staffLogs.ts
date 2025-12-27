@@ -1,31 +1,31 @@
 // lib/staffLogs.ts
 // Gestion centralisée des logs staff (inserts + lecture + filtres)
 // @ts-nocheck
-import { supabaseAdmin } from "./supabase";
-import type { StaffRole } from "./staffRoles";
+import { supabaseAdmin } from './supabase';
+import type { StaffRole } from './staffRoles';
 
 /* -----------------------------------------------------------
  * Types
  * ---------------------------------------------------------*/
 
 export type StaffLogAction =
-  | "login"
-  | "logout"
-  | "view_admin_page"
-  | "create_tournament"
-  | "update_tournament"
-  | "delete_tournament"
-  | "create_stage"
-  | "update_stage"
-  | "delete_stage"
-  | "create_match"
-  | "update_match"
-  | "delete_match"
-  | "update_bracket"
-  | "update_scores"
-  | "staff_batch_action"
-  | "manage_team"
-  | "other";
+  | 'login'
+  | 'logout'
+  | 'view_admin_page'
+  | 'create_tournament'
+  | 'update_tournament'
+  | 'delete_tournament'
+  | 'create_stage'
+  | 'update_stage'
+  | 'delete_stage'
+  | 'create_match'
+  | 'update_match'
+  | 'delete_match'
+  | 'update_bracket'
+  | 'update_scores'
+  | 'staff_batch_action'
+  | 'manage_team'
+  | 'other';
 
 export type StaffLog = {
   id: string;
@@ -68,19 +68,17 @@ export async function logStaffAction(params: StaffLogInsert) {
     payload = null,
   } = params;
 
-  const { error } = await supabaseAdmin
-    .from("staff_logs")
-    .insert({
-      staff_id,
-      action,
-      entity_type,
-      entity_id,
-      tournament_id,
-      payload,
-    });
+  const { error } = await supabaseAdmin.from('staff_logs').insert({
+    staff_id,
+    action,
+    entity_type,
+    entity_id,
+    tournament_id,
+    payload,
+  });
 
   if (error) {
-    console.error("logStaffAction error:", error, params);
+    console.error('logStaffAction error:', error, params);
   }
 }
 
@@ -90,7 +88,7 @@ export async function logStaffAction(params: StaffLogInsert) {
 
 export async function fetchStaffLogs(limit = 100): Promise<StaffLog[]> {
   const { data, error } = await supabaseAdmin
-    .from("staff_logs")
+    .from('staff_logs')
     .select(
       `
       *,
@@ -103,11 +101,11 @@ export async function fetchStaffLogs(limit = 100): Promise<StaffLog[]> {
       )
     `
     )
-    .order("created_at", { ascending: false })
+    .order('created_at', { ascending: false })
     .limit(limit);
 
   if (error) {
-    console.error("fetchStaffLogs error:", error);
+    console.error('fetchStaffLogs error:', error);
     return [];
   }
 
@@ -133,7 +131,7 @@ export async function fetchStaffLogsFiltered(
   limit = 200
 ): Promise<StaffLog[]> {
   let query = supabaseAdmin
-    .from("staff_logs")
+    .from('staff_logs')
     .select(
       `
       *,
@@ -146,44 +144,44 @@ export async function fetchStaffLogsFiltered(
       )
       `
     )
-    .order("created_at", { ascending: false })
+    .order('created_at', { ascending: false })
     .limit(limit);
 
   if (filters.staff_id) {
-    query = query.eq("staff_id", filters.staff_id);
+    query = query.eq('staff_id', filters.staff_id);
   }
 
   if (filters.action) {
-    query = query.eq("action", filters.action);
+    query = query.eq('action', filters.action);
   }
 
   if (filters.tournament_id) {
-    query = query.eq("tournament_id", filters.tournament_id);
+    query = query.eq('tournament_id', filters.tournament_id);
   }
 
   if (filters.entity_type) {
-    query = query.eq("entity_type", filters.entity_type);
+    query = query.eq('entity_type', filters.entity_type);
   }
 
   if (filters.date_from) {
-    query = query.gte("created_at", filters.date_from);
+    query = query.gte('created_at', filters.date_from);
   }
 
   if (filters.date_to) {
-    query = query.lte("created_at", filters.date_to);
+    query = query.lte('created_at', filters.date_to);
   }
 
   if (filters.search) {
     // Recherche textuelle dans payload (JSON)
-    query = query.textSearch("payload", filters.search, {
-      type: "plain",
+    query = query.textSearch('payload', filters.search, {
+      type: 'plain',
     });
   }
 
   const { data, error } = await query;
 
   if (error) {
-    console.error("fetchStaffLogsFiltered error:", error);
+    console.error('fetchStaffLogsFiltered error:', error);
     return [];
   }
 
@@ -196,35 +194,35 @@ export async function fetchStaffLogsFiltered(
 
 export function formatStaffLog(log: StaffLog) {
   const actionMap: Record<StaffLogAction, string> = {
-    login: "Connexion",
-    logout: "Déconnexion",
-    view_admin_page: "Vue page admin",
-    create_tournament: "Création tournoi",
-    update_tournament: "Modification tournoi",
-    delete_tournament: "Suppression tournoi",
-    create_stage: "Création phase",
-    update_stage: "Modification phase",
-    delete_stage: "Suppression phase",
-    create_match: "Création match",
-    update_match: "Modification match",
-    delete_match: "Suppression match",
-    update_bracket: "Mise à jour bracket",
-    update_scores: "Mise à jour scores",
-    staff_batch_action: "Action batch staff",
-    manage_team: "Action équipe",
-    other: "Action staff",
+    login: 'Connexion',
+    logout: 'Déconnexion',
+    view_admin_page: 'Vue page admin',
+    create_tournament: 'Création tournoi',
+    update_tournament: 'Modification tournoi',
+    delete_tournament: 'Suppression tournoi',
+    create_stage: 'Création phase',
+    update_stage: 'Modification phase',
+    delete_stage: 'Suppression phase',
+    create_match: 'Création match',
+    update_match: 'Modification match',
+    delete_match: 'Suppression match',
+    update_bracket: 'Mise à jour bracket',
+    update_scores: 'Mise à jour scores',
+    staff_batch_action: 'Action batch staff',
+    manage_team: 'Action équipe',
+    other: 'Action staff',
   };
 
   const readable = actionMap[log.action] || log.action;
 
   const entityLabel = log.entity_type
-    ? `${log.entity_type}${log.entity_id ? ` #${log.entity_id}` : ""}`
+    ? `${log.entity_type}${log.entity_id ? ` #${log.entity_id}` : ''}`
     : null;
 
   return {
     ...log,
     readableAction: readable,
     readableEntity: entityLabel,
-    date: new Date(log.created_at).toLocaleString("fr-FR"),
+    date: new Date(log.created_at).toLocaleString('fr-FR'),
   };
 }

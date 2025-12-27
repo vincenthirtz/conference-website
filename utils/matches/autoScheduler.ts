@@ -2,108 +2,16 @@
 // Auto-scheduler de matchs : assigne des horaires en fonction
 // d'une plage horaire, de ressources (streams/serveurs) et
 // de la durée estimée des BO, tout en évitant les overlaps par équipe.
-
-/* -----------------------------------------------------------
- * Types
- * ---------------------------------------------------------*/
-
-export type MatchFormat =
-  | "bo1"
-  | "bo2"
-  | "bo3"
-  | "bo5"
-  | "bo7";
-
-export type SchedulerResourceId = string; // ex: "stream_main", "lobby_1", etc.
-
-export interface MatchToSchedule {
-  id: string;
-  tournamentId: string;
-  stageId: string | null;
-  team1Id: string | null;
-  team2Id: string | null;
-
-  /** Format du match, ex: "bo3" */
-  format: MatchFormat;
-
-  /** Ressource souhaitée (stream ou lobby). Si null → "default". */
-  resourceId?: SchedulerResourceId | null;
-
-  /** Round / ordre logique pour la priorité de scheduling */
-  roundNumber?: number | null;
-
-  /** Priorité globale (plus petit = plus prioritaire) */
-  priority?: number | null;
-
-  /**
-   * Horaire fixée (ne doit pas être déplacée).
-   * Si défini, le scheduler l'utilise comme start forcé.
-   */
-  pinnedStartAt?: string | null;
-
-  /** Match déjà verrouillé (le scheduler l'ignore) */
-  locked?: boolean | null;
-}
-
-export interface TimeWindow {
-  /** Début de la plage horaire disponible */
-  start: Date;
-  /** Fin de la plage horaire disponible */
-  end: Date;
-}
-
-export interface AutoSchedulerConfig {
-  /**
-   * Plages horaires sur lesquelles on a le droit de planifier.
-   * Ex : une journée de 10h à 22h, éventuellement plusieurs jours.
-   */
-  windows: TimeWindow[];
-
-  /**
-   * Durée estimée par format (en minutes).
-   * Ex : { bo1: 20, bo3: 45, bo5: 70 }
-   */
-  estimatedDurationsMinutes: Partial<
-    Record<MatchFormat, number>
-  >;
-
-  /**
-   * Gap minimum entre deux matchs sur la même ressource (minutes).
-   * Ex : nettoyer le lobby, pause stream, etc.
-   */
-  resourceGapMinutes?: number;
-
-  /**
-   * Gap minimum entre deux matchs pour la même équipe (minutes).
-   * Ex : 15-20 minutes.
-   */
-  teamRestMinutes?: number;
-
-  /**
-   * Ressource par défaut si resourceId est absent.
-   */
-  defaultResourceId?: SchedulerResourceId;
-}
-
-export interface ScheduledMatch {
-  matchId: string;
-  resourceId: SchedulerResourceId;
-  /**
-   * Date de début/fin en ISO string,
-   * prêtes à être insérées dans Supabase.
-   */
-  startAt: string;
-  endAt: string;
-
-  /** Format rappel pour info */
-  format: MatchFormat;
-}
-
-export interface AutoScheduleResult {
-  scheduled: ScheduledMatch[];
-  /** Matchs qui n'ont pas pu être placés (par manque de place dans les time windows) */
-  unscheduledMatchIds: string[];
-}
+import type {
+  AutoScheduleResult,
+  AutoSchedulerConfig,
+  MatchFormat,
+  MatchToSchedule,
+  PlannedSlot,
+  ScheduledMatch,
+  SchedulerResourceId,
+  TimeWindow,
+} from '../../types/matches';
 
 /* -----------------------------------------------------------
  * Fonction principale
@@ -126,7 +34,7 @@ export function autoScheduleMatches(
     estimatedDurationsMinutes,
     resourceGapMinutes = 5,
     teamRestMinutes = 15,
-    defaultResourceId = "default",
+    defaultResourceId = 'default',
   } = config;
 
   if (windows.length === 0) {
@@ -142,10 +50,7 @@ export function autoScheduleMatches(
     .sort((a, b) => a.start.getTime() - b.start.getTime());
 
   // Helpers d'état
-  const resourceNextFreeTime = new Map<
-    SchedulerResourceId,
-    Date
-  >();
+  const resourceNextFreeTime = new Map<SchedulerResourceId, Date>();
   const teamNextFreeTime = new Map<string, Date>();
 
   // Résultat
@@ -153,17 +58,12 @@ export function autoScheduleMatches(
   const unscheduledMatchIds: string[] = [];
 
   // On sépare les matchs déjà "locked" (avec horaire fixée)
-  const lockedMatches = matches.filter(
-    (m) => m.locked && m.pinnedStartAt
-  );
-  const toSchedule = matches.filter(
-    (m) => !m.locked
-  );
+  const lockedMatches = matches.filter((m) => m.locked && m.pinnedStartAt);
+  const toSchedule = matches.filter((m) => !m.locked);
 
   // 1) On place d'abord les matchs locked
   for (const m of lockedMatches) {
-    const resourceId =
-      m.resourceId ?? defaultResourceId;
+    const resourceId = m.resourceId ?? defaultResourceId;
     const durationMin = getEstimatedDurationMinutes(
       m.format,
       estimatedDurationsMinutes
@@ -205,8 +105,7 @@ export function autoScheduleMatches(
 
   // 3) Pour chaque match, on cherche le meilleur créneau
   for (const match of sortedMatches) {
-    const resourceId =
-      match.resourceId ?? defaultResourceId;
+    const resourceId = match.resourceId ?? defaultResourceId;
     const durationMin = getEstimatedDurationMinutes(
       match.format,
       estimatedDurationsMinutes
@@ -243,20 +142,10 @@ export function autoScheduleMatches(
       resourceGapMinutes
     );
     if (match.team1Id) {
-      bumpTeam(
-        teamNextFreeTime,
-        match.team1Id,
-        planned.end,
-        teamRestMinutes
-      );
+      bumpTeam(teamNextFreeTime, match.team1Id, planned.end, teamRestMinutes);
     }
     if (match.team2Id) {
-      bumpTeam(
-        teamNextFreeTime,
-        match.team2Id,
-        planned.end,
-        teamRestMinutes
-      );
+      bumpTeam(teamNextFreeTime, match.team2Id, planned.end, teamRestMinutes);
     }
   }
 
@@ -269,11 +158,6 @@ export function autoScheduleMatches(
 /* -----------------------------------------------------------
  * Planning d'un match isolé
  * ---------------------------------------------------------*/
-
-interface PlannedSlot {
-  start: Date;
-  end: Date;
-}
 
 /**
  * Planifie un match dans les fenêtres disponibles selon :
@@ -298,16 +182,8 @@ function scheduleSingleMatch(
 
     if (
       isInAnyWindow(start, end, windows) &&
-      isResourceAvailable(
-        resourceId,
-        start,
-        resourceNextFreeTime
-      ) &&
-      areTeamsAvailable(
-        match,
-        start,
-        teamNextFreeTime
-      )
+      isResourceAvailable(resourceId, start, resourceNextFreeTime) &&
+      areTeamsAvailable(match, start, teamNextFreeTime)
     ) {
       return { start, end };
     }
@@ -338,16 +214,8 @@ function scheduleSingleMatch(
 
       // Check dispo finale
       if (
-        isResourceAvailable(
-          resourceId,
-          cursor,
-          resourceNextFreeTime
-        ) &&
-        areTeamsAvailable(
-          match,
-          cursor,
-          teamNextFreeTime
-        )
+        isResourceAvailable(resourceId, cursor, resourceNextFreeTime) &&
+        areTeamsAvailable(match, cursor, teamNextFreeTime)
       ) {
         return { start: cursor, end };
       }
@@ -405,16 +273,8 @@ function applyAvailabilityConstraints(
  * Helpers de disponibilité & tracking
  * ---------------------------------------------------------*/
 
-function isInAnyWindow(
-  start: Date,
-  end: Date,
-  windows: TimeWindow[]
-): boolean {
-  return windows.some(
-    (w) =>
-      start >= w.start &&
-      end <= w.end
-  );
+function isInAnyWindow(start: Date, end: Date, windows: TimeWindow[]): boolean {
+  return windows.some((w) => start >= w.start && end <= w.end);
 }
 
 function isResourceAvailable(
@@ -480,9 +340,7 @@ function getEstimatedDurationMinutes(
   };
 
   return (
-    table[format] ??
-    fallback[format] ??
-    45 // fallback général
+    table[format] ?? fallback[format] ?? 45 // fallback général
   );
 }
 
@@ -505,11 +363,10 @@ export function makeDayWindow(
   startTime: string,
   endTime: string
 ): TimeWindow {
-  const base =
-    typeof day === "string" ? new Date(day) : day;
+  const base = typeof day === 'string' ? new Date(day) : day;
 
-  const [sh, sm] = startTime.split(":").map(Number);
-  const [eh, em] = endTime.split(":").map(Number);
+  const [sh, sm] = startTime.split(':').map(Number);
+  const [eh, em] = endTime.split(':').map(Number);
 
   const start = new Date(base);
   start.setHours(sh, sm, 0, 0);
@@ -530,17 +387,10 @@ export function makeMultiDayWindows(
   endTime: string
 ): TimeWindow[] {
   const windows: TimeWindow[] = [];
-  const base =
-    typeof startDay === "string"
-      ? new Date(startDay)
-      : startDay;
+  const base = typeof startDay === 'string' ? new Date(startDay) : startDay;
 
   for (let i = 0; i < daysCount; i++) {
-    const d = new Date(
-      base.getFullYear(),
-      base.getMonth(),
-      base.getDate() + i
-    );
+    const d = new Date(base.getFullYear(), base.getMonth(), base.getDate() + i);
     windows.push(makeDayWindow(d, startTime, endTime));
   }
 

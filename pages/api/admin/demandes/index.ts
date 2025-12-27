@@ -4,18 +4,14 @@
 // - GET  : liste filtrable/paginée des demandes
 // - POST : batch update du statut de plusieurs demandes
 
-import type { NextApiRequest, NextApiResponse } from "next";
-import { supabaseAdmin } from "@/utils/supabase";
-import { withStaffRoute } from "@/utils/staff";
-import { logStaffAction } from "@/utils/staffLogs";
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { supabaseAdmin } from '@/utils/supabase';
+import { withStaffRoute } from '@/utils/staff';
+import { logStaffAction } from '@/utils/staffLogs';
 
-export type DemandeType = "join" | "leave" | "other";
+export type DemandeType = 'join' | 'leave' | 'other';
 
-export type DemandeStatus =
-  | "pending"
-  | "approved"
-  | "rejected"
-  | "cancelled";
+export type DemandeStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
 export type DemandeRow = {
   id: string;
@@ -60,7 +56,7 @@ type GetDemandesResponse = {
 };
 
 type BatchUpdateStatusBody = {
-  action: "updateStatus";
+  action: 'updateStatus';
   demandeIds: string[];
   newStatus: DemandeStatus;
   staffComment?: string | null;
@@ -69,31 +65,22 @@ type BatchUpdateStatusBody = {
 type PostBody = BatchUpdateStatusBody;
 
 // rôle minimum : helper (le support peut traiter les demandes)
-export default withStaffRoute(handler, "helper");
+export default withStaffRoute(handler, 'helper');
 
-async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse,
-  ctx: any
-) {
+async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
   try {
     switch (req.method) {
-      case "GET":
+      case 'GET':
         return await handleGet(req, res);
-      case "POST":
+      case 'POST':
         return await handlePost(req, res, ctx);
       default:
-        return res
-          .status(405)
-          .json({ error: "Method not allowed" });
+        return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (err: any) {
-    console.error(
-      "[/api/admin/demandes] internal error:",
-      err
-    );
+    console.error('[/api/admin/demandes] internal error:', err);
     return res.status(500).json({
-      error: "Internal server error",
+      error: 'Internal server error',
       detail: err?.message,
     });
   }
@@ -145,30 +132,21 @@ async function handleGet(
   } = req.query;
 
   const limitNum = parseInt(
-    (Array.isArray(limit) ? limit[0] : limit) ?? "50",
+    (Array.isArray(limit) ? limit[0] : limit) ?? '50',
     10
   );
   const offsetNum = parseInt(
-    (Array.isArray(offset) ? offset[0] : offset) ?? "0",
+    (Array.isArray(offset) ? offset[0] : offset) ?? '0',
     10
   );
 
-  const withUser =
-    includeUser === "1" ||
-    includeUser === "true";
-  const withTeam =
-    includeTeam === "1" ||
-    includeTeam === "true";
+  const withUser = includeUser === '1' || includeUser === 'true';
+  const withTeam = includeTeam === '1' || includeTeam === 'true';
   const withTournament =
-    includeTournament === "1" ||
-    includeTournament === "true";
+    includeTournament === '1' || includeTournament === 'true';
 
-  const orderField =
-    orderBy === "processed_at"
-      ? "processed_at"
-      : "created_at";
-  const ascending =
-    orderDir === "asc" ? true : false;
+  const orderField = orderBy === 'processed_at' ? 'processed_at' : 'created_at';
+  const ascending = orderDir === 'asc' ? true : false;
 
   const baseColumns = `
     id,
@@ -222,51 +200,40 @@ async function handleGet(
   }
 
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: "Supabase admin not configured" });
+    return res.status(500).json({ error: 'Supabase admin not configured' });
   }
 
-  let query = supabaseAdmin
-    .from("demandes")
-    .select(select, {
-      count:
-        includeTotal === "1" ||
-        includeTotal === "true"
-          ? "exact"
-          : undefined,
-    });
+  let query = supabaseAdmin.from('demandes').select(select, {
+    count:
+      includeTotal === '1' || includeTotal === 'true' ? 'exact' : undefined,
+  });
 
   if (type && !Array.isArray(type)) {
-    query = query.eq("type", type);
+    query = query.eq('type', type);
   }
 
   if (status && !Array.isArray(status)) {
-    query = query.eq("status", status);
+    query = query.eq('status', status);
   }
 
-  if (
-    tournamentId &&
-    !Array.isArray(tournamentId)
-  ) {
-    query = query.eq(
-      "tournament_id",
-      tournamentId
-    );
+  if (tournamentId && !Array.isArray(tournamentId)) {
+    query = query.eq('tournament_id', tournamentId);
   }
 
   if (teamId && !Array.isArray(teamId)) {
-    query = query.eq("team_id", teamId);
+    query = query.eq('team_id', teamId);
   }
 
   if (userId && !Array.isArray(userId)) {
-    query = query.eq("user_id", userId);
+    query = query.eq('user_id', userId);
   }
 
   if (from && !Array.isArray(from)) {
-    query = query.gte("created_at", from);
+    query = query.gte('created_at', from);
   }
 
   if (to && !Array.isArray(to)) {
-    query = query.lte("created_at", to);
+    query = query.lte('created_at', to);
   }
 
   if (search && !Array.isArray(search)) {
@@ -278,28 +245,24 @@ async function handleGet(
 
   query = query
     .order(orderField, { ascending })
-    .range(
-      offsetNum,
-      offsetNum + limitNum - 1
-    );
+    .range(offsetNum, offsetNum + limitNum - 1);
 
   const { data, error, count } = await query;
 
   if (error) {
-    console.error(
-      "admin GET demandes error:",
-      error
-    );
+    console.error('admin GET demandes error:', error);
     return res.status(500).json({
-      error: "Failed to fetch demandes",
+      error: 'Failed to fetch demandes',
     });
   }
 
-  const safeDemandes = (Array.isArray(data) ? data : []) as unknown as DemandeWithRelations[];
+  const safeDemandes = (Array.isArray(data)
+    ? data
+    : []) as unknown as DemandeWithRelations[];
 
   return res.status(200).json({
     demandes: safeDemandes,
-    total: typeof count === "number" ? count : null,
+    total: typeof count === 'number' ? count : null,
   });
 }
 
@@ -315,13 +278,9 @@ async function handleGet(
  * }
  * ---------------------------------------------------------*/
 
-async function handlePost(
-  req: NextApiRequest,
-  res: NextApiResponse,
-  ctx: any
-) {
+async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: any) {
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: "Supabase admin not configured" });
+    return res.status(500).json({ error: 'Supabase admin not configured' });
   }
 
   const body = req.body as PostBody;
@@ -332,22 +291,17 @@ async function handlePost(
     });
   }
 
-  if (body.action !== "updateStatus") {
+  if (body.action !== 'updateStatus') {
     return res.status(400).json({
-      error: "Unsupported action",
+      error: 'Unsupported action',
     });
   }
 
-  const { demandeIds, newStatus, staffComment } =
-    body;
+  const { demandeIds, newStatus, staffComment } = body;
 
-  if (
-    !Array.isArray(demandeIds) ||
-    demandeIds.length === 0
-  ) {
+  if (!Array.isArray(demandeIds) || demandeIds.length === 0) {
     return res.status(400).json({
-      error:
-        "'demandeIds' must be a non-empty array",
+      error: "'demandeIds' must be a non-empty array",
     });
   }
 
@@ -358,24 +312,18 @@ async function handlePost(
   }
 
   const nowIso = new Date().toISOString();
-  const staffId: string | null =
-    ctx.staff?.id ?? null;
+  const staffId: string | null = ctx.staff?.id ?? null;
 
   // 1) Récupérer l'état avant pour log
-  const { data: beforeList, error: fetchErr } =
-    await supabaseAdmin
-      .from("demandes")
-      .select("*")
-      .in("id", demandeIds);
+  const { data: beforeList, error: fetchErr } = await supabaseAdmin
+    .from('demandes')
+    .select('*')
+    .in('id', demandeIds);
 
   if (fetchErr) {
-    console.error(
-      "admin demandes batch fetch error:",
-      fetchErr
-    );
+    console.error('admin demandes batch fetch error:', fetchErr);
     return res.status(500).json({
-      error:
-        "Failed to fetch demandes before update",
+      error: 'Failed to fetch demandes before update',
     });
   }
 
@@ -386,26 +334,22 @@ async function handlePost(
     processed_by_staff_id: staffId,
   };
 
-  if (typeof staffComment === "string") {
+  if (typeof staffComment === 'string') {
     // on concatène avec staff_note existant plutôt que d'écraser ?
     // Pour l'instant on écrase, le front peut gérer un historique si besoin.
     updatePayload.staff_note = staffComment;
   }
 
-  const { data: afterList, error: updErr } =
-    await supabaseAdmin
-      .from("demandes")
-      .update(updatePayload)
-      .in("id", demandeIds)
-      .select("*");
+  const { data: afterList, error: updErr } = await supabaseAdmin
+    .from('demandes')
+    .update(updatePayload)
+    .in('id', demandeIds)
+    .select('*');
 
   if (updErr) {
-    console.error(
-      "admin demandes batch update error:",
-      updErr
-    );
+    console.error('admin demandes batch update error:', updErr);
     return res.status(500).json({
-      error: "Failed to update demandes",
+      error: 'Failed to update demandes',
     });
   }
 
@@ -414,27 +358,20 @@ async function handlePost(
     try {
       await logStaffAction({
         staff_id: staffId,
-        action: "staff_batch_action",
-        entity_type: "demande",
-        entity_id:
-          demandeIds.length === 1
-            ? demandeIds[0]
-            : null,
+        action: 'staff_batch_action',
+        entity_type: 'demande',
+        entity_id: demandeIds.length === 1 ? demandeIds[0] : null,
         tournament_id: null,
         payload: {
           demande_ids: demandeIds,
           new_status: newStatus,
-          staff_comment:
-            staffComment ?? null,
+          staff_comment: staffComment ?? null,
           before: beforeList,
           after: afterList,
         },
       });
     } catch (e) {
-      console.error(
-        "admin demandes batch logStaffAction error:",
-        e
-      );
+      console.error('admin demandes batch logStaffAction error:', e);
     }
   }
 

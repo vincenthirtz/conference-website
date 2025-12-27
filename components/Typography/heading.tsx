@@ -1,26 +1,9 @@
 import { JSX } from 'react';
-
-type HeadingLevel = 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
-
-type TypeStyle =
-  | 'heading-lg'
-  | 'heading-md'
-  | 'heading-md-semibold'
-  | 'heading-sm'
-  | 'heading-sm-semibold'
-  | 'heading-xs'
-  | 'heading-xs-semibold'
-  | 'body-lg'
-  | 'body-md'
-  | 'body-sm';
-
-interface IHeading {
-  typeStyle?: TypeStyle;
-  level?: HeadingLevel;
-  textColor?: string;
-  className?: string;
-  children: React.ReactNode;
-}
+import type {
+  HeadingLevel,
+  HeadingTypeStyle,
+  IHeading,
+} from '../../types/components';
 
 export default function Heading({
   typeStyle = 'heading-lg',

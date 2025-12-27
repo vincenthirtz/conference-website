@@ -1,28 +1,9 @@
-import React, {
-  useState,
-  forwardRef,
-  Dispatch,
-  SetStateAction,
-  JSX,
-} from 'react';
+import React, { useState, forwardRef, JSX } from 'react';
 import links from '@/config/links.json';
 import Link from 'next/link';
 import Dropdown from '../illustration/dropdown';
 import { LinkItem } from '../../types/types';
-
-type AdminLink = {
-  title: string;
-  ref: string;
-};
-
-interface INavDropProp {
-  setDrop: Dispatch<SetStateAction<boolean>>;
-  isStaff: boolean;
-  staffName: string | null;
-  adminLinks: AdminLink[];
-  adminLoading: boolean;
-  onLogout: () => void;
-}
+import type { INavDropProp } from '../../types/components';
 
 const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(
   (
@@ -105,56 +86,63 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(
           {links
             .filter(
               (link) =>
-                !['À propos', 'Cast', 'Sponsors', 'Équipes', 'Equipes'].includes(
-                  link.title
-                )
+                ![
+                  'À propos',
+                  'Cast',
+                  'Sponsors',
+                  'Équipes',
+                  'Equipes',
+                ].includes(link.title)
             )
             .map((link: LinkItem) => {
-            return (
-              <Link href={link.ref || '#'} key={link.title}>
-                <div
-                  className="min-h-[50px] cursor-pointer"
-                  onClick={() =>
-                    show === link.title ? setShow(null) : setShow(link.title)
-                  }
-                >
-                  {link.subMenu ? (
-                    <div>
-                      <div
-                        className="flex items-center text-white"
-                        onClick={(e) => e.preventDefault()}
-                      >
-                        <div>{link.title}</div>
-                        <Dropdown
-                          fill="white"
-                          className={`ml-2 transition-transform duration-500 ${
-                            show === link.title ? 'rotate-180' : 'rotate-0'
-                          }`}
-                        />
-                      </div>
-                      {show && show === link.title && (
-                        <div className="flex flex-col py-6 w-full">
-                          {link.subMenu.map((sub) => (
-                            <Link href={sub.ref || '#'} key={sub.ref}>
-                              <div
-                                onClick={() => setDrop(false)}
-                                className="h-[40px] flex items-center p-6 text-white hover:text-black cursor-pointer"
-                              >
-                                {sub.title}
-                              </div>
-                            </Link>
-                          ))}
+              return (
+                <Link href={link.ref || '#'} key={link.title}>
+                  <div
+                    className="min-h-[50px] cursor-pointer"
+                    onClick={() =>
+                      show === link.title ? setShow(null) : setShow(link.title)
+                    }
+                  >
+                    {link.subMenu ? (
+                      <div>
+                        <div
+                          className="flex items-center text-white"
+                          onClick={(e) => e.preventDefault()}
+                        >
+                          <div>{link.title}</div>
+                          <Dropdown
+                            fill="white"
+                            className={`ml-2 transition-transform duration-500 ${
+                              show === link.title ? 'rotate-180' : 'rotate-0'
+                            }`}
+                          />
                         </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-white" onClick={() => setDrop(false)}>
-                      {link.title}
-                    </div>
-                  )}
-                </div>
-              </Link>
-            );
+                        {show && show === link.title && (
+                          <div className="flex flex-col py-6 w-full">
+                            {link.subMenu.map((sub) => (
+                              <Link href={sub.ref || '#'} key={sub.ref}>
+                                <div
+                                  onClick={() => setDrop(false)}
+                                  className="h-[40px] flex items-center p-6 text-white hover:text-black cursor-pointer"
+                                >
+                                  {sub.title}
+                                </div>
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div
+                        className="text-white"
+                        onClick={() => setDrop(false)}
+                      >
+                        {link.title}
+                      </div>
+                    )}
+                  </div>
+                </Link>
+              );
             })}
         </div>
       </div>

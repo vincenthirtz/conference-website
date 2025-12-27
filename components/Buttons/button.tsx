@@ -1,16 +1,5 @@
 import React from 'react';
-
-type ButtonType = 'button' | 'submit' | 'reset' | undefined;
-
-interface IButton {
-  className?: string;
-  children: React.ReactNode;
-  overlay?: boolean;
-  onClick?: React.MouseEventHandler;
-  type: ButtonType;
-  disabled?: boolean;
-  test?: string;
-}
+import type { ButtonType, IButton } from '../../types/components';
 
 function Button({
   className,

@@ -6,18 +6,18 @@
 // - PUT/PATCH  : mettre à jour une phase (meta / config)
 // - DELETE     : désactiver (soft) ou supprimer (hard) une phase
 
-import type { NextApiRequest, NextApiResponse } from "next";
-import { supabaseAdmin } from "@/utils/supabase";
-import { withStaffRoute } from "@/utils/staff";
-import { logStaffAction } from "@/utils/staffLogs";
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { supabaseAdmin } from '@/utils/supabase';
+import { withStaffRoute } from '@/utils/staff';
+import { logStaffAction } from '@/utils/staffLogs';
 
 export type StageType =
-  | "group"
-  | "bracket"
-  | "swiss"
-  | "round_robin"
-  | "showmatch"
-  | "other";
+  | 'group'
+  | 'bracket'
+  | 'swiss'
+  | 'round_robin'
+  | 'showmatch'
+  | 'other';
 
 export type StageRow = {
   id: string;
@@ -36,44 +36,33 @@ export type StageRow = {
 };
 
 // rôle minimum : manager (gestion de la structure du tournoi)
-export default withStaffRoute(handler, "manager");
+export default withStaffRoute(handler, 'manager');
 
-async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse,
-  ctx: any
-) {
+async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
   const { stageId } = req.query;
 
   if (!stageId || Array.isArray(stageId)) {
-    return res
-      .status(400)
-      .json({ error: "Invalid stageId" });
+    return res.status(400).json({ error: 'Invalid stageId' });
   }
 
   const id = String(stageId);
 
   try {
     switch (req.method) {
-      case "GET":
+      case 'GET':
         return await handleGet(id, res);
-      case "PUT":
-      case "PATCH":
+      case 'PUT':
+      case 'PATCH':
         return await handlePut(id, req, res, ctx);
-      case "DELETE":
+      case 'DELETE':
         return await handleDelete(id, req, res, ctx);
       default:
-        return res
-          .status(405)
-          .json({ error: "Method not allowed" });
+        return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (err: any) {
-    console.error(
-      "[/api/admin/stages/[stageId]] internal error:",
-      err
-    );
+    console.error('[/api/admin/stages/[stageId]] internal error:', err);
     return res.status(500).json({
-      error: "Internal server error",
+      error: 'Internal server error',
       detail: err?.message,
     });
   }
@@ -83,12 +72,9 @@ async function handler(
  * GET : récupérer une phase
  * ---------------------------------------------------------*/
 
-async function handleGet(
-  id: string,
-  res: NextApiResponse
-) {
+async function handleGet(id: string, res: NextApiResponse) {
   const { data, error } = await supabaseAdmin
-    .from("tournament_stages")
+    .from('tournament_stages')
     .select(
       `
       id,
@@ -106,17 +92,12 @@ async function handleGet(
       updated_at
     `
     )
-    .eq("id", id)
+    .eq('id', id)
     .maybeSingle();
 
   if (error || !data) {
-    console.error(
-      "admin GET stage error:",
-      error
-    );
-    return res
-      .status(404)
-      .json({ error: "Stage not found" });
+    console.error('admin GET stage error:', error);
+    return res.status(404).json({ error: 'Stage not found' });
   }
 
   return res.status(200).json({
@@ -139,15 +120,15 @@ async function handlePut(
 
   // champs modifiables
   const allowedFields: (keyof StageRow)[] = [
-    "name",
-    "slug",
-    "stage_type",
-    "order_index",
-    "is_active",
-    "is_public",
-    "start_date",
-    "end_at",
-    "settings",
+    'name',
+    'slug',
+    'stage_type',
+    'order_index',
+    'is_active',
+    'is_public',
+    'start_date',
+    'end_at',
+    'settings',
   ];
 
   const updatePayload: Partial<StageRow> = {};
@@ -161,42 +142,34 @@ async function handlePut(
 
   if (Object.keys(updatePayload).length === 0) {
     return res.status(400).json({
-      error:
-        "No valid fields to update. Allowed: " +
-        allowedFields.join(", "),
+      error: 'No valid fields to update. Allowed: ' + allowedFields.join(', '),
     });
   }
 
   updatePayload.updated_at = new Date().toISOString();
 
   // récupérer l'état avant update pour log
-  const { data: before, error: fetchErr } =
-    await supabaseAdmin
-      .from("tournament_stages")
-      .select("*")
-      .eq("id", id)
-      .maybeSingle();
+  const { data: before, error: fetchErr } = await supabaseAdmin
+    .from('tournament_stages')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
 
   if (fetchErr || !before) {
-    return res
-      .status(404)
-      .json({ error: "Stage not found" });
+    return res.status(404).json({ error: 'Stage not found' });
   }
 
   const { data, error } = await supabaseAdmin
-    .from("tournament_stages")
+    .from('tournament_stages')
     .update(updatePayload)
-    .eq("id", id)
-    .select("*")
+    .eq('id', id)
+    .select('*')
     .maybeSingle();
 
   if (error || !data) {
-    console.error(
-      "admin PUT stage error:",
-      error
-    );
+    console.error('admin PUT stage error:', error);
     return res.status(500).json({
-      error: "Failed to update stage",
+      error: 'Failed to update stage',
     });
   }
 
@@ -205,8 +178,8 @@ async function handlePut(
     try {
       await logStaffAction({
         staff_id: ctx.staff.id,
-        action: "update_stage",
-        entity_type: "stage",
+        action: 'update_stage',
+        entity_type: 'stage',
         entity_id: id,
         tournament_id: (data as any).tournament_id,
         payload: {
@@ -215,10 +188,7 @@ async function handlePut(
         },
       });
     } catch (e) {
-      console.error(
-        "admin PUT stage logStaffAction error:",
-        e
-      );
+      console.error('admin PUT stage logStaffAction error:', e);
     }
   }
 
@@ -239,39 +209,30 @@ async function handleDelete(
   res: NextApiResponse,
   ctx: any
 ) {
-  const hard =
-    req.query.hard === "1" ||
-    req.query.hard === "true";
+  const hard = req.query.hard === '1' || req.query.hard === 'true';
 
-  const { data: before, error: fetchErr } =
-    await supabaseAdmin
-      .from("tournament_stages")
-      .select("*")
-      .eq("id", id)
-      .maybeSingle();
+  const { data: before, error: fetchErr } = await supabaseAdmin
+    .from('tournament_stages')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
 
   if (fetchErr || !before) {
-    return res
-      .status(404)
-      .json({ error: "Stage not found" });
+    return res.status(404).json({ error: 'Stage not found' });
   }
 
-  const tournamentId =
-    (before as any).tournament_id ?? null;
+  const tournamentId = (before as any).tournament_id ?? null;
 
   if (hard) {
     const { error } = await supabaseAdmin
-      .from("tournament_stages")
+      .from('tournament_stages')
       .delete()
-      .eq("id", id);
+      .eq('id', id);
 
     if (error) {
-      console.error(
-        "admin hard delete stage error:",
-        error
-      );
+      console.error('admin hard delete stage error:', error);
       return res.status(500).json({
-        error: "Failed to hard-delete stage",
+        error: 'Failed to hard-delete stage',
       });
     }
 
@@ -279,8 +240,8 @@ async function handleDelete(
       try {
         await logStaffAction({
           staff_id: ctx.staff.id,
-          action: "delete_stage",
-          entity_type: "stage",
+          action: 'delete_stage',
+          entity_type: 'stage',
           entity_id: id,
           tournament_id: tournamentId,
           payload: {
@@ -288,10 +249,7 @@ async function handleDelete(
           },
         });
       } catch (e) {
-        console.error(
-          "admin hard delete stage logStaffAction error:",
-          e
-        );
+        console.error('admin hard delete stage logStaffAction error:', e);
       }
     }
 
@@ -303,23 +261,20 @@ async function handleDelete(
 
   // soft delete : désactiver la phase
   const { data, error } = await supabaseAdmin
-    .from("tournament_stages")
+    .from('tournament_stages')
     .update({
       is_active: false,
       is_public: false,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", id)
-    .select("*")
+    .eq('id', id)
+    .select('*')
     .maybeSingle();
 
   if (error || !data) {
-    console.error(
-      "admin soft delete stage error:",
-      error
-    );
+    console.error('admin soft delete stage error:', error);
     return res.status(500).json({
-      error: "Failed to deactivate stage",
+      error: 'Failed to deactivate stage',
     });
   }
 
@@ -327,8 +282,8 @@ async function handleDelete(
     try {
       await logStaffAction({
         staff_id: ctx.staff.id,
-        action: "update_stage",
-        entity_type: "stage",
+        action: 'update_stage',
+        entity_type: 'stage',
         entity_id: id,
         tournament_id: tournamentId,
         payload: {
@@ -338,10 +293,7 @@ async function handleDelete(
         },
       });
     } catch (e) {
-      console.error(
-        "admin soft delete stage logStaffAction error:",
-        e
-      );
+      console.error('admin soft delete stage logStaffAction error:', e);
     }
   }
 

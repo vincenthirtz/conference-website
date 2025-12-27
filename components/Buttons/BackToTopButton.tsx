@@ -42,7 +42,7 @@ const BackToTopButton: React.FC = () => {
         clearTimeout(boostTimeout.current);
       }
     },
-    [],
+    []
   );
 
   const scrollToTop = () => {
@@ -65,6 +65,7 @@ const BackToTopButton: React.FC = () => {
       className={`back-to-top-button ${isBoosting ? 'is-boosting' : ''} fixed right-6 bottom-6 sm:right-4 sm:bottom-4 w-12 h-12 rounded-full border-none font-semibold flex items-center justify-center cursor-pointer overflow-visible z-50 outline-none transition-all duration-300 ease-in-out transform hover:scale-95 active:scale-90`}
       aria-label="Back to top"
     >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={OVERWATCH_LOGO}
         alt="Overwatch logo"

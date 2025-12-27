@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
-import Head from "next/head";
-import Link from "next/link";
-import { withStaffPage } from "@/utils/staff";
-import { StaffRoleBadge } from "@/components/admin/StaffRoleBadge";
+import { useCallback, useEffect, useState } from 'react';
+import Head from 'next/head';
+import Link from 'next/link';
+import { withStaffPage } from '@/utils/staff';
+import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
 type Tournament = {
   id: string;
@@ -35,7 +35,7 @@ function AdminTournamentsPage({ staff }: Props) {
   const [total, setTotal] = useState<number | null>(null);
 
   // filters
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
   const [status, setStatus] = useState<string | null>(null);
 
   const [limit] = useState(20);
@@ -45,12 +45,12 @@ function AdminTournamentsPage({ staff }: Props) {
     setLoading(true);
 
     const params = new URLSearchParams();
-    params.set("limit", String(limit));
-    params.set("offset", String(offset));
-    params.set("includeTotal", "1");
+    params.set('limit', String(limit));
+    params.set('offset', String(offset));
+    params.set('includeTotal', '1');
 
-    if (search.trim()) params.set("search", search);
-    if (status) params.set("status", status);
+    if (search.trim()) params.set('search', search);
+    if (status) params.set('status', status);
 
     const res = await fetch(`/api/admin/tournaments?${params.toString()}`);
     const json: ApiResponse = await res.json();
@@ -98,10 +98,8 @@ function AdminTournamentsPage({ staff }: Props) {
 
           <select
             className="px-3 py-2 rounded bg-neutral-700"
-            value={status || ""}
-            onChange={(e) =>
-              setStatus(e.target.value || null)
-            }
+            value={status || ''}
+            onChange={(e) => setStatus(e.target.value || null)}
           >
             <option value="">Tous les statuts</option>
             <option value="draft">Brouillon</option>
@@ -158,9 +156,7 @@ function AdminTournamentsPage({ staff }: Props) {
                     key={t.id}
                     className="border-t border-neutral-700 hover:bg-neutral-750"
                   >
-                    <td className="px-4 py-3 font-semibold">
-                      {t.name}
-                    </td>
+                    <td className="px-4 py-3 font-semibold">{t.name}</td>
                     <td className="px-4 py-3">{t.slug}</td>
                     <td className="px-4 py-3">
                       <span className="bg-neutral-700 px-2 py-1 rounded text-xs uppercase">
@@ -171,7 +167,7 @@ function AdminTournamentsPage({ staff }: Props) {
                     <td className="px-4 py-3">
                       {t.start_date
                         ? new Date(t.start_date).toLocaleDateString()
-                        : "—"}
+                        : '—'}
                     </td>
                     <td className="px-4 py-3">
                       <Link
@@ -195,8 +191,8 @@ function AdminTournamentsPage({ staff }: Props) {
             onClick={() => setOffset(Math.max(0, offset - limit))}
             className={`px-3 py-2 rounded ${
               offset === 0
-                ? "bg-neutral-700 opacity-40 cursor-not-allowed"
-                : "bg-neutral-700 hover:bg-neutral-600"
+                ? 'bg-neutral-700 opacity-40 cursor-not-allowed'
+                : 'bg-neutral-700 hover:bg-neutral-600'
             }`}
           >
             ← Précédent
@@ -204,7 +200,7 @@ function AdminTournamentsPage({ staff }: Props) {
 
           <span className="text-neutral-400">
             {offset + 1} – {offset + tournaments.length}
-            {total ? ` / ${total}` : ""}
+            {total ? ` / ${total}` : ''}
           </span>
 
           <button
@@ -212,8 +208,8 @@ function AdminTournamentsPage({ staff }: Props) {
             onClick={() => setOffset(offset + limit)}
             className={`px-3 py-2 rounded ${
               total !== null && offset + limit >= total
-                ? "bg-neutral-700 opacity-40 cursor-not-allowed"
-                : "bg-neutral-700 hover:bg-neutral-600"
+                ? 'bg-neutral-700 opacity-40 cursor-not-allowed'
+                : 'bg-neutral-700 hover:bg-neutral-600'
             }`}
           >
             Suivant →
@@ -224,6 +220,6 @@ function AdminTournamentsPage({ staff }: Props) {
   );
 }
 
-export const getServerSideProps = withStaffPage("manager");
+export const getServerSideProps = withStaffPage('manager');
 
 export default AdminTournamentsPage;

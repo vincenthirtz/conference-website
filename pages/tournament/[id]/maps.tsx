@@ -1,13 +1,13 @@
 // @ts-nocheck
 // pages/tournament/[id]/maps.tsx
-/* eslint-disable react/no-unescaped-entities */
-import { GetServerSideProps } from "next";
-import Head from "next/head";
-import Link from "next/link";
-import Heading from "@/components/Typography/heading";
-import Paragraph from "@/components/Typography/paragraph";
-import Button from "@/components/Buttons/button";
-import { supabaseAdmin } from "@/utils/supabase";
+ 
+import { GetServerSideProps } from 'next';
+import Head from 'next/head';
+import Link from 'next/link';
+import Heading from '@/components/Typography/heading';
+import Paragraph from '@/components/Typography/paragraph';
+import Button from '@/components/Buttons/button';
+import { supabaseAdmin } from '@/utils/supabase';
 
 type Tournament = {
   id: string;
@@ -51,9 +51,7 @@ type Props = {
   maps: MapStat[];
 };
 
-export const getServerSideProps: GetServerSideProps<Props> = async (
-  ctx
-) => {
+export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   const { id } = ctx.query;
   if (!id || Array.isArray(id)) {
     return { notFound: true };
@@ -61,48 +59,46 @@ export const getServerSideProps: GetServerSideProps<Props> = async (
 
   // 1) Tournoi
   const { data: tournament, error: tErr } = await supabaseAdmin
-    .from("tournaments")
-    .select("*")
-    .eq("id", id)
+    .from('tournaments')
+    .select('*')
+    .eq('id', id)
     .single();
 
   if (tErr || !tournament) {
     return { notFound: true };
   }
 
-  if (tournament.visibility && tournament.visibility !== "public") {
+  if (tournament.visibility && tournament.visibility !== 'public') {
     return { notFound: true };
   }
 
   // 2) Matches du tournoi (on exclut les annulés & bye)
   const { data: matchesData, error: mErr } = await supabaseAdmin
-    .from("matches")
-    .select("id, status, is_bye")
-    .eq("tournament_id", id)
-    .neq("status", "cancelled");
+    .from('matches')
+    .select('id, status, is_bye')
+    .eq('tournament_id', id)
+    .neq('status', 'cancelled');
 
   if (mErr) {
-    console.error("maps page matches error:", mErr);
+    console.error('maps page matches error:', mErr);
   }
 
   const matches = (matchesData || []) as MatchRow[];
-  const matchIds = matches
-    .filter((m) => !m.is_bye)
-    .map((m) => m.id);
+  const matchIds = matches.filter((m) => !m.is_bye).map((m) => m.id);
 
   let maps: MapStat[] = [];
 
   if (matchIds.length > 0) {
     // 3) Games de ces matchs
     const { data: gamesData, error: gErr } = await supabaseAdmin
-      .from("games")
+      .from('games')
       .select(
-        "match_id, map_name, team1_score, team2_score, is_tiebreaker, went_overtime"
+        'match_id, map_name, team1_score, team2_score, is_tiebreaker, went_overtime'
       )
-      .in("match_id", matchIds);
+      .in('match_id', matchIds);
 
     if (gErr) {
-      console.error("maps page games error:", gErr);
+      console.error('maps page games error:', gErr);
     } else {
       const games = (gamesData || []) as GameRow[];
       maps = computeMapStats(games);
@@ -117,10 +113,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (
   };
 };
 
-export default function TournamentMapsPage({
-  tournament,
-  maps,
-}: Props) {
+export default function TournamentMapsPage({ tournament, maps }: Props) {
   const dateRangeLabel = formatTournamentDates(
     tournament.start_date,
     tournament.end_date
@@ -129,18 +122,13 @@ export default function TournamentMapsPage({
   const statusColor = getStatusChipColor(tournament.status);
 
   const totalMaps = maps.length;
-  const totalGames = maps.reduce(
-    (acc, m) => acc + m.gamesPlayed,
-    0
-  );
+  const totalGames = maps.reduce((acc, m) => acc + m.gamesPlayed, 0);
   const bestMaps = maps.slice(0, 3);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <Head>
-        <title>
-          Top maps – {tournament.name} | OW Women&apos;s Cup
-        </title>
+        <title>Top maps – {tournament.name} | OW Women&apos;s Cup</title>
       </Head>
 
       <main className="container mx-auto px-4 pt-24 pb-16 max-w-6xl">
@@ -153,16 +141,13 @@ export default function TournamentMapsPage({
                   OW Women&apos;s Cup
                 </span>
                 <span className="text-gray-200">
-                  {tournament.game || "Overwatch 2"}
+                  {tournament.game || 'Overwatch 2'}
                 </span>
                 <span className="w-[1px] h-3 bg-white/20" />
                 <span className={statusColor}>{statusLabel}</span>
               </div>
 
-              <Heading
-                typeStyle="heading-md"
-                className="text-gradient mb-1"
-              >
+              <Heading typeStyle="heading-md" className="text-gradient mb-1">
                 Top maps – {tournament.name}
               </Heading>
               {dateRangeLabel && (
@@ -170,11 +155,9 @@ export default function TournamentMapsPage({
                   {dateRangeLabel}
                   {tournament.format && (
                     <>
-                      {" "}
-                      ·{" "}
-                      <span className="text-gray-100">
-                        {tournament.format}
-                      </span>
+                      {' '}
+                      ·{' '}
+                      <span className="text-gray-100">{tournament.format}</span>
                     </>
                   )}
                 </p>
@@ -184,10 +167,9 @@ export default function TournamentMapsPage({
                 textColor="text-gray-200"
                 className="max-w-xl"
               >
-                Un aperçu des cartes les plus jouées du tournoi,
-                avec le nombre de manches, d&apos;overtimes et de
-                tiebreakers. Pratique pour casters, analystes et
-                strat-callers.
+                Un aperçu des cartes les plus jouées du tournoi, avec le nombre
+                de manches, d&apos;overtimes et de tiebreakers. Pratique pour
+                casters, analystes et strat-callers.
               </Paragraph>
             </div>
 
@@ -224,36 +206,23 @@ export default function TournamentMapsPage({
         <section className="mb-6">
           <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
             {totalGames === 0 && (
-              <Paragraph
-                typeStyle="body-sm"
-                textColor="text-gray-300"
-              >
-                Aucun game enregistré pour ce tournoi pour
-                l&apos;instant. Les stats de maps apparaîtront au fur et
-                à mesure des résultats.
+              <Paragraph typeStyle="body-sm" textColor="text-gray-300">
+                Aucun game enregistré pour ce tournoi pour l&apos;instant. Les
+                stats de maps apparaîtront au fur et à mesure des résultats.
               </Paragraph>
             )}
 
             {totalGames > 0 && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <StatCard
-                  label="Maps distinctes"
-                  value={totalMaps}
-                />
+                <StatCard label="Maps distinctes" value={totalMaps} />
                 <StatCard label="Games joués" value={totalGames} />
                 <StatCard
                   label="Overtimes"
-                  value={maps.reduce(
-                    (acc, m) => acc + m.overtimes,
-                    0
-                  )}
+                  value={maps.reduce((acc, m) => acc + m.overtimes, 0)}
                 />
                 <StatCard
                   label="Tiebreakers"
-                  value={maps.reduce(
-                    (acc, m) => acc + m.tiebreakers,
-                    0
-                  )}
+                  value={maps.reduce((acc, m) => acc + m.tiebreakers, 0)}
                 />
               </div>
             )}
@@ -269,11 +238,7 @@ export default function TournamentMapsPage({
               </p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {bestMaps.map((m, index) => (
-                  <TopMapCard
-                    key={m.mapName}
-                    rank={index + 1}
-                    stat={m}
-                  />
+                  <TopMapCard key={m.mapName} rank={index + 1} stat={m} />
                 ))}
               </div>
             </div>
@@ -292,24 +257,12 @@ export default function TournamentMapsPage({
                 <table className="min-w-full text-[11px]">
                   <thead>
                     <tr className="text-gray-400 border-b border-white/10">
-                      <th className="text-left py-1.5 pr-3">
-                        Map
-                      </th>
-                      <th className="text-right py-1.5 px-3">
-                        Games
-                      </th>
-                      <th className="text-right py-1.5 px-3">
-                        Rounds totaux
-                      </th>
-                      <th className="text-right py-1.5 px-3">
-                        Rounds moyens
-                      </th>
-                      <th className="text-right py-1.5 px-3">
-                        Overtimes
-                      </th>
-                      <th className="text-right py-1.5 pl-3">
-                        Tiebreakers
-                      </th>
+                      <th className="text-left py-1.5 pr-3">Map</th>
+                      <th className="text-right py-1.5 px-3">Games</th>
+                      <th className="text-right py-1.5 px-3">Rounds totaux</th>
+                      <th className="text-right py-1.5 px-3">Rounds moyens</th>
+                      <th className="text-right py-1.5 px-3">Overtimes</th>
+                      <th className="text-right py-1.5 pl-3">Tiebreakers</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -317,16 +270,12 @@ export default function TournamentMapsPage({
                       <tr
                         key={m.mapName}
                         className={
-                          "border-b border-white/5" +
-                          (idx % 2 === 0
-                            ? " bg-white/0"
-                            : " bg-white/[0.02]")
+                          'border-b border-white/5' +
+                          (idx % 2 === 0 ? ' bg-white/0' : ' bg-white/[0.02]')
                         }
                       >
                         <td className="py-1.5 pr-3">
-                          <span className="text-gray-100">
-                            {m.mapName}
-                          </span>
+                          <span className="text-gray-100">{m.mapName}</span>
                         </td>
                         <td className="py-1.5 px-3 text-right text-gray-100">
                           {m.gamesPlayed}
@@ -338,9 +287,7 @@ export default function TournamentMapsPage({
                           {m.avgRounds.toFixed(1)}
                         </td>
                         <td className="py-1.5 px-3 text-right">
-                          <span className="text-gray-100">
-                            {m.overtimes}
-                          </span>
+                          <span className="text-gray-100">{m.overtimes}</span>
                           <span className="text-[10px] text-gray-500 ml-1">
                             ({(m.overtimesRate * 100).toFixed(0)}%)
                           </span>
@@ -355,9 +302,8 @@ export default function TournamentMapsPage({
               </div>
 
               <p className="mt-2 text-[10px] text-gray-500">
-                Note : les stats sont calculées à partir des games
-                enregistrés pour ce tournoi, en excluant les matchs
-                bye.
+                Note : les stats sont calculées à partir des games enregistrés
+                pour ce tournoi, en excluant les matchs bye.
               </p>
             </div>
           </section>
@@ -385,14 +331,12 @@ function computeMapStats(games: GameRow[]): MapStat[] {
   for (const g of games) {
     if (!g.map_name) continue;
     const key = g.map_name;
-    const entry =
-      map.get(key) ||
-      {
-        games: 0,
-        totalRounds: 0,
-        overtimes: 0,
-        tiebreakers: 0,
-      };
+    const entry = map.get(key) || {
+      games: 0,
+      totalRounds: 0,
+      overtimes: 0,
+      tiebreakers: 0,
+    };
 
     entry.games += 1;
     const r1 = g.team1_score ?? 0;
@@ -405,28 +349,20 @@ function computeMapStats(games: GameRow[]): MapStat[] {
     map.set(key, entry);
   }
 
-  const list: MapStat[] = Array.from(map.entries()).map(
-    ([mapName, entry]) => {
-      const avgRounds =
-        entry.games > 0
-          ? entry.totalRounds / entry.games
-          : 0;
-      const overtimesRate =
-        entry.games > 0
-          ? entry.overtimes / entry.games
-          : 0;
+  const list: MapStat[] = Array.from(map.entries()).map(([mapName, entry]) => {
+    const avgRounds = entry.games > 0 ? entry.totalRounds / entry.games : 0;
+    const overtimesRate = entry.games > 0 ? entry.overtimes / entry.games : 0;
 
-      return {
-        mapName,
-        gamesPlayed: entry.games,
-        totalRounds: entry.totalRounds,
-        avgRounds,
-        overtimes: entry.overtimes,
-        overtimesRate,
-        tiebreakers: entry.tiebreakers,
-      };
-    }
-  );
+    return {
+      mapName,
+      gamesPlayed: entry.games,
+      totalRounds: entry.totalRounds,
+      avgRounds,
+      overtimes: entry.overtimes,
+      overtimesRate,
+      tiebreakers: entry.tiebreakers,
+    };
+  });
 
   list.sort((a, b) => {
     if (b.gamesPlayed !== a.gamesPlayed) {
@@ -457,40 +393,29 @@ function StatCard({
         {label}
       </p>
       <p className="text-xl font-semibold text-white">
-        {typeof value === "number" ? value.toString() : value}
+        {typeof value === 'number' ? value.toString() : value}
       </p>
-      {hint && (
-        <p className="text-[10px] text-gray-400 mt-[2px]">
-          {hint}
-        </p>
-      )}
+      {hint && <p className="text-[10px] text-gray-400 mt-[2px]">{hint}</p>}
     </div>
   );
 }
 
-function TopMapCard({
-  rank,
-  stat,
-}: {
-  rank: number;
-  stat: MapStat;
-}) {
-  const rankLabel =
-    rank === 1 ? "1er" : rank === 2 ? "2e" : "3e";
+function TopMapCard({ rank, stat }: { rank: number; stat: MapStat }) {
+  const rankLabel = rank === 1 ? '1er' : rank === 2 ? '2e' : '3e';
 
   const chipClass =
     rank === 1
-      ? "bg-yellow-500/20 border-yellow-400/60 text-yellow-100"
+      ? 'bg-yellow-500/20 border-yellow-400/60 text-yellow-100'
       : rank === 2
-      ? "bg-gray-300/15 border-gray-200/60 text-gray-100"
-      : "bg-amber-800/30 border-amber-500/60 text-amber-100";
+        ? 'bg-gray-300/15 border-gray-200/60 text-gray-100'
+        : 'bg-amber-800/30 border-amber-500/60 text-amber-100';
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.02] px-3 py-3 flex flex-col gap-1">
       <div className="flex items-center justify-between mb-1">
         <span
           className={
-            "inline-flex items-center justify-center text-[10px] px-2 py-[2px] rounded-full border " +
+            'inline-flex items-center justify-center text-[10px] px-2 py-[2px] rounded-full border ' +
             chipClass
           }
         >
@@ -498,35 +423,25 @@ function TopMapCard({
         </span>
         <span className="text-[10px] text-gray-400">
           {stat.gamesPlayed} game
-          {stat.gamesPlayed > 1 ? "s" : ""}
+          {stat.gamesPlayed > 1 ? 's' : ''}
         </span>
       </div>
-      <p className="text-sm font-semibold text-white">
-        {stat.mapName}
-      </p>
+      <p className="text-sm font-semibold text-white">{stat.mapName}</p>
       <div className="flex flex-wrap gap-2 text-[10px] text-gray-300 mt-1">
         <span>
-          Rounds moyen :{" "}
-          <span className="text-gray-100">
-            {stat.avgRounds.toFixed(1)}
-          </span>
+          Rounds moyen :{' '}
+          <span className="text-gray-100">{stat.avgRounds.toFixed(1)}</span>
         </span>
         <span>
-          Overtimes :{" "}
-          <span className="text-gray-100">
-            {stat.overtimes}
-          </span>{" "}
+          Overtimes : <span className="text-gray-100">{stat.overtimes}</span>{' '}
           <span className="text-gray-500">
-            (
-            {(stat.overtimesRate * 100).toFixed(0)}
+            ({(stat.overtimesRate * 100).toFixed(0)}
             %)
           </span>
         </span>
         <span>
-          Tiebreakers :{" "}
-          <span className="text-gray-100">
-            {stat.tiebreakers}
-          </span>
+          Tiebreakers :{' '}
+          <span className="text-gray-100">{stat.tiebreakers}</span>
         </span>
       </div>
     </div>
@@ -544,41 +459,41 @@ function formatTournamentDates(
   if (!start && !end) return null;
 
   const opts: Intl.DateTimeFormatOptions = {
-    day: "2-digit",
-    month: "2-digit",
+    day: '2-digit',
+    month: '2-digit',
   };
 
   if (start && end) {
     const s = new Date(start);
     const e = new Date(end);
     if (s.getTime() === e.getTime()) {
-      return `Le ${s.toLocaleDateString("fr-FR", opts)}`;
+      return `Le ${s.toLocaleDateString('fr-FR', opts)}`;
     }
     return `Du ${s.toLocaleDateString(
-      "fr-FR",
+      'fr-FR',
       opts
-    )} au ${e.toLocaleDateString("fr-FR", opts)}`;
+    )} au ${e.toLocaleDateString('fr-FR', opts)}`;
   }
 
   if (start) {
     const s = new Date(start);
-    return `À partir du ${s.toLocaleDateString("fr-FR", opts)}`;
+    return `À partir du ${s.toLocaleDateString('fr-FR', opts)}`;
   }
 
   const e = new Date(end!);
-  return `Jusqu'au ${e.toLocaleDateString("fr-FR", opts)}`;
+  return `Jusqu'au ${e.toLocaleDateString('fr-FR', opts)}`;
 }
 
 function getStatusLabel(status: string): string {
   switch (status) {
-    case "upcoming":
-      return "À venir";
-    case "running":
-    case "ongoing":
-      return "En cours";
-    case "finished":
-    case "completed":
-      return "Terminé";
+    case 'upcoming':
+      return 'À venir';
+    case 'running':
+    case 'ongoing':
+      return 'En cours';
+    case 'finished':
+    case 'completed':
+      return 'Terminé';
     default:
       return status;
   }
@@ -586,15 +501,15 @@ function getStatusLabel(status: string): string {
 
 function getStatusChipColor(status: string): string {
   switch (status) {
-    case "upcoming":
-      return "px-1.5 py-[2px] rounded-full bg-yellow-500/20 text-yellow-200 border border-yellow-500/60";
-    case "running":
-    case "ongoing":
-      return "px-1.5 py-[2px] rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/60";
-    case "finished":
-    case "completed":
-      return "px-1.5 py-[2px] rounded-full bg-gray-500/20 text-gray-200 border border-gray-500/60";
+    case 'upcoming':
+      return 'px-1.5 py-[2px] rounded-full bg-yellow-500/20 text-yellow-200 border border-yellow-500/60';
+    case 'running':
+    case 'ongoing':
+      return 'px-1.5 py-[2px] rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/60';
+    case 'finished':
+    case 'completed':
+      return 'px-1.5 py-[2px] rounded-full bg-gray-500/20 text-gray-200 border border-gray-500/60';
     default:
-      return "px-1.5 py-[2px] rounded-full bg-white/10 text-white border border-white/30";
+      return 'px-1.5 py-[2px] rounded-full bg-white/10 text-white border border-white/30';
   }
 }

@@ -1,12 +1,6 @@
 import Image from 'next/image';
 import React, { JSX } from 'react';
-import { Team as TeamType } from '../../types/types';
-
-interface TeamProps {
-  details: TeamType;
-  location?: string;
-  className?: string;
-}
+import type { TeamProps } from '../../types/components';
 
 function Team({ details, location, className }: TeamProps): JSX.Element {
   const accent = details.color || '#60a5fa';

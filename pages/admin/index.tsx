@@ -1,9 +1,9 @@
-import Head from "next/head";
-import Link from "next/link";
-import { useEffect, useState } from "react";
-import { StaffRoleBadge } from "@/components/admin/StaffRoleBadge";
-import { supabaseClient } from "@/utils/supabase";
-import { withStaffPage } from "@/utils/staff";
+import Head from 'next/head';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
+import { supabaseClient } from '@/utils/supabase';
+import { withStaffPage } from '@/utils/staff';
 
 type StaffShape = {
   id: string;
@@ -24,7 +24,7 @@ type Props = {
   staff: StaffShape;
 };
 
-export const getServerSideProps = withStaffPage("helper");
+export const getServerSideProps = withStaffPage('helper');
 
 function AdminProfilePage({ staff }: Props) {
   const [profile, setProfile] = useState<StaffProfile | null>(null);
@@ -43,23 +43,23 @@ function AdminProfilePage({ staff }: Props) {
 
         const token = session?.access_token;
         if (!token) {
-          setErrorMsg("Session staff introuvable. Merci de te reconnecter.");
+          setErrorMsg('Session staff introuvable. Merci de te reconnecter.');
           return;
         }
 
-        const res = await fetch("/api/admin/me", {
+        const res = await fetch('/api/admin/me', {
           headers: { Authorization: `Bearer ${token}` },
         });
 
         const json = await res.json();
         if (!res.ok || json?.error) {
-          throw new Error(json?.error || "Impossible de charger ton profil.");
+          throw new Error(json?.error || 'Impossible de charger ton profil.');
         }
 
         setProfile(json as StaffProfile);
       } catch (err: any) {
-        console.error("AdminProfilePage: profile fetch error", err);
-        setErrorMsg(err?.message || "Erreur inattendue");
+        console.error('AdminProfilePage: profile fetch error', err);
+        setErrorMsg(err?.message || 'Erreur inattendue');
       } finally {
         setLoading(false);
       }
@@ -68,14 +68,15 @@ function AdminProfilePage({ staff }: Props) {
     fetchProfile();
   }, []);
 
-  const displayName = profile?.display_name ?? staff.display_name ?? "Profil staff";
-  const email = profile?.email ?? "—";
+  const displayName =
+    profile?.display_name ?? staff.display_name ?? 'Profil staff';
+  const email = profile?.email ?? '—';
   const roleLabel = formatRoleLabel(profile?.role ?? staff.role);
-  const staffId = profile?.id ?? staff.id ?? "—";
-  const authUserId = profile?.auth_user_id ?? "—";
+  const staffId = profile?.id ?? staff.id ?? '—';
+  const authUserId = profile?.auth_user_id ?? '—';
   const createdAt = profile?.created_at
     ? new Date(profile.created_at).toLocaleString()
-    : "—";
+    : '—';
 
   return (
     <>
@@ -115,7 +116,9 @@ function AdminProfilePage({ staff }: Props) {
             </div>
 
             {loading && (
-              <div className="text-sm text-neutral-400">Chargement du profil…</div>
+              <div className="text-sm text-neutral-400">
+                Chargement du profil…
+              </div>
             )}
 
             {errorMsg && (
@@ -180,10 +183,10 @@ function InfoRow({
       </span>
       <span
         className={`text-sm sm:text-base ${
-          mono ? "font-mono text-neutral-200 break-all" : "font-semibold"
+          mono ? 'font-mono text-neutral-200 break-all' : 'font-semibold'
         }`}
       >
-        {value || "—"}
+        {value || '—'}
       </span>
     </div>
   );
@@ -211,18 +214,18 @@ function Shortcut({
 
 function formatRoleLabel(role: string) {
   switch (role) {
-    case "owner":
-      return "Owner";
-    case "admin":
-      return "Admin";
-    case "manager":
-      return "Manager";
-    case "referee":
-      return "Arbitre";
-    case "caster":
-      return "Caster";
-    case "helper":
-      return "Staff";
+    case 'owner':
+      return 'Owner';
+    case 'admin':
+      return 'Admin';
+    case 'manager':
+      return 'Manager';
+    case 'referee':
+      return 'Arbitre';
+    case 'caster':
+      return 'Caster';
+    case 'helper':
+      return 'Staff';
     default:
       return role;
   }

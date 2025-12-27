@@ -5,14 +5,14 @@
 // - filtré sur un tournoi donné
 // - ignore les BYE et les matchs annulés
 
-import type { NextApiRequest, NextApiResponse } from "next";
-import { supabaseAdmin } from "@/utils/supabase";
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { supabaseAdmin } from '@/utils/supabase';
 
 /* -----------------------------------------------------------
  * Types
  * ---------------------------------------------------------*/
 
-type MatchStatus = "pending" | "ongoing" | "finished" | "cancelled";
+type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
 
 type MatchRow = {
   id: string;
@@ -52,53 +52,39 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (req.method !== "GET") {
-    return res
-      .status(405)
-      .json({ error: "Method not allowed" });
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const { tournamentId, limit, minGames } = req.query;
 
-  if (
-    !tournamentId ||
-    Array.isArray(tournamentId)
-  ) {
+  if (!tournamentId || Array.isArray(tournamentId)) {
     return res.status(400).json({
-      error:
-        "Query parameter 'tournamentId' is required",
+      error: "Query parameter 'tournamentId' is required",
     });
   }
 
   const limitNum = parseInt(
-    (Array.isArray(limit) ? limit[0] : limit) ?? "20",
+    (Array.isArray(limit) ? limit[0] : limit) ?? '20',
     10
   );
   const minGamesNum = parseInt(
-    (Array.isArray(minGames)
-      ? minGames[0]
-      : minGames) ?? "1",
+    (Array.isArray(minGames) ? minGames[0] : minGames) ?? '1',
     10
   );
 
   try {
     // 1) Récupérer les matches du tournoi (hors annulés, hors BYE)
-    const { data: matchesData, error: mErr } =
-      await supabaseAdmin
-        .from("matches")
-        .select(
-          "id, tournament_id, status, is_bye"
-        )
-        .eq("tournament_id", tournamentId)
-        .neq("status", "cancelled");
+    const { data: matchesData, error: mErr } = await supabaseAdmin
+      .from('matches')
+      .select('id, tournament_id, status, is_bye')
+      .eq('tournament_id', tournamentId)
+      .neq('status', 'cancelled');
 
     if (mErr) {
-      console.error(
-        "/api/maps/stats matches error:",
-        mErr
-      );
+      console.error('/api/maps/stats matches error:', mErr);
       return res.status(500).json({
-        error: "Failed to fetch matches",
+        error: 'Failed to fetch matches',
       });
     }
 
@@ -117,21 +103,17 @@ export default async function handler(
     }
 
     // 2) Récupérer toutes les games pour ces matches
-    const { data: gamesData, error: gErr } =
-      await supabaseAdmin
-        .from("games")
-        .select(
-          "match_id, map_name, team1_score, team2_score, is_tiebreaker, went_overtime"
-        )
-        .in("match_id", matchIds);
+    const { data: gamesData, error: gErr } = await supabaseAdmin
+      .from('games')
+      .select(
+        'match_id, map_name, team1_score, team2_score, is_tiebreaker, went_overtime'
+      )
+      .in('match_id', matchIds);
 
     if (gErr) {
-      console.error(
-        "/api/maps/stats games error:",
-        gErr
-      );
+      console.error('/api/maps/stats games error:', gErr);
       return res.status(500).json({
-        error: "Failed to fetch games",
+        error: 'Failed to fetch games',
       });
     }
 
@@ -139,23 +121,15 @@ export default async function handler(
 
     // 3) Calcul des stats par map
     const stats = computeMapStats(games);
-    const totalGames = stats.reduce(
-      (sum, m) => sum + m.gamesPlayed,
-      0
-    );
+    const totalGames = stats.reduce((sum, m) => sum + m.gamesPlayed, 0);
 
     // 4) Calcul du taux d'utilisation + filtres
     const withUsage: MapTopStat[] = stats.map((s) => ({
       ...s,
-      usageRate:
-        totalGames > 0
-          ? s.gamesPlayed / totalGames
-          : 0,
+      usageRate: totalGames > 0 ? s.gamesPlayed / totalGames : 0,
     }));
 
-    let filtered = withUsage.filter(
-      (m) => m.gamesPlayed >= minGamesNum
-    );
+    let filtered = withUsage.filter((m) => m.gamesPlayed >= minGamesNum);
 
     // Tri : par nombre de games desc, puis usageRate desc, puis nom
     filtered.sort((a, b) => {
@@ -180,12 +154,9 @@ export default async function handler(
 
     return res.status(200).json(response);
   } catch (err: any) {
-    console.error(
-      "[/api/maps/stats] internal error:",
-      err
-    );
+    console.error('[/api/maps/stats] internal error:', err);
     return res.status(500).json({
-      error: "Internal server error",
+      error: 'Internal server error',
       detail: err?.message,
     });
   }
@@ -209,13 +180,12 @@ function computeMapStats(games: GameRow[]): MapTopStat[] {
     if (!g.map_name) continue;
 
     const key = g.map_name;
-    const entry =
-      agg.get(key) || {
-        games: 0,
-        totalRounds: 0,
-        overtimes: 0,
-        tiebreakers: 0,
-      };
+    const entry = agg.get(key) || {
+      games: 0,
+      totalRounds: 0,
+      overtimes: 0,
+      tiebreakers: 0,
+    };
 
     entry.games += 1;
 
@@ -235,10 +205,7 @@ function computeMapStats(games: GameRow[]): MapTopStat[] {
 
   const list: MapTopStat[] = Array.from(agg.entries()).map(
     ([mapName, entry]) => {
-      const avgRounds =
-        entry.games > 0
-          ? entry.totalRounds / entry.games
-          : 0;
+      const avgRounds = entry.games > 0 ? entry.totalRounds / entry.games : 0;
 
       return {
         mapName,

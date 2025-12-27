@@ -1,14 +1,5 @@
 import { JSX } from 'react';
-
-type TypeStyle = 'body-lg' | 'body-md' | 'body-sm';
-
-interface IParagraph {
-  typeStyle?: TypeStyle;
-  textColor?: string;
-  fontWeight?: string;
-  className?: string;
-  children: React.ReactNode;
-}
+import type { IParagraph } from '../../types/components';
 
 export default function Paragraph({
   typeStyle = 'body-lg',

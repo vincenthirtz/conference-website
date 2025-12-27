@@ -1,10 +1,10 @@
 // pages/admin/teams/new.tsx
 
-import { useState } from "react";
-import Head from "next/head";
-import { useRouter } from "next/router";
-import { withStaffPage } from "@/utils/staff";
-import { StaffRoleBadge } from "@/components/admin/StaffRoleBadge";
+import { useState } from 'react';
+import Head from 'next/head';
+import { useRouter } from 'next/router';
+import { withStaffPage } from '@/utils/staff';
+import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
 type StaffShape = {
   id: string;
@@ -27,22 +27,22 @@ type MemberInput = {
   role: string;
 };
 
-export const getServerSideProps = withStaffPage("manager");
+export const getServerSideProps = withStaffPage('manager');
 
 function AdminNewTeamPage({ staff }: StaffProps) {
   const router = useRouter();
 
   // Infos équipe
-  const [name, setName] = useState("");
-  const [shortName, setShortName] = useState("");
-  const [logoUrl, setLogoUrl] = useState("");
-  const [country, setCountry] = useState("");
-  const [description, setDescription] = useState("");
-  const [captainEmail, setCaptainEmail] = useState("");
+  const [name, setName] = useState('');
+  const [shortName, setShortName] = useState('');
+  const [logoUrl, setLogoUrl] = useState('');
+  const [country, setCountry] = useState('');
+  const [description, setDescription] = useState('');
+  const [captainEmail, setCaptainEmail] = useState('');
 
   // Membres
   const [members, setMembers] = useState<MemberInput[]>([
-    { email: "", role: "player" },
+    { email: '', role: 'player' },
   ]);
 
   const [submitting, setSubmitting] = useState(false);
@@ -62,7 +62,7 @@ function AdminNewTeamPage({ staff }: StaffProps) {
   };
 
   const addMemberRow = () => {
-    setMembers((prev) => [...prev, { email: "", role: "player" }]);
+    setMembers((prev) => [...prev, { email: '', role: 'player' }]);
   };
 
   const removeMemberRow = (index: number) => {
@@ -91,13 +91,13 @@ function AdminNewTeamPage({ staff }: StaffProps) {
           .filter((m) => m.email.trim().length > 0)
           .map((m) => ({
             email: m.email.trim(),
-            role: m.role.trim() || "player",
+            role: m.role.trim() || 'player',
           })),
       };
 
-      const res = await fetch("/api/admin/teams", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/admin/teams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
@@ -107,14 +107,14 @@ function AdminNewTeamPage({ staff }: StaffProps) {
       }
 
       const json: CreateTeamResponse = await res.json();
-      setSuccessMsg("Équipe créée avec succès ✅");
+      setSuccessMsg('Équipe créée avec succès ✅');
 
       // Redirection vers la page de détail équipe (à adapter selon ton routing)
       if (json.team?.id) {
         router.push(`/admin/team/${json.team.id}`);
       }
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur inattendue");
+      setErrorMsg(err?.message ?? 'Erreur inattendue');
     } finally {
       setSubmitting(false);
     }
@@ -132,7 +132,7 @@ function AdminNewTeamPage({ staff }: StaffProps) {
           <div>
             <button
               type="button"
-              onClick={() => router.push("/admin/teams")}
+              onClick={() => router.push('/admin/teams')}
               className="mb-3 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
             >
               ← Retour à la liste des équipes
@@ -204,9 +204,7 @@ function AdminNewTeamPage({ staff }: StaffProps) {
                     />
                   </div>
                   <div>
-                    <label className="block text-neutral-300 mb-1">
-                      Pays
-                    </label>
+                    <label className="block text-neutral-300 mb-1">Pays</label>
                     <input
                       className="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       type="text"
@@ -257,8 +255,8 @@ function AdminNewTeamPage({ staff }: StaffProps) {
                     placeholder="capitaine@exemple.com"
                   />
                   <p className="mt-1 text-xs text-neutral-500">
-                    L&apos;API convertira cet email en{" "}
-                    <code className="font-mono">captain_id</code> dans{" "}
+                    L&apos;API convertira cet email en{' '}
+                    <code className="font-mono">captain_id</code> dans{' '}
                     <code className="font-mono">auth.users</code>.
                   </p>
                 </div>
@@ -301,7 +299,7 @@ function AdminNewTeamPage({ staff }: StaffProps) {
                         type="email"
                         value={member.email}
                         onChange={(e) =>
-                          handleMemberChange(index, "email", e.target.value)
+                          handleMemberChange(index, 'email', e.target.value)
                         }
                         placeholder="joueuse@exemple.com"
                       />
@@ -315,7 +313,7 @@ function AdminNewTeamPage({ staff }: StaffProps) {
                         type="text"
                         value={member.role}
                         onChange={(e) =>
-                          handleMemberChange(index, "role", e.target.value)
+                          handleMemberChange(index, 'role', e.target.value)
                         }
                         placeholder="player / coach / sub…"
                       />
@@ -335,9 +333,9 @@ function AdminNewTeamPage({ staff }: StaffProps) {
               </div>
 
               <p className="text-xs text-neutral-500">
-                L&apos;API créera les lignes dans{" "}
-                <code className="font-mono">team_members</code> avec{" "}
-                <code className="font-mono">role</code> et le{" "}
+                L&apos;API créera les lignes dans{' '}
+                <code className="font-mono">team_members</code> avec{' '}
+                <code className="font-mono">role</code> et le{' '}
                 <code className="font-mono">user_id</code> correspondant à
                 chaque email.
               </p>
@@ -354,37 +352,30 @@ function AdminNewTeamPage({ staff }: StaffProps) {
                 <div className="flex justify-between gap-4">
                   <span className="text-neutral-400">Nom</span>
                   <span className="font-medium truncate max-w-[200px] text-right">
-                    {name || "—"}
+                    {name || '—'}
                   </span>
                 </div>
                 <div className="flex justify-between gap-4">
                   <span className="text-neutral-400">Tag</span>
                   <span className="font-mono text-xs bg-neutral-900 px-2 py-1 rounded border border-neutral-700">
-                    {shortName || "—"}
+                    {shortName || '—'}
                   </span>
                 </div>
                 <div className="flex justify-between gap-4">
                   <span className="text-neutral-400">Pays</span>
-                  <span className="text-neutral-200">
-                    {country || "—"}
-                  </span>
+                  <span className="text-neutral-200">{country || '—'}</span>
                 </div>
                 <div className="flex justify-between gap-4">
                   <span className="text-neutral-400">Capitaine</span>
                   <span className="text-neutral-200 text-xs font-mono">
-                    {captainEmail || "—"}
+                    {captainEmail || '—'}
                   </span>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <span className="text-neutral-400">
-                    Nombre de membres
-                  </span>
+                  <span className="text-neutral-400">Nombre de membres</span>
                   <span className="text-neutral-200">
-                    {
-                      members.filter((m) => m.email.trim().length > 0)
-                        .length
-                    }{" "}
-                    / {members.length}
+                    {members.filter((m) => m.email.trim().length > 0).length} /{' '}
+                    {members.length}
                   </span>
                 </div>
               </div>
@@ -395,14 +386,11 @@ function AdminNewTeamPage({ staff }: StaffProps) {
             </section>
 
             <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5 space-y-3">
-              <h2 className="text-lg font-semibold mb-1">
-                Actions
-              </h2>
+              <h2 className="text-lg font-semibold mb-1">Actions</h2>
               <p className="text-sm text-neutral-400">
-                Vérifie bien les emails (ils doivent exister dans{" "}
-                <code className="font-mono">auth.users</code> si
-                l&apos;API ne gère pas encore la création
-                automatique).
+                Vérifie bien les emails (ils doivent exister dans{' '}
+                <code className="font-mono">auth.users</code> si l&apos;API ne
+                gère pas encore la création automatique).
               </p>
 
               <button
@@ -410,12 +398,12 @@ function AdminNewTeamPage({ staff }: StaffProps) {
                 disabled={submitting}
                 className="w-full mt-2 inline-flex items-center justify-center rounded-md bg-blue-600 hover:bg-blue-700 px-4 py-2.5 text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {submitting ? "Création en cours…" : "Créer l'équipe"}
+                {submitting ? 'Création en cours…' : "Créer l'équipe"}
               </button>
 
               <button
                 type="button"
-                onClick={() => router.push("/admin/teams")}
+                onClick={() => router.push('/admin/teams')}
                 className="w-full mt-2 inline-flex items-center justify-center rounded-md bg-neutral-700 hover:bg-neutral-600 px-4 py-2.5 text-sm"
               >
                 Annuler

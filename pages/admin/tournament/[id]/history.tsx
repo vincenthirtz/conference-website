@@ -1,11 +1,11 @@
 // pages/admin/tournament/[id]/history.tsx
 
-import { useEffect, useState } from "react";
-import Head from "next/head";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { withStaffPage } from "@/utils/staff";
-import { StaffRoleBadge } from "@/components/admin/StaffRoleBadge";
+import { useEffect, useState } from 'react';
+import Head from 'next/head';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { withStaffPage } from '@/utils/staff';
+import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
 type StaffShape = {
   id: string;
@@ -41,7 +41,7 @@ type ApiResponse = {
   logs: FormattedStaffLog[];
 };
 
-export const getServerSideProps = withStaffPage("manager");
+export const getServerSideProps = withStaffPage('manager');
 
 function formatDateTime(iso: string) {
   try {
@@ -60,8 +60,8 @@ function AdminTournamentHistoryPage({ staff }: StaffProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // filtres
-  const [entityType, setEntityType] = useState("");
-  const [action, setAction] = useState("");
+  const [entityType, setEntityType] = useState('');
+  const [action, setAction] = useState('');
   const [limit, setLimit] = useState(100);
 
   async function fetchLogs() {
@@ -72,10 +72,10 @@ function AdminTournamentHistoryPage({ staff }: StaffProps) {
 
     try {
       const params = new URLSearchParams();
-      params.set("limit", String(limit));
+      params.set('limit', String(limit));
 
-      if (entityType.trim()) params.set("entityType", entityType.trim());
-      if (action.trim()) params.set("action", action.trim());
+      if (entityType.trim()) params.set('entityType', entityType.trim());
+      if (action.trim()) params.set('action', action.trim());
 
       const res = await fetch(
         `/api/admin/tournament/${id}/history?` + params.toString()
@@ -83,13 +83,13 @@ function AdminTournamentHistoryPage({ staff }: StaffProps) {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Impossible de charger l’historique");
+        throw new Error(json.error || 'Impossible de charger l’historique');
       }
 
       const json: ApiResponse = await res.json();
       setLogs(json.logs || []);
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur inconnue");
+      setErrorMsg(err?.message ?? 'Erreur inconnue');
     } finally {
       setLoading(false);
     }
@@ -123,9 +123,7 @@ function AdminTournamentHistoryPage({ staff }: StaffProps) {
             >
               ← Retour au tournoi
             </button>
-            <h1 className="text-3xl font-bold">
-              Historique staff du tournoi
-            </h1>
+            <h1 className="text-3xl font-bold">Historique staff du tournoi</h1>
             <p className="text-neutral-400 text-sm mt-1">
               Journal des actions staff (création / update / batch, etc.) sur ce
               tournoi et ses entités liées.
@@ -153,9 +151,7 @@ function AdminTournamentHistoryPage({ staff }: StaffProps) {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-neutral-400">
-              Action
-            </label>
+            <label className="text-xs text-neutral-400">Action</label>
             <input
               type="text"
               className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -166,9 +162,7 @@ function AdminTournamentHistoryPage({ staff }: StaffProps) {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-neutral-400">
-              Limite
-            </label>
+            <label className="text-xs text-neutral-400">Limite</label>
             <select
               className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={limit}
@@ -199,7 +193,7 @@ function AdminTournamentHistoryPage({ staff }: StaffProps) {
         <div className="bg-neutral-800 border border-neutral-700 rounded-xl overflow-hidden">
           <div className="px-4 py-3 border-b border-neutral-700 flex justify-between items-center">
             <span className="text-sm font-semibold">
-              {loading ? "Chargement..." : `Logs (${logs.length})`}
+              {loading ? 'Chargement...' : `Logs (${logs.length})`}
             </span>
             <span className="text-xs text-neutral-400">
               Trié du plus récent au plus ancien
@@ -215,7 +209,10 @@ function AdminTournamentHistoryPage({ staff }: StaffProps) {
           {logs.length > 0 && (
             <ul className="divide-y divide-neutral-700">
               {logs.map((log) => (
-                <li key={log.id} className="px-4 py-3 text-sm flex flex-col gap-1">
+                <li
+                  key={log.id}
+                  className="px-4 py-3 text-sm flex flex-col gap-1"
+                >
                   {/* Ligne principale */}
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
@@ -228,7 +225,7 @@ function AdminTournamentHistoryPage({ staff }: StaffProps) {
                       {log.entity_type && (
                         <span className="px-2 py-0.5 rounded-full text-xs bg-neutral-900 border border-neutral-700 text-neutral-300">
                           {log.entity_type}
-                          {log.entity_id ? ` #${shortId(log.entity_id)}` : ""}
+                          {log.entity_id ? ` #${shortId(log.entity_id)}` : ''}
                         </span>
                       )}
                     </div>
@@ -250,9 +247,7 @@ function AdminTournamentHistoryPage({ staff }: StaffProps) {
 
                   {/* Message formatté si dispo */}
                   {log.message && (
-                    <div className="text-neutral-200">
-                      {log.message}
-                    </div>
+                    <div className="text-neutral-200">{log.message}</div>
                   )}
 
                   {/* Payload brut (mini) */}
@@ -269,7 +264,7 @@ function AdminTournamentHistoryPage({ staff }: StaffProps) {
 
                   {/* Liens rapides vers entités si possible */}
                   <div className="mt-1 flex flex-wrap gap-2 text-xs text-blue-300">
-                    {log.entity_type === "match" && log.entity_id && (
+                    {log.entity_type === 'match' && log.entity_id && (
                       <Link
                         href={`/admin/matches/${log.entity_id}`}
                         className="hover:underline"
@@ -278,7 +273,7 @@ function AdminTournamentHistoryPage({ staff }: StaffProps) {
                       </Link>
                     )}
 
-                    {log.entity_type === "stage" && log.entity_id && id && (
+                    {log.entity_type === 'stage' && log.entity_id && id && (
                       <Link
                         href={`/admin/stages/${log.entity_id}`}
                         className="hover:underline"
@@ -287,7 +282,7 @@ function AdminTournamentHistoryPage({ staff }: StaffProps) {
                       </Link>
                     )}
 
-                    {log.entity_type === "team" && log.entity_id && (
+                    {log.entity_type === 'team' && log.entity_id && (
                       <Link
                         href={`/admin/teams/${log.entity_id}`}
                         className="hover:underline"
@@ -308,7 +303,7 @@ function AdminTournamentHistoryPage({ staff }: StaffProps) {
 
 function shortId(id: string) {
   if (id.length <= 8) return id;
-  return id.slice(0, 4) + "…" + id.slice(-3);
+  return id.slice(0, 4) + '…' + id.slice(-3);
 }
 
 export default AdminTournamentHistoryPage;

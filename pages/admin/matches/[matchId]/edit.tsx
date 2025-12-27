@@ -1,12 +1,12 @@
 // pages/admin/matches/[matchId]/edit.tsx
 
-import { useEffect, useState } from "react";
-import Head from "next/head";
-import { useRouter } from "next/router";
-import Link from "next/link";
-import Image from "next/image";
-import { withStaffPage } from "@/utils/staff";
-import { StaffRoleBadge } from "@/components/admin/StaffRoleBadge";
+import { useEffect, useState } from 'react';
+import Head from 'next/head';
+import { useRouter } from 'next/router';
+import Link from 'next/link';
+import Image from 'next/image';
+import { withStaffPage } from '@/utils/staff';
+import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
 type StaffShape = {
   id: string;
@@ -17,15 +17,15 @@ type StaffShape = {
 type StaffProps = {
   staff: StaffShape;
 };
-type MatchStatus = "pending" | "ongoing" | "finished" | "cancelled";
+type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
 
 type StageType =
-  | "group"
-  | "bracket"
-  | "swiss"
-  | "round_robin"
-  | "showmatch"
-  | "other";
+  | 'group'
+  | 'bracket'
+  | 'swiss'
+  | 'round_robin'
+  | 'showmatch'
+  | 'other';
 
 type TeamMini = {
   id: string;
@@ -74,13 +74,13 @@ type ApiResponse = {
   team2: TeamMini | null;
 };
 
-export const getServerSideProps = withStaffPage("referee");
+export const getServerSideProps = withStaffPage('referee');
 
 function formatToInputDateTime(iso: string | null): string {
-  if (!iso) return "";
+  if (!iso) return '';
   try {
     const d = new Date(iso);
-    const pad = (n: number) => String(n).padStart(2, "0");
+    const pad = (n: number) => String(n).padStart(2, '0');
     const year = d.getFullYear();
     const month = pad(d.getMonth() + 1);
     const day = pad(d.getDate());
@@ -88,12 +88,12 @@ function formatToInputDateTime(iso: string | null): string {
     const minutes = pad(d.getMinutes());
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   } catch {
-    return "";
+    return '';
   }
 }
 
 function formatDateTimeNice(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return '—';
   try {
     return new Date(iso).toLocaleString();
   } catch {
@@ -103,14 +103,14 @@ function formatDateTimeNice(iso: string | null): string {
 
 function statusLabel(status: MatchStatus) {
   switch (status) {
-    case "pending":
-      return "À venir";
-    case "ongoing":
-      return "En cours";
-    case "finished":
-      return "Terminé";
-    case "cancelled":
-      return "Annulé";
+    case 'pending':
+      return 'À venir';
+    case 'ongoing':
+      return 'En cours';
+    case 'finished':
+      return 'Terminé';
+    case 'cancelled':
+      return 'Annulé';
     default:
       return status;
   }
@@ -118,16 +118,16 @@ function statusLabel(status: MatchStatus) {
 
 function statusColor(status: MatchStatus) {
   switch (status) {
-    case "pending":
-      return "bg-neutral-700 text-neutral-100";
-    case "ongoing":
-      return "bg-amber-600/80 text-neutral-900";
-    case "finished":
-      return "bg-emerald-600/80 text-white";
-    case "cancelled":
-      return "bg-red-700/80 text-white";
+    case 'pending':
+      return 'bg-neutral-700 text-neutral-100';
+    case 'ongoing':
+      return 'bg-amber-600/80 text-neutral-900';
+    case 'finished':
+      return 'bg-emerald-600/80 text-white';
+    case 'cancelled':
+      return 'bg-red-700/80 text-white';
     default:
-      return "bg-neutral-700 text-neutral-100";
+      return 'bg-neutral-700 text-neutral-100';
   }
 }
 
@@ -155,15 +155,18 @@ function AdminMatchEditPage({ staff }: StaffProps) {
     stream_url: string;
     notes: string;
   }>({
-    status: "pending",
-    best_of: "",
-    round_number: "",
-    scheduled_at: "",
-    stream_url: "",
-    notes: "",
+    status: 'pending',
+    best_of: '',
+    round_number: '',
+    scheduled_at: '',
+    stream_url: '',
+    notes: '',
   });
 
-  function updateField<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
+  function updateField<K extends keyof typeof form>(
+    key: K,
+    value: (typeof form)[K]
+  ) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -183,7 +186,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
       const res = await fetch(`/api/admin/matches/${matchId}`);
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Impossible de charger le match");
+        throw new Error(json.error || 'Impossible de charger le match');
       }
 
       const json: ApiResponse = await res.json();
@@ -196,15 +199,17 @@ function AdminMatchEditPage({ staff }: StaffProps) {
       setTeam2(json.team2 ?? null);
 
       setForm({
-        status: m.status || "pending",
-        best_of: m.best_of ? String(m.best_of) : "",
-        round_number: m.round_number ? String(m.round_number) : "",
+        status: m.status || 'pending',
+        best_of: m.best_of ? String(m.best_of) : '',
+        round_number: m.round_number ? String(m.round_number) : '',
         scheduled_at: formatToInputDateTime(m.scheduled_at),
-        stream_url: m.stream_url || "",
-        notes: m.notes || "",
+        stream_url: m.stream_url || '',
+        notes: m.notes || '',
       });
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur inattendue lors du chargement du match");
+      setErrorMsg(
+        err?.message ?? 'Erreur inattendue lors du chargement du match'
+      );
     } finally {
       setLoading(false);
     }
@@ -231,14 +236,14 @@ function AdminMatchEditPage({ staff }: StaffProps) {
       };
 
       const res = await fetch(`/api/admin/matches/${matchId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Erreur lors de la mise à jour du match");
+        throw new Error(json.error || 'Erreur lors de la mise à jour du match');
       }
 
       const json: ApiResponse = await res.json();
@@ -248,9 +253,9 @@ function AdminMatchEditPage({ staff }: StaffProps) {
       setTeam1(json.team1 ?? null);
       setTeam2(json.team2 ?? null);
 
-      setSuccessMsg("Match mis à jour avec succès.");
+      setSuccessMsg('Match mis à jour avec succès.');
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur inattendue lors de la mise à jour");
+      setErrorMsg(err?.message ?? 'Erreur inattendue lors de la mise à jour');
     } finally {
       setSaving(false);
     }
@@ -259,7 +264,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
   const backAdminUrl = `/admin/matches/${matchId}`;
   const backTournamentUrl = match
     ? `/admin/tournament/${match.tournament_id}`
-    : "/admin/tournaments";
+    : '/admin/tournaments';
 
   return (
     <>
@@ -282,13 +287,13 @@ function AdminMatchEditPage({ staff }: StaffProps) {
 
             {match && (
               <p className="text-neutral-400 text-sm mt-1">
-                Match{" "}
+                Match{' '}
                 <span className="font-mono bg-neutral-800 border border-neutral-700 px-2 py-0.5 rounded text-xs">
                   #{match.id.slice(0, 8)}
-                </span>{" "}
+                </span>{' '}
                 {tournament && (
                   <>
-                    • Tournoi{" "}
+                    • Tournoi{' '}
                     <Link
                       href={backTournamentUrl}
                       className="font-semibold hover:underline"
@@ -299,8 +304,8 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                 )}
                 {stage && (
                   <>
-                    {" "}
-                    • Phase{" "}
+                    {' '}
+                    • Phase{' '}
                     <Link
                       href={`/admin/stages/${stage.id}`}
                       className="hover:underline"
@@ -352,7 +357,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                         className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         value={form.status}
                         onChange={(e) =>
-                          updateField("status", e.target.value as MatchStatus)
+                          updateField('status', e.target.value as MatchStatus)
                         }
                       >
                         <option value="pending">À venir</option>
@@ -371,7 +376,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                         className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         value={form.round_number}
                         onChange={(e) =>
-                          updateField("round_number", e.target.value)
+                          updateField('round_number', e.target.value)
                         }
                         placeholder="1"
                       />
@@ -386,9 +391,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                         min={1}
                         className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         value={form.best_of}
-                        onChange={(e) =>
-                          updateField("best_of", e.target.value)
-                        }
+                        onChange={(e) => updateField('best_of', e.target.value)}
                         placeholder="3, 5…"
                       />
                     </div>
@@ -408,7 +411,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                         className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         value={form.scheduled_at}
                         onChange={(e) =>
-                          updateField("scheduled_at", e.target.value)
+                          updateField('scheduled_at', e.target.value)
                         }
                       />
                       <p className="text-xs text-neutral-500 mt-1">
@@ -426,7 +429,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                         className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         value={form.stream_url}
                         onChange={(e) =>
-                          updateField("stream_url", e.target.value)
+                          updateField('stream_url', e.target.value)
                         }
                         placeholder="https://twitch.tv/..."
                       />
@@ -440,7 +443,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                   <textarea
                     className="w-full min-h-[120px] px-3 py-2 rounded bg-neutral-900 border border-neutral-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={form.notes}
-                    onChange={(e) => updateField("notes", e.target.value)}
+                    onChange={(e) => updateField('notes', e.target.value)}
                     placeholder="Infos pour les arbitres / casters (setup, lobby code, casters, spécificités, etc.)."
                   />
                 </section>
@@ -461,11 +464,13 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                     disabled={saving}
                     className={`px-5 py-2 rounded font-semibold text-sm ${
                       saving
-                        ? "bg-blue-800 cursor-wait"
-                        : "bg-blue-600 hover:bg-blue-700"
+                        ? 'bg-blue-800 cursor-wait'
+                        : 'bg-blue-600 hover:bg-blue-700'
                     }`}
                   >
-                    {saving ? "Enregistrement..." : "Enregistrer les modifications"}
+                    {saving
+                      ? 'Enregistrement...'
+                      : 'Enregistrer les modifications'}
                   </button>
                 </div>
               </form>
@@ -489,13 +494,13 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                   <div className="flex justify-between gap-4">
                     <span className="text-neutral-400">Round</span>
                     <span className="text-neutral-200">
-                      {match.round_number ?? "—"}
+                      {match.round_number ?? '—'}
                     </span>
                   </div>
                   <div className="flex justify-between gap-4">
                     <span className="text-neutral-400">Format</span>
                     <span className="text-neutral-200">
-                      {match.best_of ? `BO${match.best_of}` : "—"}
+                      {match.best_of ? `BO${match.best_of}` : '—'}
                     </span>
                   </div>
                   <div className="flex justify-between gap-4">
@@ -519,7 +524,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                 </div>
 
                 <div className="mt-3 pt-3 border-t border-neutral-700 text-xs text-neutral-500">
-                  ID complet :{" "}
+                  ID complet :{' '}
                   <span className="font-mono bg-neutral-900 px-2 py-1 rounded border border-neutral-700">
                     {match.id}
                   </span>
@@ -574,8 +579,14 @@ type TeamSummaryProps = {
   isWinner: boolean;
 };
 
-function TeamSummaryCard({ label, team, teamId, score, isWinner }: TeamSummaryProps) {
-  const displayName = team?.name || teamId || "TBD";
+function TeamSummaryCard({
+  label,
+  team,
+  teamId,
+  score,
+  isWinner,
+}: TeamSummaryProps) {
+  const displayName = team?.name || teamId || 'TBD';
 
   return (
     <div className="flex items-center gap-3">
@@ -593,7 +604,7 @@ function TeamSummaryCard({ label, team, teamId, score, isWinner }: TeamSummaryPr
           <div>
             <div
               className={`font-semibold ${
-                isWinner ? "text-emerald-300" : "text-neutral-100"
+                isWinner ? 'text-emerald-300' : 'text-neutral-100'
               }`}
             >
               {displayName}
@@ -603,7 +614,7 @@ function TeamSummaryCard({ label, team, teamId, score, isWinner }: TeamSummaryPr
           <div className="text-right">
             <div className="text-xs text-neutral-400">Score</div>
             <div className="text-lg font-semibold">
-              {score != null ? score : "—"}
+              {score != null ? score : '—'}
             </div>
           </div>
         </div>

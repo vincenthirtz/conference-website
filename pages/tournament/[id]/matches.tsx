@@ -1,13 +1,13 @@
 // @ts-nocheck
 // pages/tournament/[id]/matches.tsx
-/* eslint-disable react/no-unescaped-entities */
-import { GetServerSideProps } from "next";
-import Head from "next/head";
-import Link from "next/link";
-import Heading from "@/components/Typography/heading";
-import Paragraph from "@/components/Typography/paragraph";
-import Button from "@/components/Buttons/button";
-import { supabaseAdmin } from "@/utils/supabase";
+ 
+import { GetServerSideProps } from 'next';
+import Head from 'next/head';
+import Link from 'next/link';
+import Heading from '@/components/Typography/heading';
+import Paragraph from '@/components/Typography/paragraph';
+import Button from '@/components/Buttons/button';
+import { supabaseAdmin } from '@/utils/supabase';
 
 type Tournament = {
   id: string;
@@ -34,7 +34,7 @@ type SimpleTeam = {
   logo_url?: string | null;
 };
 
-type MatchStatus = "pending" | "ongoing" | "finished" | "cancelled";
+type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
 
 type SimpleMatch = {
   id: string;
@@ -63,49 +63,45 @@ type Props = {
   stageFilter: string;
 };
 
-export const getServerSideProps: GetServerSideProps<Props> = async (
-  ctx
-) => {
+export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   const { id, status, stageId } = ctx.query;
 
   if (!id || Array.isArray(id)) {
     return { notFound: true };
   }
 
-  const statusFilter =
-    typeof status === "string" ? status : "all";
-  const stageFilter =
-    typeof stageId === "string" ? stageId : "all";
+  const statusFilter = typeof status === 'string' ? status : 'all';
+  const stageFilter = typeof stageId === 'string' ? stageId : 'all';
 
   // 1) Tournoi
   const { data: tournament, error: tErr } = await supabaseAdmin
-    .from("tournaments")
-    .select("*")
-    .eq("id", id)
+    .from('tournaments')
+    .select('*')
+    .eq('id', id)
     .single();
 
   if (tErr || !tournament) {
     return { notFound: true };
   }
 
-  if (tournament.visibility && tournament.visibility !== "public") {
+  if (tournament.visibility && tournament.visibility !== 'public') {
     return { notFound: true };
   }
 
   // 2) Stages
   const { data: stages, error: sErr } = await supabaseAdmin
-    .from("tournament_stages")
-    .select("*")
-    .eq("tournament_id", id)
-    .order("created_at", { ascending: true });
+    .from('tournament_stages')
+    .select('*')
+    .eq('tournament_id', id)
+    .order('created_at', { ascending: true });
 
   if (sErr) {
-    console.error("matches page stages error:", sErr);
+    console.error('matches page stages error:', sErr);
   }
 
   // 3) Matches avec filtres
   let q = supabaseAdmin
-    .from("matches")
+    .from('matches')
     .select(
       `
       id,
@@ -122,27 +118,27 @@ export const getServerSideProps: GetServerSideProps<Props> = async (
       stage:tournament_stages ( id, name, stage_type )
     `
     )
-    .eq("tournament_id", id)
-    .neq("status", "cancelled");
+    .eq('tournament_id', id)
+    .neq('status', 'cancelled');
 
   if (
-    statusFilter === "pending" ||
-    statusFilter === "ongoing" ||
-    statusFilter === "finished"
+    statusFilter === 'pending' ||
+    statusFilter === 'ongoing' ||
+    statusFilter === 'finished'
   ) {
-    q = q.eq("status", statusFilter);
+    q = q.eq('status', statusFilter);
   }
 
-  if (stageFilter !== "all") {
-    q = q.eq("stage_id", stageFilter);
+  if (stageFilter !== 'all') {
+    q = q.eq('stage_id', stageFilter);
   }
 
   const { data: matchesData, error: mErr } = await q
-    .order("scheduled_at", { ascending: true })
-    .order("created_at", { ascending: true });
+    .order('scheduled_at', { ascending: true })
+    .order('created_at', { ascending: true });
 
   if (mErr) {
-    console.error("matches page matches error:", mErr);
+    console.error('matches page matches error:', mErr);
   }
 
   const matches = (matchesData || []) as any as SimpleMatch[];
@@ -174,15 +170,12 @@ export default function TournamentMatchesPage({
 
   const grouped = groupMatchesByDay(matches);
 
-  const hasFilters =
-    statusFilter !== "all" || stageFilter !== "all";
+  const hasFilters = statusFilter !== 'all' || stageFilter !== 'all';
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <Head>
-        <title>
-          Matchs – {tournament.name} | OW Women&apos;s Cup
-        </title>
+        <title>Matchs – {tournament.name} | OW Women&apos;s Cup</title>
       </Head>
 
       <main className="container mx-auto px-4 pt-24 pb-16 max-w-6xl">
@@ -195,16 +188,13 @@ export default function TournamentMatchesPage({
                   OW Women&apos;s Cup
                 </span>
                 <span className="text-gray-200">
-                  {tournament.game || "Overwatch 2"}
+                  {tournament.game || 'Overwatch 2'}
                 </span>
                 <span className="w-[1px] h-3 bg-white/20" />
                 <span className={statusColor}>{statusLabel}</span>
               </div>
 
-              <Heading
-                typeStyle="heading-md"
-                className="text-gradient mb-1"
-              >
+              <Heading typeStyle="heading-md" className="text-gradient mb-1">
                 Matchs – {tournament.name}
               </Heading>
               {dateRangeLabel && (
@@ -212,11 +202,9 @@ export default function TournamentMatchesPage({
                   {dateRangeLabel}
                   {tournament.format && (
                     <>
-                      {" "}
-                      ·{" "}
-                      <span className="text-gray-100">
-                        {tournament.format}
-                      </span>
+                      {' '}
+                      ·{' '}
+                      <span className="text-gray-100">{tournament.format}</span>
                     </>
                   )}
                 </p>
@@ -226,9 +214,9 @@ export default function TournamentMatchesPage({
                 textColor="text-gray-200"
                 className="max-w-xl"
               >
-                Retrouvez ici la liste complète des matchs du
-                tournoi. Utilisez les filtres pour naviguer par
-                phase ou par statut (à venir, en cours, terminés).
+                Retrouvez ici la liste complète des matchs du tournoi. Utilisez
+                les filtres pour naviguer par phase ou par statut (à venir, en
+                cours, terminés).
               </Paragraph>
             </div>
 
@@ -275,9 +263,7 @@ export default function TournamentMatchesPage({
 
                 {/* Status filter */}
                 <label className="flex items-center gap-1">
-                  <span className="text-gray-400">
-                    Statut :
-                  </span>
+                  <span className="text-gray-400">Statut :</span>
                   <select
                     name="status"
                     defaultValue={statusFilter}
@@ -292,9 +278,7 @@ export default function TournamentMatchesPage({
 
                 {/* Stage filter */}
                 <label className="flex items-center gap-1">
-                  <span className="text-gray-400">
-                    Phase :
-                  </span>
+                  <span className="text-gray-400">Phase :</span>
                   <select
                     name="stageId"
                     defaultValue={stageFilter}
@@ -318,9 +302,7 @@ export default function TournamentMatchesPage({
                   Appliquer
                 </Button>
                 {hasFilters && (
-                  <Link
-                    href={`/tournament/${tournament.id}/matches`}
-                  >
+                  <Link href={`/tournament/${tournament.id}/matches`}>
                     <Button
                       type="button"
                       className="text-xs px-3 py-1.5 bg-transparent border border-white/25 hover:border-red-400 rounded-full"
@@ -338,10 +320,7 @@ export default function TournamentMatchesPage({
         <section>
           <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
             {matches.length === 0 && (
-              <Paragraph
-                typeStyle="body-sm"
-                textColor="text-gray-300"
-              >
+              <Paragraph typeStyle="body-sm" textColor="text-gray-300">
                 Aucun match ne correspond aux filtres actuels.
               </Paragraph>
             )}
@@ -356,7 +335,7 @@ export default function TournamentMatchesPage({
                       </p>
                       <p className="text-[10px] text-gray-500">
                         {day.matches.length} match
-                        {day.matches.length > 1 ? "s" : ""}
+                        {day.matches.length > 1 ? 's' : ''}
                       </p>
                     </div>
                     <div className="space-y-1.5">
@@ -380,20 +359,20 @@ export default function TournamentMatchesPage({
  * ────────────────────────────────────────────*/
 
 function MatchRow({ match }: { match: SimpleMatch }) {
-  const t1 = match.team1?.short_name || match.team1?.name || "Équipe 1";
+  const t1 = match.team1?.short_name || match.team1?.name || 'Équipe 1';
   const t2 =
     match.team2?.short_name ||
     match.team2?.name ||
-    (match.is_bye ? "(bye)" : "Équipe 2");
+    (match.is_bye ? '(bye)' : 'Équipe 2');
 
   const dateLabel = formatMatchDate(match.scheduled_at);
   const statusLabel = getMatchStatusShort(match.status);
   const statusColor = getMatchStatusColor(match.status);
 
   const scoreLabel =
-    match.status === "finished"
+    match.status === 'finished'
       ? `${match.team1_score ?? 0} - ${match.team2_score ?? 0}`
-      : "";
+      : '';
 
   return (
     <Link href={`/match/${match.id}`}>
@@ -401,20 +380,16 @@ function MatchRow({ match }: { match: SimpleMatch }) {
         {/* Teams */}
         <div className="flex flex-col">
           <p className="text-gray-100 truncate">
-            {t1}{" "}
+            {t1}{' '}
             {!match.is_bye && (
               <>
                 <span className="text-gray-500">vs</span> {t2}
               </>
             )}
-            {match.is_bye && (
-              <span className="text-gray-500"> (bye)</span>
-            )}
+            {match.is_bye && <span className="text-gray-500"> (bye)</span>}
           </p>
           <div className="flex flex-wrap gap-2 text-[10px] text-gray-400">
-            {match.stage && (
-              <span>{match.stage.name}</span>
-            )}
+            {match.stage && <span>{match.stage.name}</span>}
             {match.round_name && (
               <>
                 <span className="text-gray-600">·</span>
@@ -433,7 +408,7 @@ function MatchRow({ match }: { match: SimpleMatch }) {
         {/* Time */}
         <div className="flex flex-col items-start">
           <span className="text-[10px] text-gray-300">
-            {dateLabel || "Horaire à confirmer"}
+            {dateLabel || 'Horaire à confirmer'}
           </span>
         </div>
 
@@ -463,16 +438,14 @@ function groupMatchesByDay(matches: SimpleMatch[]): {
 
   for (const m of matches) {
     const d = m.scheduled_at ? new Date(m.scheduled_at) : null;
-    const key = d
-      ? d.toISOString().slice(0, 10)
-      : "unscheduled";
+    const key = d ? d.toISOString().slice(0, 10) : 'unscheduled';
     const label = d
-      ? d.toLocaleDateString("fr-FR", {
-          weekday: "short",
-          day: "2-digit",
-          month: "2-digit",
+      ? d.toLocaleDateString('fr-FR', {
+          weekday: 'short',
+          day: '2-digit',
+          month: '2-digit',
         })
-      : "Date à définir";
+      : 'Date à définir';
 
     if (!groups.has(key)) {
       groups.set(key, { key, label, matches: [] });
@@ -482,8 +455,8 @@ function groupMatchesByDay(matches: SimpleMatch[]): {
 
   const arr = Array.from(groups.values());
   arr.sort((a, b) => {
-    if (a.key === "unscheduled") return 1;
-    if (b.key === "unscheduled") return -1;
+    if (a.key === 'unscheduled') return 1;
+    if (b.key === 'unscheduled') return -1;
     return a.key.localeCompare(b.key);
   });
 
@@ -497,53 +470,53 @@ function formatTournamentDates(
   if (!start && !end) return null;
 
   const opts: Intl.DateTimeFormatOptions = {
-    day: "2-digit",
-    month: "2-digit",
+    day: '2-digit',
+    month: '2-digit',
   };
 
   if (start && end) {
     const s = new Date(start);
     const e = new Date(end);
     if (s.getTime() === e.getTime()) {
-      return `Le ${s.toLocaleDateString("fr-FR", opts)}`;
+      return `Le ${s.toLocaleDateString('fr-FR', opts)}`;
     }
     return `Du ${s.toLocaleDateString(
-      "fr-FR",
+      'fr-FR',
       opts
-    )} au ${e.toLocaleDateString("fr-FR", opts)}`;
+    )} au ${e.toLocaleDateString('fr-FR', opts)}`;
   }
 
   if (start) {
     const s = new Date(start);
-    return `À partir du ${s.toLocaleDateString("fr-FR", opts)}`;
+    return `À partir du ${s.toLocaleDateString('fr-FR', opts)}`;
   }
 
   const e = new Date(end!);
-  return `Jusqu'au ${e.toLocaleDateString("fr-FR", opts)}`;
+  return `Jusqu'au ${e.toLocaleDateString('fr-FR', opts)}`;
 }
 
 function formatMatchDate(iso: string | null): string | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (isNaN(d.getTime())) return null;
-  return d.toLocaleString("fr-FR", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
+  return d.toLocaleString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
   });
 }
 
 function getStatusLabel(status: string): string {
   switch (status) {
-    case "upcoming":
-      return "À venir";
-    case "running":
-    case "ongoing":
-      return "En cours";
-    case "finished":
-    case "completed":
-      return "Terminé";
+    case 'upcoming':
+      return 'À venir';
+    case 'running':
+    case 'ongoing':
+      return 'En cours';
+    case 'finished':
+    case 'completed':
+      return 'Terminé';
     default:
       return status;
   }
@@ -551,29 +524,29 @@ function getStatusLabel(status: string): string {
 
 function getStatusChipColor(status: string): string {
   switch (status) {
-    case "upcoming":
-      return "px-1.5 py-[2px] rounded-full bg-yellow-500/20 text-yellow-200 border border-yellow-500/60";
-    case "running":
-    case "ongoing":
-      return "px-1.5 py-[2px] rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/60";
-    case "finished":
-    case "completed":
-      return "px-1.5 py-[2px] rounded-full bg-gray-500/20 text-gray-200 border border-gray-500/60";
+    case 'upcoming':
+      return 'px-1.5 py-[2px] rounded-full bg-yellow-500/20 text-yellow-200 border border-yellow-500/60';
+    case 'running':
+    case 'ongoing':
+      return 'px-1.5 py-[2px] rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/60';
+    case 'finished':
+    case 'completed':
+      return 'px-1.5 py-[2px] rounded-full bg-gray-500/20 text-gray-200 border border-gray-500/60';
     default:
-      return "px-1.5 py-[2px] rounded-full bg-white/10 text-white border border-white/30";
+      return 'px-1.5 py-[2px] rounded-full bg-white/10 text-white border border-white/30';
   }
 }
 
 function getMatchStatusShort(status: MatchStatus): string {
   switch (status) {
-    case "pending":
-      return "À venir";
-    case "ongoing":
-      return "En cours";
-    case "finished":
-      return "Terminé";
-    case "cancelled":
-      return "Annulé";
+    case 'pending':
+      return 'À venir';
+    case 'ongoing':
+      return 'En cours';
+    case 'finished':
+      return 'Terminé';
+    case 'cancelled':
+      return 'Annulé';
     default:
       return status;
   }
@@ -581,15 +554,15 @@ function getMatchStatusShort(status: MatchStatus): string {
 
 function getMatchStatusColor(status: MatchStatus): string {
   switch (status) {
-    case "pending":
-      return "px-1.5 py-[2px] rounded-full bg-yellow-500/20 text-yellow-200 border border-yellow-500/60";
-    case "ongoing":
-      return "px-1.5 py-[2px] rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/60";
-    case "finished":
-      return "px-1.5 py-[2px] rounded-full bg-gray-500/20 text-gray-200 border border-gray-500/60";
-    case "cancelled":
-      return "px-1.5 py-[2px] rounded-full bg-red-500/20 text-red-200 border border-red-500/60";
+    case 'pending':
+      return 'px-1.5 py-[2px] rounded-full bg-yellow-500/20 text-yellow-200 border border-yellow-500/60';
+    case 'ongoing':
+      return 'px-1.5 py-[2px] rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/60';
+    case 'finished':
+      return 'px-1.5 py-[2px] rounded-full bg-gray-500/20 text-gray-200 border border-gray-500/60';
+    case 'cancelled':
+      return 'px-1.5 py-[2px] rounded-full bg-red-500/20 text-red-200 border border-red-500/60';
     default:
-      return "px-1.5 py-[2px] rounded-full bg-white/10 text-white border border-white/30";
+      return 'px-1.5 py-[2px] rounded-full bg-white/10 text-white border border-white/30';
   }
 }

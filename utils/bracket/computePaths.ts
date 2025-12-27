@@ -9,7 +9,7 @@ import {
   buildColumnsBySideAndGroup,
   makeSideGroupKey,
   listSideGroupKeys,
-} from "./buildGraph";
+} from './buildGraph';
 
 /* -----------------------------------------------------------
  * Types de layout
@@ -64,16 +64,13 @@ export function computeBracketLayout(
   graph: BracketGraph,
   maybeColumnsByKey?: BracketColumnsByKey
 ): BracketLayout {
-  const columnsByKey =
-    maybeColumnsByKey ?? buildColumnsBySideAndGroup(graph);
+  const columnsByKey = maybeColumnsByKey ?? buildColumnsBySideAndGroup(graph);
 
   const positions: Record<string, MatchPosition> = {};
   const edges: BracketEdgePath[] = [];
 
   // 1) Calculer les positions (col / row) de chaque match
-  for (const [sideGroupKey, columns] of Object.entries(
-    columnsByKey
-  )) {
+  for (const [sideGroupKey, columns] of Object.entries(columnsByKey)) {
     columns.forEach((column: BracketColumn, columnIndex: number) => {
       column.matchIds.forEach((matchId, rowIndex) => {
         positions[matchId] = {
@@ -134,13 +131,10 @@ export function sliceLayoutForSideGroup(
   positions: Record<string, MatchPosition>;
   edges: BracketEdgePath[];
 } {
-  const columns =
-    layout.columnsByKey[sideGroupKey] ?? [];
+  const columns = layout.columnsByKey[sideGroupKey] ?? [];
 
   const positions: Record<string, MatchPosition> = {};
-  for (const [matchId, pos] of Object.entries(
-    layout.positions
-  )) {
+  for (const [matchId, pos] of Object.entries(layout.positions)) {
     if (pos.sideGroupKey === sideGroupKey) {
       positions[matchId] = pos;
     }
@@ -148,8 +142,7 @@ export function sliceLayoutForSideGroup(
 
   const edges = layout.edges.filter(
     (e) =>
-      e.from.sideGroupKey === sideGroupKey &&
-      e.to.sideGroupKey === sideGroupKey
+      e.from.sideGroupKey === sideGroupKey && e.to.sideGroupKey === sideGroupKey
   );
 
   return { columns, positions, edges };
@@ -159,9 +152,7 @@ export function sliceLayoutForSideGroup(
  * Helper pratique : pour construire un layout par side+group
  * déjà groupé, prêt à mapper en composants React.
  */
-export function computeLayoutBySideGroup(
-  graph: BracketGraph
-): Record<
+export function computeLayoutBySideGroup(graph: BracketGraph): Record<
   string,
   {
     columns: BracketColumn[];

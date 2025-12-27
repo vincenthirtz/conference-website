@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
-import Head from "next/head";
-import Link from "next/link";
-import Image from "next/image";
-import { useRouter } from "next/router";
-import { withStaffPage } from "@/utils/staff";
-import { StaffRoleBadge } from "@/components/admin/StaffRoleBadge";
+import { useEffect, useMemo, useState } from 'react';
+import Head from 'next/head';
+import Link from 'next/link';
+import Image from 'next/image';
+import { useRouter } from 'next/router';
+import { withStaffPage } from '@/utils/staff';
+import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
 type StaffShape = {
   id: string;
@@ -16,12 +16,12 @@ type StaffProps = {
   staff: StaffShape;
 };
 type StageType =
-  | "group"
-  | "bracket"
-  | "swiss"
-  | "round_robin"
-  | "showmatch"
-  | "other";
+  | 'group'
+  | 'bracket'
+  | 'swiss'
+  | 'round_robin'
+  | 'showmatch'
+  | 'other';
 
 type StageTeam = {
   stage_id: string;
@@ -65,7 +65,7 @@ type TournamentTeamsApiResponse = {
   teams: TournamentTeam[];
 };
 
-export const getServerSideProps = withStaffPage("manager");
+export const getServerSideProps = withStaffPage('manager');
 
 function AdminStageTeamsPage({ staff }: StaffProps) {
   const router = useRouter();
@@ -76,30 +76,26 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
-  const [stage, setStage] = useState<StageTeamsApiResponse["stage"] | null>(
+  const [stage, setStage] = useState<StageTeamsApiResponse['stage'] | null>(
     null
   );
-  const [tournament, setTournament] =
-    useState<StageTeamsApiResponse["tournament"] | null>(null);
+  const [tournament, setTournament] = useState<
+    StageTeamsApiResponse['tournament'] | null
+  >(null);
   const [stageTeams, setStageTeams] = useState<StageTeam[]>([]);
-  const [tournamentTeams, setTournamentTeams] =
-    useState<TournamentTeam[]>([]);
+  const [tournamentTeams, setTournamentTeams] = useState<TournamentTeam[]>([]);
 
   // Ajout
-  const [addTeamId, setAddTeamId] = useState("");
-  const [addSeed, setAddSeed] = useState("");
+  const [addTeamId, setAddTeamId] = useState('');
+  const [addSeed, setAddSeed] = useState('');
   const [adding, setAdding] = useState(false);
 
   // Suppression
-  const [removingTeamId, setRemovingTeamId] =
-    useState<string | null>(null);
+  const [removingTeamId, setRemovingTeamId] = useState<string | null>(null);
 
   // Seed inline
-  const [updatingSeedId, setUpdatingSeedId] =
-    useState<string | null>(null);
-  const [seedInputs, setSeedInputs] = useState<
-    Record<string, string>
-  >({});
+  const [updatingSeedId, setUpdatingSeedId] = useState<string | null>(null);
+  const [seedInputs, setSeedInputs] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!stageId) return;
@@ -114,93 +110,62 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
     setInfoMsg(null);
 
     try {
-      const res = await fetch(
-        `/api/admin/stages/${stageId}/teams`
-      );
+      const res = await fetch(`/api/admin/stages/${stageId}/teams`);
       if (!res.ok) {
-        const json = await res
-          .json()
-          .catch(() => ({}));
+        const json = await res.json().catch(() => ({}));
         throw new Error(
-          json.error ||
-            "Impossible de charger les équipes de la phase"
+          json.error || 'Impossible de charger les équipes de la phase'
         );
       }
-      const json: StageTeamsApiResponse =
-        await res.json();
+      const json: StageTeamsApiResponse = await res.json();
       setStage(json.stage);
       setTournament(json.tournament);
       setStageTeams(json.teams || []);
 
       // Init des seeds dans les inputs
-      const seedMap: Record<string, string> =
-        {};
+      const seedMap: Record<string, string> = {};
       (json.teams || []).forEach((st) => {
-        seedMap[st.team_id] =
-          st.seed != null ? String(st.seed) : "";
+        seedMap[st.team_id] = st.seed != null ? String(st.seed) : '';
       });
       setSeedInputs(seedMap);
 
       // Charger les équipes du tournoi parent
       if (json.stage?.tournament_id) {
-        fetchTournamentTeams(
-          json.stage.tournament_id
-        );
+        fetchTournamentTeams(json.stage.tournament_id);
       }
     } catch (err: any) {
-      setErrorMsg(
-        err?.message ?? "Erreur inattendue"
-      );
+      setErrorMsg(err?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
   }
 
-  async function fetchTournamentTeams(
-    tournamentId: string
-  ) {
+  async function fetchTournamentTeams(tournamentId: string) {
     setLoadingTeams(true);
     try {
-      const res = await fetch(
-        `/api/admin/tournament/${tournamentId}/teams`
-      );
+      const res = await fetch(`/api/admin/tournament/${tournamentId}/teams`);
       if (!res.ok) {
-        throw new Error(
-          "Impossible de charger les équipes du tournoi"
-        );
+        throw new Error('Impossible de charger les équipes du tournoi');
       }
-      const json: TournamentTeamsApiResponse =
-        await res.json();
+      const json: TournamentTeamsApiResponse = await res.json();
       setTournamentTeams(json.teams || []);
     } catch (err) {
-      console.error(
-        "fetchTournamentTeams error",
-        err
-      );
+      console.error('fetchTournamentTeams error', err);
     } finally {
       setLoadingTeams(false);
     }
   }
 
-  const availableTeamsForAdd =
-    useMemo(() => {
-      const inStageIds = new Set(
-        stageTeams.map((st) => st.team_id)
-      );
-      return tournamentTeams.filter(
-        (t) => !inStageIds.has(t.id)
-      );
-    }, [stageTeams, tournamentTeams]);
+  const availableTeamsForAdd = useMemo(() => {
+    const inStageIds = new Set(stageTeams.map((st) => st.team_id));
+    return tournamentTeams.filter((t) => !inStageIds.has(t.id));
+  }, [stageTeams, tournamentTeams]);
 
-  async function handleAddTeam(
-    e: React.FormEvent
-  ) {
+  async function handleAddTeam(e: React.FormEvent) {
     e.preventDefault();
     if (!stageId) return;
     if (!addTeamId) {
-      setErrorMsg(
-        "Merci de sélectionner une équipe à ajouter."
-      );
+      setErrorMsg('Merci de sélectionner une équipe à ajouter.');
       return;
     }
 
@@ -208,172 +173,116 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
     setErrorMsg(null);
     setInfoMsg(null);
 
-    const seed =
-      addSeed.trim() !== ""
-        ? Number(addSeed)
-        : null;
+    const seed = addSeed.trim() !== '' ? Number(addSeed) : null;
 
     try {
-      const res = await fetch(
-        `/api/admin/stages/${stageId}/teams`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          body: JSON.stringify({
-            teamId: addTeamId,
-            seed,
-          }),
-        }
-      );
+      const res = await fetch(`/api/admin/stages/${stageId}/teams`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          teamId: addTeamId,
+          seed,
+        }),
+      });
 
       if (!res.ok) {
-        const json = await res
-          .json()
-          .catch(() => ({}));
-        throw new Error(
-          json.error ||
-            "Erreur lors de l'ajout de l'équipe"
-        );
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || "Erreur lors de l'ajout de l'équipe");
       }
 
       await res.json(); // on s'en fiche du détail ici
-      setInfoMsg(
-        "Équipe ajoutée à la phase."
-      );
-      setAddTeamId("");
-      setAddSeed("");
+      setInfoMsg('Équipe ajoutée à la phase.');
+      setAddTeamId('');
+      setAddSeed('');
       fetchStageTeams();
     } catch (err: any) {
-      setErrorMsg(
-        err?.message ??
-          "Erreur inattendue lors de l'ajout"
-      );
+      setErrorMsg(err?.message ?? "Erreur inattendue lors de l'ajout");
     } finally {
       setAdding(false);
     }
   }
 
-  async function handleRemoveTeam(
-    teamId: string
-  ) {
+  async function handleRemoveTeam(teamId: string) {
     if (!stageId) return;
     setRemovingTeamId(teamId);
     setErrorMsg(null);
     setInfoMsg(null);
 
     try {
-      const res = await fetch(
-        `/api/admin/stages/${stageId}/teams`,
-        {
-          method: "DELETE",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          body: JSON.stringify({ teamId }),
-        }
-      );
+      const res = await fetch(`/api/admin/stages/${stageId}/teams`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ teamId }),
+      });
       if (!res.ok) {
-        const json = await res
-          .json()
-          .catch(() => ({}));
-        throw new Error(
-          json.error ||
-            "Erreur lors du retrait de l'équipe"
-        );
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || "Erreur lors du retrait de l'équipe");
       }
       await res.json();
-      setInfoMsg(
-        "Équipe retirée de la phase."
-      );
+      setInfoMsg('Équipe retirée de la phase.');
       fetchStageTeams();
     } catch (err: any) {
-      setErrorMsg(
-        err?.message ??
-          "Erreur inattendue lors du retrait"
-      );
+      setErrorMsg(err?.message ?? 'Erreur inattendue lors du retrait');
     } finally {
       setRemovingTeamId(null);
     }
   }
 
-  function onSeedInputChange(
-    teamId: string,
-    value: string
-  ) {
+  function onSeedInputChange(teamId: string, value: string) {
     setSeedInputs((prev) => ({
       ...prev,
       [teamId]: value,
     }));
   }
 
-  async function handleUpdateSeed(
-    teamId: string
-  ) {
+  async function handleUpdateSeed(teamId: string) {
     if (!stageId) return;
-    const val = seedInputs[teamId] ?? "";
-    const seed =
-      val.trim() === ""
-        ? null
-        : Number(val);
+    const val = seedInputs[teamId] ?? '';
+    const seed = val.trim() === '' ? null : Number(val);
 
     setUpdatingSeedId(teamId);
     setErrorMsg(null);
     setInfoMsg(null);
 
     try {
-      const res = await fetch(
-        `/api/admin/stages/${stageId}/teams`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          body: JSON.stringify({
-            teamId,
-            seed,
-          }),
-        }
-      );
+      const res = await fetch(`/api/admin/stages/${stageId}/teams`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          teamId,
+          seed,
+        }),
+      });
       if (!res.ok) {
-        const json = await res
-          .json()
-          .catch(() => ({}));
-        throw new Error(
-          json.error ||
-            "Erreur lors de la mise à jour du seed"
-        );
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || 'Erreur lors de la mise à jour du seed');
       }
       await res.json();
-      setInfoMsg(
-        "Seed mis à jour."
-      );
+      setInfoMsg('Seed mis à jour.');
       fetchStageTeams();
     } catch (err: any) {
       setErrorMsg(
-        err?.message ??
-          "Erreur inattendue lors de la mise à jour du seed"
+        err?.message ?? 'Erreur inattendue lors de la mise à jour du seed'
       );
     } finally {
       setUpdatingSeedId(null);
     }
   }
 
-  const backUrl =
-    stage?.tournament_id
-      ? `/admin/tournament/${stage.tournament_id}`
-      : "/admin/tournaments";
+  const backUrl = stage?.tournament_id
+    ? `/admin/tournament/${stage.tournament_id}`
+    : '/admin/tournaments';
 
   return (
     <>
       <Head>
-        <title>
-          Admin – Équipes de la phase
-        </title>
+        <title>Admin – Équipes de la phase</title>
       </Head>
 
       <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
@@ -382,21 +291,14 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
           <div>
             <button
               type="button"
-              onClick={() =>
-                router.push(
-                  `/admin/stages/${stageId}`
-                )
-              }
+              onClick={() => router.push(`/admin/stages/${stageId}`)}
               className="mb-2 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
             >
               ← Retour à la phase
             </button>
-            <h1 className="text-3xl font-bold">
-              Équipes de la phase
-            </h1>
+            <h1 className="text-3xl font-bold">Équipes de la phase</h1>
             <p className="text-neutral-400 text-sm mt-1">
-              Gère les équipes rattachées à
-              cette phase (stage) : ajout,
+              Gère les équipes rattachées à cette phase (stage) : ajout,
               retrait, seeds…
             </p>
           </div>
@@ -417,8 +319,7 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
 
         {loading && (
           <div className="text-neutral-300">
-            Chargement des équipes de la
-            phase…
+            Chargement des équipes de la phase…
           </div>
         )}
 
@@ -427,15 +328,11 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
             {/* Contexte stage / tournoi */}
             <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
               <div>
-                <div className="text-xs text-neutral-400 mb-1">
-                  Phase
-                </div>
-                <div className="font-semibold">
-                  {stage.name}
-                </div>
+                <div className="text-xs text-neutral-400 mb-1">Phase</div>
+                <div className="font-semibold">{stage.name}</div>
                 {tournament && (
                   <div className="text-xs text-neutral-400 mt-1">
-                    Tournoi :{" "}
+                    Tournoi :{' '}
                     <Link
                       href={backUrl}
                       className="underline underline-offset-2 hover:text-white"
@@ -444,7 +341,7 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
                     </Link>
                     {tournament.slug && (
                       <>
-                        {" "}
+                        {' '}
                         <span className="font-mono bg-neutral-900 border border-neutral-700 px-1.5 py-0.5 rounded">
                           {tournament.slug}
                         </span>
@@ -457,10 +354,8 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
               <div className="text-sm text-neutral-300">
                 <span className="text-neutral-400">
                   Équipes dans la phase :
-                </span>{" "}
-                <span className="font-semibold">
-                  {stageTeams.length}
-                </span>
+                </span>{' '}
+                <span className="font-semibold">{stageTeams.length}</span>
               </div>
             </section>
 
@@ -481,35 +376,17 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
                   <select
                     className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={addTeamId}
-                    onChange={(e) =>
-                      setAddTeamId(
-                        e.target.value
-                      )
-                    }
-                    disabled={
-                      adding ||
-                      loadingTeams ||
-                      !tournament
-                    }
+                    onChange={(e) => setAddTeamId(e.target.value)}
+                    disabled={adding || loadingTeams || !tournament}
                   >
                     <option value="">
-                      {loadingTeams
-                        ? "Chargement…"
-                        : "Sélectionner une équipe"}
+                      {loadingTeams ? 'Chargement…' : 'Sélectionner une équipe'}
                     </option>
-                    {availableTeamsForAdd.map(
-                      (t) => (
-                        <option
-                          key={t.id}
-                          value={t.id}
-                        >
-                          {t.name}{" "}
-                          {t.short_name
-                            ? `(${t.short_name})`
-                            : ""}
-                        </option>
-                      )
-                    )}
+                    {availableTeamsForAdd.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} {t.short_name ? `(${t.short_name})` : ''}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -521,11 +398,7 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
                     type="number"
                     className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={addSeed}
-                    onChange={(e) =>
-                      setAddSeed(
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => setAddSeed(e.target.value)}
                   />
                 </div>
 
@@ -534,25 +407,20 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
                   disabled={adding}
                   className={`px-4 py-2 rounded font-semibold text-sm ${
                     adding
-                      ? "bg-blue-800 cursor-wait"
-                      : "bg-blue-600 hover:bg-blue-700"
+                      ? 'bg-blue-800 cursor-wait'
+                      : 'bg-blue-600 hover:bg-blue-700'
                   }`}
                 >
-                  {adding
-                    ? "Ajout…"
-                    : "Ajouter l'équipe"}
+                  {adding ? 'Ajout…' : "Ajouter l'équipe"}
                 </button>
               </form>
 
-              {availableTeamsForAdd.length ===
-                0 &&
+              {availableTeamsForAdd.length === 0 &&
                 !loadingTeams &&
-                tournamentTeams.length >
-                  0 && (
+                tournamentTeams.length > 0 && (
                   <p className="mt-2 text-xs text-neutral-400">
-                    Toutes les équipes du
-                    tournoi sont déjà
-                    rattachées à cette phase.
+                    Toutes les équipes du tournoi sont déjà rattachées à cette
+                    phase.
                   </p>
                 )}
             </section>
@@ -565,33 +433,22 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
                 </h2>
                 <span className="text-xs text-neutral-400">
                   {stageTeams.length} équipe
-                  {stageTeams.length > 1
-                    ? "s"
-                    : ""}
+                  {stageTeams.length > 1 ? 's' : ''}
                 </span>
               </div>
 
               {stageTeams.length === 0 ? (
                 <div className="px-4 py-6 text-sm text-neutral-400">
-                  Aucune équipe n&apos;est encore
-                  rattachée à cette phase.
+                  Aucune équipe n&apos;est encore rattachée à cette phase.
                 </div>
               ) : (
                 <table className="w-full text-sm">
                   <thead className="bg-neutral-750 text-neutral-300">
                     <tr>
-                      <th className="px-4 py-2 text-left">
-                        Seed
-                      </th>
-                      <th className="px-4 py-2 text-left">
-                        Équipe
-                      </th>
-                      <th className="px-4 py-2 text-left">
-                        Notes
-                      </th>
-                      <th className="px-4 py-2 text-right">
-                        Actions
-                      </th>
+                      <th className="px-4 py-2 text-left">Seed</th>
+                      <th className="px-4 py-2 text-left">Équipe</th>
+                      <th className="px-4 py-2 text-left">Notes</th>
+                      <th className="px-4 py-2 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -606,40 +463,22 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
                             <input
                               type="number"
                               className="w-16 px-2 py-1 rounded bg-neutral-700 border border-neutral-600 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
-                              value={
-                                seedInputs[
-                                  st.team_id
-                                ] ?? ""
-                              }
+                              value={seedInputs[st.team_id] ?? ''}
                               onChange={(e) =>
-                                onSeedInputChange(
-                                  st.team_id,
-                                  e.target.value
-                                )
+                                onSeedInputChange(st.team_id, e.target.value)
                               }
                             />
                             <button
                               type="button"
-                              onClick={() =>
-                                handleUpdateSeed(
-                                  st.team_id
-                                )
-                              }
-                              disabled={
-                                updatingSeedId ===
-                                st.team_id
-                              }
+                              onClick={() => handleUpdateSeed(st.team_id)}
+                              disabled={updatingSeedId === st.team_id}
                               className={`text-xs px-2 py-1 rounded ${
-                                updatingSeedId ===
-                                st.team_id
-                                  ? "bg-blue-800 cursor-wait"
-                                  : "bg-blue-600 hover:bg-blue-700"
+                                updatingSeedId === st.team_id
+                                  ? 'bg-blue-800 cursor-wait'
+                                  : 'bg-blue-600 hover:bg-blue-700'
                               }`}
                             >
-                              {updatingSeedId ===
-                              st.team_id
-                                ? "OK…"
-                                : "OK"}
+                              {updatingSeedId === st.team_id ? 'OK…' : 'OK'}
                             </button>
                           </div>
                         </td>
@@ -658,19 +497,11 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
                             )}
                             <div>
                               <div className="font-semibold">
-                                {st.team
-                                  ? st.team
-                                      .name
-                                  : st.team_id}
+                                {st.team ? st.team.name : st.team_id}
                               </div>
-                              {st.team
-                                ?.short_name && (
+                              {st.team?.short_name && (
                                 <div className="text-xs text-neutral-400">
-                                  {
-                                    st
-                                      .team
-                                      .short_name
-                                  }
+                                  {st.team.short_name}
                                 </div>
                               )}
                             </div>
@@ -679,8 +510,7 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
 
                         {/* Notes (read-only pour l'instant) */}
                         <td className="px-4 py-2 align-middle text-xs text-neutral-300">
-                          {st.notes ||
-                            "—"}
+                          {st.notes || '—'}
                         </td>
 
                         {/* Actions */}
@@ -696,26 +526,17 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
                             )}
                             <button
                               type="button"
-                              onClick={() =>
-                                handleRemoveTeam(
-                                  st.team_id
-                                )
-                              }
-                              disabled={
-                                removingTeamId ===
-                                st.team_id
-                              }
+                              onClick={() => handleRemoveTeam(st.team_id)}
+                              disabled={removingTeamId === st.team_id}
                               className={`px-2 py-1 text-xs rounded ${
-                                removingTeamId ===
-                                st.team_id
-                                  ? "bg-red-900 cursor-wait"
-                                  : "bg-red-700 hover:bg-red-800"
+                                removingTeamId === st.team_id
+                                  ? 'bg-red-900 cursor-wait'
+                                  : 'bg-red-700 hover:bg-red-800'
                               }`}
                             >
-                              {removingTeamId ===
-                              st.team_id
-                                ? "Retrait…"
-                                : "Retirer"}
+                              {removingTeamId === st.team_id
+                                ? 'Retrait…'
+                                : 'Retirer'}
                             </button>
                           </div>
                         </td>
@@ -729,9 +550,7 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
         )}
 
         {!loading && !stage && !errorMsg && (
-          <div className="text-neutral-300">
-            Phase introuvable.
-          </div>
+          <div className="text-neutral-300">Phase introuvable.</div>
         )}
       </div>
     </>

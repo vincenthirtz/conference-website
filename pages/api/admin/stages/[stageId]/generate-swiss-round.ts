@@ -15,27 +15,25 @@
 //   "allowRematchesFallback": true          // autoriser rematches si aucune solution parfaite
 // }
 
-import type { NextApiRequest, NextApiResponse } from "next";
-import { supabaseAdmin } from "@/utils/supabase";
-import { withStaffRoute } from "@/utils/staff";
-import { logStaffAction } from "@/utils/staffLogs";
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { supabaseAdmin } from '@/utils/supabase';
+import { withStaffRoute } from '@/utils/staff';
+import { logStaffAction } from '@/utils/staffLogs';
 
-import {
-  generateSwissPairings,
-  SwissParticipant as PairingParticipant,
-} from "@/utils/swiss/pairing";
+import { generateSwissPairings } from '@/utils/swiss/pairing';
 
-import {
-  computeSwissStandings,
-  SwissMatchResult,
-  SwissStandingParticipant,
-} from "@/utils/swiss/standings";
+import { computeSwissStandings } from '@/utils/swiss/standings';
 
 import {
   defaultSwissScoreConfig,
-  SwissScoreConfig,
   resultsToPastMatches,
-} from "@/utils/swiss/utils";
+} from '@/utils/swiss/utils';
+import type {
+  SwissMatchResult,
+  SwissParticipant as PairingParticipant,
+  SwissScoreConfig,
+  SwissStandingParticipant,
+} from '@/types/swiss';
 
 type StageRow = {
   id: string;
@@ -51,11 +49,7 @@ type StageTeamRow = {
   seed: number | null;
 };
 
-type MatchStatus =
-  | "pending"
-  | "ongoing"
-  | "finished"
-  | "cancelled";
+type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
 
 type DbMatchRow = {
   id: string;
@@ -96,10 +90,7 @@ type GenerateSwissRoundResponse = {
 };
 
 // Rôle minimum : manager
-export default withStaffRoute(
-  handler,
-  "manager"
-);
+export default withStaffRoute(handler, 'manager');
 
 async function handler(
   req: NextApiRequest,
@@ -111,42 +102,34 @@ async function handler(
   const { stageId } = req.query;
 
   if (!stageId || Array.isArray(stageId)) {
-    return res
-      .status(400)
-      .json({ error: "Invalid stageId" });
+    return res.status(400).json({ error: 'Invalid stageId' });
   }
 
-  if (req.method !== "POST") {
-    return res
-      .status(405)
-      .json({ error: "Method not allowed" });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const id = String(stageId);
 
   try {
-    const body = (req.body ||
-      {}) as GenerateSwissRoundBody;
+    const body = (req.body || {}) as GenerateSwissRoundBody;
 
     // 1) Vérifier le stage
-    const { data: stage, error: stageErr } =
-      await supabaseAdmin
-        .from("tournament_stages")
-        .select(
-          "id, tournament_id, stage_type, name, settings"
-        )
-        .eq("id", id)
-        .maybeSingle();
+    const { data: stage, error: stageErr } = await supabaseAdmin
+      .from('tournament_stages')
+      .select('id, tournament_id, stage_type, name, settings')
+      .eq('id', id)
+      .maybeSingle();
 
     if (stageErr || !stage) {
       return res.status(404).json({
-        error: "Stage not found",
+        error: 'Stage not found',
       });
     }
 
     const typedStage = stage as StageRow;
 
-    if (typedStage.stage_type !== "swiss") {
+    if (typedStage.stage_type !== 'swiss') {
       return res.status(400).json({
         error:
           "Stage is not of type 'swiss'. This endpoint only works for swiss stages.",
@@ -156,41 +139,29 @@ async function handler(
     const tournamentId = typedStage.tournament_id;
 
     // 2) Récupérer les participants du stage
-    const {
-      data: stageTeams,
-      error: teamErr,
-    } = await supabaseAdmin
-      .from("stage_teams")
-      .select("stage_id, team_id, seed")
-      .eq("stage_id", id);
+    const { data: stageTeams, error: teamErr } = await supabaseAdmin
+      .from('stage_teams')
+      .select('stage_id, team_id, seed')
+      .eq('stage_id', id);
 
     if (teamErr) {
-      console.error(
-        "generate-swiss-round stage_teams error:",
-        teamErr
-      );
+      console.error('generate-swiss-round stage_teams error:', teamErr);
       return res.status(500).json({
-        error:
-          "Failed to fetch stage participants",
+        error: 'Failed to fetch stage participants',
       });
     }
 
-    const participantsRows =
-      (stageTeams || []) as StageTeamRow[];
+    const participantsRows = (stageTeams || []) as StageTeamRow[];
 
     if (participantsRows.length === 0) {
       return res.status(400).json({
-        error:
-          "No participants found for this stage",
+        error: 'No participants found for this stage',
       });
     }
 
     // 3) Récupérer les matchs existants du stage (toutes rondes)
-    const {
-      data: matchesData,
-      error: matchesErr,
-    } = await supabaseAdmin
-      .from("matches")
+    const { data: matchesData, error: matchesErr } = await supabaseAdmin
+      .from('matches')
       .select(
         `
         id,
@@ -206,37 +177,31 @@ async function handler(
         team2_score
       `
       )
-      .eq("stage_id", id)
-      .neq("status", "cancelled");
+      .eq('stage_id', id)
+      .neq('status', 'cancelled');
 
     if (matchesErr) {
-      console.error(
-        "generate-swiss-round matches error:",
-        matchesErr
-      );
+      console.error('generate-swiss-round matches error:', matchesErr);
       return res.status(500).json({
-        error: "Failed to fetch stage matches",
+        error: 'Failed to fetch stage matches',
       });
     }
 
-    const allMatches =
-      (matchesData || []) as DbMatchRow[];
+    const allMatches = (matchesData || []) as DbMatchRow[];
 
     // Round ciblé
     const maxExistingRound = allMatches.reduce(
-      (acc, m) =>
-        Math.max(acc, m.round_number ?? 0),
+      (acc, m) => Math.max(acc, m.round_number ?? 0),
       0
     );
     const nextRound =
-      typeof body.roundNumber === "number"
+      typeof body.roundNumber === 'number'
         ? body.roundNumber
         : maxExistingRound + 1;
 
     if (nextRound <= maxExistingRound) {
       return res.status(400).json({
-        error:
-          "roundNumber must be greater than existing rounds",
+        error: 'roundNumber must be greater than existing rounds',
       });
     }
 
@@ -250,38 +215,30 @@ async function handler(
       (m) =>
         (m.round_number ?? 0) > 0 &&
         (m.round_number ?? 0) < nextRound &&
-        m.status === "finished"
+        m.status === 'finished'
     );
 
-    const swissResults =
-      buildSwissResultsFromMatches(
-        pastMatches,
-        mergedScoreConfig
-      );
+    const swissResults = buildSwissResultsFromMatches(
+      pastMatches,
+      mergedScoreConfig
+    );
 
     // 5) Construire la liste des participants pour standings
     const swissParticipantsForStandings: SwissStandingParticipant[] =
       participantsRows.map((p, idx) => ({
         id: p.team_id,
         name: undefined,
-        seed:
-          typeof p.seed === "number"
-            ? p.seed
-            : idx + 1,
+        seed: typeof p.seed === 'number' ? p.seed : idx + 1,
       }));
 
     // 6) Calculer les standings Swiss (score total par équipe)
     const standings = computeSwissStandings({
-      participants:
-        swissParticipantsForStandings,
+      participants: swissParticipantsForStandings,
       results: swissResults,
     });
 
     // Map id -> score / seed / hadBye
-    const scoreByTeam = new Map<
-      string,
-      number
-    >();
+    const scoreByTeam = new Map<string, number>();
     const hadByeSet = new Set<string>();
 
     for (const s of standings) {
@@ -293,11 +250,7 @@ async function handler(
 
     // Ajout : hadBye à partir de matchs BYE existants (sécurité)
     for (const m of allMatches) {
-      if (
-        m.is_bye &&
-        m.team1_id &&
-        m.status === "finished"
-      ) {
+      if (m.is_bye && m.team1_id && m.status === 'finished') {
         hadByeSet.add(m.team1_id);
       }
     }
@@ -306,12 +259,8 @@ async function handler(
     const swissParticipantsForPairing: PairingParticipant[] =
       participantsRows.map((p, idx) => {
         const id = p.team_id;
-        const seed =
-          typeof p.seed === "number"
-            ? p.seed
-            : idx + 1;
-        const score =
-          scoreByTeam.get(id) ?? 0;
+        const seed = typeof p.seed === 'number' ? p.seed : idx + 1;
+        const score = scoreByTeam.get(id) ?? 0;
 
         return {
           id,
@@ -322,23 +271,18 @@ async function handler(
       });
 
     // 8) Construire la liste des rencontres passées pour éviter rematches
-    const swissPastMatches =
-      resultsToPastMatches(swissResults);
+    const swissPastMatches = resultsToPastMatches(swissResults);
 
     // 9) Générer les pairings Swiss
-    const { pairings, hasRematches } =
-      generateSwissPairings({
-        participants:
-          swissParticipantsForPairing,
-        pastMatches: swissPastMatches,
-        allowRematchesFallback:
-          body.allowRematchesFallback ?? true,
-      });
+    const { pairings, hasRematches } = generateSwissPairings({
+      participants: swissParticipantsForPairing,
+      pastMatches: swissPastMatches,
+      allowRematchesFallback: body.allowRematchesFallback ?? true,
+    });
 
     if (pairings.length === 0) {
       return res.status(400).json({
-        error:
-          "Swiss pairing produced no matches",
+        error: 'Swiss pairing produced no matches',
       });
     }
 
@@ -350,19 +294,16 @@ async function handler(
         return {
           tournament_id: tournamentId,
           stage_id: id,
-          status: "finished" as MatchStatus,
+          status: 'finished' as MatchStatus,
           is_bye: true,
-          match_format:
-            typedStage.settings?.match_format ??
-            "bo3",
+          match_format: typedStage.settings?.match_format ?? 'bo3',
           round_name: `Round ${nextRound}`,
           round_number: nextRound,
-          bracket_side: "none",
+          bracket_side: 'none',
           group_key: null,
           team1_id: p.player1Id,
           team2_id: null,
-          team1_score:
-            mergedScoreConfig.bye ?? 1,
+          team1_score: mergedScoreConfig.bye ?? 1,
           team2_score: 0,
           winner_team_id: p.player1Id,
           scheduled_at: null,
@@ -383,14 +324,12 @@ async function handler(
       return {
         tournament_id: tournamentId,
         stage_id: id,
-        status: "pending" as MatchStatus,
+        status: 'pending' as MatchStatus,
         is_bye: false,
-        match_format:
-          typedStage.settings?.match_format ??
-          "bo3",
+        match_format: typedStage.settings?.match_format ?? 'bo3',
         round_name: `Round ${nextRound}`,
         round_number: nextRound,
-        bracket_side: "none",
+        bracket_side: 'none',
         group_key: null,
         team1_id: p.player1Id,
         team2_id: p.player2Id,
@@ -411,78 +350,60 @@ async function handler(
       };
     });
 
-    const {
-      data: inserted,
-      error: insertErr,
-    } = await supabaseAdmin
-      .from("matches")
+    const { data: inserted, error: insertErr } = await supabaseAdmin
+      .from('matches')
       .insert(matchInserts)
-      .select(
-        "id, team1_id, team2_id, is_bye, round_number, status"
-      );
+      .select('id, team1_id, team2_id, is_bye, round_number, status');
 
     if (insertErr || !inserted) {
-      console.error(
-        "generate-swiss-round insert matches error:",
-        insertErr
-      );
+      console.error('generate-swiss-round insert matches error:', insertErr);
       return res.status(500).json({
-        error: "Failed to insert swiss matches",
+        error: 'Failed to insert swiss matches',
       });
     }
 
-    const createdMatches =
-      inserted as GeneratedSwissMatch[];
+    const createdMatches = inserted as GeneratedSwissMatch[];
 
-    const byeMatch =
-      createdMatches.find((m) => m.is_bye) ??
-      null;
+    const byeMatch = createdMatches.find((m) => m.is_bye) ?? null;
 
     // 11) Log staff
     if (ctx?.staff?.id) {
       try {
         await logStaffAction({
           staff_id: ctx.staff.id,
-          action: "create_swiss_round",
-          entity_type: "stage",
+          action: 'create_swiss_round',
+          entity_type: 'stage',
           entity_id: id,
           tournament_id: tournamentId,
           payload: {
             stage_id: id,
             round_number: nextRound,
-            created_match_ids:
-              createdMatches.map(
-                (m) => m.id
-              ),
+            created_match_ids: createdMatches.map((m) => m.id),
             has_rematches: hasRematches,
           },
         });
       } catch (e) {
-        console.error(
-          "generate-swiss-round logStaffAction error:",
-          e
-        );
+        console.error('generate-swiss-round logStaffAction error:', e);
       }
     }
 
-    const response: GenerateSwissRoundResponse =
-      {
-        stageId: id,
-        tournamentId,
-        roundNumber: nextRound,
-        hasRematches,
-        createdMatches,
-        byeMatchId: byeMatch?.id ?? null,
-      };
+    const response: GenerateSwissRoundResponse = {
+      stageId: id,
+      tournamentId,
+      roundNumber: nextRound,
+      hasRematches,
+      createdMatches,
+      byeMatchId: byeMatch?.id ?? null,
+    };
 
     return res.status(200).json(response);
   } catch (err: any) {
     console.error(
-      "[/api/admin/stages/[stageId]/generate-swiss-round] error:",
+      '[/api/admin/stages/[stageId]/generate-swiss-round] error:',
       err
     );
     return res.status(500).json({
-      error: "Internal server error",
+      error: 'Internal server error',
       detail: err?.message,
     });
   }
@@ -503,16 +424,13 @@ function buildSwissResultsFromMatches(
   const results: SwissMatchResult[] = [];
 
   for (const m of matches) {
-    if (m.status !== "finished") continue;
+    if (m.status !== 'finished') continue;
     if (!m.team1_id) continue;
 
     const round = m.round_number ?? 0;
 
     // BYE
-    if (
-      m.is_bye ||
-      (!m.team2_id && m.team1_id)
-    ) {
+    if (m.is_bye || (!m.team2_id && m.team1_id)) {
       results.push({
         round,
         player1Id: m.team1_id,
@@ -537,9 +455,7 @@ function buildSwissResultsFromMatches(
         player1Score: config.win,
         player2Score: config.loss,
       });
-    } else if (
-      m.winner_team_id === m.team2_id
-    ) {
+    } else if (m.winner_team_id === m.team2_id) {
       results.push({
         round,
         player1Id: m.team1_id,

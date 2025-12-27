@@ -4,10 +4,10 @@
 
 // ⚠️ Route staff : protégée par withStaffRoute (min: manager)
 
-import type { NextApiRequest, NextApiResponse } from "next";
-import { supabaseAdmin } from "@/utils/supabase";
-import { withStaffRoute } from "@/utils/staff";
-import { logStaffAction } from "@/utils/staffLogs";
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { supabaseAdmin } from '@/utils/supabase';
+import { withStaffRoute } from '@/utils/staff';
+import { logStaffAction } from '@/utils/staffLogs';
 
 export type TournamentMapRow = {
   id: string;
@@ -30,39 +30,32 @@ export type TournamentMapInput = {
 };
 
 // Rôle minimum : manager (peut gérer les settings du tournoi)
-export default withStaffRoute(handler, "manager");
+export default withStaffRoute(handler, 'manager');
 
-async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse,
-  ctx: any
-) {
+async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
   const { id } = req.query;
   if (!id || Array.isArray(id)) {
-    return res.status(400).json({ error: "Invalid tournament id" });
+    return res.status(400).json({ error: 'Invalid tournament id' });
   }
 
   try {
     switch (req.method) {
-      case "GET":
+      case 'GET':
         return await handleGet(id, res);
-      case "POST":
+      case 'POST':
         return await handlePost(id, req, res, ctx);
-      case "PUT":
-      case "PATCH":
+      case 'PUT':
+      case 'PATCH':
         return await handlePut(id, req, res, ctx);
-      case "DELETE":
+      case 'DELETE':
         return await handleDelete(id, req, res, ctx);
       default:
-        return res.status(405).json({ error: "Method not allowed" });
+        return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (err: any) {
-    console.error(
-      "[/api/tournament/[id]/maps] error:",
-      err
-    );
+    console.error('[/api/tournament/[id]/maps] error:', err);
     return res.status(500).json({
-      error: "Internal server error",
+      error: 'Internal server error',
       detail: err?.message,
     });
   }
@@ -72,21 +65,18 @@ async function handler(
  * GET : liste des maps du tournoi
  * ---------------------------------------------------------*/
 
-async function handleGet(
-  tournamentId: string,
-  res: NextApiResponse
-) {
+async function handleGet(tournamentId: string, res: NextApiResponse) {
   const { data, error } = await supabaseAdmin
-    .from("tournament_maps")
-    .select("*")
-    .eq("tournament_id", tournamentId)
-    .order("order_index", { ascending: true })
-    .order("map_name", { ascending: true });
+    .from('tournament_maps')
+    .select('*')
+    .eq('tournament_id', tournamentId)
+    .order('order_index', { ascending: true })
+    .order('map_name', { ascending: true });
 
   if (error) {
-    console.error("GET tournament_maps error:", error);
+    console.error('GET tournament_maps error:', error);
     return res.status(500).json({
-      error: "Failed to fetch tournament maps",
+      error: 'Failed to fetch tournament maps',
     });
   }
 
@@ -110,16 +100,16 @@ async function handlePost(
 
   if (!body || !body.map_name) {
     return res.status(400).json({
-      error: "map_name is required",
+      error: 'map_name is required',
     });
   }
 
   // on calcule un order_index par défaut à la suite de ce qui existe
   let nextIndex: number | null = null;
   const { data: existing, error: countErr } = await supabaseAdmin
-    .from("tournament_maps")
-    .select("order_index")
-    .eq("tournament_id", tournamentId);
+    .from('tournament_maps')
+    .select('order_index')
+    .eq('tournament_id', tournamentId);
 
   if (!countErr && existing) {
     const max = (existing as any[])
@@ -135,29 +125,27 @@ async function handlePost(
     map_type: body.map_type ?? null,
     enabled: body.enabled ?? true,
     order_index:
-      typeof body.order_index === "number"
-        ? body.order_index
-        : nextIndex,
+      typeof body.order_index === 'number' ? body.order_index : nextIndex,
   };
 
   const { data, error } = await supabaseAdmin
-    .from("tournament_maps")
+    .from('tournament_maps')
     .insert(payload)
-    .select("*")
+    .select('*')
     .maybeSingle();
 
   if (error || !data) {
-    console.error("POST tournament_maps error:", error);
+    console.error('POST tournament_maps error:', error);
     return res.status(500).json({
-      error: "Failed to create tournament map",
+      error: 'Failed to create tournament map',
     });
   }
 
   if (ctx?.staff?.id) {
     await logStaffAction({
       staff_id: ctx.staff.id,
-      action: "update_tournament",
-      entity_type: "tournament_map",
+      action: 'update_tournament',
+      entity_type: 'tournament_map',
       entity_id: (data as any).id,
       tournament_id: tournamentId,
       payload: {
@@ -193,17 +181,14 @@ async function handlePut(
 
   // 1) On supprime toutes les maps existantes du tournoi
   const { error: delErr } = await supabaseAdmin
-    .from("tournament_maps")
+    .from('tournament_maps')
     .delete()
-    .eq("tournament_id", tournamentId);
+    .eq('tournament_id', tournamentId);
 
   if (delErr) {
-    console.error(
-      "DELETE existing tournament_maps error:",
-      delErr
-    );
+    console.error('DELETE existing tournament_maps error:', delErr);
     return res.status(500).json({
-      error: "Failed to clear tournament maps",
+      error: 'Failed to clear tournament maps',
     });
   }
 
@@ -214,27 +199,21 @@ async function handlePut(
     map_slug: m.map_slug ?? null,
     map_type: m.map_type ?? null,
     enabled: m.enabled ?? true,
-    order_index:
-      typeof m.order_index === "number"
-        ? m.order_index
-        : idx,
+    order_index: typeof m.order_index === 'number' ? m.order_index : idx,
   }));
 
   let insertedMaps: TournamentMapRow[] = [];
 
   if (payload.length > 0) {
     const { data, error: insErr } = await supabaseAdmin
-      .from("tournament_maps")
+      .from('tournament_maps')
       .insert(payload)
-      .select("*");
+      .select('*');
 
     if (insErr) {
-      console.error(
-        "INSERT tournament_maps error:",
-        insErr
-      );
+      console.error('INSERT tournament_maps error:', insErr);
       return res.status(500).json({
-        error: "Failed to insert tournament maps",
+        error: 'Failed to insert tournament maps',
       });
     }
 
@@ -244,8 +223,8 @@ async function handlePut(
   if (ctx?.staff?.id) {
     await logStaffAction({
       staff_id: ctx.staff.id,
-      action: "update_tournament",
-      entity_type: "tournament_map",
+      action: 'update_tournament',
+      entity_type: 'tournament_map',
       entity_id: null,
       tournament_id: tournamentId,
       payload: {
@@ -276,33 +255,33 @@ async function handleDelete(
 
   if (mapId && Array.isArray(mapId)) {
     return res.status(400).json({
-      error: "Invalid mapId",
+      error: 'Invalid mapId',
     });
   }
 
   let query = supabaseAdmin
-    .from("tournament_maps")
+    .from('tournament_maps')
     .delete()
-    .eq("tournament_id", tournamentId);
+    .eq('tournament_id', tournamentId);
 
   if (mapId) {
-    query = query.eq("id", mapId);
+    query = query.eq('id', mapId);
   }
 
   const { error } = await query;
 
   if (error) {
-    console.error("DELETE tournament_map(s) error:", error);
+    console.error('DELETE tournament_map(s) error:', error);
     return res.status(500).json({
-      error: "Failed to delete tournament maps",
+      error: 'Failed to delete tournament maps',
     });
   }
 
   if (ctx?.staff?.id) {
     await logStaffAction({
       staff_id: ctx.staff.id,
-      action: "update_tournament",
-      entity_type: "tournament_map",
+      action: 'update_tournament',
+      entity_type: 'tournament_map',
       entity_id: mapId ? String(mapId) : null,
       tournament_id: tournamentId,
       payload: {

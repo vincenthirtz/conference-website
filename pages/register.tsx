@@ -1,13 +1,13 @@
-import { useState } from "react";
-import Link from "next/link";
-import { supabaseClient } from "@/utils/supabase";
-import type { SeoProps } from "@/components/Seo/DefaultSeo";
+import { useState } from 'react';
+import Link from 'next/link';
+import { supabaseClient } from '@/utils/supabase';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 function RegisterPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [displayName, setDisplayName] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [displayName, setDisplayName] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -19,12 +19,12 @@ function RegisterPage() {
     setSuccessMsg(null);
 
     if (password.trim().length < 6) {
-      setErrorMsg("Le mot de passe doit contenir au moins 6 caractères.");
+      setErrorMsg('Le mot de passe doit contenir au moins 6 caractères.');
       return;
     }
 
     if (password !== confirm) {
-      setErrorMsg("Les mots de passe ne correspondent pas.");
+      setErrorMsg('Les mots de passe ne correspondent pas.');
       return;
     }
 
@@ -42,17 +42,17 @@ function RegisterPage() {
       });
 
       if (error) {
-        throw new Error(error.message || "Impossible de créer le compte.");
+        throw new Error(error.message || 'Impossible de créer le compte.');
       }
 
       setSuccessMsg(
-        "Compte créé. Vérifie tes emails pour confirmer, puis connecte-toi."
+        'Compte créé. Vérifie tes emails pour confirmer, puis connecte-toi.'
       );
-      setEmail("");
-      setPassword("");
-      setConfirm("");
+      setEmail('');
+      setPassword('');
+      setConfirm('');
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur inattendue");
+      setErrorMsg(err?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
@@ -170,11 +170,11 @@ function RegisterPage() {
                   disabled={loading}
                   className={`w-full rounded-xl py-2 text-sm font-semibold transition ${
                     loading
-                      ? "bg-neutral-700 cursor-not-allowed"
-                      : "bg-purple-600 hover:bg-purple-500"
+                      ? 'bg-neutral-700 cursor-not-allowed'
+                      : 'bg-purple-600 hover:bg-purple-500'
                   }`}
                 >
-                  {loading ? "Création..." : "Créer le compte"}
+                  {loading ? 'Création...' : 'Créer le compte'}
                 </button>
               </div>
             </form>
@@ -196,7 +196,7 @@ function RegisterPage() {
 }
 
 const registerSeo: SeoProps = {
-  title: "Inscription",
+  title: 'Inscription',
   description:
     "Crée ton compte OW Women's Cup pour t'inscrire aux tournois, rejoindre le staff ou gérer ton équipe.",
 };

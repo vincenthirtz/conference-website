@@ -2,19 +2,15 @@
 // Logique de propagation des équipes dans le bracket
 // à partir d'un match terminé (winner / loser → prochains matchs).
 // @ts-nocheck
-import { supabaseAdmin } from "../supabase";
+import { supabaseAdmin } from '../supabase';
 
 /* -----------------------------------------------------------
  * Types (adaptés à ta structure existante)
  * ---------------------------------------------------------*/
 
-export type MatchStatus =
-  | "pending"
-  | "ongoing"
-  | "finished"
-  | "cancelled";
+export type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
 
-export type BracketSide = "wb" | "lb" | "final" | "none";
+export type BracketSide = 'wb' | 'lb' | 'final' | 'none';
 
 export type MatchRow = {
   id: string;
@@ -68,7 +64,7 @@ export async function propagateBracketForMatch(
   }
 
   // Si match annulé, on ne propage rien
-  if (match.status === "cancelled") {
+  if (match.status === 'cancelled') {
     return {
       matchId,
       winnerTeamId: null,
@@ -76,21 +72,19 @@ export async function propagateBracketForMatch(
     };
   }
 
-  const { winnerTeamId, loserTeamId } =
-    computeWinnerLoserFromMatch(match);
+  const { winnerTeamId, loserTeamId } = computeWinnerLoserFromMatch(match);
 
   let updatedWinMatchId: string | null | undefined = null;
   let updatedLoseMatchId: string | null | undefined = null;
 
   // Propage le vainqueur
   if (match.next_match_win_id && match.next_match_win_slot) {
-    updatedWinMatchId =
-      await applyTeamToNextMatchSlot(
-        match.tournament_id,
-        match.next_match_win_id,
-        match.next_match_win_slot,
-        winnerTeamId
-      );
+    updatedWinMatchId = await applyTeamToNextMatchSlot(
+      match.tournament_id,
+      match.next_match_win_id,
+      match.next_match_win_slot,
+      winnerTeamId
+    );
 
     if (chain && updatedWinMatchId && winnerTeamId) {
       // On chaîne seulement si le match suivant a déjà un résultat
@@ -101,13 +95,12 @@ export async function propagateBracketForMatch(
 
   // Propage le perdant (loser bracket / match de classement)
   if (match.next_match_lose_id && match.next_match_lose_slot) {
-    updatedLoseMatchId =
-      await applyTeamToNextMatchSlot(
-        match.tournament_id,
-        match.next_match_lose_id,
-        match.next_match_lose_slot,
-        loserTeamId
-      );
+    updatedLoseMatchId = await applyTeamToNextMatchSlot(
+      match.tournament_id,
+      match.next_match_lose_id,
+      match.next_match_lose_slot,
+      loserTeamId
+    );
 
     if (chain && updatedLoseMatchId && loserTeamId) {
       // Idem : propagation en profondeur possible si besoin.
@@ -127,11 +120,9 @@ export async function propagateBracketForMatch(
  * Fetch d'un match avec les colonnes de lien de bracket
  * ---------------------------------------------------------*/
 
-async function fetchMatchWithLinks(
-  matchId: string
-): Promise<MatchRow | null> {
+async function fetchMatchWithLinks(matchId: string): Promise<MatchRow | null> {
   const { data, error } = await supabaseAdmin
-    .from("matches")
+    .from('matches')
     .select(
       `
       id,
@@ -153,11 +144,11 @@ async function fetchMatchWithLinks(
       next_match_lose_slot
     `
     )
-    .eq("id", matchId)
+    .eq('id', matchId)
     .maybeSingle();
 
   if (error) {
-    console.error("fetchMatchWithLinks error:", error);
+    console.error('fetchMatchWithLinks error:', error);
     return null;
   }
 
@@ -199,12 +190,7 @@ function computeWinnerLoserFromMatch(match: MatchRow): {
   const s1 = match.team1_score;
   const s2 = match.team2_score;
 
-  if (
-    s1 !== null &&
-    s2 !== null &&
-    match.team1_id &&
-    match.team2_id
-  ) {
+  if (s1 !== null && s2 !== null && match.team1_id && match.team2_id) {
     if (s1 > s2) {
       return {
         winnerTeamId: match.team1_id,
@@ -251,22 +237,22 @@ async function applyTeamToNextMatchSlot(
   if (!nextMatchId) return null;
 
   // On check que le match suivant appartient bien au même tournoi, par sécurité.
-  const field = slot === 1 ? "team1_id" : "team2_id";
+  const field = slot === 1 ? 'team1_id' : 'team2_id';
 
   const { data: updated, error } = await supabaseAdmin
-    .from("matches")
+    .from('matches')
     .update({ [field]: teamId })
-    .eq("id", nextMatchId)
-    .eq("tournament_id", tournamentId)
-    .select("id")
+    .eq('id', nextMatchId)
+    .eq('tournament_id', tournamentId)
+    .select('id')
     .maybeSingle();
 
   if (error) {
-    console.error(
-      "applyTeamToNextMatchSlot error:",
-      error,
-      { nextMatchId, slot, teamId }
-    );
+    console.error('applyTeamToNextMatchSlot error:', error, {
+      nextMatchId,
+      slot,
+      teamId,
+    });
     return null;
   }
 
@@ -285,41 +271,33 @@ async function applyTeamToNextMatchSlot(
  * Elle supprime l'équipe propagée dans les matchs liés
  * (win & lose).
  */
-export async function resetPropagationForMatch(
-  matchId: string
-): Promise<void> {
+export async function resetPropagationForMatch(matchId: string): Promise<void> {
   const match = await fetchMatchWithLinks(matchId);
   if (!match) return;
 
   const updates: Promise<any>[] = [];
 
   if (match.next_match_win_id && match.next_match_win_slot) {
-    const field =
-      match.next_match_win_slot === 1
-        ? "team1_id"
-        : "team2_id";
+    const field = match.next_match_win_slot === 1 ? 'team1_id' : 'team2_id';
 
     updates.push(
       supabaseAdmin
-        .from("matches")
+        .from('matches')
         .update({ [field]: null })
-        .eq("id", match.next_match_win_id)
-        .eq("tournament_id", match.tournament_id)
+        .eq('id', match.next_match_win_id)
+        .eq('tournament_id', match.tournament_id)
     );
   }
 
   if (match.next_match_lose_id && match.next_match_lose_slot) {
-    const field =
-      match.next_match_lose_slot === 1
-        ? "team1_id"
-        : "team2_id";
+    const field = match.next_match_lose_slot === 1 ? 'team1_id' : 'team2_id';
 
     updates.push(
       supabaseAdmin
-        .from("matches")
+        .from('matches')
         .update({ [field]: null })
-        .eq("id", match.next_match_lose_id)
-        .eq("tournament_id", match.tournament_id)
+        .eq('id', match.next_match_lose_id)
+        .eq('tournament_id', match.tournament_id)
     );
   }
 

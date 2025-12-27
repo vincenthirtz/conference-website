@@ -15,7 +15,10 @@ function Subscription(): JSX.Element {
           className="w-full sm:w-auto"
           data-test="subscribe-button"
         >
-          <Button type="submit" className="mt-8 w-full justify-center px-10 sm:w-[220px]">
+          <Button
+            type="submit"
+            className="mt-8 w-full justify-center px-10 sm:w-[220px]"
+          >
             Rejoindre
           </Button>
         </a>

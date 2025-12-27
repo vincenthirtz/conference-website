@@ -1,4 +1,4 @@
-/* eslint-disable react/no-unescaped-entities */
+ 
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useState } from 'react';
 import { useMediaQuery } from 'react-responsive';
@@ -320,7 +320,7 @@ function Home() {
         </div>
       </div>
       <div id="sponsors" className="mt-20">
-        <SponsorBanner />
+        {/* <SponsorBanner /> */}
       </div>
       {/* Formulaire de contact */}
       <div

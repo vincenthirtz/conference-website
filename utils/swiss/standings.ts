@@ -7,71 +7,13 @@
 
 // Ce fichier est volontairement indépendant de la persistance (Supabase, etc.)
 // et ne fait que de la logique pure.
-
-export interface SwissStandingParticipant {
-  /** ID unique (team_id, player_id, etc.) */
-  id: string;
-  /** Nom affiché (optionnel, pour l'UI) */
-  name?: string;
-  /** Seed initial (plus petit = mieux classé) */
-  seed?: number;
-}
-
-/**
- * Résultat d'un match utilisé pour le calcul des standings.
- * Les scores ici sont des points de tournoi (1 / 0.5 / 0, 3 / 1 / 0, etc.),
- * pas le score "ingame" (rounds, maps, etc.).
- */
-export interface SwissMatchResult {
-  round: number;
-  player1Id: string;
-  player2Id: string | null; // null = bye
-  /** Points gagnés par player1 pour le classement */
-  player1Score: number;
-  /** Points gagnés par player2 pour le classement (0 si bye) */
-  player2Score: number;
-}
-
-/**
- * Standing final d'un joueur / équipe
- */
-export interface SwissStanding {
-  id: string;
-  name?: string;
-  seed?: number;
-
-  /** Score total (somme des points sur tous les rounds) */
-  score: number;
-
-  /** Nombre de victoires / nulles / défaites (dérivé des scores) */
-  wins: number;
-  draws: number;
-  losses: number;
-
-  /** True si ce joueur a reçu au moins un bye */
-  hadBye: boolean;
-
-  /** Buchholz = somme des scores finaux des adversaires (hors bye) */
-  buchholz: number;
-
-  /**
-   * Median Buchholz = Buchholz en retirant
-   * le plus haut score d'adversaire et le plus bas
-   * (si au moins 3 adversaires ; sinon = Buchholz).
-   */
-  medianBuchholz: number;
-
-  /** Liste des IDs d'adversaires rencontrés (hors bye) */
-  opponents: string[];
-}
-
-/**
- * Options de calcul
- */
-export interface ComputeSwissStandingsOptions {
-  participants: SwissStandingParticipant[];
-  results: SwissMatchResult[];
-}
+import type {
+  ComputeSwissStandingsOptions,
+  RankedSwissStanding,
+  SwissMatchResult,
+  SwissStanding,
+  SwissStandingParticipant,
+} from '../../types/swiss';
 
 /**
  * Calcule les standings Swiss (score + Buchholz + Median Buchholz)
@@ -181,31 +123,20 @@ export function computeSwissStandings(
 
     for (const oppId of agg.opponents) {
       const oppScore = finalScoreById.get(oppId);
-      if (typeof oppScore === "number") {
+      if (typeof oppScore === 'number') {
         opponentScores.push(oppScore);
       }
     }
 
     // Buchholz = somme des scores des adversaires
-    const buchholz = opponentScores.reduce(
-      (sum, v) => sum + v,
-      0
-    );
+    const buchholz = opponentScores.reduce((sum, v) => sum + v, 0);
 
     // Median Buchholz : on retire le plus bas et le plus haut si >= 3 adversaires
     let medianBuchholz = buchholz;
     if (opponentScores.length >= 3) {
-      const sorted = opponentScores
-        .slice()
-        .sort((a, b) => a - b);
-      const trimmed = sorted.slice(
-        1,
-        sorted.length - 1
-      ); // retire min et max
-      medianBuchholz = trimmed.reduce(
-        (sum, v) => sum + v,
-        0
-      );
+      const sorted = opponentScores.slice().sort((a, b) => a - b);
+      const trimmed = sorted.slice(1, sorted.length - 1); // retire min et max
+      medianBuchholz = trimmed.reduce((sum, v) => sum + v, 0);
     }
 
     return {
@@ -231,8 +162,7 @@ export function computeSwissStandings(
   // - id pour stabilité
   standings.sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score;
-    if (b.buchholz !== a.buchholz)
-      return b.buchholz - a.buchholz;
+    if (b.buchholz !== a.buchholz) return b.buchholz - a.buchholz;
     if (b.medianBuchholz !== a.medianBuchholz)
       return b.medianBuchholz - a.medianBuchholz;
 
@@ -254,10 +184,6 @@ export function computeSwissStandings(
  * Ajoute un champ "rank" (1, 2, 3, ...) sur les standings.
  * Utile pour l'affichage direct dans un tableau.
  */
-export interface RankedSwissStanding extends SwissStanding {
-  rank: number;
-}
-
 export function rankSwissStandings(
   standings: SwissStanding[]
 ): RankedSwissStanding[] {

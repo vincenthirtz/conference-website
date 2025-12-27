@@ -1,19 +1,9 @@
-import { JSX } from 'react';
-import LinkedIn from '@/components/illustration/Socials/LinkedIn';
-import X from '@/components/illustration/Socials/X';
-import Youtube from '@/components/illustration/Socials/Youtube';
+import LinkedIn from '../components/illustration/Socials/LinkedIn';
+import X from '../components/illustration/Socials/X';
+import Youtube from '../components/illustration/Socials/Youtube';
+import type { SocialWithIcon } from '../types/types';
 
-export interface SocialWithIcon {
-  name: string;
-  href: string;
-  icon: ({
-    className,
-    fill,
-  }: {
-    className?: string;
-    fill?: string;
-  }) => JSX.Element;
-}
+export type { SocialWithIcon };
 
 const socials: SocialWithIcon[] = [
   // {

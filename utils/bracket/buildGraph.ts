@@ -2,7 +2,7 @@
 // Construction d'un graphe de bracket à partir des matchs
 // (utilise directement les liens next_match_win_id / next_match_lose_id).
 
-export type BracketSide = "wb" | "lb" | "final" | "none";
+export type BracketSide = 'wb' | 'lb' | 'final' | 'none';
 
 export type MatchForGraph = {
   id: string;
@@ -47,9 +47,7 @@ export type BracketGraph = {
  * Construit un graphe de bracket à partir des matchs fournis.
  * On ne touche pas à la base, on travaille uniquement en mémoire.
  */
-export function buildBracketGraph(
-  matches: MatchForGraph[]
-): BracketGraph {
+export function buildBracketGraph(matches: MatchForGraph[]): BracketGraph {
   const nodes: Record<string, BracketMatchNode> = {};
 
   // 1) Créer tous les nodes
@@ -87,11 +85,7 @@ export function buildBracketGraph(
   const rootsBySideAndGroup: Record<string, string[]> = {};
   const leavesBySideAndGroup: Record<string, string[]> = {};
 
-  const pushMap = (
-    map: Record<string, string[]>,
-    key: string,
-    id: string
-  ) => {
+  const pushMap = (map: Record<string, string[]>, key: string, id: string) => {
     if (!map[key]) map[key] = [];
     map[key].push(id);
   };
@@ -123,10 +117,7 @@ export type BracketColumn = {
   matchIds: string[];
 };
 
-export type BracketColumnsByKey = Record<
-  string,
-  BracketColumn[]
->; // key = side::group
+export type BracketColumnsByKey = Record<string, BracketColumn[]>; // key = side::group
 
 /**
  * Construit des colonnes de bracket par side+group à partir du graphe.
@@ -141,9 +132,7 @@ export function buildColumnsBySideAndGroup(
 ): BracketColumnsByKey {
   const result: BracketColumnsByKey = {};
 
-  for (const sideGroupKey of Object.keys(
-    graph.rootsBySideAndGroup
-  )) {
+  for (const sideGroupKey of Object.keys(graph.rootsBySideAndGroup)) {
     const rootIds = graph.rootsBySideAndGroup[sideGroupKey] || [];
     if (rootIds.length === 0) {
       result[sideGroupKey] = [];
@@ -172,10 +161,7 @@ export function buildColumnsBySideAndGroup(
           const outNode = graph.nodes[outId];
           if (!outNode) continue;
 
-          const key = makeSideGroupKey(
-            outNode.side,
-            outNode.groupKey
-          );
+          const key = makeSideGroupKey(outNode.side, outNode.groupKey);
           // On ne traverse que dans le même side+group
           if (key !== sideGroupKey) continue;
 
@@ -221,7 +207,7 @@ export function makeSideGroupKey(
   side: BracketSide,
   groupKey: string | null
 ): string {
-  return `${side}::${groupKey || ""}`;
+  return `${side}::${groupKey || ''}`;
 }
 
 /**
@@ -231,8 +217,8 @@ export function parseSideGroupKey(key: string): {
   side: BracketSide;
   groupKey: string | null;
 } {
-  const [sideRaw, groupRaw] = key.split("::");
-  const side = (sideRaw || "none") as BracketSide;
+  const [sideRaw, groupRaw] = key.split('::');
+  const side = (sideRaw || 'none') as BracketSide;
   const groupKey = groupRaw || null;
   return { side, groupKey };
 }
@@ -241,15 +227,13 @@ export function parseSideGroupKey(key: string): {
  * Récupère tous les side::group présents dans le graphe,
  * triés pour un affichage stable (wb, lb, final, none).
  */
-export function listSideGroupKeys(
-  graph: BracketGraph
-): string[] {
+export function listSideGroupKeys(graph: BracketGraph): string[] {
   const keys = new Set<string>();
   for (const node of Object.values(graph.nodes)) {
     keys.add(makeSideGroupKey(node.side, node.groupKey));
   }
 
-  const order: BracketSide[] = ["wb", "lb", "final", "none"];
+  const order: BracketSide[] = ['wb', 'lb', 'final', 'none'];
 
   return Array.from(keys).sort((a, b) => {
     const pa = parseSideGroupKey(a);
@@ -260,8 +244,8 @@ export function listSideGroupKeys(
 
     if (ia !== ib) return ia - ib;
 
-    const ga = pa.groupKey || "";
-    const gb = pb.groupKey || "";
+    const ga = pa.groupKey || '';
+    const gb = pb.groupKey || '';
 
     return ga.localeCompare(gb);
   });
@@ -274,7 +258,5 @@ export function getColumnMatches(
   graph: BracketGraph,
   column: BracketColumn
 ): BracketMatchNode[] {
-  return column.matchIds
-    .map((id) => graph.nodes[id])
-    .filter(Boolean);
+  return column.matchIds.map((id) => graph.nodes[id]).filter(Boolean);
 }

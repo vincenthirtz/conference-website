@@ -1,11 +1,11 @@
 // pages/admin/logs.tsx
 
-import { useEffect, useState } from "react";
-import Head from "next/head";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { withStaffPage } from "@/utils/staff";
-import { StaffRoleBadge } from "@/components/admin/StaffRoleBadge";
+import { useEffect, useState } from 'react';
+import Head from 'next/head';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { withStaffPage } from '@/utils/staff';
+import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
 type StaffShape = {
   id: string;
@@ -50,7 +50,7 @@ type TournamentsApiResponse = {
   total: number | null;
 };
 
-export const getServerSideProps = withStaffPage("manager");
+export const getServerSideProps = withStaffPage('manager');
 
 function formatDateTime(iso: string) {
   try {
@@ -61,9 +61,9 @@ function formatDateTime(iso: string) {
 }
 
 function shortId(id: string | null | undefined) {
-  if (!id) return "";
+  if (!id) return '';
   if (id.length <= 8) return id;
-  return id.slice(0, 4) + "…" + id.slice(-3);
+  return id.slice(0, 4) + '…' + id.slice(-3);
 }
 
 function AdminLogsPage({ staff }: StaffProps) {
@@ -78,16 +78,16 @@ function AdminLogsPage({ staff }: StaffProps) {
   const [loadingTournaments, setLoadingTournaments] = useState(false);
 
   // Filtres
-  const [entityType, setEntityType] = useState("");
-  const [action, setAction] = useState("");
-  const [staffId, setStaffId] = useState("");
-  const [tournamentId, setTournamentId] = useState("");
-  const [stageId, setStageId] = useState("");
-  const [matchId, setMatchId] = useState("");
-  const [teamId, setTeamId] = useState("");
-  const [search, setSearch] = useState("");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [entityType, setEntityType] = useState('');
+  const [action, setAction] = useState('');
+  const [staffId, setStaffId] = useState('');
+  const [tournamentId, setTournamentId] = useState('');
+  const [stageId, setStageId] = useState('');
+  const [matchId, setMatchId] = useState('');
+  const [teamId, setTeamId] = useState('');
+  const [search, setSearch] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
 
   const [limit] = useState(100);
   const [offset, setOffset] = useState(0);
@@ -99,17 +99,26 @@ function AdminLogsPage({ staff }: StaffProps) {
   useEffect(() => {
     fetchLogs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [offset, entityType, action, staffId, tournamentId, stageId, matchId, teamId]);
+  }, [
+    offset,
+    entityType,
+    action,
+    staffId,
+    tournamentId,
+    stageId,
+    matchId,
+    teamId,
+  ]);
 
   async function fetchTournaments() {
     try {
       setLoadingTournaments(true);
-      const res = await fetch("/api/admin/tournaments?limit=200");
+      const res = await fetch('/api/admin/tournaments?limit=200');
       if (!res.ok) return;
       const json: TournamentsApiResponse = await res.json();
       setTournaments(json.tournaments || []);
     } catch (e) {
-      console.error("Failed to load tournaments for logs filter", e);
+      console.error('Failed to load tournaments for logs filter', e);
     } finally {
       setLoadingTournaments(false);
     }
@@ -121,30 +130,30 @@ function AdminLogsPage({ staff }: StaffProps) {
 
     try {
       const params = new URLSearchParams();
-      params.set("limit", String(limit));
-      params.set("offset", String(offset));
-      if (entityType.trim()) params.set("entityType", entityType.trim());
-      if (action.trim()) params.set("action", action.trim());
-      if (staffId.trim()) params.set("staffId", staffId.trim());
-      if (tournamentId.trim()) params.set("tournamentId", tournamentId.trim());
-      if (stageId.trim()) params.set("stageId", stageId.trim());
-      if (matchId.trim()) params.set("matchId", matchId.trim());
-      if (teamId.trim()) params.set("teamId", teamId.trim());
-      if (search.trim()) params.set("search", search.trim());
-      if (fromDate) params.set("from", fromDate);
-      if (toDate) params.set("to", toDate);
+      params.set('limit', String(limit));
+      params.set('offset', String(offset));
+      if (entityType.trim()) params.set('entityType', entityType.trim());
+      if (action.trim()) params.set('action', action.trim());
+      if (staffId.trim()) params.set('staffId', staffId.trim());
+      if (tournamentId.trim()) params.set('tournamentId', tournamentId.trim());
+      if (stageId.trim()) params.set('stageId', stageId.trim());
+      if (matchId.trim()) params.set('matchId', matchId.trim());
+      if (teamId.trim()) params.set('teamId', teamId.trim());
+      if (search.trim()) params.set('search', search.trim());
+      if (fromDate) params.set('from', fromDate);
+      if (toDate) params.set('to', toDate);
 
-      const res = await fetch("/api/admin/logs?" + params.toString());
+      const res = await fetch('/api/admin/logs?' + params.toString());
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Impossible de charger les logs");
+        throw new Error(json.error || 'Impossible de charger les logs');
       }
 
       const json: LogsApiResponse = await res.json();
       setLogs(json.logs || []);
-      setTotal(typeof json.total === "number" ? json.total : null);
+      setTotal(typeof json.total === 'number' ? json.total : null);
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur inattendue");
+      setErrorMsg(err?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
@@ -156,7 +165,7 @@ function AdminLogsPage({ staff }: StaffProps) {
     fetchLogs();
   }
 
-  const backUrl = "/admin";
+  const backUrl = '/admin';
 
   return (
     <>
@@ -177,7 +186,8 @@ function AdminLogsPage({ staff }: StaffProps) {
             </button>
             <h1 className="text-3xl font-bold">Logs staff</h1>
             <p className="text-neutral-400 text-sm mt-1">
-              Historique global des actions staff (tournois, stages, matches, teams…).
+              Historique global des actions staff (tournois, stages, matches,
+              teams…).
             </p>
           </div>
           <StaffRoleBadge staff={staff} />
@@ -189,7 +199,9 @@ function AdminLogsPage({ staff }: StaffProps) {
           className="bg-neutral-800 border border-neutral-700 rounded-xl p-4 mb-6 flex flex-wrap gap-4 items-end"
         >
           <div className="flex flex-col gap-1 min-w-[160px]">
-            <label className="text-xs text-neutral-400">Type d&apos;entité</label>
+            <label className="text-xs text-neutral-400">
+              Type d&apos;entité
+            </label>
             <input
               type="text"
               placeholder='ex: "tournament", "stage", "match", "team"...'
@@ -211,7 +223,9 @@ function AdminLogsPage({ staff }: StaffProps) {
           </div>
 
           <div className="flex flex-col gap-1 min-w-[200px]">
-            <label className="text-xs text-neutral-400">Staff (id ou display_name)</label>
+            <label className="text-xs text-neutral-400">
+              Staff (id ou display_name)
+            </label>
             <input
               type="text"
               placeholder="staff_id ou nom"
@@ -230,14 +244,12 @@ function AdminLogsPage({ staff }: StaffProps) {
               disabled={loadingTournaments}
             >
               <option value="">
-                {loadingTournaments
-                  ? "Chargement…"
-                  : "Tous les tournois"}
+                {loadingTournaments ? 'Chargement…' : 'Tous les tournois'}
               </option>
               {tournaments.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
-                  {t.slug ? ` (${t.slug})` : ""}
+                  {t.slug ? ` (${t.slug})` : ''}
                 </option>
               ))}
             </select>
@@ -327,8 +339,8 @@ function AdminLogsPage({ staff }: StaffProps) {
           <div className="px-4 py-3 border-b border-neutral-700 flex justify-between items-center">
             <span className="text-sm font-semibold">
               {loading
-                ? "Chargement..."
-                : `Logs (${logs.length}${total != null ? ` / ${total}` : ""})`}
+                ? 'Chargement...'
+                : `Logs (${logs.length}${total != null ? ` / ${total}` : ''})`}
             </span>
             <span className="text-xs text-neutral-400">
               Triés par date décroissante (géré côté API).
@@ -344,7 +356,10 @@ function AdminLogsPage({ staff }: StaffProps) {
           {logs.length > 0 && (
             <ul className="divide-y divide-neutral-700">
               {logs.map((log) => (
-                <li key={log.id} className="px-4 py-3 text-sm flex flex-col gap-1">
+                <li
+                  key={log.id}
+                  className="px-4 py-3 text-sm flex flex-col gap-1"
+                >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-xs font-mono text-neutral-500">
@@ -356,7 +371,7 @@ function AdminLogsPage({ staff }: StaffProps) {
                       {log.entity_type && (
                         <span className="px-2 py-0.5 rounded-full text-xs bg-neutral-900 border border-neutral-700 text-neutral-300">
                           {log.entity_type}
-                          {log.entity_id ? ` #${shortId(log.entity_id)}` : ""}
+                          {log.entity_id ? ` #${shortId(log.entity_id)}` : ''}
                         </span>
                       )}
                       {log.tournament_id && (
@@ -397,9 +412,7 @@ function AdminLogsPage({ staff }: StaffProps) {
                   </div>
 
                   {log.message && (
-                    <div className="text-neutral-200">
-                      {log.message}
-                    </div>
+                    <div className="text-neutral-200">{log.message}</div>
                   )}
 
                   {log.payload && (
@@ -461,8 +474,8 @@ function AdminLogsPage({ staff }: StaffProps) {
               onClick={() => setOffset(Math.max(0, offset - limit))}
               className={`px-3 py-2 rounded ${
                 offset === 0
-                  ? "bg-neutral-700 opacity-40 cursor-not-allowed"
-                  : "bg-neutral-700 hover:bg-neutral-600"
+                  ? 'bg-neutral-700 opacity-40 cursor-not-allowed'
+                  : 'bg-neutral-700 hover:bg-neutral-600'
               }`}
             >
               ← Précédent
@@ -470,7 +483,7 @@ function AdminLogsPage({ staff }: StaffProps) {
 
             <span className="text-neutral-400">
               {offset + 1} – {offset + logs.length}
-              {total ? ` / ${total}` : ""}
+              {total ? ` / ${total}` : ''}
             </span>
 
             <button
@@ -478,8 +491,8 @@ function AdminLogsPage({ staff }: StaffProps) {
               onClick={() => setOffset(offset + limit)}
               className={`px-3 py-2 rounded ${
                 total !== null && offset + limit >= total
-                  ? "bg-neutral-700 opacity-40 cursor-not-allowed"
-                  : "bg-neutral-700 hover:bg-neutral-600"
+                  ? 'bg-neutral-700 opacity-40 cursor-not-allowed'
+                  : 'bg-neutral-700 hover:bg-neutral-600'
               }`}
             >
               Suivant →

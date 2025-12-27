@@ -4,18 +4,14 @@
 // - GET  : liste des matchs du tournoi (avec filtres + pagination)
 // - POST : création de 1..N matchs pour ce tournoi
 
-import type { NextApiRequest, NextApiResponse } from "next";
-import { supabaseAdmin } from "@/utils/supabase";
-import { withStaffRoute } from "@/utils/staff";
-import { logStaffAction } from "@/utils/staffLogs";
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { supabaseAdmin } from '@/utils/supabase';
+import { withStaffRoute } from '@/utils/staff';
+import { logStaffAction } from '@/utils/staffLogs';
 
-export type MatchStatus =
-  | "pending"
-  | "ongoing"
-  | "finished"
-  | "cancelled";
+export type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
 
-export type BracketSide = "wb" | "lb" | "final" | "none";
+export type BracketSide = 'wb' | 'lb' | 'final' | 'none';
 
 export type MatchRow = {
   id: string;
@@ -68,46 +64,30 @@ export type MatchCreateInput = {
 };
 
 // Rôle minimum : manager
-export default withStaffRoute(handler, "manager");
+export default withStaffRoute(handler, 'manager');
 
-async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse,
-  ctx: any
-) {
+async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
   const { id } = req.query;
 
   if (!id || Array.isArray(id)) {
-    return res
-      .status(400)
-      .json({ error: "Invalid tournament id" });
+    return res.status(400).json({ error: 'Invalid tournament id' });
   }
 
   const tournamentId = String(id);
 
   try {
     switch (req.method) {
-      case "GET":
+      case 'GET':
         return await handleGet(tournamentId, req, res);
-      case "POST":
-        return await handlePost(
-          tournamentId,
-          req,
-          res,
-          ctx
-        );
+      case 'POST':
+        return await handlePost(tournamentId, req, res, ctx);
       default:
-        return res
-          .status(405)
-          .json({ error: "Method not allowed" });
+        return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (err: any) {
-    console.error(
-      "[/api/admin/tournament/[id]/matches] internal error:",
-      err
-    );
+    console.error('[/api/admin/tournament/[id]/matches] internal error:', err);
     return res.status(500).json({
-      error: "Internal server error",
+      error: 'Internal server error',
       detail: err?.message,
     });
   }
@@ -148,30 +128,25 @@ async function handleGet(
   } = req.query;
 
   const limitNum = parseInt(
-    (Array.isArray(limit) ? limit[0] : limit) ?? "200",
+    (Array.isArray(limit) ? limit[0] : limit) ?? '200',
     10
   );
   const offsetNum = parseInt(
-    (Array.isArray(offset) ? offset[0] : offset) ?? "0",
+    (Array.isArray(offset) ? offset[0] : offset) ?? '0',
     10
   );
 
   const orderField =
-    orderBy === "scheduled_at"
-      ? "scheduled_at"
-      : orderBy === "round_number"
-      ? "round_number"
-      : "created_at";
+    orderBy === 'scheduled_at'
+      ? 'scheduled_at'
+      : orderBy === 'round_number'
+        ? 'round_number'
+        : 'created_at';
 
-  const ascending =
-    orderDir === "asc" ? true : false;
+  const ascending = orderDir === 'asc' ? true : false;
 
-  const withTeams =
-    includeTeams === "1" ||
-    includeTeams === "true";
-  const withGames =
-    includeGames === "1" ||
-    includeGames === "true";
+  const withTeams = includeTeams === '1' || includeTeams === 'true';
+  const withGames = includeGames === '1' || includeGames === 'true';
 
   let baseSelect = `
     id,
@@ -216,45 +191,36 @@ async function handleGet(
   }
 
   let query = supabaseAdmin
-    .from("matches")
+    .from('matches')
     .select(baseSelect)
-    .eq("tournament_id", tournamentId);
+    .eq('tournament_id', tournamentId);
 
   if (stageId && !Array.isArray(stageId)) {
-    query = query.eq("stage_id", stageId);
+    query = query.eq('stage_id', stageId);
   }
 
   if (status && !Array.isArray(status)) {
-    query = query.eq("status", status);
+    query = query.eq('status', status);
   }
 
-  if (
-    bracketSide &&
-    !Array.isArray(bracketSide)
-  ) {
-    query = query.eq("bracket_side", bracketSide);
+  if (bracketSide && !Array.isArray(bracketSide)) {
+    query = query.eq('bracket_side', bracketSide);
   }
 
   if (groupKey && !Array.isArray(groupKey)) {
-    query = query.eq("group_key", groupKey);
+    query = query.eq('group_key', groupKey);
   }
 
   query = query
     .order(orderField, { ascending })
-    .range(
-      offsetNum,
-      offsetNum + limitNum - 1
-    );
+    .range(offsetNum, offsetNum + limitNum - 1);
 
   const { data, error } = await query;
 
   if (error) {
-    console.error(
-      "admin GET tournament matches error:",
-      error
-    );
+    console.error('admin GET tournament matches error:', error);
     return res.status(500).json({
-      error: "Failed to fetch matches",
+      error: 'Failed to fetch matches',
     });
   }
 
@@ -284,8 +250,7 @@ async function handlePost(
 
   if (!Array.isArray(matches) || matches.length === 0) {
     return res.status(400).json({
-      error:
-        "Body must include non-empty array 'matches'",
+      error: "Body must include non-empty array 'matches'",
     });
   }
 
@@ -294,14 +259,11 @@ async function handlePost(
   const payload = matches.map((m) => ({
     tournament_id: tournamentId,
     stage_id: m.stage_id ?? null,
-    status: m.status ?? "pending",
+    status: m.status ?? 'pending',
     is_bye: m.is_bye ?? false,
     match_format: m.match_format ?? null,
     round_name: m.round_name ?? null,
-    round_number:
-      typeof m.round_number === "number"
-        ? m.round_number
-        : null,
+    round_number: typeof m.round_number === 'number' ? m.round_number : null,
     bracket_side: m.bracket_side ?? null,
     group_key: m.group_key ?? null,
     team1_id: m.team1_id ?? null,
@@ -314,30 +276,23 @@ async function handlePost(
     stream_url: m.stream_url ?? null,
     lobby_code: m.lobby_code ?? null,
     notes: m.notes ?? null,
-    next_match_win_id:
-      m.next_match_win_id ?? null,
-    next_match_win_slot:
-      m.next_match_win_slot ?? null,
-    next_match_lose_id:
-      m.next_match_lose_id ?? null,
-    next_match_lose_slot:
-      m.next_match_lose_slot ?? null,
+    next_match_win_id: m.next_match_win_id ?? null,
+    next_match_win_slot: m.next_match_win_slot ?? null,
+    next_match_lose_id: m.next_match_lose_id ?? null,
+    next_match_lose_slot: m.next_match_lose_slot ?? null,
     created_at: nowIso,
     updated_at: null,
   }));
 
   const { data, error } = await supabaseAdmin
-    .from("matches")
+    .from('matches')
     .insert(payload)
-    .select("*");
+    .select('*');
 
   if (error) {
-    console.error(
-      "admin POST tournament matches error:",
-      error
-    );
+    console.error('admin POST tournament matches error:', error);
     return res.status(500).json({
-      error: "Failed to create matches",
+      error: 'Failed to create matches',
     });
   }
 
@@ -348,12 +303,9 @@ async function handlePost(
     try {
       await logStaffAction({
         staff_id: ctx.staff.id,
-        action: "create_match",
-        entity_type: "match",
-        entity_id:
-          inserted.length === 1
-            ? inserted[0].id
-            : null,
+        action: 'create_match',
+        entity_type: 'match',
+        entity_id: inserted.length === 1 ? inserted[0].id : null,
         tournament_id: tournamentId,
         payload: {
           batch: true,
@@ -362,10 +314,7 @@ async function handlePost(
         },
       });
     } catch (e) {
-      console.error(
-        "admin POST tournament matches logStaffAction error:",
-        e
-      );
+      console.error('admin POST tournament matches logStaffAction error:', e);
     }
   }
 

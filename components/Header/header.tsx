@@ -14,7 +14,10 @@ function Header(): JSX.Element {
           <div className="flex justify-center w-full mt-32">
             <div className="flex flex-col justify-center items-center w-full">
               <div className="my-10">{/*     <Announcement /> */}</div>
-              <div className="w-full max-w-[640px] px-4 text-center" data-test="landing-heading">
+              <div
+                className="w-full max-w-[640px] px-4 text-center"
+                data-test="landing-heading"
+              >
                 <Heading
                   className="leading-normal sm:leading-38px tracking-[-3px] sm:tracking-[-0.02em] font-extrabold text-gradient"
                   level="h1"
@@ -29,10 +32,7 @@ function Header(): JSX.Element {
                 </Paragraph>
               </div>
               <div className="mt-[54px] relative flex items-center justify-center">
-                <Link
-                  href="https://discord.gg/gERSsjC3Vd"
-                  target="_blank"
-                >
+                <Link href="https://discord.gg/gERSsjC3Vd" target="_blank">
                   <Button type="button" className="w-[250px]">
                     Rejoindre
                   </Button>

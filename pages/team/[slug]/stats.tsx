@@ -1,14 +1,14 @@
 // @ts-nocheck
 // pages/team/[slug]/stats.tsx
-/* eslint-disable react/no-unescaped-entities */
-import { GetServerSideProps } from "next";
-import Head from "next/head";
-import Link from "next/link";
-import Image from "next/image";
-import Heading from "@/components/Typography/heading";
-import Paragraph from "@/components/Typography/paragraph";
-import Button from "@/components/Buttons/button";
-import { supabaseAdmin } from "@/utils/supabase";
+ 
+import { GetServerSideProps } from 'next';
+import Head from 'next/head';
+import Link from 'next/link';
+import Image from 'next/image';
+import Heading from '@/components/Typography/heading';
+import Paragraph from '@/components/Typography/paragraph';
+import Button from '@/components/Buttons/button';
+import { supabaseAdmin } from '@/utils/supabase';
 
 type Team = {
   id: string;
@@ -31,7 +31,7 @@ type TeamStatsView = {
   total_maps_lost: number;
 };
 
-type MatchStatus = "pending" | "ongoing" | "finished" | "cancelled";
+type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
 
 type MatchRow = {
   id: string;
@@ -82,9 +82,9 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
 
   // 1) Team
   const { data: team, error: tErr } = await supabaseAdmin
-    .from("teams")
-    .select("*")
-    .eq("id", teamId)
+    .from('teams')
+    .select('*')
+    .eq('id', teamId)
     .single();
 
   if (tErr || !team) {
@@ -95,50 +95,46 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   let stats: TeamStatsView | null = null;
   try {
     const { data: statsData, error: sErr } = await supabaseAdmin
-      .from("team_stats_view")
-      .select("*")
-      .eq("team_id", teamId)
+      .from('team_stats_view')
+      .select('*')
+      .eq('team_id', teamId)
       .maybeSingle();
 
     if (sErr) {
-      console.error("team_stats_view error:", sErr);
+      console.error('team_stats_view error:', sErr);
     } else if (statsData) {
       stats = statsData as TeamStatsView;
     }
   } catch (e) {
-    console.error("team_stats_view not available:", e);
+    console.error('team_stats_view not available:', e);
   }
 
   // 3) Matches de l'équipe (tous tournois confondus, hors BYE)
   const { data: matchesData, error: mErr } = await supabaseAdmin
-    .from("matches")
-    .select(
-      "id, status, is_bye, team1_id, team2_id, winner_team_id"
-    )
+    .from('matches')
+    .select('id, status, is_bye, team1_id, team2_id, winner_team_id')
     .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
-    .neq("status", "cancelled");
+    .neq('status', 'cancelled');
 
   if (mErr) {
-    console.error("team stats matches error:", mErr);
+    console.error('team stats matches error:', mErr);
   }
 
-  const matches = ((matchesData || []) as MatchRow[]).filter(
-    (m) => !m.is_bye
-  );
+  const matches = ((matchesData || []) as MatchRow[]).filter((m) => !m.is_bye);
   const matchIds = matches.map((m) => m.id);
 
   // 4) Games de ces matches, pour calculer les stats par map
   let games: GameRow[] = [];
   if (matchIds.length > 0) {
     const { data: gamesData, error: gErr } = await supabaseAdmin
-      .from("games")
+      .from('games')
       .select(
-        "match_id, map_name, team1_score, team2_score, is_tiebreaker, went_overtime"
+        'match_id, map_name, team1_score, team2_score, is_tiebreaker, went_overtime'
       )
-      .in("match_id", matchIds);
+      .in('match_id', matchIds);
 
     if (gErr) {
-      console.error("team stats games error:", gErr);
+      console.error('team stats games error:', gErr);
     } else {
       games = (gamesData || []) as GameRow[];
     }
@@ -167,9 +163,7 @@ export default function TeamStatsPage({
   const shortName = team.short_name || null;
   const logo = team.logo_url || null;
 
-  const title = shortName
-    ? `${shortName} – stats`
-    : `${name} – stats`;
+  const title = shortName ? `${shortName} – stats` : `${name} – stats`;
 
   const totalMatches = stats?.total_matches ?? matchesPlayed;
   const wins = stats?.wins ?? 0;
@@ -183,14 +177,11 @@ export default function TeamStatsPage({
   const bestMap =
     mapStats.length > 0
       ? [...mapStats].sort(
-          (a, b) =>
-            b.winrate - a.winrate ||
-            b.gamesPlayed - a.gamesPlayed
+          (a, b) => b.winrate - a.winrate || b.gamesPlayed - a.gamesPlayed
         )[0]
       : null;
 
-  const mostPlayed =
-    mapStats.length > 0 ? mapStats[0] : null;
+  const mostPlayed = mapStats.length > 0 ? mapStats[0] : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
@@ -232,9 +223,7 @@ export default function TeamStatsPage({
                   {shortName || name}
                 </Heading>
                 {shortName && (
-                  <p className="text-[11px] text-gray-400">
-                    {name}
-                  </p>
+                  <p className="text-[11px] text-gray-400">{name}</p>
                 )}
               </div>
             </div>
@@ -252,21 +241,11 @@ export default function TeamStatsPage({
           </div>
 
           <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <StatCard
-              label="Matchs joués"
-              value={totalMatches}
-            />
-            <StatCard
-              label="Bilan"
-              value={`${wins} - ${losses}`}
-            />
+            <StatCard label="Matchs joués" value={totalMatches} />
+            <StatCard label="Bilan" value={`${wins} - ${losses}`} />
             <StatCard
               label="Winrate"
-              value={
-                totalMatches > 0
-                  ? `${winrate.toFixed(0)}%`
-                  : "—"
-              }
+              value={totalMatches > 0 ? `${winrate.toFixed(0)}%` : '—'}
             />
             <StatCard
               label="Maps"
@@ -276,8 +255,8 @@ export default function TeamStatsPage({
                   ? mapDiff > 0
                     ? `+${mapDiff} diff`
                     : mapDiff < 0
-                    ? `${mapDiff} diff`
-                    : "diff neutre"
+                      ? `${mapDiff} diff`
+                      : 'diff neutre'
                   : undefined
               }
             />
@@ -288,12 +267,9 @@ export default function TeamStatsPage({
         <section className="mb-8">
           <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
             {mapStats.length === 0 && (
-              <Paragraph
-                typeStyle="body-sm"
-                textColor="text-gray-300"
-              >
-                Pas encore assez de données de maps enregistrées
-                pour calculer des statistiques détaillées.
+              <Paragraph typeStyle="body-sm" textColor="text-gray-300">
+                Pas encore assez de données de maps enregistrées pour calculer
+                des statistiques détaillées.
               </Paragraph>
             )}
 
@@ -303,20 +279,14 @@ export default function TeamStatsPage({
                   Profil de maps de l&apos;équipe
                 </p>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-                  <StatCard
-                    label="Maps distinctes"
-                    value={mapStats.length}
-                  />
+                  <StatCard label="Maps distinctes" value={mapStats.length} />
                   <StatCard
                     label="Games maps"
-                    value={mapStats.reduce(
-                      (acc, m) => acc + m.gamesPlayed,
-                      0
-                    )}
+                    value={mapStats.reduce((acc, m) => acc + m.gamesPlayed, 0)}
                   />
                   <StatCard
                     label="Map préférée"
-                    value={bestMap ? bestMap.mapName : "—"}
+                    value={bestMap ? bestMap.mapName : '—'}
                     hint={
                       bestMap
                         ? `${bestMap.gamesPlayed} games · ${(bestMap.winrate * 100).toFixed(0)}% WR`
@@ -325,21 +295,16 @@ export default function TeamStatsPage({
                   />
                   <StatCard
                     label="Map la plus jouée"
-                    value={mostPlayed ? mostPlayed.mapName : "—"}
+                    value={mostPlayed ? mostPlayed.mapName : '—'}
                     hint={
-                      mostPlayed
-                        ? `${mostPlayed.gamesPlayed} games`
-                        : undefined
+                      mostPlayed ? `${mostPlayed.gamesPlayed} games` : undefined
                     }
                   />
                 </div>
-                <Paragraph
-                  typeStyle="body-sm"
-                  textColor="text-gray-400"
-                >
-                  Les statistiques sont calculées sur l&apos;ensemble
-                  des matchs joués (tous tournois confondus) et
-                  enregistrés dans la base de données.
+                <Paragraph typeStyle="body-sm" textColor="text-gray-400">
+                  Les statistiques sont calculées sur l&apos;ensemble des matchs
+                  joués (tous tournois confondus) et enregistrés dans la base de
+                  données.
                 </Paragraph>
               </>
             )}
@@ -358,30 +323,14 @@ export default function TeamStatsPage({
                 <table className="min-w-full text-[11px]">
                   <thead>
                     <tr className="text-gray-400 border-b border-white/10">
-                      <th className="text-left py-1.5 pr-3">
-                        Map
-                      </th>
-                      <th className="text-right py-1.5 px-3">
-                        Games
-                      </th>
-                      <th className="text-right py-1.5 px-3">
-                        W
-                      </th>
-                      <th className="text-right py-1.5 px-3">
-                        L
-                      </th>
-                      <th className="text-right py-1.5 px-3">
-                        Winrate
-                      </th>
-                      <th className="text-right py-1.5 px-3">
-                        Rounds (+/-)
-                      </th>
-                      <th className="text-right py-1.5 px-3">
-                        OTs
-                      </th>
-                      <th className="text-right py-1.5 pl-3">
-                        Tiebreakers
-                      </th>
+                      <th className="text-left py-1.5 pr-3">Map</th>
+                      <th className="text-right py-1.5 px-3">Games</th>
+                      <th className="text-right py-1.5 px-3">W</th>
+                      <th className="text-right py-1.5 px-3">L</th>
+                      <th className="text-right py-1.5 px-3">Winrate</th>
+                      <th className="text-right py-1.5 px-3">Rounds (+/-)</th>
+                      <th className="text-right py-1.5 px-3">OTs</th>
+                      <th className="text-right py-1.5 pl-3">Tiebreakers</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -389,10 +338,8 @@ export default function TeamStatsPage({
                       <tr
                         key={m.mapName}
                         className={
-                          "border-b border-white/5" +
-                          (idx % 2 === 0
-                            ? " bg-white/0"
-                            : " bg-white/[0.02]")
+                          'border-b border-white/5' +
+                          (idx % 2 === 0 ? ' bg-white/0' : ' bg-white/[0.02]')
                         }
                       >
                         <td className="py-1.5 pr-3 text-gray-100">
@@ -411,22 +358,22 @@ export default function TeamStatsPage({
                           {(m.winrate * 100).toFixed(0)}%
                         </td>
                         <td className="py-1.5 px-3 text-right text-gray-100">
-                          {m.roundsFor}-{m.roundsAgainst}{" "}
+                          {m.roundsFor}-{m.roundsAgainst}{' '}
                           <span
                             className={
-                              "ml-1 " +
+                              'ml-1 ' +
                               (m.diff > 0
-                                ? "text-emerald-300"
+                                ? 'text-emerald-300'
                                 : m.diff < 0
-                                ? "text-red-300"
-                                : "text-gray-300")
+                                  ? 'text-red-300'
+                                  : 'text-gray-300')
                             }
                           >
                             {m.diff > 0
                               ? `(+${m.diff})`
                               : m.diff < 0
-                              ? `(${m.diff})`
-                              : "(0)"}
+                                ? `(${m.diff})`
+                                : '(0)'}
                           </span>
                         </td>
                         <td className="py-1.5 px-3 text-right text-gray-100">
@@ -442,8 +389,8 @@ export default function TeamStatsPage({
               </div>
 
               <p className="mt-2 text-[10px] text-gray-500">
-                Les overtimes et tiebreakers sont comptés à partir
-                des flags stockés sur chaque game.
+                Les overtimes et tiebreakers sont comptés à partir des flags
+                stockés sur chaque game.
               </p>
             </div>
           </section>
@@ -488,16 +435,15 @@ function computeMapStatsForTeam(
     if (!isTeam1 && !isTeam2) continue;
 
     const key = g.map_name;
-    const entry =
-      mapAgg.get(key) || {
-        games: 0,
-        wins: 0,
-        losses: 0,
-        roundsFor: 0,
-        roundsAgainst: 0,
-        overtimes: 0,
-        tiebreakers: 0,
-      };
+    const entry = mapAgg.get(key) || {
+      games: 0,
+      wins: 0,
+      losses: 0,
+      roundsFor: 0,
+      roundsAgainst: 0,
+      overtimes: 0,
+      tiebreakers: 0,
+    };
 
     entry.games += 1;
 
@@ -528,10 +474,7 @@ function computeMapStatsForTeam(
       gamesPlayed: entry.games,
       wins: entry.wins,
       losses: entry.losses,
-      winrate:
-        entry.games > 0
-          ? entry.wins / entry.games
-          : 0,
+      winrate: entry.games > 0 ? entry.wins / entry.games : 0,
       roundsFor: entry.roundsFor,
       roundsAgainst: entry.roundsAgainst,
       diff: entry.roundsFor - entry.roundsAgainst,
@@ -569,13 +512,9 @@ function StatCard({
         {label}
       </p>
       <p className="text-xl font-semibold text-white">
-        {typeof value === "number" ? value.toString() : value}
+        {typeof value === 'number' ? value.toString() : value}
       </p>
-      {hint && (
-        <p className="text-[10px] text-gray-400 mt-[2px]">
-          {hint}
-        </p>
-      )}
+      {hint && <p className="text-[10px] text-gray-400 mt-[2px]">{hint}</p>}
     </div>
   );
 }

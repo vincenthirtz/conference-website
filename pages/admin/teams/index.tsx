@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
-import Head from "next/head";
-import Link from "next/link";
-import { StaffRoleBadge } from "@/components/admin/StaffRoleBadge";
-import { withStaffPage } from "@/utils/staff";
+import { useEffect, useState } from 'react';
+import Head from 'next/head';
+import Link from 'next/link';
+import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
+import { withStaffPage } from '@/utils/staff';
 
 type StaffShape = {
   id: string;
@@ -30,7 +30,7 @@ type TeamsApiResponse = {
   total: number | null;
 };
 
-export const getServerSideProps = withStaffPage("manager");
+export const getServerSideProps = withStaffPage('manager');
 
 function AdminTeamsListPage({ staff }: StaffProps) {
   const [teams, setTeams] = useState<TeamRow[]>([]);
@@ -41,8 +41,8 @@ function AdminTeamsListPage({ staff }: StaffProps) {
   const [deleting, setDeleting] = useState(false);
 
   // filters
-  const [search, setSearch] = useState("");
-  const [activeFilter, setActiveFilter] = useState("");
+  const [search, setSearch] = useState('');
+  const [activeFilter, setActiveFilter] = useState('');
 
   const [limit] = useState(25);
   const [offset, setOffset] = useState(0);
@@ -58,23 +58,23 @@ function AdminTeamsListPage({ staff }: StaffProps) {
 
     try {
       const params = new URLSearchParams();
-      params.set("limit", String(limit));
-      params.set("offset", String(offset));
-      params.set("includeTotal", "1");
-      if (search.trim()) params.set("search", search.trim());
-      if (activeFilter) params.set("isActive", activeFilter);
+      params.set('limit', String(limit));
+      params.set('offset', String(offset));
+      params.set('includeTotal', '1');
+      if (search.trim()) params.set('search', search.trim());
+      if (activeFilter) params.set('isActive', activeFilter);
 
       const res = await fetch(`/api/admin/teams?${params.toString()}`);
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Impossible de charger les équipes");
+        throw new Error(json.error || 'Impossible de charger les équipes');
       }
 
       const json: TeamsApiResponse = await res.json();
       setTeams(json.teams || []);
-      setTotal(typeof json.total === "number" ? json.total : null);
+      setTotal(typeof json.total === 'number' ? json.total : null);
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur inattendue");
+      setErrorMsg(err?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
@@ -86,16 +86,16 @@ function AdminTeamsListPage({ staff }: StaffProps) {
     setErrorMsg(null);
     try {
       const res = await fetch(`/api/admin/teams/${team.id}`, {
-        method: "DELETE",
+        method: 'DELETE',
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || json.error) {
-        throw new Error(json.error || "Échec de la suppression");
+        throw new Error(json.error || 'Échec de la suppression');
       }
       setDeleteTarget(null);
       fetchTeams();
     } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur inattendue");
+      setErrorMsg(err?.message ?? 'Erreur inattendue');
     } finally {
       setDeleting(false);
     }
@@ -199,26 +199,24 @@ function AdminTeamsListPage({ staff }: StaffProps) {
                     key={team.id}
                     className="border-t border-neutral-700 hover:bg-neutral-750"
                   >
-                    <td className="px-4 py-3 font-semibold">
-                      {team.name}
-                    </td>
-                    <td className="px-4 py-3">{team.short_name || "—"}</td>
-                    <td className="px-4 py-3">{team.country || "—"}</td>
+                    <td className="px-4 py-3 font-semibold">{team.name}</td>
+                    <td className="px-4 py-3">{team.short_name || '—'}</td>
+                    <td className="px-4 py-3">{team.country || '—'}</td>
                     <td className="px-4 py-3">
                       <span
                         className={`px-2 py-1 rounded text-xs ${
                           team.is_active
-                            ? "bg-emerald-700/70 text-white"
-                            : "bg-neutral-700 text-neutral-200"
+                            ? 'bg-emerald-700/70 text-white'
+                            : 'bg-neutral-700 text-neutral-200'
                         }`}
                       >
-                        {team.is_active ? "Oui" : "Non"}
+                        {team.is_active ? 'Oui' : 'Non'}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       {team.created_at
                         ? new Date(team.created_at).toLocaleDateString()
-                        : "—"}
+                        : '—'}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
@@ -261,8 +259,8 @@ function AdminTeamsListPage({ staff }: StaffProps) {
             onClick={() => setOffset(Math.max(0, offset - limit))}
             className={`px-3 py-2 rounded ${
               offset === 0 || loading
-                ? "bg-neutral-700 opacity-50 cursor-not-allowed"
-                : "bg-neutral-700 hover:bg-neutral-600"
+                ? 'bg-neutral-700 opacity-50 cursor-not-allowed'
+                : 'bg-neutral-700 hover:bg-neutral-600'
             }`}
           >
             ← Précédent
@@ -270,7 +268,7 @@ function AdminTeamsListPage({ staff }: StaffProps) {
 
           <span className="text-neutral-400 text-sm">
             {offset + 1} – {offset + teams.length}
-            {total ? ` / ${total}` : ""}
+            {total ? ` / ${total}` : ''}
           </span>
 
           <button
@@ -278,8 +276,8 @@ function AdminTeamsListPage({ staff }: StaffProps) {
             onClick={() => setOffset(offset + limit)}
             className={`px-3 py-2 rounded ${
               loading || (total !== null && offset + limit >= total)
-                ? "bg-neutral-700 opacity-50 cursor-not-allowed"
-                : "bg-neutral-700 hover:bg-neutral-600"
+                ? 'bg-neutral-700 opacity-50 cursor-not-allowed'
+                : 'bg-neutral-700 hover:bg-neutral-600'
             }`}
           >
             Suivant →
@@ -289,9 +287,11 @@ function AdminTeamsListPage({ staff }: StaffProps) {
         {deleteTarget && (
           <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 px-4">
             <div className="bg-neutral-900 border border-neutral-700 rounded-xl p-6 w-full max-w-md">
-              <h3 className="text-lg font-semibold mb-2">Supprimer l&apos;équipe ?</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                Supprimer l&apos;équipe ?
+              </h3>
               <p className="text-sm text-neutral-300 mb-4">
-                Cela désactive l&apos;équipe (suppression soft). Continuer pour{" "}
+                Cela désactive l&apos;équipe (suppression soft). Continuer pour{' '}
                 <span className="font-semibold">{deleteTarget.name}</span> ?
               </p>
               {errorMsg && (
@@ -314,11 +314,11 @@ function AdminTeamsListPage({ staff }: StaffProps) {
                   disabled={deleting}
                   className={`px-4 py-2 rounded-lg text-sm font-semibold ${
                     deleting
-                      ? "bg-red-700/60 cursor-not-allowed"
-                      : "bg-red-600 hover:bg-red-500"
+                      ? 'bg-red-700/60 cursor-not-allowed'
+                      : 'bg-red-600 hover:bg-red-500'
                   }`}
                 >
-                  {deleting ? "Suppression..." : "Supprimer"}
+                  {deleting ? 'Suppression...' : 'Supprimer'}
                 </button>
               </div>
             </div>

@@ -5,44 +5,37 @@
 // - PUT/PATCH : update score (avec propagation) OU méta-données
 // - DELETE : annuler ou supprimer un match
 
-import type { NextApiRequest, NextApiResponse } from "next";
-import { supabaseAdmin } from "@/utils/supabase";
-import { withStaffRoute } from "@/utils/staff";
-import { applyMatchScore } from "@/utils/matches/applyScore";
-import { logStaffAction } from "@/utils/staffLogs";
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { supabaseAdmin } from '@/utils/supabase';
+import { withStaffRoute } from '@/utils/staff';
+import { applyMatchScore } from '@/utils/matches/applyScore';
+import { logStaffAction } from '@/utils/staffLogs';
 
-export default withStaffRoute(handler, "manager"); // rôle min : manager
+export default withStaffRoute(handler, 'manager'); // rôle min : manager
 
-async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse,
-  ctx: any
-) {
+async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
   const { matchId } = req.query;
 
   if (!matchId || Array.isArray(matchId)) {
-    return res.status(400).json({ error: "Invalid matchId" });
+    return res.status(400).json({ error: 'Invalid matchId' });
   }
 
   try {
     switch (req.method) {
-      case "GET":
+      case 'GET':
         return await handleGet(matchId, req, res);
-      case "PUT":
-      case "PATCH":
+      case 'PUT':
+      case 'PATCH':
         return await handlePut(matchId, req, res, ctx);
-      case "DELETE":
+      case 'DELETE':
         return await handleDelete(matchId, req, res, ctx);
       default:
-        return res.status(405).json({ error: "Method not allowed" });
+        return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (err: any) {
-    console.error(
-      "[/api/admin/matches/[matchId]] error:",
-      err
-    );
+    console.error('[/api/admin/matches/[matchId]] error:', err);
     return res.status(500).json({
-      error: "Internal server error",
+      error: 'Internal server error',
       detail: err?.message,
     });
   }
@@ -58,8 +51,7 @@ async function handleGet(
   res: NextApiResponse
 ) {
   const includeGames =
-    req.query.includeGames === "1" ||
-    req.query.includeGames === "true";
+    req.query.includeGames === '1' || req.query.includeGames === 'true';
 
   const baseSelect = `
     id,
@@ -93,24 +85,20 @@ async function handleGet(
   `;
 
   if (!supabaseAdmin) {
-    return res
-      .status(500)
-      .json({ error: "Supabase admin not configured" });
+    return res.status(500).json({ error: 'Supabase admin not configured' });
   }
 
-  const select = includeGames
-    ? `${baseSelect}, games:games(*)`
-    : baseSelect;
+  const select = includeGames ? `${baseSelect}, games:games(*)` : baseSelect;
 
   const { data, error } = await supabaseAdmin
-    .from("matches")
+    .from('matches')
     .select(select)
-    .eq("id", matchId)
+    .eq('id', matchId)
     .maybeSingle();
 
   if (error || !data) {
-    console.error("admin GET match error:", error);
-    return res.status(404).json({ error: "Match not found" });
+    console.error('admin GET match error:', error);
+    return res.status(404).json({ error: 'Match not found' });
   }
 
   return res.status(200).json({ match: data });
@@ -132,9 +120,9 @@ async function handlePut(
   res: NextApiResponse,
   ctx: any
 ) {
-  const { mode } = req.body as { mode?: "score" | "meta" };
+  const { mode } = req.body as { mode?: 'score' | 'meta' };
 
-  if (mode === "score" || hasScorePayload(req.body)) {
+  if (mode === 'score' || hasScorePayload(req.body)) {
     // --- Update score (avec helper applyMatchScore) ---
     const {
       team1Score,
@@ -144,12 +132,9 @@ async function handlePut(
       propagate = true,
     } = req.body;
 
-    if (
-      typeof team1Score !== "number" ||
-      typeof team2Score !== "number"
-    ) {
+    if (typeof team1Score !== 'number' || typeof team2Score !== 'number') {
       return res.status(400).json({
-        error: "Missing numeric team1Score / team2Score",
+        error: 'Missing numeric team1Score / team2Score',
       });
     }
 
@@ -157,13 +142,9 @@ async function handlePut(
       matchId,
       team1Score,
       team2Score,
-      winnerTeamId:
-        typeof winnerTeamId === "string"
-          ? winnerTeamId
-          : undefined,
+      winnerTeamId: typeof winnerTeamId === 'string' ? winnerTeamId : undefined,
       status,
-      markFinished:
-        status === "finished" || !status,
+      markFinished: status === 'finished' || !status,
       staffId: ctx.staff?.id ?? null,
       propagateBracket: propagate !== false,
     });
@@ -173,26 +154,26 @@ async function handlePut(
 
   // --- Update méta-données du match ---
   const metaFieldsWhitelist: string[] = [
-    "tournament_id",
-    "stage_id",
-    "status",
-    "is_bye",
-    "match_format",
-    "round_name",
-    "round_number",
-    "bracket_side",
-    "group_key",
-    "team1_id",
-    "team2_id",
-    "scheduled_at",
-    "completed_at",
-    "stream_url",
-    "lobby_code",
-    "notes",
-    "next_match_win_id",
-    "next_match_win_slot",
-    "next_match_lose_id",
-    "next_match_lose_slot",
+    'tournament_id',
+    'stage_id',
+    'status',
+    'is_bye',
+    'match_format',
+    'round_name',
+    'round_number',
+    'bracket_side',
+    'group_key',
+    'team1_id',
+    'team2_id',
+    'scheduled_at',
+    'completed_at',
+    'stream_url',
+    'lobby_code',
+    'notes',
+    'next_match_win_id',
+    'next_match_win_slot',
+    'next_match_lose_id',
+    'next_match_lose_slot',
   ];
 
   const updatePayload: Record<string, any> = {};
@@ -211,49 +192,42 @@ async function handlePut(
   }
 
   if (!supabaseAdmin) {
-    return res
-      .status(500)
-      .json({ error: "Supabase admin not configured" });
+    return res.status(500).json({ error: 'Supabase admin not configured' });
   }
 
-  const { data: before, error: fetchErr } =
-    await supabaseAdmin
-      .from("matches")
-      .select("*")
-      .eq("id", matchId)
-      .maybeSingle();
+  const { data: before, error: fetchErr } = await supabaseAdmin
+    .from('matches')
+    .select('*')
+    .eq('id', matchId)
+    .maybeSingle();
 
   if (fetchErr || !before) {
-    return res.status(404).json({ error: "Match not found" });
+    return res.status(404).json({ error: 'Match not found' });
   }
 
-  const { data: updated, error: updErr } =
-    await supabaseAdmin
-      .from("matches")
-      .update(updatePayload)
-      .eq("id", matchId)
-      .select("*")
-      .maybeSingle();
+  const { data: updated, error: updErr } = await supabaseAdmin
+    .from('matches')
+    .update(updatePayload)
+    .eq('id', matchId)
+    .select('*')
+    .maybeSingle();
 
   if (updErr || !updated) {
-    console.error(
-      "admin PUT match meta error:",
-      updErr
-    );
+    console.error('admin PUT match meta error:', updErr);
     return res.status(500).json({
-      error: "Failed to update match metadata",
+      error: 'Failed to update match metadata',
     });
   }
 
   if (ctx?.staff?.id) {
     await logStaffAction({
       staff_id: ctx.staff.id,
-      action: "update_match",
-      entity_type: "match",
+      action: 'update_match',
+      entity_type: 'match',
       entity_id: matchId,
       tournament_id: updated.tournament_id ?? null,
       payload: {
-        mode: "meta",
+        mode: 'meta',
         before,
         after: updated,
       },
@@ -275,42 +249,36 @@ async function handleDelete(
   res: NextApiResponse,
   ctx: any
 ) {
-  const hard =
-    req.query.hard === "1" ||
-    req.query.hard === "true";
+  const hard = req.query.hard === '1' || req.query.hard === 'true';
 
-  const { data: match, error: fetchErr } =
-    await supabaseAdmin
-      .from("matches")
-      .select("*")
-      .eq("id", matchId)
-      .maybeSingle();
+  const { data: match, error: fetchErr } = await supabaseAdmin
+    .from('matches')
+    .select('*')
+    .eq('id', matchId)
+    .maybeSingle();
 
   if (fetchErr || !match) {
-    return res.status(404).json({ error: "Match not found" });
+    return res.status(404).json({ error: 'Match not found' });
   }
 
   if (hard) {
     const { error } = await supabaseAdmin
-      .from("matches")
+      .from('matches')
       .delete()
-      .eq("id", matchId);
+      .eq('id', matchId);
 
     if (error) {
-      console.error(
-        "admin hard delete match error:",
-        error
-      );
+      console.error('admin hard delete match error:', error);
       return res.status(500).json({
-        error: "Failed to hard-delete match",
+        error: 'Failed to hard-delete match',
       });
     }
 
     if (ctx?.staff?.id) {
       await logStaffAction({
         staff_id: ctx.staff.id,
-        action: "delete_match",
-        entity_type: "match",
+        action: 'delete_match',
+        entity_type: 'match',
         entity_id: matchId,
         tournament_id: match.tournament_id ?? null,
         payload: {
@@ -327,30 +295,27 @@ async function handleDelete(
 
   // Soft delete / cancel
   const { error } = await supabaseAdmin
-    .from("matches")
+    .from('matches')
     .update({
-      status: "cancelled",
+      status: 'cancelled',
       team1_score: null,
       team2_score: null,
       winner_team_id: null,
     })
-    .eq("id", matchId);
+    .eq('id', matchId);
 
   if (error) {
-    console.error(
-      "admin cancel match error:",
-      error
-    );
+    console.error('admin cancel match error:', error);
     return res.status(500).json({
-      error: "Failed to cancel match",
+      error: 'Failed to cancel match',
     });
   }
 
   if (ctx?.staff?.id) {
     await logStaffAction({
       staff_id: ctx.staff.id,
-      action: "update_match",
-      entity_type: "match",
+      action: 'update_match',
+      entity_type: 'match',
       entity_id: matchId,
       tournament_id: match.tournament_id ?? null,
       payload: {
@@ -372,7 +337,6 @@ async function handleDelete(
 
 function hasScorePayload(body: any): boolean {
   return (
-    typeof body?.team1Score === "number" &&
-    typeof body?.team2Score === "number"
+    typeof body?.team1Score === 'number' && typeof body?.team2Score === 'number'
   );
 }

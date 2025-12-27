@@ -1,6 +1,6 @@
-import type { NextApiRequest, NextApiResponse } from "next";
-import slugify from "slugify";
-import { supabaseAdmin } from "@/utils/supabase";
+import type { NextApiRequest, NextApiResponse } from 'next';
+import slugify from 'slugify';
+import { supabaseAdmin } from '@/utils/supabase';
 
 type CreateTeamBody = {
   name?: string;
@@ -12,9 +12,7 @@ type CreateTeamBody = {
   website?: string | null;
 };
 
-type ApiResponse =
-  | { team: Record<string, any> }
-  | { error: string };
+type ApiResponse = { team: Record<string, any> } | { error: string };
 
 const DISCORD_TEAM_SECRET = process.env.DISCORD_TEAM_SECRET;
 
@@ -22,29 +20,29 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse>
 ) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   if (!DISCORD_TEAM_SECRET) {
     return res
       .status(500)
-      .json({ error: "Discord shared secret not configured" });
+      .json({ error: 'Discord shared secret not configured' });
   }
 
   if (!supabaseAdmin) {
     return res
       .status(500)
-      .json({ error: "Supabase service role not configured" });
+      .json({ error: 'Supabase service role not configured' });
   }
 
   const token = extractToken(req);
   if (token !== DISCORD_TEAM_SECRET) {
-    return res.status(401).json({ error: "Unauthorized" });
+    return res.status(401).json({ error: 'Unauthorized' });
   }
 
   const body: CreateTeamBody = req.body || {};
-  const name = (body.name || "").trim();
+  const name = (body.name || '').trim();
   if (!name) {
     return res.status(400).json({ error: "Field 'name' is required" });
   }
@@ -70,16 +68,14 @@ export default async function handler(
 
   for (let i = 0; i < maxAttempts; i++) {
     const suffix =
-      i === 0
-        ? ""
-        : `-${Math.random().toString(36).slice(2, 6).toLowerCase()}`;
+      i === 0 ? '' : `-${Math.random().toString(36).slice(2, 6).toLowerCase()}`;
     const slug = `${baseSlug}${suffix}`;
 
     const payload = attemptPayload(slug);
     const { data, error } = await supabaseAdmin
-      .from("teams")
+      .from('teams')
       .insert(payload)
-      .select("*")
+      .select('*')
       .maybeSingle();
 
     if (!error && data) {
@@ -87,19 +83,19 @@ export default async function handler(
     }
 
     lastError = error;
-    const message = error?.message?.toLowerCase() || "";
+    const message = error?.message?.toLowerCase() || '';
     const isDuplicate =
-      message.includes("duplicate") || message.includes("unique");
+      message.includes('duplicate') || message.includes('unique');
     if (!isDuplicate) {
       break;
     }
   }
 
-  console.error("[/api/discord/teams] create error:", lastError);
+  console.error('[/api/discord/teams] create error:', lastError);
   return res.status(500).json({
     error:
       lastError?.message ||
-      "Failed to create team. Check logs or try a different name/slug.",
+      'Failed to create team. Check logs or try a different name/slug.',
   });
 }
 
@@ -107,5 +103,5 @@ function extractToken(req: NextApiRequest) {
   const auth = req.headers.authorization;
   const raw = Array.isArray(auth) ? auth[0] : auth;
   if (!raw) return null;
-  return raw.startsWith("Bearer ") ? raw.slice(7).trim() : raw.trim();
+  return raw.startsWith('Bearer ') ? raw.slice(7).trim() : raw.trim();
 }
