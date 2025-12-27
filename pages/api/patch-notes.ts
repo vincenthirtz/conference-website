@@ -10,7 +10,7 @@ export type PatchNoteItem = {
   date: string;
   link: string;
   summary: string;
-  heroes: { name: string; icon: string; summary: string }[];
+  heroes: { name: string; icon: string; summary: string; category: string }[];
 };
 
 export type PatchNotesResponse = {
@@ -64,6 +64,12 @@ export default async function handler(
           const name = $(hero).find('h5').text().trim();
           const icon = $(hero).find('img').attr('src') || '';
           if (!name) return null;
+
+          const section = $(hero).closest('.PatchNotes-section');
+          const category =
+            section.find('.PatchNotes-sectionTitle').first().text().trim() ||
+            'Autres mises à jour';
+
           const heroBodyText = $(hero)
             .closest('.PatchNotesHeroUpdate')
             .find('.PatchNotesHeroUpdate-body')
@@ -76,17 +82,15 @@ export default async function handler(
                   heroBodyText.length > 260 ? '…' : ''
                 }`
               : 'Voir les changements détaillés dans la note.';
-          return { name, icon, summary };
+          return { name, icon, summary, category };
         })
         .get()
-        .filter(Boolean) as { name: string; icon: string; summary: string }[];
-
-      const summaryFromHeroes =
-        heroes.length > 0
-          ? `Ajustements apportés à : ${heroes
-              .map((h) => h.name)
-              .join(', ')}.`
-          : null;
+        .filter(Boolean) as {
+        name: string;
+        icon: string;
+        summary: string;
+        category: string;
+      }[];
 
       const summaryFromDescription = description
         ? `Principales mises à jour : ${description.slice(0, 220)}${
@@ -103,7 +107,7 @@ export default async function handler(
         title,
         date,
         link: `${PATCH_NOTES_URL}#${anchor}`,
-        summary: summaryFromHeroes || summaryFromDescription,
+        summary: summaryFromDescription,
         heroes,
       });
     });
@@ -116,7 +120,8 @@ export default async function handler(
   } catch (error) {
     console.error('[/api/patch-notes] failed to load patch notes', error);
     return res.status(500).json({
-      error: "Impossible de charger les patch notes d'Overwatch 2 pour le moment.",
+      error:
+        "Impossible de charger les patch notes d'Overwatch 2 pour le moment.",
     });
   }
 }
