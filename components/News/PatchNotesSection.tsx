@@ -10,7 +10,7 @@ type PatchNote = {
   date: string;
   link: string;
   summary: string;
-  heroes: { name: string; icon: string }[];
+  heroes: { name: string; icon: string; summary: string }[];
 };
 
 const PATCH_NOTES_SOURCE =
