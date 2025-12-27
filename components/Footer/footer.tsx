@@ -108,6 +108,42 @@ function LegalShieldIcon({ className, fill }: Readonly<SVGTypes>): JSX.Element {
   );
 }
 
+function DonationIcon({ className, fill }: Readonly<SVGTypes>): JSX.Element {
+  const stroke = fill || 'currentColor';
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M12 20s-6.5-3.6-6.5-9A4.5 4.5 0 0 1 12 6.5 4.5 4.5 0 0 1 18.5 11c0 5.4-6.5 9-6.5 9Z"
+        fill="none"
+        stroke={stroke}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.6"
+      />
+      <circle
+        cx="12"
+        cy="11"
+        r="2.4"
+        fill="none"
+        stroke={stroke}
+        strokeWidth="1.6"
+      />
+      <path
+        d="M12 9.6v2.8M11.1 11h1.8"
+        fill="none"
+        stroke={stroke}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.6"
+      />
+    </svg>
+  );
+}
+
 function SitemapIcon({ className, fill }: Readonly<SVGTypes>): JSX.Element {
   const stroke = fill || 'currentColor';
   return (
@@ -206,6 +242,7 @@ type FooterLink = {
 const footerLinks: FooterLink[] = [
   { label: 'Règlement', href: '/rules', Icon: RulesIcon },
   { label: 'Nous contacter', href: '/contact', Icon: MailIcon },
+  { label: 'Faire un don', href: '/don', Icon: DonationIcon },
   {
     label: 'Mentions légales',
     href: '/mentions-legales',

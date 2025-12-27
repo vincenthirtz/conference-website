@@ -1,0 +1,190 @@
+import Link from 'next/link';
+import { useEffect, useState, JSX } from 'react';
+import Button from '@/components/Buttons/button';
+import Heading from '@/components/Typography/heading';
+import Paragraph from '@/components/Typography/paragraph';
+
+type PatchNote = {
+  id: string;
+  title: string;
+  date: string;
+  link: string;
+};
+
+const PATCH_NOTES_SOURCE =
+  'https://overwatch.blizzard.com/fr-fr/news/patch-notes/';
+
+function PatchNotesSection(): JSX.Element {
+  const [notes, setNotes] = useState<PatchNote[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchNotes = async () => {
+      try {
+        const response = await fetch('/api/patch-notes');
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch patch notes');
+        }
+
+        const data = (await response.json()) as {
+          items?: PatchNote[];
+          error?: string;
+        };
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (data?.items) {
+          setNotes(data.items);
+        } else if (data?.error) {
+          setError(data.error);
+        }
+      } catch (err) {
+        console.error('Failed to load patch notes', err);
+        if (isMounted) {
+          setError('Impossible de charger les patch notes pour le moment.');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchNotes();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const renderLoading = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {[...Array(4).keys()].map((skeleton) => (
+        <div
+          key={skeleton}
+          className="animate-pulse rounded-2xl border border-white/10 bg-white/5 p-5"
+        >
+          <div className="h-3 w-24 rounded-full bg-white/10" />
+          <div className="mt-4 h-6 w-3/4 rounded bg-white/10" />
+          <div className="mt-2 h-6 w-2/3 rounded bg-white/10" />
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderContent = () => {
+    if (isLoading) {
+      return renderLoading();
+    }
+
+    if (error || notes.length === 0) {
+      return (
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
+          <Paragraph textColor="text-gray-200" className="text-lg">
+            {error ||
+              "Impossible d'afficher les dernières notes de mise à jour pour l'instant."}
+          </Paragraph>
+          <Paragraph textColor="text-gray-400" className="mt-2">
+            Consultez-les directement sur le site officiel.
+          </Paragraph>
+          <div className="mt-5 flex justify-center">
+            <Link
+              href={PATCH_NOTES_SOURCE}
+              target="_blank"
+              rel="noreferrer noopener"
+            >
+              <Button type="button" className="px-6 h-[50px]">
+                Voir les patch notes
+              </Button>
+            </Link>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {notes.map((note) => (
+          <Link
+            key={note.id}
+            href={note.link}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="group relative rounded-2xl border border-white/10 bg-white/5 p-5 transition duration-200 hover:border-blue-300/70 hover:shadow-[0_16px_40px_rgba(0,0,0,0.35)]"
+          >
+            <div className="flex items-center justify-between gap-3 text-xs uppercase tracking-wide">
+              <span className="text-blue-200/80"></span>
+              <span className="text-gray-300">{note.date}</span>
+            </div>
+            <h3 className="mt-3 text-lg font-semibold text-white transition group-hover:text-blue-100">
+              {note.title}
+            </h3>
+            <div className="mt-4 flex items-center gap-2 text-sm text-blue-200 transition group-hover:text-blue-100">
+              <span>Lire sur overwatch.blizzard.com</span>
+              <span
+                aria-hidden
+                className="transition transform group-hover:translate-x-1"
+              >
+                →
+              </span>
+            </div>
+            <div className="pointer-events-none absolute inset-0 rounded-2xl border border-white/5 opacity-0 transition group-hover:opacity-100" />
+          </Link>
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <section
+      id="actualites"
+      className="container mt-20 flex flex-col gap-8 px-4 md:px-0"
+    >
+      <div className="flex flex-col items-center text-center">
+        <div className="text-xl text-white font-semibold border-b-2 border-blue-400 mb-1">
+          Actualités
+        </div>
+        <Heading
+          typeStyle="heading-md"
+          className="text-gradient text-center lg:mt-3"
+        >
+          Patch notes Overwatch 2
+        </Heading>
+        <div className="max-w-2xl">
+          <Paragraph
+            typeStyle="body-lg"
+            className="mt-4"
+            textColor="text-gray-200"
+          >
+            Les dernières mises à jour officielles d&apos;Overwatch 2, à jour
+            directement depuis le site de Blizzard.
+          </Paragraph>
+        </div>
+      </div>
+
+      {renderContent()}
+
+      {notes.length > 0 && (
+        <div className="flex justify-center">
+          <Link
+            href={PATCH_NOTES_SOURCE}
+            target="_blank"
+            rel="noreferrer noopener"
+          >
+            <Button type="button" className="px-8 h-[52px]">
+              Voir plus
+            </Button>
+          </Link>
+        </div>
+      )}
+    </section>
+  );
+}
+
+export default PatchNotesSection;

@@ -12,10 +12,6 @@
     "subMenu": [{ "title": "2025", "ref": "/tournoi" }]
   },
   {
-    "title": "Faire un don",
-    "ref": "/don"
-  },
-  {
     "title": "Partenaires",
     "ref": "/partenaires"
   },
