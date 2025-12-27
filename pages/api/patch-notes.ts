@@ -9,6 +9,8 @@ export type PatchNoteItem = {
   title: string;
   date: string;
   link: string;
+  summary: string;
+  heroes: { name: string; icon: string; summary: string }[];
 };
 
 export type PatchNotesResponse = {
@@ -49,6 +51,48 @@ export default async function handler(
         .text()
         .trim();
       const date = $(element).find('.PatchNotes-date').first().text().trim();
+      const description = $(element)
+        .find('.PatchNotes-sectionDescription')
+        .first()
+        .text()
+        .trim()
+        .replace(/\s+/g, ' ');
+
+      const heroes = $(element)
+        .find('.PatchNotesHeroUpdate-header')
+        .map((__, hero) => {
+          const name = $(hero).find('h5').text().trim();
+          const icon = $(hero).find('img').attr('src') || '';
+          if (!name) return null;
+          const heroBodyText = $(hero)
+            .closest('.PatchNotesHeroUpdate')
+            .find('.PatchNotesHeroUpdate-body')
+            .text()
+            .trim()
+            .replace(/\s+/g, ' ');
+          const summary =
+            heroBodyText.length > 0
+              ? `${heroBodyText.slice(0, 260)}${
+                  heroBodyText.length > 260 ? '…' : ''
+                }`
+              : 'Voir les changements détaillés dans la note.';
+          return { name, icon, summary };
+        })
+        .get()
+        .filter(Boolean) as { name: string; icon: string; summary: string }[];
+
+      const summaryFromHeroes =
+        heroes.length > 0
+          ? `Ajustements apportés à : ${heroes
+              .map((h) => h.name)
+              .join(', ')}.`
+          : null;
+
+      const summaryFromDescription = description
+        ? `Principales mises à jour : ${description.slice(0, 220)}${
+            description.length > 220 ? '…' : ''
+          }`
+        : 'Mises à jour variées sur les modes et équilibrages.';
 
       if (!anchor || !title) {
         return;
@@ -59,6 +103,8 @@ export default async function handler(
         title,
         date,
         link: `${PATCH_NOTES_URL}#${anchor}`,
+        summary: summaryFromHeroes || summaryFromDescription,
+        heroes,
       });
     });
 

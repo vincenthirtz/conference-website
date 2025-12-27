@@ -7,6 +7,8 @@ import Announcement from '../announcement';
 import Link from 'next/link';
 
 function Header(): JSX.Element {
+  const currentYear = new Date().getFullYear();
+
   return (
     <div className="relative">
       <div className="container w-full flex items-center justify-center">
@@ -23,7 +25,7 @@ function Header(): JSX.Element {
                   level="h1"
                   typeStyle="heading-lg"
                 >
-                  OW WOMEN&apos;S CUP 2025
+                  OW WOMEN&apos;S CUP {currentYear}
                 </Heading>
               </div>
               <div className="w-full max-w-[640px] px-4 text-center">
