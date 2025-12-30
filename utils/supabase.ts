@@ -100,11 +100,11 @@ export function getServerClient(
  *    - À utiliser UNIQUEMENT côté serveur (API / scripts)
  * ---------------------------------------------------------*/
 
-export const supabaseAdmin =
-  SUPABASE_SERVICE_ROLE &&
-  createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
+export const supabaseAdmin = SUPABASE_SERVICE_ROLE
+  ? createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    })
+  : null;

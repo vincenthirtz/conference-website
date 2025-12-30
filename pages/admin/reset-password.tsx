@@ -11,15 +11,54 @@ export default function AdminResetPasswordPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  function hydrateSessionFromHash() {
+    if (typeof window === 'undefined') return { done: false };
+    const hash = window.location.hash.replace(/^#/, '');
+    const params = new URLSearchParams(hash);
+    const access_token = params.get('access_token');
+    const refresh_token = params.get('refresh_token');
+    if (!access_token || !refresh_token) return { done: false };
+    return {
+      done: true,
+      promise: supabaseClient.auth.setSession({ access_token, refresh_token }),
+    };
+  }
+
   useEffect(() => {
-    // Force session fetch to ensure recovery token is picked up
-    supabaseClient.auth.getSession().then(() => setSessionReady(true));
+    const hashed = hydrateSessionFromHash();
+    if (hashed.done && hashed.promise) {
+      hashed.promise
+        .then(({ error }) => {
+          if (error) {
+            setErrorMsg(
+              error.message ||
+                'Impossible de restaurer la session de récupération.'
+            );
+          }
+        })
+        .finally(() => setSessionReady(true));
+      return;
+    }
+
+    supabaseClient.auth.getSession().then(({ error, data }) => {
+      if (error || !data.session) {
+        setErrorMsg(
+          "Lien invalide ou session absente. Rouvre le lien de réinitialisation depuis l'email."
+        );
+      }
+      setSessionReady(true);
+    });
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErrorMsg(null);
     setSuccessMsg(null);
+
+    if (!sessionReady) {
+      setErrorMsg('Session de récupération non prête, réessaie dans un instant.');
+      return;
+    }
 
     if (password.trim().length < 6) {
       setErrorMsg('Le mot de passe doit contenir au moins 6 caractères.');

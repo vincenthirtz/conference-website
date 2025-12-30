@@ -123,9 +123,14 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(
                               <Link href={sub.ref || '#'} key={sub.ref}>
                                 <div
                                   onClick={() => setDrop(false)}
-                                  className="h-[40px] flex items-center p-6 text-white hover:text-black cursor-pointer"
+                                  className="h-[40px] flex items-center p-6 text-white hover:text-black cursor-pointer gap-2"
                                 >
-                                  {sub.title}
+                                  <span>{sub.title}</span>
+                                  {sub.badge && (
+                                    <span className="inline-flex items-center rounded-full bg-red-500/90 px-2 py-[2px] text-[11px] font-semibold uppercase tracking-wide text-white">
+                                      {sub.badge}
+                                    </span>
+                                  )}
                                 </div>
                               </Link>
                             ))}

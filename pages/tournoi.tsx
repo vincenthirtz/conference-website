@@ -9,25 +9,17 @@ import { replays } from '@/config/replays';
 import TeamCard from '@/components/Team/Team';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
+import type { Team as TeamType } from '@/types/types';
 
 // Types
-type Team = {
-  name: string;
-  img?: string;
-  color?: string;
-  city?: string[];
-  pub?: boolean;
-  link?: string;
-  title?: string;
-};
 
 type Match = {
   id: string;
   round: number;
   date: string; // ISO string
   timeLabel: string;
-  home: Team;
-  away: Team;
+  home: TeamType;
+  away: TeamType;
   bo: 3 | 5;
   result?: { home: number; away: number };
 };
@@ -54,10 +46,24 @@ function hashCode(str: string) {
 function colorForName(name: string) {
   return TEAM_PALETTE[hashCode(name) % TEAM_PALETTE.length];
 }
-function teamColor(team: Team) {
+function teamColor(team: TeamType) {
   return team.color && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(team.color)
     ? team.color
     : colorForName(team.name);
+}
+
+function ensureTeamShape(team: TeamType | undefined, name: string): TeamType {
+  if (team) return team;
+  return {
+    id: Math.abs(hashCode(name)) || 0,
+    name,
+    title: '',
+    link: '',
+    img: '',
+    city: [],
+    color: '',
+    pub: false,
+  };
 }
 
 function pad(n: number) {
@@ -110,18 +116,21 @@ function linkifyDescription(text: string) {
 }
 
 function Tournoi() {
-  const fullTeams = teamsData as Team[];
-  const teams: Team[] = useMemo<Team[]>(() => {
-    const base = (teamsData as any[]).slice(0, 4).map((t) => ({
-      name: t.name as string,
-      img: t.img as string,
-      color: (t as any).color as string,
+  const fullTeams = teamsData as TeamType[];
+  const teams: TeamType[] = useMemo<TeamType[]>(() => {
+    const base = (teamsData as TeamType[]).slice(0, 4).map((t) => ({
+      ...t,
     }));
     while (base.length < 4)
       base.push({
+        id: base.length + 1,
         name: `Équipe ${base.length + 1}`,
+        title: '',
+        link: '',
         img: '',
         color: '',
+        city: [],
+        pub: false,
       });
     return base;
   }, []);
@@ -129,15 +138,15 @@ function Tournoi() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [finalMatch, setFinalMatch] = useState<Match | null>(null);
 
-  function buildRoundRobin(teams: Team[]): [Team, Team][][] {
+  function buildRoundRobin(teams: TeamType[]): [TeamType, TeamType][][] {
     const list = [...teams];
     const n = list.length;
-    const rounds: [Team, Team][][] = [];
+    const rounds: [TeamType, TeamType][][] = [];
     const rotating = list.slice(1);
     const fixed = list[0];
     const R = n - 1;
     for (let r = 0; r < R; r++) {
-      const pairings: [Team, Team][] = [];
+      const pairings: [TeamType, TeamType][] = [];
       const left = [fixed, ...rotating.slice(0, Math.floor((n - 1) / 2))];
       const right = rotating
         .slice(Math.floor((n - 1) / 2))
@@ -150,7 +159,7 @@ function Tournoi() {
         pairings.push(r % 2 === 0 ? [a, b] : [b, a]);
       }
       rounds.push(pairings);
-      rotating.unshift(rotating.pop() as Team);
+      rotating.unshift(rotating.pop() as TeamType);
     }
     return rounds;
   }
@@ -240,7 +249,7 @@ function Tournoi() {
     const table = new Map<
       string,
       {
-        team: Team;
+        team: TeamType;
         mp: number;
         mw: number;
         ml: number;
@@ -323,12 +332,14 @@ function Tournoi() {
       const rrYear = new Date(lastRRDate).getFullYear();
       const finalDate = new Date(rrYear, 11, 10, 21, 0, 0, 0);
 
-      const homeTeam = teams.find((t) => t.name === t1.name) || {
-        name: t1.name,
-      };
-      const awayTeam = teams.find((t) => t.name === t2.name) || {
-        name: t2.name,
-      };
+      const homeTeam = ensureTeamShape(
+        teams.find((t) => t.name === t1.name),
+        t1.name
+      );
+      const awayTeam = ensureTeamShape(
+        teams.find((t) => t.name === t2.name),
+        t2.name
+      );
 
       setFinalMatch({
         id: 'FINAL',
@@ -381,7 +392,7 @@ function Tournoi() {
     );
   }
 
-  function TeamBadge({ team }: { team: Team }) {
+  function TeamBadge({ team }: { team: TeamType }) {
     const color = teamColor(team);
     const initials = team.name
       .split(/\s+/)
@@ -542,15 +553,14 @@ function Tournoi() {
                       <td className="py-2 text-gray-300 tabular-nums">
                         {idx + 1}
                       </td>
-                      <td className="py-2">
-                        <TeamBadge
-                          team={
-                            teams.find((t) => t.name === r.name) ?? {
-                              name: r.name,
-                            }
-                          }
-                        />
-                      </td>
+                    <td className="py-2">
+                      <TeamBadge
+                        team={ensureTeamShape(
+                          teams.find((t) => t.name === r.name),
+                          r.name
+                        )}
+                      />
+                    </td>
                       <td className="py-2 tabular-nums text-gray-200">
                         {r.mp}
                       </td>

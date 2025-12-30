@@ -323,7 +323,7 @@ function Navbar(): JSX.Element {
                                 link.subMenu!.length === 1
                                   ? 'justify-center'
                                   : 'justify-start'
-                              } min-h-[32px] text-[16px] hover:scale-95 hover:translate-x-1 transition-all focus:outline-none focus:bg-white focus:bg-opacity-20 focus:scale-95 focus:translate-x-1 rounded px-2 py-1`}
+                              } min-h-[32px] text-[16px] hover:scale-95 hover:translate-x-1 transition-all focus:outline-none focus:bg-white focus:bg-opacity-20 focus:scale-95 focus:translate-x-1 rounded px-2 py-1 gap-2`}
                               data-test={`nav-sub-${subL.title}`}
                               onKeyDown={(e) => {
                                 const currentIndex = index;
@@ -366,7 +366,12 @@ function Navbar(): JSX.Element {
                                 }
                               }}
                             >
-                              {subL.title}
+                              <span>{subL.title}</span>
+                              {subL.badge && (
+                                <span className="inline-flex items-center rounded-full bg-red-500/90 px-2 py-[2px] text-[11px] font-semibold uppercase tracking-wide text-white">
+                                  {subL.badge}
+                                </span>
+                              )}
                             </Link>
                           ))}
                         </div>

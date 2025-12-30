@@ -8,6 +8,7 @@ export interface SVGTypes {
 export interface LinkItem {
   title: string;
   ref?: string;
+  badge?: string;
   subMenu?: LinkItem[];
 }
 

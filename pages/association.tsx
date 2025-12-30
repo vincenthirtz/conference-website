@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
+import Speaker from '@/components/Speaker/speaker';
+import speakers from '@/config/speakers.json';
 
 const pillars = [
   {
@@ -150,6 +152,36 @@ function AssociationPage() {
                 <p className="mt-2 text-sm text-gray-200">{role.desc}</p>
               </div>
             ))}
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 sm:p-10 shadow-2xl">
+          <div className="text-center">
+            <p className="text-xs uppercase tracking-[0.18em] text-gray-300">
+              Pôle Production & cast
+            </p>
+            <h3 className="mt-2 text-2xl font-bold text-white">
+              Les casteuses de l&apos;asso
+            </h3>
+            <p className="mt-3 text-sm text-gray-300">
+              Joueuses et streameuses qui prêtent leur voix et leur expertise
+              pour faire vivre les matchs en direct.
+            </p>
+          </div>
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {speakers.map((speaker) => {
+              const location = speaker.city[1]
+                ? `${speaker.city[0]} & ${speaker.city[1]}`
+                : speaker.city[0];
+              return (
+                <Speaker
+                  key={speaker.id}
+                  details={speaker as any}
+                  location={location}
+                  className="mt-4"
+                />
+              );
+            })}
           </div>
         </section>
 

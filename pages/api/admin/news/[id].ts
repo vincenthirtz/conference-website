@@ -1,0 +1,122 @@
+import type { NextApiRequest, NextApiResponse } from 'next';
+import slugify from 'slugify';
+import { supabaseAdmin } from '@/utils/supabase';
+import {
+  getStaffContextFromRequest,
+  hasAtLeastRole,
+} from '@/utils/staff';
+
+type NewsPayload = {
+  title?: string;
+  slug?: string;
+  excerpt?: string;
+  content?: string;
+  imageUrl?: string;
+  status?: 'draft' | 'published';
+  publishedAt?: string | null;
+};
+
+function normalizeSlug(title?: string, slug?: string) {
+  const base = slug?.trim().length ? slug : title || '';
+  return slugify(base, { lower: true, strict: true });
+}
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  const { id } = req.query;
+  if (!id || Array.isArray(id)) {
+    return res.status(400).json({ error: 'ID manquant' });
+  }
+
+  if (!supabaseAdmin) {
+    return res
+      .status(500)
+      .json({ error: 'Service Supabase indisponible (service role manquant).' });
+  }
+  const admin = supabaseAdmin!;
+
+  const ctx = await getStaffContextFromRequest(req, res);
+  if (!hasAtLeastRole(ctx.role, 'admin')) {
+    return res.status(403).json({ error: 'Accès réservé aux admins.' });
+  }
+
+  if (req.method === 'GET') {
+    const { data, error } = await admin
+      .from('news')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[admin/news/id] fetch error', error);
+      return res
+        .status(500)
+        .json({ error: 'Impossible de charger la news.' });
+    }
+
+    if (!data) {
+      return res.status(404).json({ error: 'News introuvable.' });
+    }
+
+    return res.status(200).json(data);
+  }
+
+  if (req.method === 'PUT') {
+    const body = req.body as NewsPayload;
+    if (!body?.title || !body.content) {
+      return res
+        .status(400)
+        .json({ error: 'Titre et contenu sont obligatoires.' });
+    }
+
+    const slug = normalizeSlug(body.title, body.slug);
+    const publishedAt =
+      body.status === 'published' && body.publishedAt
+        ? new Date(body.publishedAt).toISOString()
+        : null;
+
+    const payload = {
+      title: body.title,
+      slug,
+      excerpt: body.excerpt ?? null,
+      content: body.content,
+      image_url: body.imageUrl ?? null,
+      status: body.status ?? 'draft',
+      published_at: publishedAt,
+    };
+
+    const { data, error } = await admin
+      .from('news')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[admin/news/id] update error', error);
+      return res
+        .status(500)
+        .json({ error: 'Impossible de mettre à jour la news.' });
+    }
+
+    return res.status(200).json(data);
+  }
+
+  if (req.method === 'DELETE') {
+    const { error } = await admin.from('news').delete().eq('id', id);
+
+    if (error) {
+      console.error('[admin/news/id] delete error', error);
+      return res
+        .status(500)
+        .json({ error: 'Impossible de supprimer la news.' });
+    }
+
+    return res.status(204).end();
+  }
+
+  res.setHeader('Allow', 'GET,PUT,DELETE');
+  return res.status(405).json({ error: 'Method not allowed' });
+}
