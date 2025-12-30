@@ -71,13 +71,32 @@ export default async function handler(
         .json({ error: 'Titre et contenu sont obligatoires.' });
     }
 
+    const { data: existing, error: existingErr } = await admin
+      .from('news')
+      .select('published_at, status')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (existingErr) {
+      console.error('[admin/news/id] fetch existing error', existingErr);
+      return res
+        .status(500)
+        .json({ error: 'Impossible de charger la news existante.' });
+    }
+
     const slug = normalizeSlug(body.title, body.slug);
-    const publishedAt =
-      body.status === 'published'
-        ? body.publishedAt
-          ? new Date(body.publishedAt).toISOString()
-          : new Date().toISOString()
-        : null;
+    let publishedAt: string | null = null;
+    if (body.status === 'published') {
+      if (body.publishedAt) {
+        publishedAt = new Date(body.publishedAt).toISOString();
+      } else if (existing?.published_at) {
+        publishedAt = existing.published_at;
+      } else {
+        publishedAt = new Date().toISOString();
+      }
+    } else {
+      publishedAt = existing?.published_at ?? null;
+    }
 
     const payload = {
       title: body.title,
