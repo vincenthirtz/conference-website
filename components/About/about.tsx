@@ -1,5 +1,5 @@
 /* eslint-disable react/no-unescaped-entities */
-import React, { JSX } from 'react';
+import React, { JSX, useEffect, useState } from 'react';
 import Heading from '../Typography/heading';
 import Paragraph from '../Typography/paragraph';
 import Button from '../Buttons/button';
@@ -8,6 +8,14 @@ function About(): JSX.Element {
   const aboutVideoUrl =
     process.env.NEXT_PUBLIC_ABOUT_VIDEO_URL ||
     'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4';
+
+  const [showMedia, setShowMedia] = useState(false);
+  const [mediaLoaded, setMediaLoaded] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowMedia(true), 900);
+    return () => clearTimeout(timer);
+  }, []);
 
   const isYouTube = /youtu\.?be/.test(aboutVideoUrl);
   const youtubeId =
@@ -33,26 +41,34 @@ function About(): JSX.Element {
             loading="lazy"
             draggable={false}
           />
-          {isYouTube && youtubeEmbedUrl ? (
-            <iframe
-              className="absolute inset-0 w-full h-full object-cover hidden md:block"
-              src={youtubeEmbedUrl}
-              title="OW Women's Cup vidéo"
-              allow="autoplay; fullscreen; picture-in-picture"
-              allowFullScreen
-              loading="lazy"
-            />
-          ) : (
-            <video
-              className="absolute inset-0 w-full h-full object-cover hidden md:block"
-              src={aboutVideoUrl}
-              poster="/img/fourplayers.png"
-              autoPlay
-              loop
-              muted
-              playsInline
-            />
-          )}
+          <div className="absolute inset-0 w-full h-full hidden md:block">
+            {!mediaLoaded && (
+              <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-white/10 via-white/5 to-white/0" />
+            )}
+            {showMedia &&
+              (isYouTube && youtubeEmbedUrl ? (
+                <iframe
+                  className="absolute inset-0 w-full h-full object-cover"
+                  src={youtubeEmbedUrl}
+                  title="OW Women's Cup vidéo"
+                  allow="autoplay; fullscreen; picture-in-picture"
+                  allowFullScreen
+                  loading="lazy"
+                  onLoad={() => setMediaLoaded(true)}
+                />
+              ) : (
+                <video
+                  className="absolute inset-0 w-full h-full object-cover"
+                  src={aboutVideoUrl}
+                  poster="/img/fourplayers.png"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  onLoadedData={() => setMediaLoaded(true)}
+                />
+              ))}
+          </div>
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/10 to-black/25 pointer-events-none" />
         </div>
         <div className="w-full max-w-[620px] text-center min-[1024px]:text-left min-[1024px]:mt-6 min-[1024px]:ml-4">

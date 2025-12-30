@@ -202,7 +202,7 @@ function PatchNotesSection(): JSX.Element {
   return (
     <section
       id="actualites"
-      className="container mt-20 flex flex-col gap-8 px-4 md:px-0"
+      className="container mt-20 mb-16 lg:mb-24 flex flex-col gap-8 px-4 md:px-0"
     >
       <div className="flex flex-col items-center text-center">
         <div className="text-xl text-white font-semibold border-b-2 border-blue-400 mb-1">

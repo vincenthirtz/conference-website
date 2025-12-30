@@ -49,7 +49,7 @@ function Home() {
                 typeStyle="heading-md"
                 className="text-gradient text-center lg:mt-10"
               >
-                Suivre la compétition
+                En attendant la compétition
               </Heading>
               <div className="max-w-3xl sm:w-full text-center">
                 <Paragraph
@@ -61,33 +61,58 @@ function Home() {
                 </Paragraph>
               </div>
               {twitchParent && (
-                <div className="mt-8 grid gap-6 w-full grid-cols-1 md:grid-cols-2">
+                <div className="mt-12 grid gap-10 w-full grid-cols-1 lg:grid-cols-2">
                   {[
                     { channel: 'crocheh', label: 'Crocheh' },
                     { channel: 'arukdo', label: 'Arukdo' },
                   ].map(({ channel, label }) => (
                     <div
                       key={channel}
-                      className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
+                      className="rounded-[28px] border border-white/10 bg-white/5 overflow-hidden shadow-[0_28px_90px_rgba(0,0,0,0.45)]"
                     >
-                      <div className="flex items-center justify-between px-4 py-3 bg-white/5 border-b border-white/10">
-                        <div className="flex items-center gap-2 text-base font-semibold text-white">
+                      <div className="flex items-center justify-between px-6 py-5 bg-white/5 border-b border-white/10">
+                        <div className="flex items-center gap-3 text-xl font-semibold text-white">
                           <span
-                            className="w-2 h-2 rounded-full bg-red-400 animate-pulse"
+                            className="w-2.5 h-2.5 rounded-full bg-red-400 animate-pulse"
                             aria-hidden
                           />
                           <span>Live {label}</span>
                         </div>
-                        <span className="text-xs text-gray-300">Twitch</span>
+                        <span className="text-sm text-gray-300">Twitch</span>
                       </div>
-                      <div className="relative w-full pt-[56.25%] bg-black">
+                      <div className="relative w-full pt-[70%] bg-black">
                         <iframe
                           title={`Twitch live ${label}`}
                           src={`https://player.twitch.tv/?channel=${channel}&parent=${twitchParent}&muted=true`}
                           allowFullScreen
                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                           className="absolute inset-0 w-full h-full"
+                          loading="lazy"
                         />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {!twitchParent && (
+                <div className="mt-12 grid gap-8 w-full grid-cols-1 lg:grid-cols-2">
+                  {[0, 1].map((idx) => (
+                    <div
+                      key={idx}
+                      className="rounded-[28px] border border-white/10 bg-white/5 overflow-hidden shadow-[0_28px_90px_rgba(0,0,0,0.45)]"
+                    >
+                      <div className="flex items-center justify-between px-6 py-5 bg-white/5 border-b border-white/10">
+                        <div className="flex items-center gap-3 text-xl font-semibold text-white">
+                          <span
+                            className="w-2.5 h-2.5 rounded-full bg-red-400 animate-pulse"
+                            aria-hidden
+                          />
+                          <span>Live</span>
+                        </div>
+                        <span className="text-sm text-gray-300">Twitch</span>
+                      </div>
+                      <div className="relative w-full pt-[70%] bg-gradient-to-br from-white/10 via-white/5 to-white/0">
+                        <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-white/10 via-white/5 to-white/0" />
                       </div>
                     </div>
                   ))}
