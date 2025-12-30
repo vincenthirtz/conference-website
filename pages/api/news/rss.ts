@@ -35,7 +35,7 @@ export default async function handler(
     .from('news')
     .select('*')
     .eq('status', 'published')
-    .lte('published_at', nowISO)
+    .or(`published_at.lte.${nowISO},published_at.is.null`)
     .order('published_at', { ascending: false, nullsFirst: false })
     .limit(50);
 

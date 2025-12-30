@@ -11,24 +11,23 @@ export default async function handler(
   }
 
   if (!supabaseAdmin) {
-    return res
-      .status(500)
-      .json({ error: 'Service Supabase indisponible (service role manquant).' });
+    return res.status(500).json({
+      error: 'Service Supabase indisponible (service role manquant).',
+    });
   }
   const admin = supabaseAdmin!;
 
-  const limit = Math.max(
-    1,
-    Math.min(100, Number(req.query.limit) || 10)
-  );
+  const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 10));
 
   const nowISO = new Date().toISOString();
 
   const { data, error } = await admin
     .from('news')
-    .select('*')
+    .select(
+      'id, title, slug, excerpt, content, image_url, published_at, created_at, updated_at'
+    )
     .eq('status', 'published')
-    .lte('published_at', nowISO)
+    .or(`published_at.lte.${nowISO},published_at.is.null`)
     .order('published_at', { ascending: false, nullsFirst: false })
     .limit(limit);
 
@@ -39,6 +38,8 @@ export default async function handler(
       .json({ error: 'Impossible de charger les actualités.' });
   }
 
+  console.log('data ', data);
+
   const items =
     data?.map((row) => ({
       id: row.id,
@@ -47,7 +48,9 @@ export default async function handler(
       excerpt: row.excerpt,
       content: row.content,
       imageUrl: row.image_url,
+      createdAt: row.created_at,
       publishedAt: row.published_at,
+      updatedAt: row.updated_at,
     })) ?? [];
 
   return res.status(200).json({ items });

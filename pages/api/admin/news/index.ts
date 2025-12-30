@@ -73,8 +73,10 @@ export default async function handler(
 
     const slug = normalizeSlug(body.title, body.slug);
     const publishedAt =
-      body.status === 'published' && body.publishedAt
-        ? new Date(body.publishedAt).toISOString()
+      body.status === 'published'
+        ? body.publishedAt
+          ? new Date(body.publishedAt).toISOString()
+          : new Date().toISOString()
         : null;
 
     const insertPayload = {

@@ -9,6 +9,7 @@ import Subscription from '@/components/Form/subscription';
 import Contact from '@/components/Form/Contact';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import PatchNotesSection from '@/components/News/PatchNotesSection';
+import HomeNewsSection from '@/components/News/HomeNewsSection';
 
 function Home() {
   const [twitchParent, setTwitchParent] = useState<string | null>(null);
@@ -31,6 +32,7 @@ function Home() {
       <div id="about" className="mt-20">
         <About />
       </div>
+      <HomeNewsSection />
       <PatchNotesSection />
       <div id="register" className="container mt-20 lg:mt-0">
         <div className="flex items-center flex-col justify-center">

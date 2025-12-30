@@ -55,17 +55,26 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(
 
                   {adminMenuOpen && (
                     <div className="mt-3 flex flex-col bg-white/10 rounded-lg overflow-hidden border border-white/10">
-                      {adminLinks.map((item) => (
-                        <Link
-                          key={item.ref}
-                          href={item.ref}
-                          onClick={() => setDrop(false)}
-                        >
-                          <div className="px-4 py-3 text-white hover:bg-white/20 cursor-pointer">
-                            {item.title}
+                      {adminLinks.map((item) =>
+                        item.ref ? (
+                          <Link
+                            key={item.ref}
+                            href={item.ref}
+                            onClick={() => setDrop(false)}
+                          >
+                            <div className="px-4 py-3 text-white hover:bg-white/20 cursor-pointer">
+                              {item.title}
+                            </div>
+                          </Link>
+                        ) : (
+                          <div
+                            key={item.title}
+                            className="px-4 py-2 text-xs uppercase tracking-[0.14em] text-purple-200/80 bg-white/5 border-t border-white/10"
+                          >
+                            {item.title.replace('— ', '')}
                           </div>
-                        </Link>
-                      ))}
+                        )
+                      )}
 
                       <button
                         onClick={onLogout}

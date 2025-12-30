@@ -160,14 +160,26 @@ function Navbar(): JSX.Element {
 
   // Liens du menu Admin (partagés avec NavDrop)
   const adminLinks: AdminLink[] = [
-    { title: 'Dashboard admin', ref: '/admin' },
+    { title: 'Dashboard', ref: '/admin' },
+    // Tournois
+    { title: '— Tournois', ref: '' },
     { title: 'Tournois – liste', ref: '/admin/tournaments' },
     { title: 'Créer un tournoi', ref: '/admin/tournaments/create' },
+    // Équipes
+    { title: '— Équipes', ref: '' },
     { title: 'Équipes – liste', ref: '/admin/teams' },
     { title: 'Créer une équipe', ref: '/admin/teams/new' },
     { title: 'Ajouter membre équipe', ref: '/admin/teams/add-member' },
+    // News
+    { title: '— News', ref: '' },
+    { title: 'News – liste', ref: '/admin/news' },
+    { title: 'Créer une news', ref: '/admin/news/new' },
+    // Comptes / demandes
+    { title: '— Comptes & demandes', ref: '' },
     { title: 'Créer un utilisateur', ref: '/admin/users/new' },
     { title: 'Demandes joueurs / équipes', ref: '/admin/demandes' },
+    // Logs / stats
+    { title: '— Logs & stats', ref: '' },
     { title: 'Logs staff', ref: '/admin/logs' },
     { title: 'Stats équipes', ref: '/admin/stats/teams' },
     { title: 'Stats maps', ref: '/admin/stats/maps' },
