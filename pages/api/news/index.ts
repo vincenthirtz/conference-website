@@ -38,8 +38,6 @@ export default async function handler(
       .json({ error: 'Impossible de charger les actualités.' });
   }
 
-  console.log('data ', data);
-
   const items =
     data?.map((row) => ({
       id: row.id,

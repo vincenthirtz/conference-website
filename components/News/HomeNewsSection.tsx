@@ -33,7 +33,7 @@ function HomeNewsSection(): JSX.Element {
       try {
         const res = await fetch('/api/news?limit=3');
         const json = await res.json();
-        
+
         if (!res.ok) {
           throw new Error(json?.error || 'Impossible de charger les news.');
         }
@@ -50,7 +50,6 @@ function HomeNewsSection(): JSX.Element {
               createdAt: row.createdAt ?? row.created_at,
               updatedAt: row.updatedAt ?? row.updated_at,
             })) || [];
-          console.log(items);
           setNews(items);
         }
       } catch (err: any) {
