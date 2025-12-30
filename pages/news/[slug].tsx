@@ -108,11 +108,6 @@ export default function NewsSlugPage({
               <Heading typeStyle="heading-md" className="text-gradient">
                 {title}
               </Heading>
-              {excerpt && (
-                <Paragraph textColor="text-gray-200" className="text-lg">
-                  {excerpt}
-                </Paragraph>
-              )}
               {imageUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
