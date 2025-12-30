@@ -19,7 +19,7 @@
     "name": "Envie de rejoindre le cast ?",
     "title": "",
     "img": "/img/mic.jpg",
-    "link": "#contact",
+    "link": "/contact",
     "id": 3,
     "city": [""],
     "pub": true
