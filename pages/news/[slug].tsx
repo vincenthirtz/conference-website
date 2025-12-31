@@ -4,7 +4,7 @@ import Paragraph from '@/components/Typography/paragraph';
 import Heading from '@/components/Typography/heading';
 import Button from '@/components/Buttons/button';
 import Link from 'next/link';
-import { supabaseAdmin } from '@/utils/supabase';
+import { supabaseAdmin, getServerClient } from '@/utils/supabase';
 
 type NewsPageProps = {
   title: string;
@@ -24,17 +24,9 @@ export const getServerSideProps: GetServerSideProps<NewsPageProps> = async (
     return { notFound: true, props: { title: '', content: '' } };
   }
 
-  if (!supabaseAdmin) {
-    return {
-      props: {
-        title: '',
-        content: '',
-        error: 'Service indisponible, réessaie plus tard.',
-      },
-    };
-  }
+  const client = supabaseAdmin ?? getServerClient(context.req, context.res);
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await client
     .from('news')
     .select('*')
     .eq('slug', slug)

@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { supabaseAdmin } from '@/utils/supabase';
+import { supabaseAdmin, getServerClient } from '@/utils/supabase';
 
 export default async function handler(
   req: NextApiRequest,
@@ -10,12 +10,7 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (!supabaseAdmin) {
-    return res.status(500).json({
-      error: 'Service Supabase indisponible (service role manquant).',
-    });
-  }
-  const admin = supabaseAdmin!;
+  const admin = supabaseAdmin ?? getServerClient(req, res);
 
   const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 10));
 
