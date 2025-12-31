@@ -2,7 +2,7 @@
 // @ts-nocheck
 // pages/api/admin/me.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { supabaseAdmin } from '@/utils/supabase';
+import { supabaseAdmin, getServerClient } from '@/utils/supabase';
 
 type MeResponse =
   | {
@@ -24,15 +24,7 @@ export default async function handler(
   }
 
   // 0) Vérifier que le client admin est dispo (service role non configuré)
-  const adminClient = supabaseAdmin;
-  if (!adminClient) {
-    console.error(
-      '[/api/admin/me] supabaseAdmin non configuré. Vérifie SUPABASE_SERVICE_ROLE_KEY.'
-    );
-    return res.status(500).json({
-      error: 'Configuration Supabase incomplète (service role manquant).',
-    });
-  }
+  const adminClient = supabaseAdmin ?? getServerClient(req, res);
 
   // 1) Récupérer le token envoyé par le frontend
   //    (en général: Authorization: Bearer <access_token>)
