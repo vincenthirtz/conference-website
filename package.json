@@ -10,8 +10,7 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "lint": "eslint . --fix",
     "export": "next export",
-    "test": "echo \"No tests configured yet\"",
-    "release": "echo \"No release to npm for this project\""
+    "test": "playwright test"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
@@ -31,10 +30,12 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.18",
+    "dotenv": "^16.4.5",
     "@types/node": "^25.0.3",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@types/react-slick": "^0.23.13",
+    "@playwright/test": "^1.57.0",
     "eslint": "^9.39.2",
     "eslint-config-next": "^16.1.1",
     "postcss": "^8.5.6",

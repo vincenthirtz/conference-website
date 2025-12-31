@@ -37,3 +37,4 @@ yarn-error.log*
 credentials.json
 *.log
 public/video/
+test-results/
