@@ -79,6 +79,23 @@ export default async function handler(
       .maybeSingle();
 
     if (!error && data) {
+      // Créer automatiquement une news publiée
+      try {
+        const newsSlug = `${slug}-creation-${Date.now().toString(36)}`;
+        await supabaseAdmin
+          .from('news')
+          .insert({
+            title: `Nouvelle équipe : ${name}`,
+            slug: newsSlug,
+            excerpt: `L'équipe ${name} rejoint le tournoi.`,
+            content: `Bienvenue à ${name} ! Une nouvelle équipe vient d'être créée pour participer au tournoi. Restez à l'écoute pour suivre ses matchs.`,
+            status: 'published',
+            published_at: new Date().toISOString(),
+          });
+      } catch (newsErr) {
+        console.error('[/api/discord/teams] create news error:', newsErr);
+      }
+
       return res.status(201).json({ team: data });
     }
 
