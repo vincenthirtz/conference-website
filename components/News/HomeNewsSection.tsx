@@ -126,14 +126,6 @@ function HomeNewsSection(): JSX.Element {
                     ).toLocaleDateString('fr-FR')
                   : 'News'}
               </span>
-              {item.createdAt &&
-                item.publishedAt &&
-                item.createdAt !== item.publishedAt && (
-                  <span className="text-[11px] text-gray-300 normal-case">
-                    Créée le{' '}
-                    {new Date(item.createdAt).toLocaleDateString('fr-FR')}
-                  </span>
-                )}
             </div>
             <h3 className="text-lg font-semibold text-white leading-snug">
               {item.title}
