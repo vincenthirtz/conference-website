@@ -72,9 +72,27 @@ export default function LiveTwitchSection() {
         label: 'MissKiwiii',
         badge: 'Player',
         description:
-          'Joueuse Overwatch 2 avec bonne humeur, scrims avec la team Sparkles.',
+          'Joueuse Overwatch 2 avec bonne humeur, scrims avec la team Sparkles (tenante du titre 2025).',
         background:
           'https://static-cdn.jtvnw.net/jtv_user_pictures/6324195a-0d2a-4966-93e5-3970ef1af174-profile_image-150x150.png',
+      },
+      {
+        channel: 'zezzdecitron',
+        label: 'ZezzDeCitron',
+        badge: 'Player',
+        description:
+          "Ici c'est principalement du Overwatch mais aussi quelques petits jeux indé et sinon ça discute pas mal. Support des Onna Bugeisha",
+        background:
+          'https://static-cdn.jtvnw.net/jtv_user_pictures/05b93829-6a55-463a-89ec-bd65c33d1d16-profile_image-150x150.jpeg',
+      },
+      {
+        channel: 'ooh_jaz',
+        label: 'Ooh_Jaz',
+        badge: 'Player',
+        description:
+          'Casts et parties classées Overwatch 2, avec focus dps et ambiance chill. Joueuse des Onna Bugeisha',
+        background:
+          'https://static-cdn.jtvnw.net/jtv_user_pictures/5dda95ec-d9d0-4e30-bb3f-6fd0211cdeb0-profile_image-150x150.png',
       },
     ],
     []
