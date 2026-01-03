@@ -151,6 +151,8 @@ function Comments({ newsId }: { newsId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [content, setContent] = useState('');
   const [author, setAuthor] = useState('');
+  const [honeypot, setHoneypot] = useState('');
+  const [captcha, setCaptcha] = useState('');
 
   const loadComments = async () => {
     setLoading(true);
@@ -188,6 +190,8 @@ function Comments({ newsId }: { newsId: string }) {
           newsId,
           content: content.trim(),
           authorName: author.trim() || null,
+          honeypot,
+          captcha,
         }),
       });
       if (!res.ok) {
@@ -226,6 +230,22 @@ function Comments({ newsId }: { newsId: string }) {
               onChange={(e) => setAuthor(e.target.value)}
               placeholder="Nom (optionnel)"
               className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/70 focus:border-purple-400/70 transition"
+            />
+            <input
+              type="text"
+              value={captcha}
+              onChange={(e) => setCaptcha(e.target.value)}
+              placeholder="Tapez OWC (anti-robot)"
+              className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/70 focus:border-purple-400/70 transition"
+            />
+            {/* Honeypot anti-bot */}
+            <input
+              type="text"
+              value={honeypot}
+              onChange={(e) => setHoneypot(e.target.value)}
+              className="hidden"
+              tabIndex={-1}
+              aria-hidden="true"
             />
             <Button
               type="submit"

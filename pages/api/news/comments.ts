@@ -77,10 +77,21 @@ async function createComment(
       .json({ error: 'Supabase service role missing for comments' });
   }
 
-  const { newsId, content, authorName } = req.body || {};
+  const { newsId, content, authorName, honeypot, captcha } = req.body || {};
   const trimmedContent = (content || '').toString().trim();
   const trimmedNewsId = (newsId || '').toString().trim();
   const trimmedAuthor = authorName ? authorName.toString().trim() : null;
+  const captchaValue = (captcha || '').toString().trim().toLowerCase();
+
+  // Simple anti-bot: reject if honeypot filled
+  if (honeypot && `${honeypot}`.trim().length > 0) {
+    return res.status(400).json({ error: 'Bot detected' });
+  }
+
+  // Captcha simple sans token
+  if (captchaValue !== 'owc') {
+    return res.status(400).json({ error: 'Captcha invalide' });
+  }
 
   if (!trimmedNewsId) {
     return res.status(400).json({ error: 'newsId is required' });
