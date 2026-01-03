@@ -19,7 +19,7 @@ export default async function handler(
   const { data, error } = await admin
     .from('news')
     .select(
-      'id, title, slug, excerpt, content, image_url, published_at, created_at, updated_at'
+      'id, title, slug, excerpt, content, image_url, published_at, created_at, updated_at, news_comments(count)'
     )
     .eq('status', 'published')
     .or(`published_at.lte.${nowISO},published_at.is.null`)
@@ -44,6 +44,7 @@ export default async function handler(
       createdAt: row.created_at,
       publishedAt: row.published_at,
       updatedAt: row.updated_at,
+      commentsCount: row.news_comments?.[0]?.count ?? 0,
     })) ?? [];
 
   return res.status(200).json({ items });

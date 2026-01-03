@@ -45,6 +45,8 @@ The `pages/api` directory is mapped to `/api/*`. Files in this directory are tre
   - `SUPABASE_SERVICE_ROLE_KEY`: Supabase service role key (server only, keep it secret).
   - `NEXT_PUBLIC_FORMSPREE_ID`: Formspree form id (e.g. `f/xxxxxxx`).
   - `DISCORD_TEAM_SECRET`: shared token to allow the Discord bot to hit `/api/discord/teams`.
+  - Twitch live / OAuth: `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, `TWITCH_REDIRECT_URI` (e.g. `http://localhost:3000/api/twitch/oauth-callback`).
+  - Commentaires news : appliquer `database/news_comments.sql` sur votre base (Supabase) pour créer la table `news_comments`.
 - Netlify/CI: add the same variables in your build environment. `NEXT_PUBLIC_*` values must exist at build time or `next build` will fail with the Supabase env error.
 
 ## AsyncAPI Contributors ✨

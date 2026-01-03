@@ -9,11 +9,11 @@ const EXTRA_MEMBER_EMAILS = Array.from({ length: 5 }).map(
 
 test.describe.serial('Team creation page', () => {
   test.beforeAll(async () => {
-    await deleteTeamsByName(TEAM_NAME);
+    await deleteTeamsByName([`${TEAM_NAME}%`, `${TEAM_NAME}-bulk%`, 'E2E Team%']);
   });
 
   test.afterAll(async () => {
-    await deleteTeamsByName(TEAM_NAME);
+    await deleteTeamsByName([`${TEAM_NAME}%`, `${TEAM_NAME}-bulk%`, 'E2E Team%']);
   });
 
   test('Créer une équipe sans membres', async ({ page }) => {

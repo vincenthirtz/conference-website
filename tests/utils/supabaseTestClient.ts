@@ -49,12 +49,14 @@ export async function deleteTestUser(email: string) {
   }
 }
 
-export async function deleteTeamsByName(name: string) {
+export async function deleteTeamsByName(name: string | string[]) {
   if (!supabaseTestClient) return;
+  const patterns = Array.isArray(name) ? name : [name];
+
   const { data: teams, error } = await supabaseTestClient
     .from('teams')
     .select('id')
-    .ilike('name', name);
+    .or(patterns.map((p) => `name.ilike.${p}`).join(','));
 
   if (error || !teams || teams.length === 0) return;
   const teamIds = teams.map((t) => t.id);

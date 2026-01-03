@@ -5,6 +5,7 @@ import Heading from '@/components/Typography/heading';
 import Button from '@/components/Buttons/button';
 import Link from 'next/link';
 import { supabaseAdmin, getServerClient } from '@/utils/supabase';
+import { useEffect, useState } from 'react';
 
 type NewsPageProps = {
   title: string;
@@ -13,6 +14,7 @@ type NewsPageProps = {
   imageUrl?: string | null;
   publishedAt?: string | null;
   createdAt?: string | null;
+  newsId?: string | null;
   error?: string | null;
 };
 
@@ -55,6 +57,7 @@ export const getServerSideProps: GetServerSideProps<NewsPageProps> = async (
       imageUrl: data.image_url || '',
       publishedAt: data.published_at || null,
       createdAt: data.created_at || null,
+      newsId: data.id || null,
     },
   };
 };
@@ -66,6 +69,7 @@ export default function NewsSlugPage({
   imageUrl,
   publishedAt,
   createdAt,
+  newsId,
   error,
 }: NewsPageProps) {
   const displayDate =
@@ -125,8 +129,143 @@ export default function NewsSlugPage({
                 </Button>
               </Link>
             </div>
+
+            {newsId && <Comments newsId={newsId} />}
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+type Comment = {
+  id: string;
+  author_name: string | null;
+  content: string;
+  created_at: string;
+};
+
+function Comments({ newsId }: { newsId: string }) {
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [content, setContent] = useState('');
+  const [author, setAuthor] = useState('');
+
+  const loadComments = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/news/comments?newsId=${newsId}`);
+      if (!res.ok) throw new Error('Impossible de récupérer les commentaires');
+      const json = await res.json();
+      setComments(json.items || []);
+    } catch (err: any) {
+      setError(err?.message || 'Erreur chargement commentaires');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadComments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newsId]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (content.trim().length < 3) {
+      setError('Le commentaire doit contenir au moins 3 caractères.');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/news/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          newsId,
+          content: content.trim(),
+          authorName: author.trim() || null,
+        }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => null);
+        throw new Error(json?.error || 'Impossible de publier le commentaire');
+      }
+      setContent('');
+      setAuthor('');
+      await loadComments();
+    } catch (err: any) {
+      setError(err?.message || 'Erreur lors de la publication');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="mt-12 rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">
+      <Heading typeStyle="heading-sm" className="text-white">
+        Commentaires
+      </Heading>
+
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <div className="grid gap-3 md:grid-cols-[1fr_0.6fr]">
+          <textarea
+            rows={3}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="Partage ton avis..."
+            className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/70 focus:border-purple-400/70 transition"
+          />
+          <div className="flex flex-col gap-2">
+            <input
+              type="text"
+              value={author}
+              onChange={(e) => setAuthor(e.target.value)}
+              placeholder="Nom (optionnel)"
+              className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/70 focus:border-purple-400/70 transition"
+            />
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full h-[40px] justify-center text-sm px-3"
+            >
+              {loading ? 'Envoi...' : 'Publier'}
+            </Button>
+          </div>
+        </div>
+        {error && (
+          <p className="text-sm text-red-300 border border-red-500/40 bg-red-500/10 rounded-lg px-3 py-2">
+            {error}
+          </p>
+        )}
+      </form>
+
+      <div className="divide-y divide-white/10 rounded-xl border border-white/10 bg-black/40">
+        {comments.length === 0 && (
+          <p className="p-4 text-sm text-gray-400">
+            Aucun commentaire pour le moment.
+          </p>
+        )}
+        {comments.map((c) => (
+          <div key={c.id} className="p-4 space-y-1">
+            <div className="flex items-center gap-2 text-xs text-gray-400">
+              <span>{c.author_name || 'Anonyme'}</span>
+              <span className="text-gray-600">·</span>
+              <span>
+                {new Date(c.created_at).toLocaleString('fr-FR', {
+                  dateStyle: 'short',
+                  timeStyle: 'short',
+                })}
+              </span>
+            </div>
+            <p className="text-sm text-gray-100 whitespace-pre-wrap">
+              {c.content}
+            </p>
+          </div>
+        ))}
       </div>
     </div>
   );

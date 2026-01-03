@@ -14,6 +14,7 @@ type NewsItem = {
   publishedAt?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
+  commentsCount?: number;
 };
 
 const SITE_URL =
@@ -49,6 +50,8 @@ function HomeNewsSection(): JSX.Element {
               publishedAt: row.publishedAt ?? row.published_at,
               createdAt: row.createdAt ?? row.created_at,
               updatedAt: row.updatedAt ?? row.updated_at,
+              commentsCount:
+                row.commentsCount ?? row.news_comments?.[0]?.count ?? 0,
             })) || [];
           setNews(items);
         }
@@ -126,6 +129,7 @@ function HomeNewsSection(): JSX.Element {
                     ).toLocaleDateString('fr-FR')
                   : 'News'}
               </span>
+              <span>{item.commentsCount ?? 0} commentaire(s)</span>
             </div>
             <h3 className="text-lg font-semibold text-white leading-snug">
               {item.title}
