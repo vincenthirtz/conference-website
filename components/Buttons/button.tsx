@@ -16,7 +16,7 @@ function Button({
       data-test={test || ''}
       type={type}
       onClick={onClick}
-      className={`${overlay ? '' : 'gradient-bg'} ${disabled && 'cursor-not-allowed'} flex items-center justify-center text-white h-[54px] rounded-md p-[8px] ${className}`}
+      className={`${overlay ? '' : 'gradient-bg'} ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'} flex items-center justify-center text-white h-[54px] rounded-md p-[8px] ${className}`}
     >
       {children}
     </button>

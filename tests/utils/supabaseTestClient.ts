@@ -48,3 +48,17 @@ export async function deleteTestUser(email: string) {
     if (delErr) throw delErr;
   }
 }
+
+export async function deleteTeamsByName(name: string) {
+  if (!supabaseTestClient) return;
+  const { data: teams, error } = await supabaseTestClient
+    .from('teams')
+    .select('id')
+    .ilike('name', name);
+
+  if (error || !teams || teams.length === 0) return;
+  const teamIds = teams.map((t) => t.id);
+
+  await supabaseTestClient.from('team_members').delete().in('team_id', teamIds);
+  await supabaseTestClient.from('teams').delete().in('id', teamIds);
+}

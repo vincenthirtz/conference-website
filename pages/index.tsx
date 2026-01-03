@@ -1,25 +1,15 @@
- 
 /* eslint-disable @next/next/no-img-element */
-import { useEffect, useState } from 'react';
 import Header from '@/components/Header/header';
 import About from '@/components/About/about';
 import Heading from '@/components/Typography/heading';
-import Paragraph from '@/components/Typography/paragraph';
 import Subscription from '@/components/Form/subscription';
 import Contact from '@/components/Form/Contact';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import PatchNotesSection from '@/components/News/PatchNotesSection';
 import HomeNewsSection from '@/components/News/HomeNewsSection';
+import LiveTwitchSection from '@/components/Live/LiveTwitchSection';
 
 function Home() {
-  const [twitchParent, setTwitchParent] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setTwitchParent(window.location.hostname);
-    }
-  }, []);
-
   return (
     <div>
       <img
@@ -36,96 +26,10 @@ function Home() {
       <PatchNotesSection />
       <div id="register" className="container mt-20 lg:mt-0">
         <div className="flex items-center flex-col justify-center">
-          <div
-            id="tickets"
-            className="flex items-center flex-col justify-center pt-20 lg:pt-0"
-          >
-            <div className="text-xl text-white font-semibold border-b-2 border-blue-400 mb-1">
-              Tickets
-            </div>
-            <div
-              data-test="ticket-section"
-              className="flex flex-col items-center "
-            >
-              <Heading
-                typeStyle="heading-md"
-                className="text-gradient text-center lg:mt-10"
-              >
-                En attendant la compétition
-              </Heading>
-              <div className="max-w-3xl sm:w-full text-center">
-                <Paragraph
-                  typeStyle="body-lg"
-                  className="mt-6"
-                  textColor="text-gray-200"
-                >
-                  A suivre prochainement sur Twitch gratuitement
-                </Paragraph>
-              </div>
-              {twitchParent && (
-                <div className="mt-12 grid gap-10 w-full grid-cols-1 lg:grid-cols-2">
-                  {[
-                    { channel: 'crocheh', label: 'Crocheh' },
-                    { channel: 'arukdo', label: 'Arukdo' },
-                  ].map(({ channel, label }) => (
-                    <div
-                      key={channel}
-                      className="rounded-[28px] border border-white/10 bg-white/5 overflow-hidden shadow-[0_28px_90px_rgba(0,0,0,0.45)]"
-                    >
-                      <div className="flex items-center justify-between px-6 py-5 bg-white/5 border-b border-white/10">
-                        <div className="flex items-center gap-3 text-xl font-semibold text-white">
-                          <span
-                            className="w-2.5 h-2.5 rounded-full bg-red-400 animate-pulse"
-                            aria-hidden
-                          />
-                          <span>Live {label}</span>
-                        </div>
-                        <span className="text-sm text-gray-300">Twitch</span>
-                      </div>
-                      <div className="relative w-full pt-[70%] bg-black">
-                        <iframe
-                          title={`Twitch live ${label}`}
-                          src={`https://player.twitch.tv/?channel=${channel}&parent=${twitchParent}&muted=true`}
-                          allowFullScreen
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          className="absolute inset-0 w-full h-full"
-                          loading="lazy"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {!twitchParent && (
-                <div className="mt-12 grid gap-8 w-full grid-cols-1 lg:grid-cols-2">
-                  {[0, 1].map((idx) => (
-                    <div
-                      key={idx}
-                      className="rounded-[28px] border border-white/10 bg-white/5 overflow-hidden shadow-[0_28px_90px_rgba(0,0,0,0.45)]"
-                    >
-                      <div className="flex items-center justify-between px-6 py-5 bg-white/5 border-b border-white/10">
-                        <div className="flex items-center gap-3 text-xl font-semibold text-white">
-                          <span
-                            className="w-2.5 h-2.5 rounded-full bg-red-400 animate-pulse"
-                            aria-hidden
-                          />
-                          <span>Live</span>
-                        </div>
-                        <span className="text-sm text-gray-300">Twitch</span>
-                      </div>
-                      <div className="relative w-full pt-[70%] bg-gradient-to-br from-white/10 via-white/5 to-white/0">
-                        <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-white/10 via-white/5 to-white/0" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+          <LiveTwitchSection />
         </div>
       </div>
-      <div id="sponsors" className="mt-20">
-      </div>
+      <div id="sponsors" className="mt-20"></div>
       {/* Formulaire de contact */}
       <div
         id="contact"
