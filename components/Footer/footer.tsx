@@ -250,9 +250,8 @@ const footerLinks: FooterLink[] = [
   },
   {
     label: 'Plan du site',
-    href: '/sitemap.xml',
+    href: '/plan-du-site',
     Icon: SitemapIcon,
-    external: true,
   },
 ];
 

@@ -5,11 +5,13 @@ const publicRoutes = [
   '/tournoi',
   '/timeline-2026',
   '/association',
+  '/partenaires',
   '/contact',
   '/mentions-legales',
   '/don',
   '/register',
   '/rules',
+  '/plan-du-site',
 ];
 
 function getBaseUrl(req: Parameters<GetServerSideProps>[0]['req']) {
