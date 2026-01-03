@@ -53,9 +53,8 @@ export default function LiveTwitchSection() {
       {
         channel: 'yamatorochii',
         label: 'Yamatorochii',
-        badge: 'Communauté',
-        description:
-          'Lives réguliers, gameplay et échanges avec la communauté OW.',
+        badge: 'Player',
+        description: `Lives réguliers, gameplay et échanges avec la communauté. Joueuse de l'équipe Avoidgers`,
         background:
           'https://static-cdn.jtvnw.net/jtv_user_pictures/94996092-0ed5-401c-982e-d55a2ea024df-profile_image-150x150.png',
       },
