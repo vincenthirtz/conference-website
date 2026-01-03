@@ -44,7 +44,7 @@ async function listComments(
     return res.status(400).json({ error: 'newsId is required' });
   }
 
-  const client = supabaseAdmin || getServerClient();
+  const client = supabaseAdmin || getServerClient(req, res);
   if (!client) {
     return res.status(500).json({ error: 'Supabase client unavailable' });
   }
@@ -70,7 +70,7 @@ async function createComment(
   req: NextApiRequest,
   res: NextApiResponse<CreateResponse>
 ) {
-  const client = supabaseAdmin || getServerClient();
+  const client = supabaseAdmin || getServerClient(req, res);
   if (!client) {
     return res
       .status(500)
