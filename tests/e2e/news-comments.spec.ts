@@ -44,6 +44,7 @@ test.describe.serial('News comments', () => {
     // Saisir commentaire
     await page.getByPlaceholder('Partage ton avis...').fill(COMMENT_CONTENT);
     await page.getByPlaceholder('Nom (optionnel)').fill(AUTHOR_NAME);
+    await page.getByPlaceholder('Tapez OWC (anti-robot)').fill('OWC');
 
     // Publier
     await page.getByRole('button', { name: 'Publier' }).click();
