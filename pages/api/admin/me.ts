@@ -62,7 +62,7 @@ export default async function handler(
     .from('staff')
     .select('id, auth_user_id, email, display_name, role, created_at')
     .eq('auth_user_id', user.id)
-    .single();
+    .maybeSingle();
 
   if (staffError || !staff) {
     console.error('[/api/admin/me] staff error:', staffError);

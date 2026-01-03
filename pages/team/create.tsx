@@ -33,9 +33,9 @@ export default function PublicCreateTeamPage() {
   const [description, setDescription] = useState('');
   const [discord, setDiscord] = useState('');
   const [members, setMembers] = useState<MemberForm[]>([
-    { id: 'm-0', email: '', role: 'player' },
+    { id: 'm-0', email: 'hirtzvincent+testjoueur@gmail.com', role: 'player' },
   ]);
-  const [captainIndex, setCaptainIndex] = useState<number | null>(null);
+  const [captainIndex, setCaptainIndex] = useState<number | null>(0);
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);

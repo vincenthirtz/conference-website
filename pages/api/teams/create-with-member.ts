@@ -165,32 +165,23 @@ export default async function handler(
     }
   }
 
-  const baseSlug =
-    slugify(name, { lower: true, strict: true }) ||
-    `team-${Date.now().toString(36)}`;
-
-  const attemptPayload = (slug: string) => ({
-    name,
-    slug,
-    short_name: body.short_name?.toString().trim() || null,
-    logo_url: body.logo_url?.toString().trim() || null,
-    country: body.country?.toString().trim() || null,
-    description: body.description?.toString().trim() || null,
-    discord: body.discord?.toString().trim() || null,
-    website: body.website?.toString().trim() || null,
-    is_active: true,
-  });
+  const attemptPayload = () => {
+    const base: Record<string, any> = {
+      name,
+      short_name: body.short_name?.toString().trim() || null,
+      logo_url: body.logo_url?.toString().trim() || null,
+      country: body.country?.toString().trim() || null,
+      description: body.description?.toString().trim() || null,
+    };
+    return base;
+  };
 
   const maxAttempts = 3;
   let createdTeam: Record<string, any> | null = null;
   let lastError: any = null;
 
   for (let i = 0; i < maxAttempts; i++) {
-    const suffix =
-      i === 0 ? '' : `-${Math.random().toString(36).slice(2, 6).toLowerCase()}`;
-
-    const slug = `${baseSlug}${suffix}`;
-    const payload = attemptPayload(slug);
+    const payload = attemptPayload();
 
     const { data, error } = await supabaseAdmin
       .from('teams')
