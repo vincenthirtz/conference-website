@@ -1,5 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
@@ -13,6 +13,9 @@ type TwitchChannel = {
 };
 
 export default function LiveTwitchSection() {
+  const [liveStatus, setLiveStatus] = useState<Record<string, boolean>>({});
+  const [loadingStatus, setLoadingStatus] = useState(false);
+
   const twitchChannels = useMemo<TwitchChannel[]>(
     () => [
       {
@@ -98,6 +101,29 @@ export default function LiveTwitchSection() {
     []
   );
 
+  useEffect(() => {
+    const fetchStatuses = async () => {
+      setLoadingStatus(true);
+      try {
+        const channelsParam = twitchChannels.map((c) => c.channel).join(',');
+        const resp = await fetch(`/api/twitch/live?channels=${channelsParam}`);
+        if (!resp.ok) throw new Error('Twitch status error');
+        const json = await resp.json();
+        const statuses: Record<string, boolean> = {};
+        Object.entries(json.statuses || {}).forEach(([ch, info]: any) => {
+          statuses[ch] = Boolean((info as any)?.live);
+        });
+        setLiveStatus(statuses);
+      } catch (err) {
+        console.error('LiveTwitchSection status fetch error:', err);
+      } finally {
+        setLoadingStatus(false);
+      }
+    };
+
+    fetchStatuses();
+  }, [twitchChannels]);
+
   return (
     <div
       id="tickets"
@@ -125,7 +151,9 @@ export default function LiveTwitchSection() {
         </div>
         <div className="mt-12 grid gap-8 w-full grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
           {twitchChannels.map(
-            ({ channel, label, badge, description, background }) => (
+            ({ channel, label, badge, description, background }) => {
+              const isLive = liveStatus[channel] === true;
+              return (
               <div
                 key={channel}
                 className="group rounded-2xl border border-white/10 bg-white/5 overflow-hidden shadow-[0_18px_60px_rgba(0,0,0,0.35)] transition hover:border-purple-400/60 hover:-translate-y-1"
@@ -145,6 +173,17 @@ export default function LiveTwitchSection() {
                         <span className="text-xl text-white font-semibold">
                           {label}
                         </span>
+                        <span className="flex items-center gap-2 text-xs text-gray-200">
+                          <span
+                            className={`h-2.5 w-2.5 rounded-full ${
+                              isLive
+                                ? 'bg-red-500 animate-pulse'
+                                : 'bg-gray-500'
+                            }`}
+                            aria-hidden
+                          />
+                          {isLive ? 'Live en cours' : 'Hors ligne'}
+                        </span>
                       </div>
                     </div>
                     {badge && (
@@ -157,6 +196,11 @@ export default function LiveTwitchSection() {
                     {description ||
                       `Streams OW2, analyses et cast en direct. Suivez ${label}.`}
                   </p>
+                  {loadingStatus && (
+                    <p className="text-[11px] text-gray-500">
+                      Mise à jour du statut…
+                    </p>
+                  )}
                   <div className="flex justify-end">
                     <a
                       href={`https://twitch.tv/${channel}`}
@@ -174,7 +218,8 @@ export default function LiveTwitchSection() {
                   </div>
                 </div>
               </div>
-            )
+            );
+            }
           )}
         </div>
       </div>
