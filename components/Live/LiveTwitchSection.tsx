@@ -29,7 +29,7 @@ export default function LiveTwitchSection() {
         label: 'Gwadael',
         badge: 'Cast',
         description:
-          'Cast francophons dynamique et spécialiste du LORE Overwatch.',
+          'Cast dynamique, joueuse accomplie et spécialiste du LORE Overwatch.',
         background:
           'https://static-cdn.jtvnw.net/jtv_user_pictures/a7b5e36f-134a-42a2-aa5d-2f8b256ec548-profile_image-150x150.png',
       },
