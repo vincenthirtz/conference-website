@@ -174,6 +174,9 @@ function Navbar(): JSX.Element {
     { title: '— News', ref: '' },
     { title: 'News – liste', ref: '/admin/news' },
     { title: 'Créer une news', ref: '/admin/news/new' },
+    // Commentaires
+    { title: '— Commentaires', ref: '' },
+    { title: 'Commentaires – liste', ref: '/admin/comments' },
     // Comptes / demandes
     { title: '— Comptes & demandes', ref: '' },
     { title: 'Créer un utilisateur', ref: '/admin/users/new' },
