@@ -77,33 +77,16 @@ async function handler(
       return res.status(500).json({ error: 'Supabase admin not configured' });
     }
 
-    let query = supabaseAdmin.from('staff_logs').select(
-      `
-        id,
-        created_at,
-        staff_id,
-        action,
-        entity_type,
-        entity_id,
-        tournament_id,
-        payload,
-        staff:staff_members(
-          id,
-          user_id,
-          role,
-          display_name,
-          avatar_url
-        )
-      `,
-      { count: wantTotal ? 'exact' : undefined }
-    );
+    // Pas de relation FK déclarée côté DB → on reste sur un select simple.
+    let query = supabaseAdmin
+      .from('staff_logs')
+      .select(
+        'id, created_at, staff_id, action, entity_type, entity_id',
+        { count: wantTotal ? 'exact' : undefined }
+      );
 
     if (staffId && !Array.isArray(staffId)) {
       query = query.eq('staff_id', staffId);
-    }
-
-    if (tournamentId && !Array.isArray(tournamentId)) {
-      query = query.eq('tournament_id', tournamentId);
     }
 
     if (entityType && !Array.isArray(entityType)) {
@@ -124,11 +107,7 @@ async function handler(
 
     if (search && !Array.isArray(search)) {
       const s = `%${search}%`;
-      // On fait simple : ilike sur action, entity_type et payload::text
-      // (payload::text suppose que la colonne payload est JSONB, Supabase autorise ilike dessus)
-      query = query.or(
-        `action.ilike.${s},entity_type.ilike.${s},payload::text.ilike.${s}`
-      );
+      query = query.or(`action.ilike.${s},entity_type.ilike.${s}`);
     }
 
     query = query

@@ -13,6 +13,7 @@ import { supabaseClient } from '@/utils/supabase';
 type AdminLink = {
   title: string;
   ref: string;
+  children?: AdminLink[];
 };
 
 function Navbar(): JSX.Element {
@@ -162,30 +163,40 @@ function Navbar(): JSX.Element {
   const adminLinks: AdminLink[] = [
     { title: 'Dashboard', ref: '/admin' },
     // Tournois
-    { title: '— Tournois', ref: '' },
-    { title: 'Tournois – liste', ref: '/admin/tournaments' },
-    { title: 'Créer un tournoi', ref: '/admin/tournaments/create' },
+    { title: 'Tournois', ref: '', children: [
+      { title: 'Tournois – liste', ref: '/admin/tournaments' },
+      { title: 'Créer un tournoi', ref: '/admin/tournaments/create' },
+    ] },
     // Équipes
-    { title: '— Équipes', ref: '' },
-    { title: 'Équipes – liste', ref: '/admin/teams' },
-    { title: 'Créer une équipe', ref: '/admin/teams/new' },
-    { title: 'Ajouter membre équipe', ref: '/admin/teams/add-member' },
+    { title: 'Équipes', ref: '', children: [
+      { title: 'Équipes – liste', ref: '/admin/teams' },
+      { title: 'Créer une équipe', ref: '/admin/teams/new' },
+      { title: 'Ajouter membre équipe', ref: '/admin/teams/add-member' },
+    ] },
+    // Annonces
+    { title: 'Annonces', ref: '', children: [
+      { title: 'Bandeau pub – liste', ref: '/admin/announcements' },
+    ] },
     // News
-    { title: '— News', ref: '' },
-    { title: 'News – liste', ref: '/admin/news' },
-    { title: 'Créer une news', ref: '/admin/news/new' },
+    { title: 'News', ref: '', children: [
+      { title: 'News – liste', ref: '/admin/news' },
+      { title: 'Créer une news', ref: '/admin/news/new' },
+    ] },
     // Commentaires
-    { title: '— Commentaires', ref: '' },
-    { title: 'Commentaires – liste', ref: '/admin/comments' },
+    { title: 'Commentaires', ref: '', children: [
+      { title: 'Commentaires – liste', ref: '/admin/comments' },
+    ] },
     // Comptes / demandes
-    { title: '— Comptes & demandes', ref: '' },
-    { title: 'Créer un utilisateur', ref: '/admin/users/new' },
-    { title: 'Demandes joueurs / équipes', ref: '/admin/demandes' },
+    { title: 'Comptes & demandes', ref: '', children: [
+      { title: 'Créer un utilisateur', ref: '/admin/users/new' },
+      { title: 'Demandes joueurs / équipes', ref: '/admin/demandes' },
+    ] },
     // Logs / stats
-    { title: '— Logs & stats', ref: '' },
-    { title: 'Logs staff', ref: '/admin/logs' },
-    { title: 'Stats équipes', ref: '/admin/stats/teams' },
-    { title: 'Stats maps', ref: '/admin/stats/maps' },
+    { title: 'Logs & stats', ref: '', children: [
+      { title: 'Logs staff', ref: '/admin/logs' },
+      { title: 'Stats équipes', ref: '/admin/stats/teams' },
+      { title: 'Stats maps', ref: '/admin/stats/maps' },
+    ] },
   ];
 
   const handleLogout = () => {
@@ -429,18 +440,36 @@ function Navbar(): JSX.Element {
 
                         {/* Dropdown Admin desktop */}
                         {adminMenuOpen && (
-                          <div className="absolute right-0 mt-2 min-w-[220px] rounded-md bg-[#1B1130]/95 border border-white/10 shadow-xl py-1 z-[999]">
-                            <div className="flex flex-col">
-                              {adminLinks.map((item) => (
-                                <Link
-                                  key={item.ref}
-                                  href={item.ref}
-                                  className="block px-4 py-2 text-sm text-white hover:bg-white/10"
-                                  onClick={() => setAdminMenuOpen(false)}
-                                >
-                                  {item.title}
-                                </Link>
-                              ))}
+                          <div className="absolute right-0 mt-2 min-w-[240px] rounded-md bg-[#1B1130]/95 border border-white/10 shadow-xl py-2 z-[999]">
+                            <div className="flex flex-col divide-y divide-white/5">
+                              {adminLinks.map((item) =>
+                                item.children && item.children.length > 0 ? (
+                                  <div key={item.title} className="py-1">
+                                    <p className="px-4 pb-1 text-[12px] uppercase tracking-[0.14em] text-gray-300">
+                                      {item.title}
+                                    </p>
+                                    {item.children.map((child) => (
+                                      <Link
+                                        key={child.ref}
+                                        href={child.ref}
+                                        className="block px-6 py-2 text-sm text-white hover:bg-white/10"
+                                        onClick={() => setAdminMenuOpen(false)}
+                                      >
+                                        {child.title}
+                                      </Link>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <Link
+                                    key={item.ref || item.title}
+                                    href={item.ref || '#'}
+                                    className="block px-4 py-2 text-sm text-white hover:bg-white/10"
+                                    onClick={() => setAdminMenuOpen(false)}
+                                  >
+                                    {item.title}
+                                  </Link>
+                                )
+                              )}
 
                               <button
                                 className="w-full text-left px-4 py-2 text-xs text-red-200 hover:bg-red-500/20 border-t border-white/10 mt-1"

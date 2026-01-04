@@ -8,6 +8,7 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import PatchNotesSection from '@/components/News/PatchNotesSection';
 import HomeNewsSection from '@/components/News/HomeNewsSection';
 import LiveTwitchSection from '@/components/Live/LiveTwitchSection';
+import AnnouncementsTicker from '@/components/Ads/AnnouncementsTicker';
 
 function Home() {
   return (
@@ -18,6 +19,7 @@ function Home() {
         alt="background-illustration"
       />
       <Header />
+
       {/* <Popup /> */}
       <div id="about" className="mt-20">
         <About />
@@ -48,7 +50,7 @@ function Home() {
       </div>
 
       <div className="mt-5">
-        <Subscription />
+        <AnnouncementsTicker />
       </div>
     </div>
   );

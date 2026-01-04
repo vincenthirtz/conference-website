@@ -92,9 +92,9 @@ export async function fetchStaffLogs(limit = 100): Promise<StaffLog[]> {
     .select(
       `
       *,
-      staff:staff_members(
+      staff:staff(
         id,
-        user_id,
+        auth_user_id,
         role,
         display_name,
         avatar_url
@@ -135,9 +135,9 @@ export async function fetchStaffLogsFiltered(
     .select(
       `
       *,
-      staff:staff_members(
+      staff:staff(
         id,
-        user_id,
+        auth_user_id,
         role,
         display_name,
         avatar_url

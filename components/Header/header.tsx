@@ -36,7 +36,7 @@ function Header(): JSX.Element {
               <div className="mt-[54px] relative flex items-center justify-center">
                 <Link href="https://discord.gg/gERSsjC3Vd" target="_blank">
                   <Button type="button" className="w-[250px]">
-                    Rejoindre
+                    Rejoindre le Discord
                   </Button>
                 </Link>
               </div>
