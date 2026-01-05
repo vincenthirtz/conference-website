@@ -21,6 +21,7 @@ type UserLite = {
 export const getServerSideProps = withStaffPage('admin');
 
 const ROLES = ['member', 'player', 'helper', 'caster', 'referee', 'manager', 'admin', 'owner'];
+const STAFF_ROLES = ['helper', 'caster', 'referee', 'manager', 'admin', 'owner'];
 
 export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
   const [users, setUsers] = useState<UserLite[]>([]);
@@ -58,7 +59,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const changeRole = async (userId: string, role: string) => {
+  const changeRole = async (userId: string, role: string, staffRole?: string) => {
     setUpdating(userId);
     try {
       const {
@@ -73,7 +74,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ userId, role }),
+        body: JSON.stringify({ userId, role, staffRole }),
       });
       const json = await res.json();
       if (!res.ok || json.error) {
@@ -135,6 +136,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                   <th className="text-left px-4 py-2">Email</th>
                   <th className="text-left px-4 py-2">Nom</th>
                   <th className="text-left px-4 py-2">Rôle</th>
+                  <th className="text-left px-4 py-2">Staff (optionnel)</th>
                   <th className="text-left px-4 py-2">Créé le</th>
                 </tr>
               </thead>
@@ -153,6 +155,27 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                         className="bg-neutral-800 border border-white/10 rounded px-2 py-1 text-sm"
                       >
                         {ROLES.map((r) => (
+                          <option key={r} value={r}>
+                            {r}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-4 py-2">
+                      <select
+                        defaultValue=""
+                        onChange={(e) =>
+                          changeRole(
+                            u.id,
+                            u.role || 'member',
+                            e.target.value || undefined
+                          )
+                        }
+                        disabled={updating === u.id}
+                        className="bg-neutral-800 border border-white/10 rounded px-2 py-1 text-sm"
+                      >
+                        <option value="">—</option>
+                        {STAFF_ROLES.map((r) => (
                           <option key={r} value={r}>
                             {r}
                           </option>

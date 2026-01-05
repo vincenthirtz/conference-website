@@ -71,7 +71,7 @@ async function handler(
   }
 
   if (req.method === 'PATCH') {
-    const { userId, role } = req.body || {};
+    const { userId, role, staffRole } = req.body || {};
     if (!userId || typeof role !== 'string') {
       return res.status(400).json({ error: 'userId et role requis.' });
     }
@@ -88,6 +88,29 @@ async function handler(
       return res
         .status(500)
         .json({ error: "Impossible de mettre à jour l'utilisateur." });
+    }
+
+    // Optionnel : raccorder à la table staff si staffRole est fourni
+    if (staffRole && typeof staffRole === 'string') {
+      const { data: existing } = await supabaseAdmin
+        .from('staff')
+        .select('id')
+        .eq('auth_user_id', userId)
+        .maybeSingle();
+
+      if (existing?.id) {
+        await supabaseAdmin
+          .from('staff')
+          .update({ role: staffRole })
+          .eq('auth_user_id', userId);
+      } else {
+        await supabaseAdmin.from('staff').insert({
+          auth_user_id: userId,
+          role: staffRole,
+          display_name: (data.user.user_metadata as any)?.display_name || null,
+          email: data.user.email || null,
+        });
+      }
     }
 
     const u = data.user;
