@@ -153,7 +153,9 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                     <td className="px-4 py-2">
                       <select
                         value={u.role || 'member'}
-                        onChange={(e) => changeRole(u.id, e.target.value, u.staff_role)}
+                        onChange={(e) =>
+                          changeRole(u.id, e.target.value, u.staff_role || undefined)
+                        }
                         disabled={updating === u.id}
                         className="bg-neutral-800 border border-white/10 rounded px-2 py-1 text-sm"
                       >
