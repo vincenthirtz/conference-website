@@ -91,6 +91,15 @@ export default function LiveTwitchSection() {
           'https://static-cdn.jtvnw.net/jtv_user_pictures/a37f1f33-2910-4349-b7b5-4b0e0beee14b-profile_image-150x150.jpeg',
       },
       {
+        channel: 'eiko_live',
+        label: 'Eiko_Live',
+        badge: 'Player',
+        description:
+          `Streams Overwatch 2 avec une ambiance chill et des conseils gameplay. Joueuse de l'équipe Avoidgers`,
+        background:
+          'https://static-cdn.jtvnw.net/jtv_user_pictures/8e26e1e3-e8d3-4ed1-8a3c-42199cda7741-profile_image-150x150.png',
+      },
+      {
         channel: 'zezzdecitron',
         label: 'ZezzDeCitron',
         badge: 'Player',
