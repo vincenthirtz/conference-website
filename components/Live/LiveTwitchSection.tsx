@@ -86,9 +86,9 @@ export default function LiveTwitchSection() {
         label: 'ImBanshee01',
         badge: 'Player',
         description:
-          'Gameplay compétitif OW2, sessions classées et scrims régulières.',
+          'Equipe des phénix et joueuse occasionnelle console',
         background:
-          'https://static-cdn.jtvnw.net/jtv_user_pictures/4b80f763-7dc7-4862-8d88-59db791824e6-profile_image-150x150.png',
+          'https://static-cdn.jtvnw.net/jtv_user_pictures/a37f1f33-2910-4349-b7b5-4b0e0beee14b-profile_image-150x150.jpeg',
       },
       {
         channel: 'zezzdecitron',
