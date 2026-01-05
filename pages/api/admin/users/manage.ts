@@ -116,7 +116,7 @@ async function handler(
     if (targetStaff?.role) targetStaffRole = targetStaff.role;
 
     // Seul un owner peut modifier un owner ou un admin
-    const requesterRole = req?.context?.staff?.role || null;
+    const requesterRole = (req as any)?.context?.staff?.role || null;
     const targetIsProtected =
       targetRole === 'owner' ||
       targetRole === 'admin' ||
