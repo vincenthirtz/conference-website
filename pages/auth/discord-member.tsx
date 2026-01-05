@@ -18,9 +18,7 @@ export default function DiscordMemberRedirect() {
         if (code && state) {
           setStatus('Validation de la connexion…');
           const { error: exchangeError } =
-            await supabaseClient.auth.exchangeCodeForSession({
-              authCode: code,
-            });
+            await supabaseClient.auth.exchangeCodeForSession(code);
           if (exchangeError) {
             throw exchangeError;
           }
