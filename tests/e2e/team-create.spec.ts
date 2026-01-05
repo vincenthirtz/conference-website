@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { deleteTeamsByName } from '../utils/supabaseTestClient';
+import { deleteTeamsByName, deleteTestUser } from '../utils/supabaseTestClient';
 
 const TEAM_NAME = `E2E Team ${Date.now()}`;
 const PLAYER_EMAIL = 'hirtzvincent+testjoueur@gmail.com';
@@ -10,14 +10,21 @@ const EXTRA_MEMBER_EMAILS = Array.from({ length: 5 }).map(
 const EXTRA_MEMBER_BTAGS = Array.from({ length: 5 }).map(
   (_v, idx) => `TestMember#00${idx + 2}`
 );
+const ALL_TEST_EMAILS = [PLAYER_EMAIL, ...EXTRA_MEMBER_EMAILS];
 
 test.describe.serial('Team creation page', () => {
   test.beforeAll(async () => {
     await deleteTeamsByName([`${TEAM_NAME}%`, `${TEAM_NAME}-bulk%`, 'E2E Team%']);
+    for (const email of ALL_TEST_EMAILS) {
+      await deleteTestUser(email);
+    }
   });
 
   test.afterAll(async () => {
     await deleteTeamsByName([`${TEAM_NAME}%`, `${TEAM_NAME}-bulk%`, 'E2E Team%']);
+    for (const email of ALL_TEST_EMAILS) {
+      await deleteTestUser(email);
+    }
   });
 
   test('Créer une équipe sans membres', async ({ page }) => {
