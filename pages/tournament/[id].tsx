@@ -73,6 +73,20 @@ type TournamentPageProps = {
   matches: SimpleMatch[];
 };
 
+const STAGE_TYPES: Record<string, string> = {
+  group: 'Poule',
+  bracket: 'Bracket',
+  swiss: 'Swiss',
+  round_robin: 'Round robin',
+  showmatch: 'Showmatch',
+  other: 'Autre',
+};
+
+function formatStageType(stageType: string | null | undefined) {
+  if (!stageType) return 'Autre';
+  return STAGE_TYPES[stageType] || stageType;
+}
+
 export const getServerSideProps: GetServerSideProps<
   TournamentPageProps
 > = async (ctx) => {
