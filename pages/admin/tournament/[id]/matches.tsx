@@ -164,6 +164,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
       params.set('offset', String(offset));
       params.set('includeStages', '1');
       params.set('includeTotal', '1');
+      params.set('includeTeams', '1');
       if (stageFilter) params.set('stageId', stageFilter);
       if (statusFilter) params.set('status', statusFilter);
       if (roundFilter) params.set('roundNumber', roundFilter);
@@ -434,10 +435,11 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                     </td>
 
                     {/* Team 1 */}
+
                     <td className="px-4 py-2 align-top">
                       <TeamCell
                         team={m.team1}
-                        fallbackId={m.team1_id}
+                        fallbackId={m.team1?.name || undefined}
                         isWinner={m.winner_team_id === m.team1_id}
                       />
                     </td>
@@ -446,20 +448,19 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                     <td className="px-4 py-2 align-top">
                       <TeamCell
                         team={m.team2}
-                        fallbackId={m.team2_id}
+                        fallbackId={m.team2?.name || undefined}
                         isWinner={m.winner_team_id === m.team2_id}
                       />
                     </td>
 
                     {/* Score */}
                     <td className="px-4 py-2 align-top">
-                      {m.status === 'finished' || m.status === 'ongoing' ? (
-                        <div className="font-semibold">
-                          {m.team1_score ?? 0} - {m.team2_score ?? 0}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-neutral-400">—</span>
-                      )}
+                      <div className="font-semibold">
+                        {typeof m.team1_score === 'number' ||
+                        typeof m.team2_score === 'number'
+                          ? `${m.team1_score ?? 0} - ${m.team2_score ?? 0}`
+                          : '—'}
+                      </div>
                     </td>
 
                     {/* Schedule */}
@@ -553,7 +554,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
 type TeamCellProps = {
   team: TeamMini | null | undefined;
-  fallbackId: string | null;
+  fallbackId: string | null | undefined;
   isWinner: boolean;
 };
 
@@ -563,7 +564,7 @@ function TeamCell({ team, fallbackId, isWinner }: TeamCellProps) {
 
   return (
     <div className="flex items-center gap-3">
-      {team?.logo_url && (
+      {team?.logo_url ? (
         <Image
           src={team.logo_url}
           alt={team.name}
@@ -571,6 +572,10 @@ function TeamCell({ team, fallbackId, isWinner }: TeamCellProps) {
           height={32}
           className="w-8 h-8 rounded object-cover border border-neutral-700"
         />
+      ) : (
+        <div className="w-8 h-8 rounded-full bg-neutral-700 border border-neutral-600 flex items-center justify-center text-[11px] font-semibold uppercase">
+          {(label || '?').replace(/[^A-Za-z0-9]/g, '').slice(0, 2)}
+        </div>
       )}
       <div>
         <div className={`font-semibold ${isWinner ? 'text-emerald-300' : ''}`}>
