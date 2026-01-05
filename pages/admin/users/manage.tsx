@@ -16,6 +16,7 @@ type UserLite = {
   role: string | null;
   display_name: string | null;
   created_at: string | null;
+  staff_role?: string | null;
 };
 
 export const getServerSideProps = withStaffPage('admin');
@@ -82,7 +83,9 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       }
 
       setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, role } : u))
+        prev.map((u) =>
+          u.id === userId ? { ...u, role, staff_role: staffRole ?? u.staff_role } : u
+        )
       );
     } catch (err: any) {
       alert(err?.message || 'Erreur lors de la mise à jour du rôle.');
@@ -150,7 +153,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                     <td className="px-4 py-2">
                       <select
                         value={u.role || 'member'}
-                        onChange={(e) => changeRole(u.id, e.target.value)}
+                        onChange={(e) => changeRole(u.id, e.target.value, u.staff_role)}
                         disabled={updating === u.id}
                         className="bg-neutral-800 border border-white/10 rounded px-2 py-1 text-sm"
                       >

@@ -5,23 +5,37 @@ import { supabaseClient } from '@/utils/supabase';
 export default function DiscordMemberRedirect() {
   const router = useRouter();
   const [status, setStatus] = useState('Connexion via Discord…');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const ensureRole = async () => {
       try {
         const next = (router.query.next as string) || '/';
+        const code = router.query.code as string | undefined;
+        const state = router.query.state as string | undefined;
 
-        const {
-          data: { user },
-          error,
-        } = await supabaseClient.auth.getUser();
+        // 1) Si retour OAuth avec code/state → échanger contre une session
+        if (code && state) {
+          setStatus('Validation de la connexion…');
+          const { error: exchangeError } =
+            await supabaseClient.auth.exchangeCodeForSession({
+              authCode: code,
+            });
+          if (exchangeError) {
+            throw exchangeError;
+          }
+        }
 
-        if (error || !user) {
+        // 2) Récupérer l'utilisateur courant
+        const { data: sessionData, error: sessionErr } =
+          await supabaseClient.auth.getSession();
+        if (sessionErr || !sessionData.session?.user) {
           setStatus("Session introuvable. Redirection vers l'accueil.");
           setTimeout(() => router.replace('/'), 1000);
           return;
         }
 
+        const user = sessionData.session.user;
         const currentRole = user.user_metadata?.role;
         if (!currentRole) {
           await supabaseClient.auth.updateUser({
@@ -32,6 +46,8 @@ export default function DiscordMemberRedirect() {
         setStatus('Redirection…');
         router.replace(next);
       } catch (e) {
+        console.error('[discord-member] error', e);
+        setError('Erreur de connexion Discord. Réessaie.');
         setStatus('Erreur de connexion. Redirection vers accueil…');
         setTimeout(() => router.replace('/'), 1000);
       }
@@ -47,6 +63,9 @@ export default function DiscordMemberRedirect() {
         <div className="text-sm text-gray-400">
           Merci de patienter pendant la finalisation de la connexion.
         </div>
+        {error && (
+          <div className="text-sm text-red-300 mt-2">{error}</div>
+        )}
       </div>
     </div>
   );

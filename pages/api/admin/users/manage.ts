@@ -8,6 +8,7 @@ type UserLite = {
   role: string | null;
   display_name: string | null;
   created_at: string | null;
+  staff_role?: string | null;
 };
 
 type ListResponse = {
@@ -56,18 +57,37 @@ async function handler(
           role: (u.user_metadata as any)?.role ?? null,
           display_name: (u.user_metadata as any)?.display_name ?? null,
           created_at: u.created_at ?? null,
-        }))
-        .filter((u) => {
-          if (!search || Array.isArray(search)) return true;
-          const term = search.toLowerCase();
-          return (
-            (u.email || '').toLowerCase().includes(term) ||
-            (u.display_name || '').toLowerCase().includes(term) ||
-            (u.role || '').toLowerCase().includes(term)
-          );
-        }) ?? [];
+        })) ?? [];
 
-    return res.status(200).json({ items, total: items.length });
+    const userIds = items.map((u) => u.id);
+    let staffMap = new Map<string, string>();
+    if (userIds.length) {
+      const { data: staffRows, error: staffErr } = await supabaseAdmin
+        .from('staff')
+        .select('auth_user_id, role')
+        .in('auth_user_id', userIds);
+
+      if (!staffErr && staffRows) {
+        staffRows.forEach((row: any) => {
+          if (row?.auth_user_id) staffMap.set(row.auth_user_id, row.role);
+        });
+      }
+    }
+
+    const filtered = items
+      .map((u) => ({ ...u, staff_role: staffMap.get(u.id) || null }))
+      .filter((u) => {
+        if (!search || Array.isArray(search)) return true;
+        const term = search.toLowerCase();
+        return (
+          (u.email || '').toLowerCase().includes(term) ||
+          (u.display_name || '').toLowerCase().includes(term) ||
+          (u.role || '').toLowerCase().includes(term) ||
+          (u.staff_role || '').toLowerCase().includes(term)
+        );
+      });
+
+    return res.status(200).json({ items: filtered, total: filtered.length });
   }
 
   if (req.method === 'PATCH') {
@@ -120,6 +140,7 @@ async function handler(
       role: (u.user_metadata as any)?.role ?? null,
       display_name: (u.user_metadata as any)?.display_name ?? null,
       created_at: u.created_at ?? null,
+      staff_role: staffRole || null,
     };
 
     return res.status(200).json({ success: true, user: userLite });
