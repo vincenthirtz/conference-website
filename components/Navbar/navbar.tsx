@@ -172,6 +172,7 @@ function Navbar(): JSX.Element {
       { title: 'Équipes – liste', ref: '/admin/teams' },
       { title: 'Créer une équipe', ref: '/admin/teams/new' },
       { title: 'Ajouter membre équipe', ref: '/admin/teams/add-member' },
+      { title: 'Gérer mon équipe (capitaine)', ref: '/admin/teams/my' },
     ] },
     // Annonces
     { title: 'Annonces', ref: '', children: [
@@ -188,6 +189,7 @@ function Navbar(): JSX.Element {
     ] },
     // Comptes / demandes
     { title: 'Comptes & demandes', ref: '', children: [
+      { title: 'Gérer les utilisateurs', ref: '/admin/users/manage' },
       { title: 'Créer un utilisateur', ref: '/admin/users/new' },
       { title: 'Demandes joueurs / équipes', ref: '/admin/demandes' },
     ] },

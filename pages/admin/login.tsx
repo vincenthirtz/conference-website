@@ -136,7 +136,7 @@ const AdminLoginPage = () => {
     try {
       const redirectTo =
         typeof window !== 'undefined'
-          ? `${window.location.origin}/admin`
+          ? `${window.location.origin}/auth/discord-member?next=/admin`
           : undefined;
 
       const { error: oauthError } = await supabaseClient.auth.signInWithOAuth({

@@ -1,0 +1,107 @@
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { supabaseAdmin } from '@/utils/supabase';
+import { withStaffRoute } from '@/utils/staff';
+
+type UserLite = {
+  id: string;
+  email: string | null;
+  role: string | null;
+  display_name: string | null;
+  created_at: string | null;
+};
+
+type ListResponse = {
+  items: UserLite[];
+  total: number;
+};
+
+type UpdateResponse = {
+  success: boolean;
+  user?: UserLite;
+  error?: string;
+};
+
+export default withStaffRoute(handler, 'admin');
+
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<ListResponse | UpdateResponse | { error: string }>
+) {
+  if (!supabaseAdmin) {
+    return res.status(500).json({ error: 'Supabase admin non configuré.' });
+  }
+
+  if (req.method === 'GET') {
+    const { search, limit = '200', page = '1' } = req.query;
+    const perPage = Math.max(1, Math.min(200, Number(limit) || 200));
+    const pageNum = Math.max(1, Number(page) || 1);
+
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+      page: pageNum,
+      perPage,
+    });
+
+    if (error) {
+      console.error('[admin/users/manage] list error:', error);
+      return res
+        .status(500)
+        .json({ error: 'Impossible de charger les utilisateurs.' });
+    }
+
+    const items =
+      data?.users
+        ?.map((u) => ({
+          id: u.id,
+          email: u.email ?? null,
+          role: (u.user_metadata as any)?.role ?? null,
+          display_name: (u.user_metadata as any)?.display_name ?? null,
+          created_at: u.created_at ?? null,
+        }))
+        .filter((u) => {
+          if (!search || Array.isArray(search)) return true;
+          const term = search.toLowerCase();
+          return (
+            (u.email || '').toLowerCase().includes(term) ||
+            (u.display_name || '').toLowerCase().includes(term) ||
+            (u.role || '').toLowerCase().includes(term)
+          );
+        }) ?? [];
+
+    return res.status(200).json({ items, total: items.length });
+  }
+
+  if (req.method === 'PATCH') {
+    const { userId, role } = req.body || {};
+    if (!userId || typeof role !== 'string') {
+      return res.status(400).json({ error: 'userId et role requis.' });
+    }
+
+    const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
+      userId,
+      {
+        user_metadata: { role },
+      }
+    );
+
+    if (error || !data?.user) {
+      console.error('[admin/users/manage] update error:', error);
+      return res
+        .status(500)
+        .json({ error: "Impossible de mettre à jour l'utilisateur." });
+    }
+
+    const u = data.user;
+    const userLite: UserLite = {
+      id: u.id,
+      email: u.email ?? null,
+      role: (u.user_metadata as any)?.role ?? null,
+      display_name: (u.user_metadata as any)?.display_name ?? null,
+      created_at: u.created_at ?? null,
+    };
+
+    return res.status(200).json({ success: true, user: userLite });
+  }
+
+  res.setHeader('Allow', 'GET,PATCH');
+  return res.status(405).json({ error: 'Method not allowed' });
+}

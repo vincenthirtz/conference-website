@@ -55,26 +55,36 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(
 
                   {adminMenuOpen && (
                     <div className="mt-3 flex flex-col bg-white/10 rounded-lg overflow-hidden border border-white/10">
-                      {adminLinks.map((item) =>
-                        item.ref ? (
+                  {adminLinks.map((item) =>
+                    item.children && item.children.length > 0 ? (
+                      <div key={item.title} className="border-t border-white/10 first:border-t-0">
+                        <div className="px-4 py-2 text-xs uppercase tracking-[0.14em] text-purple-200/80 bg-white/5">
+                          {item.title}
+                        </div>
+                        {item.children.map((child) => (
                           <Link
-                            key={item.ref}
-                            href={item.ref}
+                            key={child.ref}
+                            href={child.ref}
                             onClick={() => setDrop(false)}
                           >
-                            <div className="px-4 py-3 text-white hover:bg-white/20 cursor-pointer">
-                              {item.title}
+                            <div className="px-5 py-3 text-white hover:bg-white/20 cursor-pointer">
+                              {child.title}
                             </div>
                           </Link>
-                        ) : (
-                          <div
-                            key={item.title}
-                            className="px-4 py-2 text-xs uppercase tracking-[0.14em] text-purple-200/80 bg-white/5 border-t border-white/10"
-                          >
-                            {item.title.replace('— ', '')}
-                          </div>
-                        )
-                      )}
+                        ))}
+                      </div>
+                    ) : (
+                      <Link
+                        key={item.ref || item.title}
+                        href={item.ref || '#'}
+                        onClick={() => setDrop(false)}
+                      >
+                        <div className="px-4 py-3 text-white hover:bg-white/20 cursor-pointer">
+                          {item.title}
+                        </div>
+                      </Link>
+                    )
+                  )}
 
                       <button
                         onClick={onLogout}

@@ -21,7 +21,7 @@ function RegisterPage() {
     try {
       const redirectTo =
         typeof window !== 'undefined'
-          ? `${window.location.origin}/admin`
+          ? `${window.location.origin}/auth/discord-member?next=/`
           : undefined;
 
       const { error } = await supabaseClient.auth.signInWithOAuth({
@@ -71,6 +71,7 @@ function RegisterPage() {
         options: {
           data: {
             display_name: displayName || null,
+            role: 'member',
           },
         },
       });
