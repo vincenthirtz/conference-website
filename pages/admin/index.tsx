@@ -26,6 +26,36 @@ type Props = {
 
 export const getServerSideProps = withStaffPage('helper');
 
+type Shortcut = { category: string; href: string; label: string; description: string };
+
+const ADMIN_SHORTCUTS: Shortcut[] = [
+  // Base
+  { category: 'Général', href: '/admin', label: 'Dashboard', description: 'Accueil staff' },
+  // Tournois
+  { category: 'Tournois', href: '/admin/tournaments', label: 'Tournois – liste', description: 'Voir/éditer les tournois' },
+  { category: 'Tournois', href: '/admin/tournaments/create', label: 'Créer un tournoi', description: 'Nouveau tournoi' },
+  // Équipes
+  { category: 'Équipes', href: '/admin/teams', label: 'Équipes – liste', description: 'Gérer les équipes' },
+  { category: 'Équipes', href: '/admin/teams/new', label: 'Créer une équipe', description: 'Ajouter une équipe' },
+  { category: 'Équipes', href: '/admin/teams/add-member', label: 'Ajouter membre équipe', description: 'Staff: ajouter un membre' },
+  { category: 'Équipes', href: '/admin/teams/my', label: 'Gérer mon équipe (capitaine)', description: 'Espace capitaine' },
+  // Annonces
+  { category: 'Annonces', href: '/admin/announcements', label: 'Bandeau pub – liste', description: 'Annonces défilantes' },
+  // News
+  { category: 'News', href: '/admin/news', label: 'News – liste', description: 'Gérer les articles' },
+  { category: 'News', href: '/admin/news/new', label: 'Créer une news', description: 'Nouvel article' },
+  // Commentaires
+  { category: 'Commentaires', href: '/admin/comments', label: 'Commentaires – liste', description: 'Modération commentaires' },
+  // Comptes / demandes
+  { category: 'Comptes', href: '/admin/users/manage', label: 'Gérer les utilisateurs', description: 'Rôles & accès' },
+  { category: 'Comptes', href: '/admin/users/new', label: 'Créer un utilisateur', description: 'Ajout manuel' },
+  { category: 'Comptes', href: '/admin/demandes', label: 'Demandes joueurs / équipes', description: 'Valider ou refuser' },
+  // Logs / stats
+  { category: 'Logs & Stats', href: '/admin/logs', label: 'Logs staff', description: 'Journal actions' },
+  { category: 'Logs & Stats', href: '/admin/stats/teams', label: 'Stats équipes', description: 'Performances équipes' },
+  { category: 'Logs & Stats', href: '/admin/stats/maps', label: 'Stats maps', description: 'Performances par carte' },
+];
+
 function AdminProfilePage({ staff }: Props) {
   const [profile, setProfile] = useState<StaffProfile | null>(null);
   const [loading, setLoading] = useState(false);
@@ -135,31 +165,26 @@ function AdminProfilePage({ staff }: Props) {
               <InfoRow label="Profil créé le" value={createdAt} />
             </div>
           </section>
-
-          <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-6 space-y-3">
-            <h2 className="text-lg font-semibold">Raccourcis</h2>
-            <Shortcut
-              href="/admin/tournaments"
-              label="Tournois"
-              description="Créer, éditer ou publier un tournoi."
-            />
-            <Shortcut
-              href="/admin/demandes"
-              label="Demandes joueurs / équipes"
-              description="Valide ou refuse les demandes en attente."
-            />
-            <Shortcut
-              href="/admin/stats/teams"
-              label="Stats équipes"
-              description="Consulte les performances par équipe."
-            />
-            <Shortcut
-              href="/admin/logs"
-              label="Logs staff"
-              description="Historique des actions administrateur."
-            />
-          </section>
         </div>
+
+        <section className="mt-6 bg-neutral-800 border border-neutral-700 rounded-xl p-6 space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <h2 className="text-lg font-semibold">Raccourcis (menu staff)</h2>
+            <span className="text-xs text-neutral-400">
+              {ADMIN_SHORTCUTS.length} liens
+            </span>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {ADMIN_SHORTCUTS.map((s) => (
+              <Shortcut
+                key={s.href}
+                href={s.href}
+                label={`${s.category} · ${s.label}`}
+                description={s.description}
+              />
+            ))}
+          </div>
+        </section>
       </div>
     </>
   );

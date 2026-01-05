@@ -96,6 +96,40 @@ async function handler(
       return res.status(400).json({ error: 'userId et role requis.' });
     }
 
+    // Récupérer le compte cible (pour vérifier son rôle actuel)
+    const { data: target, error: targetErr } =
+      await supabaseAdmin.auth.admin.getUserById(userId);
+    if (targetErr || !target?.user) {
+      console.error('[admin/users/manage] get target error:', targetErr);
+      return res
+        .status(404)
+        .json({ error: "Utilisateur cible introuvable ou inaccessible." });
+    }
+
+    const targetRole = (target.user.user_metadata as any)?.role ?? null;
+    let targetStaffRole: string | null = null;
+    const { data: targetStaff } = await supabaseAdmin
+      .from('staff')
+      .select('role')
+      .eq('auth_user_id', userId)
+      .maybeSingle();
+    if (targetStaff?.role) targetStaffRole = targetStaff.role;
+
+    // Seul un owner peut modifier un owner ou un admin
+    const requesterRole = req?.context?.staff?.role || null;
+    const targetIsProtected =
+      targetRole === 'owner' ||
+      targetRole === 'admin' ||
+      targetStaffRole === 'owner' ||
+      targetStaffRole === 'admin';
+
+    if (targetIsProtected && requesterRole !== 'owner') {
+      return res.status(403).json({
+        error:
+          'Seul un owner peut modifier un compte owner ou admin. Action refusée.',
+      });
+    }
+
     const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
       userId,
       {

@@ -417,72 +417,21 @@ function Navbar(): JSX.Element {
                     {!isStaff && (
                       <Link
                         href="/admin/login"
-                        className="text-sm border border-purple-400/70 rounded-full px-3 py-1 hover:bg-purple-500/20 hover:border-purple-300 transition-colors"
+                        className="text-sm border border-red-500/80 rounded-full px-3 py-1 hover:bg-red-500/20 hover:border-red-300 transition-colors text-red-300 flex items-center gap-2"
                       >
+                        <span className="w-2 h-2 rounded-full bg-red-500" />
                         Connexion
                       </Link>
                     )}
 
                     {isStaff && (
-                      <div className="relative">
-                        {/* Bouton identique dans l’esprit à NavDrop (nom staff + chevron) */}
-                        <button
-                          type="button"
-                          onClick={() => setAdminMenuOpen((v) => !v)}
-                          className="flex items-center gap-2 text-sm border border-emerald-400/70 rounded-full px-3 py-1 hover:bg-emerald-500/20 hover:border-emerald-300 transition-colors"
-                        >
-                          <span>{staffName || 'Staff'}</span>
-                          <Dropdown
-                            fill="white"
-                            className={`ml-1 transition-transform duration-300 ${
-                              adminMenuOpen ? 'rotate-180' : 'rotate-0'
-                            }`}
-                          />
-                        </button>
-
-                        {/* Dropdown Admin desktop */}
-                        {adminMenuOpen && (
-                          <div className="absolute right-0 mt-2 min-w-[240px] rounded-md bg-[#1B1130]/95 border border-white/10 shadow-xl py-2 z-[999]">
-                            <div className="flex flex-col divide-y divide-white/5">
-                              {adminLinks.map((item) =>
-                                item.children && item.children.length > 0 ? (
-                                  <div key={item.title} className="py-1">
-                                    <p className="px-4 pb-1 text-[12px] uppercase tracking-[0.14em] text-gray-300">
-                                      {item.title}
-                                    </p>
-                                    {item.children.map((child) => (
-                                      <Link
-                                        key={child.ref}
-                                        href={child.ref}
-                                        className="block px-6 py-2 text-sm text-white hover:bg-white/10"
-                                        onClick={() => setAdminMenuOpen(false)}
-                                      >
-                                        {child.title}
-                                      </Link>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <Link
-                                    key={item.ref || item.title}
-                                    href={item.ref || '#'}
-                                    className="block px-4 py-2 text-sm text-white hover:bg-white/10"
-                                    onClick={() => setAdminMenuOpen(false)}
-                                  >
-                                    {item.title}
-                                  </Link>
-                                )
-                              )}
-
-                              <button
-                                className="w-full text-left px-4 py-2 text-xs text-red-200 hover:bg-red-500/20 border-t border-white/10 mt-1"
-                                onClick={handleLogout}
-                              >
-                                Déconnexion
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                      <Link
+                        href="/admin"
+                        className="flex items-center gap-2 text-sm border border-emerald-400/80 rounded-full px-3 py-1 text-emerald-200 hover:border-white hover:text-white transition"
+                      >
+                        <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                        Connecté
+                      </Link>
                     )}
                   </>
                 )}
