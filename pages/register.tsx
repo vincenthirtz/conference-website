@@ -20,10 +20,12 @@ function RegisterPage() {
     setSuccessMsg(null);
     setOauthLoading(true);
     try {
-      const redirectTo =
-        typeof window !== 'undefined'
-          ? `${window.location.origin}/auth/discord-member?next=/`
-          : undefined;
+      const baseUrl =
+        process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, '') ||
+        (typeof window !== 'undefined' ? window.location.origin : '');
+      const redirectTo = baseUrl
+        ? `${baseUrl}/auth/discord-member?next=/`
+        : undefined;
 
       const { error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'discord',

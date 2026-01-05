@@ -134,10 +134,12 @@ const AdminLoginPage = () => {
     setError(null);
     setIsSubmitting(true);
     try {
-      const redirectTo =
-        typeof window !== 'undefined'
-          ? `${window.location.origin}/auth/discord-member?next=/admin`
-          : undefined;
+      const baseUrl =
+        process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, '') ||
+        (typeof window !== 'undefined' ? window.location.origin : '');
+      const redirectTo = baseUrl
+        ? `${baseUrl}/auth/discord-member?next=/admin`
+        : undefined;
 
       const { error: oauthError } = await supabaseClient.auth.signInWithOAuth({
         provider: 'discord',
