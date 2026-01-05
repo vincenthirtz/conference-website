@@ -100,6 +100,15 @@ export default function LiveTwitchSection() {
           'https://static-cdn.jtvnw.net/jtv_user_pictures/8e26e1e3-e8d3-4ed1-8a3c-42199cda7741-profile_image-150x150.png',
       },
       {
+        channel: 'happy_ow_',
+        label: 'Happy_ow_',
+        badge: 'Player',
+        description:
+          'Gameplay OW2, ranked et scrims avec une ambiance positive. Membre des Sparkles',
+        background:
+          'https://static-cdn.jtvnw.net/jtv_user_pictures/499eb8fc-1e35-4816-a74c-458c837ae32d-profile_image-150x150.png',
+      },
+      {
         channel: 'zezzdecitron',
         label: 'ZezzDeCitron',
         badge: 'Player',
