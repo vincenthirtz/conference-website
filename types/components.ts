@@ -38,6 +38,7 @@ export interface ISpeaker {
 export type AdminLink = {
   title: string;
   ref: string;
+  children?: AdminLink[];
 };
 
 export interface INavDropProp {
