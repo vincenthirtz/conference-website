@@ -12,6 +12,7 @@ type AddMemberResponse =
       teamId: string;
       userId: string;
       role: string;
+      battle_tag?: string | null;
       captainSet: boolean;
       info?: string;
     }
@@ -33,7 +34,7 @@ async function handler(
       .json({ error: 'Supabase service role not configured' });
   }
 
-  const { teamId, userId, email, role, setCaptain } = req.body || {};
+  const { teamId, userId, email, role, setCaptain, battleTag } = req.body || {};
 
   if (!teamId || typeof teamId !== 'string') {
     return res.status(400).json({ error: 'teamId is required' });
@@ -42,6 +43,23 @@ async function handler(
   let resolvedUserId =
     typeof userId === 'string' && userId.trim().length > 0 ? userId.trim() : '';
 
+  const validateBattleTag = (tag: string) => {
+    const trimmed = (tag || '').trim();
+    const re = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
+    if (!re.test(trimmed)) {
+      throw new Error(
+        "BattleTag requis (format Pseudo#0000, alphanumérique + # + 3 à 6 chiffres)"
+      );
+    }
+    return trimmed;
+  };
+  let battleTagValue: string;
+  try {
+    battleTagValue = validateBattleTag(battleTag);
+  } catch (err: any) {
+    return res.status(400).json({ error: err?.message || 'BattleTag invalide' });
+  }
+
   try {
     // Vérifier l'équipe
     const { data: team, error: teamErr } = await supabaseAdmin
@@ -49,7 +67,6 @@ async function handler(
       .select('id, name')
       .eq('id', teamId)
       .maybeSingle();
-
     if (teamErr || !team) {
       return res.status(404).json({ error: 'Team not found' });
     }
@@ -92,6 +109,7 @@ async function handler(
       team_id: teamId,
       user_id: resolvedUserId,
       role: typeof role === 'string' && role.trim() ? role.trim() : 'player',
+      battle_tag: battleTagValue,
     };
 
     const { data: member, error: insertErr } = await supabaseAdmin
@@ -149,6 +167,7 @@ async function handler(
       teamId,
       userId: resolvedUserId,
       role: memberPayload.role,
+      battle_tag: battleTagValue,
       captainSet,
       info: captainSet
         ? 'Member added and set as captain'

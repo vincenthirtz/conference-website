@@ -13,6 +13,7 @@ type CreateResponse = {
     user_id: string;
     role: string;
     captain: boolean;
+    battle_tag: string;
   }[];
   info?: string;
   error?: string;
@@ -22,6 +23,7 @@ type MemberForm = {
   id: string;
   email: string;
   role: string;
+  battleTag: string;
 };
 
 export default function PublicCreateTeamPage() {
@@ -33,7 +35,12 @@ export default function PublicCreateTeamPage() {
   const [description, setDescription] = useState('');
   const [discord, setDiscord] = useState('');
   const [members, setMembers] = useState<MemberForm[]>([
-    { id: 'm-0', email: 'hirtzvincent+testjoueur@gmail.com', role: 'player' },
+    {
+      id: 'm-0',
+      email: 'hirtzvincent+testjoueur@gmail.com',
+      role: 'player',
+      battleTag: 'TestJoueur#0001',
+    },
   ]);
   const [captainIndex, setCaptainIndex] = useState<number | null>(0);
 
@@ -50,6 +57,7 @@ export default function PublicCreateTeamPage() {
           id: `m-${Date.now().toString(36)}-${prev.length}`,
           email: '',
           role: 'player',
+          battleTag: '',
         },
       ];
     });
@@ -87,13 +95,24 @@ export default function PublicCreateTeamPage() {
     setResult(null);
 
     try {
+      const battleTagRegex = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
       const preparedMembers = members
         .map((m, idx) => ({
           email: m.email.trim(),
           role: m.role.trim() || 'player',
+          battle_tag: m.battleTag.trim(),
           set_captain: captainIndex === idx,
         }))
         .filter((m) => m.email.length > 0);
+
+      const missingBattle = preparedMembers.find(
+        (m) => !m.battle_tag || !battleTagRegex.test(m.battle_tag)
+      );
+      if (preparedMembers.length && missingBattle) {
+        throw new Error(
+          'BattleTag requis pour chaque membre (format Pseudo#0000).'
+        );
+      }
 
       const payload = {
         name,
@@ -127,7 +146,7 @@ export default function PublicCreateTeamPage() {
       setWebsite('');
       setDescription('');
       setDiscord('');
-      setMembers([{ id: 'm-0', email: '', role: 'player' }]);
+      setMembers([{ id: 'm-0', email: '', role: 'player', battleTag: '' }]);
       setCaptainIndex(null);
     } catch (err: any) {
       setErrorMsg(err?.message ?? 'Erreur inattendue');
@@ -318,7 +337,7 @@ export default function PublicCreateTeamPage() {
                   {members.map((member, idx) => (
                     <div
                       key={member.id}
-                      className="rounded-xl border border-white/10 bg-white/5 p-3 grid gap-3 md:grid-cols-[1.2fr_0.9fr_auto] items-center"
+                      className="rounded-xl border border-white/10 bg-white/5 p-3 grid gap-3 md:grid-cols-[1.2fr_0.9fr_1.1fr_auto] items-center"
                     >
                       <div>
                         <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-gray-300 mb-1">
@@ -346,6 +365,21 @@ export default function PublicCreateTeamPage() {
                           }
                           className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/70 focus:border-emerald-400/70 transition"
                           placeholder="player / coach / sub"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-gray-300 mb-1">
+                          BattleTag *
+                        </label>
+                        <input
+                          value={member.battleTag}
+                          onChange={(e) =>
+                            handleMemberChange(idx, 'battleTag', e.target.value)
+                          }
+                          className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/70 focus:border-emerald-400/70 transition"
+                          placeholder="Pseudo#0000"
+                          required={member.email.trim().length > 0}
                         />
                       </div>
 

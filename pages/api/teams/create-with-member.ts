@@ -15,6 +15,7 @@ type Body = {
   member_email?: string | null;
   member_role?: string | null;
   member_user_id?: string | null;
+  member_battle_tag?: string | null;
   set_captain?: boolean;
   members?: MemberInput[];
 };
@@ -24,6 +25,7 @@ type MemberInput = {
   user_id?: string | null;
   role?: string | null;
   set_captain?: boolean;
+  battle_tag?: string | null;
 };
 
 type MemberResult = {
@@ -31,6 +33,7 @@ type MemberResult = {
   user_id: string;
   role: string;
   captain: boolean;
+  battle_tag: string;
 };
 
 type ApiResponse =
@@ -72,6 +75,7 @@ export default async function handler(
       user_id: m.user_id?.toString().trim() || '',
       role: m.role?.toString().trim() || '',
       set_captain: Boolean(m.set_captain),
+      battle_tag: m.battle_tag?.toString().trim() || '',
     }))
     .filter((m) => m.email || m.user_id);
 
@@ -91,7 +95,7 @@ export default async function handler(
       .json({ error: 'Provide a member to set as captain' });
   }
 
-  let memberRecords: { user_id: string; role: string; captain: boolean }[] = [];
+  let memberRecords: { user_id: string; role: string; captain: boolean; battle_tag: string }[] = [];
   let usersEmailMap: Map<string, string> | null = null;
   const ensureUsersEmailMap = async () => {
     if (usersEmailMap) return usersEmailMap;
@@ -99,15 +103,35 @@ export default async function handler(
     return usersEmailMap;
   };
 
+  const validateBattleTag = (tag: string) => {
+    const trimmed = tag.trim();
+    const re = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
+    if (!re.test(trimmed)) {
+      throw new Error(
+        "BattleTag invalide. Format attendu : Pseudo#0000 (alphanumérique + # + 3 à 6 chiffres)."
+      );
+    }
+    return trimmed;
+  };
+
   if (cleanedMembers.length === 0 && wantsMember) {
     // Fallback to single member fields
     const resolvedRole = body.member_role?.trim() || 'player';
+    const memberBattleTag = body.member_battle_tag?.trim() || '';
+    if (!memberBattleTag) {
+      return res.status(400).json({ error: 'BattleTag requis pour le membre.' });
+    }
     if (memberUserId) {
-      memberRecords.push({
-        user_id: memberUserId,
-        role: resolvedRole,
-        captain: Boolean(body.set_captain),
-      });
+      try {
+        memberRecords.push({
+          user_id: memberUserId,
+          role: resolvedRole,
+          captain: Boolean(body.set_captain),
+          battle_tag: validateBattleTag(memberBattleTag),
+        });
+      } catch (err: any) {
+        return res.status(400).json({ error: err?.message || 'BattleTag invalide' });
+      }
     } else if (memberEmail) {
       try {
         const emailMap = await ensureUsersEmailMap();
@@ -121,6 +145,7 @@ export default async function handler(
           user_id: userId,
           role: resolvedRole,
           captain: Boolean(body.set_captain),
+          battle_tag: validateBattleTag(memberBattleTag),
         });
       } catch (err: any) {
         const message =
@@ -131,13 +156,23 @@ export default async function handler(
   } else if (cleanedMembers.length > 0) {
     for (const m of cleanedMembers) {
       const resolvedRole = m.role || 'player';
+      if (!m.battle_tag) {
+        return res
+          .status(400)
+          .json({ error: 'BattleTag requis pour chaque membre.' });
+      }
 
       if (m.user_id) {
-        memberRecords.push({
-          user_id: m.user_id,
-          role: resolvedRole,
-          captain: Boolean(m.set_captain),
-        });
+        try {
+          memberRecords.push({
+            user_id: m.user_id,
+            role: resolvedRole,
+            captain: Boolean(m.set_captain),
+            battle_tag: validateBattleTag(m.battle_tag),
+          });
+        } catch (err: any) {
+          return res.status(400).json({ error: err?.message || 'BattleTag invalide' });
+        }
         continue;
       }
 
@@ -155,6 +190,7 @@ export default async function handler(
           user_id: userId,
           role: resolvedRole,
           captain: Boolean(m.set_captain),
+          battle_tag: validateBattleTag(m.battle_tag),
         });
       } catch (err: any) {
         const message =
@@ -229,6 +265,7 @@ export default async function handler(
       team_id: createdTeam.id,
       user_id: m.user_id,
       role: m.role,
+      battle_tag: m.battle_tag,
     };
 
     const { data: member, error: insertErr } = await supabaseAdmin
@@ -263,6 +300,7 @@ export default async function handler(
       user_id: m.user_id,
       role: m.role,
       captain: m.captain,
+      battle_tag: m.battle_tag,
     });
   }
 

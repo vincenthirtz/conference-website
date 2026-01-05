@@ -8,6 +8,7 @@ function RegisterPage() {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [battleTag, setBattleTag] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState(false);
@@ -72,6 +73,7 @@ function RegisterPage() {
           data: {
             display_name: displayName || null,
             role: 'member',
+            battle_tag: battleTag || null,
           },
         },
       });
@@ -86,6 +88,7 @@ function RegisterPage() {
       setEmail('');
       setPassword('');
       setConfirm('');
+      setBattleTag('');
     } catch (err: any) {
       setErrorMsg(err?.message ?? 'Erreur inattendue');
     } finally {
@@ -130,6 +133,23 @@ function RegisterPage() {
                   onChange={(e) => setDisplayName(e.target.value)}
                   className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 focus:border-purple-400/80 transition"
                   placeholder="Ex: LaKiiroi"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="battleTag"
+                  className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
+                >
+                  BattleTag (format Pseudo#0000)
+                </label>
+                <input
+                  id="battleTag"
+                  type="text"
+                  value={battleTag}
+                  onChange={(e) => setBattleTag(e.target.value)}
+                  className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 focus:border-purple-400/80 transition"
+                  placeholder="Ex: Gamerette#1234"
                 />
               </div>
 

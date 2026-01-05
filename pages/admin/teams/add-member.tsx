@@ -41,6 +41,7 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
   const [email, setEmail] = useState('');
   const [userId, setUserId] = useState('');
   const [role, setRole] = useState('player');
+  const [battleTag, setBattleTag] = useState('');
   const [setCaptain, setSetCaptain] = useState(true);
 
   const [submitting, setSubmitting] = useState(false);
@@ -76,12 +77,16 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
       if (!email.trim() && !userId.trim()) {
         throw new Error('Renseigne un email ou un userId');
       }
+      if (!battleTag.trim()) {
+        throw new Error('BattleTag requis (format Pseudo#0000).');
+      }
 
       const payload = {
         teamId,
         email: email.trim() || undefined,
         userId: userId.trim() || undefined,
         role: role.trim() || 'player',
+        battleTag: battleTag.trim(),
         setCaptain,
       };
 
@@ -99,6 +104,7 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
       setSuccess(json);
       setEmail('');
       setUserId('');
+      setBattleTag('');
     } catch (err: any) {
       setErrorMsg(err?.message ?? 'Erreur inattendue');
     } finally {
@@ -187,6 +193,20 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
                     placeholder="Prioritaire sur l'email si rempli"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm text-neutral-300 mb-1">
+                  BattleTag (Pseudo#0000) *
+                </label>
+                <input
+                  type="text"
+                  value={battleTag}
+                  onChange={(e) => setBattleTag(e.target.value)}
+                  className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Pseudo#1234"
+                  required
+                />
               </div>
 
               <div className="grid gap-4 md:grid-cols-2 items-center">

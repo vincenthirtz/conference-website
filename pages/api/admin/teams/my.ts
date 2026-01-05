@@ -99,7 +99,7 @@ export default async function handler(
     const { data: members, error: membersErr } = await supabaseAdmin
       .from('team_members')
       .select(
-        'id, user_id, display_name, role, captain, is_captain'
+        'id, user_id, display_name, role, captain, is_captain, battle_tag'
       )
       .eq('team_id', teamId)
       .order('captain', { ascending: false })

@@ -3,8 +3,12 @@ import { deleteTeamsByName } from '../utils/supabaseTestClient';
 
 const TEAM_NAME = `E2E Team ${Date.now()}`;
 const PLAYER_EMAIL = 'hirtzvincent+testjoueur@gmail.com';
+const PLAYER_BTAG = 'TestPlayer#0001';
 const EXTRA_MEMBER_EMAILS = Array.from({ length: 5 }).map(
   (_v, idx) => `hirtzvincent+testjoueur${idx + 1}@gmail.com`
+);
+const EXTRA_MEMBER_BTAGS = Array.from({ length: 5 }).map(
+  (_v, idx) => `TestMember#00${idx + 2}`
 );
 
 test.describe.serial('Team creation page', () => {
@@ -34,6 +38,7 @@ test.describe.serial('Team creation page', () => {
     // Ajouter un membre par défaut
     await page.getByPlaceholder('joueuse@email.tld').fill(PLAYER_EMAIL);
     await page.getByPlaceholder('player / coach / sub').fill('player');
+    await page.getByPlaceholder('Pseudo#0000').fill(PLAYER_BTAG);
 
     await page.getByRole('button', { name: "Créer l'équipe" }).click();
 
@@ -79,6 +84,7 @@ test.describe.serial('Team creation page', () => {
     // Premier membre déjà présent
     await page.getByPlaceholder('joueuse@email.tld').first().fill(PLAYER_EMAIL);
     await page.getByPlaceholder('player / coach / sub').first().fill('player');
+    await page.getByPlaceholder('Pseudo#0000').first().fill(PLAYER_BTAG);
 
     // Ajouter 4 autres membres (total 5)
     for (let i = 0; i < 4; i++) {
@@ -89,8 +95,10 @@ test.describe.serial('Team creation page', () => {
       const roleInput = page
         .getByPlaceholder('player / coach / sub')
         .nth(i + 1);
+      const btagInput = page.getByPlaceholder('Pseudo#0000').nth(i + 1);
       await emailInput.fill(EXTRA_MEMBER_EMAILS[i]);
       await roleInput.fill('player');
+      await btagInput.fill(EXTRA_MEMBER_BTAGS[i]);
     }
 
     await page.getByRole('button', { name: "Créer l'équipe" }).click();
