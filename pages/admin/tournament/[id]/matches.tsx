@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
+import Button from '@/components/Buttons/button';
 
 type StaffShape = {
   id: string;
@@ -350,12 +351,26 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
               />
             </div>
 
-            <button
-              type="submit"
-              className="ml-auto px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-sm font-semibold"
-            >
-              Filtrer
-            </button>
+            <div className="ml-auto flex gap-2">
+              <Button type="submit" className="px-4 py-2 text-sm" size="compact">
+                Filtrer
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                className="px-4 py-2 text-sm"
+                size="compact"
+                onClick={() => {
+                  setStageFilter('');
+                  setStatusFilter('');
+                  setRoundFilter('');
+                  setSearch('');
+                  setOffset(0);
+                }}
+              >
+                Réinitialiser
+              </Button>
+            </div>
           </form>
 
           <div className="flex flex-wrap gap-3 items-center border-t border-neutral-700 pt-3 mt-2">
@@ -363,20 +378,17 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
               Auto-scheduler : planifie automatiquement les matchs (selon les
               contraintes définies sur le tournoi).
             </div>
-            <button
+            <Button
               type="button"
               onClick={handleAutoSchedule}
               disabled={autoSchedRunning}
-              className={`px-4 py-2 rounded text-sm font-semibold ${
-                autoSchedRunning
-                  ? 'bg-blue-800 cursor-wait'
-                  : 'bg-blue-600 hover:bg-blue-700'
-              }`}
+              className="px-4 py-2 text-sm font-semibold"
+              size="compact"
             >
               {autoSchedRunning
                 ? 'Planning en cours…'
                 : 'Lancer l’auto-scheduler'}
-            </button>
+            </Button>
           </div>
         </div>
 

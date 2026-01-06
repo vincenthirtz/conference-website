@@ -2,6 +2,7 @@ import Head from 'next/head';
 import { FormEvent, useEffect, useState } from 'react';
 import { withStaffPage } from '@/utils/staff';
 import { supabaseClient } from '@/utils/supabase';
+import Button from '@/components/Buttons/button';
 import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
 type AnnouncementRow = {
@@ -307,17 +308,18 @@ export default function AdminAnnouncements({ staff }: StaffProps) {
               </div>
 
               <div className="flex items-center gap-3">
-                <button
+                <Button
                   type="submit"
+                  size="compact"
                   disabled={saving}
-                  className="inline-flex items-center px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 transition text-sm font-semibold disabled:opacity-60"
+                  className="px-4 py-2 text-sm font-semibold"
                 >
                   {saving
                     ? 'Enregistrement...'
                     : editingId
                       ? 'Mettre à jour'
                       : 'Créer'}
-                </button>
+                </Button>
                 {error && (
                   <span className="text-sm text-red-200">{error}</span>
                 )}
@@ -328,12 +330,14 @@ export default function AdminAnnouncements({ staff }: StaffProps) {
           <section className="rounded-2xl border border-white/10 bg-neutral-800/40 p-5 space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">Annonces existantes</h2>
-              <button
+              <Button
+                type="button"
+                size="compact"
                 onClick={load}
-                className="text-sm px-3 py-1.5 rounded-lg border border-white/15 hover:border-white/30 transition"
+                className="px-3 py-1.5 text-sm"
               >
                 Rafraîchir
-              </button>
+              </Button>
             </div>
 
             {loading && <div className="text-neutral-300">Chargement…</div>}

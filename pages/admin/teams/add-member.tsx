@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
+import Button from '@/components/Buttons/button';
 import { withStaffPage } from '@/utils/staff';
 
 type StaffShape = {
@@ -241,17 +242,14 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
               )}
 
               <div className="flex items-center gap-3">
-                <button
+                <Button
                   type="submit"
+                  size="compact"
                   disabled={submitting}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
-                    submitting
-                      ? 'bg-neutral-700 cursor-not-allowed'
-                      : 'bg-blue-600 hover:bg-blue-500'
-                  }`}
+                  className="px-4 py-2 text-sm font-semibold"
                 >
                   {submitting ? 'Ajout...' : 'Ajouter le membre'}
-                </button>
+                </Button>
 
                 <Link
                   href="/admin/teams"

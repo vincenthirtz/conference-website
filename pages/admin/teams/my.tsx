@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+import Button from '@/components/Buttons/button';
 import { supabaseClient } from '@/utils/supabase';
 
 type TeamLite = {
@@ -169,25 +170,28 @@ export default function MyTeamPage() {
                   : 'Vue en lecture seule.'}
               </p>
             </div>
-            <button
+            <Button
+              type="button"
+              size="compact"
+              className="px-3 py-2 text-sm"
               onClick={load}
-              className="text-sm px-3 py-2 rounded-lg border border-white/15 hover:border-white/30"
             >
               Rafraîchir
-            </button>
+            </Button>
           </div>
 
           {loading && <div className="text-neutral-300">Chargement…</div>}
           {error && (
             <div className="text-red-200 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 space-y-2">
               <div>{error}</div>
-              <button
+              <Button
                 type="button"
+                size="compact"
+                className="inline-flex items-center gap-2 text-sm"
                 onClick={() => router.push('/admin/teams/new')}
-                className="inline-flex items-center gap-2 text-sm rounded-lg border border-white/20 px-3 py-2 text-white hover:border-white/40 transition"
               >
                 Créer mon équipe
-              </button>
+              </Button>
             </div>
           )}
 
@@ -265,22 +269,19 @@ export default function MyTeamPage() {
                   </label>
                 </div>
 
-                {data.isCaptain && (
-                  <div className="pt-2">
-                    <button
-                      type="button"
-                      onClick={handleSave}
-                      disabled={saving}
-                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
-                        saving
-                          ? 'bg-neutral-700 cursor-not-allowed'
-                          : 'bg-blue-600 hover:bg-blue-500'
-                      }`}
-                    >
-                      {saving ? 'Enregistrement…' : 'Enregistrer'}
-                    </button>
-                  </div>
-                )}
+            {data.isCaptain && (
+              <div className="pt-2">
+                <Button
+                  type="button"
+                  size="compact"
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="px-4 py-2 text-sm font-semibold"
+                >
+                  {saving ? 'Enregistrement…' : 'Enregistrer'}
+                </Button>
+              </div>
+            )}
               </section>
 
               <section className="bg-neutral-800 border border-white/10 rounded-xl p-5 space-y-3">

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import Button from '@/components/Buttons/button';
 import { withStaffPage } from '@/utils/staff';
 import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
@@ -109,19 +110,19 @@ function AdminTournamentsPage({ staff }: Props) {
             <option value="archived">Archivé</option>
           </select>
 
-          <button
-            type="submit"
-            className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-semibold"
-          >
+          <Button type="submit" size="compact" className="px-4">
             Rechercher
-          </button>
+          </Button>
 
-          <Link
+          <Button
+            as="link"
             href="/admin/tournaments/create"
-            className="ml-auto bg-green-600 hover:bg-green-700 px-4 py-2 rounded font-semibold"
+            type="button"
+            size="compact"
+            className="ml-auto px-4"
           >
             + Nouveau tournoi
-          </Link>
+          </Button>
         </form>
 
         {/* Table */}
@@ -186,34 +187,30 @@ function AdminTournamentsPage({ staff }: Props) {
 
         {/* Pagination */}
         <div className="flex justify-between items-center mt-6">
-          <button
+          <Button
+            type="button"
+            size="compact"
             disabled={offset === 0}
             onClick={() => setOffset(Math.max(0, offset - limit))}
-            className={`px-3 py-2 rounded ${
-              offset === 0
-                ? 'bg-neutral-700 opacity-40 cursor-not-allowed'
-                : 'bg-neutral-700 hover:bg-neutral-600'
-            }`}
+            className="px-3 py-2"
           >
             ← Précédent
-          </button>
+          </Button>
 
           <span className="text-neutral-400">
             {offset + 1} – {offset + tournaments.length}
             {total ? ` / ${total}` : ''}
           </span>
 
-          <button
+          <Button
+            type="button"
+            size="compact"
             disabled={total !== null && offset + limit >= total}
             onClick={() => setOffset(offset + limit)}
-            className={`px-3 py-2 rounded ${
-              total !== null && offset + limit >= total
-                ? 'bg-neutral-700 opacity-40 cursor-not-allowed'
-                : 'bg-neutral-700 hover:bg-neutral-600'
-            }`}
+            className="px-3 py-2"
           >
             Suivant →
-          </button>
+          </Button>
         </div>
       </div>
     </>

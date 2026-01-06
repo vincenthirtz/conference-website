@@ -1,6 +1,6 @@
 import Head from 'next/head';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 import { supabaseClient } from '@/utils/supabase';
 import { withStaffPage } from '@/utils/staff';
@@ -198,6 +198,16 @@ function AdminProfilePage({ staff }: Props) {
     ? new Date(profile.created_at).toLocaleString()
     : '—';
 
+  const shortcutsByCategory = useMemo(() => {
+    const grouped = new Map<string, Shortcut[]>();
+    ADMIN_SHORTCUTS.forEach((s) => {
+      const list = grouped.get(s.category) || [];
+      list.push(s);
+      grouped.set(s.category, list);
+    });
+    return Array.from(grouped.entries());
+  }, []);
+
   return (
     <>
       <Head>
@@ -260,18 +270,26 @@ function AdminProfilePage({ staff }: Props) {
         <section className="mt-6 bg-neutral-800 border border-neutral-700 rounded-xl p-6 space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <h2 className="text-lg font-semibold">Gestion</h2>
-            <span className="text-xs text-neutral-400">
-              {ADMIN_SHORTCUTS.length} liens
-            </span>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {ADMIN_SHORTCUTS.map((s) => (
-              <Shortcut
-                key={s.href}
-                href={s.href}
-                label={`${s.category} · ${s.label}`}
-                description={s.description}
-              />
+          <div className="space-y-5">
+            {shortcutsByCategory.map(([category, list]) => (
+              <div key={category} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-neutral-200">
+                    {category}
+                  </h3>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {list.map((s) => (
+                    <Shortcut
+                      key={s.href}
+                      href={s.href}
+                      label={s.label}
+                      description={s.description}
+                    />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </section>

@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
+import Button from '@/components/Buttons/button';
 import { withStaffPage } from '@/utils/staff';
 
 type StaffShape = {
@@ -346,25 +347,19 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                 )}
 
                 <div className="flex items-center gap-3">
-                  <button
+                  <Button
                     type="submit"
+                    size="compact"
                     disabled={saving}
-                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
-                      saving
-                        ? 'bg-neutral-700 cursor-not-allowed'
-                        : 'bg-blue-600 hover:bg-blue-500'
-                    }`}
+                    className="px-4 py-2 text-sm font-semibold"
                   >
-                    {saving
-                      ? 'Enregistrement...'
-                      : 'Mettre à jour l&apos;équipe'}
-                  </button>
+                    {saving ? 'Enregistrement...' : `Mettre à jour l'équipe`}
+                  </Button>
 
-                  <Link
-                    href="/admin/teams"
-                    className="text-sm text-neutral-300 hover:text-white"
-                  >
-                    Liste des équipes
+                  <Link href="/admin/teams">
+                    <Button type="button" size="compact" className="px-3 py-2 text-sm">
+                      Retour liste
+                    </Button>
                   </Link>
                 </div>
               </form>

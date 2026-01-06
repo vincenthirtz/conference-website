@@ -6,6 +6,7 @@ import slugify from 'slugify';
 import { supabaseClient } from '@/utils/supabase';
 import { withStaffPage } from '@/utils/staff';
 import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
+import Button from '@/components/Buttons/button';
 
 type Props = {
   staff: {
@@ -166,18 +167,18 @@ export default function AdminNewsCreate({ staff }: Props) {
           </div>
 
           <div className="flex items-center gap-3">
-            <button
+            <Button
               type="submit"
+              size="compact"
               disabled={loading}
-              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 transition disabled:opacity-60"
+              className="px-4 py-2"
             >
               {loading ? 'Enregistrement…' : 'Enregistrer'}
-            </button>
-            <Link
-              href="/admin/news"
-              className="px-4 py-2 rounded-lg border border-white/15 hover:border-white/30"
-            >
-              Annuler
+            </Button>
+            <Link href="/admin/news">
+              <Button type="button" size="compact" className="px-4 py-2">
+                Annuler
+              </Button>
             </Link>
           </div>
         </form>

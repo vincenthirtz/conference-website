@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { supabaseClient } from '@/utils/supabase';
+import Button from '@/components/Buttons/button';
 import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
 type NewsRow = {
@@ -105,18 +106,19 @@ export default function AdminNewsList({ staff }: Props) {
         </header>
 
         <div className="flex items-center justify-between gap-4 mb-4">
-          <Link
-            href="/admin/news/new"
-            className="inline-flex items-center px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 transition text-sm font-semibold"
-          >
-            Nouvelle news
+          <Link href="/admin/news/new">
+            <Button type="button" size="compact" className="px-4">
+              Nouvelle news
+            </Button>
           </Link>
-          <button
+          <Button
+            type="button"
+            size="compact"
             onClick={() => load()}
-            className="text-sm px-3 py-2 rounded-lg border border-white/10 hover:border-white/20 transition"
+            className="px-3 py-2 text-sm"
           >
             Rafraîchir
-          </button>
+          </Button>
         </div>
 
         {loading && <div className="text-neutral-300">Chargement…</div>}

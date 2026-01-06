@@ -16,6 +16,11 @@ export interface IButton {
   type: ButtonType;
   disabled?: boolean;
   test?: string;
+  size?: 'default' | 'compact';
+  as?: 'button' | 'link';
+  href?: string;
+  target?: string;
+  rel?: string;
 }
 
 export interface IDropdown {

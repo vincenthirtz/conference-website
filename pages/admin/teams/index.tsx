@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import Button from '@/components/Buttons/button';
 import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 import { withStaffPage } from '@/utils/staff';
 
@@ -123,12 +124,15 @@ function AdminTeamsListPage({ staff }: StaffProps) {
             </p>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
-            <Link
+            <Button
+              as="link"
               href="/admin/teams/new"
-              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 transition text-sm font-semibold"
+              type="button"
+              size="compact"
+              className="px-4"
             >
               + Nouvelle équipe
-            </Link>
+            </Button>
             <StaffRoleBadge staff={staff} />
           </div>
         </div>
@@ -159,12 +163,9 @@ function AdminTeamsListPage({ staff }: StaffProps) {
             <option value="false">Inactives</option>
           </select>
 
-          <button
-            type="submit"
-            className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-500 transition text-sm font-semibold"
-          >
+          <Button type="submit" size="compact" className="px-4">
             Rechercher
-          </button>
+          </Button>
         </form>
 
         {/* Table */}
@@ -254,34 +255,30 @@ function AdminTeamsListPage({ staff }: StaffProps) {
 
         {/* Pagination */}
         <div className="flex justify-between items-center mt-6">
-          <button
+          <Button
+            type="button"
+            size="compact"
             disabled={offset === 0 || loading}
             onClick={() => setOffset(Math.max(0, offset - limit))}
-            className={`px-3 py-2 rounded ${
-              offset === 0 || loading
-                ? 'bg-neutral-700 opacity-50 cursor-not-allowed'
-                : 'bg-neutral-700 hover:bg-neutral-600'
-            }`}
+            className="px-3 py-2"
           >
             ← Précédent
-          </button>
+          </Button>
 
           <span className="text-neutral-400 text-sm">
             {offset + 1} – {offset + teams.length}
             {total ? ` / ${total}` : ''}
           </span>
 
-          <button
+          <Button
+            type="button"
+            size="compact"
             disabled={loading || (total !== null && offset + limit >= total)}
             onClick={() => setOffset(offset + limit)}
-            className={`px-3 py-2 rounded ${
-              loading || (total !== null && offset + limit >= total)
-                ? 'bg-neutral-700 opacity-50 cursor-not-allowed'
-                : 'bg-neutral-700 hover:bg-neutral-600'
-            }`}
+            className="px-3 py-2"
           >
             Suivant →
-          </button>
+          </Button>
         </div>
 
         {deleteTarget && (

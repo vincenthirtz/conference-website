@@ -5,6 +5,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
+import Button from '@/components/Buttons/button';
 
 type StaffShape = {
   id: string;
@@ -275,13 +276,14 @@ function AdminNewTeamPage({ staff }: StaffProps) {
                     auth.users) et un rôle.
                   </p>
                 </div>
-                <button
+                <Button
                   type="button"
+                  size="compact"
                   onClick={addMemberRow}
-                  className="px-3 py-1.5 rounded-md bg-neutral-700 hover:bg-neutral-600 text-sm"
+                  className="px-3 py-1.5 text-sm"
                 >
                   + Ajouter un membre
-                </button>
+                </Button>
               </div>
 
               <div className="space-y-3">
@@ -319,14 +321,15 @@ function AdminNewTeamPage({ staff }: StaffProps) {
                       />
                     </div>
                     <div className="flex items-end">
-                      <button
+                      <Button
                         type="button"
+                        size="compact"
                         disabled={members.length === 1}
                         onClick={() => removeMemberRow(index)}
-                        className="px-3 py-2 rounded-md border border-red-700/70 text-xs text-red-300 hover:bg-red-900/40 disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="px-3 py-2 text-xs border border-red-700/70 text-red-200"
                       >
                         Suppr.
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -393,21 +396,23 @@ function AdminNewTeamPage({ staff }: StaffProps) {
                 gère pas encore la création automatique).
               </p>
 
-              <button
+              <Button
                 type="submit"
+                size="compact"
                 disabled={submitting}
-                className="w-full mt-2 inline-flex items-center justify-center rounded-md bg-blue-600 hover:bg-blue-700 px-4 py-2.5 text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full mt-2 px-4 py-2.5 text-sm font-semibold"
               >
                 {submitting ? 'Création en cours…' : "Créer l'équipe"}
-              </button>
+              </Button>
 
-              <button
+              <Button
                 type="button"
+                size="compact"
                 onClick={() => router.push('/admin/teams')}
-                className="w-full mt-2 inline-flex items-center justify-center rounded-md bg-neutral-700 hover:bg-neutral-600 px-4 py-2.5 text-sm"
+                className="w-full mt-2 px-4 py-2.5 text-sm"
               >
                 Annuler
-              </button>
+              </Button>
             </section>
           </div>
         </form>

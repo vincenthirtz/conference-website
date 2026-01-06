@@ -125,12 +125,9 @@ function AdminCommentsPage({ staff }: Props) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <button
-            type="submit"
-            className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-semibold text-sm"
-          >
+          <Button type="submit" size="compact" className="px-4 py-2 text-sm">
             Rechercher
-          </button>
+          </Button>
         </form>
 
         {error && (
@@ -181,13 +178,14 @@ function AdminCommentsPage({ staff }: Props) {
                   >
                     Sauvegarder
                   </Button>
-                  <button
+                  <Button
                     type="button"
+                    size="compact"
+                    className="px-3 py-1 text-sm bg-red-800 hover:bg-red-700"
                     onClick={() => handleDelete(c.id)}
-                    className="text-sm text-red-300 hover:text-red-200"
                   >
                     Supprimer
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))

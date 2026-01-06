@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import Button from '@/components/Buttons/button';
 import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
 type Props = {
@@ -147,8 +148,8 @@ function AdminTournamentCreatePage({ staff }: Props) {
           <StaffRoleBadge staff={staff} />
         </div>
 
-        {/* Card */}
-        <div className="max-w-3xl bg-neutral-800 border border-neutral-700 rounded-xl p-6 pt-20">
+        {/* Card full width */}
+        <div className="bg-neutral-800 border border-neutral-700 rounded-xl p-6 pt-20">
           {errorMsg && (
             <div className="mb-4 rounded bg-red-900/60 border border-red-600 px-4 py-3 text-sm">
               {errorMsg}
@@ -342,26 +343,24 @@ function AdminTournamentCreatePage({ staff }: Props) {
 
             {/* Actions */}
             <div className="flex justify-between items-center pt-2">
-              <button
+              <Button
                 type="button"
-                className="px-4 py-2 rounded border border-neutral-600 text-neutral-200 hover:bg-neutral-800"
+                size="compact"
+                className="px-4 py-2"
                 onClick={() => router.push('/admin/tournaments')}
                 disabled={submitting}
               >
                 Annuler
-              </button>
+              </Button>
 
-              <button
+              <Button
                 type="submit"
+                size="compact"
                 disabled={submitting}
-                className={`px-5 py-2 rounded font-semibold ${
-                  submitting
-                    ? 'bg-blue-800 cursor-wait'
-                    : 'bg-blue-600 hover:bg-blue-700'
-                }`}
+                className="px-5 py-2 font-semibold"
               >
                 {submitting ? 'Création...' : 'Créer le tournoi'}
-              </button>
+              </Button>
             </div>
           </form>
         </div>
