@@ -357,7 +357,6 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
               </Button>
               <Button
                 type="button"
-                variant="secondary"
                 className="px-4 py-2 text-sm"
                 size="compact"
                 onClick={() => {
