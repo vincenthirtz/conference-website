@@ -357,7 +357,11 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                   </Button>
 
                   <Link href="/admin/teams">
-                    <Button type="button" size="compact" className="px-3 py-2 text-sm">
+                    <Button
+                      type="button"
+                      size="compact"
+                      className="px-3 py-2 text-sm"
+                    >
                       Retour liste
                     </Button>
                   </Link>
@@ -378,64 +382,65 @@ function AdminEditTeamPage({ staff }: StaffProps) {
               <li>• Les réseaux sont optionnels.</li>
             </ul>
           </aside>
-        </div>
-      </div>
 
-      <div className="min-h-[0] bg-neutral-800 border border-neutral-700 rounded-xl p-6 mt-6">
-        <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
-          <div>
-            <h2 className="text-xl font-semibold">Membres de l&apos;équipe</h2>
-            <p className="text-sm text-neutral-400">
-              Liste des membres dans{' '}
-              <code className="font-mono">team_members</code>.
-            </p>
-          </div>
-          <Link
-            href="/admin/teams/add-member"
-            className="text-sm px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 transition"
-          >
-            + Ajouter un membre
-          </Link>
-        </div>
+          <aside className="bg-neutral-800 border border-neutral-700 rounded-xl p-5 space-y-3">
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl font-semibold text-white">
+                Membres de l&apos;équipe
+              </h2>
+              <Link href="/admin/teams/add-member">
+                <Button
+                  type="button"
+                  size="compact"
+                  className="px-3 py-2 text-sm"
+                >
+                  + Ajouter un membre
+                </Button>
+              </Link>
+            </div>
 
-        {membersLoading ? (
-          <p className="text-sm text-neutral-300">Chargement des membres…</p>
-        ) : membersError ? (
-          <div className="text-sm text-red-200 bg-red-500/10 border border-red-500/40 rounded-lg px-3 py-2">
-            {membersError}
-          </div>
-        ) : members.length === 0 ? (
-          <p className="text-sm text-neutral-400">
-            Aucun membre pour cette équipe.
-          </p>
-        ) : (
-          <div className="overflow-auto">
-            <table className="w-full text-left min-w-[520px]">
-              <thead className="text-xs uppercase tracking-[0.08em] text-neutral-400">
-                <tr>
-                  <th className="px-3 py-2">user_id</th>
-                  <th className="px-3 py-2">Rôle</th>
-                  <th className="px-3 py-2">Ajouté le</th>
-                </tr>
-              </thead>
-              <tbody>
-                {members.map((m) => (
-                  <tr key={m.id} className="border-t border-neutral-700">
-                    <td className="px-3 py-2 font-mono text-xs break-all text-neutral-200">
-                      {m.user_id}
-                    </td>
-                    <td className="px-3 py-2 text-sm">{m.role}</td>
-                    <td className="px-3 py-2 text-sm text-neutral-300">
-                      {m.created_at
-                        ? new Date(m.created_at).toLocaleString()
-                        : '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+            {membersLoading ? (
+              <p className="text-sm text-neutral-300">
+                Chargement des membres…
+              </p>
+            ) : membersError ? (
+              <div className="text-sm text-red-200 bg-red-500/10 border border-red-500/40 rounded-lg px-3 py-2">
+                {membersError}
+              </div>
+            ) : members.length === 0 ? (
+              <p className="text-sm text-neutral-400">
+                Aucun membre pour cette équipe.
+              </p>
+            ) : (
+              <div className="overflow-auto">
+                <table className="w-full text-left min-w-[520px]">
+                  <thead className="text-xs uppercase tracking-[0.08em] text-neutral-400">
+                    <tr>
+                      <th className="px-3 py-2">user_id</th>
+                      <th className="px-3 py-2">Rôle</th>
+                      <th className="px-3 py-2">Ajouté le</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {members.map((m) => (
+                      <tr key={m.id} className="border-t border-neutral-700">
+                        <td className="px-3 py-2 font-mono text-xs break-all text-neutral-200">
+                          {m.user_id}
+                        </td>
+                        <td className="px-3 py-2 text-sm">{m.role}</td>
+                        <td className="px-3 py-2 text-sm text-neutral-300">
+                          {m.created_at
+                            ? new Date(m.created_at).toLocaleString()
+                            : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </aside>
+        </div>
       </div>
     </>
   );
