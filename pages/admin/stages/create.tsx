@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
 type StaffShape = {
   id: string;
@@ -232,7 +231,6 @@ function AdminStageCreatePage({ staff }: StaffProps) {
               Associe cette phase à un tournoi puis configure ses paramètres.
             </p>
           </div>
-          <StaffRoleBadge staff={staff} />
         </div>
 
         <div className="max-w-3xl bg-neutral-800 border border-neutral-700 rounded-xl p-6 pt-20">

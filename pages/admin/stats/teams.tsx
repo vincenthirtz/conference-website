@@ -6,7 +6,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
 type StaffShape = {
   id: string;
@@ -201,7 +200,6 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
               points), filtré par tournoi et volume de matchs.
             </p>
           </div>
-          <StaffRoleBadge staff={staff} />
         </header>
 
         {/* Filters */}

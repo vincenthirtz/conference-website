@@ -3,7 +3,6 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import Button from '@/components/Buttons/button';
-import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
 type Props = {
   staff: {
@@ -145,7 +144,6 @@ function AdminTournamentCreatePage({ staff }: Props) {
               / matchs ensuite.
             </p>
           </div>
-          <StaffRoleBadge staff={staff} />
         </div>
 
         {/* Card full width */}

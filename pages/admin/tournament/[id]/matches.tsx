@@ -6,7 +6,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 import Button from '@/components/Buttons/button';
 
 type StaffShape = {
@@ -272,7 +271,6 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
               </p>
             )}
           </div>
-          <StaffRoleBadge staff={staff} />
         </div>
 
         {/* Messages */}

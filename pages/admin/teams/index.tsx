@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Button from '@/components/Buttons/button';
-import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 import { withStaffPage } from '@/utils/staff';
 
 type StaffShape = {
@@ -133,7 +132,6 @@ function AdminTeamsListPage({ staff }: StaffProps) {
             >
               + Nouvelle équipe
             </Button>
-            <StaffRoleBadge staff={staff} />
           </div>
         </div>
 

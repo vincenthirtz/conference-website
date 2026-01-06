@@ -5,7 +5,6 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
 type StaffShape = {
   id: string;
@@ -190,7 +189,6 @@ function AdminLogsPage({ staff }: StaffProps) {
               teams…).
             </p>
           </div>
-          <StaffRoleBadge staff={staff} />
         </div>
 
         {/* Filters */}

@@ -5,7 +5,6 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import { supabaseAdmin as supabase } from '@/utils/supabase';
-import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge'; // optionnel si tu veux l'afficher
 import { useRouter } from 'next/router';
 
 type Team = {

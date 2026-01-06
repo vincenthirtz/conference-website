@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 import { supabaseClient } from '@/utils/supabase';
 import { withStaffPage } from '@/utils/staff';
 
@@ -369,7 +368,6 @@ function AdminDemandesPage() {
               tournoi. Filtre par type, statut et tournoi.
             </p>
           </div>
-          <StaffRoleBadge staff={staff} />
         </div>
 
         {/* Messages */}

@@ -6,7 +6,6 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Image from 'next/image';
 import { withStaffPage } from '@/utils/staff';
-import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
 type StaffShape = {
   id: string;
@@ -317,7 +316,6 @@ function AdminMatchEditPage({ staff }: StaffProps) {
               </p>
             )}
           </div>
-          <StaffRoleBadge staff={staff} />
         </div>
 
         {/* Messages */}

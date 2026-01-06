@@ -4,7 +4,6 @@ import { useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 import Button from '@/components/Buttons/button';
 
 type StaffShape = {
@@ -143,10 +142,6 @@ function AdminNewTeamPage({ staff }: StaffProps) {
               Renseigne les informations générales + tous les membres de
               l&apos;équipe.
             </p>
-          </div>
-
-          <div className="flex flex-col items-end gap-3">
-            <StaffRoleBadge staff={staff} />
           </div>
         </div>
 

@@ -5,6 +5,7 @@ import type {
   SetStateAction,
 } from 'react';
 import type { City, Speaker, Team, SVGTypes } from './types';
+import type { StaffRole } from '@/utils/staff';
 
 export type ButtonType = 'button' | 'submit' | 'reset' | undefined;
 
@@ -43,6 +44,7 @@ export interface ISpeaker {
 export type AdminLink = {
   title: string;
   ref: string;
+  minRole?: StaffRole;
   children?: AdminLink[];
 };
 
@@ -52,6 +54,7 @@ export interface INavDropProp {
   staffName: string | null;
   adminLinks: AdminLink[];
   adminLoading: boolean;
+  offsetTop?: number;
   onLogout: () => void;
 }
 

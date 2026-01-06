@@ -3,7 +3,6 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Button from '@/components/Buttons/button';
 import { withStaffPage } from '@/utils/staff';
-import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
 type Tournament = {
   id: string;
@@ -81,7 +80,6 @@ function AdminTournamentsPage({ staff }: Props) {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold">Gestion des tournois</h1>
-          <StaffRoleBadge staff={staff} />
         </div>
 
         {/* Filters */}

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { withStaffPage } from '@/utils/staff';
 import { supabaseClient } from '@/utils/supabase';
-import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
 type StaffShape = {
   id: string;
@@ -110,7 +109,6 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
               Modifier le rôle des nouveaux comptes (default: member).
             </p>
           </div>
-          <StaffRoleBadge staff={staff} />
         </header>
 
         <div className="flex items-center gap-3 mb-4 flex-wrap">

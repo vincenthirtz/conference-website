@@ -5,7 +5,6 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { supabaseClient } from '@/utils/supabase';
 import Button from '@/components/Buttons/button';
-import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
 type NewsRow = {
   id: string;
@@ -103,7 +102,6 @@ export default function AdminNewsList({ staff }: Props) {
               Créer, éditer ou supprimer les actualités du site.
             </p>
           </div>
-          <StaffRoleBadge staff={staff} />
         </header>
 
         <div className="flex items-center justify-between gap-4 mb-4">

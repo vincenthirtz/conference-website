@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react';
 import slugify from 'slugify';
 import { supabaseClient } from '@/utils/supabase';
 import { withStaffPage } from '@/utils/staff';
-import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
 type Props = {
   staff: {
@@ -131,7 +130,6 @@ export default function AdminNewsEdit({ staff }: Props) {
               Met à jour le contenu ou le statut.
             </p>
           </div>
-          <StaffRoleBadge staff={staff} />
         </header>
 
         {loading && <div className="text-neutral-300">Chargement…</div>}

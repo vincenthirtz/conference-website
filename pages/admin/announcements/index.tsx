@@ -3,7 +3,6 @@ import { FormEvent, useEffect, useState } from 'react';
 import { withStaffPage } from '@/utils/staff';
 import { supabaseClient } from '@/utils/supabase';
 import Button from '@/components/Buttons/button';
-import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
 type AnnouncementRow = {
   id: string;
@@ -202,7 +201,6 @@ export default function AdminAnnouncements({ staff }: StaffProps) {
               page d&apos;accueil.
             </p>
           </div>
-          <StaffRoleBadge staff={staff} />
         </header>
 
         <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">

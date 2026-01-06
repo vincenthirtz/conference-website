@@ -7,16 +7,26 @@ import type { INavDropProp } from '../../types/components';
 
 const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(
   (
-    { setDrop, isStaff, staffName, adminLinks, adminLoading, onLogout },
+    {
+      setDrop,
+      isStaff,
+      staffName,
+      adminLinks,
+      adminLoading,
+      offsetTop = 74,
+      onLogout,
+    },
     ref
   ): JSX.Element => {
     const [show, setShow] = useState<string | null>(null);
     const [adminMenuOpen, setAdminMenuOpen] = useState(false);
+    const dropHeight = `calc(100vh - ${offsetTop}px)`;
 
     return (
       <div
         ref={ref}
-        className="z-[99] absolute left-0 top-[74px] w-full h-screen bg-[#1B1130]/90 backdrop-filter backdrop-blur-md"
+        className="z-[99] absolute left-0 w-full bg-[#1B1130]/90 backdrop-filter backdrop-blur-md"
+        style={{ top: offsetTop, height: dropHeight }}
       >
         <div className="flex flex-col p-5 pb-8 w-full">
           {/* ----------------------------------------------------

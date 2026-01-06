@@ -5,7 +5,6 @@ import { useState } from 'react';
 import slugify from 'slugify';
 import { supabaseClient } from '@/utils/supabase';
 import { withStaffPage } from '@/utils/staff';
-import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 import Button from '@/components/Buttons/button';
 
 type Props = {
@@ -88,7 +87,6 @@ export default function AdminNewsCreate({ staff }: Props) {
               Publie une actualité pour le site.
             </p>
           </div>
-          <StaffRoleBadge staff={staff} />
         </header>
 
         <form

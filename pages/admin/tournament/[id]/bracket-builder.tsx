@@ -6,7 +6,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
 type StaffShape = {
   id: string;
@@ -166,8 +165,7 @@ function AdminBracketBuilderPage({ staff }: StaffProps) {
 
     for (const m of matches) {
       const col =
-        m.column_index ??
-        (m.round_number != null ? m.round_number - 1 : 0);
+        m.column_index ?? (m.round_number != null ? m.round_number - 1 : 0);
 
       if (!colMap.has(col)) colMap.set(col, []);
       colMap.get(col)!.push(m);
@@ -381,7 +379,6 @@ function AdminBracketBuilderPage({ staff }: StaffProps) {
               </p>
             )}
           </div>
-          <StaffRoleBadge staff={staff} />
         </div>
 
         {/* Messages */}

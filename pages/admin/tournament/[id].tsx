@@ -6,7 +6,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
 type StaffShape = {
   id: string;
@@ -168,7 +167,6 @@ function AdminTournamentPage({ staff }: StaffProps) {
           </div>
 
           <div className="flex flex-col items-end gap-3">
-            <StaffRoleBadge staff={staff} />
             {tournament && (
               <div className="flex flex-wrap gap-2 justify-end">
                 <span

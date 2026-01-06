@@ -5,7 +5,6 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
-import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
 type StaffShape = {
   id: string;
@@ -229,7 +228,6 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
               Mets à jour les informations principales du tournoi.
             </p>
           </div>
-          <StaffRoleBadge staff={staff} />
         </div>
 
         {/* Card */}

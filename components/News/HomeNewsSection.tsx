@@ -60,7 +60,7 @@ function HomeNewsSection(): JSX.Element {
         }
         if (mounted) {
           const items =
-            json.items?.map((row: any) => ({
+            json.items?.map((row: any): NewsItem => ({
               id: row.id,
               title: row.title,
               slug: row.slug,
@@ -76,12 +76,16 @@ function HomeNewsSection(): JSX.Element {
             })) || [];
           setNews(items);
           setAvailableTags((prev) => {
-            const tagsFromData = items.map((row) => row.tag || 'general');
-            const merged = new Set([
-              ...prev,
-              ...tagsFromData,
-              selectedTag !== 'all' ? selectedTag : null,
-            ].filter(Boolean) as string[]);
+            const tagsFromData = items.map(
+              (row: NewsItem) => row.tag || 'general'
+            );
+            const merged = new Set(
+              [
+                ...prev,
+                ...tagsFromData,
+                selectedTag !== 'all' ? selectedTag : null,
+              ].filter(Boolean) as string[]
+            );
             return Array.from(merged).sort();
           });
         }

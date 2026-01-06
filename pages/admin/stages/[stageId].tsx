@@ -5,7 +5,6 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 
 type StaffShape = {
   id: string;
@@ -234,7 +233,6 @@ function AdminStagePage({ staff }: StaffProps) {
               Overview et actions rapides pour cette phase (stage).
             </p>
           </div>
-          <StaffRoleBadge staff={staff} />
         </div>
 
         {/* Messages */}

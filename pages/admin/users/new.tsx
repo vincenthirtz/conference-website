@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import Head from 'next/head';
-import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
 import Button from '@/components/Buttons/button';
 import { withStaffPage } from '@/utils/staff';
 
@@ -90,7 +89,6 @@ function AdminCreateUserPage({ staff }: StaffProps) {
               staff.
             </p>
           </div>
-          <StaffRoleBadge staff={staff} />
         </header>
 
         <div className="grid gap-6 lg:grid-cols-[2fr,1.2fr] items-start">
