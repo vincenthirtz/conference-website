@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Head from 'next/head';
-import Link from 'next/link';
 import { StaffRoleBadge } from '@/components/admin/StaffRoleBadge';
+import Button from '@/components/Buttons/button';
 import { withStaffPage } from '@/utils/staff';
 
 type StaffShape = {
@@ -163,24 +163,14 @@ function AdminCreateUserPage({ staff }: StaffProps) {
               )}
 
               <div className="flex items-center gap-3">
-                <button
+                <Button
                   type="submit"
+                  size="compact"
                   disabled={loading}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
-                    loading
-                      ? 'bg-neutral-700 cursor-not-allowed'
-                      : 'bg-blue-600 hover:bg-blue-500'
-                  }`}
+                  className="px-4 py-2 text-sm font-semibold"
                 >
-                  {loading ? 'Création...' : 'Créer l&apos;utilisateur'}
-                </button>
-
-                <Link
-                  href="/admin"
-                  className="text-sm text-neutral-300 hover:text-white"
-                >
-                  Dashboard admin
-                </Link>
+                  {loading ? 'Création...' : `Créer l'utilisateur`}
+                </Button>
               </div>
             </form>
           </section>
