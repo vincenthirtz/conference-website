@@ -26,6 +26,7 @@ export default function AdminNewsCreate({ staff }: Props) {
   const [form, setForm] = useState({
     title: '',
     slug: '',
+    tag: 'general',
     excerpt: '',
     imageUrl: '',
     content: '',
@@ -113,6 +114,20 @@ export default function AdminNewsCreate({ staff }: Props) {
               value={form.slug}
               onChange={(v) => updateField('slug', slugifyValue(v))}
             />
+          </div>
+
+          <div className="grid gap-2">
+            <Field
+              label="Tag / catégorie"
+              placeholder="general, tournoi, announcement..."
+              value={form.tag}
+              onChange={(v) => updateField('tag', slugifyValue(v))}
+              required
+            />
+            <p className="text-xs text-neutral-400">
+              Utilisé pour filtrer les news par catégorie (slug simple, ex :
+              tournoi).
+            </p>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">

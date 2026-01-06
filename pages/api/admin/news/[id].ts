@@ -9,6 +9,7 @@ import {
 type NewsPayload = {
   title?: string;
   slug?: string;
+  tag?: string;
   excerpt?: string;
   content?: string;
   imageUrl?: string;
@@ -19,6 +20,12 @@ type NewsPayload = {
 function normalizeSlug(title?: string, slug?: string) {
   const base = slug?.trim().length ? slug : title || '';
   return slugify(base, { lower: true, strict: true });
+}
+
+function normalizeTag(tag?: string) {
+  const cleaned = (tag || '').trim();
+  if (!cleaned) return 'general';
+  return slugify(cleaned, { lower: true, strict: true });
 }
 
 export default async function handler(
@@ -73,7 +80,7 @@ export default async function handler(
 
     const { data: existing, error: existingErr } = await admin
       .from('news')
-      .select('published_at, status')
+      .select('published_at, status, tag')
       .eq('id', id)
       .maybeSingle();
 
@@ -84,6 +91,7 @@ export default async function handler(
         .json({ error: 'Impossible de charger la news existante.' });
     }
 
+    const tagValue = normalizeTag(body.tag ?? existing?.tag ?? '');
     const slug = normalizeSlug(body.title, body.slug);
     let publishedAt: string | null = null;
     if (body.status === 'published') {
@@ -101,6 +109,7 @@ export default async function handler(
     const payload = {
       title: body.title,
       slug,
+      tag: tagValue,
       excerpt: body.excerpt ?? null,
       content: body.content,
       image_url: body.imageUrl ?? null,

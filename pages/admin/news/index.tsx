@@ -11,6 +11,7 @@ type NewsRow = {
   id: string;
   title: string;
   slug: string;
+  tag?: string | null;
   status: 'draft' | 'published';
   published_at: string | null;
   created_at: string;
@@ -141,6 +142,7 @@ export default function AdminNewsList({ staff }: Props) {
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-lg font-semibold">{item.title}</span>
+                  {item.tag && <TagBadge tag={item.tag} />}
                   <StatusBadge status={item.status} />
                 </div>
                 <div className="flex items-center gap-2">
@@ -190,6 +192,14 @@ function StatusBadge({ status }: { status: 'draft' | 'published' }) {
       className={`text-xs px-2 py-1 rounded-full border ${cls} uppercase tracking-wide`}
     >
       {label}
+    </span>
+  );
+}
+
+function TagBadge({ tag }: { tag: string }) {
+  return (
+    <span className="text-[11px] px-2 py-1 rounded-full border border-blue-400/30 text-blue-100 bg-blue-500/10 uppercase tracking-wide">
+      {tag}
     </span>
   );
 }

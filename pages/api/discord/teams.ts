@@ -87,6 +87,7 @@ export default async function handler(
           .insert({
             title: `Nouvelle équipe : ${name}`,
             slug: newsSlug,
+            tag: 'teams',
             excerpt: `L'équipe ${name} rejoint le tournoi.`,
             content: `Bienvenue à ${name} ! Une nouvelle équipe vient d'être créée pour participer au tournoi. Restez à l'écoute pour suivre ses matchs.`,
             status: 'published',

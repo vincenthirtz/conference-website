@@ -28,7 +28,7 @@ export default async function handler(
   const nowISO = new Date().toISOString();
   const { data, error } = await admin
     .from('news')
-    .select('*')
+    .select('id, title, slug, tag, excerpt, content, published_at')
     .eq('status', 'published')
     .or(`published_at.lte.${nowISO},published_at.is.null`)
     .order('published_at', { ascending: false, nullsFirst: false })
@@ -49,6 +49,7 @@ export default async function handler(
         ? new Date(item.published_at).toUTCString()
         : new Date().toUTCString();
       const description = xmlEscape(item.excerpt || item.content || '');
+      const tagValue = xmlEscape(item.tag || 'general');
       return `
   <item>
     <title>${xmlEscape(item.title)}</title>
@@ -56,6 +57,7 @@ export default async function handler(
     <guid>${item.id}</guid>
     <pubDate>${pubDate}</pubDate>
     <description>${description}</description>
+    <category>${tagValue}</category>
   </item>`;
     })
     .join('\n');

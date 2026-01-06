@@ -153,6 +153,7 @@ async function handler(
       await supabaseAdmin.from('news').insert({
         title: `Nouveau membre dans ${team?.name || 'une équipe'}`,
         slug: newsSlug,
+        tag: 'teams',
         excerpt: `Un nouveau membre rejoint ${team?.name || 'l’équipe'}.`,
         content: `Une nouvelle recrue a rejoint ${team?.name || 'l’équipe'} en tant que ${memberPayload.role}. Bienvenue !`,
         status: 'published',

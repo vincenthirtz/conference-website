@@ -7,9 +7,17 @@ import Link from 'next/link';
 import { supabaseAdmin, getServerClient } from '@/utils/supabase';
 import { useEffect, useState } from 'react';
 
+const formatTagLabel = (value?: string | null) => {
+  if (!value) return null;
+  const cleaned = value.replace(/-/g, ' ').trim();
+  if (!cleaned) return null;
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+};
+
 type NewsPageProps = {
   title: string;
   content: string;
+  tag?: string | null;
   excerpt?: string | null;
   imageUrl?: string | null;
   publishedAt?: string | null;
@@ -53,6 +61,7 @@ export const getServerSideProps: GetServerSideProps<NewsPageProps> = async (
     props: {
       title: data.title || '',
       content: data.content || '',
+      tag: data.tag || 'general',
       excerpt: data.excerpt || '',
       imageUrl: data.image_url || '',
       publishedAt: data.published_at || null,
@@ -65,6 +74,7 @@ export const getServerSideProps: GetServerSideProps<NewsPageProps> = async (
 export default function NewsSlugPage({
   title,
   content,
+  tag,
   excerpt,
   imageUrl,
   publishedAt,
@@ -76,6 +86,7 @@ export default function NewsSlugPage({
     publishedAt || createdAt
       ? new Date(publishedAt || createdAt || '').toLocaleDateString('fr-FR')
       : null;
+  const formattedTag = tag ? formatTagLabel(tag) : null;
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white pb-20">
@@ -98,8 +109,13 @@ export default function NewsSlugPage({
         ) : (
           <>
             <div className="mt-6 flex flex-col gap-3">
-              <div className="text-xs uppercase tracking-[0.16em] text-blue-200/80">
-                {displayDate || 'News'}
+              <div className="flex items-center gap-3 text-xs uppercase tracking-[0.16em] text-blue-200/80">
+                <span>{displayDate || 'News'}</span>
+                {formattedTag && (
+                  <span className="px-3 py-1 rounded-full border border-blue-300/40 bg-blue-500/10 text-[10px] tracking-[0.14em] text-blue-100">
+                    {formattedTag}
+                  </span>
+                )}
               </div>
               <Heading typeStyle="heading-md" className="text-gradient">
                 {title}

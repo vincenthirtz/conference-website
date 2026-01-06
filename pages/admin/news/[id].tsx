@@ -18,6 +18,7 @@ type Props = {
 type FormState = {
   title: string;
   slug: string;
+  tag: string;
   excerpt: string;
   imageUrl: string;
   content: string;
@@ -63,6 +64,7 @@ export default function AdminNewsEdit({ staff }: Props) {
         setForm({
           title: json.title || '',
           slug: json.slug || '',
+          tag: json.tag || 'general',
           excerpt: json.excerpt || '',
           imageUrl: json.image_url || '',
           content: json.content || '',
@@ -156,6 +158,19 @@ export default function AdminNewsEdit({ staff }: Props) {
                 value={form.slug}
                 onChange={(v) => updateField('slug', slugifyValue(v))}
               />
+            </div>
+
+            <div className="grid gap-2">
+              <Field
+                label="Tag / catégorie"
+                placeholder="general, tournoi, announcement..."
+                value={form.tag}
+                onChange={(v) => updateField('tag', slugifyValue(v))}
+                required
+              />
+              <p className="text-xs text-neutral-400">
+                Utilisé pour filtrer les news par catégorie (slug simple).
+              </p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">

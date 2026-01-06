@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS public.news (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   title text NOT NULL,
   slug text NOT NULL UNIQUE,
+  tag text NOT NULL DEFAULT 'general',
   excerpt text,
   content text NOT NULL,
   image_url text,
@@ -20,6 +21,13 @@ CREATE INDEX IF NOT EXISTS news_published_at_idx
 
 CREATE INDEX IF NOT EXISTS news_status_idx
   ON public.news (status);
+
+CREATE INDEX IF NOT EXISTS news_tag_idx
+  ON public.news (tag);
+
+-- In case the table already exists, ensure the tag column is present
+ALTER TABLE IF EXISTS public.news
+  ADD COLUMN IF NOT EXISTS tag text NOT NULL DEFAULT 'general';
 
 -- Trigger to keep updated_at fresh (optional if not already present)
 CREATE OR REPLACE FUNCTION public.update_updated_at_column()

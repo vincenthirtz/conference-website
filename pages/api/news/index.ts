@@ -1,5 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import slugify from 'slugify';
 import { supabaseAdmin, getServerClient } from '@/utils/supabase';
+
+const normalizeTag = (value?: string | null) => {
+  const cleaned = (value || '').toString().trim();
+  if (!cleaned) return '';
+  return slugify(cleaned, { lower: true, strict: true });
+};
 
 export default async function handler(
   req: NextApiRequest,
@@ -13,18 +20,25 @@ export default async function handler(
   const admin = supabaseAdmin ?? getServerClient(req, res);
 
   const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 10));
+  const tagFilter = normalizeTag(req.query.tag?.toString());
 
   const nowISO = new Date().toISOString();
 
-  const { data, error } = await admin
+  let query = admin
     .from('news')
     .select(
-      'id, title, slug, excerpt, content, image_url, published_at, created_at, updated_at, news_comments(count)'
+      'id, title, slug, tag, excerpt, content, image_url, published_at, created_at, updated_at, news_comments(count)'
     )
     .eq('status', 'published')
     .or(`published_at.lte.${nowISO},published_at.is.null`)
     .order('published_at', { ascending: false, nullsFirst: false })
     .limit(limit);
+
+  if (tagFilter) {
+    query = query.eq('tag', tagFilter);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error('[news] public list error', error);
@@ -38,6 +52,7 @@ export default async function handler(
       id: row.id,
       title: row.title,
       slug: row.slug,
+      tag: row.tag,
       excerpt: row.excerpt,
       content: row.content,
       imageUrl: row.image_url,

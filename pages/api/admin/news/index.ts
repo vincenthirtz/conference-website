@@ -9,6 +9,7 @@ import {
 type NewsPayload = {
   title?: string;
   slug?: string;
+  tag?: string;
   excerpt?: string;
   content?: string;
   imageUrl?: string;
@@ -19,6 +20,12 @@ type NewsPayload = {
 function normalizeSlug(title: string, slug?: string) {
   const base = slug?.trim().length ? slug : title;
   return slugify(base, { lower: true, strict: true });
+}
+
+function normalizeTag(tag?: string) {
+  const cleaned = (tag || '').trim();
+  if (!cleaned) return 'general';
+  return slugify(cleaned, { lower: true, strict: true });
 }
 
 export default async function handler(
@@ -38,7 +45,7 @@ export default async function handler(
   }
 
   if (req.method === 'GET') {
-    const { limit = '50', status } = req.query;
+    const { limit = '50', status, tag } = req.query;
     const limitNum = Math.max(1, Math.min(200, Number(limit) || 50));
 
     let query = admin
@@ -49,6 +56,9 @@ export default async function handler(
 
     if (status && typeof status === 'string') {
       query = query.eq('status', status);
+    }
+    if (tag && typeof tag === 'string') {
+      query = query.eq('tag', normalizeTag(tag));
     }
 
     const { data, error } = await query;
@@ -82,6 +92,7 @@ export default async function handler(
     const insertPayload = {
       title: body.title,
       slug,
+      tag: normalizeTag(body.tag),
       excerpt: body.excerpt ?? null,
       content: body.content,
       image_url: body.imageUrl ?? null,
