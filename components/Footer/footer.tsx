@@ -232,6 +232,34 @@ function SitemapIcon({ className, fill }: Readonly<SVGTypes>): JSX.Element {
   );
 }
 
+function DeployIcon({ className, fill }: Readonly<SVGTypes>): JSX.Element {
+  const stroke = fill || 'currentColor';
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M12 3 7 8.5l3 .5-4 7 5.5-5 .5 3 5.5-5.5L12 3Z"
+        fill="none"
+        stroke={stroke}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.6"
+      />
+      <path
+        d="M5 19h4M15 19h4"
+        fill="none"
+        stroke={stroke}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.6"
+      />
+    </svg>
+  );
+}
+
 type FooterLink = {
   label: string;
   href: string;
@@ -252,6 +280,11 @@ const footerLinks: FooterLink[] = [
     label: 'Plan du site',
     href: '/plan-du-site',
     Icon: SitemapIcon,
+  },
+  {
+    label: 'Déploiements',
+    href: '/builds',
+    Icon: DeployIcon,
   },
 ];
 

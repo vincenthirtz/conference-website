@@ -35,6 +35,7 @@ const siteSections: SiteSection[] = [
     links: [
       { label: 'Règlement', href: '/rules' },
       { label: 'Mentions légales', href: '/mentions-legales' },
+      { label: 'Déploiements', href: '/builds' },
     ],
   },
   {

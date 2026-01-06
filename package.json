@@ -13,13 +13,14 @@
     "test": "playwright test"
   },
   "dependencies": {
+    "@netlify/functions": "^5.1.2",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.89.0",
     "axios": "^1.13.2",
     "canvas-confetti": "^1.9.4",
     "cheerio": "^1.1.2",
     "cookie": "^1.1.1",
-    "framer-motion": "^12.23.26",
+    "framer-motion": "^12.24.0",
     "next": "^16.1.1",
     "react": "^19.2.3",
     "react-confetti": "^6.4.0",
@@ -29,13 +30,13 @@
     "slugify": "^1.6.6"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "@tailwindcss/postcss": "^4.1.18",
-    "dotenv": "^16.4.5",
     "@types/node": "^25.0.3",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@types/react-slick": "^0.23.13",
-    "@playwright/test": "^1.57.0",
+    "dotenv": "^17.2.3",
     "eslint": "^9.39.2",
     "eslint-config-next": "^16.1.1",
     "postcss": "^8.5.6",
