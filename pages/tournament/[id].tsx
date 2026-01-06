@@ -90,19 +90,42 @@ function formatStageType(stageType: string | null | undefined) {
 export const getServerSideProps: GetServerSideProps<
   TournamentPageProps
 > = async (ctx) => {
-  const { id } = ctx.query;
-  if (!id || Array.isArray(id)) {
+  const { id: rawId } = ctx.query;
+  if (!rawId || Array.isArray(rawId)) {
     return { notFound: true };
   }
 
-  // 1) Tournoi
-  const { data: tournament, error: tErr } = await supabaseAdmin
-    .from('tournaments')
-    .select('*')
-    .eq('id', id)
-    .single();
+  const asString = String(rawId);
+  const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+    asString
+  );
 
-  if (tErr || !tournament) {
+  // 1) Tournoi (accept both uuid id and slug)
+  let tournament: Tournament | null = null;
+
+  if (isUuid) {
+    const { data, error } = await supabaseAdmin
+      .from('tournaments')
+      .select('*')
+      .eq('id', asString)
+      .single();
+    if (!error && data) {
+      tournament = data as Tournament;
+    }
+  }
+
+  if (!tournament) {
+    const { data } = await supabaseAdmin
+      .from('tournaments')
+      .select('*')
+      .eq('slug', asString)
+      .single();
+    if (data) {
+      tournament = data as Tournament;
+    }
+  }
+
+  if (!tournament) {
     return { notFound: true };
   }
 
@@ -111,11 +134,13 @@ export const getServerSideProps: GetServerSideProps<
     return { notFound: true };
   }
 
+  const tournamentId = tournament.id;
+
   // 2) Stages
   const { data: stages, error: sErr } = await supabaseAdmin
     .from('tournament_stages')
     .select('*')
-    .eq('tournament_id', id)
+    .eq('tournament_id', tournamentId)
     .order('created_at', { ascending: true });
 
   if (sErr) {
@@ -141,7 +166,7 @@ export const getServerSideProps: GetServerSideProps<
       stage:tournament_stages ( id, name, stage_type )
     `
     )
-    .eq('tournament_id', id)
+    .eq('tournament_id', tournamentId)
     .neq('status', 'cancelled')
     .order('scheduled_at', { ascending: false })
     .limit(40);

@@ -34,7 +34,7 @@ type SimpleTeam = {
   logo_url?: string | null;
 };
 
-type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
+type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'completed' | 'cancelled';
 
 type SimpleMatch = {
   id: string;
@@ -126,7 +126,11 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     statusFilter === 'ongoing' ||
     statusFilter === 'finished'
   ) {
-    q = q.eq('status', statusFilter);
+    if (statusFilter === 'finished') {
+      q = q.in('status', ['finished', 'completed']);
+    } else {
+      q = q.eq('status', statusFilter);
+    }
   }
 
   if (stageFilter !== 'all') {
@@ -369,8 +373,16 @@ function MatchRow({ match }: { match: SimpleMatch }) {
   const statusLabel = getMatchStatusShort(match.status);
   const statusColor = getMatchStatusColor(match.status);
 
+  const isFinished =
+    match.status === 'finished' || match.status === 'completed';
+  const hasScores =
+    match.team1_score !== null &&
+    match.team1_score !== undefined &&
+    match.team2_score !== null &&
+    match.team2_score !== undefined;
+
   const scoreLabel =
-    match.status === 'finished'
+    isFinished || hasScores
       ? `${match.team1_score ?? 0} - ${match.team2_score ?? 0}`
       : '';
 
@@ -543,6 +555,7 @@ function getMatchStatusShort(status: MatchStatus): string {
       return 'À venir';
     case 'ongoing':
       return 'En cours';
+    case 'completed':
     case 'finished':
       return 'Terminé';
     case 'cancelled':
@@ -558,6 +571,7 @@ function getMatchStatusColor(status: MatchStatus): string {
       return 'px-1.5 py-[2px] rounded-full bg-yellow-500/20 text-yellow-200 border border-yellow-500/60';
     case 'ongoing':
       return 'px-1.5 py-[2px] rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/60';
+    case 'completed':
     case 'finished':
       return 'px-1.5 py-[2px] rounded-full bg-gray-500/20 text-gray-200 border border-gray-500/60';
     case 'cancelled':
