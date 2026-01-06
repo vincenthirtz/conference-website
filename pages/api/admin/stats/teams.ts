@@ -7,9 +7,20 @@ type TeamStatsRow = {
   team_name: string | null;
   team_short_name: string | null;
   team_logo_url: string | null;
+  team?: {
+    id: string | null;
+    name: string | null;
+    short_name: string | null;
+    logo_url: string | null;
+  };
   tournament_id: string | null;
   tournament_name: string | null;
   tournament_slug: string | null;
+  tournament?: {
+    id: string | null;
+    name: string | null;
+    slug: string | null;
+  } | null;
   matches_played: number;
   wins: number;
   losses: number;
@@ -120,7 +131,7 @@ export default async function handler(
       { count: 'exact' }
     )
     .gte('matches_played', minMatchesNum)
-    .order(sortByNormalized, { ascending: sortDirNormalized === 'asc', nullsLast: true })
+    .order(sortByNormalized, { ascending: sortDirNormalized === 'asc' })
     .range(offsetNum, offsetNum + limitNum - 1);
 
   if (tournamentId && typeof tournamentId === 'string') {
@@ -143,8 +154,11 @@ export default async function handler(
       .json({ error: 'Impossible de charger les stats équipes.' });
   }
 
-  const stats = (data || []).map((row) => ({
+  const stats: TeamStatsRow[] = (data || []).map((row: any) => ({
     team_id: row.team_id,
+    team_name: row.team_name,
+    team_short_name: row.team_short_name,
+    team_logo_url: row.team_logo_url,
     team: {
       id: row.team_id,
       name: row.team_name,
@@ -152,6 +166,8 @@ export default async function handler(
       logo_url: row.team_logo_url,
     },
     tournament_id: row.tournament_id,
+    tournament_name: row.tournament_name,
+    tournament_slug: row.tournament_slug,
     tournament: row.tournament_id
       ? {
           id: row.tournament_id,
@@ -170,7 +186,7 @@ export default async function handler(
     map_winrate: row.map_winrate,
     points: row.points ?? null,
     last_match_at: row.last_match_at ?? null,
-  })) as TeamStatsRow[];
+  }));
 
   // Export CSV si demandé
   if (exportFormat === 'csv') {
@@ -216,7 +232,7 @@ export default async function handler(
       'Content-Disposition',
       'attachment; filename=\"team-stats.csv\"'
     );
-    res.status(200).send(csv);
+    res.status(200).end(csv);
     return;
   }
 
