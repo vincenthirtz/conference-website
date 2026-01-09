@@ -61,7 +61,7 @@ export default async function handler(
     // Enrichir avec les infos d'equipe si team_id present
     const enrichedDemandes = await Promise.all(
       (demandes || []).map(async (d) => {
-        if (d.team_id) {
+        if (d.team_id && supabaseAdmin) {
           const { data: teamData } = await supabaseAdmin
             .from('teams')
             .select('id, name, short_name, logo_url')
