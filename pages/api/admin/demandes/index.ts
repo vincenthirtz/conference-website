@@ -167,36 +167,24 @@ async function handleGet(
 
   let select = baseColumns;
 
+  // Note: profiles table doesn't exist, so we skip user data for now
+  // The user_id is still included in baseColumns
   if (withUser) {
-    select += `,
-      user:profiles!demandes_user_id_fkey(
-        id,
-        username,
-        battle_tag,
-        discord
-      )
-    `;
+    // TODO: Create profiles table or fetch user data separately
+    // For now, we skip the user join to avoid errors
   }
 
+  // Note: Foreign key relationships need to be properly set up in Supabase
+  // For now, we'll fetch related data separately if needed
+  // The team_id and tournament_id are still included in baseColumns
   if (withTeam) {
-    select += `,
-      team:teams(
-        id,
-        name,
-        short_name,
-        logo_url
-      )
-    `;
+    // TODO: Fetch team data separately or ensure FK exists in database
+    // Skipping for now to avoid PostgREST errors
   }
 
   if (withTournament) {
-    select += `,
-      tournament:tournaments(
-        id,
-        name,
-        slug
-      )
-    `;
+    // TODO: Fetch tournament data separately or ensure FK exists in database
+    // Skipping for now to avoid PostgREST errors
   }
 
   if (!supabaseAdmin) {

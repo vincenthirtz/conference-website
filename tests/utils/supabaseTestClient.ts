@@ -142,7 +142,7 @@ export async function deleteTestStaff(email: string) {
 
   if (user) {
     // Delete from staff table first
-    await supabaseTestClient.from('staff').delete().eq('user_id', user.id);
+    await supabaseTestClient.from('staff').delete().eq('auth_user_id', user.id);
     // Then delete user
     await supabaseTestClient.auth.admin.deleteUser(user.id);
   }
