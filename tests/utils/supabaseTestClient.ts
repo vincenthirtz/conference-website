@@ -11,7 +11,7 @@ const serviceRoleKey =
 const envReady = Boolean(supabaseUrl && serviceRoleKey);
 
 if (!envReady) {
-  // eslint-disable-next-line no-console
+   
   console.warn(
     '[tests] Supabase env manquants (TEST_SUPABASE_URL / TEST_SUPABASE_SERVICE_ROLE_KEY ou NEXT_SUPABASE_SERVICE_ROLE_KEY). Auth e2e tests seront ignorés.'
   );

@@ -37,6 +37,25 @@ type TeamMemberRow = {
   created_at: string;
 };
 
+type TournamentRow = {
+  id: string;
+  name: string;
+  slug: string;
+  game: string;
+  status: string;
+  start_date: string | null;
+  end_date: string | null;
+  max_teams?: number | null;
+};
+
+type TournamentRegistration = TournamentRow & {
+  stages: Array<{
+    stageId: string;
+    stageName: string;
+    stageType: string;
+  }>;
+};
+
 export const getServerSideProps = withStaffPage('manager');
 
 function AdminEditTeamPage({ staff }: StaffProps) {
@@ -53,6 +72,12 @@ function AdminEditTeamPage({ staff }: StaffProps) {
   const [membersLoading, setMembersLoading] = useState(false);
   const [membersError, setMembersError] = useState<string | null>(null);
 
+  const [registeredTournaments, setRegisteredTournaments] = useState<TournamentRegistration[]>([]);
+  const [availableTournaments, setAvailableTournaments] = useState<TournamentRow[]>([]);
+  const [tournamentsLoading, setTournamentsLoading] = useState(false);
+  const [tournamentsError, setTournamentsError] = useState<string | null>(null);
+  const [selectedTournamentId, setSelectedTournamentId] = useState<string>('');
+
   const [name, setName] = useState('');
   const [shortName, setShortName] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
@@ -68,6 +93,7 @@ function AdminEditTeamPage({ staff }: StaffProps) {
     if (!teamId) return;
     fetchTeam();
     fetchMembers();
+    fetchTournaments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamId]);
 
@@ -158,6 +184,80 @@ function AdminEditTeamPage({ staff }: StaffProps) {
       setMembersError(err?.message ?? 'Erreur inattendue');
     } finally {
       setMembersLoading(false);
+    }
+  }
+
+  async function fetchTournaments() {
+    if (!teamId) return;
+    setTournamentsLoading(true);
+    setTournamentsError(null);
+    try {
+      const res = await fetch(`/api/admin/teams/${teamId}/tournaments`);
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        throw new Error(json.error || 'Impossible de charger les tournois');
+      }
+      setRegisteredTournaments(json.registered || []);
+      setAvailableTournaments(json.available || []);
+    } catch (err: any) {
+      setTournamentsError(err?.message ?? 'Erreur inattendue');
+    } finally {
+      setTournamentsLoading(false);
+    }
+  }
+
+  async function handleRegisterToTournament() {
+    if (!teamId || !selectedTournamentId) return;
+    setTournamentsLoading(true);
+    setTournamentsError(null);
+
+    try {
+      const res = await fetch(`/api/admin/teams/${teamId}/tournaments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tournamentId: selectedTournamentId }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        throw new Error(json.error || 'Échec de l\'inscription');
+      }
+
+      setSelectedTournamentId('');
+      await fetchTournaments();
+    } catch (err: any) {
+      setTournamentsError(err?.message ?? 'Erreur inattendue');
+    } finally {
+      setTournamentsLoading(false);
+    }
+  }
+
+  async function handleUnregisterFromTournament(tournamentId: string) {
+    if (!teamId) return;
+    if (!confirm('Êtes-vous sûr de vouloir désinscrire cette équipe de ce tournoi ?')) {
+      return;
+    }
+
+    setTournamentsLoading(true);
+    setTournamentsError(null);
+
+    try {
+      const res = await fetch(`/api/admin/teams/${teamId}/tournaments`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tournamentId }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        throw new Error(json.error || 'Échec de la désinscription');
+      }
+
+      await fetchTournaments();
+    } catch (err: any) {
+      setTournamentsError(err?.message ?? 'Erreur inattendue');
+    } finally {
+      setTournamentsLoading(false);
     }
   }
 
@@ -438,6 +538,104 @@ function AdminEditTeamPage({ staff }: StaffProps) {
               </div>
             )}
           </aside>
+
+          <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5 space-y-4">
+            <h2 className="text-xl font-semibold text-white">
+              Inscription aux tournois
+            </h2>
+
+            {tournamentsError && (
+              <div className="text-sm text-red-200 bg-red-500/10 border border-red-500/40 rounded-lg px-3 py-2">
+                {tournamentsError}
+              </div>
+            )}
+
+            {tournamentsLoading ? (
+              <p className="text-sm text-neutral-300">
+                Chargement des tournois…
+              </p>
+            ) : (
+              <>
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-neutral-300">
+                    Tournois inscrits
+                  </h3>
+                  {registeredTournaments.length === 0 ? (
+                    <p className="text-sm text-neutral-400">
+                      Cette équipe n&apos;est inscrite à aucun tournoi.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {registeredTournaments.map((t) => (
+                        <div
+                          key={t.id}
+                          className="flex items-center justify-between bg-neutral-900 border border-neutral-700 rounded-lg px-4 py-3"
+                        >
+                          <div className="flex-1">
+                            <div className="font-semibold text-white">
+                              {t.name}
+                            </div>
+                            <div className="text-xs text-neutral-400 mt-1">
+                              {t.game} • {t.status}
+                              {t.stages.length > 0 && (
+                                <span className="ml-2">
+                                  Stages: {t.stages.map(s => s.stageName).join(', ')}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleUnregisterFromTournament(t.id)}
+                            disabled={tournamentsLoading}
+                            className="ml-3 px-3 py-1 text-xs font-semibold text-red-200 bg-red-900/40 hover:bg-red-900/60 border border-red-700 rounded transition disabled:opacity-50"
+                          >
+                            Désinscrire
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-3 pt-4 border-t border-neutral-700">
+                  <h3 className="text-sm font-semibold text-neutral-300">
+                    Inscrire à un nouveau tournoi
+                  </h3>
+                  {availableTournaments.length === 0 ? (
+                    <p className="text-sm text-neutral-400">
+                      Aucun tournoi publié disponible.
+                    </p>
+                  ) : (
+                    <div className="flex gap-2">
+                      <select
+                        value={selectedTournamentId}
+                        onChange={(e) => setSelectedTournamentId(e.target.value)}
+                        className="flex-1 rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        disabled={tournamentsLoading}
+                      >
+                        <option value="">Sélectionner un tournoi...</option>
+                        {availableTournaments.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name} ({t.game})
+                          </option>
+                        ))}
+                      </select>
+                      <Button
+                        type="button"
+                        size="compact"
+                        onClick={handleRegisterToTournament}
+                        disabled={!selectedTournamentId || tournamentsLoading}
+                        className="px-4 py-2 text-sm"
+                      >
+                        Inscrire
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </section>
         </div>
       </div>
     </>

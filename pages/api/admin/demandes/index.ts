@@ -174,17 +174,30 @@ async function handleGet(
     // For now, we skip the user join to avoid errors
   }
 
-  // Note: Foreign key relationships need to be properly set up in Supabase
-  // For now, we'll fetch related data separately if needed
-  // The team_id and tournament_id are still included in baseColumns
+  // Include team data using the explicit foreign key relationship name
+  // Requires: demandes_team_id_fkey constraint to be set up in database
+  // Run: database/demandes_fix_foreign_keys.sql to create the constraint
   if (withTeam) {
-    // TODO: Fetch team data separately or ensure FK exists in database
-    // Skipping for now to avoid PostgREST errors
+    select += `,
+      team:teams!demandes_team_id_fkey(
+        id,
+        name,
+        short_name,
+        logo_url
+      )
+    `;
   }
 
+  // Include tournament data using the explicit foreign key relationship name
+  // Requires: demandes_tournament_id_fkey constraint to be set up in database
   if (withTournament) {
-    // TODO: Fetch tournament data separately or ensure FK exists in database
-    // Skipping for now to avoid PostgREST errors
+    select += `,
+      tournament:tournaments!demandes_tournament_id_fkey(
+        id,
+        name,
+        slug
+      )
+    `;
   }
 
   if (!supabaseAdmin) {
