@@ -74,7 +74,7 @@ function RegisterPage() {
         options: {
           data: {
             display_name: displayName || null,
-            role: 'member',
+            role: 'player',
             battle_tag: battleTag || null,
           },
         },

@@ -83,6 +83,14 @@ function statusColor(status: string | null) {
   }
 }
 
+const STATUS_OPTIONS = [
+  { value: 'draft', label: 'Brouillon', color: 'bg-neutral-600' },
+  { value: 'published', label: 'Publie', color: 'bg-blue-600' },
+  { value: 'running', label: 'En cours', color: 'bg-emerald-600' },
+  { value: 'completed', label: 'Termine', color: 'bg-purple-600' },
+  { value: 'archived', label: 'Archive', color: 'bg-neutral-700' },
+];
+
 function AdminTournamentPage({ staff }: StaffProps) {
   const router = useRouter();
   const { id } = router.query;
@@ -90,6 +98,8 @@ function AdminTournamentPage({ staff }: StaffProps) {
   const [loading, setLoading] = useState(true);
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -114,6 +124,37 @@ function AdminTournamentPage({ staff }: StaffProps) {
       setErrorMsg(err?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function updateStatus(newStatus: string) {
+    if (!id || !tournament) return;
+    if (newStatus === tournament.status) return;
+
+    setUpdatingStatus(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    try {
+      const res = await fetch(`/api/admin/tournament/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      const json = await res.json();
+
+      if (!res.ok) {
+        throw new Error(json.error || 'Impossible de modifier le statut');
+      }
+
+      setTournament(json.tournament);
+      setSuccessMsg(`Statut modifie : ${statusLabel(newStatus)}`);
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } finally {
+      setUpdatingStatus(false);
     }
   }
 
@@ -193,10 +234,16 @@ function AdminTournamentPage({ staff }: StaffProps) {
           </div>
         </div>
 
-        {/* Error / loading */}
+        {/* Error / Success / loading */}
         {errorMsg && (
           <div className="mb-4 rounded bg-red-900/60 border border-red-600 px-4 py-3 text-sm">
             {errorMsg}
+          </div>
+        )}
+
+        {successMsg && (
+          <div className="mb-4 rounded bg-emerald-900/60 border border-emerald-600 px-4 py-3 text-sm">
+            {successMsg}
           </div>
         )}
 
@@ -345,29 +392,61 @@ function AdminTournamentPage({ staff }: StaffProps) {
             {/* Second row : paramètres rapides / debug / meta */}
             <div className="grid gap-6 lg:grid-cols-[2fr,1.5fr]">
               {/* Paramètres rapides */}
-              <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5 space-y-3">
+              <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5 space-y-4">
                 <h2 className="text-lg font-semibold mb-1">
-                  Paramètres rapides
+                  Parametres rapides
                 </h2>
-                <p className="text-sm text-neutral-400 mb-3">
-                  Certains paramètres nécessitent l&apos;édition complète via
-                  l&apos;API ou une page dédiée, mais tu peux vérifier ici les
-                  infos principales.
-                </p>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <div className="text-neutral-400 mb-1">URL du logo</div>
-                    <div className="font-mono text-xs break-all bg-neutral-900 px-3 py-2 rounded border border-neutral-700">
-                      {tournament.logo_url || '—'}
-                    </div>
+                {/* Modification du statut */}
+                <div>
+                  <div className="text-neutral-400 text-sm mb-2">
+                    Statut du tournoi
                   </div>
-                  <div>
-                    <div className="text-neutral-400 mb-1">
-                      URL de la bannière
+                  <div className="flex flex-wrap gap-2">
+                    {STATUS_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => updateStatus(option.value)}
+                        disabled={updatingStatus}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
+                          tournament.status === option.value
+                            ? `${option.color} text-white ring-2 ring-white/30`
+                            : 'bg-neutral-700 text-neutral-300 hover:bg-neutral-600'
+                        } ${updatingStatus ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        {option.label}
+                        {tournament.status === option.value && (
+                          <span className="ml-2">✓</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  {updatingStatus && (
+                    <div className="text-xs text-neutral-400 mt-2">
+                      Mise a jour en cours...
                     </div>
-                    <div className="font-mono text-xs break-all bg-neutral-900 px-3 py-2 rounded border border-neutral-700">
-                      {tournament.banner_url || '—'}
+                  )}
+                </div>
+
+                <div className="border-t border-neutral-700 pt-4">
+                  <p className="text-sm text-neutral-400 mb-3">
+                    Autres parametres (lecture seule)
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <div className="text-neutral-400 mb-1">URL du logo</div>
+                      <div className="font-mono text-xs break-all bg-neutral-900 px-3 py-2 rounded border border-neutral-700">
+                        {tournament.logo_url || '—'}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-neutral-400 mb-1">
+                        URL de la banniere
+                      </div>
+                      <div className="font-mono text-xs break-all bg-neutral-900 px-3 py-2 rounded border border-neutral-700">
+                        {tournament.banner_url || '—'}
+                      </div>
                     </div>
                   </div>
                 </div>

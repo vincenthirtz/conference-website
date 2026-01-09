@@ -9,7 +9,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 
-export type DemandeType = 'join' | 'leave' | 'other';
+export type DemandeType = 'join' | 'leave' | 'captain_request' | 'other';
 
 export type DemandeStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 

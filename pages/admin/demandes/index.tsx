@@ -13,7 +13,7 @@ type StaffShape = {
   display_name: string | null;
 };
 
-type DemandeType = 'join_team' | 'leave_team';
+type DemandeType = 'join_team' | 'leave_team' | 'captain_request';
 
 type DemandeStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
@@ -53,7 +53,21 @@ type Demande = {
   team_id: string | null;
   user_id: string | null;
   message: string | null;
+  comment: string | null;
   metadata: any | null;
+  payload?: {
+    team_name?: string;
+    user_email?: string;
+    user_display_name?: string;
+    request_type?: 'existing_team' | 'new_team';
+    existing_team_id?: string;
+    existing_team_name?: string;
+    members?: Array<{
+      email: string;
+      battle_tag?: string;
+      display_name?: string;
+    }>;
+  } | null;
   handled_at?: string | null;
   handled_by?: StaffMini | null;
 
@@ -89,6 +103,8 @@ function typeLabel(type: DemandeType) {
       return 'Rejoindre une équipe';
     case 'leave_team':
       return 'Quitter une équipe';
+    case 'captain_request':
+      return 'Devenir capitaine';
     default:
       return type;
   }
@@ -100,6 +116,8 @@ function typeColor(type: DemandeType) {
       return 'bg-emerald-700/80 text-white';
     case 'leave_team':
       return 'bg-amber-600/80 text-neutral-900';
+    case 'captain_request':
+      return 'bg-purple-600/80 text-white';
     default:
       return 'bg-neutral-700 text-neutral-100';
   }
@@ -256,12 +274,16 @@ function AdminDemandesPage() {
       const params = new URLSearchParams();
       params.set('limit', String(limit));
       params.set('offset', String(offset));
+      params.set('includeUser', '1');
+      params.set('includeTeam', '1');
+      params.set('includeTournament', '1');
+      params.set('includeTotal', '1');
       if (statusFilter) params.set('status', statusFilter);
       if (typeFilter) params.set('type', typeFilter);
       if (tournamentFilter) params.set('tournamentId', tournamentFilter);
       if (search.trim()) params.set('search', search.trim());
-      if (dateFrom) params.set('dateFrom', dateFrom);
-      if (dateTo) params.set('dateTo', dateTo);
+      if (dateFrom) params.set('from', dateFrom);
+      if (dateTo) params.set('to', dateTo);
 
       const res = await fetch('/api/admin/demandes?' + params.toString(), {
         headers: token
@@ -390,6 +412,7 @@ function AdminDemandesPage() {
               onChange={(e) => setTypeFilter(e.target.value)}
             >
               <option value="">Tous</option>
+              <option value="captain_request">Devenir capitaine</option>
               <option value="join_team">Rejoindre une équipe</option>
               <option value="leave_team">Quitter une équipe</option>
             </select>
@@ -589,6 +612,25 @@ function AdminDemandesPage() {
                               )}
                             </div>
                           </div>
+                        ) : d.type === 'captain_request' && d.payload ? (
+                          <div>
+                            <div className="font-semibold text-purple-300">
+                              {d.payload.request_type === 'existing_team'
+                                ? d.payload.existing_team_name || 'Équipe existante'
+                                : d.payload.team_name || '—'}
+                            </div>
+                            <div className="text-[10px] text-neutral-500">
+                              {d.payload.request_type === 'existing_team'
+                                ? '(existante)'
+                                : '(à créer)'}
+                            </div>
+                            {d.payload.members && d.payload.members.length > 0 && (
+                              <div className="text-[10px] text-neutral-400 mt-1">
+                                +{d.payload.members.length} membre
+                                {d.payload.members.length > 1 ? 's' : ''}
+                              </div>
+                            )}
+                          </div>
                         ) : d.team_id ? (
                           <span className="font-mono text-neutral-300">
                             {d.team_id}
@@ -622,9 +664,9 @@ function AdminDemandesPage() {
 
                       {/* Message */}
                       <td className="px-3 py-2 text-xs max-w-[260px]">
-                        {d.message ? (
+                        {d.message || d.comment ? (
                           <div className="text-neutral-200 line-clamp-3">
-                            {d.message}
+                            {d.message || d.comment}
                           </div>
                         ) : (
                           <span className="text-neutral-500">—</span>

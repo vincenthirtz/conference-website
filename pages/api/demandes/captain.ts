@@ -1,0 +1,202 @@
+// pages/api/demandes/captain.ts
+// API pour les demandes de capitaine d'équipe
+// - POST : créer une demande de capitaine (équipe existante ou nouvelle)
+// - GET : récupérer ses propres demandes
+
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { supabaseAdmin } from '@/utils/supabase';
+
+export type TeamMember = {
+  email: string;
+  battleTag?: string;
+  displayName?: string;
+};
+
+export type CaptainRequestBody = {
+  // Pour une équipe existante
+  existingTeamId?: string;
+  // Pour une nouvelle équipe
+  teamName?: string;
+  members?: TeamMember[];
+  // Message optionnel
+  message?: string;
+};
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  if (!supabaseAdmin) {
+    return res
+      .status(500)
+      .json({ error: 'Supabase admin non configuré (service role manquant).' });
+  }
+
+  // Authentification via Bearer token
+  const authHeader = req.headers.authorization;
+  const token =
+    authHeader && authHeader.startsWith('Bearer ')
+      ? authHeader.slice('Bearer '.length)
+      : undefined;
+
+  if (!token) {
+    return res.status(401).json({ error: 'Token requis.' });
+  }
+
+  const { data: userData, error: userErr } =
+    await supabaseAdmin.auth.getUser(token);
+
+  if (userErr || !userData?.user) {
+    return res.status(401).json({ error: 'Utilisateur non authentifié.' });
+  }
+
+  const user = userData.user;
+  const userId = user.id;
+
+  if (req.method === 'GET') {
+    // Récupérer les demandes de capitaine de l'utilisateur
+    const { data: demandes, error: demandesErr } = await supabaseAdmin
+      .from('demandes')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('type', 'captain_request')
+      .order('created_at', { ascending: false });
+
+    if (demandesErr) {
+      console.error('[demandes/captain] GET error:', demandesErr);
+      return res
+        .status(500)
+        .json({ error: 'Impossible de charger les demandes.' });
+    }
+
+    return res.status(200).json({ demandes: demandes || [] });
+  }
+
+  if (req.method === 'POST') {
+    const body = req.body as CaptainRequestBody;
+
+    const hasExistingTeam = !!body?.existingTeamId?.trim();
+    const hasNewTeam = !!body?.teamName?.trim();
+
+    // Valider qu'on a soit une équipe existante, soit un nom pour une nouvelle
+    if (!hasExistingTeam && !hasNewTeam) {
+      return res.status(400).json({
+        error: "Sélectionne une équipe existante ou entre un nom pour une nouvelle équipe.",
+      });
+    }
+
+    const message = body.message?.trim() || null;
+    const members = body.members || [];
+
+    // Valider les membres (max 5, emails valides)
+    if (members.length > 5) {
+      return res.status(400).json({
+        error: 'Tu peux ajouter au maximum 5 joueuses.',
+      });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    for (const m of members) {
+      if (!m.email || !emailRegex.test(m.email.trim())) {
+        return res.status(400).json({
+          error: `Email invalide : ${m.email || '(vide)'}`,
+        });
+      }
+    }
+
+    // Vérifier s'il existe déjà une demande pending pour cet utilisateur
+    const { data: existingDemande, error: existingErr } = await supabaseAdmin
+      .from('demandes')
+      .select('id, status')
+      .eq('user_id', userId)
+      .eq('type', 'captain_request')
+      .eq('status', 'pending')
+      .maybeSingle();
+
+    if (existingErr) {
+      console.error('[demandes/captain] check existing error:', existingErr);
+      return res.status(500).json({ error: 'Erreur lors de la vérification.' });
+    }
+
+    if (existingDemande) {
+      return res.status(400).json({
+        error: 'Tu as déjà une demande de capitaine en attente.',
+        existingDemandeId: existingDemande.id,
+      });
+    }
+
+    // Si équipe existante, vérifier qu'elle existe et récupérer ses infos
+    let existingTeamName: string | null = null;
+    if (hasExistingTeam) {
+      const { data: teamData, error: teamErr } = await supabaseAdmin
+        .from('teams')
+        .select('id, name')
+        .eq('id', body.existingTeamId!.trim())
+        .maybeSingle();
+
+      if (teamErr || !teamData) {
+        return res.status(400).json({ error: "L'équipe sélectionnée n'existe pas." });
+      }
+
+      existingTeamName = teamData.name;
+    }
+
+    // Construire le payload
+    const payload: Record<string, any> = {
+      user_email: user.email,
+      user_display_name:
+        user.user_metadata?.display_name ||
+        user.user_metadata?.full_name ||
+        null,
+      request_type: hasExistingTeam ? 'existing_team' : 'new_team',
+    };
+
+    if (hasExistingTeam) {
+      payload.existing_team_id = body.existingTeamId!.trim();
+      payload.existing_team_name = existingTeamName;
+    } else {
+      payload.team_name = body.teamName!.trim();
+    }
+
+    // Ajouter les membres si présents
+    if (members.length > 0) {
+      payload.members = members.map((m) => ({
+        email: m.email.trim().toLowerCase(),
+        battle_tag: m.battleTag?.trim() || null,
+        display_name: m.displayName?.trim() || null,
+      }));
+    }
+
+    // Créer la demande
+    const { data: newDemande, error: insertErr } = await supabaseAdmin
+      .from('demandes')
+      .insert({
+        user_id: userId,
+        team_id: hasExistingTeam ? body.existingTeamId!.trim() : null,
+        type: 'captain_request',
+        status: 'pending',
+        comment: message,
+        source: 'website',
+        payload,
+      })
+      .select('*')
+      .single();
+
+    if (insertErr) {
+      console.error('[demandes/captain] insert error:', insertErr);
+      return res
+        .status(500)
+        .json({ error: 'Impossible de créer la demande.' });
+    }
+
+    return res.status(201).json({
+      success: true,
+      demande: newDemande,
+      message:
+        'Ta demande de capitaine a été envoyée. Un admin la validera prochainement.',
+    });
+  }
+
+  res.setHeader('Allow', 'GET,POST');
+  return res.status(405).json({ error: 'Method not allowed' });
+}

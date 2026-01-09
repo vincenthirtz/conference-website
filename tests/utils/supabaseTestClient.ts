@@ -64,3 +64,86 @@ export async function deleteTeamsByName(name: string | string[]) {
   await supabaseTestClient.from('team_members').delete().in('team_id', teamIds);
   await supabaseTestClient.from('teams').delete().in('id', teamIds);
 }
+
+/**
+ * Create a test user with player role (not staff)
+ */
+export async function createTestPlayer(email: string, password: string) {
+  if (!supabaseTestClient) return null;
+  const { data, error } = await supabaseTestClient.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: {
+      role: 'player',
+      display_name: 'Test Player',
+    },
+  });
+  if (error) throw error;
+  return data.user;
+}
+
+/**
+ * Create a test staff user with specified role
+ */
+export async function createTestStaff(
+  email: string,
+  password: string,
+  role: 'owner' | 'admin' | 'manager' | 'referee' | 'caster' | 'helper' = 'helper'
+) {
+  if (!supabaseTestClient) return null;
+
+  // Create user first
+  const { data: userData, error: userError } =
+    await supabaseTestClient.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        role: 'staff',
+        display_name: `Test ${role}`,
+      },
+    });
+
+  if (userError) throw userError;
+  if (!userData.user) return null;
+
+  // Add to staff table
+  const { error: staffError } = await supabaseTestClient.from('staff').insert({
+    user_id: userData.user.id,
+    role,
+    display_name: `Test ${role}`,
+    is_active: true,
+  });
+
+  if (staffError) {
+    // If staff insert fails, delete the user
+    await supabaseTestClient.auth.admin.deleteUser(userData.user.id);
+    throw staffError;
+  }
+
+  return userData.user;
+}
+
+/**
+ * Delete staff entry for a user
+ */
+export async function deleteTestStaff(email: string) {
+  if (!supabaseTestClient) return;
+
+  const { data } = await supabaseTestClient.auth.admin.listUsers({
+    page: 1,
+    perPage: 100,
+  });
+
+  const user = data?.users?.find(
+    (u) => u.email?.toLowerCase() === email.toLowerCase()
+  );
+
+  if (user) {
+    // Delete from staff table first
+    await supabaseTestClient.from('staff').delete().eq('user_id', user.id);
+    // Then delete user
+    await supabaseTestClient.auth.admin.deleteUser(user.id);
+  }
+}

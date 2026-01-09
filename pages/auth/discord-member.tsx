@@ -37,8 +37,29 @@ export default function DiscordMemberRedirect() {
         const currentRole = user.user_metadata?.role;
         if (!currentRole) {
           await supabaseClient.auth.updateUser({
-            data: { role: 'member' },
+            data: { role: 'player' },
           });
+        }
+
+        // 3) Si la destination est /admin, vérifier que l'utilisateur a un rôle staff
+        if (next.startsWith('/admin')) {
+          setStatus('Vérification des permissions…');
+          const token = sessionData.session.access_token;
+
+          const res = await fetch('/api/admin/me', {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          if (!res.ok) {
+            // L'utilisateur n'a pas de rôle staff → rediriger vers l'accueil avec message
+            setError(
+              "Ton compte n'a pas d'accès staff. Contacte un admin si c'est une erreur."
+            );
+            setStatus("Pas d'accès staff. Redirection vers l'accueil…");
+            await supabaseClient.auth.signOut();
+            setTimeout(() => router.replace('/'), 2000);
+            return;
+          }
         }
 
         setStatus('Redirection…');
