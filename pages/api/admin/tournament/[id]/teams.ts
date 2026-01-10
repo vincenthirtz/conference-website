@@ -63,6 +63,10 @@ async function handleGet(
   tournamentId: string,
   res: NextApiResponse<ApiResponse>
 ) {
+  if (!supabaseAdmin) {
+    return res.status(500).json({ error: 'Service Supabase indisponible (service role manquant).' });
+  }
+
   const { data, error } = await supabaseAdmin
     .from('tournament_teams')
     .select(
@@ -99,6 +103,10 @@ async function handlePost(
   res: NextApiResponse<ApiResponse>,
   ctx: any
 ) {
+  if (!supabaseAdmin) {
+    return res.status(500).json({ error: 'Service Supabase indisponible (service role manquant).' });
+  }
+
   const { team_id, seed, status } = req.body || {};
 
   if (!team_id) {
@@ -188,7 +196,7 @@ async function handlePost(
     try {
       await logStaffAction({
         staff_id: ctx.staff.id,
-        action: 'add_team_to_tournament',
+        action: 'manage_team',
         entity_type: 'tournament_team',
         entity_id: data.id,
         tournament_id: tournamentId,

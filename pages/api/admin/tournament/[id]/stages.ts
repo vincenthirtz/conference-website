@@ -71,6 +71,10 @@ async function handleGet(
   tournamentId: string,
   res: NextApiResponse<ApiResponse>
 ) {
+  if (!supabaseAdmin) {
+    return res.status(500).json({ error: 'Service Supabase indisponible (service role manquant).' });
+  }
+
   const { data, error } = await supabaseAdmin
     .from('tournament_stages')
     .select('*')
@@ -93,6 +97,10 @@ async function handlePost(
   res: NextApiResponse<ApiResponse>,
   ctx: any
 ) {
+  if (!supabaseAdmin) {
+    return res.status(500).json({ error: 'Service Supabase indisponible (service role manquant).' });
+  }
+
   const {
     name,
     slug,

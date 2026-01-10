@@ -53,6 +53,10 @@ async function handleGet(
   tournamentTeamId: string,
   res: NextApiResponse<ApiResponse>
 ) {
+  if (!supabaseAdmin) {
+    return res.status(500).json({ error: 'Service Supabase indisponible (service role manquant).' });
+  }
+
   const { data, error } = await supabaseAdmin
     .from('tournament_teams')
     .select(
@@ -88,6 +92,10 @@ async function handlePatch(
   res: NextApiResponse<ApiResponse>,
   ctx: any
 ) {
+  if (!supabaseAdmin) {
+    return res.status(500).json({ error: 'Service Supabase indisponible (service role manquant).' });
+  }
+
   const { seed, status } = req.body || {};
 
   // Récupérer l'état actuel
@@ -141,7 +149,7 @@ async function handlePatch(
     try {
       await logStaffAction({
         staff_id: ctx.staff.id,
-        action: 'update_tournament_team',
+        action: 'manage_team',
         entity_type: 'tournament_team',
         entity_id: tournamentTeamId,
         tournament_id: tournamentId,
@@ -165,6 +173,10 @@ async function handleDelete(
   res: NextApiResponse<ApiResponse>,
   ctx: any
 ) {
+  if (!supabaseAdmin) {
+    return res.status(500).json({ error: 'Service Supabase indisponible (service role manquant).' });
+  }
+
   // Récupérer l'équipe avant suppression pour le log
   const { data: before, error: fetchErr } = await supabaseAdmin
     .from('tournament_teams')
@@ -191,7 +203,7 @@ async function handleDelete(
     try {
       await logStaffAction({
         staff_id: ctx.staff.id,
-        action: 'remove_team_from_tournament',
+        action: 'manage_team',
         entity_type: 'tournament_team',
         entity_id: tournamentTeamId,
         tournament_id: tournamentId,
