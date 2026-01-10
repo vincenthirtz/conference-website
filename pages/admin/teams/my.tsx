@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Button from '@/components/Buttons/button';
@@ -30,6 +30,14 @@ type ApiResponse = {
   error?: string;
 };
 
+type SearchResult = {
+  id: string;
+  email: string | null;
+  display_name: string | null;
+  battle_tag: string | null;
+  has_team: boolean;
+};
+
 export default function MyTeamPage() {
   const router = useRouter();
   const [data, setData] = useState<ApiResponse | null>(null);
@@ -45,6 +53,16 @@ export default function MyTeamPage() {
     country: '',
     description: '',
   });
+
+  // Search and add member state
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [selectedPlayer, setSelectedPlayer] = useState<SearchResult | null>(null);
+  const [newMemberRole, setNewMemberRole] = useState('player');
+  const [newMemberBattleTag, setNewMemberBattleTag] = useState('');
+  const [addingMember, setAddingMember] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -119,6 +137,93 @@ export default function MyTeamPage() {
       alert(err?.message || 'Erreur lors de la sauvegarde.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Search players
+  const handleSearchPlayers = useCallback(async (query: string) => {
+    if (query.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    setSearchLoading(true);
+    try {
+      const {
+        data: { session },
+      } = await supabaseClient.auth.getSession();
+      if (!session) return;
+
+      const res = await fetch(`/api/teams/search-players?q=${encodeURIComponent(query)}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const json = await res.json();
+      if (res.ok && json.players) {
+        setSearchResults(json.players);
+      } else {
+        setSearchResults([]);
+      }
+    } catch (err) {
+      console.error('Search error:', err);
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  }, []);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery.length >= 2) {
+        handleSearchPlayers(searchQuery);
+      } else {
+        setSearchResults([]);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery, handleSearchPlayers]);
+
+  // Add member to team
+  const handleAddMember = async () => {
+    if (!selectedPlayer) return;
+    setAddingMember(true);
+    try {
+      const {
+        data: { session },
+      } = await supabaseClient.auth.getSession();
+      if (!session) {
+        router.replace('/admin/login');
+        return;
+      }
+
+      const res = await fetch('/api/teams/add-member', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          userId: selectedPlayer.id,
+          role: newMemberRole,
+          battleTag: newMemberBattleTag || selectedPlayer.battle_tag,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        alert(json?.error || 'Erreur lors de l\'ajout');
+        return;
+      }
+      // Reset and reload
+      setShowAddModal(false);
+      setSelectedPlayer(null);
+      setSearchQuery('');
+      setSearchResults([]);
+      setNewMemberRole('player');
+      setNewMemberBattleTag('');
+      await load();
+    } catch (err: any) {
+      alert(err?.message || 'Erreur lors de l\'ajout');
+    } finally {
+      setAddingMember(false);
     }
   };
 
@@ -310,7 +415,19 @@ export default function MyTeamPage() {
               </section>
 
               <section className="bg-neutral-800 border border-white/10 rounded-xl p-5 space-y-3">
-                <h2 className="text-xl font-semibold">Membres</h2>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold">Membres</h2>
+                  {data.isCaptain && (
+                    <Button
+                      type="button"
+                      size="compact"
+                      className="px-3 py-1.5 text-sm"
+                      onClick={() => setShowAddModal(true)}
+                    >
+                      + Ajouter
+                    </Button>
+                  )}
+                </div>
                 {!data.isCaptain && (
                   <p className="text-sm text-neutral-400 mb-2">
                     Lecture seule (non capitaine).
@@ -322,6 +439,185 @@ export default function MyTeamPage() {
           )}
         </div>
       </div>
+
+      {/* Add Member Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-neutral-800 border border-white/10 rounded-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-white/10 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Ajouter un membre</h3>
+              <button
+                onClick={() => {
+                  setShowAddModal(false);
+                  setSelectedPlayer(null);
+                  setSearchQuery('');
+                  setSearchResults([]);
+                  setNewMemberBattleTag('');
+                  setNewMemberRole('player');
+                }}
+                className="text-neutral-400 hover:text-white"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4 overflow-y-auto flex-1">
+              {!selectedPlayer ? (
+                <>
+                  {/* Search input */}
+                  <div>
+                    <label className="block text-sm text-neutral-400 mb-1">
+                      Rechercher par email ou BattleTag
+                    </label>
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="email@example.com ou Pseudo#1234"
+                      className="w-full rounded-lg bg-neutral-900 border border-white/10 px-3 py-2 text-sm"
+                      autoFocus
+                    />
+                  </div>
+
+                  {/* Search results */}
+                  <div className="space-y-2">
+                    {searchLoading && (
+                      <div className="text-neutral-400 text-sm">Recherche...</div>
+                    )}
+                    {!searchLoading && searchQuery.length >= 2 && searchResults.length === 0 && (
+                      <div className="text-neutral-400 text-sm">Aucun résultat</div>
+                    )}
+                    {searchResults.map((player) => (
+                      <button
+                        key={player.id}
+                        onClick={() => {
+                          setSelectedPlayer(player);
+                          if (player.battle_tag) {
+                            setNewMemberBattleTag(player.battle_tag);
+                          }
+                        }}
+                        disabled={player.has_team}
+                        className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                          player.has_team
+                            ? 'bg-neutral-900/50 border-neutral-700 opacity-50 cursor-not-allowed'
+                            : 'bg-neutral-900 border-white/10 hover:border-purple-500/50 hover:bg-neutral-900/80'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium text-white">
+                              {player.display_name || player.email || 'Utilisateur'}
+                            </div>
+                            {player.email && player.display_name && (
+                              <div className="text-xs text-neutral-400">{player.email}</div>
+                            )}
+                            {player.battle_tag && (
+                              <div className="text-xs text-blue-400">{player.battle_tag}</div>
+                            )}
+                          </div>
+                          {player.has_team && (
+                            <span className="text-xs bg-red-500/20 text-red-300 px-2 py-0.5 rounded">
+                              Déjà en équipe
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Selected player form */}
+                  <div className="bg-neutral-900 rounded-lg p-3 border border-purple-500/30">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-white">
+                          {selectedPlayer.display_name || selectedPlayer.email || 'Utilisateur'}
+                        </div>
+                        {selectedPlayer.email && (
+                          <div className="text-xs text-neutral-400">{selectedPlayer.email}</div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => setSelectedPlayer(null)}
+                        className="text-neutral-400 hover:text-white text-sm"
+                      >
+                        Changer
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-neutral-400 mb-1">
+                      BattleTag *
+                    </label>
+                    <input
+                      type="text"
+                      value={newMemberBattleTag}
+                      onChange={(e) => setNewMemberBattleTag(e.target.value)}
+                      placeholder="Pseudo#1234"
+                      className="w-full rounded-lg bg-neutral-900 border border-white/10 px-3 py-2 text-sm"
+                    />
+                    <p className="text-xs text-neutral-500 mt-1">
+                      Format: Pseudo#0000 (2+ caractères + # + 3-6 chiffres)
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-neutral-400 mb-1">
+                      Rôle
+                    </label>
+                    <select
+                      value={newMemberRole}
+                      onChange={(e) => setNewMemberRole(e.target.value)}
+                      className="w-full rounded-lg bg-neutral-900 border border-white/10 px-3 py-2 text-sm"
+                    >
+                      <option value="player">Joueuse</option>
+                      <option value="tank">Tank</option>
+                      <option value="dps">DPS</option>
+                      <option value="support">Support</option>
+                      <option value="flex">Flex</option>
+                      <option value="coach">Coach</option>
+                      <option value="manager">Manager</option>
+                    </select>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {selectedPlayer && (
+              <div className="p-4 border-t border-white/10 flex justify-end gap-2">
+                <Button
+                  type="button"
+                  size="compact"
+                  className="px-4 py-2 text-sm bg-neutral-700 hover:bg-neutral-600"
+                  onClick={() => {
+                    setShowAddModal(false);
+                    setSelectedPlayer(null);
+                    setSearchQuery('');
+                    setSearchResults([]);
+                    setNewMemberBattleTag('');
+                    setNewMemberRole('player');
+                  }}
+                >
+                  Annuler
+                </Button>
+                <Button
+                  type="button"
+                  size="compact"
+                  className="px-4 py-2 text-sm"
+                  onClick={handleAddMember}
+                  disabled={addingMember || !newMemberBattleTag}
+                >
+                  {addingMember ? 'Ajout...' : 'Ajouter'}
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }

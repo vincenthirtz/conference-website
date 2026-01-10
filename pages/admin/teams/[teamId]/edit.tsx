@@ -104,6 +104,20 @@ function AdminEditTeamPage({ staff }: StaffProps) {
   const [memberSaving, setMemberSaving] = useState(false);
   const [memberError, setMemberError] = useState<string | null>(null);
 
+  // Player search
+  type SearchResult = {
+    id: string;
+    email: string | null;
+    display_name: string | null;
+    battle_tag: string | null;
+    team_id: string | null;
+    team_name: string | null;
+  };
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+
   const fetchTeam = useCallback(async () => {
     if (!teamId) return;
     setLoading(true);
@@ -268,7 +282,46 @@ function AdminEditTeamPage({ staff }: StaffProps) {
   function openAddMemberModal() {
     setMemberForm({ email: '', userId: '', role: 'player', battleTag: '', setCaptain: false });
     setMemberError(null);
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowSearchResults(false);
     setShowAddMemberModal(true);
+  }
+
+  async function handleSearchPlayers(query: string) {
+    setSearchQuery(query);
+    if (query.length < 2) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+
+    setSearchLoading(true);
+    setShowSearchResults(true);
+    try {
+      const res = await fetch(`/api/admin/users/search?q=${encodeURIComponent(query)}`);
+      const json = await res.json();
+      if (res.ok && json.players) {
+        setSearchResults(json.players);
+      } else {
+        setSearchResults([]);
+      }
+    } catch {
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  }
+
+  function selectPlayer(player: SearchResult) {
+    setMemberForm({
+      ...memberForm,
+      email: player.email || '',
+      userId: player.id,
+      battleTag: player.battle_tag || '',
+    });
+    setShowSearchResults(false);
+    setSearchQuery(player.email || player.battle_tag || player.display_name || '');
   }
 
   function openEditMemberModal(member: TeamMemberRow) {
@@ -895,6 +948,73 @@ function AdminEditTeamPage({ staff }: StaffProps) {
             <h3 className="text-lg font-semibold mb-4">Ajouter un membre</h3>
 
             <div className="space-y-4">
+              {/* Search input */}
+              <div className="relative">
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Rechercher par email ou BattleTag
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => handleSearchPlayers(e.target.value)}
+                    className="w-full px-3 py-2 pl-9 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                    placeholder="Rechercher un joueur..."
+                  />
+                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  {searchLoading && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Search results dropdown */}
+                {showSearchResults && (
+                  <div className="absolute z-10 w-full mt-1 bg-neutral-900 border border-neutral-700 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                    {searchResults.length === 0 && !searchLoading ? (
+                      <div className="px-3 py-2 text-sm text-neutral-400">
+                        Aucun résultat trouvé
+                      </div>
+                    ) : (
+                      searchResults.map((player) => (
+                        <button
+                          key={player.id}
+                          type="button"
+                          onClick={() => selectPlayer(player)}
+                          className="w-full px-3 py-2 text-left hover:bg-neutral-700 transition-colors flex items-center gap-3"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-neutral-700 flex items-center justify-center flex-shrink-0">
+                            <svg className="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-medium truncate">
+                              {player.battle_tag || player.display_name || player.email || 'Joueur'}
+                            </div>
+                            <div className="text-xs text-neutral-400 truncate">
+                              {player.email}
+                              {player.team_name && (
+                                <span className="ml-2 text-amber-400">
+                                  Équipe: {player.team_name}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t border-neutral-700 pt-4">
+                <p className="text-xs text-neutral-500 mb-3">Ou saisir manuellement :</p>
+              </div>
+
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">Email utilisateur</label>
                 <input
