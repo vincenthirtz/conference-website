@@ -803,7 +803,7 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                   <h2 className="text-sm font-semibold text-neutral-400 mb-3">Liens rapides</h2>
                   <div className="space-y-2">
                     <Link
-                      href={`/teams/${team.id}`}
+                      href={`/team/${team.id}`}
                       target="_blank"
                       className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-neutral-900/50 hover:bg-neutral-700/50 transition-colors group"
                     >
