@@ -75,23 +75,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
 async function handleGet(id: string, res: NextApiResponse) {
   const { data, error } = await supabaseAdmin
     .from('tournament_stages')
-    .select(
-      `
-      id,
-      tournament_id,
-      name,
-      slug,
-      stage_type,
-      order_index,
-      is_active,
-      is_public,
-      start_date,
-      end_at,
-      settings,
-      created_at,
-      updated_at
-    `
-    )
+    .select('*')
     .eq('id', id)
     .maybeSingle();
 

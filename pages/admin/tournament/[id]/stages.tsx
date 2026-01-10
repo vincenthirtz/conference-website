@@ -82,14 +82,21 @@ function StagesPage(_: StaffProps) {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const res = await fetch(`/api/admin/tournament/${tournamentId}/matches?limit=1`);
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
+      // Fetch stages
+      const stagesRes = await fetch(`/api/admin/tournament/${tournamentId}/stages`);
+      if (!stagesRes.ok) {
+        const json = await stagesRes.json().catch(() => ({}));
         throw new Error(json.error || 'Impossible de charger les phases');
       }
-      const json: MatchesApiResponse = await res.json();
-      setStages(json.stages || []);
-      setTournamentName(json.tournament?.name || tournamentId || 'Tournoi');
+      const stagesJson = await stagesRes.json();
+      setStages(stagesJson.stages || []);
+
+      // Fetch tournament name
+      const tournamentRes = await fetch(`/api/admin/tournament/${tournamentId}`);
+      if (tournamentRes.ok) {
+        const tournamentJson = await tournamentRes.json();
+        setTournamentName(tournamentJson.tournament?.name || tournamentId || 'Tournoi');
+      }
     } catch (err: any) {
       setErrorMsg(err?.message || 'Erreur de chargement');
     } finally {
