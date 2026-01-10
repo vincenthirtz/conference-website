@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import Button from '@/components/Buttons/button';
+import Image from 'next/image';
 import { withStaffPage } from '@/utils/staff';
 
 type StaffShape = {
@@ -34,6 +34,7 @@ type TeamMemberRow = {
   team_id: string;
   user_id: string;
   role: string;
+  battle_tag?: string | null;
   created_at: string;
 };
 
@@ -70,14 +71,13 @@ function AdminEditTeamPage({ staff }: StaffProps) {
   const [team, setTeam] = useState<TeamRow | null>(null);
   const [members, setMembers] = useState<TeamMemberRow[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
-  const [membersError, setMembersError] = useState<string | null>(null);
 
   const [registeredTournaments, setRegisteredTournaments] = useState<TournamentRegistration[]>([]);
   const [availableTournaments, setAvailableTournaments] = useState<TournamentRow[]>([]);
   const [tournamentsLoading, setTournamentsLoading] = useState(false);
-  const [tournamentsError, setTournamentsError] = useState<string | null>(null);
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>('');
 
+  // Form state
   const [name, setName] = useState('');
   const [shortName, setShortName] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
@@ -89,24 +89,30 @@ function AdminEditTeamPage({ staff }: StaffProps) {
   const [website, setWebsite] = useState('');
   const [isActive, setIsActive] = useState(true);
 
-  useEffect(() => {
-    if (!teamId) return;
-    fetchTeam();
-    fetchMembers();
-    fetchTournaments();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [teamId]);
+  // Member modals
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  const [showEditMemberModal, setShowEditMemberModal] = useState(false);
+  const [editingMember, setEditingMember] = useState<TeamMemberRow | null>(null);
+  const [memberForm, setMemberForm] = useState({
+    email: '',
+    userId: '',
+    role: 'player',
+    battleTag: '',
+    setCaptain: false,
+  });
+  const [memberSaving, setMemberSaving] = useState(false);
+  const [memberError, setMemberError] = useState<string | null>(null);
 
-  async function fetchTeam() {
+  const fetchTeam = useCallback(async () => {
+    if (!teamId) return;
     setLoading(true);
     setErrorMsg(null);
-    setSuccessMsg(null);
 
     try {
       const res = await fetch(`/api/admin/teams/${teamId}`);
       const json = await res.json();
       if (!res.ok || json.error) {
-        throw new Error(json.error || 'Impossible de charger l&apos;équipe');
+        throw new Error(json.error || 'Impossible de charger l\'équipe');
       }
 
       const t: TeamRow = json.team;
@@ -126,7 +132,47 @@ function AdminEditTeamPage({ staff }: StaffProps) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [teamId]);
+
+  const fetchMembers = useCallback(async () => {
+    if (!teamId) return;
+    setMembersLoading(true);
+    try {
+      const res = await fetch(`/api/admin/teams/${teamId}/members`);
+      const json = await res.json();
+      if (res.ok && !json.error) {
+        setMembers(json.members || []);
+      }
+    } catch {
+      // Silently fail
+    } finally {
+      setMembersLoading(false);
+    }
+  }, [teamId]);
+
+  const fetchTournaments = useCallback(async () => {
+    if (!teamId) return;
+    setTournamentsLoading(true);
+    try {
+      const res = await fetch(`/api/admin/teams/${teamId}/tournaments`);
+      const json = await res.json();
+      if (res.ok && !json.error) {
+        setRegisteredTournaments(json.registered || []);
+        setAvailableTournaments(json.available || []);
+      }
+    } catch {
+      // Silently fail
+    } finally {
+      setTournamentsLoading(false);
+    }
+  }, [teamId]);
+
+  useEffect(() => {
+    if (!teamId) return;
+    fetchTeam();
+    fetchMembers();
+    fetchTournaments();
+  }, [teamId, fetchTeam, fetchMembers, fetchTournaments]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -160,8 +206,9 @@ function AdminEditTeamPage({ staff }: StaffProps) {
         throw new Error(json.error || 'Échec de la mise à jour');
       }
 
-      setSuccessMsg('Équipe mise à jour ✅');
+      setSuccessMsg('Équipe mise à jour');
       setTeam(json.team);
+      setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: any) {
       setErrorMsg(err?.message ?? 'Erreur inattendue');
     } finally {
@@ -169,47 +216,9 @@ function AdminEditTeamPage({ staff }: StaffProps) {
     }
   }
 
-  async function fetchMembers() {
-    if (!teamId) return;
-    setMembersLoading(true);
-    setMembersError(null);
-    try {
-      const res = await fetch(`/api/admin/teams/${teamId}/members`);
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error || 'Impossible de charger les membres');
-      }
-      setMembers(json.members || []);
-    } catch (err: any) {
-      setMembersError(err?.message ?? 'Erreur inattendue');
-    } finally {
-      setMembersLoading(false);
-    }
-  }
-
-  async function fetchTournaments() {
-    if (!teamId) return;
-    setTournamentsLoading(true);
-    setTournamentsError(null);
-    try {
-      const res = await fetch(`/api/admin/teams/${teamId}/tournaments`);
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error || 'Impossible de charger les tournois');
-      }
-      setRegisteredTournaments(json.registered || []);
-      setAvailableTournaments(json.available || []);
-    } catch (err: any) {
-      setTournamentsError(err?.message ?? 'Erreur inattendue');
-    } finally {
-      setTournamentsLoading(false);
-    }
-  }
-
   async function handleRegisterToTournament() {
     if (!teamId || !selectedTournamentId) return;
     setTournamentsLoading(true);
-    setTournamentsError(null);
 
     try {
       const res = await fetch(`/api/admin/teams/${teamId}/tournaments`, {
@@ -226,7 +235,7 @@ function AdminEditTeamPage({ staff }: StaffProps) {
       setSelectedTournamentId('');
       await fetchTournaments();
     } catch (err: any) {
-      setTournamentsError(err?.message ?? 'Erreur inattendue');
+      setErrorMsg(err?.message ?? 'Erreur inattendue');
     } finally {
       setTournamentsLoading(false);
     }
@@ -234,13 +243,9 @@ function AdminEditTeamPage({ staff }: StaffProps) {
 
   async function handleUnregisterFromTournament(tournamentId: string) {
     if (!teamId) return;
-    if (!confirm('Êtes-vous sûr de vouloir désinscrire cette équipe de ce tournoi ?')) {
-      return;
-    }
+    if (!confirm('Désinscrire cette équipe de ce tournoi ?')) return;
 
     setTournamentsLoading(true);
-    setTournamentsError(null);
-
     try {
       const res = await fetch(`/api/admin/teams/${teamId}/tournaments`, {
         method: 'DELETE',
@@ -248,396 +253,733 @@ function AdminEditTeamPage({ staff }: StaffProps) {
         body: JSON.stringify({ tournamentId }),
       });
 
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error || 'Échec de la désinscription');
+      if (res.ok) {
+        await fetchTournaments();
       }
-
-      await fetchTournaments();
-    } catch (err: any) {
-      setTournamentsError(err?.message ?? 'Erreur inattendue');
+    } catch {
+      // Silently fail
     } finally {
       setTournamentsLoading(false);
+    }
+  }
+
+  // Member handlers
+  function openAddMemberModal() {
+    setMemberForm({ email: '', userId: '', role: 'player', battleTag: '', setCaptain: false });
+    setMemberError(null);
+    setShowAddMemberModal(true);
+  }
+
+  function openEditMemberModal(member: TeamMemberRow) {
+    setEditingMember(member);
+    setMemberForm({
+      email: '',
+      userId: member.user_id,
+      role: member.role,
+      battleTag: member.battle_tag || '',
+      setCaptain: false,
+    });
+    setMemberError(null);
+    setShowEditMemberModal(true);
+  }
+
+  async function handleAddMember() {
+    if (!teamId) return;
+    if (!memberForm.email.trim() && !memberForm.userId.trim()) {
+      setMemberError('Email ou User ID requis');
+      return;
+    }
+
+    setMemberSaving(true);
+    setMemberError(null);
+
+    try {
+      const res = await fetch(`/api/admin/teams/${teamId}/members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: memberForm.email.trim() || undefined,
+          userId: memberForm.userId.trim() || undefined,
+          role: memberForm.role.trim() || 'player',
+          battleTag: memberForm.battleTag.trim() || undefined,
+          setCaptain: memberForm.setCaptain,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        throw new Error(json.error || 'Impossible d\'ajouter le membre');
+      }
+
+      setShowAddMemberModal(false);
+      setSuccessMsg('Membre ajouté');
+      setTimeout(() => setSuccessMsg(null), 3000);
+      await fetchMembers();
+    } catch (err: any) {
+      setMemberError(err?.message ?? 'Erreur inattendue');
+    } finally {
+      setMemberSaving(false);
+    }
+  }
+
+  async function handleEditMember() {
+    if (!teamId || !editingMember) return;
+
+    setMemberSaving(true);
+    setMemberError(null);
+
+    try {
+      const res = await fetch(`/api/admin/teams/${teamId}/members`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          memberId: editingMember.id,
+          role: memberForm.role.trim() || 'player',
+          battleTag: memberForm.battleTag.trim() || null,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        throw new Error(json.error || 'Impossible de modifier le membre');
+      }
+
+      setShowEditMemberModal(false);
+      setEditingMember(null);
+      setSuccessMsg('Membre modifié');
+      setTimeout(() => setSuccessMsg(null), 3000);
+      await fetchMembers();
+    } catch (err: any) {
+      setMemberError(err?.message ?? 'Erreur inattendue');
+    } finally {
+      setMemberSaving(false);
+    }
+  }
+
+  async function handleDeleteMember(member: TeamMemberRow) {
+    if (!teamId) return;
+    if (!confirm(`Retirer ${member.battle_tag || member.user_id} de l'équipe ?`)) return;
+
+    try {
+      const res = await fetch(`/api/admin/teams/${teamId}/members`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId: member.id }),
+      });
+
+      if (res.ok) {
+        setSuccessMsg('Membre retiré');
+        setTimeout(() => setSuccessMsg(null), 3000);
+        await fetchMembers();
+      }
+    } catch {
+      // Silently fail
     }
   }
 
   return (
     <>
       <Head>
-        <title>Admin – Éditer équipe</title>
+        <title>Admin – Éditer équipe{team?.name ? ` : ${team.name}` : ''}</title>
       </Head>
 
-      <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
-        <header className="flex items-center justify-between flex-wrap gap-4 mb-6">
-          <div>
+      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
+        {/* Banner */}
+        {team?.banner_url && (
+          <div className="relative h-48 md:h-56 w-full overflow-hidden">
+            <Image
+              src={team.banner_url}
+              alt=""
+              fill
+              className="object-cover opacity-40"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/60 to-transparent" />
+          </div>
+        )}
+
+        <div
+          className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ${
+            team?.banner_url ? '-mt-20 relative z-10' : 'pt-20'
+          } pb-12`}
+        >
+          {/* Header */}
+          <div className="mb-8">
             <button
               type="button"
               onClick={() => router.push('/admin/teams')}
-              className="mb-2 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
+              className="mb-4 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors"
             >
-              ← Retour à la liste des équipes
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Retour à la liste
             </button>
-            <h1 className="text-3xl font-bold">
-              Éditer l&apos;équipe {team?.name ? `: ${team.name}` : ''}
-            </h1>
-            <p className="text-sm text-neutral-400 mt-1">
-              Mets à jour les informations générales de l&apos;équipe.
-            </p>
-          </div>
-        </header>
 
-        <div className="grid gap-6 lg:grid-cols-[2fr,1.2fr] items-start">
-          <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-6">
-            {loading ? (
-              <p className="text-neutral-300 text-sm">
-                Chargement de l&apos;équipe…
-              </p>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <label className="block text-sm text-neutral-300 mb-1">
-                      Nom *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Nom de l'équipe"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-neutral-300 mb-1">
-                      Tag / short name
-                    </label>
-                    <input
-                      type="text"
-                      value={shortName}
-                      onChange={(e) => setShortName(e.target.value)}
-                      className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="PHX"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <label className="block text-sm text-neutral-300 mb-1">
-                      URL logo
-                    </label>
-                    <input
-                      type="text"
-                      value={logoUrl}
-                      onChange={(e) => setLogoUrl(e.target.value)}
-                      className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="https://…"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-neutral-300 mb-1">
-                      URL bannière
-                    </label>
-                    <input
-                      type="text"
-                      value={bannerUrl}
-                      onChange={(e) => setBannerUrl(e.target.value)}
-                      className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="https://…"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <label className="block text-sm text-neutral-300 mb-1">
-                      Pays
-                    </label>
-                    <input
-                      type="text"
-                      value={country}
-                      onChange={(e) => setCountry(e.target.value)}
-                      className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="FR"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-2 mt-6">
-                    <input
-                      id="active"
-                      type="checkbox"
-                      checked={isActive}
-                      onChange={(e) => setIsActive(e.target.checked)}
-                      className="h-4 w-4 rounded border-neutral-600 bg-neutral-900"
-                    />
-                    <label
-                      htmlFor="active"
-                      className="text-sm text-neutral-300"
-                    >
-                      Équipe active
-                    </label>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm text-neutral-300 mb-1">
-                    Description
-                  </label>
-                  <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm min-h-[100px] resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Présentation de l'équipe"
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="flex items-center gap-4">
+                {team?.logo_url && (
+                  <Image
+                    src={team.logo_url}
+                    alt={team.name}
+                    width={64}
+                    height={64}
+                    className="w-16 h-16 rounded-xl object-cover border-2 border-neutral-700 shadow-lg"
                   />
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div>
-                    <label className="block text-sm text-neutral-300 mb-1">
-                      Twitter
-                    </label>
-                    <input
-                      type="text"
-                      value={twitter}
-                      onChange={(e) => setTwitter(e.target.value)}
-                      className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="@team"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-neutral-300 mb-1">
-                      Discord
-                    </label>
-                    <input
-                      type="text"
-                      value={discord}
-                      onChange={(e) => setDiscord(e.target.value)}
-                      className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="discord.gg/…"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-neutral-300 mb-1">
-                      Site web
-                    </label>
-                    <input
-                      type="text"
-                      value={website}
-                      onChange={(e) => setWebsite(e.target.value)}
-                      className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="https://…"
-                    />
-                  </div>
-                </div>
-
-                {errorMsg && (
-                  <div className="rounded-lg border border-red-600 bg-red-900/60 px-3 py-2 text-sm">
-                    {errorMsg}
-                  </div>
                 )}
-                {successMsg && (
-                  <div className="rounded-lg border border-emerald-600 bg-emerald-900/50 px-3 py-2 text-sm">
-                    {successMsg}
-                  </div>
-                )}
-
-                <div className="flex items-center gap-3">
-                  <Button
-                    type="submit"
-                    size="compact"
-                    disabled={saving}
-                    className="px-4 py-2 text-sm font-semibold"
-                  >
-                    {saving ? 'Enregistrement...' : `Mettre à jour l'équipe`}
-                  </Button>
-
-                  <Link href="/admin/teams">
-                    <Button
-                      type="button"
-                      size="compact"
-                      className="px-3 py-2 text-sm"
-                    >
-                      Retour liste
-                    </Button>
-                  </Link>
-                </div>
-              </form>
-            )}
-          </section>
-
-          <aside className="bg-neutral-800 border border-neutral-700 rounded-xl p-5 space-y-3">
-            <h2 className="text-lg font-semibold">Conseils</h2>
-            <ul className="space-y-1 text-sm text-neutral-300">
-              <li>• Les champs vides ne remplaceront rien dans le back-end.</li>
-              <li>• Le statut actif est envoyé dans le payload si activé.</li>
-              <li>
-                • Utilise les URLs complètes pour le logo/bannière si tu veux un
-                affichage public.
-              </li>
-              <li>• Les réseaux sont optionnels.</li>
-            </ul>
-          </aside>
-
-          <aside className="bg-neutral-800 border border-neutral-700 rounded-xl p-5 space-y-3">
-            <div className="flex items-center gap-3">
-              <h2 className="text-xl font-semibold text-white">
-                Membres de l&apos;équipe
-              </h2>
-              <Link href="/admin/teams/add-member">
-                <Button
-                  type="button"
-                  size="compact"
-                  className="px-3 py-2 text-sm"
-                >
-                  + Ajouter un membre
-                </Button>
-              </Link>
-            </div>
-
-            {membersLoading ? (
-              <p className="text-sm text-neutral-300">
-                Chargement des membres…
-              </p>
-            ) : membersError ? (
-              <div className="text-sm text-red-200 bg-red-500/10 border border-red-500/40 rounded-lg px-3 py-2">
-                {membersError}
-              </div>
-            ) : members.length === 0 ? (
-              <p className="text-sm text-neutral-400">
-                Aucun membre pour cette équipe.
-              </p>
-            ) : (
-              <div className="overflow-auto">
-                <table className="w-full text-left min-w-[520px]">
-                  <thead className="text-xs uppercase tracking-[0.08em] text-neutral-400">
-                    <tr>
-                      <th className="px-3 py-2">user_id</th>
-                      <th className="px-3 py-2">Rôle</th>
-                      <th className="px-3 py-2">Ajouté le</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {members.map((m) => (
-                      <tr key={m.id} className="border-t border-neutral-700">
-                        <td className="px-3 py-2 font-mono text-xs break-all text-neutral-200">
-                          {m.user_id}
-                        </td>
-                        <td className="px-3 py-2 text-sm">{m.role}</td>
-                        <td className="px-3 py-2 text-sm text-neutral-300">
-                          {m.created_at
-                            ? new Date(m.created_at).toLocaleString()
-                            : '—'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </aside>
-
-          <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5 space-y-4">
-            <h2 className="text-xl font-semibold text-white">
-              Inscription aux tournois
-            </h2>
-
-            {tournamentsError && (
-              <div className="text-sm text-red-200 bg-red-500/10 border border-red-500/40 rounded-lg px-3 py-2">
-                {tournamentsError}
-              </div>
-            )}
-
-            {tournamentsLoading ? (
-              <p className="text-sm text-neutral-300">
-                Chargement des tournois…
-              </p>
-            ) : (
-              <>
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-neutral-300">
-                    Tournois inscrits
-                  </h3>
-                  {registeredTournaments.length === 0 ? (
-                    <p className="text-sm text-neutral-400">
-                      Cette équipe n&apos;est inscrite à aucun tournoi.
+                <div>
+                  <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+                    {team?.name || 'Chargement...'}
+                  </h1>
+                  {team?.short_name && (
+                    <p className="text-sm text-neutral-400 mt-1">
+                      <span className="font-mono text-xs bg-neutral-800/80 px-2 py-0.5 rounded">
+                        {team.short_name}
+                      </span>
+                      {team.country && <span className="ml-2">{team.country}</span>}
                     </p>
+                  )}
+                </div>
+              </div>
+
+              {team && (
+                <div className="flex items-center gap-2">
+                  {team.is_active ? (
+                    <span className="px-3 py-1.5 rounded-full text-sm font-semibold bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
+                      Active
+                    </span>
+                  ) : (
+                    <span className="px-3 py-1.5 rounded-full text-sm font-semibold bg-neutral-600/20 text-neutral-300 border border-neutral-500/30">
+                      Inactive
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Messages */}
+          {errorMsg && (
+            <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
+              <svg className="w-5 h-5 text-red-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              {errorMsg}
+            </div>
+          )}
+          {successMsg && (
+            <div className="mb-6 rounded-xl bg-emerald-900/40 border border-emerald-500/50 px-4 py-3 text-sm flex items-center gap-2">
+              <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              {successMsg}
+            </div>
+          )}
+
+          {loading && !team && (
+            <div className="flex items-center justify-center py-20">
+              <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+            </div>
+          )}
+
+          {team && (
+            <div className="grid gap-6 lg:grid-cols-3">
+              {/* Left Column - Edit Form */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* Team Info Form */}
+                <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
+                  <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Informations générales
+                  </h2>
+
+                  <form onSubmit={handleSubmit} className="space-y-5">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <label className="block text-sm text-neutral-400 mb-1">Nom *</label>
+                        <input
+                          type="text"
+                          required
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          placeholder="Nom de l'équipe"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-neutral-400 mb-1">Tag / Short name</label>
+                        <input
+                          type="text"
+                          value={shortName}
+                          onChange={(e) => setShortName(e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          placeholder="PHX"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <label className="block text-sm text-neutral-400 mb-1">URL Logo</label>
+                        <input
+                          type="text"
+                          value={logoUrl}
+                          onChange={(e) => setLogoUrl(e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
+                          placeholder="https://..."
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-neutral-400 mb-1">URL Bannière</label>
+                        <input
+                          type="text"
+                          value={bannerUrl}
+                          onChange={(e) => setBannerUrl(e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
+                          placeholder="https://..."
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <label className="block text-sm text-neutral-400 mb-1">Pays</label>
+                        <input
+                          type="text"
+                          value={country}
+                          onChange={(e) => setCountry(e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          placeholder="FR"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2 mt-6">
+                        <input
+                          id="active"
+                          type="checkbox"
+                          checked={isActive}
+                          onChange={(e) => setIsActive(e.target.checked)}
+                          className="h-4 w-4 rounded border-neutral-600 bg-neutral-700"
+                        />
+                        <label htmlFor="active" className="text-sm text-neutral-300">
+                          Équipe active
+                        </label>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-neutral-400 mb-1">Description</label>
+                      <textarea
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm min-h-[100px] resize-y"
+                        placeholder="Présentation de l'équipe"
+                      />
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <div>
+                        <label className="block text-sm text-neutral-400 mb-1">Twitter</label>
+                        <input
+                          type="text"
+                          value={twitter}
+                          onChange={(e) => setTwitter(e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          placeholder="@team"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-neutral-400 mb-1">Discord</label>
+                        <input
+                          type="text"
+                          value={discord}
+                          onChange={(e) => setDiscord(e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          placeholder="discord.gg/..."
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-neutral-400 mb-1">Site web</label>
+                        <input
+                          type="text"
+                          value={website}
+                          onChange={(e) => setWebsite(e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          placeholder="https://..."
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center gap-2"
+                    >
+                      {saving ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Enregistrement...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Enregistrer
+                        </>
+                      )}
+                    </button>
+                  </form>
+                </section>
+
+                {/* Members Section */}
+                <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold flex items-center gap-2">
+                      <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                      Membres ({members.length})
+                    </h2>
+                    <button
+                      onClick={openAddMemberModal}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors flex items-center gap-1.5"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Ajouter
+                    </button>
+                  </div>
+
+                  {membersLoading ? (
+                    <div className="text-neutral-400 text-sm py-4">Chargement...</div>
+                  ) : members.length === 0 ? (
+                    <div className="text-neutral-400 text-sm py-8 text-center bg-neutral-900/30 rounded-xl">
+                      Aucun membre dans cette équipe
+                    </div>
                   ) : (
                     <div className="space-y-2">
-                      {registeredTournaments.map((t) => (
+                      {members.map((member) => (
                         <div
-                          key={t.id}
-                          className="flex items-center justify-between bg-neutral-900 border border-neutral-700 rounded-lg px-4 py-3"
+                          key={member.id}
+                          className="flex items-center justify-between gap-3 bg-neutral-900/50 rounded-xl px-4 py-3 group"
                         >
-                          <div className="flex-1">
-                            <div className="font-semibold text-white">
-                              {t.name}
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-10 h-10 rounded-lg bg-neutral-700 flex items-center justify-center text-neutral-400">
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
                             </div>
-                            <div className="text-xs text-neutral-400 mt-1">
-                              {t.game} • {t.status}
-                              {t.stages.length > 0 && (
-                                <span className="ml-2">
-                                  Stages: {t.stages.map(s => s.stageName).join(', ')}
+                            <div className="min-w-0">
+                              <div className="font-medium text-sm truncate">
+                                {member.battle_tag || 'Membre'}
+                              </div>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="px-2 py-0.5 rounded-full text-xs bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                                  {member.role}
                                 </span>
-                              )}
+                                <span className="text-xs text-neutral-500 font-mono truncate">
+                                  {member.user_id.slice(0, 8)}...
+                                </span>
+                              </div>
                             </div>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => handleUnregisterFromTournament(t.id)}
-                            disabled={tournamentsLoading}
-                            className="ml-3 px-3 py-1 text-xs font-semibold text-red-200 bg-red-900/40 hover:bg-red-900/60 border border-red-700 rounded transition disabled:opacity-50"
-                          >
-                            Désinscrire
-                          </button>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => openEditMemberModal(member)}
+                              className="p-2 rounded-lg hover:bg-neutral-700 text-neutral-400 hover:text-white transition-colors"
+                              title="Modifier"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteMember(member)}
+                              className="p-2 rounded-lg hover:bg-red-900/50 text-neutral-400 hover:text-red-400 transition-colors"
+                              title="Supprimer"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
                   )}
-                </div>
+                </section>
 
-                <div className="space-y-3 pt-4 border-t border-neutral-700">
-                  <h3 className="text-sm font-semibold text-neutral-300">
-                    Inscrire à un nouveau tournoi
-                  </h3>
-                  {availableTournaments.length === 0 ? (
-                    <p className="text-sm text-neutral-400">
-                      Aucun tournoi publié disponible.
-                    </p>
+                {/* Tournaments Section */}
+                <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
+                  <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                    </svg>
+                    Tournois
+                  </h2>
+
+                  {tournamentsLoading ? (
+                    <div className="text-neutral-400 text-sm py-4">Chargement...</div>
                   ) : (
-                    <div className="flex gap-2">
-                      <select
-                        value={selectedTournamentId}
-                        onChange={(e) => setSelectedTournamentId(e.target.value)}
-                        className="flex-1 rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        disabled={tournamentsLoading}
-                      >
-                        <option value="">Sélectionner un tournoi...</option>
-                        {availableTournaments.map((t) => (
-                          <option key={t.id} value={t.id}>
-                            {t.name} ({t.game})
-                          </option>
-                        ))}
-                      </select>
-                      <Button
-                        type="button"
-                        size="compact"
-                        onClick={handleRegisterToTournament}
-                        disabled={!selectedTournamentId || tournamentsLoading}
-                        className="px-4 py-2 text-sm"
-                      >
-                        Inscrire
-                      </Button>
+                    <div className="space-y-4">
+                      {/* Registered tournaments */}
+                      <div>
+                        <h3 className="text-sm font-semibold text-neutral-400 mb-2">Inscrits ({registeredTournaments.length})</h3>
+                        {registeredTournaments.length === 0 ? (
+                          <div className="text-sm text-neutral-500 py-4 text-center bg-neutral-900/30 rounded-xl">
+                            Aucune inscription
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {registeredTournaments.map((t) => (
+                              <div key={t.id} className="flex items-center justify-between gap-3 bg-neutral-900/50 rounded-xl px-4 py-3">
+                                <div>
+                                  <div className="font-medium text-sm">{t.name}</div>
+                                  <div className="text-xs text-neutral-500 mt-0.5">
+                                    {t.game} • {t.status}
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => handleUnregisterFromTournament(t.id)}
+                                  className="px-3 py-1 rounded-lg text-xs font-medium bg-red-900/40 hover:bg-red-900/60 text-red-300 border border-red-700/50 transition-colors"
+                                >
+                                  Désinscrire
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Register to new tournament */}
+                      {availableTournaments.length > 0 && (
+                        <div className="pt-4 border-t border-neutral-700">
+                          <h3 className="text-sm font-semibold text-neutral-400 mb-2">Inscrire à un tournoi</h3>
+                          <div className="flex gap-2">
+                            <select
+                              value={selectedTournamentId}
+                              onChange={(e) => setSelectedTournamentId(e.target.value)}
+                              className="flex-1 px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            >
+                              <option value="">Sélectionner un tournoi...</option>
+                              {availableTournaments.map((t) => (
+                                <option key={t.id} value={t.id}>
+                                  {t.name} ({t.game})
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              onClick={handleRegisterToTournament}
+                              disabled={!selectedTournamentId || tournamentsLoading}
+                              className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
+                            >
+                              Inscrire
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
-              </>
-            )}
-          </section>
+                </section>
+              </div>
+
+              {/* Right Column - Quick Info */}
+              <div className="space-y-6">
+                <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
+                  <h2 className="text-sm font-semibold text-neutral-400 mb-3">Informations système</h2>
+                  <div className="space-y-3 text-sm">
+                    <div>
+                      <div className="text-xs text-neutral-500 mb-1">ID de l&apos;équipe</div>
+                      <div className="font-mono text-xs bg-neutral-900 px-3 py-2 rounded-lg border border-neutral-700 break-all">
+                        {team.id}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
+                  <h2 className="text-sm font-semibold text-neutral-400 mb-3">Liens rapides</h2>
+                  <div className="space-y-2">
+                    <Link
+                      href={`/teams/${team.id}`}
+                      target="_blank"
+                      className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-neutral-900/50 hover:bg-neutral-700/50 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-blue-600/20 flex items-center justify-center">
+                          <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </div>
+                        <span className="text-sm">Page publique</span>
+                      </div>
+                      <svg className="w-4 h-4 text-neutral-500 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </Link>
+                  </div>
+                </section>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Add Member Modal */}
+      {showAddMemberModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h3 className="text-lg font-semibold mb-4">Ajouter un membre</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-neutral-400 mb-1">Email utilisateur</label>
+                <input
+                  type="email"
+                  value={memberForm.email}
+                  onChange={(e) => setMemberForm({ ...memberForm, email: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                  placeholder="user@email.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-neutral-400 mb-1">Ou User ID</label>
+                <input
+                  type="text"
+                  value={memberForm.userId}
+                  onChange={(e) => setMemberForm({ ...memberForm, userId: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-mono"
+                  placeholder="UUID de l'utilisateur"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-neutral-400 mb-1">BattleTag</label>
+                <input
+                  type="text"
+                  value={memberForm.battleTag}
+                  onChange={(e) => setMemberForm({ ...memberForm, battleTag: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                  placeholder="Pseudo#1234"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-neutral-400 mb-1">Rôle</label>
+                <input
+                  type="text"
+                  value={memberForm.role}
+                  onChange={(e) => setMemberForm({ ...memberForm, role: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                  placeholder="player / coach / sub"
+                />
+              </div>
+
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={memberForm.setCaptain}
+                  onChange={(e) => setMemberForm({ ...memberForm, setCaptain: e.target.checked })}
+                  className="h-4 w-4 rounded border-neutral-600 bg-neutral-700"
+                />
+                <span>Définir comme capitaine</span>
+              </label>
+
+              {memberError && (
+                <div className="rounded-lg bg-red-900/40 border border-red-500/50 px-3 py-2 text-sm text-red-200">
+                  {memberError}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                onClick={() => setShowAddMemberModal(false)}
+                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleAddMember}
+                disabled={memberSaving}
+                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {memberSaving && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                {memberSaving ? 'Ajout...' : 'Ajouter'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Member Modal */}
+      {showEditMemberModal && editingMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h3 className="text-lg font-semibold mb-4">Modifier le membre</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-neutral-400 mb-1">User ID</label>
+                <div className="font-mono text-xs bg-neutral-900 px-3 py-2 rounded-lg border border-neutral-700 break-all">
+                  {editingMember.user_id}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm text-neutral-400 mb-1">BattleTag</label>
+                <input
+                  type="text"
+                  value={memberForm.battleTag}
+                  onChange={(e) => setMemberForm({ ...memberForm, battleTag: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  placeholder="Pseudo#1234"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-neutral-400 mb-1">Rôle</label>
+                <input
+                  type="text"
+                  value={memberForm.role}
+                  onChange={(e) => setMemberForm({ ...memberForm, role: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  placeholder="player / coach / sub"
+                />
+              </div>
+
+              {memberError && (
+                <div className="rounded-lg bg-red-900/40 border border-red-500/50 px-3 py-2 text-sm text-red-200">
+                  {memberError}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                onClick={() => {
+                  setShowEditMemberModal(false);
+                  setEditingMember(null);
+                }}
+                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleEditMember}
+                disabled={memberSaving}
+                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {memberSaving && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                {memberSaving ? 'Enregistrement...' : 'Enregistrer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
