@@ -3,7 +3,9 @@
     "allow": [
       "Bash(npm run lint)",
       "Bash(npx tsc:*)",
-      "Bash(npm run lint:*)"
+      "Bash(npm run lint:*)",
+      "Bash(npm run build:*)",
+      "Bash(timeout 5 npm run dev:*)"
     ]
   }
 }

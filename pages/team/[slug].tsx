@@ -31,8 +31,6 @@ type TeamMember = {
   user_id: string;
   role: string;
   battle_tag?: string | null;
-  display_name?: string | null;
-  avatar_url?: string | null;
   is_captain?: boolean;
   created_at: string;
 };
@@ -61,6 +59,7 @@ type RecentMatch = {
   status: string;
   team1_score: number | null;
   team2_score: number | null;
+  winner_team_id: string | null;
   round_name?: string | null;
   opponent: {
     id: string;
@@ -133,11 +132,15 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (ctx)
   const teamId = team.id;
 
   // 2) Fetch members
-  const { data: rawMembers } = await supabaseAdmin
+  const { data: rawMembers, error: membersError } = await supabaseAdmin
     .from('team_members')
-    .select('id, user_id, role, battle_tag, display_name, avatar_url, created_at')
+    .select('id, user_id, role, battle_tag, created_at')
     .eq('team_id', teamId)
     .order('created_at', { ascending: true });
+
+  if (membersError) {
+    console.error('Error fetching team members:', membersError);
+  }
 
   // Compute is_captain based on team.captain_id
   const membersWithCaptain = (rawMembers || []).map((m: any) => ({
@@ -216,77 +219,93 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (ctx)
     });
   }
 
-  // 4) Fetch match stats
-  const { data: matchesAsTeam1 } = await supabaseAdmin
+  // 4) Fetch match stats - use winner_team_id for accurate results
+  const { data: allMatches } = await supabaseAdmin
     .from('matches')
-    .select('id, status, team1_score, team2_score')
-    .eq('team1_id', teamId)
-    .eq('status', 'finished');
-
-  const { data: matchesAsTeam2 } = await supabaseAdmin
-    .from('matches')
-    .select('id, status, team1_score, team2_score')
-    .eq('team2_id', teamId)
-    .eq('status', 'finished');
+    .select('id, status, team1_id, team2_id, team1_score, team2_score, winner_team_id')
+    .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
+    .in('status', ['finished', 'completed', 'done']);
 
   let wins = 0;
   let losses = 0;
   let draws = 0;
 
-  (matchesAsTeam1 || []).forEach((m: any) => {
-    const s1 = m.team1_score ?? 0;
-    const s2 = m.team2_score ?? 0;
-    if (s1 > s2) wins++;
-    else if (s1 < s2) losses++;
-    else draws++;
-  });
+  (allMatches || []).forEach((m: any) => {
+    const isTeam1 = m.team1_id === teamId;
+    const ourScore = isTeam1 ? m.team1_score : m.team2_score;
+    const theirScore = isTeam1 ? m.team2_score : m.team1_score;
 
-  (matchesAsTeam2 || []).forEach((m: any) => {
-    const s1 = m.team1_score ?? 0;
-    const s2 = m.team2_score ?? 0;
-    if (s2 > s1) wins++;
-    else if (s2 < s1) losses++;
-    else draws++;
+    // Method 1: Use winner_team_id if available
+    if (m.winner_team_id) {
+      if (m.winner_team_id === teamId) wins++;
+      else losses++;
+    }
+    // Method 2: Fallback to score comparison
+    else if (ourScore !== null && theirScore !== null) {
+      if (ourScore > theirScore) wins++;
+      else if (ourScore < theirScore) losses++;
+      else draws++;
+    }
   });
 
   const matchStats: MatchStats = {
-    total: (matchesAsTeam1?.length || 0) + (matchesAsTeam2?.length || 0),
+    total: allMatches?.length || 0,
     wins,
     losses,
     draws,
   };
 
   // 5) Recent matches
-  const { data: recentMatchesData } = await supabaseAdmin
+  const { data: recentMatchesData, error: matchesError } = await supabaseAdmin
     .from('matches')
-    .select(`
-      id,
-      scheduled_at,
-      status,
-      team1_score,
-      team2_score,
-      round_name,
-      team1_id,
-      team2_id,
-      team1:team1_id ( id, name, short_name, logo_url ),
-      team2:team2_id ( id, name, short_name, logo_url ),
-      tournament:tournaments ( id, name )
-    `)
+    .select('*')
     .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
-    .order('scheduled_at', { ascending: false })
+    .order('scheduled_at', { ascending: false, nullsFirst: false })
     .limit(10);
+
+  if (matchesError) {
+    console.error('Error fetching recent matches:', matchesError);
+  }
+
+  // Fetch opponent teams and tournaments separately
+  const opponentIds = new Set<string>();
+  const tournamentIds = new Set<string>();
+  (recentMatchesData || []).forEach((m: any) => {
+    if (m.team1_id && m.team1_id !== teamId) opponentIds.add(m.team1_id);
+    if (m.team2_id && m.team2_id !== teamId) opponentIds.add(m.team2_id);
+    if (m.tournament_id) tournamentIds.add(m.tournament_id);
+  });
+
+  const { data: opponentTeams } = opponentIds.size > 0
+    ? await supabaseAdmin
+        .from('teams')
+        .select('id, name, short_name, logo_url')
+        .in('id', Array.from(opponentIds))
+    : { data: [] };
+
+  const { data: tournamentData } = tournamentIds.size > 0
+    ? await supabaseAdmin
+        .from('tournaments')
+        .select('id, name')
+        .in('id', Array.from(tournamentIds))
+    : { data: [] };
+
+  const teamsMap = new Map((opponentTeams || []).map((t: any) => [t.id, t]));
+  const tournamentsMap = new Map((tournamentData || []).map((t: any) => [t.id, t]));
 
   const recentMatches: RecentMatch[] = (recentMatchesData || []).map((m: any) => {
     const isTeam1 = m.team1_id === teamId;
+    const opponentId = isTeam1 ? m.team2_id : m.team1_id;
     return {
       id: m.id,
       scheduled_at: m.scheduled_at,
       status: m.status,
       team1_score: m.team1_score,
       team2_score: m.team2_score,
+      winner_team_id: m.winner_team_id,
       round_name: m.round_name,
-      opponent: isTeam1 ? m.team2 : m.team1,
-      tournament: m.tournament,
+      opponent: opponentId ? teamsMap.get(opponentId) || null : null,
+      tournament: m.tournament_id ? tournamentsMap.get(m.tournament_id) || null : null,
       isTeam1,
     };
   });
@@ -486,37 +505,25 @@ export default function TeamPage({
                           : 'bg-white/5 border border-white/10'
                       }`}
                     >
-                      {member.avatar_url ? (
-                        <Image
-                          src={member.avatar_url}
-                          alt=""
-                          width={40}
-                          height={40}
-                          className={`w-10 h-10 rounded-lg object-cover ${
-                            member.is_captain ? 'border-2 border-amber-500/50' : 'border border-white/10'
-                          }`}
-                        />
-                      ) : (
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                          member.is_captain
-                            ? 'bg-amber-500/20 border border-amber-500/30'
-                            : 'bg-gradient-to-br from-neutral-700 to-neutral-800'
-                        }`}>
-                          {member.is_captain ? (
-                            <svg className="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
-                            </svg>
-                          ) : (
-                            <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                            </svg>
-                          )}
-                        </div>
-                      )}
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                        member.is_captain
+                          ? 'bg-amber-500/20 border border-amber-500/30'
+                          : 'bg-gradient-to-br from-neutral-700 to-neutral-800'
+                      }`}>
+                        {member.is_captain ? (
+                          <svg className="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
+                          </svg>
+                        ) : (
+                          <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                        )}
+                      </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-semibold text-white truncate">
-                            {member.battle_tag || member.display_name || 'Membre'}
+                            {member.battle_tag || 'Membre'}
                           </p>
                           {member.is_captain && (
                             <svg className="w-4 h-4 text-amber-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
@@ -713,21 +720,42 @@ function StatCard({
 }
 
 function MatchCard({ match, teamId }: { match: RecentMatch; teamId: string }) {
-  const isFinished = match.status === 'finished';
+  // Consider match finished if status contains 'finish' or 'complete' or 'done'
+  const isFinished = match.status === 'finished' ||
+    match.status === 'completed' ||
+    match.status === 'done' ||
+    match.status?.toLowerCase().includes('finish');
+
   const ourScore = match.isTeam1 ? match.team1_score : match.team2_score;
   const theirScore = match.isTeam1 ? match.team2_score : match.team1_score;
+  const hasScores = ourScore !== null && theirScore !== null;
 
+  // Determine result: first check winner_team_id, then fallback to scores
   let result: 'win' | 'loss' | 'draw' | null = null;
-  if (isFinished && ourScore !== null && theirScore !== null) {
-    if (ourScore > theirScore) result = 'win';
-    else if (ourScore < theirScore) result = 'loss';
-    else result = 'draw';
+
+  // Method 1: Use winner_team_id if available
+  if (match.winner_team_id) {
+    if (match.winner_team_id === teamId) {
+      result = 'win';
+    } else {
+      result = 'loss';
+    }
+  }
+  // Method 2: Fallback to score comparison if match is finished and has scores
+  else if ((isFinished || hasScores) && hasScores) {
+    if (ourScore > theirScore) {
+      result = 'win';
+    } else if (ourScore < theirScore) {
+      result = 'loss';
+    } else {
+      result = 'draw';
+    }
   }
 
   const resultColors = {
-    win: 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300',
-    loss: 'bg-red-500/20 border-red-500/40 text-red-300',
-    draw: 'bg-yellow-500/20 border-yellow-500/40 text-yellow-300',
+    win: 'bg-emerald-500/30 border-emerald-500/50 text-emerald-300',
+    loss: 'bg-red-500/30 border-red-500/50 text-red-300',
+    draw: 'bg-yellow-500/30 border-yellow-500/50 text-yellow-300',
   };
 
   const dateStr = match.scheduled_at
@@ -737,17 +765,26 @@ function MatchCard({ match, teamId }: { match: RecentMatch; teamId: string }) {
       })
     : null;
 
+  // Card border color based on result
+  const cardBorderColor = result
+    ? result === 'win'
+      ? 'border-emerald-500/40 hover:border-emerald-500/60'
+      : result === 'loss'
+      ? 'border-red-500/40 hover:border-red-500/60'
+      : 'border-yellow-500/40 hover:border-yellow-500/60'
+    : 'border-white/10 hover:border-white/30';
+
   return (
     <Link href={`/match/${match.id}`}>
-      <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3 hover:border-white/30 transition-colors cursor-pointer group">
+      <div className={`flex items-center gap-3 bg-white/5 border ${cardBorderColor} rounded-xl px-4 py-3 transition-colors cursor-pointer group`}>
         {/* Result indicator */}
         {result && (
-          <div className={`w-8 h-8 rounded-lg ${resultColors[result]} flex items-center justify-center text-xs font-bold`}>
+          <div className={`w-10 h-10 rounded-lg border ${resultColors[result]} flex items-center justify-center text-sm font-bold`}>
             {result === 'win' ? 'V' : result === 'loss' ? 'D' : 'N'}
           </div>
         )}
         {!result && (
-          <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-xs text-gray-400">
+          <div className="w-10 h-10 rounded-lg bg-white/10 border border-white/10 flex items-center justify-center text-xs text-gray-400">
             —
           </div>
         )}
@@ -758,8 +795,10 @@ function MatchCard({ match, teamId }: { match: RecentMatch; teamId: string }) {
             <p className="text-sm font-medium text-white truncate">
               vs {match.opponent?.short_name || match.opponent?.name || 'TBD'}
             </p>
-            {isFinished && ourScore !== null && theirScore !== null && (
-              <span className="text-xs font-mono text-gray-300">
+            {ourScore !== null && theirScore !== null && (
+              <span className={`text-sm font-bold font-mono ${
+                result === 'win' ? 'text-emerald-400' : result === 'loss' ? 'text-red-400' : 'text-gray-300'
+              }`}>
                 {ourScore} - {theirScore}
               </span>
             )}
