@@ -27,6 +27,7 @@ type TeamRow = {
   discord?: string | null;
   website?: string | null;
   is_active?: boolean;
+  captain_id?: string | null;
 };
 
 type TeamMemberRow = {
@@ -375,9 +376,34 @@ function AdminEditTeamPage({ staff }: StaffProps) {
         setSuccessMsg('Membre retiré');
         setTimeout(() => setSuccessMsg(null), 3000);
         await fetchMembers();
+        await fetchTeam();
       }
     } catch {
       // Silently fail
+    }
+  }
+
+  async function handleSetCaptain(member: TeamMemberRow) {
+    if (!teamId) return;
+    if (!confirm(`Définir ${member.battle_tag || member.user_id} comme capitaine ?`)) return;
+
+    try {
+      const res = await fetch(`/api/admin/teams/${teamId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ captain_id: member.user_id }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        throw new Error(json.error || 'Impossible de définir le capitaine');
+      }
+
+      setTeam(json.team);
+      setSuccessMsg('Capitaine défini');
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? 'Erreur inattendue');
     }
   }
 
@@ -664,53 +690,84 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {members.map((member) => (
-                        <div
-                          key={member.id}
-                          className="flex items-center justify-between gap-3 bg-neutral-900/50 rounded-xl px-4 py-3 group"
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-10 h-10 rounded-lg bg-neutral-700 flex items-center justify-center text-neutral-400">
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                              </svg>
+                      {members.map((member) => {
+                        const isCaptain = team?.captain_id === member.user_id;
+                        return (
+                          <div
+                            key={member.id}
+                            className={`flex items-center justify-between gap-3 rounded-xl px-4 py-3 group ${
+                              isCaptain
+                                ? 'bg-amber-900/20 border border-amber-500/30'
+                                : 'bg-neutral-900/50'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                                isCaptain ? 'bg-amber-500/20 text-amber-400' : 'bg-neutral-700 text-neutral-400'
+                              }`}>
+                                {isCaptain ? (
+                                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
+                                  </svg>
+                                ) : (
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                  </svg>
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="font-medium text-sm truncate flex items-center gap-2">
+                                  {member.battle_tag || 'Membre'}
+                                  {isCaptain && (
+                                    <span className="px-1.5 py-0.5 rounded text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold">
+                                      Capitaine
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span className="px-2 py-0.5 rounded-full text-xs bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                                    {member.role}
+                                  </span>
+                                  <span className="text-xs text-neutral-500 font-mono truncate">
+                                    {member.user_id.slice(0, 8)}...
+                                  </span>
+                                </div>
+                              </div>
                             </div>
-                            <div className="min-w-0">
-                              <div className="font-medium text-sm truncate">
-                                {member.battle_tag || 'Membre'}
-                              </div>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <span className="px-2 py-0.5 rounded-full text-xs bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                                  {member.role}
-                                </span>
-                                <span className="text-xs text-neutral-500 font-mono truncate">
-                                  {member.user_id.slice(0, 8)}...
-                                </span>
-                              </div>
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              {!isCaptain && (
+                                <button
+                                  onClick={() => handleSetCaptain(member)}
+                                  className="p-2 rounded-lg hover:bg-amber-900/50 text-neutral-400 hover:text-amber-400 transition-colors"
+                                  title="Définir comme capitaine"
+                                >
+                                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
+                                  </svg>
+                                </button>
+                              )}
+                              <button
+                                onClick={() => openEditMemberModal(member)}
+                                className="p-2 rounded-lg hover:bg-neutral-700 text-neutral-400 hover:text-white transition-colors"
+                                title="Modifier"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={() => handleDeleteMember(member)}
+                                className="p-2 rounded-lg hover:bg-red-900/50 text-neutral-400 hover:text-red-400 transition-colors"
+                                title="Supprimer"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
                             </div>
                           </div>
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={() => openEditMemberModal(member)}
-                              className="p-2 rounded-lg hover:bg-neutral-700 text-neutral-400 hover:text-white transition-colors"
-                              title="Modifier"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                              </svg>
-                            </button>
-                            <button
-                              onClick={() => handleDeleteMember(member)}
-                              className="p-2 rounded-lg hover:bg-red-900/50 text-neutral-400 hover:text-red-400 transition-colors"
-                              title="Supprimer"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </section>

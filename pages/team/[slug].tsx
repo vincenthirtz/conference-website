@@ -22,6 +22,7 @@ type Team = {
   discord?: string | null;
   website?: string | null;
   is_active?: boolean;
+  captain_id?: string | null;
   created_at: string;
 };
 
@@ -132,12 +133,24 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (ctx)
   const teamId = team.id;
 
   // 2) Fetch members
-  const { data: members } = await supabaseAdmin
+  const { data: rawMembers } = await supabaseAdmin
     .from('team_members')
-    .select('id, user_id, role, battle_tag, display_name, avatar_url, is_captain, created_at')
+    .select('id, user_id, role, battle_tag, display_name, avatar_url, created_at')
     .eq('team_id', teamId)
-    .order('is_captain', { ascending: false })
     .order('created_at', { ascending: true });
+
+  // Compute is_captain based on team.captain_id
+  const membersWithCaptain = (rawMembers || []).map((m: any) => ({
+    ...m,
+    is_captain: team.captain_id === m.user_id,
+  }));
+  // Sort captain first
+  membersWithCaptain.sort((a: any, b: any) => {
+    if (a.is_captain && !b.is_captain) return -1;
+    if (!a.is_captain && b.is_captain) return 1;
+    return 0;
+  });
+  const members = membersWithCaptain;
 
   // 3) Fetch tournaments (via multiple sources)
   let tournaments: Tournament[] = [];
@@ -467,7 +480,11 @@ export default function TeamPage({
                   {members.map((member) => (
                     <div
                       key={member.id}
-                      className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3"
+                      className={`flex items-center gap-3 rounded-xl px-4 py-3 ${
+                        member.is_captain
+                          ? 'bg-amber-500/10 border border-amber-500/30'
+                          : 'bg-white/5 border border-white/10'
+                      }`}
                     >
                       {member.avatar_url ? (
                         <Image
@@ -475,19 +492,38 @@ export default function TeamPage({
                           alt=""
                           width={40}
                           height={40}
-                          className="w-10 h-10 rounded-lg object-cover border border-white/10"
+                          className={`w-10 h-10 rounded-lg object-cover ${
+                            member.is_captain ? 'border-2 border-amber-500/50' : 'border border-white/10'
+                          }`}
                         />
                       ) : (
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-neutral-700 to-neutral-800 flex items-center justify-center">
-                          <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                          </svg>
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                          member.is_captain
+                            ? 'bg-amber-500/20 border border-amber-500/30'
+                            : 'bg-gradient-to-br from-neutral-700 to-neutral-800'
+                        }`}>
+                          {member.is_captain ? (
+                            <svg className="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
+                            </svg>
+                          ) : (
+                            <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                          )}
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-white truncate">
-                          {member.battle_tag || member.display_name || 'Membre'}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold text-white truncate">
+                            {member.battle_tag || member.display_name || 'Membre'}
+                          </p>
+                          {member.is_captain && (
+                            <svg className="w-4 h-4 text-amber-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
+                            </svg>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2">
                           <p className="text-xs text-gray-400 capitalize">{member.role}</p>
                           {member.is_captain && (

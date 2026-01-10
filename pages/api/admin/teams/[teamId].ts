@@ -23,6 +23,7 @@ export type TeamRow = {
   discord: string | null;
   website: string | null;
   is_active: boolean;
+  captain_id: string | null;
   created_at: string;
   updated_at: string | null;
 };
@@ -106,6 +107,7 @@ async function handlePut(
     'discord',
     'website',
     'is_active',
+    'captain_id',
   ];
 
   const updatePayload: Partial<TeamRow> = {};

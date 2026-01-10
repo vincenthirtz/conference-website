@@ -27,6 +27,7 @@ type TeamRow = {
   discord?: string | null;
   website?: string | null;
   is_active?: boolean;
+  captain_id?: string | null;
 };
 
 type TeamMemberRow = {
@@ -34,6 +35,7 @@ type TeamMemberRow = {
   team_id: string;
   user_id: string;
   role: string;
+  battle_tag?: string | null;
   created_at: string;
 };
 
@@ -215,22 +217,51 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
               <p className="text-neutral-300 text-sm">Aucun membre pour le moment.</p>
             ) : (
               <div className="space-y-2">
-                {members.map((m) => (
-                  <div
-                    key={m.id}
-                    className="flex items-center justify-between bg-neutral-900/60 border border-neutral-700 rounded-lg px-3 py-2 text-sm"
-                  >
-                    <div className="flex flex-col">
-                      <span className="font-semibold">{m.user_id}</span>
-                      <span className="text-neutral-400 text-xs">
-                        Rôle : {m.role || '—'}
+                {members.map((m) => {
+                  const isCaptain = team?.captain_id === m.user_id;
+                  return (
+                    <div
+                      key={m.id}
+                      className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm ${
+                        isCaptain
+                          ? 'bg-amber-900/20 border border-amber-500/30'
+                          : 'bg-neutral-900/60 border border-neutral-700'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                          isCaptain ? 'bg-amber-500/20' : 'bg-neutral-700'
+                        }`}>
+                          {isCaptain ? (
+                            <svg className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
+                            </svg>
+                          ) : (
+                            <svg className="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                          )}
+                        </div>
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold">{m.battle_tag || m.user_id.slice(0, 8) + '...'}</span>
+                            {isCaptain && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold">
+                                Capitaine
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-neutral-400 text-xs">
+                            {m.role || '—'}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-xs text-neutral-500">
+                        {new Date(m.created_at).toLocaleDateString()}
                       </span>
                     </div>
-                    <span className="text-xs text-neutral-500">
-                      {new Date(m.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>

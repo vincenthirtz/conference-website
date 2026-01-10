@@ -129,24 +129,49 @@ export default function MyTeamPage() {
     }
 
     return (
-      <ul className="divide-y divide-white/5">
-        {data.members.map((m) => (
-          <li key={m.id} className="py-3 flex items-center gap-3">
-            <div className="flex-1">
-              <div className="text-white font-semibold">
-                {m.display_name || m.user_id || m.id}
+      <ul className="space-y-2">
+        {data.members.map((m) => {
+          const isCaptain = m.captain || m.is_captain;
+          return (
+            <li
+              key={m.id}
+              className={`py-3 px-3 flex items-center gap-3 rounded-lg ${
+                isCaptain
+                  ? 'bg-amber-900/20 border border-amber-500/30'
+                  : 'bg-neutral-900/50 border border-white/5'
+              }`}
+            >
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                isCaptain ? 'bg-amber-500/20' : 'bg-neutral-700'
+              }`}>
+                {isCaptain ? (
+                  <svg className="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                )}
               </div>
-              <div className="text-xs text-neutral-400">
-                Rôle équipe : {m.role || '—'}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-white font-semibold truncate">
+                    {m.display_name || m.user_id || m.id}
+                  </span>
+                  {isCaptain && (
+                    <span className="text-[10px] uppercase tracking-wide bg-amber-500/20 text-amber-300 rounded px-1.5 py-0.5 border border-amber-500/30 font-semibold flex-shrink-0">
+                      Capitaine
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-neutral-400">
+                  {m.role || '—'}
+                </div>
               </div>
-            </div>
-            {(m.captain || m.is_captain) && (
-              <span className="text-[11px] uppercase tracking-wide bg-amber-500/20 text-amber-100 rounded-full px-2 py-1 border border-amber-400/40">
-                Capitaine
-              </span>
-            )}
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
     );
   };
