@@ -73,7 +73,7 @@ type ApiResponse = {
   team2: TeamMini | null;
 };
 
-export const getServerSideProps = withStaffPage('referee');
+export const getServerSideProps = withStaffPage('manager');
 
 function formatToInputDateTime(iso: string | null): string {
   if (!iso) return '';

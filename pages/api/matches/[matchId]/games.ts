@@ -7,7 +7,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import { logStaffAction } from '@/utils/staffLogs';
 
-export default withStaffRoute(handler, 'referee');
+export default withStaffRoute(handler, 'manager');
 
 /* -----------------------------------------------------------
  * Types

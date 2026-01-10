@@ -89,7 +89,7 @@ export async function createTestPlayer(email: string, password: string) {
 export async function createTestStaff(
   email: string,
   password: string,
-  role: 'owner' | 'admin' | 'manager' | 'referee' | 'caster' | 'helper' = 'helper'
+  role: 'owner' | 'admin' | 'manager' | 'caster' = 'caster'
 ) {
   if (!supabaseTestClient) return null;
 

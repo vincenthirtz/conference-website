@@ -72,18 +72,22 @@ async function handler(
     let resolvedUserId =
       typeof userId === 'string' && userId.trim().length > 0 ? userId.trim() : '';
 
-    // Valider le BattleTag si fourni
-    let battleTagValue: string | null = null;
-    if (battleTag && typeof battleTag === 'string' && battleTag.trim()) {
-      const trimmed = battleTag.trim();
-      const re = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
-      if (!re.test(trimmed)) {
-        return res.status(400).json({
-          error: 'BattleTag invalide (format Pseudo#0000)',
-        });
-      }
-      battleTagValue = trimmed;
+    // BattleTag est obligatoire pour rejoindre une équipe
+    if (!battleTag || typeof battleTag !== 'string' || !battleTag.trim()) {
+      return res.status(400).json({
+        error: 'BattleTag est obligatoire pour rejoindre une équipe',
+      });
     }
+
+    // Valider le format du BattleTag
+    const trimmedBattleTag = battleTag.trim();
+    const re = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
+    if (!re.test(trimmedBattleTag)) {
+      return res.status(400).json({
+        error: 'BattleTag invalide (format Pseudo#0000)',
+      });
+    }
+    const battleTagValue = trimmedBattleTag;
 
     try {
       // Vérifier l'équipe
@@ -129,15 +133,13 @@ async function handler(
         resolvedUserId = found.id;
       }
 
-      // Insérer dans team_members
-      const memberPayload: any = {
+      // Insérer dans team_members (battle_tag est toujours requis)
+      const memberPayload = {
         team_id: teamId,
         user_id: resolvedUserId,
         role: typeof role === 'string' && role.trim() ? role.trim() : 'player',
+        battle_tag: battleTagValue,
       };
-      if (battleTagValue) {
-        memberPayload.battle_tag = battleTagValue;
-      }
 
       const { data: member, error: insertErr } = await supabaseAdmin
         .from('team_members')

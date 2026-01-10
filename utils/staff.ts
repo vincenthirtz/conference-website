@@ -18,9 +18,7 @@ export type StaffRole =
   | 'owner'
   | 'admin'
   | 'manager'
-  | 'referee'
-  | 'caster'
-  | 'helper';
+  | 'caster';
 
 export type StaffMember = {
   id: string;
@@ -55,12 +53,10 @@ export class StaffUnauthenticatedError extends Error {
 }
 
 const ROLE_RANK: Record<StaffRole, number> = {
-  owner: 5,
-  admin: 4,
-  manager: 3,
-  referee: 2,
-  caster: 1,
-  helper: 0,
+  owner: 3,
+  admin: 2,
+  manager: 1,
+  caster: 0,
 };
 
 /* -----------------------------------------------------------
@@ -75,12 +71,8 @@ export function formatStaffRoleLabel(role: StaffRole): string {
       return 'Admin';
     case 'manager':
       return 'Manager';
-    case 'referee':
-      return 'Arbitre';
     case 'caster':
       return 'Caster';
-    case 'helper':
-      return 'Staff';
     default:
       return role;
   }

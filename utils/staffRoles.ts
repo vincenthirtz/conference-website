@@ -5,9 +5,7 @@ export type StaffRole =
   | 'owner'
   | 'admin'
   | 'manager'
-  | 'referee'
-  | 'caster'
-  | 'helper';
+  | 'caster';
 
 /* -----------------------------------------------------------
  * Liste des rôles disponibles
@@ -17,9 +15,7 @@ export const STAFF_ROLES: StaffRole[] = [
   'owner',
   'admin',
   'manager',
-  'referee',
   'caster',
-  'helper',
 ];
 
 /* -----------------------------------------------------------
@@ -30,9 +26,7 @@ export const STAFF_ROLE_LABEL: Record<StaffRole, string> = {
   owner: 'Owner',
   admin: 'Admin',
   manager: 'Manager',
-  referee: 'Arbitre',
   caster: 'Caster',
-  helper: 'Staff',
 };
 
 /* -----------------------------------------------------------
@@ -43,29 +37,23 @@ export const STAFF_ROLE_DESCRIPTION: Record<StaffRole, string> = {
   owner: 'Accès complet, gestion du staff, gestion des permissions',
   admin: 'Accès complet au back-office, gestion tournois & résultats',
   manager: 'Gestion opérationnelle : équipes, demandes, matches',
-  referee: 'Arbitrage : validation résultats, scores, litiges',
   caster: 'Accès lecture + meta info match (pour préparation cast)',
-  helper: 'Rôle staff léger : lecture + petites tâches simples',
 };
 
 /* -----------------------------------------------------------
  * Hiérarchie — utilisé pour check permissions rapidement
  *
- * owner (5)
- * admin (4)
- * manager (3)
- * referee (2)
- * caster (1)
- * helper (0)
+ * owner (3)
+ * admin (2)
+ * manager (1)
+ * caster (0)
  * ---------------------------------------------------------*/
 
 export const STAFF_ROLE_RANK: Record<StaffRole, number> = {
-  owner: 5,
-  admin: 4,
-  manager: 3,
-  referee: 2,
-  caster: 1,
-  helper: 0,
+  owner: 3,
+  admin: 2,
+  manager: 1,
+  caster: 0,
 };
 
 /* -----------------------------------------------------------
@@ -91,7 +79,7 @@ export function hasAtLeastRole(
 }
 
 /**
- * Vérifie si le rôle du staff appartient au staff (helper+)
+ * Vérifie si le rôle du staff appartient au staff (caster+)
  */
 export function isStaff(role: StaffRole | null | undefined): boolean {
   return !!role;

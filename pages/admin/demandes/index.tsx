@@ -217,7 +217,7 @@ function AdminDemandesPage() {
 
         setStaff({
           id: (me.id as string) ?? '',
-          role: me.role ?? 'helper',
+          role: me.role ?? 'caster',
           display_name: me.display_name ?? null,
         });
       } catch (e) {

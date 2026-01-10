@@ -9,7 +9,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { formatStaffLog, StaffLog } from '@/utils/staffLogs';
 
-export default withStaffRoute(handler, 'referee'); // arbitres & + peuvent voir l’historique
+export default withStaffRoute(handler, 'manager'); // managers & + peuvent voir l'historique
 
 type MatchHistoryResponse = {
   matchId: string;

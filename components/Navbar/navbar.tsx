@@ -169,7 +169,7 @@ function Navbar(): JSX.Element {
 
   // Liens du menu Admin (partagés avec NavDrop)
   const adminLinks: AdminLink[] = [
-    { title: 'Dashboard', ref: '/admin', minRole: 'helper' },
+    { title: 'Dashboard', ref: '/admin', minRole: 'caster' },
     {
       title: 'Tournois',
       ref: '',
@@ -206,7 +206,7 @@ function Navbar(): JSX.Element {
         {
           title: 'Gérer mon équipe (capitaine)',
           ref: '/admin/teams/my',
-          minRole: 'helper',
+          minRole: 'caster',
         },
       ],
     },

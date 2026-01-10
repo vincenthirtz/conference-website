@@ -24,7 +24,7 @@ type Props = {
   staff: StaffShape;
 };
 
-export const getServerSideProps = withStaffPage('helper');
+export const getServerSideProps = withStaffPage('caster');
 
 type Shortcut = {
   category: string;
@@ -575,12 +575,8 @@ function formatRoleLabel(role: string) {
       return 'Admin';
     case 'manager':
       return 'Manager';
-    case 'referee':
-      return 'Arbitre';
     case 'caster':
       return 'Caster';
-    case 'helper':
-      return 'Staff';
     default:
       return role;
   }

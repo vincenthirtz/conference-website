@@ -48,7 +48,7 @@ This is a **Next.js 16** conference/tournament website using the **Pages Router*
 Uses Supabase Auth with a custom staff system:
 - `getServerClient(req, res)` - Server-side Supabase client with cookie handling
 - `supabaseAdmin` - Admin client with service role (bypasses RLS)
-- Staff roles hierarchy: `owner > admin > manager > referee > caster > helper`
+- Staff roles hierarchy: `owner > admin > manager > caster`
 - Use `withStaffRoute(handler, minRole)` to protect API routes
 - Use `withStaffPage(minRole)` for SSR page protection
 

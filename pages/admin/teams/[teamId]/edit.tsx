@@ -289,6 +289,10 @@ function AdminEditTeamPage({ staff }: StaffProps) {
       setMemberError('Email ou User ID requis');
       return;
     }
+    if (!memberForm.battleTag.trim()) {
+      setMemberError('BattleTag est obligatoire');
+      return;
+    }
 
     setMemberSaving(true);
     setMemberError(null);
@@ -857,14 +861,16 @@ function AdminEditTeamPage({ staff }: StaffProps) {
               </div>
 
               <div>
-                <label className="block text-sm text-neutral-400 mb-1">BattleTag</label>
+                <label className="block text-sm text-neutral-400 mb-1">BattleTag *</label>
                 <input
                   type="text"
+                  required
                   value={memberForm.battleTag}
                   onChange={(e) => setMemberForm({ ...memberForm, battleTag: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                   placeholder="Pseudo#1234"
                 />
+                <p className="text-xs text-neutral-500 mt-1">Format: Pseudo#0000</p>
               </div>
 
               <div>

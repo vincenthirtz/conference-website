@@ -64,8 +64,8 @@ type BatchUpdateStatusBody = {
 
 type PostBody = BatchUpdateStatusBody;
 
-// rôle minimum : helper (le support peut traiter les demandes)
-export default withStaffRoute(handler, 'helper');
+// rôle minimum : caster (le support peut traiter les demandes)
+export default withStaffRoute(handler, 'caster');
 
 async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
   try {
