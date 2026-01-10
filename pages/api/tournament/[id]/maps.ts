@@ -15,6 +15,7 @@ export type TournamentMapRow = {
   map_name: string;
   map_slug: string | null;
   map_type: string | null; // ex: "control", "hybrid", ...
+  image_url: string | null;
   enabled: boolean;
   order_index: number | null;
   created_at: string;
@@ -25,6 +26,7 @@ export type TournamentMapInput = {
   map_name: string;
   map_slug?: string | null;
   map_type?: string | null;
+  image_url?: string | null;
   enabled?: boolean;
   order_index?: number | null;
 };
@@ -45,8 +47,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
       case 'POST':
         return await handlePost(id, req, res, ctx);
       case 'PUT':
-      case 'PATCH':
         return await handlePut(id, req, res, ctx);
+      case 'PATCH':
+        return await handlePatch(id, req, res, ctx);
       case 'DELETE':
         return await handleDelete(id, req, res, ctx);
       default:
@@ -123,6 +126,7 @@ async function handlePost(
     map_name: body.map_name,
     map_slug: body.map_slug ?? null,
     map_type: body.map_type ?? null,
+    image_url: body.image_url ?? null,
     enabled: body.enabled ?? true,
     order_index:
       typeof body.order_index === 'number' ? body.order_index : nextIndex,
@@ -198,6 +202,7 @@ async function handlePut(
     map_name: m.map_name,
     map_slug: m.map_slug ?? null,
     map_type: m.map_type ?? null,
+    image_url: m.image_url ?? null,
     enabled: m.enabled ?? true,
     order_index: typeof m.order_index === 'number' ? m.order_index : idx,
   }));
@@ -237,6 +242,76 @@ async function handlePut(
   return res.status(200).json({
     maps: insertedMaps,
   });
+}
+
+/* -----------------------------------------------------------
+ * PATCH : mettre à jour une map individuelle
+ * query.mapId = id de la map à modifier (requis)
+ * body: TournamentMapInput (champs à modifier)
+ * ---------------------------------------------------------*/
+
+async function handlePatch(
+  tournamentId: string,
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: any
+) {
+  const { mapId } = req.query;
+
+  if (!mapId || Array.isArray(mapId)) {
+    return res.status(400).json({
+      error: 'mapId is required for PATCH',
+    });
+  }
+
+  const body = req.body as Partial<TournamentMapInput>;
+
+  if (!body || Object.keys(body).length === 0) {
+    return res.status(400).json({
+      error: 'No fields to update',
+    });
+  }
+
+  // Construire le payload avec seulement les champs fournis
+  const updatePayload: any = {};
+
+  if (body.map_name !== undefined) updatePayload.map_name = body.map_name;
+  if (body.map_slug !== undefined) updatePayload.map_slug = body.map_slug ?? null;
+  if (body.map_type !== undefined) updatePayload.map_type = body.map_type ?? null;
+  if (body.image_url !== undefined) updatePayload.image_url = body.image_url ?? null;
+  if (body.enabled !== undefined) updatePayload.enabled = body.enabled;
+  if (body.order_index !== undefined) updatePayload.order_index = body.order_index ?? null;
+
+  const { data, error } = await supabaseAdmin
+    .from('tournament_maps')
+    .update(updatePayload)
+    .eq('id', mapId)
+    .eq('tournament_id', tournamentId)
+    .select('*')
+    .maybeSingle();
+
+  if (error || !data) {
+    console.error('PATCH tournament_map error:', error);
+    return res.status(500).json({
+      error: 'Failed to update tournament map',
+    });
+  }
+
+  if (ctx?.staff?.id) {
+    await logStaffAction({
+      staff_id: ctx.staff.id,
+      action: 'update_tournament',
+      entity_type: 'tournament_map',
+      entity_id: mapId,
+      tournament_id: tournamentId,
+      payload: {
+        updated: true,
+        fields: Object.keys(updatePayload),
+      },
+    });
+  }
+
+  return res.status(200).json({ map: data as TournamentMapRow });
 }
 
 /* -----------------------------------------------------------

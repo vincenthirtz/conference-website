@@ -7,6 +7,7 @@ create table if not exists public.tournament_maps (
   map_name text not null,
   map_slug text null,
   map_type text null, -- ex: control, hybrid, escort, push...
+  image_url text null, -- URL de l'image représentant la map
   enabled boolean not null default true,
   order_index integer null,
   created_at timestamp with time zone not null default now()
