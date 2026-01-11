@@ -50,7 +50,10 @@ export default async function handler(
   } = await adminClient.auth.getUser(token);
 
   if (userError || !user) {
-    console.error('[/api/admin/me] getUser error:', userError);
+    // Only log unexpected errors (not auth session missing which is expected for invalid tokens)
+    if (userError && !userError.message?.includes('session')) {
+      console.error('[/api/admin/me] getUser error:', userError);
+    }
     return res.status(401).json({ error: 'Invalid or expired token' });
   }
 

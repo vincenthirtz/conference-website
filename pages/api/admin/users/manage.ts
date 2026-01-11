@@ -15,7 +15,6 @@ type UserLite = {
   role: string | null;
   display_name: string | null;
   created_at: string | null;
-  staff_role?: string | null;
   team_memberships?: TeamMembership[];
 };
 
@@ -68,22 +67,9 @@ async function handler(
         })) ?? [];
 
     const userIds = items.map((u) => u.id);
-    let staffMap = new Map<string, string>();
-    let teamMembershipsMap = new Map<string, TeamMembership[]>();
+    const teamMembershipsMap = new Map<string, TeamMembership[]>();
 
     if (userIds.length) {
-      // Fetch staff roles
-      const { data: staffRows, error: staffErr } = await supabaseAdmin
-        .from('staff')
-        .select('auth_user_id, role')
-        .in('auth_user_id', userIds);
-
-      if (!staffErr && staffRows) {
-        staffRows.forEach((row: any) => {
-          if (row?.auth_user_id) staffMap.set(row.auth_user_id, row.role);
-        });
-      }
-
       // Fetch team memberships with battle_tag
       const { data: teamMembers, error: tmErr } = await supabaseAdmin
         .from('team_members')
@@ -116,7 +102,6 @@ async function handler(
     const filtered = items
       .map((u) => ({
         ...u,
-        staff_role: staffMap.get(u.id) || null,
         team_memberships: teamMembershipsMap.get(u.id) || [],
       }))
       .filter((u) => {
@@ -129,7 +114,6 @@ async function handler(
           (u.email || '').toLowerCase().includes(term) ||
           (u.display_name || '').toLowerCase().includes(term) ||
           (u.role || '').toLowerCase().includes(term) ||
-          (u.staff_role || '').toLowerCase().includes(term) ||
           battleTagMatch
         );
       });
@@ -138,7 +122,7 @@ async function handler(
   }
 
   if (req.method === 'PATCH') {
-    const { userId, role, staffRole, teamId, battleTag } = req.body || {};
+    const { userId, role, teamId, battleTag } = req.body || {};
 
     // Special case: update battle_tag for a specific team membership
     if (userId && teamId && typeof battleTag === 'string') {
@@ -219,27 +203,37 @@ async function handler(
         .json({ error: "Impossible de mettre à jour l'utilisateur." });
     }
 
-    // Optionnel : raccorder à la table staff si staffRole est fourni
-    if (staffRole && typeof staffRole === 'string') {
-      const { data: existing } = await supabaseAdmin
-        .from('staff')
-        .select('id')
-        .eq('auth_user_id', userId)
-        .maybeSingle();
+    // Synchroniser la table staff selon le rôle
+    const STAFF_ROLES = ['caster', 'manager', 'admin', 'owner'];
+    const isStaffRole = STAFF_ROLES.includes(role);
 
-      if (existing?.id) {
+    const { data: existingStaff } = await supabaseAdmin
+      .from('staff')
+      .select('id')
+      .eq('auth_user_id', userId)
+      .maybeSingle();
+
+    if (isStaffRole) {
+      // Ajouter ou mettre à jour l'entrée staff
+      if (existingStaff?.id) {
         await supabaseAdmin
           .from('staff')
-          .update({ role: staffRole })
+          .update({ role })
           .eq('auth_user_id', userId);
       } else {
         await supabaseAdmin.from('staff').insert({
           auth_user_id: userId,
-          role: staffRole,
+          role,
           display_name: (data.user.user_metadata as any)?.display_name || null,
           email: data.user.email || null,
         });
       }
+    } else if (existingStaff?.id) {
+      // Supprimer l'entrée staff si le rôle n'est plus un rôle staff
+      await supabaseAdmin
+        .from('staff')
+        .delete()
+        .eq('auth_user_id', userId);
     }
 
     const u = data.user;
@@ -249,7 +243,6 @@ async function handler(
       role: (u.user_metadata as any)?.role ?? null,
       display_name: (u.user_metadata as any)?.display_name ?? null,
       created_at: u.created_at ?? null,
-      staff_role: staffRole || null,
     };
 
     return res.status(200).json({ success: true, user: userLite });

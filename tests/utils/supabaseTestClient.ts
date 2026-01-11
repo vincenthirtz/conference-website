@@ -93,14 +93,14 @@ export async function createTestStaff(
 ) {
   if (!supabaseTestClient) return null;
 
-  // Create user first
+  // Create user first with the staff role in metadata
   const { data: userData, error: userError } =
     await supabaseTestClient.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
       user_metadata: {
-        role: 'staff',
+        role,
         display_name: `Test ${role}`,
       },
     });
@@ -108,12 +108,12 @@ export async function createTestStaff(
   if (userError) throw userError;
   if (!userData.user) return null;
 
-  // Add to staff table
+  // Add to staff table (auth_user_id is the correct column name)
   const { error: staffError } = await supabaseTestClient.from('staff').insert({
-    user_id: userData.user.id,
+    auth_user_id: userData.user.id,
     role,
     display_name: `Test ${role}`,
-    is_active: true,
+    email,
   });
 
   if (staffError) {

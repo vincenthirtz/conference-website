@@ -285,16 +285,17 @@ export function withStaffRoute(
       const ctx = await requireStaffRoleFromRequest(req, res, minRole);
       await handler(req, res, ctx);
     } catch (err: any) {
-      console.error('withStaffRoute error:', err);
-
       if (
         err instanceof StaffUnauthenticatedError ||
         err instanceof StaffUnauthorizedError
       ) {
+        // Expected auth errors - no need to log
         res.status(err.statusCode || 401).json({ error: err.message });
         return;
       }
 
+      // Log only unexpected errors
+      console.error('withStaffRoute error:', err);
       res.status(500).json({ error: 'Erreur serveur' });
     }
   };

@@ -23,14 +23,12 @@ type UserLite = {
   role: string | null;
   display_name: string | null;
   created_at: string | null;
-  staff_role?: string | null;
   team_memberships?: TeamMembership[];
 };
 
 export const getServerSideProps = withStaffPage('admin');
 
 const ROLES = ['member', 'player', 'caster', 'manager', 'admin', 'owner'];
-const STAFF_ROLES = ['caster', 'manager', 'admin', 'owner'];
 
 export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
   const [users, setUsers] = useState<UserLite[]>([]);
@@ -80,7 +78,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const changeRole = async (userId: string, role: string, staffRole?: string) => {
+  const changeRole = async (userId: string, role: string) => {
     setUpdating(userId);
     try {
       const {
@@ -95,7 +93,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ userId, role, staffRole }),
+        body: JSON.stringify({ userId, role }),
       });
       const json = await res.json();
       if (!res.ok || json.error) {
@@ -104,7 +102,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
 
       setUsers((prev) =>
         prev.map((u) =>
-          u.id === userId ? { ...u, role, staff_role: staffRole ?? u.staff_role } : u
+          u.id === userId ? { ...u, role } : u
         )
       );
       setSuccessMsg('Rôle mis à jour');
@@ -261,7 +259,6 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                       <th className="text-left px-4 py-3 font-semibold text-neutral-300">Email</th>
                       <th className="text-left px-4 py-3 font-semibold text-neutral-300">Nom</th>
                       <th className="text-left px-4 py-3 font-semibold text-neutral-300">Rôle</th>
-                      <th className="text-left px-4 py-3 font-semibold text-neutral-300">Staff</th>
                       <th className="text-left px-4 py-3 font-semibold text-neutral-300">Équipes & BattleTags</th>
                       <th className="text-left px-4 py-3 font-semibold text-neutral-300">Créé le</th>
                     </tr>
@@ -278,30 +275,11 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                         <td className="px-4 py-3">
                           <select
                             value={u.role || 'member'}
-                            onChange={(e) =>
-                              changeRole(u.id, e.target.value, u.staff_role || undefined)
-                            }
+                            onChange={(e) => changeRole(u.id, e.target.value)}
                             disabled={updating === u.id}
                             className="bg-neutral-700 border border-neutral-600 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                           >
                             {ROLES.map((r) => (
-                              <option key={r} value={r}>
-                                {r}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                        <td className="px-4 py-3">
-                          <select
-                            value={u.staff_role || ''}
-                            onChange={(e) =>
-                              changeRole(u.id, u.role || 'member', e.target.value || undefined)
-                            }
-                            disabled={updating === u.id}
-                            className="bg-neutral-700 border border-neutral-600 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                          >
-                            <option value="">—</option>
-                            {STAFF_ROLES.map((r) => (
                               <option key={r} value={r}>
                                 {r}
                               </option>
