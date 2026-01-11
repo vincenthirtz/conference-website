@@ -77,8 +77,40 @@ async function handleGet(id: string, res: NextApiResponse) {
     return res.status(404).json({ error: 'Team not found' });
   }
 
+  // Récupérer les membres de l'équipe
+  const { data: membersData, error: membersError } = await supabaseAdmin
+    .from('team_members')
+    .select(`
+      id,
+      user_id,
+      role,
+      battle_tag,
+      profiles:user_id (
+        id,
+        display_name,
+        email
+      )
+    `)
+    .eq('team_id', id);
+
+  if (membersError) {
+    console.error('admin GET team members error:', membersError);
+  }
+
+  // Formater les membres
+  const members = (membersData || []).map((m: any) => ({
+    id: m.id,
+    user_id: m.user_id,
+    display_name: m.profiles?.display_name || m.battle_tag || null,
+    role: m.role,
+    battle_tag: m.battle_tag,
+    captain: data.captain_id === m.user_id,
+    is_captain: data.captain_id === m.user_id,
+  }));
+
   return res.status(200).json({
     team: data as TeamRow,
+    members,
   });
 }
 

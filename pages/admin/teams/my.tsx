@@ -144,20 +144,20 @@ function MyTeamPage({ staff }: StaffProps) {
       }
 
       // Handle different API response formats
-      if (isStaffAdmin && teamId && json.id) {
-        // Direct team fetch returns team object directly
+      if (isStaffAdmin && teamId && json.team) {
+        // Admin team fetch returns { team, members }
         setData({
-          team: json,
+          team: json.team,
           members: json.members || [],
           isCaptain: true, // Admin has full access
         });
         setForm({
-          name: json.name || '',
-          short_name: json.short_name || '',
-          bio: json.bio || '',
-          logo_url: json.logo_url || '',
-          country: json.country || '',
-          description: json.description || '',
+          name: json.team.name || '',
+          short_name: json.team.short_name || '',
+          bio: json.team.bio || '',
+          logo_url: json.team.logo_url || '',
+          country: json.team.country || '',
+          description: json.team.description || '',
         });
       } else {
         setData(json);
