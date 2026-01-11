@@ -6,7 +6,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import Button from '@/components/Buttons/button';
 
 type StaffShape = {
   id: string;
@@ -77,7 +76,12 @@ export const getServerSideProps = withStaffPage('manager');
 function formatDateTime(iso: string | null) {
   if (!iso) return '—';
   try {
-    return new Date(iso).toLocaleString();
+    return new Date(iso).toLocaleString('fr-FR', {
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   } catch {
     return iso;
   }
@@ -86,13 +90,13 @@ function formatDateTime(iso: string | null) {
 function statusLabel(status: MatchStatus) {
   switch (status) {
     case 'pending':
-      return 'À venir';
+      return 'A venir';
     case 'ongoing':
       return 'En cours';
     case 'finished':
-      return 'Terminé';
+      return 'Termine';
     case 'cancelled':
-      return 'Annulé';
+      return 'Annule';
     default:
       return status;
   }
@@ -101,15 +105,15 @@ function statusLabel(status: MatchStatus) {
 function statusColor(status: MatchStatus) {
   switch (status) {
     case 'pending':
-      return 'bg-neutral-700 text-neutral-100';
+      return 'bg-neutral-600 text-neutral-100';
     case 'ongoing':
-      return 'bg-amber-600/80 text-neutral-900';
+      return 'bg-amber-600 text-white';
     case 'finished':
-      return 'bg-emerald-600/80 text-white';
+      return 'bg-emerald-600 text-white';
     case 'cancelled':
-      return 'bg-red-700/80 text-white';
+      return 'bg-red-600 text-white';
     default:
-      return 'bg-neutral-700 text-neutral-100';
+      return 'bg-neutral-600 text-neutral-100';
   }
 }
 
@@ -215,7 +219,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({}), // options par défaut
+        body: JSON.stringify({}),
       });
 
       if (!res.ok) {
@@ -225,9 +229,8 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
       const json = await res.json();
       setAutoSchedMsg(
-        `Auto-scheduler terminé : ${json.scheduledMatchesCount ?? 0} matches planifiés.`
+        `Auto-scheduler termine : ${json.scheduledMatchesCount ?? 0} matches planifies.`
       );
-      // recharger les matches pour voir les horaires mis à jour
       fetchMatches();
     } catch (err: any) {
       setErrorMsg(err?.message ?? "Erreur lors de l'auto-scheduler");
@@ -244,318 +247,405 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
         <title>Admin – Matches du tournoi</title>
       </Head>
 
-      <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-          <div>
+      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
+        <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12">
+          {/* Header */}
+          <div className="mb-8">
             <button
               type="button"
               onClick={() => router.push(backUrl)}
-              className="mb-2 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
+              className="mb-4 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors"
             >
-              ← Retour au tournoi
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+              Retour au tournoi
             </button>
-            <h1 className="text-3xl font-bold">Matches du tournoi</h1>
-            {tournament && (
-              <p className="text-neutral-400 text-sm mt-1">
-                Tournoi :{' '}
-                <span className="font-semibold">{tournament.name}</span>
-                {tournament.slug && (
+
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+                  Matches du tournoi
+                </h1>
+                {tournament && (
+                  <p className="text-neutral-400 text-sm mt-1">
+                    {tournament.name}
+                    {tournament.slug && (
+                      <span className="ml-2 font-mono text-xs bg-neutral-800 px-2 py-0.5 rounded">
+                        /{tournament.slug}
+                      </span>
+                    )}
+                    {total !== null && (
+                      <span className="ml-2">• {total} match{total > 1 ? 'es' : ''}</span>
+                    )}
+                  </p>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleAutoSchedule}
+                disabled={autoSchedRunning}
+                className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {autoSchedRunning ? (
                   <>
-                    {' '}
-                    <span className="font-mono bg-neutral-800 border border-neutral-700 px-2 py-0.5 rounded text-xs">
-                      {tournament.slug}
-                    </span>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Planning en cours...
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    Auto-scheduler
                   </>
                 )}
-              </p>
-            )}
+              </button>
+            </div>
           </div>
-        </div>
 
-        {/* Messages */}
-        {errorMsg && (
-          <div className="mb-4 rounded bg-red-900/60 border border-red-600 px-4 py-3 text-sm">
-            {errorMsg}
-          </div>
-        )}
-        {autoSchedMsg && (
-          <div className="mb-4 rounded bg-emerald-900/60 border border-emerald-600 px-4 py-3 text-sm">
-            {autoSchedMsg}
-          </div>
-        )}
-
-        {/* Filters + Auto-scheduler */}
-        <div className="bg-neutral-800 border border-neutral-700 rounded-xl p-4 mb-6 flex flex-col gap-4">
-          <form
-            onSubmit={handleFilterSubmit}
-            className="flex flex-wrap gap-4 items-end"
-          >
-            <div className="flex flex-col gap-1 min-w-[200px]">
-              <label className="text-xs text-neutral-400">Phase (stage)</label>
-              <select
-                className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={stageFilter}
-                onChange={(e) => setStageFilter(e.target.value)}
+          {/* Messages */}
+          {errorMsg && (
+            <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
+              <svg
+                className="w-5 h-5 text-red-400 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 20 20"
               >
-                <option value="">Toutes les phases</option>
-                {stages
-                  .slice()
-                  .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
-                  .map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {stageLabel(s)}
-                    </option>
-                  ))}
-              </select>
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              {errorMsg}
             </div>
-
-            <div className="flex flex-col gap-1 w-40">
-              <label className="text-xs text-neutral-400">Statut</label>
-              <select
-                className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
+          )}
+          {autoSchedMsg && (
+            <div className="mb-6 rounded-xl bg-emerald-900/40 border border-emerald-500/50 px-4 py-3 text-sm flex items-center gap-2">
+              <svg
+                className="w-5 h-5 text-emerald-400 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 20 20"
               >
-                <option value="">Tous les statuts</option>
-                <option value="pending">À venir</option>
-                <option value="ongoing">En cours</option>
-                <option value="finished">Terminé</option>
-                <option value="cancelled">Annulé</option>
-              </select>
-            </div>
-
-            <div className="flex flex-col gap-1 w-28">
-              <label className="text-xs text-neutral-400">Round #</label>
-              <input
-                type="number"
-                className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={roundFilter}
-                onChange={(e) => setRoundFilter(e.target.value)}
-                placeholder="ex: 1"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1 min-w-[200px]">
-              <label className="text-xs text-neutral-400">
-                Recherche (équipes, ID…)
-              </label>
-              <input
-                type="text"
-                className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Nom équipe, short name, match id..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-
-            <div className="ml-auto flex gap-2">
-              <Button type="submit" className="px-4 py-2 text-sm" size="compact">
-                Filtrer
-              </Button>
-              <Button
-                type="button"
-                className="px-4 py-2 text-sm"
-                size="compact"
-                onClick={() => {
-                  setStageFilter('');
-                  setStatusFilter('');
-                  setRoundFilter('');
-                  setSearch('');
-                  setOffset(0);
-                }}
-              >
-                Réinitialiser
-              </Button>
-            </div>
-          </form>
-
-          <div className="flex flex-wrap gap-3 items-center border-t border-neutral-700 pt-3 mt-2">
-            <div className="text-xs text-neutral-400">
-              Auto-scheduler : planifie automatiquement les matchs (selon les
-              contraintes définies sur le tournoi).
-            </div>
-            <Button
-              type="button"
-              onClick={handleAutoSchedule}
-              disabled={autoSchedRunning}
-              className="px-4 py-2 text-sm font-semibold"
-              size="compact"
-            >
-              {autoSchedRunning
-                ? 'Planning en cours…'
-                : 'Lancer l’auto-scheduler'}
-            </Button>
-          </div>
-        </div>
-
-        {/* Matches table */}
-        <div className="bg-neutral-800 border border-neutral-700 rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-neutral-700 flex justify-between items-center">
-            <span className="text-sm font-semibold">
-              {loading
-                ? 'Chargement...'
-                : `Matches (${matches.length}${
-                    total != null ? ` / ${total}` : ''
-                  })`}
-            </span>
-            <span className="text-xs text-neutral-400">
-              Trié du plus récent au plus ancien par horaires / création (géré
-              côté API).
-            </span>
-          </div>
-
-          {matches.length === 0 && !loading && (
-            <div className="px-4 py-6 text-sm text-neutral-400">
-              Aucun match trouvé pour ces filtres.
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              {autoSchedMsg}
             </div>
           )}
 
-          {matches.length > 0 && (
-            <table className="w-full text-sm">
-              <thead className="bg-neutral-750 text-neutral-300">
-                <tr>
-                  <th className="px-4 py-2 text-left">Phase / Round</th>
-                  <th className="px-4 py-2 text-left">Équipe 1</th>
-                  <th className="px-4 py-2 text-left">Équipe 2</th>
-                  <th className="px-4 py-2 text-left">Score</th>
-                  <th className="px-4 py-2 text-left">Horaire</th>
-                  <th className="px-4 py-2 text-left">Statut</th>
-                  <th className="px-4 py-2 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
+          {/* Filters */}
+          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6">
+            <form
+              onSubmit={handleFilterSubmit}
+              className="flex gap-4 flex-wrap items-end"
+            >
+              <div className="min-w-[180px]">
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Phase (stage)
+                </label>
+                <select
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  value={stageFilter}
+                  onChange={(e) => setStageFilter(e.target.value)}
+                >
+                  <option value="">Toutes les phases</option>
+                  {stages
+                    .slice()
+                    .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {stageLabel(s)}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div className="min-w-[140px]">
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Statut
+                </label>
+                <select
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="">Tous les statuts</option>
+                  <option value="pending">A venir</option>
+                  <option value="ongoing">En cours</option>
+                  <option value="finished">Termine</option>
+                  <option value="cancelled">Annule</option>
+                </select>
+              </div>
+
+              <div className="w-24">
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Round
+                </label>
+                <input
+                  type="number"
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  value={roundFilter}
+                  onChange={(e) => setRoundFilter(e.target.value)}
+                  placeholder="#"
+                />
+              </div>
+
+              <div className="flex-1 min-w-[200px]">
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Recherche
+                </label>
+                <div className="relative">
+                  <svg
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                  <input
+                    type="text"
+                    className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    placeholder="Equipe, ID..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors flex items-center gap-2"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+                    />
+                  </svg>
+                  Filtrer
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStageFilter('');
+                    setStatusFilter('');
+                    setRoundFilter('');
+                    setSearch('');
+                    setOffset(0);
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-sm font-medium transition-colors"
+                >
+                  Reset
+                </button>
+              </div>
+            </form>
+          </section>
+
+          {/* Matches List */}
+          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+              </div>
+            ) : matches.length === 0 ? (
+              <div className="text-center py-20 text-neutral-400">
+                <svg
+                  className="w-12 h-12 mx-auto mb-4 text-neutral-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                Aucun match trouve pour ces filtres.
+              </div>
+            ) : (
+              <div className="divide-y divide-neutral-700/50">
                 {matches.map((m) => (
-                  <tr key={m.id} className="border-t border-neutral-700">
-                    {/* Stage / round */}
-                    <td className="px-4 py-2 align-top">
-                      <div className="flex flex-col gap-1">
-                        <div className="font-semibold">
-                          {stageLabel(m.stage)}
-                        </div>
+                  <div
+                    key={m.id}
+                    className="p-4 hover:bg-neutral-700/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-4 flex-wrap">
+                      {/* Stage & Round info */}
+                      <div className="w-40 flex-shrink-0">
+                        <div className="font-medium text-sm">{stageLabel(m.stage)}</div>
                         <div className="text-xs text-neutral-400">
                           Round {m.round_number ?? '—'}
                           {m.best_of ? ` • BO${m.best_of}` : ''}
                         </div>
-                        <div className="text-[11px] text-neutral-500 font-mono">
+                        <div className="text-[10px] text-neutral-500 font-mono mt-1">
                           #{m.id.slice(0, 8)}
                         </div>
                       </div>
-                    </td>
 
-                    {/* Team 1 */}
+                      {/* Teams & Score */}
+                      <div className="flex-1 flex items-center justify-center gap-4 min-w-[300px]">
+                        <TeamCell
+                          team={m.team1}
+                          fallbackId={m.team1?.name || undefined}
+                          isWinner={m.winner_team_id === m.team1_id}
+                          align="right"
+                        />
 
-                    <td className="px-4 py-2 align-top">
-                      <TeamCell
-                        team={m.team1}
-                        fallbackId={m.team1?.name || undefined}
-                        isWinner={m.winner_team_id === m.team1_id}
-                      />
-                    </td>
+                        <div className="flex flex-col items-center">
+                          <div className="text-xl font-bold px-4 py-1 bg-neutral-900/50 rounded-lg">
+                            {typeof m.team1_score === 'number' ||
+                            typeof m.team2_score === 'number'
+                              ? `${m.team1_score ?? 0} - ${m.team2_score ?? 0}`
+                              : 'vs'}
+                          </div>
+                          <span
+                            className={`mt-2 px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(
+                              m.status
+                            )}`}
+                          >
+                            {statusLabel(m.status)}
+                          </span>
+                        </div>
 
-                    {/* Team 2 */}
-                    <td className="px-4 py-2 align-top">
-                      <TeamCell
-                        team={m.team2}
-                        fallbackId={m.team2?.name || undefined}
-                        isWinner={m.winner_team_id === m.team2_id}
-                      />
-                    </td>
-
-                    {/* Score */}
-                    <td className="px-4 py-2 align-top">
-                      <div className="font-semibold">
-                        {typeof m.team1_score === 'number' ||
-                        typeof m.team2_score === 'number'
-                          ? `${m.team1_score ?? 0} - ${m.team2_score ?? 0}`
-                          : '—'}
+                        <TeamCell
+                          team={m.team2}
+                          fallbackId={m.team2?.name || undefined}
+                          isWinner={m.winner_team_id === m.team2_id}
+                          align="left"
+                        />
                       </div>
-                    </td>
 
-                    {/* Schedule */}
-                    <td className="px-4 py-2 align-top text-xs text-neutral-300">
-                      <div>{formatDateTime(m.scheduled_at)}</div>
-                      {m.started_at && (
-                        <div className="text-[11px] text-neutral-500">
-                          start: {formatDateTime(m.started_at)}
+                      {/* Schedule */}
+                      <div className="w-32 text-right flex-shrink-0">
+                        <div className="text-sm text-neutral-300">
+                          {formatDateTime(m.scheduled_at)}
                         </div>
-                      )}
-                      {m.completed_at && (
-                        <div className="text-[11px] text-neutral-500">
-                          end: {formatDateTime(m.completed_at)}
-                        </div>
-                      )}
-                    </td>
+                        {m.completed_at && (
+                          <div className="text-[10px] text-neutral-500">
+                            Termine {formatDateTime(m.completed_at)}
+                          </div>
+                        )}
+                      </div>
 
-                    {/* Status */}
-                    <td className="px-4 py-2 align-top">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-semibold ${statusColor(
-                          m.status
-                        )}`}
-                      >
-                        {statusLabel(m.status)}
-                      </span>
-                    </td>
-
-                    {/* Actions */}
-                    <td className="px-4 py-2 align-top">
-                      <div className="flex flex-col gap-2 items-end">
+                      {/* Actions */}
+                      <div className="flex gap-2 flex-shrink-0">
                         <Link
                           href={`/admin/matches/${m.id}`}
-                          className="px-2 py-1 rounded bg-neutral-700 hover:bg-neutral-600 text-xs"
+                          className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-xs font-medium transition-colors"
                         >
-                          Ouvrir (admin)
+                          Editer
                         </Link>
                         <Link
                           href={`/match/${m.id}`}
-                          className="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-xs"
                           target="_blank"
+                          className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium transition-colors"
                         >
-                          Voir (public)
+                          Voir
                         </Link>
                       </div>
-                    </td>
-                  </tr>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            )}
+          </section>
+
+          {/* Pagination */}
+          {matches.length > 0 && (
+            <div className="flex justify-between items-center mt-6">
+              <button
+                type="button"
+                disabled={offset === 0}
+                onClick={() => setOffset(Math.max(0, offset - limit))}
+                className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+                Precedent
+              </button>
+
+              <span className="text-neutral-400 text-sm">
+                {offset + 1} – {offset + matches.length}
+                {total ? ` sur ${total}` : ''}
+              </span>
+
+              <button
+                type="button"
+                disabled={total !== null && offset + limit >= total}
+                onClick={() => setOffset(offset + limit)}
+                className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                Suivant
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+            </div>
           )}
         </div>
-
-        {/* Pagination */}
-        {matches.length > 0 && (
-          <div className="flex justify-between items-center mt-6 text-sm">
-            <button
-              disabled={offset === 0}
-              onClick={() => setOffset(Math.max(0, offset - limit))}
-              className={`px-3 py-2 rounded ${
-                offset === 0
-                  ? 'bg-neutral-700 opacity-40 cursor-not-allowed'
-                  : 'bg-neutral-700 hover:bg-neutral-600'
-              }`}
-            >
-              ← Précédent
-            </button>
-
-            <span className="text-neutral-400">
-              {offset + 1} – {offset + matches.length}
-              {total ? ` / ${total}` : ''}
-            </span>
-
-            <button
-              disabled={total !== null && offset + limit >= total}
-              onClick={() => setOffset(offset + limit)}
-              className={`px-3 py-2 rounded ${
-                total !== null && offset + limit >= total
-                  ? 'bg-neutral-700 opacity-40 cursor-not-allowed'
-                  : 'bg-neutral-700 hover:bg-neutral-600'
-              }`}
-            >
-              Suivant →
-            </button>
-          </div>
-        )}
       </div>
     </>
   );
@@ -565,32 +655,33 @@ type TeamCellProps = {
   team: TeamMini | null | undefined;
   fallbackId: string | null | undefined;
   isWinner: boolean;
+  align?: 'left' | 'right';
 };
 
-function TeamCell({ team, fallbackId, isWinner }: TeamCellProps) {
+function TeamCell({ team, fallbackId, isWinner, align = 'left' }: TeamCellProps) {
   const label = team?.name || fallbackId || 'TBD';
   const short = team?.short_name || null;
 
   return (
-    <div className="flex items-center gap-3">
+    <div className={`flex items-center gap-3 w-40 ${align === 'right' ? 'flex-row-reverse text-right' : ''}`}>
       {team?.logo_url ? (
         <Image
           src={team.logo_url}
           alt={team.name}
-          width={32}
-          height={32}
-          className="w-8 h-8 rounded object-cover border border-neutral-700"
+          width={40}
+          height={40}
+          className="w-10 h-10 rounded-xl object-cover border border-neutral-700"
         />
       ) : (
-        <div className="w-8 h-8 rounded-full bg-neutral-700 border border-neutral-600 flex items-center justify-center text-[11px] font-semibold uppercase">
+        <div className="w-10 h-10 rounded-xl bg-neutral-700/50 border border-neutral-700 flex items-center justify-center text-xs font-semibold uppercase">
           {(label || '?').replace(/[^A-Za-z0-9]/g, '').slice(0, 2)}
         </div>
       )}
-      <div>
-        <div className={`font-semibold ${isWinner ? 'text-emerald-300' : ''}`}>
+      <div className="flex-1 min-w-0">
+        <div className={`font-semibold text-sm truncate ${isWinner ? 'text-emerald-400' : ''}`}>
           {label}
         </div>
-        {short && <div className="text-xs text-neutral-400">{short}</div>}
+        {short && <div className="text-xs text-neutral-500 truncate">{short}</div>}
       </div>
     </div>
   );

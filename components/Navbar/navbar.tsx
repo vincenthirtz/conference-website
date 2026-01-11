@@ -335,24 +335,24 @@ function Navbar(): JSX.Element {
         />
       )}
       <div
-        className={`fixed inset-x-0 z-[100] text-white ${isStaff ? 'hidden' : 'backdrop-blur'} ${
-          drop && 'bg-[#1B1130]/90'
-        }`}
+        className={`fixed inset-x-0 z-[100] text-white ${
+          !isStaff ? 'backdrop-blur' : ''
+        } ${drop && 'bg-[#1B1130]/90'}`}
         style={{ top: headerOffset }}
       >
-        <div className="mx-auto max-w-7xl px-4 py-5 flex justify-between h-[75px] w-full items-center">
+        <div className={!isStaff ? "mx-auto max-w-7xl px-4 py-5 flex justify-between h-[75px] w-full items-center" : ""}>
           <div
             className="flex items-center sm:justify-between sm:w-full z-[99]"
             data-test="nav-Home"
           >
             <Link href="/">
-              <div className="flex items-center cursor-pointer shrink-0">
+              <div className={`flex items-center cursor-pointer shrink-0 ${isStaff ? 'hidden' : ''}`}>
                 <Image
                   src="/img/logos/2025-logo.png"
                   alt="conference logo"
                   width={150}
                   height={33}
-                  className={`block ${isStaff ? 'hidden' : ''}`}
+                  className="block"
                   priority
                 />
               </div>
@@ -372,7 +372,7 @@ function Navbar(): JSX.Element {
             </div>
           ) : (
             <div className="flex items-center">
-              {/* Liens publics existants */}
+              {/* Liens publics existants - masqués quand staff connecté */}
               {!isStaff &&
                 links
                   .filter(
@@ -541,33 +541,21 @@ function Navbar(): JSX.Element {
                   ))}
 
               {/* ------------------------------------------------
-                  🔐 Zone Admin / Connexion staff (desktop only)
+                  🔐 Zone Connexion staff (desktop only) - masquée si connecté
                  ------------------------------------------------ */}
-              <div className="ml-10">
-                {!adminLoading && (
-                  <>
-                    {!isStaff && (
-                      <Link
-                        href="/admin/login"
-                        className="text-sm border border-red-500/80 rounded-full px-3 py-1 hover:bg-red-500/20 hover:border-red-300 transition-colors text-red-300 flex items-center gap-2"
-                      >
-                        <span className="w-2 h-2 rounded-full bg-red-500" />
-                        Connexion
-                      </Link>
-                    )}
-
-                    {isStaff && (
-                      <Link
-                        href="/admin"
-                        className="flex items-center gap-2 text-sm border border-emerald-400/80 rounded-full px-3 py-1 text-emerald-200 hover:border-white hover:text-white transition"
-                      >
-                        <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                        Connecté
-                      </Link>
-                    )}
-                  </>
-                )}
-              </div>
+              {!isStaff && (
+                <div className="ml-10">
+                  {!adminLoading && (
+                    <Link
+                      href="/admin/login"
+                      className="text-sm border border-red-500/80 rounded-full px-3 py-1 hover:bg-red-500/20 hover:border-red-300 transition-colors text-red-300 flex items-center gap-2"
+                    >
+                      <span className="w-2 h-2 rounded-full bg-red-500" />
+                      Connexion
+                    </Link>
+                  )}
+                </div>
+              )}
             </div>
           )}
           {isTablet && (
