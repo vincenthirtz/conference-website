@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 
@@ -15,46 +14,20 @@ type StaffShape = {
 type StaffProps = {
   staff: StaffShape;
 };
-type TournamentMini = {
-  id: string;
-  name: string;
-  slug: string | null;
-};
 
 type MapStatsRow = {
   map_name: string;
-  tournament_id: string | null;
-  tournament: TournamentMini | null;
-
-  // occurrences au niveau matchs
   matches_played: number;
   matches_won_attack?: number | null;
   matches_won_defense?: number | null;
-
-  // occurrences au niveau manches / rounds (optionnel selon ton backend)
   rounds_played?: number | null;
-  rounds_won_attack?: number | null;
-  rounds_won_defense?: number | null;
-
-  // winrates calculés côté API
-  match_winrate_attack?: number | null; // 0–1
-  match_winrate_defense?: number | null; // 0–1
-  round_winrate_attack?: number | null; // 0–1
-  round_winrate_defense?: number | null; // 0–1;
-
-  // stats génériques
+  match_winrate_attack?: number | null;
+  match_winrate_defense?: number | null;
   avg_total_rounds?: number | null;
-  pick_rate?: number | null; // proportion de matchs du tournoi où la map est jouée
-  ban_rate?: number | null; // si ton système gère les bans
 };
 
 type MapStatsApiResponse = {
   stats: MapStatsRow[];
-  total: number | null;
-};
-
-type TournamentsApiResponse = {
-  tournaments: TournamentMini[];
   total: number | null;
 };
 
@@ -70,7 +43,17 @@ function formatNumber(v: number | null | undefined, decimals = 1) {
   return v.toFixed(decimals);
 }
 
-function AdminMapsStatsPage({ staff }: StaffProps) {
+function rankBadge(rank: number) {
+  if (rank === 1)
+    return 'bg-amber-500/20 text-amber-300 border border-amber-500/30';
+  if (rank === 2)
+    return 'bg-neutral-400/20 text-neutral-300 border border-neutral-400/30';
+  if (rank === 3)
+    return 'bg-orange-600/20 text-orange-300 border border-orange-500/30';
+  return 'bg-neutral-700/50 text-neutral-400';
+}
+
+function AdminMapsStatsPage({}: StaffProps) {
   const router = useRouter();
 
   const [loading, setLoading] = useState(false);
@@ -79,41 +62,19 @@ function AdminMapsStatsPage({ staff }: StaffProps) {
   const [stats, setStats] = useState<MapStatsRow[]>([]);
   const [total, setTotal] = useState<number | null>(null);
 
-  const [tournaments, setTournaments] = useState<TournamentMini[]>([]);
-  const [loadingTournaments, setLoadingTournaments] = useState(false);
-
   // Filtres
-  const [tournamentId, setTournamentId] = useState<string>('');
   const [searchMap, setSearchMap] = useState<string>('');
-  const [minMatches, setMinMatches] = useState<string>('5');
-  const [sortBy, setSortBy] = useState<string>('pick_rate');
+  const [minMatches, setMinMatches] = useState<string>('1');
+  const [sortBy, setSortBy] = useState<string>('matches_played');
   const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
 
   const [limit] = useState(100);
   const [offset, setOffset] = useState(0);
 
   useEffect(() => {
-    fetchTournaments();
-  }, []);
-
-  useEffect(() => {
     fetchStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [offset, tournamentId, sortBy, sortDir, minMatches]);
-
-  async function fetchTournaments() {
-    try {
-      setLoadingTournaments(true);
-      const res = await fetch('/api/admin/tournaments?limit=200');
-      if (!res.ok) return;
-      const json: TournamentsApiResponse = await res.json();
-      setTournaments(json.tournaments || []);
-    } catch (err) {
-      console.error('Failed to load tournaments for map stats filters', err);
-    } finally {
-      setLoadingTournaments(false);
-    }
-  }
+  }, [offset, sortBy, sortDir, minMatches]);
 
   async function fetchStats() {
     setLoading(true);
@@ -123,14 +84,11 @@ function AdminMapsStatsPage({ staff }: StaffProps) {
       const params = new URLSearchParams();
       params.set('limit', String(limit));
       params.set('offset', String(offset));
-      if (tournamentId) params.set('tournamentId', tournamentId);
       if (searchMap.trim()) params.set('search', searchMap.trim());
       if (minMatches) params.set('minMatches', minMatches);
       if (sortBy) params.set('sortBy', sortBy);
       if (sortDir) params.set('sortDir', sortDir);
 
-      // Endpoint admin stats maps – à implémenter côté API:
-      // GET /api/admin/stats/maps
       const res = await fetch('/api/admin/stats/maps?' + params.toString());
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -158,7 +116,6 @@ function AdminMapsStatsPage({ staff }: StaffProps) {
     params.set('limit', '10000');
     params.set('offset', '0');
     params.set('export', 'csv');
-    if (tournamentId) params.set('tournamentId', tournamentId);
     if (searchMap.trim()) params.set('search', searchMap.trim());
     if (minMatches) params.set('minMatches', minMatches);
     if (sortBy) params.set('sortBy', sortBy);
@@ -175,360 +132,401 @@ function AdminMapsStatsPage({ staff }: StaffProps) {
         <title>Admin – Stats maps</title>
       </Head>
 
-      <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
-        {/* Header */}
-        <header className="flex items-center justify-between mb-6 flex-wrap gap-4">
-          <div>
+      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
+        <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12">
+          {/* Header */}
+          <div className="mb-8">
             <button
               type="button"
               onClick={() => router.push(backUrl)}
-              className="mb-2 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
+              className="mb-4 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors"
             >
-              ← Retour au dashboard admin
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+              Retour au dashboard admin
             </button>
-            <h1 className="text-3xl font-bold">Stats maps</h1>
-            <p className="text-neutral-400 text-sm mt-1">
-              Analyse des performances & de la popularité des maps (pick-rate,
-              winrate attaque/défense, volume de matchs & manches).
-            </p>
-          </div>
-        </header>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+                  Stats maps
+                </h1>
+                <p className="text-neutral-400 text-sm mt-1">
+                  Analyse des performances & de la popularité des maps
+                  (pick-rate, winrate attaque/défense, volume de matchs &
+                  manches).
+                </p>
+              </div>
 
-        {/* Filters */}
-        <form
-          onSubmit={handleFilterSubmit}
-          className="bg-neutral-800 border border-neutral-700 rounded-xl p-4 mb-6 flex flex-wrap gap-4 items-end"
-        >
-          <div className="flex flex-col gap-1 min-w-[220px]">
-            <label className="text-xs text-neutral-400">Tournoi</label>
-            <select
-              className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={tournamentId}
-              onChange={(e) => setTournamentId(e.target.value)}
-              disabled={loadingTournaments}
+              <button
+                type="button"
+                onClick={handleExportCsv}
+                className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                  />
+                </svg>
+                Export CSV
+              </button>
+            </div>
+          </div>
+
+          {/* Filters */}
+          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6">
+            <form
+              onSubmit={handleFilterSubmit}
+              className="flex gap-4 flex-wrap items-end"
             >
-              <option value="">
-                {loadingTournaments
-                  ? 'Chargement des tournois…'
-                  : 'Tous les tournois'}
-              </option>
-              {tournaments.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                  {t.slug ? ` (${t.slug})` : ''}
-                </option>
-              ))}
-            </select>
-          </div>
+              <div className="flex-1 min-w-[200px]">
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Map
+                </label>
+                <div className="relative">
+                  <svg
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Nom de la map (ex: Ascent, Bind…)"
+                    className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={searchMap}
+                    onChange={(e) => setSearchMap(e.target.value)}
+                  />
+                </div>
+              </div>
 
-          <div className="flex flex-col gap-1 min-w-[200px]">
-            <label className="text-xs text-neutral-400">Map</label>
-            <input
-              type="text"
-              placeholder="Nom de la map (ex: Ascent, Bind…) "
-              className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={searchMap}
-              onChange={(e) => setSearchMap(e.target.value)}
-            />
-          </div>
+              <div className="w-36">
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Min. matchs
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={minMatches}
+                  onChange={(e) => setMinMatches(e.target.value)}
+                  placeholder="ex: 5"
+                />
+              </div>
 
-          <div className="flex flex-col gap-1 w-36">
-            <label className="text-xs text-neutral-400">Min. matchs</label>
-            <input
-              type="number"
-              min={0}
-              className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={minMatches}
-              onChange={(e) => setMinMatches(e.target.value)}
-              placeholder="ex: 5"
-            />
-          </div>
+              <div className="min-w-[180px]">
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Trier par
+                </label>
+                <select
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                >
+                  <option value="matches_played">Matchs joués</option>
+                  <option value="rounds_played">Rounds totaux</option>
+                  <option value="match_winrate_attack">Victoires Team 1</option>
+                  <option value="match_winrate_defense">Victoires Team 2</option>
+                  <option value="avg_total_rounds">Moy. rounds/match</option>
+                  <option value="map_name">Nom de la map</option>
+                </select>
+              </div>
 
-          <div className="flex flex-col gap-1 min-w-[180px]">
-            <label className="text-xs text-neutral-400">Trier par</label>
-            <select
-              className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-            >
-              <option value="pick_rate">Pick-rate</option>
-              <option value="ban_rate">Ban-rate</option>
-              <option value="matches_played">Matchs joués</option>
-              <option value="rounds_played">Manches jouées</option>
-              <option value="match_winrate_attack">
-                Winrate match (attaque)
-              </option>
-              <option value="match_winrate_defense">
-                Winrate match (défense)
-              </option>
-              <option value="round_winrate_attack">
-                Winrate round (attaque)
-              </option>
-              <option value="round_winrate_defense">
-                Winrate round (défense)
-              </option>
-              <option value="avg_total_rounds">Nb moyen de manches</option>
-            </select>
-          </div>
+              <div className="w-36">
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Ordre
+                </label>
+                <select
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={sortDir}
+                  onChange={(e) =>
+                    setSortDir(e.target.value === 'asc' ? 'asc' : 'desc')
+                  }
+                >
+                  <option value="desc">Descendant</option>
+                  <option value="asc">Ascendant</option>
+                </select>
+              </div>
 
-          <div className="flex flex-col gap-1 w-32">
-            <label className="text-xs text-neutral-400">Ordre</label>
-            <select
-              className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={sortDir}
-              onChange={(e) =>
-                setSortDir(e.target.value === 'asc' ? 'asc' : 'desc')
-              }
-            >
-              <option value="desc">Descendant</option>
-              <option value="asc">Ascendant</option>
-            </select>
-          </div>
+              <button
+                type="submit"
+                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                Filtrer
+              </button>
+            </form>
+          </section>
 
-          <button
-            type="submit"
-            className="ml-auto px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-sm font-semibold"
-          >
-            Filtrer
-          </button>
-
-          <button
-            type="button"
-            onClick={handleExportCsv}
-            className="px-4 py-2 rounded border border-neutral-600 text-sm hover:bg-neutral-800"
-          >
-            Export CSV
-          </button>
-        </form>
-
-        {/* Error */}
-        {errorMsg && (
-          <div className="mb-4 rounded bg-red-900/60 border border-red-600 px-4 py-3 text-sm">
-            {errorMsg}
-          </div>
-        )}
-
-        {/* Table */}
-        <section className="bg-neutral-800 border border-neutral-700 rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-neutral-700 flex justify-between items-center">
-            <span className="text-sm font-semibold">
-              {loading
-                ? 'Chargement...'
-                : `Maps (${stats.length}${total != null ? ` / ${total}` : ''})`}
-            </span>
-            <span className="text-xs text-neutral-400">
-              Calcul effectué côté API à partir des matchs et des rounds joués.
-            </span>
-          </div>
-
-          {stats.length === 0 && !loading && (
-            <div className="px-4 py-6 text-sm text-neutral-400">
-              Aucune map pour ces filtres.
+          {/* Error */}
+          {errorMsg && (
+            <div className="mb-6 rounded-xl bg-red-900/30 border border-red-600/50 px-4 py-3 flex items-center gap-3">
+              <svg
+                className="w-5 h-5 text-red-400 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span className="text-sm text-red-200">{errorMsg}</span>
             </div>
           )}
 
-          {stats.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-xs">
-                <thead className="bg-neutral-750 text-neutral-300">
-                  <tr>
-                    <th className="px-3 py-2 text-left">#</th>
-                    <th className="px-3 py-2 text-left">Map</th>
-                    <th className="px-3 py-2 text-left">Tournoi</th>
-                    <th className="px-3 py-2 text-center">Matchs</th>
-                    <th className="px-3 py-2 text-center">Pick-rate</th>
-                    <th className="px-3 py-2 text-center">Ban-rate</th>
-                    <th className="px-3 py-2 text-center">
-                      Winrate match A / D
-                    </th>
-                    <th className="px-3 py-2 text-center">Manches totales</th>
-                    <th className="px-3 py-2 text-center">
-                      Winrate round A / D
-                    </th>
-                    <th className="px-3 py-2 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.map((row, index) => {
-                    const rank = offset + index + 1;
+          {/* Table */}
+          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-neutral-700/50 flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <svg
+                  className="w-5 h-5 text-neutral-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+                  />
+                </svg>
+                <span className="font-semibold">
+                  {loading
+                    ? 'Chargement...'
+                    : `Maps (${stats.length}${total != null ? ` / ${total}` : ''})`}
+                </span>
+              </div>
+              <span className="text-xs text-neutral-500">
+                Calcul effectué côté API à partir des matchs et des rounds
+                joués.
+              </span>
+            </div>
 
-                    const roundsPlayed =
-                      row.rounds_played != null ? row.rounds_played : null;
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+              </div>
+            ) : stats.length === 0 ? (
+              <div className="text-center py-20 text-neutral-400">
+                <svg
+                  className="w-12 h-12 mx-auto mb-4 text-neutral-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+                  />
+                </svg>
+                Aucune map pour ces filtres.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-neutral-900/50 text-neutral-400">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-medium">#</th>
+                      <th className="px-4 py-3 text-left font-medium">Map</th>
+                      <th className="px-4 py-3 text-center font-medium">
+                        Matchs joués
+                      </th>
+                      <th className="px-4 py-3 text-center font-medium">
+                        Victoires Team 1
+                      </th>
+                      <th className="px-4 py-3 text-center font-medium">
+                        Victoires Team 2
+                      </th>
+                      <th className="px-4 py-3 text-center font-medium">
+                        Winrate T1 / T2
+                      </th>
+                      <th className="px-4 py-3 text-center font-medium">
+                        Rounds totaux
+                      </th>
+                      <th className="px-4 py-3 text-center font-medium">
+                        Moy. rounds/match
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-700/50">
+                    {stats.map((row, index) => {
+                      const rank = offset + index + 1;
 
-                    const totalRoundWinrateA = formatPercent(
-                      row.round_winrate_attack
-                    );
-                    const totalRoundWinrateD = formatPercent(
-                      row.round_winrate_defense
-                    );
+                      return (
+                        <tr
+                          key={`${row.map_name}-${index}`}
+                          className="hover:bg-neutral-700/30 transition-colors"
+                        >
+                          {/* Rank */}
+                          <td className="px-4 py-3">
+                            <span
+                              className={`inline-flex items-center justify-center w-8 h-8 rounded-lg text-sm font-bold ${rankBadge(rank)}`}
+                            >
+                              {rank}
+                            </span>
+                          </td>
 
-                    return (
-                      <tr
-                        key={`${row.map_name}-${row.tournament_id || 'global'}`}
-                        className="border-t border-neutral-700"
-                      >
-                        {/* Rank */}
-                        <td className="px-3 py-2 text-center font-semibold">
-                          {rank}
-                        </td>
-
-                        {/* Map name */}
-                        <td className="px-3 py-2">
-                          <div className="font-semibold text-neutral-50">
-                            {row.map_name}
-                          </div>
-                        </td>
-
-                        {/* Tournament */}
-                        <td className="px-3 py-2">
-                          {row.tournament ? (
-                            <div>
-                              <div className="font-medium text-neutral-100">
-                                {row.tournament.name}
-                              </div>
-                              {row.tournament.slug && (
-                                <div className="text-[10px] text-neutral-500 font-mono">
-                                  {row.tournament.slug}
-                                </div>
-                              )}
+                          {/* Map name */}
+                          <td className="px-4 py-3">
+                            <div className="font-semibold text-white">
+                              {row.map_name}
                             </div>
-                          ) : (
-                            <span className="text-neutral-500">
-                              Tous tournois
+                          </td>
+
+                          {/* Matches played */}
+                          <td className="px-4 py-3 text-center">
+                            <span className="px-2 py-1 rounded-lg bg-neutral-700/50 text-neutral-200 text-sm font-medium">
+                              {row.matches_played}
                             </span>
-                          )}
-                        </td>
+                          </td>
 
-                        {/* Matches */}
-                        <td className="px-3 py-2 text-center">
-                          {row.matches_played}
-                        </td>
-
-                        {/* Pick / Ban rate */}
-                        <td className="px-3 py-2 text-center font-semibold">
-                          {formatPercent(row.pick_rate)}
-                        </td>
-                        <td className="px-3 py-2 text-center">
-                          {formatPercent(row.ban_rate)}
-                        </td>
-
-                        {/* Match winrate attack / defense */}
-                        <td className="px-3 py-2 text-center">
-                          <div>
-                            <span className="text-emerald-300">
-                              {formatPercent(row.match_winrate_attack)}
-                            </span>{' '}
-                            /{' '}
-                            <span className="text-sky-300">
-                              {formatPercent(row.match_winrate_defense)}
+                          {/* Wins Team 1 */}
+                          <td className="px-4 py-3 text-center">
+                            <span className="px-2 py-1 rounded-lg bg-emerald-600/20 text-emerald-300 text-sm font-medium">
+                              {row.matches_won_attack ?? 0}
                             </span>
-                          </div>
-                          <div className="text-[10px] text-neutral-500">
-                            (Victoires match selon side de départ)
-                          </div>
-                        </td>
+                          </td>
 
-                        {/* Rounds info */}
-                        <td className="px-3 py-2 text-center">
-                          {roundsPlayed != null ? (
-                            <>
-                              <div>{roundsPlayed}</div>
-                              <div className="text-[10px] text-neutral-500">
-                                Moyenne : {formatNumber(row.avg_total_rounds)}
-                              </div>
-                            </>
-                          ) : (
-                            <span className="text-neutral-500">—</span>
-                          )}
-                        </td>
+                          {/* Wins Team 2 */}
+                          <td className="px-4 py-3 text-center">
+                            <span className="px-2 py-1 rounded-lg bg-sky-600/20 text-sky-300 text-sm font-medium">
+                              {row.matches_won_defense ?? 0}
+                            </span>
+                          </td>
 
-                        {/* Round winrate A/D */}
-                        <td className="px-3 py-2 text-center">
-                          {roundsPlayed != null ? (
-                            <>
-                              <div>
-                                <span className="text-emerald-300">
-                                  {totalRoundWinrateA}
-                                </span>{' '}
-                                /{' '}
-                                <span className="text-sky-300">
-                                  {totalRoundWinrateD}
-                                </span>
-                              </div>
-                              <div className="text-[10px] text-neutral-500">
-                                (Winrate par manche)
-                              </div>
-                            </>
-                          ) : (
-                            <span className="text-neutral-500">—</span>
-                          )}
-                        </td>
+                          {/* Winrate T1 / T2 */}
+                          <td className="px-4 py-3 text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <span className="px-2 py-0.5 rounded bg-emerald-600/20 text-emerald-300 text-xs font-medium">
+                                {formatPercent(row.match_winrate_attack)}
+                              </span>
+                              <span className="text-neutral-500">/</span>
+                              <span className="px-2 py-0.5 rounded bg-sky-600/20 text-sky-300 text-xs font-medium">
+                                {formatPercent(row.match_winrate_defense)}
+                              </span>
+                            </div>
+                          </td>
 
-                        {/* Actions */}
-                        <td className="px-3 py-2 text-right align-top">
-                          <div className="flex flex-col gap-2 items-end">
-                            {row.tournament_id && (
-                              <Link
-                                href={`/tournament/${row.tournament_id}/maps`}
-                                className="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-[11px]"
-                                target="_blank"
-                              >
-                                Voir maps tournoi (public)
-                              </Link>
-                            )}
-                            {row.tournament_id && (
-                              <Link
-                                href={`/tournament/${row.tournament_id}/stats`}
-                                className="px-2 py-1 rounded bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-[11px]"
-                                target="_blank"
-                              >
-                                Stats tournoi
-                              </Link>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                          {/* Total rounds */}
+                          <td className="px-4 py-3 text-center">
+                            <span className="font-medium">
+                              {row.rounds_played ?? '—'}
+                            </span>
+                          </td>
+
+                          {/* Avg rounds per match */}
+                          <td className="px-4 py-3 text-center">
+                            <span className="px-2 py-1 rounded-lg bg-purple-600/20 text-purple-300 text-sm font-medium">
+                              {formatNumber(row.avg_total_rounds)}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+
+          {/* Pagination */}
+          {stats.length > 0 && (
+            <div className="flex justify-between items-center mt-6">
+              <button
+                type="button"
+                disabled={offset === 0}
+                onClick={() => setOffset(Math.max(0, offset - limit))}
+                className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+                Précédent
+              </button>
+
+              <span className="text-neutral-400 text-sm">
+                {offset + 1} – {offset + stats.length}
+                {total ? ` sur ${total}` : ''}
+              </span>
+
+              <button
+                type="button"
+                disabled={total !== null && offset + limit >= total}
+                onClick={() => setOffset(offset + limit)}
+                className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                Suivant
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
             </div>
           )}
-        </section>
-
-        {/* Pagination */}
-        {stats.length > 0 && (
-          <div className="flex justify-between items-center mt-6 text-sm">
-            <button
-              disabled={offset === 0}
-              onClick={() => setOffset(Math.max(0, offset - limit))}
-              className={`px-3 py-2 rounded ${
-                offset === 0
-                  ? 'bg-neutral-700 opacity-40 cursor-not-allowed'
-                  : 'bg-neutral-700 hover:bg-neutral-600'
-              }`}
-            >
-              ← Précédent
-            </button>
-
-            <span className="text-neutral-400">
-              {offset + 1} – {offset + stats.length}
-              {total ? ` / ${total}` : ''}
-            </span>
-
-            <button
-              disabled={total !== null && offset + limit >= total}
-              onClick={() => setOffset(offset + limit)}
-              className={`px-3 py-2 rounded ${
-                total !== null && offset + limit >= total
-                  ? 'bg-neutral-700 opacity-40 cursor-not-allowed'
-                  : 'bg-neutral-700 hover:bg-neutral-600'
-              }`}
-            >
-              Suivant →
-            </button>
-          </div>
-        )}
+        </div>
       </div>
     </>
   );
