@@ -47,9 +47,10 @@ async function handler(
     case 'GET':
       return handleGet(req, res, id);
     case 'PATCH':
+    case 'PUT':
       return handlePatch(req, res, id, ctx);
     default:
-      res.setHeader('Allow', 'GET,PATCH');
+      res.setHeader('Allow', 'GET,PATCH,PUT');
       return res.status(405).json({ error: 'Method not allowed' });
   }
 }
@@ -104,7 +105,21 @@ async function handlePatch(
   ctx: any
 ) {
   try {
-    const { status } = req.body;
+    const {
+      status,
+      name,
+      slug,
+      game,
+      start_date,
+      end_at,
+      end_date,
+      format_type,
+      max_teams,
+      min_players,
+      is_public,
+      is_featured,
+      banner_url,
+    } = req.body;
 
     // Valider le statut si fourni
     if (status !== undefined) {
@@ -129,9 +144,21 @@ async function handlePatch(
     // Construire l'objet de mise à jour
     const updatePayload: Record<string, any> = {};
 
-    if (status !== undefined) {
-      updatePayload.status = status;
-    }
+    if (status !== undefined) updatePayload.status = status;
+    if (name !== undefined) updatePayload.name = name;
+    if (slug !== undefined) updatePayload.slug = slug;
+    if (game !== undefined) updatePayload.game = game;
+    if (start_date !== undefined) updatePayload.start_date = start_date;
+    // Support both end_at (frontend) and end_date (database)
+    if (end_at !== undefined) updatePayload.end_date = end_at;
+    if (end_date !== undefined) updatePayload.end_date = end_date;
+    if (format_type !== undefined) updatePayload.format_type = format_type;
+    if (max_teams !== undefined) updatePayload.max_teams = max_teams;
+    if (min_players !== undefined) updatePayload.min_players = min_players;
+    // Map is_public (frontend) to visibility (database)
+    if (is_public !== undefined) updatePayload.visibility = is_public ? 'public' : 'private';
+    if (is_featured !== undefined) updatePayload.is_featured = is_featured;
+    if (banner_url !== undefined) updatePayload.banner_url = banner_url;
 
     // Si rien à mettre à jour
     if (Object.keys(updatePayload).length === 0) {
