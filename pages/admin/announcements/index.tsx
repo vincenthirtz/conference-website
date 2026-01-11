@@ -1,8 +1,8 @@
+import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
-import { FormEvent, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
 import { supabaseClient } from '@/utils/supabase';
-import Button from '@/components/Buttons/button';
 
 type AnnouncementRow = {
   id: string;
@@ -18,97 +18,99 @@ type AnnouncementRow = {
   updated_at: string;
 };
 
-type StaffProps = {
+type ApiResponse = {
+  items: AnnouncementRow[];
+  total?: number;
+};
+
+type Props = {
   staff: {
     id: string;
     role: string;
-    display_name: string | null;
+    display_name: string;
   };
 };
 
-type FormState = {
-  title: string;
-  message: string;
-  ctaLabel: string;
-  ctaUrl: string;
-  startsAt: string;
-  endsAt: string;
-  priority: number;
-  isActive: boolean;
-};
+function statusLabel(isActive: boolean) {
+  return isActive ? 'Actif' : 'Inactif';
+}
 
-const initialForm: FormState = {
-  title: '',
-  message: '',
-  ctaLabel: '',
-  ctaUrl: '',
-  startsAt: '',
-  endsAt: '',
-  priority: 0,
-  isActive: true,
-};
+function statusColor(isActive: boolean) {
+  return isActive
+    ? 'bg-emerald-600 text-white'
+    : 'bg-neutral-600 text-neutral-100';
+}
 
-export const getServerSideProps = withStaffPage('admin');
+function formatDate(d: string | null) {
+  if (!d) return '—';
+  try {
+    return new Date(d).toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return d;
+  }
+}
 
-export default function AdminAnnouncements({ staff }: StaffProps) {
-  const [items, setItems] = useState<AnnouncementRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState<FormState>(initialForm);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+function AdminAnnouncementsPage({ staff }: Props) {
+  const [loading, setLoading] = useState(false);
+  const [announcements, setAnnouncements] = useState<AnnouncementRow[]>([]);
+  const [total, setTotal] = useState<number | null>(null);
 
-  const load = async () => {
+  // filters
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+
+  const [limit] = useState(20);
+  const [offset, setOffset] = useState(0);
+
+  const fetchData = useCallback(async () => {
     setLoading(true);
-    setError(null);
+
     try {
       const {
         data: { session },
       } = await supabaseClient.auth.getSession();
       const token = session?.access_token;
       if (!token) {
-        throw new Error('Session staff manquante.');
+        setLoading(false);
+        return;
       }
-      const res = await fetch('/api/admin/announcements?limit=200', {
+
+      const params = new URLSearchParams();
+      params.set('limit', String(limit));
+      params.set('offset', String(offset));
+
+      if (search.trim()) params.set('search', search);
+      if (statusFilter) params.set('status', statusFilter);
+
+      const res = await fetch(`/api/admin/announcements?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error || 'Erreur de chargement');
-      setItems(json.items || []);
-    } catch (err: any) {
-      console.error('admin announcements load error', err);
-      setError(err?.message || 'Erreur inattendue.');
+      const json: ApiResponse = await res.json();
+
+      setAnnouncements(json.items || []);
+      setTotal(json.total ?? json.items?.length ?? 0);
+    } catch (err) {
+      console.error('Error fetching announcements', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [limit, offset, search, statusFilter]);
 
   useEffect(() => {
-    load();
-  }, []);
+    fetchData();
+  }, [fetchData]);
 
-  const updateField = (key: keyof FormState, value: any) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const resetForm = () => {
-    setForm(initialForm);
-    setEditingId(null);
-  };
-
-  const onEdit = (row: AnnouncementRow) => {
-    setEditingId(row.id);
-    setForm({
-      title: row.title,
-      message: row.message,
-      ctaLabel: row.cta_label || '',
-      ctaUrl: row.cta_url || '',
-      startsAt: row.starts_at ? row.starts_at.slice(0, 16) : '',
-      endsAt: row.ends_at ? row.ends_at.slice(0, 16) : '',
-      priority: row.priority ?? 0,
-      isActive: !!row.is_active,
-    });
-  };
+  function handleSearchSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setOffset(0);
+    fetchData();
+  }
 
   const onDelete = async (id: string) => {
     if (!confirm('Supprimer cette annonce ?')) return;
@@ -126,279 +128,288 @@ export default function AdminAnnouncements({ staff }: StaffProps) {
         const json = await res.json().catch(() => null);
         throw new Error(json?.error || 'Suppression impossible');
       }
-      setItems((prev) => prev.filter((a) => a.id !== id));
-      if (editingId === id) resetForm();
+      fetchData();
     } catch (err: any) {
       alert(err?.message || 'Erreur de suppression.');
     }
   };
-
-  const onSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    setError(null);
-    try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-
-      const payload = {
-        title: form.title.trim(),
-        message: form.message.trim(),
-        ctaLabel: form.ctaLabel.trim() || null,
-        ctaUrl: form.ctaUrl.trim() || null,
-        startsAt: form.startsAt || null,
-        endsAt: form.endsAt || null,
-        isActive: form.isActive,
-        priority: Number(form.priority) || 0,
-      };
-
-      const res = await fetch(
-        editingId
-          ? `/api/admin/announcements/${editingId}`
-          : '/api/admin/announcements',
-        {
-          method: editingId ? 'PATCH' : 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      const json = await res.json().catch(() => null);
-      if (!res.ok) {
-        throw new Error(json?.error || 'Enregistrement impossible');
-      }
-
-      resetForm();
-      await load();
-    } catch (err: any) {
-      setError(err?.message || 'Erreur inattendue.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const formatDate = (value: string | null) =>
-    value ? new Date(value).toLocaleString('fr-FR') : '—';
 
   return (
     <>
       <Head>
         <title>Admin – Annonces</title>
       </Head>
-      <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
-        <header className="flex items-center justify-between flex-wrap gap-4 mb-8">
-          <div>
-            <p className="text-sm text-neutral-400">Espace staff</p>
-            <h1 className="text-3xl font-bold mt-1">Annonces / bandeau pub</h1>
-            <p className="text-sm text-neutral-400 mt-1">
-              Créez et planifiez les messages sponsorisés affichés sur la
-              page d&apos;accueil.
-            </p>
-          </div>
-        </header>
 
-        <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
-          <section className="rounded-2xl border border-white/10 bg-neutral-800/60 p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">
-                {editingId ? 'Modifier une annonce' : 'Nouvelle annonce'}
-              </h2>
-              {editingId && (
-                <button
-                  onClick={resetForm}
-                  className="text-sm px-3 py-1.5 rounded-lg border border-white/20 hover:border-white/40 transition"
+      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
+        <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+                  Gestion des annonces
+                </h1>
+                <p className="text-neutral-400 text-sm mt-1">
+                  {total !== null
+                    ? `${total} annonce${total > 1 ? 's' : ''}`
+                    : 'Chargement...'}
+                </p>
+              </div>
+
+              <Link
+                href="/admin/announcements/new"
+                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  Réinitialiser
-                </button>
-              )}
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+                Nouvelle annonce
+              </Link>
             </div>
+          </div>
 
-            <form onSubmit={onSubmit} className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="flex flex-col gap-1 text-sm">
-                  Titre *
-                  <input
-                    value={form.title}
-                    onChange={(e) => updateField('title', e.target.value)}
-                    className="rounded-lg bg-neutral-900 border border-white/10 px-3 py-2"
-                    required
-                  />
+          {/* Filters */}
+          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6">
+            <form
+              onSubmit={handleSearchSubmit}
+              className="flex gap-4 flex-wrap items-end"
+            >
+              <div className="flex-1 min-w-[200px]">
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Recherche
                 </label>
-                <label className="flex items-center gap-2 text-sm">
+                <div className="relative">
+                  <svg
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
                   <input
-                    type="checkbox"
-                    checked={form.isActive}
-                    onChange={(e) => updateField('isActive', e.target.checked)}
-                    className="h-4 w-4"
+                    type="text"
+                    placeholder="Titre ou message..."
+                    className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
                   />
-                  Activer l&apos;annonce
-                </label>
+                </div>
               </div>
 
-              <label className="flex flex-col gap-1 text-sm">
-                Message *
-                <textarea
-                  value={form.message}
-                  onChange={(e) => updateField('message', e.target.value)}
-                  rows={3}
-                  className="rounded-lg bg-neutral-900 border border-white/10 px-3 py-2"
-                  required
-                />
-              </label>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="flex flex-col gap-1 text-sm">
-                  Label CTA
-                  <input
-                    value={form.ctaLabel}
-                    onChange={(e) => updateField('ctaLabel', e.target.value)}
-                    placeholder="Découvrir, Voir l'offre..."
-                    className="rounded-lg bg-neutral-900 border border-white/10 px-3 py-2"
-                  />
+              <div className="min-w-[160px]">
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Statut
                 </label>
-                <label className="flex flex-col gap-1 text-sm">
-                  URL CTA
-                  <input
-                    value={form.ctaUrl}
-                    onChange={(e) => updateField('ctaUrl', e.target.value)}
-                    placeholder="https://..."
-                    className="rounded-lg bg-neutral-900 border border-white/10 px-3 py-2"
-                  />
-                </label>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-3">
-                <label className="flex flex-col gap-1 text-sm">
-                  Début (UTC)
-                  <input
-                    type="datetime-local"
-                    value={form.startsAt}
-                    onChange={(e) => updateField('startsAt', e.target.value)}
-                    className="rounded-lg bg-neutral-900 border border-white/10 px-3 py-2"
-                  />
-                </label>
-                <label className="flex flex-col gap-1 text-sm">
-                  Fin (UTC)
-                  <input
-                    type="datetime-local"
-                    value={form.endsAt}
-                    onChange={(e) => updateField('endsAt', e.target.value)}
-                    className="rounded-lg bg-neutral-900 border border-white/10 px-3 py-2"
-                  />
-                </label>
-                <label className="flex flex-col gap-1 text-sm">
-                  Priorité
-                  <input
-                    type="number"
-                    value={form.priority}
-                    onChange={(e) =>
-                      updateField('priority', Number(e.target.value))
-                    }
-                    className="rounded-lg bg-neutral-900 border border-white/10 px-3 py-2"
-                  />
-                </label>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Button
-                  type="submit"
-                  size="compact"
-                  disabled={saving}
-                  className="px-4 py-2 text-sm font-semibold"
+                <select
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={statusFilter || ''}
+                  onChange={(e) => setStatusFilter(e.target.value || null)}
                 >
-                  {saving
-                    ? 'Enregistrement...'
-                    : editingId
-                      ? 'Mettre à jour'
-                      : 'Créer'}
-                </Button>
-                {error && (
-                  <span className="text-sm text-red-200">{error}</span>
-                )}
+                  <option value="">Tous les statuts</option>
+                  <option value="active">Actif</option>
+                  <option value="inactive">Inactif</option>
+                </select>
               </div>
+
+              <button
+                type="submit"
+                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                Rechercher
+              </button>
             </form>
           </section>
 
-          <section className="rounded-2xl border border-white/10 bg-neutral-800/40 p-5 space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Annonces existantes</h2>
-              <Button
-                type="button"
-                size="compact"
-                onClick={load}
-                className="px-3 py-1.5 text-sm"
-              >
-                Rafraîchir
-              </Button>
-            </div>
-
-            {loading && <div className="text-neutral-300">Chargement…</div>}
-            {!loading && items.length === 0 && (
-              <div className="text-neutral-300">
-                Aucune annonce pour le moment.
+          {/* Announcements List */}
+          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
               </div>
-            )}
-
-            <div className="space-y-3">
-              {items.map((item) => (
-                <div
-                  key={item.id}
-                  className="rounded-xl border border-white/10 bg-neutral-900/60 p-4 space-y-2"
+            ) : announcements.length === 0 ? (
+              <div className="text-center py-20 text-neutral-400">
+                <svg
+                  className="w-12 h-12 mx-auto mb-4 text-neutral-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-lg font-semibold">
-                        {item.title}
-                      </span>
-                      <StatusBadge active={item.is_active} />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
+                  />
+                </svg>
+                Aucune annonce trouvée
+              </div>
+            ) : (
+              <div className="divide-y divide-neutral-700/50">
+                {announcements.map((a) => (
+                  <div
+                    key={a.id}
+                    className="flex items-center gap-4 p-4 hover:bg-neutral-700/30 transition-colors group"
+                  >
+                    {/* Icon */}
+                    <div className="flex-shrink-0">
+                      <div className="w-12 h-12 rounded-xl bg-neutral-700/50 flex items-center justify-center border border-neutral-700">
+                        <svg
+                          className="w-6 h-6 text-neutral-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
+                          />
+                        </svg>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => onEdit(item)}
-                        className="text-sm px-3 py-1.5 rounded-lg border border-white/15 hover:border-white/30"
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold text-white group-hover:text-blue-400 transition-colors truncate">
+                          {a.title}
+                        </h3>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(
+                            a.is_active
+                          )}`}
+                        >
+                          {statusLabel(a.is_active)}
+                        </span>
+                        {a.priority !== null && a.priority > 0 && (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-600/20 text-amber-300 border border-amber-500/30">
+                            Priorité {a.priority}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-neutral-300 truncate mb-1">
+                        {a.message}
+                      </p>
+                      <div className="flex items-center gap-3 text-sm text-neutral-400">
+                        {a.cta_label && (
+                          <span className="font-mono text-xs bg-neutral-800 px-2 py-0.5 rounded">
+                            CTA: {a.cta_label}
+                          </span>
+                        )}
+                        <span>Début: {formatDate(a.starts_at)}</span>
+                        <span>•</span>
+                        <span>Fin: {formatDate(a.ends_at)}</span>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <Link
+                        href={`/admin/announcements/${a.id}`}
+                        className="px-3 py-1.5 rounded-lg border border-neutral-600 hover:border-neutral-500 text-sm transition-colors"
                       >
                         Modifier
-                      </button>
+                      </Link>
                       <button
-                        onClick={() => onDelete(item.id)}
-                        className="text-sm px-3 py-1.5 rounded-lg border border-red-500/40 text-red-200 hover:border-red-400"
+                        onClick={() => onDelete(a.id)}
+                        className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-300 hover:border-red-400 text-sm transition-colors"
                       >
                         Supprimer
                       </button>
                     </div>
                   </div>
-                  <p className="text-sm text-neutral-200">{item.message}</p>
-                  <div className="text-xs text-neutral-400 flex flex-wrap gap-3">
-                    <span>CTA : {item.cta_label || '—'}</span>
-                    <span>Priorité : {item.priority ?? 0}</span>
-                    <span>Début : {formatDate(item.starts_at)}</span>
-                    <span>Fin : {formatDate(item.ends_at)}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </section>
+
+          {/* Pagination */}
+          <div className="flex justify-between items-center mt-6">
+            <button
+              type="button"
+              disabled={offset === 0}
+              onClick={() => setOffset(Math.max(0, offset - limit))}
+              className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+              Précédent
+            </button>
+
+            <span className="text-neutral-400 text-sm">
+              {offset + 1} – {offset + announcements.length}
+              {total ? ` sur ${total}` : ''}
+            </span>
+
+            <button
+              type="button"
+              disabled={total !== null && offset + limit >= total}
+              onClick={() => setOffset(offset + limit)}
+              className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              Suivant
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </>
   );
 }
 
-function StatusBadge({ active }: { active: boolean }) {
-  const cls = active
-    ? 'bg-emerald-500/20 text-emerald-200 border-emerald-400/40'
-    : 'bg-neutral-600/40 text-neutral-200 border-neutral-400/30';
-  return (
-    <span
-      className={`text-xs px-2 py-1 rounded-full border uppercase tracking-wide ${cls}`}
-    >
-      {active ? 'Actif' : 'Inactif'}
-    </span>
-  );
-}
+export const getServerSideProps = withStaffPage('admin');
+
+export default AdminAnnouncementsPage;

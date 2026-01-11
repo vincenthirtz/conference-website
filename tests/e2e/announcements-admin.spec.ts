@@ -1,6 +1,36 @@
 import { test, expect } from '@playwright/test';
 import { supabaseTestClient } from '../utils/supabaseTestClient';
 
+test.describe('Admin announcements pages (sans auth)', () => {
+  test('GET /admin/announcements redirige vers login', async ({ page }) => {
+    await page.goto('/admin/announcements');
+    await page.waitForTimeout(1000);
+
+    const url = page.url();
+    const redirectedToLogin = url.includes('/admin/login');
+    const redirectedTo403 = url.includes('/403');
+
+    expect(
+      redirectedToLogin || redirectedTo403,
+      `/admin/announcements devrait rediriger vers login ou 403. URL actuelle: ${url}`
+    ).toBeTruthy();
+  });
+
+  test('GET /admin/announcements/new redirige vers login', async ({ page }) => {
+    await page.goto('/admin/announcements/new');
+    await page.waitForTimeout(1000);
+
+    const url = page.url();
+    const redirectedToLogin = url.includes('/admin/login');
+    const redirectedTo403 = url.includes('/403');
+
+    expect(
+      redirectedToLogin || redirectedTo403,
+      `/admin/announcements/new devrait rediriger vers login ou 403. URL actuelle: ${url}`
+    ).toBeTruthy();
+  });
+});
+
 test.describe('Admin announcements CRUD (supabase)', () => {
   test.skip(!supabaseTestClient, 'Supabase service role manquant pour les annonces');
 

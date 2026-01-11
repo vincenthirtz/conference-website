@@ -86,6 +86,12 @@ const ADMIN_SHORTCUTS: Shortcut[] = [
     label: 'Bandeau pub – liste',
     description: 'Annonces défilantes',
   },
+  {
+    category: 'Annonces',
+    href: '/admin/announcements/new',
+    label: 'Créer une annonce',
+    description: 'Nouvelle annonce',
+  },
   // News
   {
     category: 'News',
