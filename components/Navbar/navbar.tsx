@@ -220,6 +220,11 @@ function Navbar(): JSX.Element {
           ref: '/admin/announcements',
           minRole: 'admin',
         },
+        {
+          title: 'Créer une annonce',
+          ref: '/admin/announcements/new',
+          minRole: 'admin',
+        },
       ],
     },
     {
@@ -656,41 +661,43 @@ function AdminTopBar({
 
   return (
     <div
-      className="fixed inset-x-0 top-0 z-[120] bg-gradient-to-r from-neutral-950/95 via-neutral-900/95 to-emerald-900/70 border-b border-emerald-400/40 backdrop-blur shadow-[0_6px_24px_rgba(0,0,0,0.35)]"
+      className="fixed inset-x-0 top-0 z-[120] bg-neutral-950/98 border-b border-neutral-800 backdrop-blur-xl"
       style={{ height, minHeight: height }}
     >
-      <div className="mx-auto max-w-7xl px-4 h-full flex items-center gap-3 text-[13px] text-white">
+      <div className="mx-auto max-w-7xl px-4 h-full flex items-center gap-4 text-[13px] text-white">
         <Link
           href="/"
-          className="flex items-center h-full pr-4 border-r border-white/10 mr-1 shrink-0"
+          className="flex items-center h-full pr-4 border-r border-neutral-800 mr-1 shrink-0"
         >
           <Image
             src="/img/logos/2025-logo.png"
             alt="conference logo"
             width={150}
             height={38}
-            className="h-9 w-auto block"
+            className="h-8 w-auto block"
             priority
           />
         </Link>
-        <div className="flex items-center gap-2 pr-4 border-r border-white/10 whitespace-nowrap">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.8)]" />
-          <span className="font-semibold">{staffName || 'Staff'}</span>
+        <div className="flex items-center gap-3 pr-4 border-r border-neutral-800 whitespace-nowrap">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span className="font-medium text-neutral-200">{staffName || 'Staff'}</span>
+          </div>
           {staffRole && (
-            <span className="px-2 py-[2px] rounded-full bg-emerald-500/20 border border-emerald-300/40 text-[11px] uppercase tracking-[0.14em] text-emerald-100">
+            <span className="px-2 py-0.5 rounded-md bg-neutral-800 text-[10px] uppercase tracking-wider text-neutral-400 font-medium">
               {formatStaffRoleLabel(staffRole)}
             </span>
           )}
         </div>
         <div
           ref={menuAreaRef}
-          className="flex items-center gap-2 whitespace-nowrap flex-1 relative overflow-visible"
+          className="flex items-center gap-1 whitespace-nowrap flex-1 relative overflow-visible"
         >
           {singleLinks.map((link) => (
             <Link
               key={link.ref}
               href={link.ref}
-              className="px-3.5 py-2 rounded-full border border-emerald-300/60 bg-emerald-500/15 hover:bg-emerald-400/25 hover:border-white/60 transition text-[12px] font-semibold shadow-[0_4px_12px_rgba(16,185,129,0.25)]"
+              className="px-3 py-1.5 rounded-lg text-[12px] font-medium text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors"
             >
               {link.title}
             </Link>
@@ -699,30 +706,33 @@ function AdminTopBar({
             <div key={cat.title} className="relative">
               <button
                 onClick={() => toggleMenu(cat.title)}
-                className={`px-3.5 py-2 rounded-full border text-[12px] font-semibold flex items-center gap-2 transition shadow-[0_4px_12px_rgba(16,185,129,0.25)] ${
+                className={`px-3 py-1.5 rounded-lg text-[12px] font-medium flex items-center gap-1.5 transition-colors ${
                   openMenu === cat.title
-                    ? 'border-white/70 bg-emerald-500/30'
-                    : 'border-emerald-300/60 bg-emerald-500/15 hover:bg-emerald-400/25 hover:border-white/60'
+                    ? 'text-white bg-neutral-800'
+                    : 'text-neutral-300 hover:text-white hover:bg-neutral-800'
                 }`}
                 aria-expanded={openMenu === cat.title}
                 aria-haspopup="true"
               >
                 {cat.title}
-                <span
-                  className={`inline-block transition-transform ${
+                <svg
+                  className={`w-3 h-3 transition-transform ${
                     openMenu === cat.title ? 'rotate-180' : 'rotate-0'
                   }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  ▼
-                </span>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
               </button>
               {openMenu === cat.title && (
-                <div className="absolute left-0 top-[calc(100%+10px)] min-w-[220px] rounded-xl border border-white/15 bg-neutral-900/95 backdrop-blur shadow-[0_18px_36px_rgba(0,0,0,0.45)] overflow-hidden z-[130]">
+                <div className="absolute left-0 top-[calc(100%+8px)] min-w-[200px] rounded-xl bg-neutral-900 border border-neutral-800 shadow-2xl overflow-hidden z-[130]">
                   {cat.children?.map((child) => (
                     <Link
                       key={child.ref}
                       href={child.ref}
-                      className="block px-4 py-2.5 text-sm text-white hover:bg-emerald-500/15 hover:text-emerald-50 transition border-b border-white/5 last:border-b-0"
+                      className="block px-4 py-2.5 text-[13px] text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors"
                       onClick={() => setOpenMenu(null)}
                     >
                       {child.title}
@@ -735,7 +745,7 @@ function AdminTopBar({
         </div>
         <button
           onClick={onLogout}
-          className="text-[12px] uppercase tracking-wide px-3.5 py-2 rounded-full border border-red-400/70 text-red-50 bg-red-500/15 hover:bg-red-500/30 hover:border-red-300 transition whitespace-nowrap shadow-[0_4px_12px_rgba(248,113,113,0.25)]"
+          className="text-[11px] uppercase tracking-wide px-3 py-1.5 rounded-lg text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition-colors whitespace-nowrap font-medium"
         >
           Déconnexion
         </button>
