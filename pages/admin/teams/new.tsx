@@ -4,7 +4,6 @@ import { useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import Button from '@/components/Buttons/button';
 
 type StaffShape = {
   id: string;
@@ -15,6 +14,7 @@ type StaffShape = {
 type StaffProps = {
   staff: StaffShape;
 };
+
 type CreateTeamResponse = {
   team: {
     id: string;
@@ -32,7 +32,7 @@ export const getServerSideProps = withStaffPage('manager');
 function AdminNewTeamPage({ staff }: StaffProps) {
   const router = useRouter();
 
-  // Infos équipe
+  // Infos equipe
   const [name, setName] = useState('');
   const [shortName, setShortName] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
@@ -86,7 +86,6 @@ function AdminNewTeamPage({ staff }: StaffProps) {
         country: country || null,
         description: description || null,
         captain_email: captainEmail || null,
-        // On envoie les membres par email, l'API fera le mapping vers auth.users.id
         members: members
           .filter((m) => m.email.trim().length > 0)
           .map((m) => ({
@@ -103,15 +102,14 @@ function AdminNewTeamPage({ staff }: StaffProps) {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Impossible de créer l'équipe");
+        throw new Error(json.error || "Impossible de creer l'equipe");
       }
 
       const json: CreateTeamResponse = await res.json();
-      setSuccessMsg('Équipe créée avec succès ✅');
+      setSuccessMsg('Equipe creee avec succes');
 
-      // Redirection vers la page de détail équipe (à adapter selon ton routing)
       if (json.team?.id) {
-        router.push(`/admin/team/${json.team.id}`);
+        router.push(`/admin/teams/${json.team.id}`);
       }
     } catch (err: any) {
       setErrorMsg(err?.message ?? 'Erreur inattendue');
@@ -123,294 +121,379 @@ function AdminNewTeamPage({ staff }: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Nouvelle équipe</title>
+        <title>Admin – Nouvelle equipe</title>
       </Head>
 
-      <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
-        {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-          <div>
+      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
+        <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12">
+          {/* Header */}
+          <div className="mb-8">
             <button
               type="button"
               onClick={() => router.push('/admin/teams')}
-              className="mb-3 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
+              className="mb-4 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors"
             >
-              ← Retour à la liste des équipes
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+              Retour a la liste des equipes
             </button>
-            <h1 className="text-3xl font-bold">Créer une nouvelle équipe</h1>
-            <p className="text-sm text-neutral-400 mt-1">
-              Renseigne les informations générales + tous les membres de
-              l&apos;équipe.
-            </p>
+
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+                  Creer une nouvelle equipe
+                </h1>
+                <p className="text-neutral-400 text-sm mt-1">
+                  Renseigne les informations generales et les membres de l&apos;equipe
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
 
-        {/* Messages */}
-        {errorMsg && (
-          <div className="mb-4 rounded bg-red-900/60 border border-red-600 px-4 py-3 text-sm">
-            {errorMsg}
-          </div>
-        )}
+          {/* Messages */}
+          {errorMsg && (
+            <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
+              <svg
+                className="w-5 h-5 text-red-400 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              {errorMsg}
+            </div>
+          )}
 
-        {successMsg && (
-          <div className="mb-4 rounded bg-emerald-900/60 border border-emerald-600 px-4 py-3 text-sm">
-            {successMsg}
-          </div>
-        )}
+          {successMsg && (
+            <div className="mb-6 rounded-xl bg-emerald-900/40 border border-emerald-500/50 px-4 py-3 text-sm flex items-center gap-2">
+              <svg
+                className="w-5 h-5 text-emerald-400 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              {successMsg}
+            </div>
+          )}
 
-        {/* Form */}
-        <form
-          onSubmit={handleSubmit}
-          className="grid gap-6 lg:grid-cols-[2fr,1.4fr]"
-        >
-          {/* Colonne gauche : infos équipe + membres */}
-          <div className="space-y-6">
-            {/* Infos équipe */}
-            <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5 space-y-4">
-              <h2 className="text-lg font-semibold mb-1">
-                Informations principales
-              </h2>
+          {/* Form */}
+          <form
+            onSubmit={handleSubmit}
+            className="grid gap-6 lg:grid-cols-[2fr,1fr]"
+          >
+            {/* Colonne gauche : infos equipe + membres */}
+            <div className="space-y-6">
+              {/* Infos equipe */}
+              <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-5">
+                <h2 className="text-lg font-semibold">
+                  Informations principales
+                </h2>
 
-              <div className="space-y-4 text-sm">
-                <div>
-                  <label className="block text-neutral-300 mb-1">
-                    Nom de l&apos;équipe *
-                  </label>
-                  <input
-                    className="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Ex : Phénix"
-                  />
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-4">
                   <div>
-                    <label className="block text-neutral-300 mb-1">
-                      Tag / short name
+                    <label className="block text-sm text-neutral-300 mb-1">
+                      Nom de l&apos;equipe <span className="text-red-400">*</span>
                     </label>
                     <input
-                      className="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                       type="text"
-                      value={shortName}
-                      onChange={(e) => setShortName(e.target.value)}
-                      placeholder="Ex : PNX"
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Ex : Phoenix"
                     />
                   </div>
-                  <div>
-                    <label className="block text-neutral-300 mb-1">Pays</label>
-                    <input
-                      className="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      type="text"
-                      value={country}
-                      onChange={(e) => setCountry(e.target.value)}
-                      placeholder="Ex : France"
-                    />
-                  </div>
-                </div>
 
-                <div>
-                  <label className="block text-neutral-300 mb-1">
-                    URL du logo
-                  </label>
-                  <input
-                    className="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    type="text"
-                    value={logoUrl}
-                    onChange={(e) => setLogoUrl(e.target.value)}
-                    placeholder="https://…"
-                  />
-                  <p className="mt-1 text-xs text-neutral-500">
-                    Idéalement un PNG ou WebP carré (512x512).
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-neutral-300 mb-1">
-                    Description
-                  </label>
-                  <textarea
-                    className="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm min-h-[80px] resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Quelques infos sur l'équipe, palmarès, style de jeu, etc."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-neutral-300 mb-1">
-                    Email du capitaine
-                  </label>
-                  <input
-                    className="w-full rounded-md bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    type="email"
-                    value={captainEmail}
-                    onChange={(e) => setCaptainEmail(e.target.value)}
-                    placeholder="capitaine@exemple.com"
-                  />
-                  <p className="mt-1 text-xs text-neutral-500">
-                    L&apos;API convertira cet email en{' '}
-                    <code className="font-mono">captain_id</code> dans{' '}
-                    <code className="font-mono">auth.users</code>.
-                  </p>
-                </div>
-              </div>
-            </section>
-
-            {/* Membres */}
-            <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5 space-y-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-lg font-semibold mb-1">
-                    Membres de l&apos;équipe
-                  </h2>
-                  <p className="text-sm text-neutral-400">
-                    Ajoute les joueuses / staff avec leur email (lié à
-                    auth.users) et un rôle.
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  size="compact"
-                  onClick={addMemberRow}
-                  className="px-3 py-1.5 text-sm"
-                >
-                  + Ajouter un membre
-                </Button>
-              </div>
-
-              <div className="space-y-3">
-                {members.map((member, index) => (
-                  <div
-                    key={index}
-                    className="flex flex-col md:flex-row gap-3 bg-neutral-900/60 border border-neutral-700 rounded-lg p-3"
-                  >
-                    <div className="flex-1">
-                      <label className="block text-neutral-300 mb-1 text-xs">
-                        Email (auth.users)
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="block text-sm text-neutral-300 mb-1">
+                        Tag / short name
                       </label>
                       <input
-                        className="w-full rounded-md bg-neutral-950 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        type="email"
-                        value={member.email}
-                        onChange={(e) =>
-                          handleMemberChange(index, 'email', e.target.value)
-                        }
-                        placeholder="joueuse@exemple.com"
-                      />
-                    </div>
-                    <div className="w-full md:w-40">
-                      <label className="block text-neutral-300 mb-1 text-xs">
-                        Rôle
-                      </label>
-                      <input
-                        className="w-full rounded-md bg-neutral-950 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         type="text"
-                        value={member.role}
-                        onChange={(e) =>
-                          handleMemberChange(index, 'role', e.target.value)
-                        }
-                        placeholder="player / coach / sub…"
+                        value={shortName}
+                        onChange={(e) => setShortName(e.target.value)}
+                        placeholder="Ex : PNX"
                       />
                     </div>
-                    <div className="flex items-end">
-                      <Button
-                        type="button"
-                        size="compact"
-                        disabled={members.length === 1}
-                        onClick={() => removeMemberRow(index)}
-                        className="px-3 py-2 text-xs border border-red-700/70 text-red-200"
-                      >
-                        Suppr.
-                      </Button>
+                    <div>
+                      <label className="block text-sm text-neutral-300 mb-1">
+                        Pays
+                      </label>
+                      <input
+                        className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        type="text"
+                        value={country}
+                        onChange={(e) => setCountry(e.target.value)}
+                        placeholder="Ex : France"
+                      />
                     </div>
                   </div>
-                ))}
-              </div>
 
-              <p className="text-xs text-neutral-500">
-                L&apos;API créera les lignes dans{' '}
-                <code className="font-mono">team_members</code> avec{' '}
-                <code className="font-mono">role</code> et le{' '}
-                <code className="font-mono">user_id</code> correspondant à
-                chaque email.
-              </p>
-            </section>
-          </div>
+                  <div>
+                    <label className="block text-sm text-neutral-300 mb-1">
+                      URL du logo
+                    </label>
+                    <input
+                      className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
+                      type="text"
+                      value={logoUrl}
+                      onChange={(e) => setLogoUrl(e.target.value)}
+                      placeholder="https://..."
+                    />
+                    <p className="mt-1 text-xs text-neutral-500">
+                      Idealement un PNG ou WebP carre (512x512).
+                    </p>
+                  </div>
 
-          {/* Colonne droite : résumé & actions */}
-          <div className="space-y-6">
-            <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5 space-y-3">
-              <h2 className="text-lg font-semibold mb-1">
-                Résumé de l&apos;équipe
-              </h2>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between gap-4">
-                  <span className="text-neutral-400">Nom</span>
-                  <span className="font-medium truncate max-w-[200px] text-right">
-                    {name || '—'}
-                  </span>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <span className="text-neutral-400">Tag</span>
-                  <span className="font-mono text-xs bg-neutral-900 px-2 py-1 rounded border border-neutral-700">
-                    {shortName || '—'}
-                  </span>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <span className="text-neutral-400">Pays</span>
-                  <span className="text-neutral-200">{country || '—'}</span>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <span className="text-neutral-400">Capitaine</span>
-                  <span className="text-neutral-200 text-xs font-mono">
-                    {captainEmail || '—'}
-                  </span>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <span className="text-neutral-400">Nombre de membres</span>
-                  <span className="text-neutral-200">
-                    {members.filter((m) => m.email.trim().length > 0).length} /{' '}
-                    {members.length}
-                  </span>
-                </div>
-              </div>
-              <p className="mt-3 text-xs text-neutral-500">
-                Tu pourras éditer l&apos;équipe et ses membres plus tard via
-                l&apos;interface admin ou l&apos;API.
-              </p>
-            </section>
+                  <div>
+                    <label className="block text-sm text-neutral-300 mb-1">
+                      Description
+                    </label>
+                    <textarea
+                      className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm min-h-[100px] resize-y"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Quelques infos sur l'equipe, palmares, style de jeu, etc."
+                    />
+                  </div>
 
-            <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5 space-y-3">
-              <h2 className="text-lg font-semibold mb-1">Actions</h2>
-              <p className="text-sm text-neutral-400">
-                Vérifie bien les emails (ils doivent exister dans{' '}
-                <code className="font-mono">auth.users</code> si l&apos;API ne
-                gère pas encore la création automatique).
-              </p>
+                  <div>
+                    <label className="block text-sm text-neutral-300 mb-1">
+                      Email du capitaine
+                    </label>
+                    <input
+                      className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      type="email"
+                      value={captainEmail}
+                      onChange={(e) => setCaptainEmail(e.target.value)}
+                      placeholder="capitaine@exemple.com"
+                    />
+                    <p className="mt-1 text-xs text-neutral-500">
+                      L&apos;API convertira cet email en captain_id.
+                    </p>
+                  </div>
+                </div>
+              </section>
 
-              <Button
-                type="submit"
-                size="compact"
-                disabled={submitting}
-                className="w-full mt-2 px-4 py-2.5 text-sm font-semibold"
-              >
-                {submitting ? 'Création en cours…' : "Créer l'équipe"}
-              </Button>
+              {/* Membres */}
+              <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-semibold">
+                      Membres de l&apos;equipe
+                    </h2>
+                    <p className="text-sm text-neutral-400 mt-1">
+                      Ajoute les joueurs / staff avec leur email et un role
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addMemberRow}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors flex items-center gap-2"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
+                    Ajouter
+                  </button>
+                </div>
 
-              <Button
-                type="button"
-                size="compact"
-                onClick={() => router.push('/admin/teams')}
-                className="w-full mt-2 px-4 py-2.5 text-sm"
-              >
-                Annuler
-              </Button>
-            </section>
-          </div>
-        </form>
+                <div className="space-y-3">
+                  {members.map((member, index) => (
+                    <div
+                      key={index}
+                      className="flex flex-col md:flex-row gap-3 bg-neutral-900/50 border border-neutral-700/50 rounded-xl p-4"
+                    >
+                      <div className="flex-1">
+                        <label className="block text-xs text-neutral-400 mb-1">
+                          Email (auth.users)
+                        </label>
+                        <input
+                          className="w-full px-3 py-2.5 rounded-xl bg-neutral-950/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          type="email"
+                          value={member.email}
+                          onChange={(e) =>
+                            handleMemberChange(index, 'email', e.target.value)
+                          }
+                          placeholder="joueur@exemple.com"
+                        />
+                      </div>
+                      <div className="w-full md:w-40">
+                        <label className="block text-xs text-neutral-400 mb-1">
+                          Role
+                        </label>
+                        <input
+                          className="w-full px-3 py-2.5 rounded-xl bg-neutral-950/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          type="text"
+                          value={member.role}
+                          onChange={(e) =>
+                            handleMemberChange(index, 'role', e.target.value)
+                          }
+                          placeholder="player / coach / sub..."
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <button
+                          type="button"
+                          disabled={members.length === 1}
+                          onClick={() => removeMemberRow(index)}
+                          className="p-2.5 rounded-xl hover:bg-red-900/50 text-red-400 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="Supprimer ce membre"
+                        >
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <p className="text-xs text-neutral-500">
+                  L&apos;API creera les lignes dans team_members avec le role et
+                  le user_id correspondant a chaque email.
+                </p>
+              </section>
+            </div>
+
+            {/* Colonne droite : resume & actions */}
+            <div className="space-y-6">
+              <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4">
+                <h2 className="text-lg font-semibold">
+                  Resume de l&apos;equipe
+                </h2>
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between gap-4 py-2 border-b border-neutral-700/50">
+                    <span className="text-neutral-400">Nom</span>
+                    <span className="font-medium truncate max-w-[180px] text-right">
+                      {name || '—'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-4 py-2 border-b border-neutral-700/50">
+                    <span className="text-neutral-400">Tag</span>
+                    {shortName ? (
+                      <span className="font-mono text-xs bg-neutral-900/50 px-2 py-1 rounded-lg border border-neutral-700/50">
+                        {shortName}
+                      </span>
+                    ) : (
+                      <span className="text-neutral-500">—</span>
+                    )}
+                  </div>
+                  <div className="flex justify-between gap-4 py-2 border-b border-neutral-700/50">
+                    <span className="text-neutral-400">Pays</span>
+                    <span className="text-neutral-200">{country || '—'}</span>
+                  </div>
+                  <div className="flex justify-between gap-4 py-2 border-b border-neutral-700/50">
+                    <span className="text-neutral-400">Capitaine</span>
+                    <span className="text-neutral-200 text-xs font-mono truncate max-w-[140px]">
+                      {captainEmail || '—'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-4 py-2">
+                    <span className="text-neutral-400">Membres</span>
+                    <span className="text-neutral-200">
+                      {members.filter((m) => m.email.trim().length > 0).length} /{' '}
+                      {members.length}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-xs text-neutral-500 pt-2">
+                  Tu pourras editer l&apos;equipe et ses membres plus tard via
+                  l&apos;interface admin.
+                </p>
+              </section>
+
+              <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4">
+                <h2 className="text-lg font-semibold">Actions</h2>
+                <p className="text-sm text-neutral-400">
+                  Verifie bien les emails (ils doivent exister dans auth.users).
+                </p>
+
+                <div className="space-y-3 pt-2">
+                  <button
+                    type="submit"
+                    disabled={submitting || !name.trim()}
+                    className="w-full px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {submitting ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Creation en cours...
+                      </>
+                    ) : (
+                      <>
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 4v16m8-8H4"
+                          />
+                        </svg>
+                        Creer l&apos;equipe
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => router.push('/admin/teams')}
+                    className="w-full px-5 py-3 rounded-xl bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-sm font-medium transition-colors"
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </section>
+            </div>
+          </form>
+        </div>
       </div>
     </>
   );

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { supabaseClient } from '@/utils/supabase';
 import { withStaffPage } from '@/utils/staff';
@@ -91,7 +92,13 @@ export const getServerSideProps = withStaffPage('manager');
 function formatDateTime(iso: string | null) {
   if (!iso) return '—';
   try {
-    return new Date(iso).toLocaleString();
+    return new Date(iso).toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   } catch {
     return iso;
   }
@@ -100,11 +107,11 @@ function formatDateTime(iso: string | null) {
 function typeLabel(type: DemandeType) {
   switch (type) {
     case 'join_team':
-      return 'Rejoindre une équipe';
+      return 'Rejoindre';
     case 'leave_team':
-      return 'Quitter une équipe';
+      return 'Quitter';
     case 'captain_request':
-      return 'Devenir capitaine';
+      return 'Capitaine';
     default:
       return type;
   }
@@ -113,11 +120,11 @@ function typeLabel(type: DemandeType) {
 function typeColor(type: DemandeType) {
   switch (type) {
     case 'join_team':
-      return 'bg-emerald-700/80 text-white';
+      return 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/30';
     case 'leave_team':
-      return 'bg-amber-600/80 text-neutral-900';
+      return 'bg-amber-600/20 text-amber-300 border border-amber-500/30';
     case 'captain_request':
-      return 'bg-purple-600/80 text-white';
+      return 'bg-purple-600/20 text-purple-300 border border-purple-500/30';
     default:
       return 'bg-neutral-700 text-neutral-100';
   }
@@ -128,11 +135,11 @@ function statusLabel(status: DemandeStatus) {
     case 'pending':
       return 'En attente';
     case 'approved':
-      return 'Approuvée';
+      return 'Approuvee';
     case 'rejected':
-      return 'Refusée';
+      return 'Refusee';
     case 'cancelled':
-      return 'Annulée';
+      return 'Annulee';
     default:
       return status;
   }
@@ -141,13 +148,13 @@ function statusLabel(status: DemandeStatus) {
 function statusColor(status: DemandeStatus) {
   switch (status) {
     case 'pending':
-      return 'bg-neutral-700 text-neutral-100';
+      return 'bg-blue-600 text-white';
     case 'approved':
-      return 'bg-emerald-600/80 text-white';
+      return 'bg-emerald-600 text-white';
     case 'rejected':
-      return 'bg-red-700/80 text-white';
+      return 'bg-red-600 text-white';
     case 'cancelled':
-      return 'bg-neutral-600 text-neutral-100';
+      return 'bg-neutral-600 text-neutral-200';
     default:
       return 'bg-neutral-700 text-neutral-100';
   }
@@ -156,12 +163,12 @@ function statusColor(status: DemandeStatus) {
 function AdminDemandesPage() {
   const router = useRouter();
 
-  // 🔐 Guard auth côté client
+  // Guard auth cote client
   const [guardLoading, setGuardLoading] = useState(true);
   const [staff, setStaff] = useState<StaffShape | null>(null);
   const [token, setToken] = useState<string | null>(null);
 
-  // Données page
+  // Donnees page
   const [loading, setLoading] = useState(true);
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [total, setTotal] = useState<number | null>(null);
@@ -232,7 +239,7 @@ function AdminDemandesPage() {
     run();
   }, [router]);
 
-  // 2) Charger les tournois une fois l’auth OK
+  // 2) Charger les tournois une fois l'auth OK
   useEffect(() => {
     if (!token) return;
     fetchTournaments();
@@ -256,7 +263,7 @@ function AdminDemandesPage() {
             }
           : {},
       });
-      if (!res.ok) return; // non bloquant
+      if (!res.ok) return;
       const json: TournamentsApiResponse = await res.json();
       setTournaments(json.tournaments || []);
     } catch (e) {
@@ -327,7 +334,6 @@ function AdminDemandesPage() {
 
     const url = '/api/admin/demandes?' + params.toString();
 
-    // on envoie aussi le token pour les routes protégées
     if (token) {
       fetch(url, {
         headers: {
@@ -349,20 +355,16 @@ function AdminDemandesPage() {
     }
   }
 
-  const backUrl = '/admin';
-
-  // État de garde : pendant le check auth, on affiche un écran simple
+  // Etat de garde : pendant le check auth, on affiche un ecran simple
   if (guardLoading) {
     return (
-      <div className="min-h-screen bg-neutral-900 text-white flex items-center justify-center">
-        <span className="text-sm text-neutral-400">
-          Vérification des droits…
-        </span>
+      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
       </div>
     );
   }
 
-  // Si pas de staff (et pas en train de loader) → on ne rend rien (redir déjà faite)
+  // Si pas de staff (et pas en train de loader) -> on ne rend rien (redir deja faite)
   if (!staff) {
     return null;
   }
@@ -370,402 +372,436 @@ function AdminDemandesPage() {
   return (
     <>
       <Head>
-        <title>Admin – Demandes d&apos;équipes</title>
+        <title>Admin – Demandes d&apos;equipes</title>
       </Head>
 
-      <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-          <div>
+      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
+        <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12">
+          {/* Header */}
+          <div className="mb-8">
             <button
               type="button"
-              onClick={() => router.push(backUrl)}
-              className="mb-2 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
+              onClick={() => router.push('/admin')}
+              className="mb-4 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors"
             >
-              ← Retour au dashboard admin
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+              Retour au dashboard admin
             </button>
-            <h1 className="text-3xl font-bold">Demandes équipes / joueurs</h1>
-            <p className="text-neutral-400 text-sm mt-1">
-              Requêtes de joueurs pour rejoindre / quitter une équipe, par
-              tournoi. Filtre par type, statut et tournoi.
-            </p>
-          </div>
-        </div>
 
-        {/* Messages */}
-        {errorMsg && (
-          <div className="mb-4 rounded bg-red-900/60 border border-red-600 px-4 py-3 text-sm">
-            {errorMsg}
-          </div>
-        )}
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+                  Demandes equipes / joueurs
+                </h1>
+                <p className="text-neutral-400 text-sm mt-1">
+                  {total !== null
+                    ? `${total} demande${total > 1 ? 's' : ''}`
+                    : 'Chargement...'}
+                </p>
+              </div>
 
-        {/* Filters */}
-        <form
-          onSubmit={handleFilterSubmit}
-          className="bg-neutral-800 border border-neutral-700 rounded-xl p-4 mb-6 flex flex-wrap gap-4 items-end"
-        >
-          <div className="flex flex-col gap-1 min-w-[180px]">
-            <label className="text-xs text-neutral-400">Type</label>
-            <select
-              className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-            >
-              <option value="">Tous</option>
-              <option value="captain_request">Devenir capitaine</option>
-              <option value="join_team">Rejoindre une équipe</option>
-              <option value="leave_team">Quitter une équipe</option>
-            </select>
-          </div>
-
-          <div className="flex flex-col gap-1 w-40">
-            <label className="text-xs text-neutral-400">Statut</label>
-            <select
-              className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="">Tous</option>
-              <option value="pending">En attente</option>
-              <option value="approved">Approuvée</option>
-              <option value="rejected">Refusée</option>
-              <option value="cancelled">Annulée</option>
-            </select>
+              <button
+                type="button"
+                onClick={handleExportCsv}
+                className="px-4 py-2.5 rounded-xl border border-neutral-600 hover:bg-neutral-800 text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                Export CSV
+              </button>
+            </div>
           </div>
 
-          <div className="flex flex-col gap-1 min-w-[220px]">
-            <label className="text-xs text-neutral-400">Tournoi</label>
-            <select
-              className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={tournamentFilter}
-              onChange={(e) => setTournamentFilter(e.target.value)}
-            >
-              <option value="">Tous</option>
-              {loadingTournaments && <option disabled>Chargement...</option>}
-              {!loadingTournaments &&
-                tournaments.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                    {t.slug ? ` (${t.slug})` : ''}
-                  </option>
-                ))}
-            </select>
-          </div>
-
-          <div className="flex flex-col gap-1 min-w-[220px]">
-            <label className="text-xs text-neutral-400">Recherche</label>
-            <input
-              type="text"
-              placeholder="Nom joueur, équipe, Battlefy..."
-              className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-neutral-400">Du</label>
-            <input
-              type="date"
-              className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-            />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-neutral-400">Au</label>
-            <input
-              type="date"
-              className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="ml-auto px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-sm font-semibold"
-          >
-            Filtrer
-          </button>
-
-          <button
-            type="button"
-            onClick={handleExportCsv}
-            className="px-4 py-2 rounded border border-neutral-600 text-sm hover:bg-neutral-800"
-          >
-            Export CSV
-          </button>
-        </form>
-
-        {/* Table */}
-        <div className="bg-neutral-800 border border-neutral-700 rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-neutral-700 flex justify-between items-center">
-            <span className="text-sm font-semibold">
-              {loading
-                ? 'Chargement...'
-                : `Demandes (${demandes.length}${
-                    total != null ? ` / ${total}` : ''
-                  })`}
-            </span>
-            <span className="text-xs text-neutral-400">
-              Triées par date (plus récentes en haut) – logique gérée côté API.
-            </span>
-          </div>
-
-          {demandes.length === 0 && !loading && (
-            <div className="px-4 py-6 text-sm text-neutral-400">
-              Aucune demande trouvée pour ces filtres.
+          {/* Error Message */}
+          {errorMsg && (
+            <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
+              <svg
+                className="w-5 h-5 text-red-400 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              {errorMsg}
             </div>
           )}
 
-          {demandes.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead className="bg-neutral-750 text-neutral-300">
-                  <tr>
-                    <th className="px-3 py-2 text-left">Date</th>
-                    <th className="px-3 py-2 text-left">Type</th>
-                    <th className="px-3 py-2 text-left">Joueur</th>
-                    <th className="px-3 py-2 text-left">Équipe</th>
-                    <th className="px-3 py-2 text-left">Tournoi</th>
-                    <th className="px-3 py-2 text-left">Message</th>
-                    <th className="px-3 py-2 text-left">Statut</th>
-                    <th className="px-3 py-2 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {demandes.map((d) => (
-                    <tr
-                      key={d.id}
-                      className="border-t border-neutral-800 hover:bg-neutral-800/60"
-                    >
-                      {/* Date */}
-                      <td className="px-3 py-2 text-xs text-neutral-300 whitespace-nowrap">
-                        {formatDateTime(d.created_at)}
-                      </td>
+          {/* Filters */}
+          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6">
+            <form
+              onSubmit={handleFilterSubmit}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4 items-end"
+            >
+              <div>
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Type
+                </label>
+                <select
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                >
+                  <option value="">Tous les types</option>
+                  <option value="captain_request">Devenir capitaine</option>
+                  <option value="join_team">Rejoindre une equipe</option>
+                  <option value="leave_team">Quitter une equipe</option>
+                </select>
+              </div>
 
-                      {/* Type */}
-                      <td className="px-3 py-2 text-xs">
+              <div>
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Statut
+                </label>
+                <select
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="">Tous les statuts</option>
+                  <option value="pending">En attente</option>
+                  <option value="approved">Approuvee</option>
+                  <option value="rejected">Refusee</option>
+                  <option value="cancelled">Annulee</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Tournoi
+                </label>
+                <select
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  value={tournamentFilter}
+                  onChange={(e) => setTournamentFilter(e.target.value)}
+                  disabled={loadingTournaments}
+                >
+                  <option value="">
+                    {loadingTournaments ? 'Chargement...' : 'Tous les tournois'}
+                  </option>
+                  {tournaments.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                      {t.slug ? ` (${t.slug})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Recherche
+                </label>
+                <div className="relative">
+                  <svg
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Joueur, equipe..."
+                    className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Du
+                </label>
+                <input
+                  type="date"
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Au
+                </label>
+                <input
+                  type="date"
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                Rechercher
+              </button>
+            </form>
+          </section>
+
+          {/* Demandes List */}
+          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+              </div>
+            ) : demandes.length === 0 ? (
+              <div className="text-center py-20 text-neutral-400">
+                <svg
+                  className="w-12 h-12 mx-auto mb-4 text-neutral-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                Aucune demande trouvee pour ces filtres
+              </div>
+            ) : (
+              <div className="divide-y divide-neutral-700/50">
+                {demandes.map((d) => (
+                  <Link
+                    key={d.id}
+                    href={`/admin/demandes/${d.id}`}
+                    className="flex items-center gap-4 p-4 hover:bg-neutral-700/30 transition-colors group"
+                  >
+                    {/* Icon / Avatar */}
+                    <div className="flex-shrink-0">
+                      {d.user?.avatar_url ? (
+                        <Image
+                          src={d.user.avatar_url}
+                          alt={d.user.display_name || 'User'}
+                          width={48}
+                          height={48}
+                          className="w-12 h-12 rounded-xl object-cover border border-neutral-700"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-xl bg-neutral-700/50 flex items-center justify-center border border-neutral-700">
+                          <svg
+                            className="w-6 h-6 text-neutral-500"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                            />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <h3 className="font-semibold text-white group-hover:text-blue-400 transition-colors truncate">
+                          {d.user?.display_name || d.user_id || 'Utilisateur inconnu'}
+                        </h3>
                         <span
-                          className={
-                            'inline-flex px-2 py-1 rounded-full text-[11px] font-semibold ' +
-                            typeColor(d.type)
-                          }
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(
+                            d.status
+                          )}`}
+                        >
+                          {statusLabel(d.status)}
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${typeColor(
+                            d.type
+                          )}`}
                         >
                           {typeLabel(d.type)}
                         </span>
-                      </td>
-
-                      {/* Joueur */}
-                      <td className="px-3 py-2 text-xs">
-                        {d.user ? (
-                          <div>
-                            <div className="font-semibold">
-                              {d.user.display_name || d.user.id}
-                            </div>
-                            {d.user.discord_tag && (
-                              <div className="text-[10px] text-neutral-400">
-                                Discord:{' '}
-                                <span className="font-mono">
-                                  {d.user.discord_tag}
-                                </span>
-                              </div>
-                            )}
-                            {d.user.battlefy_name && (
-                              <div className="text-[10px] text-neutral-400">
-                                Battlefy:{' '}
-                                <span className="font-mono">
-                                  {d.user.battlefy_name}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        ) : d.user_id ? (
-                          <span className="font-mono text-neutral-300">
-                            {d.user_id}
-                          </span>
-                        ) : (
-                          <span className="text-neutral-500">—</span>
-                        )}
-                      </td>
-
-                      {/* Équipe */}
-                      <td className="px-3 py-2 text-xs">
-                        {d.team ? (
-                          <div className="flex items-center gap-2">
-                            {d.team.logo_url && (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={d.team.logo_url}
-                                alt={d.team.name}
-                                className="w-6 h-6 rounded-full object-cover"
-                              />
-                            )}
-                            <div>
-                              <div className="font-semibold">{d.team.name}</div>
-                              {d.team.short_name && (
-                                <div className="text-[10px] text-neutral-400">
-                                  {d.team.short_name}
-                                </div>
+                      </div>
+                      <div className="flex items-center gap-3 text-sm text-neutral-400 flex-wrap">
+                        {d.team && (
+                          <>
+                            <span className="flex items-center gap-1">
+                              {d.team.logo_url && (
+                                <Image
+                                  src={d.team.logo_url}
+                                  alt={d.team.name}
+                                  width={16}
+                                  height={16}
+                                  className="w-4 h-4 rounded object-cover"
+                                />
                               )}
-                            </div>
-                          </div>
-                        ) : d.type === 'captain_request' && d.payload ? (
-                          <div>
-                            <div className="font-semibold text-purple-300">
-                              {d.payload.request_type === 'existing_team'
-                                ? d.payload.existing_team_name || 'Équipe existante'
-                                : d.payload.team_name || '—'}
-                            </div>
-                            <div className="text-[10px] text-neutral-500">
-                              {d.payload.request_type === 'existing_team'
-                                ? '(existante)'
-                                : '(à créer)'}
-                            </div>
-                            {d.payload.members && d.payload.members.length > 0 && (
-                              <div className="text-[10px] text-neutral-400 mt-1">
-                                +{d.payload.members.length} membre
-                                {d.payload.members.length > 1 ? 's' : ''}
-                              </div>
-                            )}
-                          </div>
-                        ) : d.team_id ? (
-                          <span className="font-mono text-neutral-300">
-                            {d.team_id}
-                          </span>
-                        ) : (
-                          <span className="text-neutral-500">—</span>
-                        )}
-                      </td>
-
-                      {/* Tournoi */}
-                      <td className="px-3 py-2 text-xs">
-                        {d.tournament ? (
-                          <div>
-                            <div className="font-semibold">
-                              {d.tournament.name}
-                            </div>
-                            {d.tournament.slug && (
-                              <div className="text-[10px] text-neutral-500 font-mono">
-                                {d.tournament.slug}
-                              </div>
-                            )}
-                          </div>
-                        ) : d.tournament_id ? (
-                          <span className="font-mono text-neutral-300">
-                            {d.tournament_id}
-                          </span>
-                        ) : (
-                          <span className="text-neutral-500">—</span>
-                        )}
-                      </td>
-
-                      {/* Message */}
-                      <td className="px-3 py-2 text-xs max-w-[260px]">
-                        {d.message || d.comment ? (
-                          <div className="text-neutral-200 line-clamp-3">
-                            {d.message || d.comment}
-                          </div>
-                        ) : (
-                          <span className="text-neutral-500">—</span>
-                        )}
-                      </td>
-
-                      {/* Statut + handler */}
-                      <td className="px-3 py-2 text-xs">
-                        <div className="mb-1">
-                          <span
-                            className={
-                              'inline-flex px-2 py-1 rounded-full text-[11px] font-semibold ' +
-                              statusColor(d.status)
-                            }
-                          >
-                            {statusLabel(d.status)}
-                          </span>
-                        </div>
-                        {d.handled_by && (
-                          <div className="text-[10px] text-neutral-500">
-                            par{' '}
-                            <span className="font-medium">
-                              {d.handled_by.display_name || d.handled_by.id}
+                              {d.team.name}
                             </span>
-                            {d.handled_at && (
-                              <> • {formatDateTime(d.handled_at)}</>
-                            )}
+                            <span>•</span>
+                          </>
+                        )}
+                        {d.type === 'captain_request' && d.payload && !d.team && (
+                          <>
+                            <span className="text-purple-300">
+                              {d.payload.request_type === 'existing_team'
+                                ? d.payload.existing_team_name
+                                : d.payload.team_name}
+                              {d.payload.request_type === 'new_team' && ' (a creer)'}
+                            </span>
+                            <span>•</span>
+                          </>
+                        )}
+                        {d.tournament && (
+                          <>
+                            <span>{d.tournament.name}</span>
+                            <span>•</span>
+                          </>
+                        )}
+                        <span className="text-xs">{formatDateTime(d.created_at)}</span>
+                      </div>
+                      {d.message && (
+                        <p className="text-xs text-neutral-500 mt-1 truncate max-w-xl">
+                          {d.message}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Handler info */}
+                    {d.handled_by && (
+                      <div className="hidden sm:block text-xs text-neutral-500 text-right flex-shrink-0">
+                        <div>
+                          par{' '}
+                          <span className="text-neutral-300">
+                            {d.handled_by.display_name || d.handled_by.id}
+                          </span>
+                        </div>
+                        {d.handled_at && (
+                          <div className="text-neutral-600">
+                            {formatDateTime(d.handled_at)}
                           </div>
                         )}
-                      </td>
+                      </div>
+                    )}
 
-                      {/* Actions */}
-                      <td className="px-3 py-2 text-right align-top text-xs">
-                        <div className="flex flex-col gap-2 items-end">
-                          <Link
-                            href={`/admin/demandes/${d.id}`}
-                            className="px-2 py-1 rounded bg-neutral-700 hover:bg-neutral-600"
-                          >
-                            Ouvrir
-                          </Link>
-                          {d.user && (
-                            <Link
-                              href={`/admin/users/${d.user.id}`}
-                              className="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 border border-neutral-700"
-                            >
-                              Voir joueur
-                            </Link>
-                          )}
-                          {d.team && (
-                            <Link
-                              href={`/admin/teams/${d.team.id}`}
-                              className="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 border border-neutral-700"
-                            >
-                              Voir équipe
-                            </Link>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                    {/* Arrow */}
+                    <svg
+                      className="w-5 h-5 text-neutral-500 group-hover:text-white transition-colors flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </section>
 
-        {/* Pagination */}
-        {demandes.length > 0 && (
-          <div className="flex justify-between items-center mt-6 text-sm">
+          {/* Pagination */}
+          <div className="flex justify-between items-center mt-6">
             <button
+              type="button"
               disabled={offset === 0}
               onClick={() => setOffset(Math.max(0, offset - limit))}
-              className={`px-3 py-2 rounded ${
-                offset === 0
-                  ? 'bg-neutral-700 opacity-40 cursor-not-allowed'
-                  : 'bg-neutral-700 hover:bg-neutral-600'
-              }`}
+              className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              ← Précédent
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+              Precedent
             </button>
 
-            <span className="text-neutral-400">
+            <span className="text-neutral-400 text-sm">
               {offset + 1} – {offset + demandes.length}
-              {total ? ` / ${total}` : ''}
+              {total ? ` sur ${total}` : ''}
             </span>
 
             <button
+              type="button"
               disabled={total !== null && offset + limit >= total}
               onClick={() => setOffset(offset + limit)}
-              className={`px-3 py-2 rounded ${
-                total !== null && offset + limit >= total
-                  ? 'bg-neutral-700 opacity-40 cursor-not-allowed'
-                  : 'bg-neutral-700 hover:bg-neutral-600'
-              }`}
+              className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              Suivant →
+              Suivant
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
             </button>
           </div>
-        )}
+        </div>
       </div>
     </>
   );

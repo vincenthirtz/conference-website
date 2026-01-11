@@ -53,7 +53,13 @@ export const getServerSideProps = withStaffPage('manager');
 
 function formatDateTime(iso: string) {
   try {
-    return new Date(iso).toLocaleString();
+    return new Date(iso).toLocaleString('fr-FR', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   } catch {
     return iso;
   }
@@ -164,339 +170,509 @@ function AdminLogsPage({ staff }: StaffProps) {
     fetchLogs();
   }
 
-  const backUrl = '/admin';
-
   return (
     <>
       <Head>
         <title>Admin – Logs staff</title>
       </Head>
 
-      <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-          <div>
+      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
+        <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12">
+          {/* Header */}
+          <div className="mb-8">
             <button
               type="button"
-              onClick={() => router.push(backUrl)}
-              className="mb-2 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
+              onClick={() => router.push('/admin')}
+              className="mb-4 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors"
             >
-              ← Retour au dashboard admin
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+              Retour au dashboard admin
             </button>
-            <h1 className="text-3xl font-bold">Logs staff</h1>
-            <p className="text-neutral-400 text-sm mt-1">
-              Historique global des actions staff (tournois, stages, matches,
-              teams…).
-            </p>
-          </div>
-        </div>
 
-        {/* Filters */}
-        <form
-          onSubmit={handleFilterSubmit}
-          className="bg-neutral-800 border border-neutral-700 rounded-xl p-4 mb-6 flex flex-wrap gap-4 items-end"
-        >
-          <div className="flex flex-col gap-1 min-w-[160px]">
-            <label className="text-xs text-neutral-400">
-              Type d&apos;entité
-            </label>
-            <input
-              type="text"
-              placeholder='ex: "tournament", "stage", "match", "team"...'
-              className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={entityType}
-              onChange={(e) => setEntityType(e.target.value)}
-            />
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+                  Logs staff
+                </h1>
+                <p className="text-neutral-400 text-sm mt-1">
+                  {total !== null
+                    ? `${total} action${total > 1 ? 's' : ''} enregistree${total > 1 ? 's' : ''}`
+                    : 'Chargement...'}
+                </p>
+              </div>
+
+              <div className="text-xs text-neutral-500 bg-neutral-800/50 px-3 py-2 rounded-xl border border-neutral-700/50">
+                Tries par date decroissante
+              </div>
+            </div>
           </div>
 
-          <div className="flex flex-col gap-1 min-w-[160px]">
-            <label className="text-xs text-neutral-400">Action</label>
-            <input
-              type="text"
-              placeholder='ex: "create_match", "update_stage"...'
-              className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={action}
-              onChange={(e) => setAction(e.target.value)}
-            />
-          </div>
-
-          <div className="flex flex-col gap-1 min-w-[200px]">
-            <label className="text-xs text-neutral-400">
-              Staff (id ou display_name)
-            </label>
-            <input
-              type="text"
-              placeholder="staff_id ou nom"
-              className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={staffId}
-              onChange={(e) => setStaffId(e.target.value)}
-            />
-          </div>
-
-          <div className="flex flex-col gap-1 min-w-[200px]">
-            <label className="text-xs text-neutral-400">Tournoi</label>
-            <select
-              className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={tournamentId}
-              onChange={(e) => setTournamentId(e.target.value)}
-              disabled={loadingTournaments}
-            >
-              <option value="">
-                {loadingTournaments ? 'Chargement…' : 'Tous les tournois'}
-              </option>
-              {tournaments.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                  {t.slug ? ` (${t.slug})` : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex flex-col gap-1 w-32">
-            <label className="text-xs text-neutral-400">Stage ID</label>
-            <input
-              type="text"
-              className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={stageId}
-              onChange={(e) => setStageId(e.target.value)}
-              placeholder="stage…"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1 w-32">
-            <label className="text-xs text-neutral-400">Match ID</label>
-            <input
-              type="text"
-              className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={matchId}
-              onChange={(e) => setMatchId(e.target.value)}
-              placeholder="match…"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1 w-32">
-            <label className="text-xs text-neutral-400">Team ID</label>
-            <input
-              type="text"
-              className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={teamId}
-              onChange={(e) => setTeamId(e.target.value)}
-              placeholder="team…"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1 min-w-[200px]">
-            <label className="text-xs text-neutral-400">Recherche texte</label>
-            <input
-              type="text"
-              placeholder="message, payload, id…"
-              className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-neutral-400">Du</label>
-            <input
-              type="date"
-              className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
-            />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-neutral-400">Au</label>
-            <input
-              type="date"
-              className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={toDate}
-              onChange={(e) => setToDate(e.target.value)}
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="ml-auto px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-sm font-semibold"
-          >
-            Filtrer
-          </button>
-        </form>
-
-        {/* Error */}
-        {errorMsg && (
-          <div className="mb-4 rounded bg-red-900/60 border border-red-600 px-4 py-3 text-sm">
-            {errorMsg}
-          </div>
-        )}
-
-        {/* Table */}
-        <div className="bg-neutral-800 border border-neutral-700 rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-neutral-700 flex justify-between items-center">
-            <span className="text-sm font-semibold">
-              {loading
-                ? 'Chargement...'
-                : `Logs (${logs.length}${total != null ? ` / ${total}` : ''})`}
-            </span>
-            <span className="text-xs text-neutral-400">
-              Triés par date décroissante (géré côté API).
-            </span>
-          </div>
-
-          {logs.length === 0 && !loading && (
-            <div className="px-4 py-6 text-sm text-neutral-400">
-              Aucun log trouvé pour ces filtres.
+          {/* Error Message */}
+          {errorMsg && (
+            <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
+              <svg
+                className="w-5 h-5 text-red-400 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              {errorMsg}
             </div>
           )}
 
-          {logs.length > 0 && (
-            <ul className="divide-y divide-neutral-700">
-              {logs.map((log) => (
-                <li
-                  key={log.id}
-                  className="px-4 py-3 text-sm flex flex-col gap-1"
+          {/* Filters */}
+          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6">
+            <form
+              onSubmit={handleFilterSubmit}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4 items-end"
+            >
+              <div>
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Type d&apos;entite
+                </label>
+                <input
+                  type="text"
+                  placeholder="tournament, stage, match..."
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  value={entityType}
+                  onChange={(e) => setEntityType(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Action
+                </label>
+                <input
+                  type="text"
+                  placeholder="create_match, update_stage..."
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  value={action}
+                  onChange={(e) => setAction(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Staff
+                </label>
+                <input
+                  type="text"
+                  placeholder="ID ou nom"
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  value={staffId}
+                  onChange={(e) => setStaffId(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Tournoi
+                </label>
+                <select
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  value={tournamentId}
+                  onChange={(e) => setTournamentId(e.target.value)}
+                  disabled={loadingTournaments}
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs font-mono text-neutral-500">
-                        {formatDateTime(log.created_at)}
-                      </span>
-                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-neutral-700 text-neutral-100">
-                        {log.action}
-                      </span>
-                      {log.entity_type && (
-                        <span className="px-2 py-0.5 rounded-full text-xs bg-neutral-900 border border-neutral-700 text-neutral-300">
-                          {log.entity_type}
-                          {log.entity_id ? ` #${shortId(log.entity_id)}` : ''}
+                  <option value="">
+                    {loadingTournaments ? 'Chargement...' : 'Tous les tournois'}
+                  </option>
+                  {tournaments.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                      {t.slug ? ` (${t.slug})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Recherche
+                </label>
+                <div className="relative">
+                  <svg
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="message, payload..."
+                    className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  className="flex-1 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+                    />
+                  </svg>
+                  Filtrer
+                </button>
+              </div>
+
+              {/* Additional filters row */}
+              <div>
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Stage ID
+                </label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
+                  value={stageId}
+                  onChange={(e) => setStageId(e.target.value)}
+                  placeholder="stage..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Match ID
+                </label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
+                  value={matchId}
+                  onChange={(e) => setMatchId(e.target.value)}
+                  placeholder="match..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Team ID
+                </label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
+                  value={teamId}
+                  onChange={(e) => setTeamId(e.target.value)}
+                  placeholder="team..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Du
+                </label>
+                <input
+                  type="date"
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Au
+                </label>
+                <input
+                  type="date"
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                />
+              </div>
+            </form>
+          </section>
+
+          {/* Logs List */}
+          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+              </div>
+            ) : logs.length === 0 ? (
+              <div className="text-center py-20 text-neutral-400">
+                <svg
+                  className="w-12 h-12 mx-auto mb-4 text-neutral-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                Aucun log trouve pour ces filtres
+              </div>
+            ) : (
+              <div className="divide-y divide-neutral-700/50">
+                {logs.map((log) => (
+                  <div
+                    key={log.id}
+                    className="p-4 hover:bg-neutral-700/30 transition-colors"
+                  >
+                    {/* Header row */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-mono text-neutral-500 bg-neutral-900/50 px-2 py-1 rounded-lg">
+                          {formatDateTime(log.created_at)}
                         </span>
+                        <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-600/20 text-blue-300 border border-blue-500/30">
+                          {log.action}
+                        </span>
+                        {log.entity_type && (
+                          <span className="px-2.5 py-1 rounded-lg text-xs bg-neutral-700/50 text-neutral-300 border border-neutral-600/50">
+                            {log.entity_type}
+                            {log.entity_id ? ` #${shortId(log.entity_id)}` : ''}
+                          </span>
+                        )}
+                      </div>
+
+                      {log.staff_id && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-neutral-500">par</span>
+                          <span className="font-medium text-neutral-200">
+                            {log.staff_display_name || shortId(log.staff_id)}
+                          </span>
+                          {log.staff_role && (
+                            <span className="px-2 py-0.5 rounded-lg bg-neutral-700/50 border border-neutral-600/50 text-[10px] uppercase tracking-wide text-neutral-400">
+                              {log.staff_role}
+                            </span>
+                          )}
+                        </div>
                       )}
+                    </div>
+
+                    {/* Tags row */}
+                    <div className="flex flex-wrap gap-2 mb-2">
                       {log.tournament_id && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-neutral-900 border border-neutral-700 text-neutral-400">
-                          T:{shortId(log.tournament_id)}
+                        <span className="px-2 py-0.5 rounded-lg text-[10px] bg-amber-900/30 border border-amber-700/30 text-amber-300">
+                          Tournoi: {shortId(log.tournament_id)}
                         </span>
                       )}
                       {log.stage_id && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-neutral-900 border border-neutral-700 text-neutral-400">
-                          S:{shortId(log.stage_id)}
+                        <span className="px-2 py-0.5 rounded-lg text-[10px] bg-purple-900/30 border border-purple-700/30 text-purple-300">
+                          Stage: {shortId(log.stage_id)}
                         </span>
                       )}
                       {log.match_id && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-neutral-900 border border-neutral-700 text-neutral-400">
-                          M:{shortId(log.match_id)}
+                        <span className="px-2 py-0.5 rounded-lg text-[10px] bg-emerald-900/30 border border-emerald-700/30 text-emerald-300">
+                          Match: {shortId(log.match_id)}
                         </span>
                       )}
                       {log.team_id && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-neutral-900 border border-neutral-700 text-neutral-400">
-                          Team:{shortId(log.team_id)}
+                        <span className="px-2 py-0.5 rounded-lg text-[10px] bg-cyan-900/30 border border-cyan-700/30 text-cyan-300">
+                          Team: {shortId(log.team_id)}
                         </span>
                       )}
                     </div>
 
-                    {log.staff_id && (
-                      <div className="flex items-center gap-2 text-xs text-neutral-400">
-                        <span className="text-neutral-500">par</span>
-                        <span className="font-medium text-neutral-200">
-                          {log.staff_display_name || log.staff_id}
-                        </span>
-                        {log.staff_role && (
-                          <span className="px-1.5 py-0.5 rounded bg-neutral-900 border border-neutral-700 text-[10px] uppercase tracking-wide">
-                            {log.staff_role}
-                          </span>
+                    {/* Message */}
+                    {log.message && (
+                      <p className="text-sm text-neutral-200 mb-2">
+                        {log.message}
+                      </p>
+                    )}
+
+                    {/* Payload + Links */}
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      {log.payload && (
+                        <details className="text-xs text-neutral-400">
+                          <summary className="cursor-pointer select-none hover:text-neutral-200 transition-colors">
+                            Details (payload)
+                          </summary>
+                          <pre className="mt-2 bg-neutral-900/70 border border-neutral-700/50 rounded-xl p-3 text-[11px] overflow-x-auto max-h-48">
+                            {JSON.stringify(log.payload, null, 2)}
+                          </pre>
+                        </details>
+                      )}
+
+                      <div className="flex flex-wrap gap-3 text-xs">
+                        {log.tournament_id && (
+                          <Link
+                            href={`/admin/tournament/${log.tournament_id}`}
+                            className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
+                          >
+                            <svg
+                              className="w-3 h-3"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                              />
+                            </svg>
+                            Tournoi
+                          </Link>
+                        )}
+                        {log.stage_id && (
+                          <Link
+                            href={`/admin/stages/${log.stage_id}`}
+                            className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
+                          >
+                            <svg
+                              className="w-3 h-3"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                              />
+                            </svg>
+                            Phase
+                          </Link>
+                        )}
+                        {log.match_id && (
+                          <Link
+                            href={`/admin/matches/${log.match_id}`}
+                            className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
+                          >
+                            <svg
+                              className="w-3 h-3"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                              />
+                            </svg>
+                            Match
+                          </Link>
+                        )}
+                        {log.team_id && (
+                          <Link
+                            href={`/admin/teams/${log.team_id}`}
+                            className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
+                          >
+                            <svg
+                              className="w-3 h-3"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                              />
+                            </svg>
+                            Equipe
+                          </Link>
                         )}
                       </div>
-                    )}
+                    </div>
                   </div>
+                ))}
+              </div>
+            )}
+          </section>
 
-                  {log.message && (
-                    <div className="text-neutral-200">{log.message}</div>
-                  )}
+          {/* Pagination */}
+          {logs.length > 0 && (
+            <div className="flex justify-between items-center mt-6">
+              <button
+                type="button"
+                disabled={offset === 0}
+                onClick={() => setOffset(Math.max(0, offset - limit))}
+                className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+                Precedent
+              </button>
 
-                  {log.payload && (
-                    <details className="mt-1 text-xs text-neutral-400">
-                      <summary className="cursor-pointer select-none hover:text-neutral-200">
-                        Détails (payload)
-                      </summary>
-                      <pre className="mt-1 bg-neutral-900 border border-neutral-800 rounded p-2 text-[11px] overflow-x-auto">
-                        {JSON.stringify(log.payload, null, 2)}
-                      </pre>
-                    </details>
-                  )}
+              <span className="text-neutral-400 text-sm">
+                {offset + 1} – {offset + logs.length}
+                {total ? ` sur ${total}` : ''}
+              </span>
 
-                  <div className="mt-1 flex flex-wrap gap-2 text-xs text-blue-300">
-                    {log.tournament_id && (
-                      <Link
-                        href={`/admin/tournament/${log.tournament_id}`}
-                        className="hover:underline"
-                      >
-                        Ouvrir tournoi
-                      </Link>
-                    )}
-                    {log.stage_id && (
-                      <Link
-                        href={`/admin/stages/${log.stage_id}`}
-                        className="hover:underline"
-                      >
-                        Ouvrir phase
-                      </Link>
-                    )}
-                    {log.match_id && (
-                      <Link
-                        href={`/admin/matches/${log.match_id}`}
-                        className="hover:underline"
-                      >
-                        Ouvrir match
-                      </Link>
-                    )}
-                    {log.team_id && (
-                      <Link
-                        href={`/admin/teams/${log.team_id}`}
-                        className="hover:underline"
-                      >
-                        Ouvrir équipe
-                      </Link>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
+              <button
+                type="button"
+                disabled={total !== null && offset + limit >= total}
+                onClick={() => setOffset(offset + limit)}
+                className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                Suivant
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+            </div>
           )}
         </div>
-
-        {/* Pagination */}
-        {logs.length > 0 && (
-          <div className="flex justify-between items-center mt-6 text-sm">
-            <button
-              disabled={offset === 0}
-              onClick={() => setOffset(Math.max(0, offset - limit))}
-              className={`px-3 py-2 rounded ${
-                offset === 0
-                  ? 'bg-neutral-700 opacity-40 cursor-not-allowed'
-                  : 'bg-neutral-700 hover:bg-neutral-600'
-              }`}
-            >
-              ← Précédent
-            </button>
-
-            <span className="text-neutral-400">
-              {offset + 1} – {offset + logs.length}
-              {total ? ` / ${total}` : ''}
-            </span>
-
-            <button
-              disabled={total !== null && offset + limit >= total}
-              onClick={() => setOffset(offset + limit)}
-              className={`px-3 py-2 rounded ${
-                total !== null && offset + limit >= total
-                  ? 'bg-neutral-700 opacity-40 cursor-not-allowed'
-                  : 'bg-neutral-700 hover:bg-neutral-600'
-              }`}
-            >
-              Suivant →
-            </button>
-          </div>
-        )}
       </div>
     </>
   );
