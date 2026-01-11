@@ -155,7 +155,7 @@ async function handlePost(
     // Verify tournament exists and is published
     const { data: tournament, error: tournamentError } = await supabaseAdmin
       .from('tournaments')
-      .select('id, name, status, max_teams')
+      .select('id, name, status, max_teams, min_players')
       .eq('id', tournamentId)
       .single();
 
@@ -165,6 +165,24 @@ async function handlePost(
 
     if (tournament.status !== 'published') {
       return res.status(400).json({ error: 'Le tournoi doit être publié pour y inscrire une équipe' });
+    }
+
+    // Check if team has enough players (min_players validation)
+    if (tournament.min_players) {
+      const { count: playerCount, error: countPlayersError } = await supabaseAdmin
+        .from('team_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('team_id', teamId);
+
+      if (countPlayersError) {
+        throw countPlayersError;
+      }
+
+      if ((playerCount || 0) < tournament.min_players) {
+        return res.status(400).json({
+          error: `L'équipe doit avoir au moins ${tournament.min_players} joueuse(s) pour s'inscrire à ce tournoi. Actuellement: ${playerCount || 0} membre(s).`
+        });
+      }
     }
 
     // Check if max_teams limit is reached

@@ -116,7 +116,7 @@ async function handlePost(
   // Vérifier que le tournoi existe
   const { data: tournament, error: tournamentError } = await supabaseAdmin
     .from('tournaments')
-    .select('id, name, max_teams')
+    .select('id, name, max_teams, min_players')
     .eq('id', tournamentId)
     .maybeSingle();
 
@@ -133,6 +133,25 @@ async function handlePost(
 
   if (teamError || !team) {
     return res.status(404).json({ error: 'Team not found' });
+  }
+
+  // Vérifier que l'équipe a assez de joueuses (min_players)
+  if (tournament.min_players) {
+    const { count: playerCount, error: countPlayersError } = await supabaseAdmin
+      .from('team_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('team_id', team_id);
+
+    if (countPlayersError) {
+      console.error('Error counting team members:', countPlayersError);
+      return res.status(500).json({ error: 'Failed to verify team size' });
+    }
+
+    if ((playerCount || 0) < tournament.min_players) {
+      return res.status(400).json({
+        error: `Team must have at least ${tournament.min_players} player(s) to register. Current: ${playerCount || 0} member(s).`
+      });
+    }
   }
 
   // Vérifier que l'équipe n'est pas déjà inscrite
