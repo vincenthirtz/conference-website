@@ -61,6 +61,21 @@ type TournamentTeam = {
   team: Team;
 };
 
+type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
+
+type RecentMatch = {
+  id: string;
+  stage_id: string | null;
+  round_number: number | null;
+  status: MatchStatus;
+  scheduled_at: string | null;
+  team1?: { id: string; name: string; logo_url?: string | null } | null;
+  team2?: { id: string; name: string; logo_url?: string | null } | null;
+  team1_score: number | null;
+  team2_score: number | null;
+  winner_team_id: string | null;
+};
+
 type ApiResponse = {
   tournament: Tournament;
 };
@@ -191,6 +206,36 @@ const STAGE_TYPE_OPTIONS = [
   { value: 'other', label: 'Autre' },
 ];
 
+function matchStatusLabel(status: MatchStatus) {
+  switch (status) {
+    case 'pending':
+      return 'A venir';
+    case 'ongoing':
+      return 'En cours';
+    case 'finished':
+      return 'Terminé';
+    case 'cancelled':
+      return 'Annulé';
+    default:
+      return status;
+  }
+}
+
+function matchStatusColor(status: MatchStatus) {
+  switch (status) {
+    case 'pending':
+      return 'bg-neutral-600 text-neutral-100';
+    case 'ongoing':
+      return 'bg-amber-600 text-white';
+    case 'finished':
+      return 'bg-emerald-600 text-white';
+    case 'cancelled':
+      return 'bg-red-600 text-white';
+    default:
+      return 'bg-neutral-600 text-neutral-100';
+  }
+}
+
 function AdminTournamentPage({ staff }: StaffProps) {
   const router = useRouter();
   const { id } = router.query;
@@ -227,6 +272,10 @@ function AdminTournamentPage({ staff }: StaffProps) {
     ongoing: number;
     finished: number;
   } | null>(null);
+
+  // Recent matches
+  const [recentMatches, setRecentMatches] = useState<RecentMatch[]>([]);
+  const [loadingMatches, setLoadingMatches] = useState(false);
 
   const fetchTournament = useCallback(async () => {
     if (!id) return;
@@ -292,12 +341,31 @@ function AdminTournamentPage({ staff }: StaffProps) {
     }
   }, []);
 
+  const fetchRecentMatches = useCallback(async () => {
+    if (!id) return;
+    setLoadingMatches(true);
+    try {
+      const res = await fetch(
+        `/api/admin/tournament/${id}/matches?limit=3&includeTeams=1`
+      );
+      if (res.ok) {
+        const json = await res.json();
+        setRecentMatches(json.matches || []);
+      }
+    } catch {
+      // Silently fail
+    } finally {
+      setLoadingMatches(false);
+    }
+  }, [id]);
+
   useEffect(() => {
     if (!id) return;
     fetchTournament();
     fetchStages();
     fetchTournamentTeams();
-  }, [id, fetchTournament, fetchStages, fetchTournamentTeams]);
+    fetchRecentMatches();
+  }, [id, fetchTournament, fetchStages, fetchTournamentTeams, fetchRecentMatches]);
 
   async function updateStatus(newStatus: string) {
     if (!id || !tournament) return;
@@ -1182,6 +1250,130 @@ function AdminTournamentPage({ staff }: StaffProps) {
                         </svg>
                       </Link>
                     </div>
+                  </section>
+
+                  {/* Recent Matches */}
+                  <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-lg font-semibold flex items-center gap-2">
+                        <svg
+                          className="w-5 h-5 text-neutral-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                          />
+                        </svg>
+                        Derniers matches
+                      </h2>
+                      <Link
+                        href={`/admin/tournament/${tournament.id}/matches`}
+                        className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                      >
+                        Voir tout →
+                      </Link>
+                    </div>
+
+                    {loadingMatches ? (
+                      <div className="flex items-center justify-center py-6">
+                        <div className="w-5 h-5 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+                      </div>
+                    ) : recentMatches.length === 0 ? (
+                      <div className="text-neutral-400 text-sm py-6 text-center bg-neutral-900/30 rounded-xl">
+                        Aucun match
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {recentMatches.map((match) => (
+                          <Link
+                            key={match.id}
+                            href={`/admin/matches/${match.id}`}
+                            className="block bg-neutral-900/50 hover:bg-neutral-900 rounded-xl p-3 transition-colors group"
+                          >
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${matchStatusColor(
+                                  match.status
+                                )}`}
+                              >
+                                {matchStatusLabel(match.status)}
+                              </span>
+                              {match.round_number && (
+                                <span className="text-[10px] text-neutral-500">
+                                  Round {match.round_number}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between gap-2">
+                              {/* Team 1 */}
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                {match.team1?.logo_url ? (
+                                  <Image
+                                    src={match.team1.logo_url}
+                                    alt=""
+                                    width={24}
+                                    height={24}
+                                    className="w-6 h-6 rounded object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-6 h-6 rounded bg-neutral-700 flex items-center justify-center text-[10px] font-semibold">
+                                    {(match.team1?.name || 'TBD').slice(0, 2).toUpperCase()}
+                                  </div>
+                                )}
+                                <span
+                                  className={`text-xs font-medium truncate ${
+                                    match.winner_team_id === match.team1?.id
+                                      ? 'text-emerald-400'
+                                      : 'text-neutral-300'
+                                  }`}
+                                >
+                                  {match.team1?.name || 'TBD'}
+                                </span>
+                              </div>
+
+                              {/* Score */}
+                              <div className="text-sm font-bold px-2 py-0.5 bg-neutral-800 rounded">
+                                {typeof match.team1_score === 'number' ||
+                                typeof match.team2_score === 'number'
+                                  ? `${match.team1_score ?? 0} - ${match.team2_score ?? 0}`
+                                  : 'vs'}
+                              </div>
+
+                              {/* Team 2 */}
+                              <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
+                                <span
+                                  className={`text-xs font-medium truncate ${
+                                    match.winner_team_id === match.team2?.id
+                                      ? 'text-emerald-400'
+                                      : 'text-neutral-300'
+                                  }`}
+                                >
+                                  {match.team2?.name || 'TBD'}
+                                </span>
+                                {match.team2?.logo_url ? (
+                                  <Image
+                                    src={match.team2.logo_url}
+                                    alt=""
+                                    width={24}
+                                    height={24}
+                                    className="w-6 h-6 rounded object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-6 h-6 rounded bg-neutral-700 flex items-center justify-center text-[10px] font-semibold">
+                                    {(match.team2?.name || 'TBD').slice(0, 2).toUpperCase()}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    )}
                   </section>
 
                   {/* Meta Info */}
