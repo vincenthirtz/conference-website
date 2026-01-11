@@ -217,278 +217,443 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
         <title>Admin – Éditer le tournoi</title>
       </Head>
 
-      <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-          <div>
+      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
+        <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12">
+          {/* Header */}
+          <div className="mb-8">
             <button
               type="button"
               onClick={() => router.push(`/admin/tournament/${id}`)}
-              className="mb-2 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
+              className="mb-4 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors"
             >
-              ← Retour au dashboard du tournoi
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+              Retour au dashboard du tournoi
             </button>
-            <h1 className="text-3xl font-bold">Éditer le tournoi</h1>
-            <p className="text-neutral-400 text-sm mt-1">
-              Mets à jour les informations principales du tournoi.
-            </p>
-          </div>
-        </div>
 
-        {/* Card */}
-        <div className="max-w-3xl bg-neutral-800 border border-neutral-700 rounded-xl p-6 pt-20">
-          {loading && !formReady && (
-            <div className="text-neutral-300">
-              Chargement des données du tournoi…
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+                  Éditer le tournoi
+                </h1>
+                <p className="text-neutral-400 text-sm mt-1">
+                  Mets à jour les informations principales du tournoi.
+                </p>
+              </div>
             </div>
-          )}
+          </div>
 
-          {!loading && errorMsg && (
-            <div className="mb-4 rounded bg-red-900/60 border border-red-600 px-4 py-3 text-sm">
+          {/* Messages */}
+          {errorMsg && (
+            <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
+              <svg
+                className="w-5 h-5 text-red-400 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
+              </svg>
               {errorMsg}
             </div>
           )}
 
           {successMsg && (
-            <div className="mb-4 rounded bg-emerald-900/60 border border-emerald-600 px-4 py-3 text-sm">
+            <div className="mb-6 rounded-xl bg-emerald-900/40 border border-emerald-500/50 px-4 py-3 text-sm flex items-center gap-2">
+              <svg
+                className="w-5 h-5 text-emerald-400 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                  clipRule="evenodd"
+                />
+              </svg>
               {successMsg}
+            </div>
+          )}
+
+          {loading && !formReady && (
+            <div className="flex items-center justify-center py-20">
+              <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
             </div>
           )}
 
           {!loading && formReady && (
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Basics */}
-              <section className="space-y-4">
-                <h2 className="font-semibold text-lg">
-                  Informations générales
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm mb-1 text-neutral-300">
-                      Nom du tournoi <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={form.name}
-                      onChange={(e) => updateField('name', e.target.value)}
-                    />
-                  </div>
+              {/* Grid layout like dashboard */}
+              <div className="grid gap-6 lg:grid-cols-3">
+                {/* Left Column - Main fields */}
+                <div className="lg:col-span-2 space-y-6">
+                  {/* Informations générales */}
+                  <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
+                    <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <svg
+                        className="w-5 h-5 text-neutral-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      Informations générales
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm mb-1 text-neutral-300">
+                          Nom du tournoi <span className="text-red-400">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={form.name}
+                          onChange={(e) => updateField('name', e.target.value)}
+                        />
+                      </div>
 
-                  <div>
-                    <label className="block text-sm mb-1 text-neutral-300">
-                      Slug (URL)
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={form.slug}
-                      onChange={(e) => updateField('slug', e.target.value)}
-                      placeholder="owl-womens-cup-1"
-                    />
-                    <p className="text-xs text-neutral-500 mt-1">
-                      Si tu modifies le slug, l&apos;URL publique changera.
-                    </p>
-                  </div>
+                      <div>
+                        <label className="block text-sm mb-1 text-neutral-300">
+                          Slug (URL)
+                        </label>
+                        <input
+                          type="text"
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={form.slug}
+                          onChange={(e) => updateField('slug', e.target.value)}
+                          placeholder="owl-womens-cup-1"
+                        />
+                        <p className="text-xs text-neutral-500 mt-1">
+                          Si tu modifies le slug, l&apos;URL publique changera.
+                        </p>
+                      </div>
 
-                  <div>
-                    <label className="block text-sm mb-1 text-neutral-300">
-                      Jeu
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={form.game}
-                      onChange={(e) => updateField('game', e.target.value)}
-                      placeholder="Overwatch 2"
-                    />
-                  </div>
+                      <div>
+                        <label className="block text-sm mb-1 text-neutral-300">
+                          Jeu
+                        </label>
+                        <input
+                          type="text"
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={form.game}
+                          onChange={(e) => updateField('game', e.target.value)}
+                          placeholder="Overwatch 2"
+                        />
+                      </div>
 
-                  <div>
-                    <label className="block text-sm mb-1 text-neutral-300">
-                      Statut
-                    </label>
-                    <select
-                      className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={form.status}
-                      onChange={(e) => updateField('status', e.target.value)}
-                    >
-                      <option value="draft">Brouillon</option>
-                      <option value="published">Publié</option>
-                      <option value="running">En cours</option>
-                      <option value="completed">Terminé</option>
-                      <option value="archived">Archivé</option>
-                    </select>
-                  </div>
+                      <div>
+                        <label className="block text-sm mb-1 text-neutral-300">
+                          Statut
+                        </label>
+                        <select
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={form.status}
+                          onChange={(e) => updateField('status', e.target.value)}
+                        >
+                          <option value="draft">Brouillon</option>
+                          <option value="published">Publié</option>
+                          <option value="running">En cours</option>
+                          <option value="completed">Terminé</option>
+                          <option value="archived">Archivé</option>
+                        </select>
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* Planning & format */}
+                  <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
+                    <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <svg
+                        className="w-5 h-5 text-neutral-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                      Planning & format
+                    </h2>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm mb-1 text-neutral-300">
+                          Date de début
+                        </label>
+                        <input
+                          type="datetime-local"
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={form.start_date}
+                          onChange={(e) =>
+                            updateField('start_date', e.target.value)
+                          }
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm mb-1 text-neutral-300">
+                          Date de fin
+                        </label>
+                        <input
+                          type="datetime-local"
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={form.end_at}
+                          onChange={(e) => updateField('end_at', e.target.value)}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm mb-1 text-neutral-300">
+                          Format global
+                        </label>
+                        <select
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={form.format_type}
+                          onChange={(e) =>
+                            updateField('format_type', e.target.value)
+                          }
+                        >
+                          <option value="">(Ne pas modifier / à définir)</option>
+                          <option value="single_elim">Single Elim</option>
+                          <option value="double_elim">Double Elim</option>
+                          <option value="swiss">Swiss</option>
+                          <option value="round_robin">Round Robin</option>
+                          <option value="showmatch">Showmatch</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm mb-1 text-neutral-300">
+                          Nombre max. d&apos;équipes
+                        </label>
+                        <input
+                          type="number"
+                          min={2}
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={form.max_teams}
+                          onChange={(e) => updateField('max_teams', e.target.value)}
+                          placeholder="16"
+                        />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-sm mb-1 text-neutral-300">
+                          Joueuses min. par équipe
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={form.min_players}
+                          onChange={(e) => updateField('min_players', e.target.value)}
+                          placeholder="5"
+                        />
+                        <p className="text-xs text-neutral-500 mt-1">
+                          Nombre minimum de membres requis pour inscrire une équipe
+                        </p>
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* Visuels */}
+                  <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
+                    <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <svg
+                        className="w-5 h-5 text-neutral-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                      Visuels
+                    </h2>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm mb-1 text-neutral-300">
+                          Logo (URL)
+                        </label>
+                        <input
+                          type="text"
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={form.logo_url}
+                          onChange={(e) => updateField('logo_url', e.target.value)}
+                          placeholder="https://…"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm mb-1 text-neutral-300">
+                          Bannière (URL)
+                        </label>
+                        <input
+                          type="text"
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={form.banner_url}
+                          onChange={(e) =>
+                            updateField('banner_url', e.target.value)
+                          }
+                          placeholder="https://…"
+                        />
+                      </div>
+                    </div>
+                  </section>
                 </div>
-              </section>
 
-              {/* Dates & format */}
-              <section className="space-y-4">
-                <h2 className="font-semibold text-lg">Planning & format</h2>
+                {/* Right Column - Visibility & Actions */}
+                <div className="space-y-6">
+                  {/* Visibilité */}
+                  <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
+                    <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <svg
+                        className="w-5 h-5 text-neutral-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                        />
+                      </svg>
+                      Visibilité
+                    </h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm mb-1 text-neutral-300">
-                      Date de début
-                    </label>
-                    <input
-                      type="datetime-local"
-                      className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={form.start_date}
-                      onChange={(e) =>
-                        updateField('start_date', e.target.value)
-                      }
-                    />
-                  </div>
+                    <div className="space-y-3">
+                      <label className="flex items-center gap-3 p-3 rounded-xl bg-neutral-900/50 hover:bg-neutral-900 transition-colors cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="w-5 h-5 rounded border-neutral-500 bg-neutral-700 text-emerald-500 focus:ring-emerald-500"
+                          checked={form.is_public}
+                          onChange={(e) =>
+                            updateField('is_public', e.target.checked)
+                          }
+                        />
+                        <div>
+                          <span className="text-sm font-medium">Tournoi public</span>
+                          <p className="text-xs text-neutral-500">
+                            Visible sur le site
+                          </p>
+                        </div>
+                      </label>
 
-                  <div>
-                    <label className="block text-sm mb-1 text-neutral-300">
-                      Date de fin
-                    </label>
-                    <input
-                      type="datetime-local"
-                      className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={form.end_at}
-                      onChange={(e) => updateField('end_at', e.target.value)}
-                    />
-                  </div>
+                      <label className="flex items-center gap-3 p-3 rounded-xl bg-neutral-900/50 hover:bg-neutral-900 transition-colors cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="w-5 h-5 rounded border-neutral-500 bg-neutral-700 text-amber-500 focus:ring-amber-500"
+                          checked={form.is_featured}
+                          onChange={(e) =>
+                            updateField('is_featured', e.target.checked)
+                          }
+                        />
+                        <div>
+                          <span className="text-sm font-medium">Mis en avant</span>
+                          <p className="text-xs text-neutral-500">
+                            Section &quot;featured&quot;
+                          </p>
+                        </div>
+                      </label>
+                    </div>
+                  </section>
 
-                  <div>
-                    <label className="block text-sm mb-1 text-neutral-300">
-                      Format global
-                    </label>
-                    <select
-                      className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={form.format_type}
-                      onChange={(e) =>
-                        updateField('format_type', e.target.value)
-                      }
-                    >
-                      <option value="">(Ne pas modifier / à définir)</option>
-                      <option value="single_elim">Single Elim</option>
-                      <option value="double_elim">Double Elim</option>
-                      <option value="swiss">Swiss</option>
-                      <option value="round_robin">Round Robin</option>
-                      <option value="showmatch">Showmatch</option>
-                    </select>
-                  </div>
+                  {/* Actions */}
+                  <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
+                    <h2 className="text-lg font-semibold mb-4">Actions</h2>
 
-                  <div>
-                    <label className="block text-sm mb-1 text-neutral-300">
-                      Nombre max. d&apos;équipes
-                    </label>
-                    <input
-                      type="number"
-                      min={2}
-                      className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={form.max_teams}
-                      onChange={(e) => updateField('max_teams', e.target.value)}
-                      placeholder="16"
-                    />
-                  </div>
+                    <div className="space-y-3">
+                      <button
+                        type="submit"
+                        disabled={saving}
+                        className={`w-full px-4 py-3 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
+                          saving
+                            ? 'bg-blue-800 cursor-wait'
+                            : 'bg-blue-600 hover:bg-blue-700'
+                        }`}
+                      >
+                        {saving ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            Enregistrement...
+                          </>
+                        ) : (
+                          <>
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M5 13l4 4L19 7"
+                              />
+                            </svg>
+                            Enregistrer les modifications
+                          </>
+                        )}
+                      </button>
 
-                  <div>
-                    <label className="block text-sm mb-1 text-neutral-300">
-                      Joueuses min. par équipe
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={form.min_players}
-                      onChange={(e) => updateField('min_players', e.target.value)}
-                      placeholder="5"
-                    />
-                    <p className="text-xs text-neutral-400 mt-1">
-                      Nombre minimum de membres requis pour inscrire une équipe
-                    </p>
-                  </div>
+                      <Link
+                        href={`/admin/tournament/${id}`}
+                        className="w-full px-4 py-3 rounded-xl border border-neutral-600 text-neutral-200 hover:bg-neutral-700/50 text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                        Annuler
+                      </Link>
+                    </div>
+                  </section>
                 </div>
-              </section>
-
-              {/* Visibilité & visuels */}
-              <section className="space-y-4">
-                <h2 className="font-semibold text-lg">Visibilité & visuels</h2>
-
-                <div className="flex flex-col gap-3">
-                  <label className="inline-flex items-center gap-2 text-sm text-neutral-200">
-                    <input
-                      type="checkbox"
-                      className="rounded border-neutral-500 bg-neutral-700"
-                      checked={form.is_public}
-                      onChange={(e) =>
-                        updateField('is_public', e.target.checked)
-                      }
-                    />
-                    <span>Rendre le tournoi public sur le site</span>
-                  </label>
-
-                  <label className="inline-flex items-center gap-2 text-sm text-neutral-200">
-                    <input
-                      type="checkbox"
-                      className="rounded border-neutral-500 bg-neutral-700"
-                      checked={form.is_featured}
-                      onChange={(e) =>
-                        updateField('is_featured', e.target.checked)
-                      }
-                    />
-                    <span>Mettre en avant (section &quot;featured&quot;)</span>
-                  </label>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm mb-1 text-neutral-300">
-                      Logo (URL)
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={form.logo_url}
-                      onChange={(e) => updateField('logo_url', e.target.value)}
-                      placeholder="https://…"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm mb-1 text-neutral-300">
-                      Bannière (URL)
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={form.banner_url}
-                      onChange={(e) =>
-                        updateField('banner_url', e.target.value)
-                      }
-                      placeholder="https://…"
-                    />
-                  </div>
-                </div>
-              </section>
-
-              {/* Actions */}
-              <div className="flex justify-between items-center pt-2">
-                <Link
-                  href={`/admin/tournament/${id}`}
-                  className="px-4 py-2 rounded border border-neutral-600 text-neutral-200 hover:bg-neutral-800 text-sm"
-                >
-                  Annuler
-                </Link>
-
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className={`px-5 py-2 rounded font-semibold text-sm ${
-                    saving
-                      ? 'bg-blue-800 cursor-wait'
-                      : 'bg-blue-600 hover:bg-blue-700'
-                  }`}
-                >
-                  {saving
-                    ? 'Enregistrement...'
-                    : 'Enregistrer les modifications'}
-                </button>
               </div>
             </form>
           )}
