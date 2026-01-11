@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Head from 'next/head';
-import Button from '@/components/Buttons/button';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import Button from '@/components/Buttons/button';
 
 type StaffShape = {
   id: string;
@@ -19,17 +21,88 @@ type CreateUserResponse = {
   tempPassword?: string;
 };
 
+type TeamOption = {
+  id: string;
+  name: string;
+};
+
+type AddMemberResponse = {
+  teamMemberId?: string;
+  teamId: string;
+  userId: string;
+  role: string;
+  captainSet: boolean;
+  info?: string;
+};
+
+const ROLES = ['member', 'player', 'caster', 'manager', 'admin', 'owner'];
+const TEAM_ROLES = ['player', 'coach', 'sub', 'manager'];
+
+function roleLabel(role: string) {
+  switch (role) {
+    case 'owner':
+      return 'Owner';
+    case 'admin':
+      return 'Admin';
+    case 'manager':
+      return 'Manager';
+    case 'caster':
+      return 'Caster';
+    case 'player':
+      return 'Joueur';
+    case 'member':
+      return 'Membre';
+    default:
+      return role;
+  }
+}
+
 export const getServerSideProps = withStaffPage('admin');
 
 function AdminCreateUserPage({ staff }: StaffProps) {
+  const router = useRouter();
+
+  // User fields
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [role, setRole] = useState('player');
 
+  // Team assignment fields
+  const [assignToTeam, setAssignToTeam] = useState(false);
+  const [teams, setTeams] = useState<TeamOption[]>([]);
+  const [loadingTeams, setLoadingTeams] = useState(false);
+  const [selectedTeamId, setSelectedTeamId] = useState('');
+  const [battleTag, setBattleTag] = useState('');
+  const [teamRole, setTeamRole] = useState('player');
+  const [setCaptain, setSetCaptain] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [success, setSuccess] = useState<CreateUserResponse | null>(null);
+  const [success, setSuccess] = useState<{
+    user: CreateUserResponse;
+    teamAssignment?: AddMemberResponse;
+  } | null>(null);
+
+  useEffect(() => {
+    if (assignToTeam && teams.length === 0) {
+      loadTeams();
+    }
+  }, [assignToTeam]);
+
+  async function loadTeams() {
+    setLoadingTeams(true);
+    try {
+      const res = await fetch('/api/admin/teams?limit=200&includeTotal=0');
+      if (!res.ok) return;
+      const json = await res.json();
+      setTeams(json.teams || []);
+    } catch (e) {
+      console.error('Failed to load teams list', e);
+    } finally {
+      setLoadingTeams(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -38,28 +111,83 @@ function AdminCreateUserPage({ staff }: StaffProps) {
     setSuccess(null);
 
     try {
-      const payload: Record<string, any> = {
+      // Validate team assignment fields if enabled
+      if (assignToTeam) {
+        if (!selectedTeamId) {
+          throw new Error('Veuillez sélectionner une équipe');
+        }
+        if (!battleTag.trim()) {
+          throw new Error('BattleTag requis (format Pseudo#0000)');
+        }
+        const battleTagRegex = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
+        if (!battleTagRegex.test(battleTag.trim())) {
+          throw new Error(
+            'Format BattleTag invalide (ex: Pseudo#1234)'
+          );
+        }
+      }
+
+      // Step 1: Create the user
+      const userPayload: Record<string, any> = {
         email,
         display_name: displayName || undefined,
         role: role || undefined,
       };
-      if (password.trim()) payload.password = password.trim();
+      if (password.trim()) userPayload.password = password.trim();
 
-      const res = await fetch('/api/admin/users', {
+      const userRes = await fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(userPayload),
       });
 
-      const json: CreateUserResponse & { error?: string } = await res.json();
+      const userJson: CreateUserResponse & { error?: string } =
+        await userRes.json();
 
-      if (!res.ok || json.error) {
-        throw new Error(json.error || 'Impossible de créer l&apos;utilisateur');
+      if (!userRes.ok || userJson.error) {
+        throw new Error(userJson.error || "Impossible de créer l'utilisateur");
       }
 
-      setSuccess(json);
+      let teamAssignment: AddMemberResponse | undefined;
+
+      // Step 2: Add to team if enabled
+      if (assignToTeam && selectedTeamId && userJson.userId) {
+        const teamPayload = {
+          teamId: selectedTeamId,
+          userId: userJson.userId,
+          role: teamRole || 'player',
+          battleTag: battleTag.trim(),
+          setCaptain,
+        };
+
+        const teamRes = await fetch('/api/admin/teams/add-member', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(teamPayload),
+        });
+
+        const teamJson: AddMemberResponse & { error?: string } =
+          await teamRes.json();
+
+        if (!teamRes.ok || teamJson.error) {
+          // User created but team assignment failed
+          setSuccess({ user: userJson });
+          setErrorMsg(
+            `Utilisateur créé mais erreur lors de l'ajout à l'équipe: ${teamJson.error}`
+          );
+          return;
+        }
+
+        teamAssignment = teamJson;
+      }
+
+      setSuccess({ user: userJson, teamAssignment });
       setEmail('');
       setPassword('');
+      setDisplayName('');
+      setBattleTag('');
+      setSelectedTeamId('');
+      setSetCaptain(false);
     } catch (err: any) {
       setErrorMsg(err?.message ?? 'Erreur inattendue');
     } finally {
@@ -67,147 +195,462 @@ function AdminCreateUserPage({ staff }: StaffProps) {
     }
   }
 
+  const selectedTeamName = teams.find((t) => t.id === selectedTeamId)?.name;
+
   return (
     <>
       <Head>
         <title>Admin – Créer un utilisateur</title>
       </Head>
 
-      <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
-        <header className="flex items-center justify-between flex-wrap gap-4 mb-6">
-          <div>
-            <button
-              type="button"
-              onClick={() => history.back()}
-              className="mb-2 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
-            >
-              ← Retour
-            </button>
-            <h1 className="text-3xl font-bold">Créer un utilisateur</h1>
-            <p className="text-sm text-neutral-400 mt-1">
-              Génère un compte Supabase (email confirmé) pour un joueur ou un
-              staff.
-            </p>
+      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
+        <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+                  Nouvel utilisateur
+                </h1>
+                <p className="text-neutral-400 text-sm mt-1">
+                  Créer un compte et optionnellement l&apos;ajouter à une équipe
+                </p>
+              </div>
+
+              <Link
+                href="/admin/users/manage"
+                className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+                Retour à la liste
+              </Link>
+            </div>
           </div>
-        </header>
 
-        <div className="grid gap-6 lg:grid-cols-[2fr,1.2fr] items-start">
-          <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-6">
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label className="block text-sm text-neutral-300 mb-1">
-                  Email *
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="ex: player@email.tld"
-                />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-sm text-neutral-300">
-                    Mot de passe (optionnel)
-                  </label>
-                  <span className="text-xs text-neutral-400">
-                    Vide → mot de passe auto-généré
-                  </span>
-                </div>
-                <input
-                  type="text"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Laisser vide pour générer"
-                />
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="block text-sm text-neutral-300 mb-1">
-                    Nom affiché (optionnel)
-                  </label>
-                  <input
-                    type="text"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="LaKiiroi"
+          {/* Success Message */}
+          {success && (
+            <div className="mb-6 rounded-xl bg-emerald-900/40 border border-emerald-500/50 px-4 py-4">
+              <div className="flex items-start gap-3">
+                <svg
+                  className="w-6 h-6 text-emerald-400 flex-shrink-0 mt-0.5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clipRule="evenodd"
                   />
-                </div>
+                </svg>
+                <div className="space-y-3 flex-1">
+                  <p className="font-semibold text-white">
+                    Compte créé avec succès
+                  </p>
+                  <div className="text-sm text-neutral-300 space-y-1">
+                    <p>
+                      User ID :{' '}
+                      <span className="font-mono text-xs bg-neutral-800 px-2 py-0.5 rounded">
+                        {success.user.userId}
+                      </span>
+                    </p>
+                    <p>
+                      Email :{' '}
+                      <span className="font-mono text-xs bg-neutral-800 px-2 py-0.5 rounded">
+                        {success.user.email}
+                      </span>
+                    </p>
+                    {success.user.tempPassword && (
+                      <p className="text-amber-300">
+                        Mot de passe :{' '}
+                        <span className="font-mono text-xs bg-amber-900/50 px-2 py-0.5 rounded border border-amber-500/30">
+                          {success.user.tempPassword}
+                        </span>
+                        <br />
+                        <span className="text-xs text-amber-400">
+                          Notez-le, il ne sera pas affiché à nouveau.
+                        </span>
+                      </p>
+                    )}
+                  </div>
 
-                <div>
-                  <label className="block text-sm text-neutral-300 mb-1">
-                    Rôle (metadata)
-                  </label>
-                  <input
-                    type="text"
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                    className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="player"
-                  />
+                  {success.teamAssignment && (
+                    <div className="mt-3 pt-3 border-t border-emerald-500/30">
+                      <p className="font-medium text-emerald-300 mb-1">
+                        Ajouté à l&apos;équipe
+                      </p>
+                      <div className="text-sm text-neutral-300 space-y-1">
+                        <p>
+                          Équipe :{' '}
+                          <span className="text-white">
+                            {selectedTeamName || success.teamAssignment.teamId}
+                          </span>
+                        </p>
+                        <p>
+                          Rôle :{' '}
+                          <span className="text-white">
+                            {success.teamAssignment.role}
+                          </span>
+                        </p>
+                        {success.teamAssignment.captainSet && (
+                          <p className="text-amber-300">Défini comme capitaine</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => setSuccess(null)}
+                    className="mt-2 text-sm text-emerald-400 hover:text-emerald-300"
+                  >
+                    Créer un autre utilisateur
+                  </button>
                 </div>
               </div>
+            </div>
+          )}
 
-              {errorMsg && (
-                <div className="rounded-lg border border-red-600 bg-red-900/60 px-3 py-2 text-sm">
-                  {errorMsg}
+          {/* Error Message */}
+          {errorMsg && (
+            <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
+              <svg
+                className="w-5 h-5 text-red-400 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              {errorMsg}
+            </div>
+          )}
+
+          <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
+            {/* Form */}
+            <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Informations de connexion */}
+                <div>
+                  <h2 className="font-semibold text-lg mb-4">
+                    Informations de connexion
+                  </h2>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="block text-sm text-neutral-400 mb-1">
+                        Email <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="player@email.tld"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-neutral-400 mb-1">
+                        Mot de passe
+                      </label>
+                      <input
+                        type="text"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Laisser vide pour générer"
+                      />
+                      <p className="text-xs text-neutral-500 mt-1">
+                        Vide = mot de passe auto-généré
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Profil */}
+                <div>
+                  <h2 className="font-semibold text-lg mb-4">Profil</h2>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="block text-sm text-neutral-400 mb-1">
+                        Nom affiché
+                      </label>
+                      <input
+                        type="text"
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                        className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Pseudo du joueur"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-neutral-400 mb-1">
+                        Rôle système
+                      </label>
+                      <select
+                        value={role}
+                        onChange={(e) => setRole(e.target.value)}
+                        className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        {ROLES.map((r) => (
+                          <option key={r} value={r}>
+                            {roleLabel(r)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Team Assignment */}
+                <div className="border-t border-neutral-700/50 pt-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="font-semibold text-lg">
+                      Rattacher à une équipe
+                    </h2>
+                    <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={assignToTeam}
+                        onChange={(e) => setAssignToTeam(e.target.checked)}
+                        className="rounded border-neutral-500 bg-neutral-700 h-4 w-4"
+                      />
+                      <span className="text-neutral-300">Activer</span>
+                    </label>
+                  </div>
+
+                  {assignToTeam && (
+                    <div className="space-y-4 bg-neutral-900/30 rounded-xl p-4 border border-neutral-700/50">
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div>
+                          <label className="block text-sm text-neutral-400 mb-1">
+                            Équipe <span className="text-red-400">*</span>
+                          </label>
+                          <select
+                            value={selectedTeamId}
+                            onChange={(e) => setSelectedTeamId(e.target.value)}
+                            className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="">Sélectionner une équipe</option>
+                            {teams.map((t) => (
+                              <option key={t.id} value={t.id}>
+                                {t.name}
+                              </option>
+                            ))}
+                          </select>
+                          {loadingTeams && (
+                            <p className="text-xs text-neutral-500 mt-1">
+                              Chargement des équipes...
+                            </p>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="block text-sm text-neutral-400 mb-1">
+                            BattleTag <span className="text-red-400">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={battleTag}
+                            onChange={(e) => setBattleTag(e.target.value)}
+                            className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Pseudo#1234"
+                          />
+                          <p className="text-xs text-neutral-500 mt-1">
+                            Format: Pseudo#0000
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-4 md:grid-cols-2 items-end">
+                        <div>
+                          <label className="block text-sm text-neutral-400 mb-1">
+                            Rôle dans l&apos;équipe
+                          </label>
+                          <select
+                            value={teamRole}
+                            onChange={(e) => setTeamRole(e.target.value)}
+                            className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            {TEAM_ROLES.map((r) => (
+                              <option key={r} value={r}>
+                                {r.charAt(0).toUpperCase() + r.slice(1)}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <label className="inline-flex items-center gap-2 text-sm cursor-pointer pb-2.5">
+                          <input
+                            type="checkbox"
+                            checked={setCaptain}
+                            onChange={(e) => setSetCaptain(e.target.checked)}
+                            className="rounded border-neutral-500 bg-neutral-700 h-4 w-4"
+                          />
+                          <span className="text-neutral-300">
+                            Définir comme capitaine
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex justify-between items-center pt-4 border-t border-neutral-700/50">
+                  <Button
+                    type="button"
+                    size="compact"
+                    className="px-4 py-2.5"
+                    onClick={() => router.push('/admin/users/manage')}
+                    disabled={loading}
+                  >
+                    Annuler
+                  </Button>
+
+                  <Button
+                    type="submit"
+                    size="compact"
+                    disabled={loading}
+                    className="px-5 py-2.5 font-semibold bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    {loading ? 'Création...' : "Créer l'utilisateur"}
+                  </Button>
+                </div>
+              </form>
+            </section>
+
+            {/* Info sidebar */}
+            <aside className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
+              <h2 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                <svg
+                  className="w-5 h-5 text-neutral-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                Informations
+              </h2>
+              <ul className="space-y-3 text-sm text-neutral-300">
+                <li className="flex items-start gap-2">
+                  <svg
+                    className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  Le compte est créé via le service role Supabase
+                </li>
+                <li className="flex items-start gap-2">
+                  <svg
+                    className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  L&apos;email est automatiquement marqué comme confirmé
+                </li>
+                <li className="flex items-start gap-2">
+                  <svg
+                    className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  Le mot de passe est généré si laissé vide
+                </li>
+              </ul>
+
+              {assignToTeam && (
+                <div className="mt-6 pt-4 border-t border-neutral-700/50">
+                  <h3 className="font-medium text-sm mb-3 text-neutral-200">
+                    Rattachement équipe
+                  </h3>
+                  <ul className="space-y-2 text-sm text-neutral-400">
+                    <li className="flex items-start gap-2">
+                      <svg
+                        className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      Le BattleTag doit être au format Pseudo#0000
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <svg
+                        className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      L&apos;utilisateur sera ajouté à team_members
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <svg
+                        className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      Si capitaine, teams.captain_id sera mis à jour
+                    </li>
+                  </ul>
                 </div>
               )}
-
-              <div className="flex items-center gap-3">
-                <Button
-                  type="submit"
-                  size="compact"
-                  disabled={loading}
-                  className="px-4 py-2 text-sm font-semibold"
-                >
-                  {loading ? 'Création...' : `Créer l'utilisateur`}
-                </Button>
-              </div>
-            </form>
-          </section>
-
-          <aside className="bg-neutral-800 border border-neutral-700 rounded-xl p-5 space-y-4">
-            <h2 className="text-lg font-semibold">Infos</h2>
-            <ul className="space-y-2 text-sm text-neutral-300">
-              <li>• Le compte est créé via le rôle service Supabase.</li>
-              <li>• Le mot de passe est généré si tu laisses le champ vide.</li>
-              <li>• L&apos;email est marqué comme confirmé.</li>
-              <li>
-                • Ajoute ensuite la personne à une équipe via la page équipe ou
-                team_members.
-              </li>
-            </ul>
-
-            {success && (
-              <div className="rounded-lg border border-emerald-600 bg-emerald-900/50 px-3 py-3 space-y-2">
-                <p className="text-sm font-semibold text-white">
-                  Compte créé ✅
-                </p>
-                <p className="text-xs text-neutral-200">
-                  User ID :{' '}
-                  <span className="font-mono break-all">{success.userId}</span>
-                </p>
-                <p className="text-xs text-neutral-200">
-                  Email : <span className="font-mono">{success.email}</span>
-                </p>
-                {success.tempPassword && (
-                  <p className="text-xs text-yellow-100">
-                    Mot de passe :{' '}
-                    <span className="font-mono">{success.tempPassword}</span>
-                    <br />
-                    Note-le, il ne sera pas affiché à nouveau.
-                  </p>
-                )}
-              </div>
-            )}
-          </aside>
+            </aside>
+          </div>
         </div>
       </div>
     </>

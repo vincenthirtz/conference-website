@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
@@ -26,17 +26,78 @@ type UserLite = {
   team_memberships?: TeamMembership[];
 };
 
+type ApiResponse = {
+  items: UserLite[];
+  total?: number;
+};
+
 export const getServerSideProps = withStaffPage('admin');
 
 const ROLES = ['member', 'player', 'caster', 'manager', 'admin', 'owner'];
 
+function roleLabel(role: string | null) {
+  switch (role) {
+    case 'owner':
+      return 'Owner';
+    case 'admin':
+      return 'Admin';
+    case 'manager':
+      return 'Manager';
+    case 'caster':
+      return 'Caster';
+    case 'player':
+      return 'Joueur';
+    case 'member':
+      return 'Membre';
+    default:
+      return role || 'Membre';
+  }
+}
+
+function roleColor(role: string | null) {
+  switch (role) {
+    case 'owner':
+      return 'bg-purple-600 text-white';
+    case 'admin':
+      return 'bg-red-600 text-white';
+    case 'manager':
+      return 'bg-blue-600 text-white';
+    case 'caster':
+      return 'bg-amber-600 text-white';
+    case 'player':
+      return 'bg-emerald-600 text-white';
+    default:
+      return 'bg-neutral-600 text-neutral-100';
+  }
+}
+
+function formatDate(d: string | null) {
+  if (!d) return '—';
+  try {
+    return new Date(d).toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  } catch {
+    return d;
+  }
+}
+
 export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
+  const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState<UserLite[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [total, setTotal] = useState<number | null>(null);
+
+  // filters
   const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState<string | null>(null);
+
+  const [limit] = useState(20);
+  const [offset, setOffset] = useState(0);
+
   const [updating, setUpdating] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   // Battle tag edit modal
   const [editingBattleTag, setEditingBattleTag] = useState<{
@@ -49,34 +110,49 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
   const [battleTagSaving, setBattleTagSaving] = useState(false);
   const [battleTagError, setBattleTagError] = useState<string | null>(null);
 
-  const load = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
-    setError(null);
+
     try {
       const {
         data: { session },
       } = await supabaseClient.auth.getSession();
       const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
+      if (!token) {
+        setLoading(false);
+        return;
+      }
 
-      const url = `/api/admin/users/manage?limit=200${search ? `&search=${encodeURIComponent(search)}` : ''}`;
-      const res = await fetch(url, {
+      const params = new URLSearchParams();
+      params.set('limit', String(limit));
+      params.set('offset', String(offset));
+
+      if (search.trim()) params.set('search', search);
+      if (roleFilter) params.set('role', roleFilter);
+
+      const res = await fetch(`/api/admin/users/manage?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error || 'Erreur de chargement');
+      const json: ApiResponse = await res.json();
+
       setUsers(json.items || []);
-    } catch (err: any) {
-      setError(err?.message || 'Erreur inattendue.');
+      setTotal(json.total ?? json.items?.length ?? 0);
+    } catch (err) {
+      console.error('Error fetching users', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [limit, offset, search, roleFilter]);
 
   useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    fetchData();
+  }, [fetchData]);
+
+  function handleSearchSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setOffset(0);
+    fetchData();
+  }
 
   const changeRole = async (userId: string, role: string) => {
     setUpdating(userId);
@@ -101,9 +177,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       }
 
       setUsers((prev) =>
-        prev.map((u) =>
-          u.id === userId ? { ...u, role } : u
-        )
+        prev.map((u) => (u.id === userId ? { ...u, role } : u))
       );
       setSuccessMsg('Rôle mis à jour');
       setTimeout(() => setSuccessMsg(null), 3000);
@@ -120,7 +194,12 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
     teamName: string,
     currentTag: string | null
   ) => {
-    setEditingBattleTag({ userId, teamId, teamName, currentTag: currentTag || '' });
+    setEditingBattleTag({
+      userId,
+      teamId,
+      teamName,
+      currentTag: currentTag || '',
+    });
     setNewBattleTag(currentTag || '');
     setBattleTagError(null);
   };
@@ -156,7 +235,6 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
         throw new Error(json.error || 'Mise à jour impossible.');
       }
 
-      // Update local state
       setUsers((prev) =>
         prev.map((u) => {
           if (u.id === editingBattleTag.userId && u.team_memberships) {
@@ -190,164 +268,327 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
+        <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12">
           {/* Header */}
           <div className="mb-8">
-            <p className="text-sm text-neutral-400">Espace staff</p>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight mt-1">
-              Gestion des inscrits
-            </h1>
-            <p className="text-sm text-neutral-400 mt-2">
-              Modifier le rôle des comptes et gérer les BattleTags des membres d&apos;équipe.
-            </p>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+                  Gestion des inscrits
+                </h1>
+                <p className="text-neutral-400 text-sm mt-1">
+                  {total !== null
+                    ? `${total} utilisateur${total > 1 ? 's' : ''}`
+                    : 'Chargement...'}
+                </p>
+              </div>
+
+              <Link
+                href="/admin/users/new"
+                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+                Nouvel utilisateur
+              </Link>
+            </div>
           </div>
 
-          {/* Messages */}
-          {error && (
-            <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
-              <svg className="w-5 h-5 text-red-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-              {error}
-            </div>
-          )}
+          {/* Success Message */}
           {successMsg && (
             <div className="mb-6 rounded-xl bg-emerald-900/40 border border-emerald-500/50 px-4 py-3 text-sm flex items-center gap-2">
-              <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              <svg
+                className="w-5 h-5 text-emerald-400 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                  clipRule="evenodd"
+                />
               </svg>
               {successMsg}
             </div>
           )}
 
-          {/* Search */}
-          <div className="flex items-center gap-3 mb-6 flex-wrap">
-            <div className="relative flex-1 max-w-md">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && load()}
-                placeholder="Recherche email / nom / rôle / BattleTag"
-                className="w-full pl-10 pr-3 py-2 rounded-lg bg-neutral-800/50 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-              />
-            </div>
-            <button
-              onClick={load}
-              className="px-4 py-2 text-sm rounded-lg bg-neutral-700 hover:bg-neutral-600 transition-colors flex items-center gap-2"
+          {/* Filters */}
+          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6">
+            <form
+              onSubmit={handleSearchSubmit}
+              className="flex gap-4 flex-wrap items-end"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Recharger
-            </button>
-          </div>
-
-          {/* Table */}
-          {loading ? (
-            <div className="flex items-center justify-center py-20">
-              <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
-            </div>
-          ) : (
-            <div className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-neutral-900/50">
-                    <tr>
-                      <th className="text-left px-4 py-3 font-semibold text-neutral-300">Email</th>
-                      <th className="text-left px-4 py-3 font-semibold text-neutral-300">Nom</th>
-                      <th className="text-left px-4 py-3 font-semibold text-neutral-300">Rôle</th>
-                      <th className="text-left px-4 py-3 font-semibold text-neutral-300">Équipes & BattleTags</th>
-                      <th className="text-left px-4 py-3 font-semibold text-neutral-300">Créé le</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-neutral-700/50">
-                    {users.map((u) => (
-                      <tr key={u.id} className="hover:bg-neutral-700/20 transition-colors">
-                        <td className="px-4 py-3">
-                          <span className="font-mono text-xs text-neutral-300">{u.email}</span>
-                        </td>
-                        <td className="px-4 py-3 text-neutral-200">
-                          {u.display_name || <span className="text-neutral-500">—</span>}
-                        </td>
-                        <td className="px-4 py-3">
-                          <select
-                            value={u.role || 'member'}
-                            onChange={(e) => changeRole(u.id, e.target.value)}
-                            disabled={updating === u.id}
-                            className="bg-neutral-700 border border-neutral-600 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                          >
-                            {ROLES.map((r) => (
-                              <option key={r} value={r}>
-                                {r}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                        <td className="px-4 py-3">
-                          {u.team_memberships && u.team_memberships.length > 0 ? (
-                            <div className="space-y-1">
-                              {u.team_memberships.map((tm) => (
-                                <div
-                                  key={tm.team_id}
-                                  className="flex items-center gap-2 flex-wrap"
-                                >
-                                  <Link
-                                    href={`/admin/teams/${tm.team_id}/edit`}
-                                    className="text-xs text-blue-400 hover:text-blue-300 truncate max-w-[100px]"
-                                  >
-                                    {tm.team_name}
-                                  </Link>
-                                  <span className="text-neutral-500 text-xs">•</span>
-                                  {tm.battle_tag ? (
-                                    <button
-                                      onClick={() =>
-                                        openBattleTagEdit(u.id, tm.team_id, tm.team_name, tm.battle_tag)
-                                      }
-                                      className="px-2 py-0.5 rounded bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 text-xs hover:bg-emerald-600/30 transition-colors"
-                                    >
-                                      {tm.battle_tag}
-                                    </button>
-                                  ) : (
-                                    <button
-                                      onClick={() =>
-                                        openBattleTagEdit(u.id, tm.team_id, tm.team_name, null)
-                                      }
-                                      className="px-2 py-0.5 rounded bg-red-600/20 text-red-300 border border-red-500/30 text-xs hover:bg-red-600/30 transition-colors"
-                                    >
-                                      BattleTag manquant
-                                    </button>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-neutral-500 text-xs">Aucune équipe</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-neutral-400 text-xs">
-                          {u.created_at
-                            ? new Date(u.created_at).toLocaleDateString('fr-FR')
-                            : '—'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="flex-1 min-w-[200px]">
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Recherche
+                </label>
+                <div className="relative">
+                  <svg
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Email, nom ou BattleTag..."
+                    className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
               </div>
 
-              {users.length === 0 && (
-                <div className="text-center py-12 text-neutral-400">
-                  Aucun utilisateur trouvé
-                </div>
-              )}
-            </div>
-          )}
+              <div className="min-w-[160px]">
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Rôle
+                </label>
+                <select
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={roleFilter || ''}
+                  onChange={(e) => setRoleFilter(e.target.value || null)}
+                >
+                  <option value="">Tous les rôles</option>
+                  {ROLES.map((r) => (
+                    <option key={r} value={r}>
+                      {roleLabel(r)}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-          <div className="mt-4 text-sm text-neutral-500">
-            {users.length} utilisateur{users.length > 1 ? 's' : ''} affiché{users.length > 1 ? 's' : ''}
+              <button
+                type="submit"
+                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                Rechercher
+              </button>
+            </form>
+          </section>
+
+          {/* Users List */}
+          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+              </div>
+            ) : users.length === 0 ? (
+              <div className="text-center py-20 text-neutral-400">
+                <svg
+                  className="w-12 h-12 mx-auto mb-4 text-neutral-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                  />
+                </svg>
+                Aucun utilisateur trouvé
+              </div>
+            ) : (
+              <div className="divide-y divide-neutral-700/50">
+                {users.map((u) => (
+                  <div
+                    key={u.id}
+                    className="flex items-center gap-4 p-4 hover:bg-neutral-700/30 transition-colors group"
+                  >
+                    {/* Avatar */}
+                    <div className="flex-shrink-0">
+                      <div className="w-12 h-12 rounded-xl bg-neutral-700/50 flex items-center justify-center border border-neutral-700">
+                        <svg
+                          className="w-6 h-6 text-neutral-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold text-white truncate">
+                          {u.display_name || u.email || 'Utilisateur'}
+                        </h3>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${roleColor(
+                            u.role
+                          )}`}
+                        >
+                          {roleLabel(u.role)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-sm text-neutral-400 flex-wrap">
+                        {u.email && (
+                          <span className="font-mono text-xs bg-neutral-800 px-2 py-0.5 rounded truncate max-w-[200px]">
+                            {u.email}
+                          </span>
+                        )}
+                        <span>•</span>
+                        <span>Inscrit le {formatDate(u.created_at)}</span>
+                      </div>
+                      {/* Team memberships */}
+                      {u.team_memberships && u.team_memberships.length > 0 && (
+                        <div className="flex items-center gap-2 mt-2 flex-wrap">
+                          {u.team_memberships.map((tm) => (
+                            <div
+                              key={tm.team_id}
+                              className="flex items-center gap-1"
+                            >
+                              <Link
+                                href={`/admin/teams/${tm.team_id}/edit`}
+                                className="text-xs text-blue-400 hover:text-blue-300"
+                              >
+                                {tm.team_name}
+                              </Link>
+                              {tm.battle_tag ? (
+                                <button
+                                  onClick={() =>
+                                    openBattleTagEdit(
+                                      u.id,
+                                      tm.team_id,
+                                      tm.team_name,
+                                      tm.battle_tag
+                                    )
+                                  }
+                                  className="px-1.5 py-0.5 rounded bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 text-xs hover:bg-emerald-600/30 transition-colors"
+                                >
+                                  {tm.battle_tag}
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() =>
+                                    openBattleTagEdit(
+                                      u.id,
+                                      tm.team_id,
+                                      tm.team_name,
+                                      null
+                                    )
+                                  }
+                                  className="px-1.5 py-0.5 rounded bg-red-600/20 text-red-300 border border-red-500/30 text-xs hover:bg-red-600/30 transition-colors"
+                                >
+                                  BattleTag ?
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Role selector */}
+                    <div className="flex-shrink-0">
+                      <select
+                        value={u.role || 'member'}
+                        onChange={(e) => changeRole(u.id, e.target.value)}
+                        disabled={updating === u.id}
+                        className="px-3 py-1.5 rounded-lg bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                      >
+                        {ROLES.map((r) => (
+                          <option key={r} value={r}>
+                            {roleLabel(r)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Pagination */}
+          <div className="flex justify-between items-center mt-6">
+            <button
+              type="button"
+              disabled={offset === 0}
+              onClick={() => setOffset(Math.max(0, offset - limit))}
+              className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+              Précédent
+            </button>
+
+            <span className="text-neutral-400 text-sm">
+              {offset + 1} – {offset + users.length}
+              {total ? ` sur ${total}` : ''}
+            </span>
+
+            <button
+              type="button"
+              disabled={total !== null && offset + limit >= total}
+              onClick={() => setOffset(offset + limit)}
+              className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              Suivant
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </button>
           </div>
         </div>
       </div>
@@ -358,12 +599,15 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
           <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
             <h3 className="text-lg font-semibold mb-2">Modifier le BattleTag</h3>
             <p className="text-sm text-neutral-400 mb-4">
-              Équipe : <span className="text-white">{editingBattleTag.teamName}</span>
+              Équipe :{' '}
+              <span className="text-white">{editingBattleTag.teamName}</span>
             </p>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-neutral-400 mb-1">BattleTag</label>
+                <label className="block text-sm text-neutral-400 mb-1">
+                  BattleTag
+                </label>
                 <input
                   type="text"
                   value={newBattleTag}
