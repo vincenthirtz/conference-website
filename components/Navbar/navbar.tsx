@@ -211,38 +211,55 @@ function Navbar(): JSX.Element {
       ],
     },
     {
-      title: 'Annonces',
-      ref: '',
-      minRole: 'admin',
-      children: [
-        {
-          title: 'Bandeau pub – liste',
-          ref: '/admin/announcements',
-          minRole: 'admin',
-        },
-        {
-          title: 'Créer une annonce',
-          ref: '/admin/announcements/new',
-          minRole: 'admin',
-        },
-      ],
-    },
-    {
-      title: 'News',
-      ref: '',
-      minRole: 'admin',
-      children: [
-        { title: 'News – liste', ref: '/admin/news', minRole: 'admin' },
-        { title: 'Créer une news', ref: '/admin/news/new', minRole: 'admin' },
-      ],
-    },
-    {
-      title: 'Commentaires',
+      title: 'Contenu',
       ref: '',
       minRole: 'manager',
       children: [
         {
-          title: 'Commentaires – liste',
+          title: 'Annonces',
+          ref: '',
+          minRole: 'admin',
+          children: [
+            {
+              title: 'Liste des annonces',
+              ref: '/admin/announcements',
+              minRole: 'admin',
+            },
+            {
+              title: 'Créer une annonce',
+              ref: '/admin/announcements/new',
+              minRole: 'admin',
+            },
+          ],
+        },
+        {
+          title: 'News',
+          ref: '',
+          minRole: 'admin',
+          children: [
+            { title: 'Liste des news', ref: '/admin/news', minRole: 'admin' },
+            { title: 'Créer une news', ref: '/admin/news/new', minRole: 'admin' },
+          ],
+        },
+        {
+          title: 'Chaînes Twitch',
+          ref: '',
+          minRole: 'admin',
+          children: [
+            {
+              title: 'Liste des chaînes',
+              ref: '/admin/twitch-channels',
+              minRole: 'admin',
+            },
+            {
+              title: 'Ajouter une chaîne',
+              ref: '/admin/twitch-channels/new',
+              minRole: 'admin',
+            },
+          ],
+        },
+        {
+          title: 'Commentaires',
           ref: '/admin/comments',
           minRole: 'manager',
         },
@@ -602,6 +619,7 @@ function AdminTopBar({
   onLogout,
 }: AdminTopBarProps) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [openSubMenu, setOpenSubMenu] = useState<string | null>(null);
   const menuAreaRef = useRef<HTMLDivElement>(null);
   const flatLinks =
     links.flatMap((item) => {
@@ -631,6 +649,11 @@ function AdminTopBar({
 
   const toggleMenu = (title: string) => {
     setOpenMenu((prev) => (prev === title ? null : title));
+    setOpenSubMenu(null);
+  };
+
+  const toggleSubMenu = (title: string) => {
+    setOpenSubMenu((prev) => (prev === title ? null : title));
   };
 
   useEffect(() => {
@@ -641,6 +664,7 @@ function AdminTopBar({
         !menuAreaRef.current.contains(e.target as Node)
       ) {
         setOpenMenu(null);
+        setOpenSubMenu(null);
       }
     };
     window.addEventListener('mousedown', handleClickOutside);
@@ -715,17 +739,68 @@ function AdminTopBar({
                 </svg>
               </button>
               {openMenu === cat.title && (
-                <div className="absolute left-0 top-[calc(100%+8px)] min-w-[200px] rounded-xl bg-neutral-900 border border-neutral-800 shadow-2xl overflow-hidden z-[130]">
-                  {cat.children?.map((child) => (
-                    <Link
-                      key={child.ref}
-                      href={child.ref}
-                      className="block px-4 py-2.5 text-[13px] text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors"
-                      onClick={() => setOpenMenu(null)}
-                    >
-                      {child.title}
-                    </Link>
-                  ))}
+                <div className="absolute left-0 top-[calc(100%+8px)] min-w-[220px] rounded-xl bg-neutral-900 border border-neutral-800 shadow-2xl overflow-hidden z-[130]">
+                  {cat.children?.map((child) => {
+                    const hasNestedChildren = child.children && child.children.length > 0;
+
+                    if (hasNestedChildren) {
+                      return (
+                        <div key={child.title} className="border-b border-neutral-800 last:border-b-0">
+                          <button
+                            onClick={() => toggleSubMenu(child.title)}
+                            className={`w-full px-4 py-2.5 text-[13px] flex items-center justify-between transition-colors ${
+                              openSubMenu === child.title
+                                ? 'text-white bg-neutral-800'
+                                : 'text-neutral-300 hover:text-white hover:bg-neutral-800'
+                            }`}
+                          >
+                            <span>{child.title}</span>
+                            <svg
+                              className={`w-3 h-3 transition-transform ${
+                                openSubMenu === child.title ? 'rotate-180' : 'rotate-0'
+                              }`}
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
+                          {openSubMenu === child.title && (
+                            <div className="bg-neutral-950/50">
+                              {child.children?.map((subChild) => (
+                                <Link
+                                  key={subChild.ref}
+                                  href={subChild.ref}
+                                  className="block pl-8 pr-4 py-2 text-[12px] text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
+                                  onClick={() => {
+                                    setOpenMenu(null);
+                                    setOpenSubMenu(null);
+                                  }}
+                                >
+                                  {subChild.title}
+                                </Link>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <Link
+                        key={child.ref}
+                        href={child.ref}
+                        className="block px-4 py-2.5 text-[13px] text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors"
+                        onClick={() => {
+                          setOpenMenu(null);
+                          setOpenSubMenu(null);
+                        }}
+                      >
+                        {child.title}
+                      </Link>
+                    );
+                  })}
                 </div>
               )}
             </div>

@@ -1,0 +1,109 @@
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { supabaseAdmin } from '@/utils/supabase';
+import { getStaffContextFromRequest, hasAtLeastRole } from '@/utils/staff';
+
+type TwitchChannelPayload = {
+  channel?: string;
+  label?: string;
+  badge?: string | null;
+  description?: string | null;
+  backgroundUrl?: string | null;
+  isActive?: boolean;
+  sortOrder?: number;
+};
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  if (!supabaseAdmin) {
+    return res
+      .status(500)
+      .json({ error: 'Service Supabase indisponible (service role manquant).' });
+  }
+  const admin = supabaseAdmin!;
+
+  const ctx = await getStaffContextFromRequest(req, res);
+  if (!hasAtLeastRole(ctx.role, 'admin')) {
+    return res.status(403).json({ error: 'Accès réservé aux admins.' });
+  }
+
+  if (req.method === 'GET') {
+    const limit = Math.max(1, Math.min(200, Number(req.query.limit) || 100));
+    const includeInactive = req.query.includeInactive === 'true';
+
+    let query = admin
+      .from('twitch_channels')
+      .select('*')
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (!includeInactive) {
+      query = query.eq('is_active', true);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('[admin/twitch-channels] list error', error);
+      return res
+        .status(500)
+        .json({ error: 'Impossible de charger les chaînes.' });
+    }
+
+    return res.status(200).json({ items: data ?? [] });
+  }
+
+  if (req.method === 'POST') {
+    const body = req.body as TwitchChannelPayload;
+    if (!body.channel || !body.label) {
+      return res
+        .status(400)
+        .json({ error: 'Channel et label sont obligatoires.' });
+    }
+
+    // Récupérer le prochain sort_order
+    const { data: maxOrder } = await admin
+      .from('twitch_channels')
+      .select('sort_order')
+      .order('sort_order', { ascending: false })
+      .limit(1)
+      .single();
+
+    const nextOrder = (maxOrder?.sort_order ?? 0) + 1;
+
+    const insertPayload = {
+      channel: body.channel.trim().toLowerCase(),
+      label: body.label.trim(),
+      badge: body.badge?.trim() || null,
+      description: body.description?.trim() || null,
+      background_url: body.backgroundUrl?.trim() || null,
+      is_active: body.isActive ?? true,
+      sort_order: body.sortOrder ?? nextOrder,
+    };
+
+    const { data, error } = await admin
+      .from('twitch_channels')
+      .insert(insertPayload)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[admin/twitch-channels] create error', error);
+      if (error.code === '23505') {
+        return res
+          .status(400)
+          .json({ error: 'Cette chaîne existe déjà.' });
+      }
+      return res
+        .status(500)
+        .json({ error: 'Impossible de créer la chaîne.', detail: error.message });
+    }
+
+    return res.status(201).json(data);
+  }
+
+  res.setHeader('Allow', 'GET,POST');
+  return res.status(405).json({ error: 'Method not allowed' });
+}
