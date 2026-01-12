@@ -1,440 +1,278 @@
+import { useEffect, useState } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
+import Image from 'next/image';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
+import Button from '@/components/Buttons/button';
 
-type TimelineItem = {
-  year: string;
+type MediaType = 'comic' | 'story' | 'music' | 'screenshot';
+
+type BlizzardMedia = {
+  id: string;
   title: string;
-  description: string;
-  imageUrl: string;
-  videoUrl?: string;
+  type: MediaType;
+  category: string | null;
+  link: string;
+  thumbnail_url: string | null;
+  description: string | null;
+  parts: number;
 };
 
-type Faction = {
-  name: string;
-  summary: string;
-  keyMembers: string[];
-  alignment: 'Bienveillant' | 'Neutre' | 'Hostile';
+const MEDIA_SOURCE = 'https://overwatch.blizzard.com/fr-fr/media/';
+
+const TYPE_CONFIG: Record<
+  MediaType,
+  {
+    label: string;
+    color: string;
+    bgColor: string;
+    borderColor: string;
+    hoverBorder: string;
+    shadow: string;
+  }
+> = {
+  comic: {
+    label: 'Bande dessinée',
+    color: 'text-purple-300',
+    bgColor: 'bg-purple-500/20',
+    borderColor: 'border-purple-500/30',
+    hoverBorder: 'hover:border-purple-400/60',
+    shadow: 'hover:shadow-[0_16px_40px_rgba(168,85,247,0.15)]',
+  },
+  story: {
+    label: 'Nouvelle',
+    color: 'text-amber-300',
+    bgColor: 'bg-amber-500/20',
+    borderColor: 'border-amber-500/30',
+    hoverBorder: 'hover:border-amber-400/60',
+    shadow: 'hover:shadow-[0_16px_40px_rgba(245,158,11,0.15)]',
+  },
+  music: {
+    label: 'Musique',
+    color: 'text-green-300',
+    bgColor: 'bg-green-500/20',
+    borderColor: 'border-green-500/30',
+    hoverBorder: 'hover:border-green-400/60',
+    shadow: 'hover:shadow-[0_16px_40px_rgba(34,197,94,0.15)]',
+  },
+  screenshot: {
+    label: 'Image',
+    color: 'text-cyan-300',
+    bgColor: 'bg-cyan-500/20',
+    borderColor: 'border-cyan-500/30',
+    hoverBorder: 'hover:border-cyan-400/60',
+    shadow: 'hover:shadow-[0_16px_40px_rgba(6,182,212,0.15)]',
+  },
 };
-
-type HeroDetail = {
-  name: string;
-  role: 'Tank' | 'Damage' | 'Support';
-  bio: string;
-  videoUrl: string;
-  imageUrl: string;
-};
-
-const TIMELINE: TimelineItem[] = [
-  {
-    year: '2040s',
-    title: 'Crise des Omniums',
-    description:
-      'Les usines d’IA “omniums” se retournent contre l’humanité, déclenchant une guerre mondiale.',
-    imageUrl: '/images/timeline-omnium.jpg',
-  },
-  {
-    year: '2040s',
-    title: 'Null Sector & King’s Row',
-    description:
-      'L’Omnium britannique engendre Null Sector. L’insurrection de King’s Row marque l’alliance entre omnics et humains opprimés.',
-    imageUrl: '/images/timeline-null-sector.jpg',
-  },
-  {
-    year: '2050',
-    title: 'Fondation d’Overwatch',
-    description:
-      'Jack Morrison et Gabriel Reyes prennent la tête d’une task force internationale pour vaincre les omniums.',
-    imageUrl: '/images/timeline-overwatch.jpg',
-  },
-  {
-    year: '2050s',
-    title: 'Reconquête & héroïsme',
-    description:
-      'Ligne bleue de Gibraltar, opération Anubis en Égypte, missions d’élite de Blackwatch pour désamorcer les menaces émergentes.',
-    imageUrl: '/images/timeline-anubis.jpg',
-  },
-  {
-    year: '2050-2060',
-    title: 'L’âge d’or',
-    description:
-      'Overwatch restaure la paix, mène des missions humanitaires et repousse les menaces globales.',
-    imageUrl: '/images/timeline-golden-age.jpg',
-  },
-  {
-    year: '2060',
-    title: 'Scandales internes',
-    description:
-      'Rivalités Morrison/Reyes, opérations opaques de Blackwatch, fuite de Moira. L’opinion publique se retourne.',
-    imageUrl: '/images/timeline-scandals.png',
-  },
-  {
-    year: '2060+',
-    title: 'Chute et disparition',
-    description:
-      'Scandales internes, explosion du QG suisse et dissolution officielle d’Overwatch par l’ONU.',
-    imageUrl: '/images/timeline-fall.jpg',
-  },
-  {
-    year: '2069',
-    title: 'Réveil des menaces',
-    description:
-      'Null Sector se réarme (attaque de Paris), Talon accentue ses frappes, Vishkar cherche à “reconstruire” l’ordre mondial.',
-    imageUrl: '/images/timeline-zero-hour.png',
-  },
-  {
-    year: 'Aujourd’hui',
-    title: 'Rappel des agents',
-    description:
-      'Winston lance un rappel. Les anciennes figures se reforment tandis que de nouvelles factions avancent leurs plans.',
-    imageUrl: '/images/timeline-recall.jpg',
-  },
-];
-
-const FACTIONS: Faction[] = [
-  {
-    name: 'Overwatch (Reformée)',
-    summary:
-      'Ancienne organisation de paix désormais clandestine. Winston, Tracer et Mercy rallient les vétérans pour contrer les nouvelles menaces.',
-    keyMembers: ['Winston', 'Tracer', 'Mercy', 'Reinhardt', 'Soldier: 76'],
-    alignment: 'Bienveillant',
-  },
-  {
-    name: 'Blackwatch',
-    summary:
-      "Bras secret d'Overwatch, initialement dirigé par Gabriel Reyes. Opérations covertes, méthodes brutales, loyautés fracturées.",
-    keyMembers: ['Reaper', 'Moira', 'Genji (ex)', 'McCree/Cassidy (ex)'],
-    alignment: 'Neutre',
-  },
-  {
-    name: 'Null Sector',
-    summary:
-      'Faction omnic militarisée née de l’oppression à King’s Row. Cherche à libérer les omnics par la force et des offensives coordonnées.',
-    keyMembers: ['Orisa (ex confrontée)', 'Ramattra (ancien leader Shambali)'],
-    alignment: 'Hostile',
-  },
-  {
-    name: 'Talon',
-    summary:
-      'Syndicat criminel tirant profit du chaos global. Manipule conflits et attaques ciblées pour asseoir son influence.',
-    keyMembers: ['Doomfist', 'Reaper', 'Widowmaker', 'Sombra', 'Moira'],
-    alignment: 'Hostile',
-  },
-  {
-    name: 'Vishkar / LumériCo',
-    summary:
-      'Conglomérats techno-architecturaux imposant des “solutions” de reconstruction. Exploitent la main-d’œuvre omnic et suscitent la résistance.',
-    keyMembers: ['Symmetra (agent Vishkar)', 'Sancha (LumériCo)'],
-    alignment: 'Neutre',
-  },
-  {
-    name: 'Shambali',
-    summary:
-      'Moines omniacs prônant la paix homme-omnic. Guidés par Zenyatta et feu Tekhartha Mondatta.',
-    keyMembers: ['Zenyatta', 'Ramattra (exilé)'],
-    alignment: 'Neutre',
-  },
-  {
-    name: 'Junkers & indépendants',
-    summary:
-      'Mercenaires, bricoleurs et survivants du désert australien. Motivations souvent personnelles.',
-    keyMembers: ['Junker Queen', 'Junkrat', 'Roadhog'],
-    alignment: 'Neutre',
-  },
-];
-
-const HEROES: HeroDetail[] = [
-  {
-    name: 'Tracer',
-    role: 'Damage',
-    bio: "Pilote d’essai victime d’un accident temporel, stabilisée par Winston. Symbole d’Overwatch, toujours prête à “remettre les pendules à l’heure”.",
-    videoUrl: 'https://www.youtube.com/@OverwatchFR/search?query=Tracer',
-    imageUrl: '/images/hero-tracer.jpg',
-  },
-  {
-    name: 'Reinhardt',
-    role: 'Tank',
-    bio: 'Chevalier-crusader en armure, défenseur du code d’honneur d’Overwatch. Porte le marteau Fulmination et le bouclier d’énergie sur le front.',
-    videoUrl: 'https://www.youtube.com/@OverwatchFR/search?query=Reinhardt',
-    imageUrl: '/images/hero-reinhardt.jpg',
-  },
-  {
-    name: 'Ana',
-    role: 'Support',
-    bio: 'Co-fondatrice d’Overwatch, sniper d’élite. Protége sa fille Pharah depuis l’ombre et endort les menaces d’une fléchette.',
-    videoUrl: 'https://www.youtube.com/@OverwatchFR/search?query=Ana',
-    imageUrl: '/images/hero-ana.jpg',
-  },
-  {
-    name: 'Sojourn',
-    role: 'Damage',
-    bio: "Ancienne capitaine d’Overwatch Canada. Implantes cybernétiques, railgun, rigueur tactique. Rappelle l’équipe pour contrer Null Sector.",
-    videoUrl: 'https://www.youtube.com/@OverwatchFR/search?query=Sojourn',
-    imageUrl: '/images/hero-sojourn.jpg',
-  },
-  {
-    name: 'Mercy',
-    role: 'Support',
-    bio: 'Médecin prodige, pacifiste. Sa Valkyrie lui permet de soigner et ressusciter, même si ses idéaux l’ont opposée à certaines décisions d’Overwatch.',
-    videoUrl: 'https://www.youtube.com/@OverwatchFR/search?query=Mercy',
-    imageUrl: '/images/hero-mercy.jpg',
-  },
-  {
-    name: 'Genji',
-    role: 'Damage',
-    bio: 'Ninja cyborg sauvé par Mercy, apaisé par les Shambali. Trouve son équilibre entre humanité et métal.',
-    videoUrl: 'https://www.youtube.com/@OverwatchFR/search?query=Genji',
-    imageUrl: '/images/hero-genji.jpg',
-  },
-  {
-    name: 'Ramattra',
-    role: 'Tank',
-    bio: 'Moine omnic Shambali devenu leader radical de Null Sector. Alterne forme omnic et némésis pour protéger son peuple par tous les moyens.',
-    videoUrl: 'https://www.youtube.com/@OverwatchFR/search?query=Ramattra',
-    imageUrl: '/images/hero-ramattra.jpg',
-  },
-  {
-    name: 'Doomfist',
-    role: 'Damage',
-    bio: 'Stratège de Talon qui croit au “progrès par le conflit”. Son gantelet sème le chaos pour remodeler le monde.',
-    videoUrl: 'https://www.youtube.com/@OverwatchFR/search?query=Doomfist',
-    imageUrl: '/images/hero-doomfist.jpg',
-  },
-  {
-    name: 'D.Va',
-    role: 'Tank',
-    bio: 'Ancienne pro-gamer devenue pilote MEKA pour défendre la Corée contre les kaijus omniques. Stream ses exploits et inspire la jeune génération.',
-    videoUrl: 'https://www.youtube.com/@OverwatchFR/search?query=D.Va',
-    imageUrl: '/images/hero-dva.jpg',
-  },
-  {
-    name: 'Kiriko',
-    role: 'Support',
-    bio: 'Protectrice du clan Shimada, guidée par le renard Yōkai. Mélange talismans de soins et kunai précis.',
-    videoUrl: 'https://www.youtube.com/@OverwatchFR/search?query=Kiriko',
-    imageUrl: '/images/hero-kiriko.jpg',
-  },
-  {
-    name: 'Sombra',
-    role: 'Damage',
-    bio: 'Hackeuse de Talon obsédée par les “marionnettistes” mondiaux. Réseau, infiltration et EMP pour mettre à nu les secrets.',
-    videoUrl: 'https://www.youtube.com/@OverwatchFR/search?query=Sombra',
-    imageUrl: '/images/hero-sombra.jpg',
-  },
-  {
-    name: 'Orisa',
-    role: 'Tank',
-    bio: 'Gardiens d’oriisa conçue par Efi Oladele pour défendre Numbani. Ancre protectrice équipée de lance-fusion et javelot.',
-    videoUrl: 'https://www.youtube.com/@OverwatchFR/search?query=Orisa',
-    imageUrl: '/images/hero-orisa.jpg',
-  },
-  {
-    name: 'Cassidy',
-    role: 'Damage',
-    bio: 'Ex-Blackwatch devenu justicier errant. Six coups précis, grenade collante et flair de pistolero pour régler les comptes.',
-    videoUrl: 'https://www.youtube.com/@OverwatchFR/search?query=Cassidy',
-    imageUrl: '/images/hero-cassidy.jpg',
-  },
-  {
-    name: 'Junker Queen',
-    role: 'Tank',
-    bio: 'Chef des Junkers de Junkertown, charismatique et impitoyable. Hache, fusil anti-émeute et commandement brutal.',
-    videoUrl: 'https://www.youtube.com/@OverwatchFR/search?query=Junker%20Queen',
-    imageUrl: '/images/hero-junker-queen.jpg',
-  },
-  {
-    name: 'Widowmaker',
-    role: 'Damage',
-    bio: 'Sniper de Talon, jadis Amélie Lacroix. Conditionnement neural lui a glacé le cœur pour en faire l’assassin parfait.',
-    videoUrl: 'https://www.youtube.com/@OverwatchFR/search?query=Widowmaker',
-    imageUrl: '/images/hero-widowmaker.jpg',
-  },
-];
 
 export default function LorePage() {
+  const [media, setMedia] = useState<BlizzardMedia[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'all' | MediaType>('all');
+
+  useEffect(() => {
+    fetch('/api/blizzard-media?limit=50')
+      .then((res) => res.json())
+      .then((data) => {
+        setMedia(data.items || []);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  const renderSkeleton = (count: number) => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {[...Array(count)].map((_, i) => (
+        <div
+          key={i}
+          className="animate-pulse rounded-2xl border border-white/10 bg-white/5 overflow-hidden"
+        >
+          <div className="h-44 bg-white/10" />
+          <div className="p-5 space-y-3">
+            <div className="h-3 w-20 rounded bg-white/10" />
+            <div className="h-5 w-3/4 rounded bg-white/10" />
+            <div className="h-4 w-full rounded bg-white/10" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderMediaCard = (item: BlizzardMedia) => {
+    const config = TYPE_CONFIG[item.type];
+
+    return (
+      <Link
+        key={item.id}
+        href={item.link}
+        target="_blank"
+        rel="noreferrer noopener"
+        className={`group relative flex flex-col rounded-2xl border ${config.borderColor} bg-gradient-to-br from-neutral-900/80 to-neutral-950/90 overflow-hidden transition ${config.hoverBorder} ${config.shadow}`}
+      >
+        {item.thumbnail_url && (
+          <div className="relative h-44 overflow-hidden">
+            <Image
+              src={item.thumbnail_url}
+              alt={item.title}
+              fill
+              className="object-cover transition group-hover:scale-105"
+              unoptimized
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-neutral-900 via-transparent to-transparent" />
+            {item.parts > 1 && (
+              <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-black/60 text-xs text-white font-medium backdrop-blur-sm">
+                {item.parts} parties
+              </div>
+            )}
+          </div>
+        )}
+        <div className="p-5 flex flex-col flex-1">
+          <div className="flex items-center justify-between gap-3 text-xs">
+            <span
+              className={`px-2.5 py-1 rounded-full ${config.bgColor} ${config.color} font-medium uppercase tracking-wide`}
+            >
+              {config.label}
+            </span>
+            {item.category && item.category !== config.label && (
+              <span className="text-neutral-400">{item.category}</span>
+            )}
+          </div>
+          <h3 className="mt-4 text-lg font-semibold text-white group-hover:text-white/90 transition line-clamp-2">
+            {item.title}
+          </h3>
+          {item.description && (
+            <p className="mt-3 text-sm text-neutral-300 leading-relaxed line-clamp-3">
+              {item.description}
+            </p>
+          )}
+          <div
+            className={`mt-auto pt-4 flex items-center gap-2 text-sm ${config.color} transition`}
+          >
+            <span>
+              {item.type === 'comic'
+                ? 'Lire la BD'
+                : item.type === 'story'
+                  ? 'Lire la nouvelle'
+                  : item.type === 'music'
+                    ? 'Écouter'
+                    : 'Voir les images'}
+            </span>
+            <span className="transition transform group-hover:translate-x-1">
+              →
+            </span>
+          </div>
+        </div>
+      </Link>
+    );
+  };
+
+  const filteredItems =
+    activeTab === 'all' ? media : media.filter((m) => m.type === activeTab);
+
+  // Compter par type
+  const counts = media.reduce(
+    (acc, item) => {
+      acc[item.type] = (acc[item.type] || 0) + 1;
+      return acc;
+    },
+    {} as Record<MediaType, number>
+  );
+
+  const tabs: { key: 'all' | MediaType; label: string }[] = [
+    { key: 'all', label: 'Tout' },
+    { key: 'comic', label: 'BD' },
+    { key: 'story', label: 'Nouvelles' },
+    { key: 'music', label: 'Musique' },
+    { key: 'screenshot', label: 'Images' },
+  ];
+
   return (
-    <div className="min-h-screen bg-neutral-950 text-white pb-20">
+    <>
       <Head>
-        <title>Lore Overwatch | OW Women&apos;s Cup</title>
+        <title>Lore & Médias Overwatch 2 | OW World Cup</title>
         <meta
           name="description"
-          content="Résumé du lore d’Overwatch : crise omnium, création d’Overwatch, chute et factions actuelles."
+          content="Découvrez l'univers d'Overwatch 2 : bandes dessinées, nouvelles, musiques et images officielles de Blizzard."
         />
       </Head>
 
-      <div className="container mx-auto max-w-6xl px-4 pt-24 space-y-10">
-        <div className="flex flex-col gap-3">
-          <Heading typeStyle="heading-md" className="text-gradient">
-            Lore Overwatch – repères essentiels
-          </Heading>
-          <Paragraph textColor="text-gray-200" className="max-w-3xl">
-            Une frise rapide pour situer les grands événements, suivie de fiches
-            synthétiques sur les principales factions. Un rappel concis pour
-            préparer vos casts et vos decks de présentation.
-          </Paragraph>
-        </div>
-
-        <section className="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">
-          <Heading typeStyle="heading-sm" className="text-white">
-            Frise chronologique
-          </Heading>
-          <div className="relative">
-            <div className="absolute left-[10px] top-0 bottom-0 w-[2px] bg-gradient-to-b from-blue-400/80 to-purple-500/60" />
-            <div className="space-y-4 ml-8">
-              {TIMELINE.map((item) => (
-                <div
-                  key={`${item.year}-${item.title}`}
-                  className="rounded-xl border border-white/10 bg-black/50 p-4 space-y-3"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={item.imageUrl}
-                    alt={item.title}
-                    className="w-full h-36 object-cover rounded-lg border border-white/10"
-                    loading="lazy"
-                  />
-                  <div className="flex items-center gap-3 text-sm text-blue-200">
-                    <span className="h-3 w-3 rounded-full bg-blue-400" />
-                    <span className="font-semibold">{item.year}</span>
-                    <span className="text-gray-400">· {item.title}</span>
-                  </div>
-                  <p className="mt-2 text-sm text-gray-200 leading-relaxed">
-                    {item.description}
-                  </p>
-                  {item.videoUrl && (
-                    <a
-                      href={item.videoUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-2 text-xs text-amber-200 hover:text-amber-100"
-                    >
-                      Voir la vidéo liée ↗
-                    </a>
-                  )}
-                </div>
-              ))}
+      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950">
+        <div className="container mx-auto px-4 pt-28 pb-16">
+          {/* Header */}
+          <div className="text-center mb-12">
+            <div className="inline-block text-lg text-white font-semibold border-b-2 border-purple-400 mb-4">
+              Univers & Lore
+            </div>
+            <Heading typeStyle="heading-lg" className="text-gradient">
+              Médias Overwatch 2
+            </Heading>
+            <div className="max-w-2xl mx-auto mt-4">
+              <Paragraph typeStyle="body-lg" textColor="text-neutral-300">
+                Plongez dans l&apos;univers d&apos;Overwatch avec les bandes
+                dessinées, nouvelles, musiques et visuels officiels de Blizzard.
+              </Paragraph>
             </div>
           </div>
-        </section>
 
-        <section className="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">
-          <Heading typeStyle="heading-sm" className="text-white">
-            Factions principales
-          </Heading>
-          <div className="grid gap-4 md:grid-cols-2">
-            {FACTIONS.map((f) => (
-              <div
-                key={f.name}
-                className="rounded-xl border border-white/10 bg-black/50 p-4 flex flex-col gap-2"
-              >
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">{f.name}</h3>
-                  <span
-                    className={`text-xs rounded-full px-3 py-1 border ${
-                      f.alignment === 'Bienveillant'
-                        ? 'border-emerald-400/60 text-emerald-200'
-                        : f.alignment === 'Hostile'
-                          ? 'border-red-400/60 text-red-200'
-                          : 'border-yellow-400/60 text-yellow-200'
-                    }`}
-                  >
-                    {f.alignment}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-200 leading-relaxed">
-                  {f.summary}
-                </p>
-                <p className="text-xs text-gray-400">
-                  Membres clés : {f.keyMembers.join(', ')}
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
+          {/* Tabs */}
+          <div className="flex flex-wrap justify-center gap-2 mb-10">
+            {tabs.map((tab) => {
+              const count =
+                tab.key === 'all' ? media.length : counts[tab.key] || 0;
+              const config = tab.key !== 'all' ? TYPE_CONFIG[tab.key] : null;
 
-        <section className="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">
-          <Heading typeStyle="heading-sm" className="text-white">
-            Héros en lumière (fiche + vidéo)
-          </Heading>
-          <div className="grid gap-4 md:grid-cols-2">
-            {HEROES.map((h) => (
-              <div
-                key={h.name}
-                className="rounded-xl border border-white/10 bg-black/50 p-4 flex flex-col gap-3"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={h.imageUrl}
-                  alt={h.name}
-                  className="w-full h-40 object-cover rounded-lg border border-white/10"
-                  loading="lazy"
-                />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.14em] text-gray-400">
-                      {h.role}
-                    </p>
-                    <h3 className="text-lg font-semibold text-white">
-                      {h.name}
-                    </h3>
-                  </div>
-                  <a
-                    href={h.videoUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs rounded-full bg-amber-400/90 text-black px-3 py-1 font-semibold hover:bg-amber-300 transition"
-                  >
-                    Voir la vidéo
-                  </a>
-                </div>
-                <p className="text-sm text-gray-200 leading-relaxed">{h.bio}</p>
-              </div>
-            ))}
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`px-5 py-2.5 rounded-xl text-sm font-medium transition ${
+                    activeTab === tab.key
+                      ? 'bg-white/10 text-white border border-white/20'
+                      : 'text-neutral-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  {tab.label}
+                  {!loading && count > 0 && (
+                    <span
+                      className={`ml-2 text-xs ${config ? config.color : 'text-neutral-500'}`}
+                    >
+                      ({count})
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
-        </section>
 
-        <section className="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">
-          <Heading typeStyle="heading-sm" className="text-white">
-            Conflits / lieux emblématiques
-          </Heading>
-          <div className="grid gap-4 md:grid-cols-3">
-            {[
-              {
-                title: 'King’s Row (Londres)',
-                desc: 'Bastion de Null Sector et symbole de la lutte omnic-humaine.',
-                image: '/images/location-kings-row.png',
-              },
-              {
-                title: 'Temple d’Anubis (Égypte)',
-                desc: 'Site d’IA interdit, surveillé par Helix Security. Opération majeure d’Overwatch.',
-                image: '/images/location-anubis.png',
-              },
-              {
-                title: 'Numbani',
-                desc: 'Ville modèle homme-omnic, prise pour cible par Doomfist et Talon.',
-                image: '/images/location-numbani.png',
-              },
-            ].map((loc) => (
-              <div
-                key={loc.title}
-                className="rounded-xl border border-white/10 bg-black/50 p-3 space-y-2"
+          {/* Content */}
+          {loading ? (
+            renderSkeleton(6)
+          ) : filteredItems.length === 0 ? (
+            <div className="text-center py-20">
+              <Paragraph textColor="text-neutral-400" className="text-lg">
+                Aucun média disponible pour le moment.
+              </Paragraph>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredItems.map((item) => renderMediaCard(item))}
+            </div>
+          )}
+
+          {/* Link to Blizzard */}
+          <div className="mt-16 flex justify-center">
+            <Link href={MEDIA_SOURCE} target="_blank" rel="noreferrer">
+              <Button
+                type="button"
+                className="px-6 py-3 bg-purple-600 hover:bg-purple-500"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={loc.image}
-                  alt={loc.title}
-                  className="w-full h-28 object-cover rounded-lg border border-white/10"
-                  loading="lazy"
-                />
-                <p className="text-sm font-semibold text-white">{loc.title}</p>
-                <p className="text-xs text-gray-300 leading-relaxed">
-                  {loc.desc}
-                </p>
-              </div>
-            ))}
+                Voir tous les médias sur Blizzard
+              </Button>
+            </Link>
           </div>
-        </section>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

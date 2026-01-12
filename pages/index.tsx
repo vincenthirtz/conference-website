@@ -2,13 +2,12 @@
 import Header from '@/components/Header/header';
 import About from '@/components/About/about';
 import Heading from '@/components/Typography/heading';
-import Subscription from '@/components/Form/subscription';
 import Contact from '@/components/Form/Contact';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
-import PatchNotesSection from '@/components/News/PatchNotesSection';
 import HomeNewsSection from '@/components/News/HomeNewsSection';
 import LiveTwitchSection from '@/components/Live/LiveTwitchSection';
 import AnnouncementsTicker from '@/components/Ads/AnnouncementsTicker';
+import ActualitesPreviewSection from '@/components/News/ActualitesPreviewSection';
 
 function Home() {
   return (
@@ -25,7 +24,7 @@ function Home() {
         <About />
       </div>
       <HomeNewsSection />
-      <PatchNotesSection />
+      <ActualitesPreviewSection />
       <div id="register" className="container mt-20 lg:mt-0">
         <div className="flex items-center flex-col justify-center">
           <LiveTwitchSection />

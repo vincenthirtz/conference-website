@@ -260,6 +260,78 @@ function DeployIcon({ className, fill }: Readonly<SVGTypes>): JSX.Element {
   );
 }
 
+function OverwatchNewsIcon({
+  className,
+  fill,
+}: Readonly<SVGTypes>): JSX.Element {
+  const stroke = fill || 'currentColor';
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      {/* Overwatch-inspired logo with news element */}
+      <circle
+        cx="12"
+        cy="12"
+        r="8.5"
+        fill="none"
+        stroke={stroke}
+        strokeWidth="1.6"
+      />
+      <circle
+        cx="12"
+        cy="12"
+        r="3"
+        fill="none"
+        stroke={stroke}
+        strokeWidth="1.6"
+      />
+      <path
+        d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2"
+        fill="none"
+        stroke={stroke}
+        strokeLinecap="round"
+        strokeWidth="1.4"
+      />
+    </svg>
+  );
+}
+
+function LoreMediaIcon({ className, fill }: Readonly<SVGTypes>): JSX.Element {
+  const stroke = fill || 'currentColor';
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      {/* Book/media icon for lore */}
+      <path
+        d="M4 4.5A2.5 2.5 0 0 1 6.5 2H18a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6.5A2.5 2.5 0 0 1 4 19.5v-15Z"
+        fill="none"
+        stroke={stroke}
+        strokeWidth="1.6"
+      />
+      <path
+        d="M4 17.5A2.5 2.5 0 0 1 6.5 15H20"
+        fill="none"
+        stroke={stroke}
+        strokeLinecap="round"
+        strokeWidth="1.6"
+      />
+      <path
+        d="M8 6h8M8 10h5"
+        fill="none"
+        stroke={stroke}
+        strokeLinecap="round"
+        strokeWidth="1.6"
+      />
+    </svg>
+  );
+}
+
 type FooterLink = {
   label: string;
   href: string;
@@ -271,6 +343,8 @@ const footerLinks: FooterLink[] = [
   { label: 'Règlement', href: '/rules', Icon: RulesIcon },
   { label: 'Nous contacter', href: '/contact', Icon: MailIcon },
   { label: 'Faire un don', href: '/don', Icon: DonationIcon },
+  { label: 'Actualités OW2', href: '/actualites', Icon: OverwatchNewsIcon },
+  // { label: 'Lore & Médias', href: '/lore', Icon: LoreMediaIcon },
   {
     label: 'Mentions légales',
     href: '/mentions-legales',
