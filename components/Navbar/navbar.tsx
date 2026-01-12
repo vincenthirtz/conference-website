@@ -280,6 +280,11 @@ function Navbar(): JSX.Element {
           ref: '/admin/comments',
           minRole: 'manager',
         },
+        {
+          title: 'Messages contact',
+          ref: '/admin/contact-submissions',
+          minRole: 'manager',
+        },
       ],
     },
     {

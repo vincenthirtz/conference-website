@@ -1,4 +1,3 @@
- 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 type Status = 'idle' | 'loading' | 'success' | 'error';
@@ -7,9 +6,6 @@ export default function Contact({ className = '' }: { className?: string }) {
   const [status, setStatus] = useState<Status>('idle');
   const [error, setError] = useState<string | null>(null);
   const liveRef = useRef<HTMLSpanElement | null>(null);
-
-  const formspreeId = process.env.NEXT_PUBLIC_FORMSPREE_ID; // e.g. "f/abcdwxyz"
-  const endpoint = formspreeId ? `https://formspree.io/${formspreeId}` : '';
 
   // --- Confetti (SSR-safe) ---
   const burstConfetti = useCallback(async () => {
@@ -41,14 +37,6 @@ export default function Contact({ className = '' }: { className?: string }) {
     e.preventDefault();
     setError(null);
 
-    if (!endpoint) {
-      setStatus('error');
-      setError(
-        'Formspree ID manquant. Définis NEXT_PUBLIC_FORMSPREE_ID dans .env.local'
-      );
-      return;
-    }
-
     const form = e.currentTarget;
     const data = new FormData(form);
 
@@ -61,23 +49,29 @@ export default function Contact({ className = '' }: { className?: string }) {
 
     setStatus('loading');
     try {
-      const res = await fetch(endpoint, {
+      const payload = {
+        name: data.get('name') as string,
+        email: data.get('email') as string,
+        subject: data.get('subject') as string,
+        message: data.get('message') as string,
+      };
+
+      const res = await fetch('/api/contact', {
         method: 'POST',
-        headers: { Accept: 'application/json' },
-        body: data,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
       });
       const json = await res.json();
 
-      if (res.ok) {
+      if (res.ok && json.ok) {
         setStatus('success');
         form.reset();
         liveRef.current?.focus();
       } else {
         setStatus('error');
-        setError(
-          json?.errors?.[0]?.message ||
-            'Une erreur est survenue. Réessaie plus tard.'
-        );
+        setError(json?.error || 'Une erreur est survenue. Réessaie plus tard.');
       }
     } catch {
       setStatus('error');
@@ -91,7 +85,7 @@ export default function Contact({ className = '' }: { className?: string }) {
         {/* Titre style site: gradient + sous-titre fin */}
         <div className="text-center">
           <p className="mt-4 text-gray-300">
-            Une question sur l’OW Women&apos;s Cup ? Laisse-nous un message, on
+            Une question sur l'OW Women&apos;s Cup ? Laisse-nous un message, on
             répond vite.
           </p>
         </div>
@@ -193,7 +187,7 @@ export default function Contact({ className = '' }: { className?: string }) {
               required
               className="mt-1 accent-blue-500"
             />
-            J’accepte que mes informations soient utilisées pour traiter ma
+            J'accepte que mes informations soient utilisées pour traiter ma
             demande. (Pas de revente.)
           </label>
 

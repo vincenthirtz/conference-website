@@ -112,6 +112,13 @@ const ADMIN_SHORTCUTS: Shortcut[] = [
     label: 'Commentaires – liste',
     description: 'Modération commentaires',
   },
+  // Contact
+  {
+    category: 'Contact',
+    href: '/admin/contact-submissions',
+    label: 'Messages de contact',
+    description: 'Gérer les demandes',
+  },
   // Comptes / demandes
   {
     category: 'Comptes',
