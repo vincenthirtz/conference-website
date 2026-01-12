@@ -1,14 +1,16 @@
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
-import { useSiteSetting } from '@/hooks/useSiteSettings';
 
 type Partner = {
+  id: string;
   name: string;
   description: string;
-  url?: string;
-  note?: string;
-  logo?: string;
-  pub?: boolean;
+  category: 'super' | 'major' | 'cultural';
+  logo_url?: string | null;
+  website_url?: string | null;
+  note?: string | null;
+  display_order: number;
 };
 
 type PartnerCategory = {
@@ -37,88 +39,67 @@ const highlights = [
   },
 ];
 
-function getPartnerCategories(contactMail: string): PartnerCategory[] {
-  return [
-    {
-      id: 'super',
-      title: 'Super partenaire',
-      summary:
-        "Le soutien titre qui porte l'édition (naming, présence live, activités principales, animations IRL).",
-      accent: 'from-amber-300 via-pink-400 to-purple-600',
-      partners: [
-        {
-          name: 'En recherche',
-          note: 'Super Partenaire 2026',
-          description: `Place réservée au partenaire principal de la prochaine édition. Construction d'un programme sur-mesure.`,
-        },
-      ],
-    },
-    {
-      id: 'major',
-      title: 'Partenaire majeur',
-      summary:
-        'Marques qui financent la production, le cashprize ou le matériel et apparaissent sur chaque émission.',
-      accent: 'from-indigo-300 via-purple-400 to-pink-400',
-      partners: [
-        {
-          name: 'Slots ouverts',
-          description:
-            'Visibilité cross-plateformes, encarts avant/après matchs, placement dans les interviews et sur le site.',
-        },
-        {
-          name: "Betty's Bar",
-          description:
-            'Soutien terrain et visibilité locale pour la prochaine édition, avec relais auprès du public esport.',
-          logo: 'https://dynamic-media-cdn.tripadvisor.com/media/photo-o/0c/ab/a2/6b/betty-s-bar.jpg?w=500&h=300&s=1',
-          note: 'Nouveau',
-          url: 'https://www.instagram.com/bettysbarlyon/?hl=fr',
-        },
-        {
-          name: 'Vous ?',
-          description:
-            'Contactez-nous pour choisir un soutien financier ou autre.',
-          url: contactMail,
-          pub: true,
-        },
-      ],
-    },
-    {
-      id: 'cultural',
-      title: 'Partenaire culturel',
-      summary:
-        'Institutions et acteurs culturels qui soutiennent la mise en avant des talents féminins et la médiation.',
-      accent: 'from-emerald-300 via-cyan-300 to-blue-500',
-      partners: [
-        {
-          name: 'Librairie à soi.e',
-          description:
-            "Déjà à nos côtés pour la médiation, la mise en avant des joueuses et l'animation d'ateliers.",
-          note: 'Nouveau',
-          logo: 'https://static.wixstatic.com/media/54f35a_ddaa971440884bba8f6e9b9b61ec2b0d~mv2.png/v1/crop/x_134,y_113,w_879,h_459/fill/w_250,h_130,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/Librairie%20%C3%A0%20soi_e%20Lyon%20f%C3%A9iminisme.png',
-          url: 'https://www.librairieasoie.com',
-        },
-        {
-          name: 'Collectifs & médias',
-          description:
-            'Relais éditorial, portraits de joueuses, ateliers média-training et journées de sensibilisation.',
-        },
-        {
-          name: 'Vous ?',
-          description:
-            'Contactez-nous pour choisir un soutien culturel ou autre.',
-          url: contactMail,
-          pub: true,
-        },
-      ],
-    },
-  ];
+const categoryMeta: Record<string, { title: string; summary: string; accent: string }> = {
+  super: {
+    title: 'Super partenaire',
+    summary:
+      "Le soutien titre qui porte l'édition (naming, présence live, activités principales, animations IRL).",
+    accent: 'from-amber-300 via-pink-400 to-purple-600',
+  },
+  major: {
+    title: 'Partenaire majeur',
+    summary:
+      'Marques qui financent la production, le cashprize ou le matériel et apparaissent sur chaque émission.',
+    accent: 'from-indigo-300 via-purple-400 to-pink-400',
+  },
+  cultural: {
+    title: 'Partenaire culturel',
+    summary:
+      'Institutions et acteurs culturels qui soutiennent la mise en avant des talents féminins et la médiation.',
+    accent: 'from-emerald-300 via-cyan-300 to-blue-500',
+  },
+};
+
+function groupPartnersByCategory(partners: Partner[]): PartnerCategory[] {
+  const categories: PartnerCategory[] = [];
+  const order = ['super', 'major', 'cultural'];
+
+  for (const catId of order) {
+    const meta = categoryMeta[catId];
+    const categoryPartners = partners.filter((p) => p.category === catId);
+    categories.push({
+      id: catId,
+      title: meta.title,
+      summary: meta.summary,
+      accent: meta.accent,
+      partners: categoryPartners,
+    });
+  }
+
+  return categories;
 }
 
 function PartnersPage() {
-  const { value: contactEmail } = useSiteSetting('contact_email');
+  const [partners, setPartners] = useState<Partner[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const contactMail = `mailto:${contactEmail}?subject=Partenariat%20OW%20Women%27s%20Cup%202026&body=Bonjour%20%21%0AJe%20souhaite%20discuter%20d%27un%20partenariat%20pour%20la%20prochaine%20%C3%A9dition.%0A`;
-  const partnerCategories = getPartnerCategories(contactMail);
+  useEffect(() => {
+    async function fetchPartners() {
+      try {
+        const res = await fetch('/api/partners');
+        const json = await res.json();
+        setPartners(json.items ?? []);
+      } catch (err) {
+        console.error('Error fetching partners', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchPartners();
+  }, []);
+
+  const partnerCategories = groupPartnersByCategory(partners);
+
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
       <div className="relative overflow-hidden">
@@ -142,12 +123,12 @@ function PartnersPage() {
           </p>
 
           <div className="mt-6 flex flex-wrap items-center gap-4">
-            <a
-              href={contactMail}
+            <Link
+              href="/partenaires/demande"
               className="rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:brightness-110"
             >
               Devenir partenaire
-            </a>
+            </Link>
             <Link
               href="/don"
               className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
@@ -218,7 +199,7 @@ function PartnersPage() {
                   <div className="grid gap-4 sm:grid-cols-2">
                     {category.partners.map((partner) => (
                       <div
-                        key={partner.name}
+                        key={partner.id}
                         className="rounded-2xl border border-white/10 bg-neutral-900/60 p-4 shadow-inner shadow-black/20"
                       >
                         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -231,11 +212,11 @@ function PartnersPage() {
                             </span>
                           )}
                         </div>
-                        {partner.logo && (
+                        {partner.logo_url && (
                           <div className="mt-3 flex items-center justify-center rounded-xl border border-white/10 bg-white/5 p-3">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
-                              src={partner.logo}
+                              src={partner.logo_url}
                               alt={`Logo ${partner.name}`}
                               className="max-h-14 w-auto object-contain drop-shadow"
                             />
@@ -244,19 +225,32 @@ function PartnersPage() {
                         <p className="mt-2 text-sm text-gray-300">
                           {partner.description}
                         </p>
-                        {partner.url && (
+                        {partner.website_url && (
                           <a
-                            href={partner.url}
+                            href={partner.website_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-purple-200 underline decoration-purple-400/60 underline-offset-4 transition hover:text-white"
                           >
-                            {partner.pub
-                              ? 'Rejoindre le programme'
-                              : 'Découvrir le partenaire'}
+                            Découvrir le partenaire
                             <span aria-hidden>↗</span>
                           </a>
                         )}
                       </div>
                     ))}
+                    {/* CTA to join */}
+                    <Link
+                      href="/partenaires/demande"
+                      className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/20 bg-white/[0.02] p-4 text-center transition hover:border-purple-400/50 hover:bg-white/[0.04]"
+                    >
+                      <span className="text-2xl mb-2">+</span>
+                      <span className="text-sm font-semibold text-purple-200">
+                        Rejoindre le programme
+                      </span>
+                      <span className="text-xs text-gray-400 mt-1">
+                        Devenir {category.title.toLowerCase()}
+                      </span>
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -277,12 +271,12 @@ function PartnersPage() {
             scène féminine.
           </p>
           <div className="mt-5 flex justify-center gap-3">
-            <a
-              href={contactMail}
+            <Link
+              href="/partenaires/demande"
               className="rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:brightness-110"
             >
-              Écrire à l&apos;équipe
-            </a>
+              Faire une demande
+            </Link>
             <Link
               href="/association"
               className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold text-white transition hover:bg-white/10"

@@ -5,6 +5,7 @@ const publicPaths = [
   { path: '/association', name: 'Association' },
   { path: '/tournoi', name: 'Tournoi' },
   { path: '/partenaires', name: 'Partenaires' },
+  { path: '/partenaires/demande', name: 'Demande de partenariat' },
   { path: '/don', name: 'Don' },
   { path: '/register', name: 'Inscription' },
   { path: '/contact', name: 'Contact' },
@@ -59,6 +60,9 @@ test.describe('Pages admin sans auth redirigent vers login', () => {
     '/admin/users/manage',
     '/admin/cast-members',
     '/admin/cast-members/new',
+    '/admin/partners',
+    '/admin/partners/new',
+    '/admin/partnership-requests',
   ];
 
   for (const path of adminPaths) {

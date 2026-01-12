@@ -119,6 +119,25 @@ const ADMIN_SHORTCUTS: Shortcut[] = [
     label: 'Messages de contact',
     description: 'Gérer les demandes',
   },
+  // Partenaires
+  {
+    category: 'Partenaires',
+    href: '/admin/partners',
+    label: 'Partenaires – liste',
+    description: 'Gérer les partenaires',
+  },
+  {
+    category: 'Partenaires',
+    href: '/admin/partners/new',
+    label: 'Ajouter un partenaire',
+    description: 'Nouveau partenaire',
+  },
+  {
+    category: 'Partenaires',
+    href: '/admin/partnership-requests',
+    label: 'Demandes de partenariat',
+    description: 'Formulaires reçus',
+  },
   // Comptes / demandes
   {
     category: 'Comptes',
