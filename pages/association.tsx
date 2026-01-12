@@ -1,7 +1,22 @@
 import Link from 'next/link';
+import type { GetServerSideProps } from 'next';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import Speaker from '@/components/Speaker/speaker';
-import speakers from '@/config/speakers.json';
+import { supabaseAdmin } from '@/utils/supabase';
+
+type CastMember = {
+  id: string;
+  name: string;
+  title: string | null;
+  image_url: string | null;
+  twitch_url: string | null;
+  city: string | null;
+  is_promo: boolean;
+};
+
+type Props = {
+  castMembers: CastMember[];
+};
 
 const pillars = [
   {
@@ -25,7 +40,7 @@ const commitments = [
   'Respect des règles officielles Overwatch 2 et du code de conduite Blizzard.',
   'Charte anti-harcèlement et procédure de signalement claire (staff dédié).',
   'Priorité aux opportunités pour les talents féminins : joueuses, casters, admins, graphistes.',
-  'Transparence budgétaire : rapports d’impact et allocation des dons par poste.',
+  "Transparence budgétaire : rapports d'impact et allocation des dons par poste.",
 ];
 
 const teamRoles = [
@@ -47,7 +62,18 @@ const teamRoles = [
   },
 ];
 
-function AssociationPage() {
+function AssociationPage({ castMembers }: Props) {
+  // Transform cast members to speaker format
+  const speakers = castMembers.map((member) => ({
+    id: member.id,
+    name: member.name,
+    title: member.title || '',
+    img: member.image_url || '/img/mic.jpg',
+    link: member.twitch_url || '/contact',
+    city: [member.city || ''],
+    pub: member.is_promo,
+  }));
+
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
       <div className="relative overflow-hidden">
@@ -215,6 +241,37 @@ function AssociationPage() {
     </div>
   );
 }
+
+export const getServerSideProps: GetServerSideProps<Props> = async () => {
+  if (!supabaseAdmin) {
+    return {
+      props: {
+        castMembers: [],
+      },
+    };
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('cast_members')
+    .select('id, name, title, image_url, twitch_url, city, is_promo')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true });
+
+  if (error) {
+    console.error('[association] Error fetching cast members:', error);
+    return {
+      props: {
+        castMembers: [],
+      },
+    };
+  }
+
+  return {
+    props: {
+      castMembers: data ?? [],
+    },
+  };
+};
 
 const associationSeo: SeoProps = {
   title: "L'association OW Women's Cup",

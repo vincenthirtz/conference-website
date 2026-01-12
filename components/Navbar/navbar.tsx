@@ -259,6 +259,23 @@ function Navbar(): JSX.Element {
           ],
         },
         {
+          title: 'Casteuses',
+          ref: '',
+          minRole: 'admin',
+          children: [
+            {
+              title: 'Liste des casteuses',
+              ref: '/admin/cast-members',
+              minRole: 'admin',
+            },
+            {
+              title: 'Ajouter une casteuse',
+              ref: '/admin/cast-members/new',
+              minRole: 'admin',
+            },
+          ],
+        },
+        {
           title: 'Commentaires',
           ref: '/admin/comments',
           minRole: 'manager',

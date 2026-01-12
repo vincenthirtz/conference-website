@@ -131,6 +131,19 @@ const ADMIN_SHORTCUTS: Shortcut[] = [
     label: 'Demandes joueurs / équipes',
     description: 'Valider ou refuser',
   },
+  // Production & Cast
+  {
+    category: 'Production & Cast',
+    href: '/admin/cast-members',
+    label: 'Casteuses – liste',
+    description: 'Gérer les casteuses',
+  },
+  {
+    category: 'Production & Cast',
+    href: '/admin/cast-members/new',
+    label: 'Ajouter une casteuse',
+    description: 'Nouvel ajout',
+  },
   // Logs / stats
   {
     category: 'Logs & Stats',

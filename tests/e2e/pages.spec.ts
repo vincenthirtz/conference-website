@@ -50,6 +50,8 @@ test.describe('Pages admin sans auth redirigent vers login', () => {
     '/admin/teams',
     '/admin/news',
     '/admin/users/manage',
+    '/admin/cast-members',
+    '/admin/cast-members/new',
   ];
 
   for (const path of adminPaths) {
