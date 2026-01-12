@@ -35,3 +35,12 @@ VALUES (
   'URL de la vidéo affichée dans la section "A propos" de la page d''accueil (YouTube ou MP4)'
 )
 ON CONFLICT (key) DO NOTHING;
+
+-- Insert default contact email
+INSERT INTO site_settings (key, value, description)
+VALUES (
+  'contact_email',
+  'owwomenscup@gmail.com',
+  'Email de contact principal affiché sur le site'
+)
+ON CONFLICT (key) DO NOTHING;

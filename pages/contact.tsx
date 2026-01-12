@@ -1,33 +1,45 @@
 import Link from 'next/link';
 import Contact from '@/components/Form/Contact';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
+import { useSiteSetting } from '@/hooks/useSiteSettings';
 
-const contactChannels = [
-  {
-    title: 'Email principal',
-    desc: 'Questions générales, inscriptions, suivi des demandes staff ou équipes.',
-    cta: {
-      label: 'owwomenscup@gmail.com',
-      href: 'mailto:owwomenscup@gmail.com?subject=Contact%20OW%20Women%27s%20Cup',
+type ContactChannel = {
+  title: string;
+  desc: string;
+  cta: {
+    label: string;
+    href: string;
+  };
+};
+
+function getContactChannels(contactEmail: string): ContactChannel[] {
+  return [
+    {
+      title: 'Email principal',
+      desc: 'Questions générales, inscriptions, suivi des demandes staff ou équipes.',
+      cta: {
+        label: contactEmail,
+        href: `mailto:${contactEmail}?subject=Contact%20OW%20Women%27s%20Cup`,
+      },
     },
-  },
-  {
-    title: 'Discord communautaire',
-    desc: 'Rejoins le serveur pour discuter avec le staff et la communauté.',
-    cta: {
-      label: 'Serveur Discord',
-      href: 'https://discord.gg/gERSsjC3Vd',
+    {
+      title: 'Discord communautaire',
+      desc: 'Rejoins le serveur pour discuter avec le staff et la communauté.',
+      cta: {
+        label: 'Serveur Discord',
+        href: 'https://discord.gg/gERSsjC3Vd',
+      },
     },
-  },
-  {
-    title: 'Partenariats & presse',
-    desc: 'Collaborations marque, médias ou bénévolat pro (graphisme, cast, prod).',
-    cta: {
-      label: 'Écrire au staff',
-      href: 'mailto:owwomenscup@gmail.com?subject=Partenariat%20OW%20Women%27s%20Cup',
+    {
+      title: 'Partenariats & presse',
+      desc: 'Collaborations marque, médias ou bénévolat pro (graphisme, cast, prod).',
+      cta: {
+        label: 'Écrire au staff',
+        href: `mailto:${contactEmail}?subject=Partenariat%20OW%20Women%27s%20Cup`,
+      },
     },
-  },
-];
+  ];
+}
 
 const helpPoints = [
   'Temps de réponse moyen : 24 à 48h hors périodes de tournoi en direct.',
@@ -36,6 +48,9 @@ const helpPoints = [
 ];
 
 function ContactPage() {
+  const { value: contactEmail } = useSiteSetting('contact_email');
+  const contactChannels = getContactChannels(contactEmail);
+
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
       <div className="relative overflow-hidden">
@@ -52,7 +67,7 @@ function ContactPage() {
             Nous contacter
           </h1>
           <p className="mx-auto mt-4 max-w-3xl text-lg text-gray-200">
-            Choisis le canal le plus rapide pour joindre l’équipe OW
+            Choisis le canal le plus rapide pour joindre l'équipe OW
             Women&apos;s Cup : email, Discord ou formulaire direct.
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
@@ -63,7 +78,7 @@ function ContactPage() {
               Ouvrir le formulaire
             </a>
             <a
-              href="mailto:owwomenscup@gmail.com?subject=Contact%20OW%20Women%27s%20Cup"
+              href={`mailto:${contactEmail}?subject=Contact%20OW%20Women%27s%20Cup`}
               className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
             >
               Écrire un email

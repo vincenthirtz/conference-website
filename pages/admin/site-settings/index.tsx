@@ -20,10 +20,18 @@ type Props = {
 
 const KNOWN_SETTINGS = [
   {
+    key: 'contact_email',
+    label: 'Email de contact',
+    description: 'Email de contact principal affiché sur le site (pages contact, mentions légales, etc.)',
+    placeholder: 'contact@example.com',
+    type: 'email',
+  },
+  {
     key: 'about_video_url',
     label: 'URL vidéo "A propos"',
     description: 'URL de la vidéo affichée dans la section "A propos" de la page d\'accueil (YouTube ou MP4)',
     placeholder: 'https://www.youtube.com/watch?v=...',
+    type: 'url',
   },
 ];
 

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Button from '@/components/Buttons/button';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
+import { useSiteSetting } from '@/hooks/useSiteSettings';
 
 const uses = [
   {
@@ -47,10 +48,11 @@ const tiers = [
   },
 ];
 
-const donationMail =
-  'mailto:owwomenscup@gmail.com?subject=Don%20pour%20l%27association%20OW%20Women%27s%20Cup&body=Bonjour%20%21%0AJe%20souhaite%20faire%20un%20don.%20Merci%20de%20m%27indiquer%20la%20marche%20%C3%A0%20suivre.%0A';
-
 function DonationPage() {
+  const { value: contactEmail } = useSiteSetting('contact_email');
+
+  const donationMail = `mailto:${contactEmail}?subject=Don%20pour%20l%27association%20OW%20Women%27s%20Cup&body=Bonjour%20%21%0AJe%20souhaite%20faire%20un%20don.%20Merci%20de%20m%27indiquer%20la%20marche%20%C3%A0%20suivre.%0A`;
+  const sponsorMail = `mailto:${contactEmail}?subject=Partenariat%20ou%20m%C3%A9c%C3%A9nat%20OW%20Women%27s%20Cup&body=Bonjour%20%21%0AJe%20souhaite%20discuter%20d%27un%20partenariat%20ou%20m%C3%A9c%C3%A9nat.%0A`;
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
       <div className="relative overflow-hidden">
@@ -212,11 +214,7 @@ function DonationPage() {
                     overlay
                     type="button"
                     className="mt-4 h-auto w-full justify-center rounded-lg border border-white/30 bg-white/10 px-4 py-3 text-sm font-semibold hover:bg-white/20"
-                    onClick={() =>
-                      window.location.assign(
-                        'mailto:owwomenscup@gmail.com?subject=Partenariat%20ou%20m%C3%A9c%C3%A9nat%20OW%20Women%27s%20Cup&body=Bonjour%20%21%0AJe%20souhaite%20discuter%20d%27un%20partenariat%20ou%20m%C3%A9c%C3%A9nat.%0A'
-                      )
-                    }
+                    onClick={() => window.location.assign(sponsorMail)}
                   >
                     Parler sponsoring
                   </Button>
@@ -242,7 +240,7 @@ function DonationPage() {
                 href={donationMail}
                 className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
               >
-                owwomenscup@gmail.com
+                {contactEmail}
               </a>
             </div>
           </div>

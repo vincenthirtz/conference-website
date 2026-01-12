@@ -21,7 +21,8 @@
       "@/styles/*": ["./styles/*"],
       "@/pages/*": ["./pages/*"],
       "@/config/*": ["./config/*"],
-      "@/components/*": ["./components/*"]
+      "@/components/*": ["./components/*"],
+      "@/hooks/*": ["./hooks/*"]
     }
   },
   "exclude": ["node_modules"],

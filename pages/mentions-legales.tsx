@@ -1,4 +1,5 @@
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
+import { useSiteSetting } from '@/hooks/useSiteSettings';
 
 const dataUses = [
   'Gestion des inscriptions et des comptes (joueuses, staff, bénévoles).',
@@ -15,6 +16,8 @@ const rights = [
 ];
 
 function MentionsLegalesPage() {
+  const { value: contactEmail } = useSiteSetting('contact_email');
+
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
       <div className="relative overflow-hidden">
@@ -37,7 +40,7 @@ function MentionsLegalesPage() {
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
             <a
-              href="mailto:owwomenscup@gmail.com?subject=Question%20mentions%20l%C3%A9gales"
+              href={`mailto:${contactEmail}?subject=Question%20mentions%20l%C3%A9gales`}
               className="rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:brightness-110"
             >
               Nous écrire
@@ -74,10 +77,10 @@ function MentionsLegalesPage() {
               <li>
                 Contact principal :{' '}
                 <a
-                  href="mailto:owwomenscup@gmail.com"
+                  href={`mailto:${contactEmail}`}
                   className="text-purple-200 underline decoration-purple-400/60 underline-offset-4 hover:text-white"
                 >
-                  owwomenscup@gmail.com
+                  {contactEmail}
                 </a>
                 .
               </li>
@@ -149,7 +152,7 @@ function MentionsLegalesPage() {
               <span>
                 Toute signalisation d’un contenu problématique ou d’un
                 dysfonctionnement peut être adressée à{' '}
-                <a href="mailto:owwomenscup@gmail.com">owwomenscup@gmail.com</a>
+                <a href={`mailto:${contactEmail}`}>{contactEmail}</a>
                 .
               </span>
             </li>
@@ -203,13 +206,13 @@ function MentionsLegalesPage() {
               <p className="mt-3 text-xs text-gray-300">
                 Exercez vos droits en écrivant à{' '}
                 <a
-                  href="mailto:owwomenscup@gmail.com"
+                  href={`mailto:${contactEmail}`}
                   className="underline decoration-purple-400/60 underline-offset-4 hover:text-white"
                 >
-                  owwomenscup@gmail.com
+                  {contactEmail}
                 </a>
                 . Les données sont conservées le temps strictement nécessaire à
-                l’organisation des événements.
+                l'organisation des événements.
               </p>
             </div>
           </div>
@@ -250,10 +253,10 @@ function MentionsLegalesPage() {
               Pour toute demande d’utilisation de contenus (partenariat, presse,
               médias), écrivez à{' '}
               <a
-                href="mailto:owwomenscup@gmail.com"
+                href={`mailto:${contactEmail}`}
                 className="underline decoration-purple-400/60 underline-offset-4 hover:text-white"
               >
-                owwomenscup@gmail.com
+                {contactEmail}
               </a>
               .
             </li>

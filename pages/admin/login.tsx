@@ -8,9 +8,11 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
 import { supabaseClient } from '@/utils/supabase';
+import { useSiteSetting } from '@/hooks/useSiteSettings';
 
 const AdminLoginPage = () => {
   const router = useRouter();
+  const { value: contactEmail } = useSiteSetting('contact_email');
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -318,7 +320,7 @@ const AdminLoginPage = () => {
               >
                 Besoin d&apos;un accès staff ?{' '}
                 <span className="text-gray-200">
-                  Contacte l&apos;équipe à owwomenscup@gmail.com.
+                  Contacte l&apos;équipe à {contactEmail}.
                 </span>
                 {'  '}
                 <Link

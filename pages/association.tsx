@@ -3,6 +3,7 @@ import type { GetServerSideProps } from 'next';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import Speaker from '@/components/Speaker/speaker';
 import { supabaseAdmin } from '@/utils/supabase';
+import { useSiteSetting } from '@/hooks/useSiteSettings';
 
 type CastMember = {
   id: string;
@@ -63,6 +64,8 @@ const teamRoles = [
 ];
 
 function AssociationPage({ castMembers }: Props) {
+  const { value: contactEmail } = useSiteSetting('contact_email');
+
   // Transform cast members to speaker format
   const speakers = castMembers.map((member) => ({
     id: member.id,
@@ -224,10 +227,10 @@ function AssociationPage({ castMembers }: Props) {
           </p>
           <div className="mt-5 flex justify-center gap-3">
             <a
-              href="mailto:owwomenscup@gmail.com?subject=Rejoindre%20l%27association%20OW%20Women%27s%20Cup"
+              href={`mailto:${contactEmail}?subject=Rejoindre%20l%27association%20OW%20Women%27s%20Cup`}
               className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
             >
-              owwomenscup@gmail.com
+              {contactEmail}
             </a>
             <Link
               href="/don"

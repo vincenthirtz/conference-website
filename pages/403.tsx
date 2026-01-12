@@ -1,7 +1,10 @@
 import Head from 'next/head';
 import Link from 'next/link';
+import { useSiteSetting } from '@/hooks/useSiteSettings';
 
 export default function ForbiddenPage() {
+  const { value: contactEmail } = useSiteSetting('contact_email');
+
   return (
     <>
       <Head>
@@ -36,10 +39,10 @@ export default function ForbiddenPage() {
           <p className="text-xs text-gray-500 mt-8">
             Besoin d&apos;aide ?{' '}
             <a
-              href="mailto:owwomenscup@gmail.com"
+              href={`mailto:${contactEmail}`}
               className="text-purple-300 hover:text-purple-200 underline"
             >
-              owwomenscup@gmail.com
+              {contactEmail}
             </a>
           </p>
         </div>
