@@ -45,21 +45,21 @@ test.describe('Formulaire d\'inscription', () => {
 
     await page.click('button[type="submit"]');
 
-    // Devrait afficher une erreur de correspondance
+    // Devrait afficher une erreur de correspondance (message spécifique)
     await expect(
-      page.getByText(/mot de passe|password|correspondent|match/i)
+      page.getByText('Les mots de passe ne correspondent pas.')
     ).toBeVisible({ timeout: 5000 });
   });
 
-  test('Basculer vers le formulaire de connexion', async ({ page }) => {
+  test('Lien vers la page de connexion est présent', async ({ page }) => {
     await page.goto('/register');
 
-    // Cliquer sur le lien de connexion
-    await page.click('text=Se connecter');
+    // Le lien vers la page de connexion doit être visible
+    const loginLink = page.getByRole('link', { name: 'Connexion' });
+    await expect(loginLink).toBeVisible({ timeout: 5000 });
 
-    // Le formulaire de connexion devrait apparaître
-    await expect(page.locator('input#loginEmail')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('input#loginPassword')).toBeVisible();
+    // Vérifier que le lien pointe vers /admin/login
+    await expect(loginLink).toHaveAttribute('href', '/admin/login');
   });
 });
 

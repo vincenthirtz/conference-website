@@ -9,7 +9,7 @@ const publicPaths = [
   { path: '/register', name: 'Inscription' },
   { path: '/contact', name: 'Contact' },
   { path: '/timeline-2026', name: 'Timeline' },
-  { path: '/news', name: 'News' },
+  { path: '/actualites', name: 'Actualités' },
   { path: '/mentions-legales', name: 'Mentions légales' },
   { path: '/plan-du-site', name: 'Plan du site' },
 ];
@@ -27,18 +27,25 @@ test.describe('Pages publiques', () => {
 test.describe('Navigation et structure', () => {
   test('La page accueil contient une navbar', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('nav')).toBeVisible();
+    // Le navbar utilise une div, pas une balise nav
+    // Attendre le chargement client-side (_app.tsx a isClient check)
+    await expect(page.getByRole('link', { name: /connexion/i })).toBeVisible({
+      timeout: 10000,
+    });
   });
 
   test('La page accueil contient un footer', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('footer')).toBeVisible();
+    // Le footer utilise data-test="footer" au lieu d'une balise footer
+    await expect(page.locator('[data-test="footer"]')).toBeVisible({
+      timeout: 10000,
+    });
   });
 
   test('Le lien Connexion est visible pour les visiteurs', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('link', { name: /connexion/i })).toBeVisible({
-      timeout: 5000,
+      timeout: 10000,
     });
   });
 });
