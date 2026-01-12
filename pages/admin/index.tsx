@@ -1,6 +1,6 @@
 import Head from 'next/head';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabaseClient } from '@/utils/supabase';
 import { withStaffPage } from '@/utils/staff';
 
@@ -25,178 +25,6 @@ type Props = {
 };
 
 export const getServerSideProps = withStaffPage('caster');
-
-type Shortcut = {
-  category: string;
-  href: string;
-  label: string;
-  description: string;
-};
-
-const ADMIN_SHORTCUTS: Shortcut[] = [
-  // Base
-  {
-    category: 'Général',
-    href: '/admin',
-    label: 'Dashboard',
-    description: 'Accueil staff',
-  },
-  // Tournois
-  {
-    category: 'Tournois',
-    href: '/admin/tournaments',
-    label: 'Tournois – liste',
-    description: 'Voir/éditer les tournois',
-  },
-  {
-    category: 'Tournois',
-    href: '/admin/tournaments/create',
-    label: 'Créer un tournoi',
-    description: 'Nouveau tournoi',
-  },
-  // Équipes
-  {
-    category: 'Équipes',
-    href: '/admin/teams',
-    label: 'Équipes – liste',
-    description: 'Gérer les équipes',
-  },
-  {
-    category: 'Équipes',
-    href: '/admin/teams/new',
-    label: 'Créer une équipe',
-    description: 'Ajouter une équipe',
-  },
-  {
-    category: 'Équipes',
-    href: '/admin/teams/add-member',
-    label: 'Ajouter membre équipe',
-    description: 'Staff: ajouter un membre',
-  },
-  {
-    category: 'Équipes',
-    href: '/admin/teams/my',
-    label: 'Gérer mon équipe (capitaine)',
-    description: 'Espace capitaine',
-  },
-  // Annonces
-  {
-    category: 'Annonces',
-    href: '/admin/announcements',
-    label: 'Bandeau pub – liste',
-    description: 'Annonces défilantes',
-  },
-  {
-    category: 'Annonces',
-    href: '/admin/announcements/new',
-    label: 'Créer une annonce',
-    description: 'Nouvelle annonce',
-  },
-  // News
-  {
-    category: 'News',
-    href: '/admin/news',
-    label: 'News – liste',
-    description: 'Gérer les articles',
-  },
-  {
-    category: 'News',
-    href: '/admin/news/new',
-    label: 'Créer une news',
-    description: 'Nouvel article',
-  },
-  // Commentaires
-  {
-    category: 'Commentaires',
-    href: '/admin/comments',
-    label: 'Commentaires – liste',
-    description: 'Modération commentaires',
-  },
-  // Contact
-  {
-    category: 'Contact',
-    href: '/admin/contact-submissions',
-    label: 'Messages de contact',
-    description: 'Gérer les demandes',
-  },
-  // Partenaires
-  {
-    category: 'Partenaires',
-    href: '/admin/partners',
-    label: 'Partenaires – liste',
-    description: 'Gérer les partenaires',
-  },
-  {
-    category: 'Partenaires',
-    href: '/admin/partners/new',
-    label: 'Ajouter un partenaire',
-    description: 'Nouveau partenaire',
-  },
-  {
-    category: 'Partenaires',
-    href: '/admin/partnership-requests',
-    label: 'Demandes de partenariat',
-    description: 'Formulaires reçus',
-  },
-  // Comptes / demandes
-  {
-    category: 'Comptes',
-    href: '/admin/users/manage',
-    label: 'Gérer les utilisateurs',
-    description: 'Rôles & accès',
-  },
-  {
-    category: 'Comptes',
-    href: '/admin/users/new',
-    label: 'Créer un utilisateur',
-    description: 'Ajout manuel',
-  },
-  {
-    category: 'Comptes',
-    href: '/admin/demandes',
-    label: 'Demandes joueurs / équipes',
-    description: 'Valider ou refuser',
-  },
-  // Production & Cast
-  {
-    category: 'Production & Cast',
-    href: '/admin/cast-members',
-    label: 'Casteuses – liste',
-    description: 'Gérer les casteuses',
-  },
-  {
-    category: 'Production & Cast',
-    href: '/admin/cast-members/new',
-    label: 'Ajouter une casteuse',
-    description: 'Nouvel ajout',
-  },
-  // Logs / stats
-  {
-    category: 'Logs & Stats',
-    href: '/admin/logs',
-    label: 'Logs staff',
-    description: 'Journal actions',
-  },
-  {
-    category: 'Logs & Stats',
-    href: '/admin/stats/teams',
-    label: 'Stats équipes',
-    description: 'Performances équipes',
-  },
-  {
-    category: 'Logs & Stats',
-    href: '/admin/stats/maps',
-    label: 'Stats maps',
-    description: 'Performances par carte',
-  },
-  // Configuration
-  {
-    category: 'Configuration',
-    href: '/admin/site-settings',
-    label: 'Paramètres du site',
-    description: 'Vidéo, URLs, etc.',
-  },
-];
 
 function AdminProfilePage({ staff }: Props) {
   const [profile, setProfile] = useState<StaffProfile | null>(null);
@@ -383,16 +211,6 @@ function AdminProfilePage({ staff }: Props) {
     ? new Date(profile.created_at).toLocaleString()
     : '—';
 
-  const shortcutsByCategory = useMemo(() => {
-    const grouped = new Map<string, Shortcut[]>();
-    ADMIN_SHORTCUTS.forEach((s) => {
-      const list = grouped.get(s.category) || [];
-      list.push(s);
-      grouped.set(s.category, list);
-    });
-    return Array.from(grouped.entries());
-  }, []);
-
   return (
     <>
       <Head>
@@ -408,7 +226,7 @@ function AdminProfilePage({ staff }: Props) {
               Mon profil
             </h1>
             <p className="text-sm text-neutral-400 mt-2">
-              Résumé de ton compte staff et raccourcis utiles.
+              Résumé de ton compte staff.
             </p>
           </div>
 
@@ -446,10 +264,8 @@ function AdminProfilePage({ staff }: Props) {
             </div>
           )}
 
-          <div className="grid gap-6 lg:grid-cols-3">
-            {/* Left Column - Profile Info */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Profile Card */}
+          <div className="space-y-6 max-w-3xl">
+            {/* Profile Card */}
               <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
                 <div className="flex items-center justify-between gap-4 flex-wrap mb-6">
                   <div className="flex items-center gap-4">
@@ -527,48 +343,7 @@ function AdminProfilePage({ staff }: Props) {
                 )}
               </section>
 
-              {/* Shortcuts Section */}
-              <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
-                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <svg
-                    className="w-5 h-5 text-neutral-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-                    />
-                  </svg>
-                  Gestion
-                </h2>
-                <div className="space-y-5">
-                  {shortcutsByCategory.map(([category, list]) => (
-                    <div key={category} className="space-y-2">
-                      <h3 className="text-sm font-semibold text-neutral-400">
-                        {category}
-                      </h3>
-                      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                        {list.map((s) => (
-                          <Shortcut
-                            key={s.href}
-                            href={s.href}
-                            label={s.label}
-                            description={s.description}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </div>
-
-            {/* Right Column - Edit Profile */}
-            <div className="space-y-6">
+              {/* Edit Profile */}
               <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
                 <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                   <svg
@@ -832,7 +607,6 @@ function AdminProfilePage({ staff }: Props) {
                   </div>
                 </div>
               </section>
-            </div>
           </div>
         </div>
       </div>
@@ -841,43 +615,6 @@ function AdminProfilePage({ staff }: Props) {
 }
 
 export default AdminProfilePage;
-
-function Shortcut({
-  href,
-  label,
-  description,
-}: {
-  href: string;
-  label: string;
-  description: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-neutral-900/50 hover:bg-neutral-700/50 transition-colors group"
-    >
-      <div>
-        <div className="font-medium text-sm group-hover:text-white transition-colors">
-          {label}
-        </div>
-        <div className="text-xs text-neutral-500">{description}</div>
-      </div>
-      <svg
-        className="w-4 h-4 text-neutral-500 group-hover:text-white transition-colors flex-shrink-0"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M9 5l7 7-7 7"
-        />
-      </svg>
-    </Link>
-  );
-}
 
 function formatRoleLabel(role: string) {
   switch (role) {

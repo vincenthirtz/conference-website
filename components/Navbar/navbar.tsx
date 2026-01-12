@@ -211,6 +211,28 @@ function Navbar(): JSX.Element {
       ],
     },
     {
+      title: 'Gestion partenaires',
+      ref: '',
+      minRole: 'admin',
+      children: [
+        {
+          title: 'Partenaires – liste',
+          ref: '/admin/partners',
+          minRole: 'admin',
+        },
+        {
+          title: 'Ajouter un partenaire',
+          ref: '/admin/partners/new',
+          minRole: 'admin',
+        },
+        {
+          title: 'Demandes de partenariat',
+          ref: '/admin/partnership-requests',
+          minRole: 'admin',
+        },
+      ],
+    },
+    {
       title: 'Contenu',
       ref: '',
       minRole: 'manager',

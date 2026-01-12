@@ -128,6 +128,7 @@ export default function DefaultSeo({
       <meta name="theme-color" content="#0E0A1F" />
       <meta name="msapplication-TileColor" content="#0E0A1F" />
       <link rel="icon" href="/favicon.ico" />
+      <link rel="manifest" href="/site.webmanifest" />
 
       {/* JSON-LD Structured Data - only on homepage to avoid duplication */}
       {isHomePage && (

@@ -1,0 +1,24 @@
+{
+  "name": "OW Women's Cup",
+  "short_name": "OWWC",
+  "description": "Tournoi Overwatch et communauté 100% féminine : staff inclusif, matchs commentés et actions pour rendre l'esport plus accessible.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0E0A1F",
+  "theme_color": "#0E0A1F",
+  "orientation": "portrait-primary",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "/img/logos/2025-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ]
+}
