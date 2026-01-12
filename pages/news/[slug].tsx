@@ -1,11 +1,20 @@
 import Head from 'next/head';
 import { GetServerSideProps } from 'next';
-import Paragraph from '@/components/Typography/paragraph';
 import Heading from '@/components/Typography/heading';
 import Button from '@/components/Buttons/button';
 import Link from 'next/link';
 import { supabaseAdmin, getServerClient } from '@/utils/supabase';
 import { useEffect, useState } from 'react';
+
+const SITE_NAME = "OW Women's Cup";
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || '';
+
+function toAbsoluteUrl(path: string | null | undefined): string | undefined {
+  if (!path) return undefined;
+  if (path.startsWith('http')) return path;
+  if (!BASE_URL) return path;
+  return `${BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
+}
 
 const formatTagLabel = (value?: string | null) => {
   if (!value) return null;
@@ -17,11 +26,13 @@ const formatTagLabel = (value?: string | null) => {
 type NewsPageProps = {
   title: string;
   content: string;
+  slug?: string | null;
   tag?: string | null;
   excerpt?: string | null;
   imageUrl?: string | null;
   publishedAt?: string | null;
   createdAt?: string | null;
+  updatedAt?: string | null;
   newsId?: string | null;
   error?: string | null;
 };
@@ -61,11 +72,13 @@ export const getServerSideProps: GetServerSideProps<NewsPageProps> = async (
     props: {
       title: data.title || '',
       content: data.content || '',
+      slug: data.slug || null,
       tag: data.tag || 'general',
       excerpt: data.excerpt || '',
       imageUrl: data.image_url || '',
       publishedAt: data.published_at || null,
       createdAt: data.created_at || null,
+      updatedAt: data.updated_at || null,
       newsId: data.id || null,
     },
   };
@@ -74,11 +87,13 @@ export const getServerSideProps: GetServerSideProps<NewsPageProps> = async (
 export default function NewsSlugPage({
   title,
   content,
+  slug,
   tag,
   excerpt,
   imageUrl,
   publishedAt,
   createdAt,
+  updatedAt,
   newsId,
   error,
 }: NewsPageProps) {
@@ -88,11 +103,83 @@ export default function NewsSlugPage({
       : null;
   const formattedTag = tag ? formatTagLabel(tag) : null;
 
+  // SEO variables
+  const metaTitle = title ? `${title} | ${SITE_NAME}` : `News | ${SITE_NAME}`;
+  const metaDescription = excerpt || `Actualité ${SITE_NAME} : ${title}`;
+  const canonical = slug && BASE_URL ? `${BASE_URL}/news/${slug}` : undefined;
+  const ogImage = toAbsoluteUrl(imageUrl) || toAbsoluteUrl('/img/logos/2025-logo.png');
+  const articlePublishedTime = publishedAt || createdAt || undefined;
+  const articleModifiedTime = updatedAt || undefined;
+
+  // JSON-LD Article Schema
+  const articleSchema = title
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'NewsArticle',
+        headline: title,
+        description: metaDescription,
+        image: ogImage,
+        datePublished: articlePublishedTime,
+        dateModified: articleModifiedTime || articlePublishedTime,
+        author: {
+          '@type': 'Organization',
+          name: SITE_NAME,
+          url: BASE_URL || 'https://owwomenscup.fr',
+        },
+        publisher: {
+          '@type': 'Organization',
+          name: SITE_NAME,
+          logo: {
+            '@type': 'ImageObject',
+            url: `${BASE_URL || 'https://owwomenscup.fr'}/img/logos/2025-logo.png`,
+          },
+        },
+        mainEntityOfPage: canonical,
+        inLanguage: 'fr-FR',
+      }
+    : null;
+
   return (
     <div className="min-h-screen bg-neutral-950 text-white pb-20">
       <Head>
-        <title>{title ? `${title} | OW Women's Cup` : 'News'}</title>
-        {excerpt && <meta name="description" content={excerpt} />}
+        <title>{metaTitle}</title>
+        <meta name="description" content={metaDescription} />
+        {canonical && <link rel="canonical" href={canonical} />}
+
+        {/* Open Graph */}
+        <meta property="og:type" content="article" />
+        <meta property="og:locale" content="fr_FR" />
+        <meta property="og:site_name" content={SITE_NAME} />
+        <meta property="og:title" content={metaTitle} />
+        <meta property="og:description" content={metaDescription} />
+        {canonical && <meta property="og:url" content={canonical} />}
+        {ogImage && <meta property="og:image" content={ogImage} />}
+        {ogImage && <meta property="og:image:alt" content={title || 'News'} />}
+        {articlePublishedTime && (
+          <meta property="article:published_time" content={articlePublishedTime} />
+        )}
+        {articleModifiedTime && (
+          <meta property="article:modified_time" content={articleModifiedTime} />
+        )}
+        <meta property="article:author" content={SITE_NAME} />
+        {tag && <meta property="article:tag" content={tag} />}
+
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:site" content="@OWWomensCup" />
+        <meta name="twitter:title" content={metaTitle} />
+        <meta name="twitter:description" content={metaDescription} />
+        {ogImage && <meta name="twitter:image" content={ogImage} />}
+
+        {/* JSON-LD Structured Data */}
+        {articleSchema && (
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify(articleSchema),
+            }}
+          />
+        )}
       </Head>
       <div className="container max-w-4xl px-4 pt-24">
         <Link

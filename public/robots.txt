@@ -1,0 +1,13 @@
+# robots.txt for OW Women's Cup
+# Allow all search engine crawlers
+
+User-agent: *
+Allow: /
+
+# Block admin and API paths
+Disallow: /admin/
+Disallow: /api/
+Disallow: /_next/
+
+# Sitemap location
+Sitemap: https://owwomenscup.com/sitemap.xml
