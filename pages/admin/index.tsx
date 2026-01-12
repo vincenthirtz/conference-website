@@ -190,6 +190,19 @@ function AdminProfilePage({ staff }: Props) {
     avatarUrl: '',
   });
 
+  // Email change state
+  const [newEmail, setNewEmail] = useState('');
+  const [emailChanging, setEmailChanging] = useState(false);
+  const [emailSuccessMsg, setEmailSuccessMsg] = useState<string | null>(null);
+  const [emailErrorMsg, setEmailErrorMsg] = useState<string | null>(null);
+
+  // Password change state
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordChanging, setPasswordChanging] = useState(false);
+  const [passwordSuccessMsg, setPasswordSuccessMsg] = useState<string | null>(null);
+  const [passwordErrorMsg, setPasswordErrorMsg] = useState<string | null>(null);
+
   useEffect(() => {
     const fetchProfile = async () => {
       setLoading(true);
@@ -233,6 +246,66 @@ function AdminProfilePage({ staff }: Props) {
 
   const updateField = (k: 'displayName' | 'avatarUrl', v: string) =>
     setForm((prev) => ({ ...prev, [k]: v }));
+
+  const handleEmailChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newEmail || newEmail === profile?.email) return;
+
+    setEmailChanging(true);
+    setEmailErrorMsg(null);
+    setEmailSuccessMsg(null);
+
+    try {
+      const { error } = await supabaseClient.auth.updateUser({ email: newEmail });
+
+      if (error) {
+        throw error;
+      }
+
+      setEmailSuccessMsg(
+        'Un email de confirmation a été envoyé à ta nouvelle adresse. Clique sur le lien pour confirmer le changement.'
+      );
+      setNewEmail('');
+    } catch (err: any) {
+      console.error('AdminProfilePage: email change error', err);
+      setEmailErrorMsg(err?.message || 'Erreur lors du changement d\'email.');
+    } finally {
+      setEmailChanging(false);
+    }
+  };
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPassword || newPassword.length < 8) {
+      setPasswordErrorMsg('Le mot de passe doit contenir au moins 8 caractères.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordErrorMsg('Les mots de passe ne correspondent pas.');
+      return;
+    }
+
+    setPasswordChanging(true);
+    setPasswordErrorMsg(null);
+    setPasswordSuccessMsg(null);
+
+    try {
+      const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
+
+      if (error) {
+        throw error;
+      }
+
+      setPasswordSuccessMsg('Ton mot de passe a été modifié avec succès.');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err: any) {
+      console.error('AdminProfilePage: password change error', err);
+      setPasswordErrorMsg(err?.message || 'Erreur lors du changement de mot de passe.');
+    } finally {
+      setPasswordChanging(false);
+    }
+  };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -535,6 +608,193 @@ function AdminProfilePage({ staff }: Props) {
                     )}
                   </button>
                 </form>
+              </section>
+
+              {/* Change Email */}
+              <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <svg
+                    className="w-5 h-5 text-neutral-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                    />
+                  </svg>
+                  Changer mon email
+                </h2>
+
+                {emailSuccessMsg && (
+                  <div className="mb-4 rounded-xl bg-emerald-900/40 border border-emerald-500/50 px-4 py-3 text-sm flex items-center gap-2">
+                    <svg
+                      className="w-5 h-5 text-emerald-400 flex-shrink-0"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    {emailSuccessMsg}
+                  </div>
+                )}
+                {emailErrorMsg && (
+                  <div className="mb-4 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
+                    <svg
+                      className="w-5 h-5 text-red-400 flex-shrink-0"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    {emailErrorMsg}
+                  </div>
+                )}
+
+                <form onSubmit={handleEmailChange} className="space-y-4">
+                  <div>
+                    <label className="block text-sm text-neutral-400 mb-1">
+                      Nouvel email
+                    </label>
+                    <input
+                      type="email"
+                      className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                      value={newEmail}
+                      onChange={(e) => setNewEmail(e.target.value)}
+                      placeholder="nouveau@email.com"
+                      required
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={emailChanging || !newEmail || newEmail === profile?.email}
+                    className="w-full px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                  >
+                    {emailChanging ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Envoi en cours…
+                      </>
+                    ) : (
+                      'Changer mon email'
+                    )}
+                  </button>
+                </form>
+                <p className="text-xs text-neutral-500 mt-3">
+                  Un email de confirmation sera envoyé à la nouvelle adresse.
+                </p>
+              </section>
+
+              {/* Change Password */}
+              <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <svg
+                    className="w-5 h-5 text-neutral-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                    />
+                  </svg>
+                  Changer mon mot de passe
+                </h2>
+
+                {passwordSuccessMsg && (
+                  <div className="mb-4 rounded-xl bg-emerald-900/40 border border-emerald-500/50 px-4 py-3 text-sm flex items-center gap-2">
+                    <svg
+                      className="w-5 h-5 text-emerald-400 flex-shrink-0"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    {passwordSuccessMsg}
+                  </div>
+                )}
+                {passwordErrorMsg && (
+                  <div className="mb-4 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
+                    <svg
+                      className="w-5 h-5 text-red-400 flex-shrink-0"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    {passwordErrorMsg}
+                  </div>
+                )}
+
+                <form onSubmit={handlePasswordChange} className="space-y-4">
+                  <div>
+                    <label className="block text-sm text-neutral-400 mb-1">
+                      Nouveau mot de passe
+                    </label>
+                    <input
+                      type="password"
+                      className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="••••••••"
+                      minLength={8}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-neutral-400 mb-1">
+                      Confirmer le mot de passe
+                    </label>
+                    <input
+                      type="password"
+                      className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      minLength={8}
+                      required
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={passwordChanging || !newPassword || !confirmPassword}
+                    className="w-full px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                  >
+                    {passwordChanging ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Modification…
+                      </>
+                    ) : (
+                      'Changer mon mot de passe'
+                    )}
+                  </button>
+                </form>
+                <p className="text-xs text-neutral-500 mt-3">
+                  Minimum 8 caractères.
+                </p>
               </section>
 
               {/* System Info */}
