@@ -323,6 +323,18 @@ function Navbar(): JSX.Element {
         { title: 'Stats maps', ref: '/admin/stats/maps', minRole: 'manager' },
       ],
     },
+    {
+      title: 'Configuration',
+      ref: '',
+      minRole: 'admin',
+      children: [
+        {
+          title: 'Paramètres du site',
+          ref: '/admin/site-settings',
+          minRole: 'admin',
+        },
+      ],
+    },
   ];
 
   const canAccessLink = (minRole?: StaffRole) =>

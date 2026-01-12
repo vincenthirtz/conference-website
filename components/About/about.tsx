@@ -4,13 +4,26 @@ import Heading from '../Typography/heading';
 import Paragraph from '../Typography/paragraph';
 import Button from '../Buttons/button';
 
-function About(): JSX.Element {
-  const aboutVideoUrl =
-    process.env.NEXT_PUBLIC_ABOUT_VIDEO_URL ||
-    'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4';
+const DEFAULT_VIDEO_URL = 'https://www.youtube.com/watch?v=3j6w7CjXne8';
 
+function About(): JSX.Element {
+  const [aboutVideoUrl, setAboutVideoUrl] = useState(DEFAULT_VIDEO_URL);
   const [showMedia, setShowMedia] = useState(false);
   const [mediaLoaded, setMediaLoaded] = useState(false);
+
+  useEffect(() => {
+    // Fetch video URL from site settings
+    fetch('/api/site-settings?key=about_video_url')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.value) {
+          setAboutVideoUrl(data.value);
+        }
+      })
+      .catch(() => {
+        // Keep default on error
+      });
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowMedia(true), 900);

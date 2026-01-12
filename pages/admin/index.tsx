@@ -170,6 +170,13 @@ const ADMIN_SHORTCUTS: Shortcut[] = [
     label: 'Stats maps',
     description: 'Performances par carte',
   },
+  // Configuration
+  {
+    category: 'Configuration',
+    href: '/admin/site-settings',
+    label: 'Paramètres du site',
+    description: 'Vidéo, URLs, etc.',
+  },
 ];
 
 function AdminProfilePage({ staff }: Props) {
