@@ -1,5 +1,6 @@
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useSiteSetting } from '@/hooks/useSiteSettings';
+import { CookieSettingsButton } from '@/components/CookieBanner';
 
 const dataUses = [
   'Gestion des inscriptions et des comptes (joueuses, staff, bénévoles).',
@@ -50,6 +51,12 @@ function MentionsLegalesPage() {
               className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
             >
               Vos données
+            </a>
+            <a
+              href="#cookies"
+              className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
+            >
+              Cookies
             </a>
           </div>
         </div>
@@ -216,13 +223,81 @@ function MentionsLegalesPage() {
               </p>
             </div>
           </div>
-          <div className="mt-5 rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-gray-200">
-            <p className="font-semibold text-white">Cookies & traceurs</p>
-            <p className="mt-2">
-              Aucun cookie publicitaire n’est utilisé. Les éventuels cookies
-              techniques servent au fonctionnement des formulaires, de
-              l’authentification et à la sécurité de l’espace d’administration.
+          <div
+            id="cookies"
+            className="mt-5 rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-gray-200"
+          >
+            <p className="font-semibold text-white text-base">
+              Cookies & traceurs
             </p>
+            <p className="mt-2">
+              Conformément au RGPD et à la directive ePrivacy, nous vous
+              informons des cookies utilisés sur ce site et vous permettons de
+              gérer vos préférences.
+            </p>
+
+            <div className="mt-4 space-y-3">
+              <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3">
+                <p className="font-medium text-white flex items-center gap-2">
+                  <span className="inline-block h-2 w-2 rounded-full bg-emerald-400" />
+                  Cookies essentiels
+                  <span className="text-[10px] uppercase px-2 py-0.5 rounded bg-purple-500/30 text-purple-200">
+                    Requis
+                  </span>
+                </p>
+                <p className="mt-1 text-gray-300 text-xs">
+                  Nécessaires au fonctionnement du site : authentification
+                  Supabase, gestion de session pour l&apos;espace
+                  administration, sécurité. Ces cookies ne peuvent pas être
+                  désactivés.
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3">
+                <p className="font-medium text-white flex items-center gap-2">
+                  <span className="inline-block h-2 w-2 rounded-full bg-blue-400" />
+                  Cookies fonctionnels
+                </p>
+                <p className="mt-1 text-gray-300 text-xs">
+                  Améliorent votre expérience utilisateur en mémorisant vos
+                  préférences (thème, langue, etc.). Soumis à votre
+                  consentement.
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3">
+                <p className="font-medium text-white flex items-center gap-2">
+                  <span className="inline-block h-2 w-2 rounded-full bg-amber-400" />
+                  Cookies analytiques
+                </p>
+                <p className="mt-1 text-gray-300 text-xs">
+                  Nous aident à comprendre comment vous utilisez le site pour
+                  l&apos;améliorer (pages visitées, durée de visite). Soumis à
+                  votre consentement. Actuellement non utilisés.
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3">
+                <p className="font-medium text-white flex items-center gap-2">
+                  <span className="inline-block h-2 w-2 rounded-full bg-pink-400" />
+                  Cookies marketing
+                </p>
+                <p className="mt-1 text-gray-300 text-xs">
+                  Utilisés pour afficher des publicités pertinentes. Soumis à
+                  votre consentement.{' '}
+                  <strong>Aucun cookie marketing n&apos;est utilisé</strong> sur
+                  ce site.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-3 border-t border-white/10">
+              <p className="text-xs text-gray-400">
+                Vos préférences sont enregistrées localement sur votre
+                navigateur et peuvent être modifiées à tout moment.
+              </p>
+              <CookieSettingsButton />
+            </div>
           </div>
         </section>
 

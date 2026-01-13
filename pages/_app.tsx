@@ -2,6 +2,7 @@ import '@/styles/globals.css';
 import Navbar from '@/components/Navbar/navbar';
 import Footer from '@/components/Footer/footer';
 import BackToTopButton from '@/components/Buttons/BackToTopButton';
+import { CookieBanner } from '@/components/CookieBanner';
 import type { AppProps } from 'next/app';
 import { useEffect, useState } from 'react';
 import DefaultSeo, { SeoProps } from '@/components/Seo/DefaultSeo';
@@ -27,6 +28,7 @@ function MyApp({ Component, pageProps }: AppPropsWithSeo) {
       <Component {...pageProps} />
       <Footer />
       <BackToTopButton />
+      <CookieBanner />
     </div>
   );
 }

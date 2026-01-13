@@ -2,6 +2,7 @@ import React, { JSX } from 'react';
 import Link from 'next/link';
 import type { SVGTypes } from '@/types/types';
 import socials, { SocialWithIcon } from '@/config/socials';
+import { CookieSettingsButton } from '@/components/CookieBanner';
 
 type Season = 'winter' | 'spring' | 'summer' | 'autumn';
 
@@ -451,17 +452,21 @@ function Footer(): JSX.Element {
           </div>
           <div></div>
           <div className="flex items-center justify-between sm:flex-col sm:items-center">
-            <div className="text-white text-center">
-              Association OW WOMEN&apos;S CUP - Tous droits réservés - Fait avec
-              ❤️ par{' '}
-              <a
-                href="https://www.twitch.tv/arukdo"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Arukdo
-              </a>
-              .
+            <div className="text-white text-center flex items-center gap-2 flex-wrap justify-center">
+              <span>
+                Association OW WOMEN&apos;S CUP - Tous droits réservés - Fait avec
+                ❤️ par{' '}
+                <a
+                  href="https://www.twitch.tv/arukdo"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Arukdo
+                </a>
+                .
+              </span>
+              <span className="hidden sm:inline">|</span>
+              <CookieSettingsButton />
             </div>
             <div className="w-[0.9px] h-4 bg-white ml-4 sm:hidden" />
             <div className="ml-4 flex justify-between items-center gap-2 sm:mt-4">
