@@ -6,9 +6,10 @@ import { useCookieConsent } from '@/hooks/useCookieConsent';
  * À placer dans le footer ou une page de paramètres
  */
 export default function CookieSettingsButton() {
-  const { resetConsent, hasConsented } = useCookieConsent();
+  const { resetConsent, isLoaded } = useCookieConsent();
 
-  if (!hasConsented) {
+  // Ne pas afficher avant le chargement pour éviter le flash
+  if (!isLoaded) {
     return null;
   }
 
