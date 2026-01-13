@@ -310,24 +310,19 @@ function Navbar(): JSX.Element {
       ],
     },
     {
-      title: 'Comptes & demandes',
+      title: 'Gestion adhérents',
       ref: '',
-      minRole: 'manager',
+      minRole: 'admin',
       children: [
         {
-          title: 'Gérer les utilisateurs',
-          ref: '/admin/users/manage',
+          title: 'Liste des adhérents',
+          ref: '/admin/adherents',
           minRole: 'admin',
         },
         {
-          title: 'Créer un utilisateur',
-          ref: '/admin/users/new',
+          title: 'Ajouter un adhérent',
+          ref: '/admin/adherents/new',
           minRole: 'admin',
-        },
-        {
-          title: 'Demandes joueurs / équipes',
-          ref: '/admin/demandes',
-          minRole: 'manager',
         },
       ],
     },
@@ -354,6 +349,21 @@ function Navbar(): JSX.Element {
           title: 'Paramètres du site',
           ref: '/admin/site-settings',
           minRole: 'admin',
+        },
+        {
+          title: 'Gérer les utilisateurs',
+          ref: '/admin/users/manage',
+          minRole: 'admin',
+        },
+        {
+          title: 'Créer un utilisateur',
+          ref: '/admin/users/new',
+          minRole: 'admin',
+        },
+        {
+          title: 'Demandes joueurs / équipes',
+          ref: '/admin/demandes',
+          minRole: 'manager',
         },
       ],
     },

@@ -33,6 +33,20 @@ const KNOWN_SETTINGS = [
     placeholder: 'https://www.youtube.com/watch?v=...',
     type: 'url',
   },
+  {
+    key: 'cotisation_amount',
+    label: 'Montant de la cotisation annuelle',
+    description: 'Montant de la cotisation annuelle pour les adhérents (en euros)',
+    placeholder: '20.00',
+    type: 'number',
+  },
+  {
+    key: 'cotisation_year',
+    label: 'Année de cotisation en cours',
+    description: 'Année de cotisation active pour le suivi des paiements',
+    placeholder: new Date().getFullYear().toString(),
+    type: 'number',
+  },
 ];
 
 function AdminSiteSettingsPage({ staff }: Props) {
