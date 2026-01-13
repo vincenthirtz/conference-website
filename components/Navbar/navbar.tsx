@@ -208,6 +208,11 @@ function Navbar(): JSX.Element {
           ref: '/admin/teams/my',
           minRole: 'caster',
         },
+        {
+          title: 'Demandes joueurs / équipes',
+          ref: '/admin/demandes',
+          minRole: 'manager',
+        },
       ],
     },
     {
@@ -359,11 +364,6 @@ function Navbar(): JSX.Element {
           title: 'Créer un utilisateur',
           ref: '/admin/users/new',
           minRole: 'admin',
-        },
-        {
-          title: 'Demandes joueurs / équipes',
-          ref: '/admin/demandes',
-          minRole: 'manager',
         },
       ],
     },
