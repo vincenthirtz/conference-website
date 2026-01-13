@@ -52,7 +52,7 @@ export default function AdminForgotPasswordPage() {
         <title>Réinitialiser le mot de passe | OW Women&apos;s Cup</title>
       </Head>
 
-      <main className="flex items-center justify-center px-4 py-10">
+      <main className="flex items-center justify-center px-4 pt-28 pb-20 md:pt-24 md:pb-10">
         <div className="w-full max-w-md">
           <div className="flex flex-col items-center mb-8">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] uppercase tracking-[0.16em] text-gray-300">
