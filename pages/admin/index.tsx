@@ -390,7 +390,7 @@ function AdminProfilePage({ staff }: Props) {
                   <button
                     type="submit"
                     disabled={saving}
-                    className="w-full px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                    className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
                   >
                     {saving ? (
                       <>
@@ -473,7 +473,7 @@ function AdminProfilePage({ staff }: Props) {
                   <button
                     type="submit"
                     disabled={emailChanging || !newEmail || newEmail === profile?.email}
-                    className="w-full px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                    className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
                   >
                     {emailChanging ? (
                       <>
@@ -574,7 +574,7 @@ function AdminProfilePage({ staff }: Props) {
                   <button
                     type="submit"
                     disabled={passwordChanging || !newPassword || !confirmPassword}
-                    className="w-full px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                    className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
                   >
                     {passwordChanging ? (
                       <>
