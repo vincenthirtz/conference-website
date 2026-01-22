@@ -84,12 +84,58 @@ export default async function handler(
       return res.status(400).json({ error: 'Aucune modification fournie.' });
     }
 
+    // Fetch the current request data before update (needed for auto-creating partner)
+    const { data: currentRequest } = await admin
+      .from('partnership_requests')
+      .select('*')
+      .eq('id', id)
+      .single();
+
     const { data, error } = await admin
       .from('partnership_requests')
       .update(updates)
       .eq('id', id)
       .select()
       .single();
+
+    // If status changed to 'accepted', auto-create a disabled partner
+    if (
+      body.status === 'accepted' &&
+      currentRequest &&
+      currentRequest.status !== 'accepted'
+    ) {
+      const partnerCategory =
+        currentRequest.category === 'other' ? 'cultural' : currentRequest.category;
+
+      const { data: newPartner, error: partnerError } = await admin
+        .from('partners')
+        .insert({
+          name: currentRequest.company_name,
+          description: currentRequest.message || `Partenaire ${currentRequest.company_name}`,
+          category: partnerCategory,
+          website_url: currentRequest.website || null,
+          is_active: false,
+          display_order: 0,
+        })
+        .select('id')
+        .single();
+
+      if (partnerError) {
+        console.error('[admin/partnership-requests] auto-create partner error', partnerError);
+      } else if (ctx.staff?.id && newPartner) {
+        await logStaffAction({
+          staff_id: ctx.staff.id,
+          action: 'settings_update' as any,
+          entity_type: 'partner',
+          entity_id: newPartner.id,
+          payload: {
+            autoCreated: true,
+            fromPartnershipRequest: id,
+            companyName: currentRequest.company_name,
+          },
+        });
+      }
+    }
 
     if (error) {
       console.error('[admin/partnership-requests] update error', error);
