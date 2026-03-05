@@ -19,12 +19,12 @@ function Home() {
       />
       <Header />
 
+      <ActualitesPreviewSection />
       {/* <Popup /> */}
       <div id="about" className="mt-20">
         <About />
       </div>
       <HomeNewsSection />
-      <ActualitesPreviewSection />
       <div id="register" className="container mt-20 lg:mt-0">
         <div className="flex items-center flex-col justify-center">
           <LiveTwitchSection />
@@ -56,9 +56,9 @@ function Home() {
 }
 
 const homeSeo: SeoProps = {
-  title: "OW Women's Cup 2025",
+  title: "OW Women's Cup 2026",
   description:
-    "Tournoi Overwatch 100% féminin : cast, équipes, inscriptions et infos clés de l'édition 2025 de l'OW Women's Cup.",
+    "Tournoi Overwatch 100% féminin : cast, équipes, inscriptions et infos clés de l'édition 2026 de l'OW Women's Cup.",
 };
 
 Home.seo = homeSeo;

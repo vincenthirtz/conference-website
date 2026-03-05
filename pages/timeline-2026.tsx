@@ -153,7 +153,7 @@ function Timeline2026Page() {
                     <p className="text-neutral-300 text-sm mt-3 leading-relaxed">
                       {item.description}
                     </p>
-                    {item.id === 'signup' && (
+                    {item.id === 'mix-tournament' && (
                       <div className="mt-4">
                         <Link
                           href="/team/create"
