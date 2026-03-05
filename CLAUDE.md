@@ -59,6 +59,10 @@ Uses Supabase Auth with a custom staff system:
 - Staff actions are logged to `staff_logs` table via `logStaffAction()`
 - Pages use `_app.tsx` layout with Navbar, Footer, and DefaultSeo components
 
+## Project Policies
+
+This is a zero-dependency project. Never add packages to dependencies or devDependencies without explicit approval. For CI-only tools, install them in the CI workflow directly.
+
 ## Commit Convention
 
 This project follows Conventional Commits:
@@ -68,6 +72,22 @@ This project follows Conventional Commits:
 - `chore:` - Cleanup/maintenance
 - `refactor:` - Code refactoring
 - Add `!` for breaking changes: `feat!:`, `fix!:`
+
+## Git Workflow
+
+After fixing files, always verify you haven't accidentally deleted or modified files outside the requested scope. Use `git diff --stat` to review all changed files before committing.
+
+## Security / Code Quality
+
+When fixing CodeQL or static analysis alerts, understand the tool's taint-tracking model before applying fixes. Simple runtime guards often don't satisfy static analyzers—prefer input validation at entry points and type-safe patterns like Map instead of plain objects.
+
+## Testing
+
+For E2E tests: never use `--ignore-pattern` with Playwright (invalid flag), use `--grep-invert` instead. Always check for transparent background inheritance when testing color contrast.
+
+## Shell Commands
+
+When using sed in zsh for multi-line insertions, prefer using a temp file approach or node -e scripts instead, as sed newline handling in zsh breaks imports.
 
 ## Environment Variables
 
