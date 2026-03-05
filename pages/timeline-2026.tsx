@@ -27,41 +27,27 @@ const frenchMonthMap: Record<string, number> = {
 
 const timeline: TimelineItem[] = [
   {
-    id: 'prep',
-    title: 'Préparation & annonces',
-    period: 'Décembre 2025',
-    description:
-      'Reveal des formats, ouverture des rôles staff et publication du rulebook mis à jour.',
-    badge: 'Go Live',
-  },
-  {
-    id: 'signup',
-    title: 'Inscriptions équipes',
-    period: 'Janvier 2026',
-    description:
-      'Ouverture des inscriptions, vérification des rosters et accompagnement des nouvelles équipes.',
-  },
-  {
-    id: 'season',
-    title: 'Saison régulière',
+    id: 'mix-tournament',
+    title: 'Tournoi mixte',
     period: 'Avril 2026',
     description:
-      'Rounds suisses + classements hebdo. Diffusions communautaires et interviews.',
+      'Tournoi mixte hommes/femmes le 3 avril pour lancer la saison compétitive. Un avant-goût de ce qui vous attend en octobre !',
+    badge: '3 Avril',
   },
   {
-    id: 'playoffs',
-    title: 'Playoffs',
-    period: 'Mai 2026',
-    description:
-      'Bracket double élimination (upper et low bracket). Maps révélées à l’avance, veto en direct, analyst desk.',
-    badge: 'Clutch Time',
-  },
-  {
-    id: 'finals',
-    title: 'Grandes finales',
+    id: 'summer',
+    title: "Été \u2014 Préparation de l'événement",
     period: 'Juin 2026',
     description:
-      'Grande scène online, invités spéciaux, showmatch. Podium, récompenses et récap de la saison.',
+      "Annonces progressives, recrutement staff, partenariats et teasers pour le grand événement féminin d'octobre.",
+  },
+  {
+    id: 'main-event',
+    title: 'Grand événement féminin',
+    period: 'Octobre 2026',
+    description:
+      "L'événement phare de la saison : compétition 100\u00A0% féminine, grande scène, showmatchs, invitées spéciales et remise des récompenses.",
+    badge: 'Main Event',
   },
 ];
 
