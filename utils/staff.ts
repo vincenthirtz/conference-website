@@ -252,7 +252,7 @@ export function withStaffRoute(
     req: NextApiRequest,
     res: NextApiResponse,
     ctx: StaffContext
-  ) => Promise<void>,
+  ) => Promise<unknown>,
   minRole: StaffRole = 'admin'
 ) {
   return async (req: NextApiRequest, res: NextApiResponse) => {

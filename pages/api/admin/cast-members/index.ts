@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { getStaffContextFromRequest, hasAtLeastRole } from '@/utils/staff';
+import { withStaffRoute } from '@/utils/staff';
 
 type CastMemberPayload = {
   name?: string;
@@ -14,7 +14,7 @@ type CastMemberPayload = {
   sortOrder?: number;
 };
 
-export default async function handler(
+async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
@@ -24,11 +24,6 @@ export default async function handler(
       .json({ error: 'Service Supabase indisponible (service role manquant).' });
   }
   const admin = supabaseAdmin!;
-
-  const ctx = await getStaffContextFromRequest(req, res);
-  if (!hasAtLeastRole(ctx.role, 'admin')) {
-    return res.status(403).json({ error: 'Accès réservé aux admins.' });
-  }
 
   if (req.method === 'GET') {
     const limit = Math.max(1, Math.min(200, Number(req.query.limit) || 100));
@@ -106,3 +101,5 @@ export default async function handler(
   res.setHeader('Allow', 'GET,POST');
   return res.status(405).json({ error: 'Method not allowed' });
 }
+
+export default withStaffRoute(handler, 'admin');

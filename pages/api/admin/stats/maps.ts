@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { getStaffContextFromRequest, hasAtLeastRole } from '@/utils/staff';
+import { withStaffRoute } from '@/utils/staff';
 
 type MapStatsRow = {
   map_name: string;
@@ -56,7 +56,7 @@ function normalizeSortDir(value: string | null | undefined): 'asc' | 'desc' {
   return value === 'asc' ? 'asc' : 'desc';
 }
 
-export default async function handler(
+async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ResponseData>
 ) {
@@ -67,11 +67,6 @@ export default async function handler(
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const ctx = await getStaffContextFromRequest(req, res);
-  if (!ctx.role || !hasAtLeastRole(ctx.role, 'manager')) {
-    return res.status(403).json({ error: 'Accès réservé aux managers.' });
   }
 
   const {
@@ -208,3 +203,5 @@ export default async function handler(
 
   return res.status(200).json({ stats, total: count ?? null });
 }
+
+export default withStaffRoute(handler, 'manager');

@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabaseClient } from '@/utils/supabase';
 import type { User } from '@supabase/supabase-js';
+import ExistingTeamSelector from '@/components/player/ExistingTeamSelector';
+import NewTeamForm from '@/components/player/NewTeamForm';
 
 type Team = {
   id: string;
@@ -64,7 +66,6 @@ export default function RequestCaptainPage() {
         setUser(session.user);
         setToken(session.access_token);
 
-        // Vérifier s'il y a déjà une demande en attente
         const res = await fetch('/api/demandes/captain', {
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
@@ -80,7 +81,6 @@ export default function RequestCaptainPage() {
           }
         }
 
-        // Charger les équipes
         await loadTeams();
       } catch (err) {
         console.error('[request-captain] auth error:', err);
@@ -114,7 +114,6 @@ export default function RequestCaptainPage() {
 
   const handleTeamSearchChange = (value: string) => {
     setTeamSearch(value);
-    // Debounce la recherche
     const timeout = setTimeout(() => {
       loadTeams(value);
     }, 300);
@@ -144,7 +143,6 @@ export default function RequestCaptainPage() {
     e.preventDefault();
     setError(null);
 
-    // Validation
     if (mode === 'existing') {
       if (!selectedTeamId) {
         setError('Sélectionne une équipe.');
@@ -161,7 +159,6 @@ export default function RequestCaptainPage() {
       }
     }
 
-    // Valider les emails des membres
     const validMembers = members.filter((m) => m.email.trim());
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     for (const m of validMembers) {
@@ -206,10 +203,9 @@ export default function RequestCaptainPage() {
         throw new Error(data.error || 'Impossible de créer la demande.');
       }
 
-      // Déterminer le nom pour le message de succès
       if (mode === 'existing') {
         const team = teams.find((t) => t.id === selectedTeamId);
-        setSuccessTeamName(team?.name || 'l\'équipe sélectionnée');
+        setSuccessTeamName(team?.name || "l'équipe sélectionnée");
       } else {
         setSuccessTeamName(teamName.trim());
       }
@@ -326,194 +322,26 @@ export default function RequestCaptainPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Mode: Équipe existante */}
               {mode === 'existing' && (
-                <div>
-                  <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
-                    Rechercher une equipe
-                  </label>
-                  <input
-                    type="text"
-                    value={teamSearch}
-                    onChange={(e) => handleTeamSearchChange(e.target.value)}
-                    className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 mb-3"
-                    placeholder="Rechercher par nom..."
-                  />
-
-                  <div className="max-h-60 overflow-y-auto space-y-2 rounded-xl border border-white/10 bg-black/40 p-2">
-                    {teamsLoading && (
-                      <div className="text-sm text-gray-500 text-center py-4">
-                        Chargement...
-                      </div>
-                    )}
-
-                    {!teamsLoading && teams.length === 0 && (
-                      <div className="text-sm text-gray-500 text-center py-4">
-                        Aucune equipe trouvee
-                      </div>
-                    )}
-
-                    {!teamsLoading &&
-                      teams.map((team) => (
-                        <button
-                          key={team.id}
-                          type="button"
-                          onClick={() => setSelectedTeamId(team.id)}
-                          className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition ${
-                            selectedTeamId === team.id
-                              ? 'bg-purple-600/30 border border-purple-400/50'
-                              : 'bg-white/5 border border-transparent hover:bg-white/10'
-                          }`}
-                        >
-                          <div className="w-10 h-10 rounded-full bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
-                            {team.logo_url ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={team.logo_url}
-                                alt=""
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <span className="text-xs text-gray-500">
-                                {(team.short_name || team.name)
-                                  .slice(0, 2)
-                                  .toUpperCase()}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-white truncate">
-                              {team.name}
-                            </div>
-                            {team.short_name && (
-                              <div className="text-xs text-gray-400">
-                                {team.short_name}
-                              </div>
-                            )}
-                          </div>
-                          {selectedTeamId === team.id && (
-                            <svg
-                              className="w-5 h-5 text-purple-400 flex-shrink-0"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                          )}
-                        </button>
-                      ))}
-                  </div>
-                </div>
+                <ExistingTeamSelector
+                  teams={teams}
+                  teamsLoading={teamsLoading}
+                  selectedTeamId={selectedTeamId}
+                  teamSearch={teamSearch}
+                  onTeamSearchChange={handleTeamSearchChange}
+                  onSelectTeam={setSelectedTeamId}
+                />
               )}
 
-              {/* Mode: Nouvelle équipe */}
               {mode === 'new' && (
-                <>
-                  <div>
-                    <label
-                      htmlFor="teamName"
-                      className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
-                    >
-                      Nom de l&apos;equipe *
-                    </label>
-                    <input
-                      id="teamName"
-                      type="text"
-                      value={teamName}
-                      onChange={(e) => setTeamName(e.target.value)}
-                      className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 transition"
-                      placeholder="Ex: Les Licornes de l'Espace"
-                      maxLength={100}
-                    />
-                  </div>
-
-                  {/* Membres */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="text-xs font-medium tracking-[0.12em] uppercase text-gray-300">
-                        Joueuses (optionnel)
-                      </label>
-                      <span className="text-xs text-gray-500">
-                        {members.length}/5
-                      </span>
-                    </div>
-
-                    <p className="text-xs text-gray-500 mb-3">
-                      Ajoute les joueuses de ton equipe. Elles recevront une
-                      invitation.
-                    </p>
-
-                    <div className="space-y-3">
-                      {members.map((member, index) => (
-                        <div
-                          key={index}
-                          className="rounded-xl border border-white/10 bg-black/40 p-3"
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs text-gray-400">
-                              Joueuse {index + 1}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => removeMember(index)}
-                              className="text-xs text-red-400 hover:text-red-300"
-                            >
-                              Retirer
-                            </button>
-                          </div>
-
-                          <div className="grid gap-2 sm:grid-cols-3">
-                            <input
-                              type="email"
-                              placeholder="Email *"
-                              value={member.email}
-                              onChange={(e) =>
-                                updateMember(index, 'email', e.target.value)
-                              }
-                              className="rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-purple-400/60"
-                            />
-                            <input
-                              type="text"
-                              placeholder="BattleTag"
-                              value={member.battleTag}
-                              onChange={(e) =>
-                                updateMember(index, 'battleTag', e.target.value)
-                              }
-                              className="rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-purple-400/60"
-                            />
-                            <input
-                              type="text"
-                              placeholder="Pseudo"
-                              value={member.displayName}
-                              onChange={(e) =>
-                                updateMember(
-                                  index,
-                                  'displayName',
-                                  e.target.value
-                                )
-                              }
-                              className="rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-purple-400/60"
-                            />
-                          </div>
-                        </div>
-                      ))}
-
-                      {members.length < 5 && (
-                        <button
-                          type="button"
-                          onClick={addMember}
-                          className="w-full px-4 py-3 rounded-xl border border-dashed border-white/20 text-sm text-gray-400 hover:border-purple-400/50 hover:text-purple-300 transition"
-                        >
-                          + Ajouter une joueuse
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </>
+                <NewTeamForm
+                  teamName={teamName}
+                  onTeamNameChange={setTeamName}
+                  members={members}
+                  onAddMember={addMember}
+                  onUpdateMember={updateMember}
+                  onRemoveMember={removeMember}
+                />
               )}
 
               {/* Message */}

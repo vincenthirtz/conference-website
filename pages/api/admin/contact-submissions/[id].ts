@@ -1,15 +1,16 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { getStaffContextFromRequest, hasAtLeastRole } from '@/utils/staff';
+import { withStaffRoute, hasAtLeastRole, type StaffContext } from '@/utils/staff';
 
 type UpdatePayload = {
   status?: 'new' | 'read' | 'replied' | 'archived' | 'spam';
   adminNotes?: string | null;
 };
 
-export default async function handler(
+async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
+  ctx: StaffContext
 ) {
   if (!supabaseAdmin) {
     return res
@@ -21,11 +22,6 @@ export default async function handler(
   const { id } = req.query;
   if (!id || typeof id !== 'string') {
     return res.status(400).json({ error: 'ID manquant.' });
-  }
-
-  const ctx = await getStaffContextFromRequest(req, res);
-  if (!hasAtLeastRole(ctx.role, 'manager')) {
-    return res.status(403).json({ error: 'Accès réservé aux managers et admins.' });
   }
 
   if (req.method === 'GET') {
@@ -109,3 +105,5 @@ export default async function handler(
   res.setHeader('Allow', 'GET,PATCH,DELETE');
   return res.status(405).json({ error: 'Method not allowed' });
 }
+
+export default withStaffRoute(handler, 'manager');

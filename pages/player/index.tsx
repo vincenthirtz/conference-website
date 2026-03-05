@@ -7,6 +7,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabaseClient } from '@/utils/supabase';
 import type { User } from '@supabase/supabase-js';
+import ProfileCard from '@/components/player/ProfileCard';
+import TeamCard from '@/components/player/TeamCard';
+import DemandesHistory from '@/components/player/DemandesHistory';
 
 type TeamInfo = {
   id: string;
@@ -39,23 +42,9 @@ export default function PlayerDashboard() {
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // Email change state
-  const [newEmail, setNewEmail] = useState('');
-  const [emailChanging, setEmailChanging] = useState(false);
-  const [emailSuccess, setEmailSuccess] = useState<string | null>(null);
-  const [emailError, setEmailError] = useState<string | null>(null);
-
-  // Password change state
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [passwordChanging, setPasswordChanging] = useState(false);
-  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
-  const [passwordError, setPasswordError] = useState<string | null>(null);
-
   useEffect(() => {
     const loadData = async () => {
       try {
-        // 1) Vérifier la session
         const {
           data: { session },
         } = await supabaseClient.auth.getSession();
@@ -68,7 +57,6 @@ export default function PlayerDashboard() {
         setUser(session.user);
         const token = session.access_token;
 
-        // 2) Charger les infos d'équipe (si membre)
         const teamRes = await fetch('/api/admin/teams/my', {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -79,7 +67,6 @@ export default function PlayerDashboard() {
           setIsCaptain(teamData.isCaptain || false);
         }
 
-        // 3) Charger les demandes (capitaine + join)
         const [captainRes, joinRes] = await Promise.all([
           fetch('/api/demandes/captain', {
             headers: { Authorization: `Bearer ${token}` },
@@ -101,7 +88,6 @@ export default function PlayerDashboard() {
           allDemandes.push(...(joinData.demandes || []));
         }
 
-        // Trier par date decroissante
         allDemandes.sort(
           (a, b) =>
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -124,66 +110,6 @@ export default function PlayerDashboard() {
     router.replace('/');
   };
 
-  const handleEmailChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newEmail || newEmail === user?.email) return;
-
-    setEmailChanging(true);
-    setEmailError(null);
-    setEmailSuccess(null);
-
-    try {
-      const { error } = await supabaseClient.auth.updateUser({ email: newEmail });
-
-      if (error) {
-        throw error;
-      }
-
-      setEmailSuccess(
-        'Un email de confirmation a été envoyé à ta nouvelle adresse. Clique sur le lien pour confirmer le changement.'
-      );
-      setNewEmail('');
-    } catch (err: any) {
-      console.error('[player] email change error:', err);
-      setEmailError(err?.message || 'Erreur lors du changement d\'email.');
-    } finally {
-      setEmailChanging(false);
-    }
-  };
-
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newPassword || newPassword.length < 8) {
-      setPasswordError('Le mot de passe doit contenir au moins 8 caractères.');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setPasswordError('Les mots de passe ne correspondent pas.');
-      return;
-    }
-
-    setPasswordChanging(true);
-    setPasswordError(null);
-    setPasswordSuccess(null);
-
-    try {
-      const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
-
-      if (error) {
-        throw error;
-      }
-
-      setPasswordSuccess('Ton mot de passe a été modifié avec succès.');
-      setNewPassword('');
-      setConfirmPassword('');
-    } catch (err: any) {
-      console.error('[player] password change error:', err);
-      setPasswordError(err?.message || 'Erreur lors du changement de mot de passe.');
-    } finally {
-      setPasswordChanging(false);
-    }
-  };
-
   const pendingCaptainRequest = demandes.find(
     (d) => d.type === 'captain_request' && d.status === 'pending'
   );
@@ -191,8 +117,6 @@ export default function PlayerDashboard() {
   const pendingJoinRequest = demandes.find(
     (d) => d.type === 'join' && d.status === 'pending'
   );
-
-  const hasPendingRequest = pendingCaptainRequest || pendingJoinRequest;
 
   if (loading) {
     return (
@@ -245,287 +169,16 @@ export default function PlayerDashboard() {
           )}
 
           <div className="grid gap-6 md:grid-cols-2">
-            {/* Carte Profil */}
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
-              <h2 className="text-lg font-semibold mb-4">Mon profil</h2>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Email</span>
-                  <span>{user.email}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Nom affiché</span>
-                  <span>{displayName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Rôle</span>
-                  <span className="capitalize">
-                    {user.user_metadata?.role || 'player'}
-                  </span>
-                </div>
-                {user.user_metadata?.battle_tag && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">BattleTag</span>
-                    <span className="font-mono">
-                      {user.user_metadata.battle_tag}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Changer d'email */}
-              <div className="mt-6 pt-4 border-t border-white/10">
-                <h3 className="text-sm font-medium mb-3">Changer d&apos;email</h3>
-
-                {emailSuccess && (
-                  <div className="mb-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
-                    {emailSuccess}
-                  </div>
-                )}
-                {emailError && (
-                  <div className="mb-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200">
-                    {emailError}
-                  </div>
-                )}
-
-                <form onSubmit={handleEmailChange} className="space-y-3">
-                  <input
-                    type="email"
-                    placeholder="Nouvel email"
-                    value={newEmail}
-                    onChange={(e) => setNewEmail(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-500"
-                    required
-                  />
-                  <button
-                    type="submit"
-                    disabled={emailChanging || !newEmail || newEmail === user.email}
-                    className="w-full px-3 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition"
-                  >
-                    {emailChanging ? 'Envoi en cours...' : 'Changer mon email'}
-                  </button>
-                </form>
-                <p className="text-xs text-gray-500 mt-2">
-                  Un email de confirmation sera envoyé à la nouvelle adresse.
-                </p>
-              </div>
-
-              {/* Changer de mot de passe */}
-              <div className="mt-6 pt-4 border-t border-white/10">
-                <h3 className="text-sm font-medium mb-3">Changer de mot de passe</h3>
-
-                {passwordSuccess && (
-                  <div className="mb-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
-                    {passwordSuccess}
-                  </div>
-                )}
-                {passwordError && (
-                  <div className="mb-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200">
-                    {passwordError}
-                  </div>
-                )}
-
-                <form onSubmit={handlePasswordChange} className="space-y-3">
-                  <input
-                    type="password"
-                    placeholder="Nouveau mot de passe"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-500"
-                    minLength={8}
-                    required
-                  />
-                  <input
-                    type="password"
-                    placeholder="Confirmer le mot de passe"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-500"
-                    minLength={8}
-                    required
-                  />
-                  <button
-                    type="submit"
-                    disabled={passwordChanging || !newPassword || !confirmPassword}
-                    className="w-full px-3 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition"
-                  >
-                    {passwordChanging ? 'Modification...' : 'Changer mon mot de passe'}
-                  </button>
-                </form>
-                <p className="text-xs text-gray-500 mt-2">
-                  Minimum 8 caractères.
-                </p>
-              </div>
-            </div>
-
-            {/* Carte Équipe */}
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
-              <h2 className="text-lg font-semibold mb-4">Mon équipe</h2>
-
-              {team ? (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    {team.logo_url && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={team.logo_url}
-                        alt={team.name}
-                        className="w-12 h-12 rounded-full object-cover border border-white/10"
-                      />
-                    )}
-                    <div>
-                      <div className="font-semibold">{team.name}</div>
-                      {team.short_name && (
-                        <div className="text-xs text-gray-400">
-                          {team.short_name}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {isCaptain && (
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-400/30 text-xs text-purple-200">
-                      <span>Capitaine</span>
-                    </div>
-                  )}
-
-                  {isCaptain && (
-                    <Link
-                      href="/admin/teams/my"
-                      className="block w-full text-center px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-sm font-semibold transition"
-                    >
-                      Gerer mon equipe
-                    </Link>
-                  )}
-                </div>
-              ) : (
-                <div className="text-sm text-gray-400">
-                  <p className="mb-4">
-                    Tu n&apos;es pas encore membre d&apos;une equipe.
-                  </p>
-
-                  {/* Demande en attente */}
-                  {hasPendingRequest && (
-                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 mb-4">
-                      <div className="text-amber-200 font-medium mb-1">
-                        {pendingCaptainRequest
-                          ? 'Demande de capitaine en attente'
-                          : 'Demande en attente'}
-                      </div>
-                      <div className="text-xs text-amber-300/70">
-                        {pendingCaptainRequest ? (
-                          <>
-                            Equipe :{' '}
-                            {pendingCaptainRequest.payload?.team_name ||
-                              pendingCaptainRequest.payload?.existing_team_name ||
-                              '—'}
-                          </>
-                        ) : pendingJoinRequest ? (
-                          <>
-                            Rejoindre :{' '}
-                            {pendingJoinRequest.team?.name ||
-                              pendingJoinRequest.payload?.team_name ||
-                              '—'}
-                          </>
-                        ) : null}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        Envoyee le{' '}
-                        {new Date(
-                          (pendingCaptainRequest || pendingJoinRequest)!.created_at
-                        ).toLocaleDateString()}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Boutons d'action si pas de demande en attente */}
-                  {!hasPendingRequest && (
-                    <div className="space-y-3">
-                      <Link
-                        href="/player/join-team"
-                        className="block w-full text-center px-4 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white text-sm font-semibold transition"
-                      >
-                        Rejoindre une equipe
-                      </Link>
-                      <Link
-                        href="/player/request-captain"
-                        className="block w-full text-center px-4 py-3 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 text-white text-sm font-medium transition"
-                      >
-                        Creer ma propre equipe
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+            <ProfileCard user={user} displayName={displayName} />
+            <TeamCard
+              team={team}
+              isCaptain={isCaptain}
+              pendingCaptainRequest={pendingCaptainRequest}
+              pendingJoinRequest={pendingJoinRequest}
+            />
           </div>
 
-          {/* Historique des demandes */}
-          {demandes.length > 0 && (
-            <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
-              <h2 className="text-lg font-semibold mb-4">
-                Historique des demandes
-              </h2>
-              <div className="space-y-3">
-                {demandes.map((d) => {
-                  const teamName =
-                    d.team?.name ||
-                    d.payload?.team_name ||
-                    d.payload?.existing_team_name ||
-                    null;
-
-                  const typeLabel =
-                    d.type === 'captain_request'
-                      ? 'Demande de capitaine'
-                      : d.type === 'join'
-                        ? 'Rejoindre une equipe'
-                        : d.type === 'leave'
-                          ? 'Quitter l\'equipe'
-                          : 'Demande';
-
-                  return (
-                    <div
-                      key={d.id}
-                      className="flex items-center justify-between text-sm border-b border-white/5 pb-3 last:border-0"
-                    >
-                      <div>
-                        <span className="font-medium">{typeLabel}</span>
-                        {teamName && (
-                          <span className="text-gray-400 ml-2">
-                            ({teamName})
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                            d.status === 'pending'
-                              ? 'bg-amber-500/20 text-amber-300'
-                              : d.status === 'approved'
-                                ? 'bg-emerald-500/20 text-emerald-300'
-                                : d.status === 'rejected'
-                                  ? 'bg-red-500/20 text-red-300'
-                                  : 'bg-gray-500/20 text-gray-300'
-                          }`}
-                        >
-                          {d.status === 'pending'
-                            ? 'En attente'
-                            : d.status === 'approved'
-                              ? 'Approuvee'
-                              : d.status === 'rejected'
-                                ? 'Refusee'
-                                : 'Annulee'}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {new Date(d.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+          <DemandesHistory demandes={demandes} />
 
           {/* Liens utiles */}
           <div className="mt-8 flex flex-wrap gap-4 text-sm">
