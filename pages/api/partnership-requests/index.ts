@@ -1,16 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-
-type PartnershipRequestPayload = {
-  companyName: string;
-  contactName: string;
-  email: string;
-  phone?: string;
-  website?: string;
-  category: 'super' | 'major' | 'cultural' | 'other';
-  message: string;
-  budgetRange?: string;
-};
+import {
+  partnershipRequestSchema,
+  formatZodError,
+} from '@/utils/validation';
 
 export default async function handler(
   req: NextApiRequest,
@@ -27,35 +20,12 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const body = req.body as PartnershipRequestPayload;
-
   // Validation
-  if (!body.companyName?.trim()) {
-    return res.status(400).json({ error: 'Le nom de l\'entreprise est requis.' });
+  const parsed = partnershipRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: formatZodError(parsed.error) });
   }
-  if (!body.contactName?.trim()) {
-    return res.status(400).json({ error: 'Le nom du contact est requis.' });
-  }
-  if (!body.email?.trim()) {
-    return res.status(400).json({ error: 'L\'email est requis.' });
-  }
-  if (!body.category) {
-    return res.status(400).json({ error: 'La catégorie est requise.' });
-  }
-  if (!body.message?.trim()) {
-    return res.status(400).json({ error: 'Le message est requis.' });
-  }
-
-  // Email validation
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(body.email)) {
-    return res.status(400).json({ error: 'L\'email est invalide.' });
-  }
-
-  const validCategories = ['super', 'major', 'cultural', 'other'];
-  if (!validCategories.includes(body.category)) {
-    return res.status(400).json({ error: 'Catégorie invalide.' });
-  }
+  const body = parsed.data;
 
   // Get IP and user agent for spam detection
   const forwarded = req.headers['x-forwarded-for'];
@@ -65,13 +35,13 @@ export default async function handler(
   const userAgent = req.headers['user-agent'] ?? null;
 
   const insertPayload = {
-    company_name: body.companyName.trim(),
-    contact_name: body.contactName.trim(),
-    email: body.email.trim().toLowerCase(),
+    company_name: body.companyName,
+    contact_name: body.contactName,
+    email: body.email,
     phone: body.phone?.trim() || null,
     website: body.website?.trim() || null,
     category: body.category,
-    message: body.message.trim(),
+    message: body.message,
     budget_range: body.budgetRange?.trim() || null,
     status: 'new',
     ip_address: ipAddress,

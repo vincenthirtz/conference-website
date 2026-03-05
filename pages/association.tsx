@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import type { GetServerSideProps } from 'next';
+import type { GetStaticProps } from 'next';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import Speaker from '@/components/Speaker/speaker';
 import { supabaseAdmin } from '@/utils/supabase';
@@ -245,12 +245,13 @@ function AssociationPage({ castMembers }: Props) {
   );
 }
 
-export const getServerSideProps: GetServerSideProps<Props> = async () => {
+export const getStaticProps: GetStaticProps<Props> = async () => {
   if (!supabaseAdmin) {
     return {
       props: {
         castMembers: [],
       },
+      revalidate: 60,
     };
   }
 
@@ -266,6 +267,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async () => {
       props: {
         castMembers: [],
       },
+      revalidate: 60,
     };
   }
 
@@ -273,6 +275,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async () => {
     props: {
       castMembers: data ?? [],
     },
+    revalidate: 3600, // Rebuild every hour
   };
 };
 

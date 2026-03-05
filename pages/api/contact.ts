@@ -1,12 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-
-type ContactPayload = {
-  name?: string;
-  email?: string;
-  subject?: string;
-  message?: string;
-};
+import { contactSchema, formatZodError } from '@/utils/validation';
 
 const RATE_LIMIT_MAX = 5;
 
@@ -54,27 +48,12 @@ export default async function handler(
     });
   }
 
-  const body = req.body as ContactPayload;
-
   // Validation
-  if (!body.name?.trim()) {
-    return res.status(400).json({ error: 'Le nom est obligatoire.' });
+  const parsed = contactSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: formatZodError(parsed.error) });
   }
-  if (!body.email?.trim() || !isValidEmail(body.email)) {
-    return res.status(400).json({ error: 'Email invalide.' });
-  }
-  if (!body.subject?.trim()) {
-    return res.status(400).json({ error: 'Le sujet est obligatoire.' });
-  }
-  if (!body.message?.trim()) {
-    return res.status(400).json({ error: 'Le message est obligatoire.' });
-  }
-  if (body.message.trim().length < 10) {
-    return res.status(400).json({ error: 'Le message est trop court.' });
-  }
-  if (body.message.trim().length > 5000) {
-    return res.status(400).json({ error: 'Le message est trop long (max 5000 caractères).' });
-  }
+  const { name, email, subject, message } = parsed.data;
 
   // Get user agent
   const userAgent = req.headers['user-agent'] || null;
@@ -83,10 +62,10 @@ export default async function handler(
   const { data, error } = await supabaseAdmin
     .from('contact_submissions')
     .insert({
-      name: body.name.trim(),
-      email: body.email.trim().toLowerCase(),
-      subject: body.subject.trim(),
-      message: body.message.trim(),
+      name,
+      email,
+      subject,
+      message,
       status: 'new',
       ip_address: ip,
       user_agent: userAgent,
@@ -104,9 +83,4 @@ export default async function handler(
     message: 'Message envoyé avec succès.',
     id: data.id,
   });
-}
-
-function isValidEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
 }

@@ -5,22 +5,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-
-export type TeamMember = {
-  email: string;
-  battleTag?: string;
-  displayName?: string;
-};
-
-export type CaptainRequestBody = {
-  // Pour une équipe existante
-  existingTeamId?: string;
-  // Pour une nouvelle équipe
-  teamName?: string;
-  members?: TeamMember[];
-  // Message optionnel
-  message?: string;
-};
+import { captainRequestSchema, formatZodError } from '@/utils/validation';
 
 export default async function handler(
   req: NextApiRequest,
@@ -73,36 +58,15 @@ export default async function handler(
   }
 
   if (req.method === 'POST') {
-    const body = req.body as CaptainRequestBody;
-
-    const hasExistingTeam = !!body?.existingTeamId?.trim();
-    const hasNewTeam = !!body?.teamName?.trim();
-
-    // Valider qu'on a soit une équipe existante, soit un nom pour une nouvelle
-    if (!hasExistingTeam && !hasNewTeam) {
-      return res.status(400).json({
-        error: "Sélectionne une équipe existante ou entre un nom pour une nouvelle équipe.",
-      });
+    const parsed = captainRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: formatZodError(parsed.error) });
     }
+    const body = parsed.data;
 
+    const hasExistingTeam = !!body.existingTeamId;
     const message = body.message?.trim() || null;
-    const members = body.members || [];
-
-    // Valider les membres (max 5, emails valides)
-    if (members.length > 5) {
-      return res.status(400).json({
-        error: 'Tu peux ajouter au maximum 5 joueuses.',
-      });
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    for (const m of members) {
-      if (!m.email || !emailRegex.test(m.email.trim())) {
-        return res.status(400).json({
-          error: `Email invalide : ${m.email || '(vide)'}`,
-        });
-      }
-    }
+    const members = body.members;
 
     // Vérifier s'il existe déjà une demande pending pour cet utilisateur
     const { data: existingDemande, error: existingErr } = await supabaseAdmin
@@ -131,7 +95,7 @@ export default async function handler(
       const { data: teamData, error: teamErr } = await supabaseAdmin
         .from('teams')
         .select('id, name')
-        .eq('id', body.existingTeamId!.trim())
+        .eq('id', body.existingTeamId!)
         .maybeSingle();
 
       if (teamErr || !teamData) {
@@ -152,16 +116,16 @@ export default async function handler(
     };
 
     if (hasExistingTeam) {
-      payload.existing_team_id = body.existingTeamId!.trim();
+      payload.existing_team_id = body.existingTeamId!;
       payload.existing_team_name = existingTeamName;
     } else {
-      payload.team_name = body.teamName!.trim();
+      payload.team_name = body.teamName!;
     }
 
     // Ajouter les membres si présents
     if (members.length > 0) {
       payload.members = members.map((m) => ({
-        email: m.email.trim().toLowerCase(),
+        email: m.email,
         battle_tag: m.battleTag?.trim() || null,
         display_name: m.displayName?.trim() || null,
       }));
@@ -172,7 +136,7 @@ export default async function handler(
       .from('demandes')
       .insert({
         user_id: userId,
-        team_id: hasExistingTeam ? body.existingTeamId!.trim() : null,
+        team_id: hasExistingTeam ? body.existingTeamId! : null,
         type: 'captain_request',
         status: 'pending',
         comment: message,

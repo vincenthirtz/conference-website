@@ -1,7 +1,7 @@
 // pages/tournaments.tsx
 // Page publique listant tous les tournois (passés, en cours, à venir)
 
-import { GetServerSideProps } from 'next';
+import { GetStaticProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useMemo } from 'react';
@@ -26,11 +26,9 @@ type TournamentsPageProps = {
   tournaments: Tournament[];
 };
 
-export const getServerSideProps: GetServerSideProps<
-  TournamentsPageProps
-> = async () => {
+export const getStaticProps: GetStaticProps<TournamentsPageProps> = async () => {
   if (!supabaseAdmin) {
-    return { props: { tournaments: [] } };
+    return { props: { tournaments: [] }, revalidate: 60 };
   }
 
   const { data, error } = await supabaseAdmin
@@ -55,13 +53,14 @@ export const getServerSideProps: GetServerSideProps<
 
   if (error) {
     console.error('[tournaments] fetch error:', error);
-    return { props: { tournaments: [] } };
+    return { props: { tournaments: [] }, revalidate: 60 };
   }
 
   return {
     props: {
       tournaments: (data || []) as Tournament[],
     },
+    revalidate: 300, // Rebuild every 5 minutes
   };
 };
 
