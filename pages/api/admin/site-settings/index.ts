@@ -1,10 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import {
-  getStaffContextFromRequest,
-  hasAtLeastRole,
-  logStaffAction,
-} from '@/utils/staff';
+import { getStaffContextFromRequest, hasAtLeastRole } from '@/utils/staff';
+import { logStaffAction } from '@/utils/staffLogs';
 
 type SiteSetting = {
   key: string;

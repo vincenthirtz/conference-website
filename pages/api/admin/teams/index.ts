@@ -1,4 +1,3 @@
-// @ts-nocheck
 // pages/api/admin/teams/index.ts
 // Admin: liste des équipes avec filtres simples
 
@@ -62,7 +61,7 @@ async function handleGet(
   let query = supabaseAdmin
     .from('teams')
     .select('*', {
-      count: includeTotal === '1' || includeTotal === 'true' ? 'exact' : 'none',
+      count: includeTotal === '1' || includeTotal === 'true' ? 'exact' : undefined,
     })
     .order('created_at', { ascending: false })
     .range(offsetNum, offsetNum + limitNum - 1);

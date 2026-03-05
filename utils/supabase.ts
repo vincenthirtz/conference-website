@@ -109,4 +109,4 @@ export const supabaseAdmin = SUPABASE_SERVICE_ROLE
         persistSession: false,
       },
     })
-  : null;
+  : null!;

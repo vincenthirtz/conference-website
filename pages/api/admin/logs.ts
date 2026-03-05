@@ -1,4 +1,3 @@
-// @ts-nocheck
 // pages/api/admin/logs.ts
 // Admin: lecture des staff_logs globaux (journal d'audit).
 //

@@ -1,4 +1,3 @@
-// @ts-nocheck
 // pages/match/[id].tsx
  
 import { GetServerSideProps } from 'next';

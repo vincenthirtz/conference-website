@@ -1,4 +1,3 @@
-// @ts-nocheck
 // pages/api/admin/stages/[stageId]/auto-byes.ts
 // Admin: auto-traitement des matchs "incomplets" d'un stage en BYE.
 //

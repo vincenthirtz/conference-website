@@ -1,4 +1,3 @@
-// @ts-nocheck
 /* eslint-disable @next/next/no-img-element */
 import type { GetServerSideProps, NextPage } from 'next';
 import Head from 'next/head';
@@ -40,7 +39,7 @@ const TeamMapsPage: NextPage<Props> = ({ team, mapStats }) => {
         </Head>
         <main className="min-h-screen bg-neutral-900 text-white">
           <div className="container mx-auto px-4 py-16">
-            <Heading level={1} className="text-center mb-4">
+            <Heading level="h1" className="text-center mb-4">
               Équipe introuvable
             </Heading>
             <Paragraph className="text-center text-neutral-400 mb-8">
@@ -95,7 +94,7 @@ const TeamMapsPage: NextPage<Props> = ({ team, mapStats }) => {
                 </div>
               )}
               <div>
-                <Heading level={1} className="text-3xl md:text-4xl mb-1">
+                <Heading level="h1" className="text-3xl md:text-4xl mb-1">
                   {team.name}
                   {team.short_name && (
                     <span className="ml-2 text-sm px-2 py-1 rounded-full bg-white/10 border border-white/20 uppercase tracking-wide align-middle">
@@ -130,7 +129,7 @@ const TeamMapsPage: NextPage<Props> = ({ team, mapStats }) => {
           <section className="bg-neutral-800/80 border border-neutral-700 rounded-2xl p-6 md:p-8">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb  -4">
               <div>
-                <Heading level={2} className="text-2xl">
+                <Heading level="h2" className="text-2xl">
                   Performance par carte
                 </Heading>
                 <Paragraph className="text-neutral-400 mt-1">

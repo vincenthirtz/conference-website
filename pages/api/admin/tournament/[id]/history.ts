@@ -1,4 +1,3 @@
-// @ts-nocheck
 // pages/api/admin/tournament/[id]/history.ts
 // Historique staff d’un tournoi :
 // - GET : retourne la liste des actions staff liées au tournoi
@@ -93,7 +92,7 @@ async function handler(
       });
     }
 
-    const rawLogs = (data || []) as StaffLog[];
+    const rawLogs = (data || []) as unknown as StaffLog[];
 
     // Formatage human-readable
     const formatted = rawLogs.map((log) => formatStaffLog(log));

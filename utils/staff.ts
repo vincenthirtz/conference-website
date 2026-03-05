@@ -1,6 +1,5 @@
 // lib/staff.ts
 /* Outils Staff : rôles, permissions, helpers SSR/API */
-// @ts-nocheck
 import type {
   NextApiRequest,
   NextApiResponse,
@@ -52,7 +51,28 @@ export class StaffUnauthenticatedError extends Error {
   }
 }
 
-const ROLE_RANK: Record<StaffRole, number> = {
+export const STAFF_ROLES: StaffRole[] = [
+  'owner',
+  'admin',
+  'manager',
+  'caster',
+];
+
+export const STAFF_ROLE_LABEL: Record<StaffRole, string> = {
+  owner: 'Owner',
+  admin: 'Admin',
+  manager: 'Manager',
+  caster: 'Caster',
+};
+
+export const STAFF_ROLE_DESCRIPTION: Record<StaffRole, string> = {
+  owner: 'Accès complet, gestion du staff, gestion des permissions',
+  admin: 'Accès complet au back-office, gestion tournois & résultats',
+  manager: 'Gestion opérationnelle : équipes, demandes, matches',
+  caster: 'Accès lecture + meta info match (pour préparation cast)',
+};
+
+export const STAFF_ROLE_RANK: Record<StaffRole, number> = {
   owner: 3,
   admin: 2,
   manager: 1,
@@ -64,18 +84,25 @@ const ROLE_RANK: Record<StaffRole, number> = {
  * ---------------------------------------------------------*/
 
 export function formatStaffRoleLabel(role: StaffRole): string {
-  switch (role) {
-    case 'owner':
-      return 'Owner';
-    case 'admin':
-      return 'Admin';
-    case 'manager':
-      return 'Manager';
-    case 'caster':
-      return 'Caster';
-    default:
-      return role;
-  }
+  return STAFF_ROLE_LABEL[role] ?? role;
+}
+
+export function getRoleLabel(role: StaffRole | null | undefined): string {
+  if (!role) return '—';
+  return STAFF_ROLE_LABEL[role] ?? role;
+}
+
+export function getRoleDescription(role: StaffRole | null | undefined): string {
+  if (!role) return '';
+  return STAFF_ROLE_DESCRIPTION[role] ?? '';
+}
+
+export function getRoleOptions() {
+  return STAFF_ROLES.map((role) => ({
+    value: role,
+    label: STAFF_ROLE_LABEL[role],
+    description: STAFF_ROLE_DESCRIPTION[role],
+  }));
 }
 
 export function hasAtLeastRole(
@@ -83,7 +110,7 @@ export function hasAtLeastRole(
   minRole: StaffRole
 ): boolean {
   if (!role) return false;
-  return ROLE_RANK[role] >= ROLE_RANK[minRole];
+  return STAFF_ROLE_RANK[role] >= STAFF_ROLE_RANK[minRole];
 }
 
 /* -----------------------------------------------------------
@@ -214,58 +241,6 @@ export async function requireStaffRoleFromRequest(
   }
 
   return ctx;
-}
-
-/* -----------------------------------------------------------
- * Staff logs
- * ---------------------------------------------------------*/
-
-export type StaffLogAction =
-  | 'login'
-  | 'logout'
-  | 'view_admin_page'
-  | 'update_tournament'
-  | 'create_tournament'
-  | 'delete_tournament'
-  | 'update_match'
-  | 'create_match'
-  | 'delete_match'
-  | 'update_bracket'
-  | 'update_team'
-  | 'staff_batch_action'
-  | 'other';
-
-export type StaffLogPayload = Record<string, any>;
-
-export async function logStaffAction(params: {
-  staff_id: string;
-  action: StaffLogAction;
-  entity_type?: string | null;
-  entity_id?: string | null;
-  tournament_id?: string | null;
-  payload?: StaffLogPayload | null;
-}) {
-  const {
-    staff_id,
-    action,
-    entity_type = null,
-    entity_id = null,
-    tournament_id = null,
-    payload = null,
-  } = params;
-
-  const { error } = await supabaseAdmin.from('staff_logs').insert({
-    staff_id,
-    action,
-    entity_type,
-    entity_id,
-    tournament_id,
-    payload,
-  });
-
-  if (error) {
-    console.error('logStaffAction error:', error, params);
-  }
 }
 
 /* -----------------------------------------------------------

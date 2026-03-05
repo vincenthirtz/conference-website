@@ -1,8 +1,7 @@
 // lib/staffLogs.ts
 // Gestion centralisée des logs staff (inserts + lecture + filtres)
-// @ts-nocheck
 import { supabaseAdmin } from './supabase';
-import type { StaffRole } from './staffRoles';
+import type { StaffRole } from './staff';
 
 /* -----------------------------------------------------------
  * Types
@@ -25,6 +24,10 @@ export type StaffLogAction =
   | 'update_scores'
   | 'staff_batch_action'
   | 'manage_team'
+  | 'update_team'
+  | 'delete_team'
+  | 'tournament_update'
+  | 'create_swiss_round'
   | 'other';
 
 export type StaffLog = {
@@ -38,7 +41,7 @@ export type StaffLog = {
   payload: Record<string, any> | null;
   staff: {
     id: string;
-    user_id: string;
+    auth_user_id: string;
     role: StaffRole;
     display_name: string | null;
     avatar_url: string | null;
@@ -210,6 +213,10 @@ export function formatStaffLog(log: StaffLog) {
     update_scores: 'Mise à jour scores',
     staff_batch_action: 'Action batch staff',
     manage_team: 'Action équipe',
+    update_team: 'Modification équipe',
+    delete_team: 'Suppression équipe',
+    tournament_update: 'Mise à jour tournoi',
+    create_swiss_round: 'Création round swiss',
     other: 'Action staff',
   };
 

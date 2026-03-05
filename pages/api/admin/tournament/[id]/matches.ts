@@ -1,4 +1,3 @@
-// @ts-nocheck
 // pages/api/admin/tournament/[id]/matches.ts
 // Admin: gestion des matchs d'un tournoi
 // - GET  : liste des matchs du tournoi (avec filtres + pagination)
@@ -225,7 +224,7 @@ async function handleGet(
   }
 
   return res.status(200).json({
-    matches: (data || []) as MatchRow[],
+    matches: (data || []) as unknown as MatchRow[],
   });
 }
 

@@ -8,26 +8,22 @@ type ContactPayload = {
   message?: string;
 };
 
-// Simple rate limiting in memory (per IP)
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT_MAX = 5; // Max 5 submissions
-const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // Per hour
+const RATE_LIMIT_MAX = 5;
 
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const record = rateLimitMap.get(ip);
+async function isRateLimited(ip: string): Promise<boolean> {
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const { count, error } = await supabaseAdmin
+    .from('contact_submissions')
+    .select('*', { count: 'exact', head: true })
+    .eq('ip_address', ip)
+    .gte('created_at', oneHourAgo);
 
-  if (!record || now > record.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
+  if (error) {
+    console.error('[api/contact] rate limit check error', error);
     return false;
   }
 
-  if (record.count >= RATE_LIMIT_MAX) {
-    return true;
-  }
-
-  record.count += 1;
-  return false;
+  return (count ?? 0) >= RATE_LIMIT_MAX;
 }
 
 export default async function handler(
@@ -52,7 +48,7 @@ export default async function handler(
     'unknown';
 
   // Rate limiting
-  if (isRateLimited(ip)) {
+  if (await isRateLimited(ip)) {
     return res.status(429).json({
       error: 'Trop de messages envoyés. Réessaie dans une heure.',
     });

@@ -1,4 +1,3 @@
-// @ts-nocheck
 // pages/tournament/[id].tsx
  
 import { GetServerSideProps } from 'next';
@@ -50,6 +49,7 @@ type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
 type SimpleMatch = {
   id: string;
   scheduled_at: string | null;
+  completed_at: string | null;
   status: MatchStatus;
   is_bye: boolean | null;
   round_name: string | null;
@@ -242,12 +242,12 @@ export default function TournamentPage({
       finishedMatches
         .sort((a, b) => {
           const da = a.completed_at
-            ? new Date((a as any).completed_at)
+            ? new Date(a.completed_at)
             : a.scheduled_at
               ? new Date(a.scheduled_at)
               : new Date(0);
           const db = b.completed_at
-            ? new Date((b as any).completed_at)
+            ? new Date(b.completed_at)
             : b.scheduled_at
               ? new Date(b.scheduled_at)
               : new Date(0);

@@ -1,4 +1,3 @@
-// @ts-nocheck
 // pages/api/admin/teams/[teamId]/history.ts
 // Historique staff d’une équipe.
 //
@@ -136,8 +135,8 @@ async function handler(
 
     // 3) Merge + tri chrono desc
     const rawLogs: StaffLog[] = [
-      ...(((directLogsData as StaffLog[]) ?? []) as StaffLog[]),
-      ...(((payloadLogsData as StaffLog[]) ?? []) as StaffLog[]),
+      ...(((directLogsData as unknown as StaffLog[]) ?? []) as StaffLog[]),
+      ...(((payloadLogsData as unknown as StaffLog[]) ?? []) as StaffLog[]),
     ];
 
     rawLogs.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));

@@ -1,4 +1,3 @@
-// @ts-nocheck
 // pages/api/admin/teams/add-member.ts
 // Ajout d'un membre à une équipe (option: le définir capitaine)
 

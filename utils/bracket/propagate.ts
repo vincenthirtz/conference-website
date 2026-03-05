@@ -1,7 +1,6 @@
 // lib/bracket/propagate.ts
 // Logique de propagation des équipes dans le bracket
 // à partir d'un match terminé (winner / loser → prochains matchs).
-// @ts-nocheck
 import { supabaseAdmin } from '../supabase';
 
 /* -----------------------------------------------------------
@@ -275,7 +274,7 @@ export async function resetPropagationForMatch(matchId: string): Promise<void> {
   const match = await fetchMatchWithLinks(matchId);
   if (!match) return;
 
-  const updates: Promise<any>[] = [];
+  const updates: PromiseLike<any>[] = [];
 
   if (match.next_match_win_id && match.next_match_win_slot) {
     const field = match.next_match_win_slot === 1 ? 'team1_id' : 'team2_id';
@@ -286,6 +285,7 @@ export async function resetPropagationForMatch(matchId: string): Promise<void> {
         .update({ [field]: null })
         .eq('id', match.next_match_win_id)
         .eq('tournament_id', match.tournament_id)
+        .then()
     );
   }
 
@@ -298,6 +298,7 @@ export async function resetPropagationForMatch(matchId: string): Promise<void> {
         .update({ [field]: null })
         .eq('id', match.next_match_lose_id)
         .eq('tournament_id', match.tournament_id)
+        .then()
     );
   }
 

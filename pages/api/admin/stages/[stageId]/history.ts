@@ -1,4 +1,3 @@
-// @ts-nocheck
 // pages/api/admin/stages/[stageId]/history.ts
 // Historique staff d’une phase (stage) de tournoi.
 //
@@ -141,8 +140,8 @@ async function handler(
 
     // 3) Merge + tri chrono desc
     const rawLogs: StaffLog[] = [
-      ...(((stageLogsData as StaffLog[]) ?? []) as StaffLog[]),
-      ...(((payloadLogsData as StaffLog[]) ?? []) as StaffLog[]),
+      ...(((stageLogsData as unknown as StaffLog[]) ?? []) as StaffLog[]),
+      ...(((payloadLogsData as unknown as StaffLog[]) ?? []) as StaffLog[]),
     ];
 
     rawLogs.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));

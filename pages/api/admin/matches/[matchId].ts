@@ -1,4 +1,3 @@
-// @ts-nocheck
 // pages/api/admin/matches/[matchId].ts
 // Route admin pour gérer un match :
 // - GET : détail du match (+ équipes, + games optionnelles)

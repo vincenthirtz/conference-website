@@ -1,4 +1,3 @@
-// @ts-nocheck
 // pages/tournament/[id]/stats.tsx
  
 import { GetServerSideProps } from 'next';
@@ -148,7 +147,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     if (gErr) {
       console.error('stats page games error:', gErr);
     } else {
-      games = (gamesData || []) as GameRow;
+      games = (gamesData || []) as GameRow[];
     }
   }
 

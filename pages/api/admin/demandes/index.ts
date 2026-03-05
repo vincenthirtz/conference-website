@@ -1,4 +1,3 @@
-// @ts-nocheck
 // pages/api/admin/demandes/index.ts
 // Admin: gestion des demandes (join/leave, etc.)
 // - GET  : liste filtrable/paginée des demandes

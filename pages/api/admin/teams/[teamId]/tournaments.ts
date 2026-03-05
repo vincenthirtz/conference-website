@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { withStaffRoute } from '@/utils/staff';
 import { supabaseAdmin } from '@/utils/supabase';
-import { logStaffAction } from '@/utils/staff';
+import { logStaffAction } from '@/utils/staffLogs';
 
 /**
  * GET /api/admin/teams/[teamId]/tournaments

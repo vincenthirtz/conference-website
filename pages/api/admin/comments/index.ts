@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Admin CRUD pour les commentaires de news
 
 import type { NextApiRequest, NextApiResponse } from 'next';
@@ -90,7 +89,7 @@ async function listComments(
   }
 
   return res.status(200).json({
-    comments: data || [],
+    comments: (data || []) as unknown as CommentRow[],
     total: typeof count === 'number' ? count : null,
   });
 }
@@ -136,7 +135,7 @@ async function updateComment(
       .json({ error: error.message || 'Failed to update comment' });
   }
 
-  return res.status(200).json({ comment: data as CommentRow });
+  return res.status(200).json({ comment: data as unknown as CommentRow });
 }
 
 async function deleteComment(

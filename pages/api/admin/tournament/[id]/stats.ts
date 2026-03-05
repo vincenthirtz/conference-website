@@ -1,4 +1,3 @@
-// @ts-nocheck
 // pages/api/admin/tournament/[id]/stats.ts
 // Admin: statistiques d'un tournoi
 // - GET : stats globales, classement équipes, stats maps, matchs serrés
@@ -89,7 +88,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       return res.status(500).json({ error: 'Failed to fetch matches' });
     }
 
-    const allMatches = (matchesData || []) as MatchRow[];
+    const allMatches = (matchesData || []) as unknown as MatchRow[];
     const realMatches = allMatches.filter((m) => !m.is_bye);
 
     // 3) Récupérer les équipes du tournoi

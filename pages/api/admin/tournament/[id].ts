@@ -1,4 +1,3 @@
-// @ts-nocheck
 // pages/api/admin/tournament/[id].ts
 // Admin: détails d'un tournoi + modification du statut
 // - GET  : récupérer les détails

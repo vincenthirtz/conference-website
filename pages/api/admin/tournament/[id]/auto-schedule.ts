@@ -1,4 +1,3 @@
-// @ts-nocheck
 // pages/api/admin/tournament/[id]/auto-schedule.ts
 // Auto-scheduler admin pour les matchs d'un tournoi.
 //

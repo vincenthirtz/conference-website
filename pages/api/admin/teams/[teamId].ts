@@ -1,4 +1,3 @@
-// @ts-nocheck
 // pages/api/admin/teams/[teamId].ts
 // Admin: gestion d'une équipe
 // - GET        : récupérer une équipe
@@ -146,8 +145,7 @@ async function handlePut(
 
   for (const key of allowedFields) {
     if (key in body) {
-      // @ts-expect-error index assign
-      updatePayload[key] = body[key];
+      updatePayload[key as keyof TeamRow] = body[key];
     }
   }
 

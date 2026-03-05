@@ -1,4 +1,3 @@
-// @ts-nocheck
 // pages/api/admin/matches/[matchId]/history.ts
 // Historique staff d’un match spécifique.
 // - GET : retourne la liste des actions staff liées au match
@@ -98,8 +97,8 @@ async function handler(
 
     // 3) Merge + tri chrono desc
     const rawLogs = [
-      ...(((matchLogs as StaffLog[]) ?? []) as StaffLog[]),
-      ...(((gameLogs as StaffLog[]) ?? []) as StaffLog[]),
+      ...(((matchLogs as unknown as StaffLog[]) ?? []) as StaffLog[]),
+      ...(((gameLogs as unknown as StaffLog[]) ?? []) as StaffLog[]),
     ];
 
     rawLogs.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));

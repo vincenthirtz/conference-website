@@ -1,4 +1,3 @@
-// @ts-nocheck
 // pages/team/[slug].tsx
 
 import { GetServerSideProps } from 'next';

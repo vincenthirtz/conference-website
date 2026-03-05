@@ -1,5 +1,3 @@
-// @ts-nocheck
-// @ts-nocheck
 // pages/api/admin/me.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
@@ -135,7 +133,7 @@ export default async function handler(
       (updated as any).avatar_url = null;
     }
 
-    return res.status(200).json(updated);
+    return res.status(200).json(updated as unknown as MeResponse);
   }
 
   if (req.method !== 'GET') {
@@ -166,5 +164,5 @@ export default async function handler(
   }
 
   // 4) OK : renvoyer les infos staff (c’est ce que tu consommeras côté front)
-  return res.status(200).json(staff);
+  return res.status(200).json(staff as unknown as MeResponse);
 }

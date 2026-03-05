@@ -1,4 +1,3 @@
-// @ts-nocheck
 // pages/api/matches/[matchId]/games.ts
 
 import type { NextApiRequest, NextApiResponse } from 'next';

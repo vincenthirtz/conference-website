@@ -1,4 +1,3 @@
-// @ts-nocheck
 // pages/api/admin/teams/[teamId]/members.ts
 // Gestion des membres d'une équipe (admin): GET, POST, PATCH, DELETE
 

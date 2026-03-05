@@ -1,7 +1,6 @@
 // lib/bracket/computePaths.ts
 // Utilitaires pour passer du graphe de bracket à un layout exploitable par le front
 // (colonnes, rangées, et "paths" entre les matchs).
-// @ts-nocheck
 import {
   BracketGraph,
   BracketColumn,

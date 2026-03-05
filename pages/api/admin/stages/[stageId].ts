@@ -1,5 +1,3 @@
-// @ts-nocheck
-// @ts-nocheck
 // pages/api/admin/stages/[stageId].ts
 // Admin: gestion d'une phase (stage) de tournoi.
 // - GET        : récupérer une phase
@@ -119,8 +117,7 @@ async function handlePut(
 
   for (const key of allowedFields) {
     if (key in body) {
-      // @ts-expect-error index
-      updatePayload[key] = body[key];
+      updatePayload[key as keyof StageRow] = body[key];
     }
   }
 

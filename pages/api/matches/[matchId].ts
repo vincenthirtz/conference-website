@@ -1,9 +1,8 @@
-// @ts-nocheck
 // pages/api/matches/[matchId].ts
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, StaffContext } from '@/utils/staff';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import { logStaffAction } from '@/utils/staffLogs';
 
@@ -13,7 +12,7 @@ export default withStaffRoute(handler, 'manager');
  * API HANDLER PRINCIPAL
  * ---------------------------------------------------------*/
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx) {
+async function handler(req: NextApiRequest, res: NextApiResponse, ctx: StaffContext) {
   const { matchId } = req.query;
 
   if (!matchId || Array.isArray(matchId)) {
@@ -103,7 +102,7 @@ async function handlePut(
   matchId: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx
+  ctx: StaffContext
 ) {
   const {
     team1Score,
@@ -141,7 +140,7 @@ async function handleDelete(
   matchId: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx
+  ctx: StaffContext
 ) {
   const { data: match, error: fetchErr } = await supabaseAdmin
     .from('matches')

@@ -1,4 +1,3 @@
-// @ts-nocheck
 // pages/api/admin/tournaments/index.ts
 // Admin: gestion des tournois
 // - GET  : liste des tournois avec filtres + pagination
@@ -6,7 +5,8 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute, logStaffAction } from '@/utils/staff'; // adapte les paths si besoin
+import { withStaffRoute } from '@/utils/staff';
+import { logStaffAction } from '@/utils/staffLogs';
 import slugify from 'slugify';
 
 export type TournamentRow = {
@@ -94,7 +94,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
   `;
 
   let query = supabaseAdmin!.from('tournaments').select(selectColumns, {
-    count: includeTotal === '1' || includeTotal === 'true' ? 'exact' : 'none',
+    count: includeTotal === '1' || includeTotal === 'true' ? 'exact' : undefined,
   });
 
   if (status && !Array.isArray(status)) {
