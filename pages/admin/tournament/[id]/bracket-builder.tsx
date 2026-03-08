@@ -1086,114 +1086,252 @@ type BracketTreeViewProps = {
   rounds: BracketRound[];
 };
 
+const CARD_H = 82;       // match card height in px
+const CARD_W = 220;      // match card width in px
+const GAP_BASE = 16;     // base vertical gap between cards in round 0
+const CONNECTOR_W = 48;  // horizontal space for bracket connectors
+const HEADER_H = 48;     // round header height
+
 function BracketTreeView({ rounds }: BracketTreeViewProps) {
   if (!rounds.length) return null;
+
+  const isFinalRound = (idx: number) => idx === rounds.length - 1 && rounds[idx].matches.length === 1;
 
   function teamLabel(m: ScheduleMatch, slot: 1 | 2) {
     const team = slot === 1 ? m.team1 : m.team2;
     const info = parseNotes(m.notes);
     const seed = slot === 1 ? info?.seed1 : info?.seed2;
-    if (team) return { name: team.short_name ?? team.name, logo: team.logo_url };
-    if (seed) return { name: `Seed ${seed}`, logo: null };
-    return { name: 'TBD', logo: null };
+    const s = seed ?? null;
+    if (team) return { name: team.short_name ?? team.name, logo: team.logo_url, hasSeed: !!s, seed: s };
+    if (s) return { name: `Seed ${s}`, logo: null, hasSeed: true, seed: s };
+    return { name: 'TBD', logo: null, hasSeed: false, seed: null };
   }
+
+  // Compute Y positions for each match in each round
+  // Round 0: evenly spaced. Round N: centered between pairs from round N-1
+  const yPositions: number[][] = [];
+  for (let r = 0; r < rounds.length; r++) {
+    const count = rounds[r].matches.length;
+    if (r === 0) {
+      const ys: number[] = [];
+      for (let i = 0; i < count; i++) {
+        ys.push(i * (CARD_H + GAP_BASE));
+      }
+      yPositions.push(ys);
+    } else {
+      const prevYs = yPositions[r - 1];
+      const ys: number[] = [];
+      for (let i = 0; i < count; i++) {
+        // Center between the two feeder matches (or just use the single one)
+        const top = prevYs[i * 2] ?? prevYs[prevYs.length - 1] ?? 0;
+        const bot = prevYs[i * 2 + 1] ?? top;
+        ys.push((top + bot) / 2);
+      }
+      yPositions.push(ys);
+    }
+  }
+
+  // Total height = max Y + card height + some padding
+  const allYs = yPositions.flat();
+  const totalH = (allYs.length > 0 ? Math.max(...allYs) : 0) + CARD_H + GAP_BASE;
+
+  const seedColors: Record<string, string> = {
+    '1': 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+    '2': 'bg-sky-500/20 text-sky-300 border-sky-500/30',
+    '3': 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+    '4': 'bg-rose-500/20 text-rose-300 border-rose-500/30',
+    '5': 'bg-violet-500/20 text-violet-300 border-violet-500/30',
+    '6': 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
+    '7': 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30',
+    '8': 'bg-lime-500/20 text-lime-300 border-lime-500/30',
+  };
 
   return (
     <div className="overflow-x-auto pb-4">
-      <div className="flex items-stretch gap-0 min-w-max">
+      <div className="flex min-w-max" style={{ gap: 0 }}>
         {rounds.map((round, roundIdx) => {
-          // Compute vertical spacing: each subsequent round doubles spacing
-          const spacingMultiplier = Math.pow(2, roundIdx);
+          const ys = yPositions[roundIdx];
+          const prevYs = roundIdx > 0 ? yPositions[roundIdx - 1] : null;
+          const showConnectors = roundIdx > 0 && prevYs;
+          const isFinale = isFinalRound(roundIdx);
+
           return (
-            <div key={round.roundNumber} className="flex flex-col items-center">
-              {/* Round header */}
-              <div className="mb-4 px-4">
-                <div className="text-[11px] font-bold text-purple-300 uppercase tracking-wider text-center whitespace-nowrap">
-                  {round.roundName}
+            <div key={round.roundNumber} className="flex-shrink-0" style={{ display: 'flex' }}>
+              {/* SVG connectors from previous round */}
+              {showConnectors && (
+                <svg
+                  width={CONNECTOR_W}
+                  height={totalH + HEADER_H}
+                  className="flex-shrink-0"
+                  style={{ marginTop: 0 }}
+                >
+                  {ys.map((y, i) => {
+                    const topIdx = i * 2;
+                    const botIdx = i * 2 + 1;
+                    const topY = (prevYs![topIdx] ?? prevYs![prevYs!.length - 1] ?? 0) + HEADER_H + CARD_H / 2;
+                    const botY = (prevYs![botIdx] ?? topY - HEADER_H) + HEADER_H + CARD_H / 2;
+                    const midY = y + HEADER_H + CARD_H / 2;
+                    const hasTwo = prevYs![botIdx] !== undefined;
+
+                    if (!hasTwo) {
+                      // Single line straight across
+                      return (
+                        <line
+                          key={i}
+                          x1={0} y1={topY}
+                          x2={CONNECTOR_W} y2={midY}
+                          stroke="rgba(139,92,246,0.25)"
+                          strokeWidth={1.5}
+                        />
+                      );
+                    }
+
+                    // Bracket merge: two horizontal stubs, vertical bar, horizontal to next
+                    return (
+                      <g key={i}>
+                        {/* Horizontal from top match */}
+                        <line x1={0} y1={topY} x2={CONNECTOR_W / 2} y2={topY}
+                          stroke="rgba(139,92,246,0.25)" strokeWidth={1.5} />
+                        {/* Horizontal from bottom match */}
+                        <line x1={0} y1={botY} x2={CONNECTOR_W / 2} y2={botY}
+                          stroke="rgba(139,92,246,0.25)" strokeWidth={1.5} />
+                        {/* Vertical bar connecting them */}
+                        <line x1={CONNECTOR_W / 2} y1={topY} x2={CONNECTOR_W / 2} y2={botY}
+                          stroke="rgba(139,92,246,0.25)" strokeWidth={1.5} />
+                        {/* Horizontal to next round match */}
+                        <line x1={CONNECTOR_W / 2} y1={midY} x2={CONNECTOR_W} y2={midY}
+                          stroke="rgba(139,92,246,0.3)" strokeWidth={1.5} />
+                        {/* Junction dots */}
+                        <circle cx={CONNECTOR_W / 2} cy={topY} r={2} fill="rgba(139,92,246,0.4)" />
+                        <circle cx={CONNECTOR_W / 2} cy={botY} r={2} fill="rgba(139,92,246,0.4)" />
+                        <circle cx={CONNECTOR_W / 2} cy={midY} r={2.5} fill="rgba(139,92,246,0.5)" />
+                      </g>
+                    );
+                  })}
+                </svg>
+              )}
+
+              {/* Round column */}
+              <div className="flex-shrink-0 relative" style={{ width: CARD_W }}>
+                {/* Round header */}
+                <div className="flex items-center justify-center gap-2" style={{ height: HEADER_H }}>
+                  <div className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border ${
+                    isFinale
+                      ? 'bg-amber-500/10 text-amber-300 border-amber-500/20'
+                      : 'bg-purple-500/10 text-purple-300 border-purple-500/20'
+                  }`}>
+                    {isFinale && (
+                      <span className="mr-1">&#9733;</span>
+                    )}
+                    {round.roundName}
+                  </div>
                 </div>
-                <div className="text-[10px] text-neutral-500 text-center mt-0.5">
-                  {round.matches.length} match{round.matches.length > 1 ? 's' : ''}
-                </div>
-              </div>
 
-              {/* Matches */}
-              <div
-                className="flex flex-col justify-around flex-1"
-                style={{ gap: `${(spacingMultiplier - 1) * 48 + 12}px` }}
-              >
-                {round.matches.map((m) => {
-                  const statusCfg = STATUS_CONFIG[m.status];
-                  const t1 = teamLabel(m, 1);
-                  const t2 = teamLabel(m, 2);
-                  const w1 = !!m.winner_team_id && m.winner_team_id === m.team1_id;
-                  const w2 = !!m.winner_team_id && m.winner_team_id === m.team2_id;
+                {/* Match cards positioned absolutely */}
+                <div className="relative" style={{ height: totalH }}>
+                  {round.matches.map((m, mIdx) => {
+                    const statusCfg = STATUS_CONFIG[m.status];
+                    const t1 = teamLabel(m, 1);
+                    const t2 = teamLabel(m, 2);
+                    const w1 = !!m.winner_team_id && m.winner_team_id === m.team1_id;
+                    const w2 = !!m.winner_team_id && m.winner_team_id === m.team2_id;
+                    const posLabel = m.position_in_round ?? mIdx + 1;
 
-                  return (
-                    <div key={m.id} className="relative flex items-center">
-                      {/* Connector line from left */}
-                      {roundIdx > 0 && (
-                        <div className="w-4 h-px bg-white/10 -ml-4" />
-                      )}
-
-                      <div className="w-52 rounded-lg border border-white/[0.08] bg-[#12121a] overflow-hidden shadow-lg shadow-black/20">
-                        {/* Match header */}
-                        <div className="flex items-center justify-between px-2.5 py-1.5 bg-white/[0.02] border-b border-white/[0.05]">
-                          <span className="text-[10px] tabular-nums text-neutral-500">
-                            {m.scheduled_at ? formatTime(m.scheduled_at) : '—'}
-                          </span>
-                          <div className="flex items-center gap-1.5">
-                            {m.match_format && (
-                              <span className="text-[9px] font-semibold uppercase text-neutral-500">
-                                {m.match_format}
+                    return (
+                      <div
+                        key={m.id}
+                        className="absolute left-0 right-0"
+                        style={{ top: ys[mIdx], height: CARD_H }}
+                      >
+                        <div className={`h-full rounded-xl border overflow-hidden transition-all ${
+                          isFinale
+                            ? 'bg-gradient-to-br from-amber-950/30 via-[#12121a] to-purple-950/30 border-amber-500/20 shadow-xl shadow-amber-500/5'
+                            : m.status === 'finished'
+                              ? 'bg-[#12121a] border-white/[0.08]'
+                              : 'bg-[#12121a] border-white/[0.06] hover:border-purple-500/20'
+                        }`}>
+                          {/* Top bar */}
+                          <div className="flex items-center justify-between px-2.5 py-1 border-b border-white/[0.05]" style={{ height: 26 }}>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[9px] font-bold text-neutral-600 font-mono">
+                                #{posLabel}
                               </span>
-                            )}
-                            <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} title={statusCfg.label} />
+                              {m.scheduled_at && (
+                                <span className="text-[10px] tabular-nums text-neutral-400 font-medium">
+                                  {formatTime(m.scheduled_at)}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              {m.match_format && (
+                                <span className="text-[9px] font-semibold uppercase text-neutral-500 bg-white/5 px-1 rounded">
+                                  {m.match_format}
+                                </span>
+                              )}
+                              <span
+                                className={`inline-flex items-center gap-1 px-1.5 py-px rounded-full text-[9px] font-medium border ${statusCfg.bg}`}
+                              >
+                                <span className={`w-1 h-1 rounded-full ${statusCfg.dot}`} />
+                                {statusCfg.label}
+                              </span>
+                            </div>
                           </div>
-                        </div>
 
-                        {/* Team 1 */}
-                        <div
-                          className={`flex items-center gap-2 px-2.5 py-2 border-b border-white/[0.04] ${
-                            w1 ? 'bg-emerald-500/5' : ''
-                          }`}
-                        >
-                          {t1.logo && (
-                            <Image src={t1.logo} alt="" width={16} height={16} className="w-4 h-4 rounded object-cover" />
-                          )}
-                          <span className={`text-xs truncate flex-1 ${w1 ? 'text-emerald-300 font-semibold' : 'text-white/80'}`}>
-                            {t1.name}
-                          </span>
-                          {w1 && <span className="text-[9px] font-bold text-emerald-400">W</span>}
-                        </div>
-
-                        {/* Team 2 */}
-                        <div
-                          className={`flex items-center gap-2 px-2.5 py-2 ${
-                            w2 ? 'bg-emerald-500/5' : ''
-                          }`}
-                        >
-                          {t2.logo && (
-                            <Image src={t2.logo} alt="" width={16} height={16} className="w-4 h-4 rounded object-cover" />
-                          )}
-                          <span className={`text-xs truncate flex-1 ${w2 ? 'text-emerald-300 font-semibold' : 'text-white/80'}`}>
-                            {t2.name}
-                          </span>
-                          {w2 && <span className="text-[9px] font-bold text-emerald-400">W</span>}
+                          {/* Team rows */}
+                          <BracketTeamRow t={t1} isWinner={w1} seedColors={seedColors} />
+                          <div className="h-px bg-white/[0.04]" />
+                          <BracketTeamRow t={t2} isWinner={w2} seedColors={seedColors} />
                         </div>
                       </div>
-
-                      {/* Connector line to right */}
-                      {roundIdx < rounds.length - 1 && (
-                        <div className="w-4 h-px bg-white/10" />
-                      )}
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function BracketTeamRow({
+  t,
+  isWinner,
+  seedColors,
+}: {
+  t: { name: string; logo: string | null; hasSeed: boolean; seed: string | null };
+  isWinner: boolean;
+  seedColors: Record<string, string>;
+}) {
+  const rowH = (CARD_H - 26) / 2; // remaining height split between two teams
+  return (
+    <div
+      className={`flex items-center gap-2 px-2.5 ${
+        isWinner ? 'bg-emerald-500/[0.07]' : ''
+      }`}
+      style={{ height: rowH }}
+    >
+      {t.seed && (
+        <span className={`inline-flex items-center justify-center w-5 h-5 rounded text-[9px] font-extrabold border ${
+          seedColors[t.seed] ?? 'bg-neutral-500/20 text-neutral-400 border-neutral-500/30'
+        }`}>
+          {t.seed}
+        </span>
+      )}
+      {t.logo && (
+        <Image src={t.logo} alt="" width={16} height={16} className="w-4 h-4 rounded object-cover flex-shrink-0" />
+      )}
+      <span className={`text-xs truncate flex-1 ${
+        isWinner ? 'text-emerald-300 font-semibold' : t.name === 'TBD' ? 'text-neutral-600 italic' : 'text-white/80'
+      }`}>
+        {t.hasSeed && t.seed ? t.name.replace(/^Seed \d+$/, '') || t.name : t.name}
+      </span>
+      {isWinner && (
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" className="flex-shrink-0 text-emerald-400">
+          <path d="M3 8.5l3 3 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
     </div>
   );
 }
