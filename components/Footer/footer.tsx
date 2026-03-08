@@ -4,8 +4,6 @@ import type { SVGTypes } from '@/types/types';
 import socials, { SocialWithIcon } from '@/config/socials';
 import { CookieSettingsButton } from '@/components/CookieBanner';
 
-type Season = 'winter' | 'spring' | 'summer' | 'autumn';
-
 function RulesIcon({ className, fill }: Readonly<SVGTypes>): JSX.Element {
   const stroke = fill || 'currentColor';
   return (
@@ -363,63 +361,12 @@ const footerLinks: FooterLink[] = [
   },
 ];
 
-function getSeasonFromMonth(month: number): Season {
-  if (month === 11 || month === 0 || month === 1) {
-    return 'winter';
-  }
-  if (month >= 2 && month <= 4) {
-    return 'spring';
-  }
-  if (month >= 5 && month <= 7) {
-    return 'summer';
-  }
-  return 'autumn';
-}
-
-function SeasonalBackdrop({ season }: { season: Season }): JSX.Element {
-  if (season === 'spring') {
-    return (
-      <div className="footer-season-overlay" aria-hidden>
-        <div className="season-layer sun-layer" />
-        <div className="season-layer rain-layer spring-rain" />
-      </div>
-    );
-  }
-
-  if (season === 'winter') {
-    return (
-      <div className="footer-season-overlay" aria-hidden>
-        <div className="season-layer snow-layer" />
-        <div className="season-layer snow-layer snow-layer--slow" />
-      </div>
-    );
-  }
-
-  if (season === 'summer') {
-    return (
-      <div className="footer-season-overlay" aria-hidden>
-        <div className="season-layer sun-layer" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="footer-season-overlay" aria-hidden>
-      <div className="season-layer rain-layer autumn-rain" />
-    </div>
-  );
-}
-
 function Footer(): JSX.Element {
-  const season = getSeasonFromMonth(new Date().getMonth());
-
   return (
     <div
       className="container relative overflow-hidden"
       data-test="footer"
-      data-season={season}
     >
-      <SeasonalBackdrop season={season} />
       <div className="relative z-10">
         <div
           className="w-full flex justify-between items-center p-4 sm:flex-col sm:gap-3"
@@ -454,7 +401,7 @@ function Footer(): JSX.Element {
           <div className="flex items-center justify-between sm:flex-col sm:items-center">
             <div className="text-white text-center flex items-center gap-2 flex-wrap justify-center">
               <span>
-                Association OW WOMEN&apos;S CUP - Tous droits réservés - Fait avec
+                Association WOMEN&apos;S CUP - Tous droits réservés - Fait avec
                 ❤️ par{' '}
                 <a
                   href="https://www.twitch.tv/arukdo"
