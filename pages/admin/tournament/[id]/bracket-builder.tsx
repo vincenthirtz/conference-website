@@ -1,12 +1,14 @@
 // pages/admin/tournament/[id]/bracket-builder.tsx
 // Planning visuel du tournoi — vue schedule par journée
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+
+type ViewMode = 'planning' | 'list' | 'bracket';
 
 type StaffShape = {
   id: string;
@@ -152,6 +154,8 @@ function AdminBracketBuilderPage(_: StaffProps) {
   const [matches, setMatches] = useState<ScheduleMatch[]>([]);
   const [dirty, setDirty] = useState(false);
   const [editingDateId, setEditingDateId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('planning');
+  const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -214,6 +218,120 @@ function AdminBracketBuilderPage(_: StaffProps) {
 
   const totalMatches = matches.length;
   const finishedCount = matches.filter((m) => m.status === 'finished').length;
+
+  /** Build bracket rounds from matches for tree view */
+  const bracketRounds = useMemo(() => {
+    if (!matches.length) return [];
+    const roundMap = new Map<number, ScheduleMatch[]>();
+    for (const m of matches) {
+      const r = m.round_number ?? 0;
+      if (!roundMap.has(r)) roundMap.set(r, []);
+      roundMap.get(r)!.push(m);
+    }
+    return Array.from(roundMap.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([roundNum, roundMatches]) => ({
+        roundNumber: roundNum,
+        roundName:
+          roundMatches[0]?.round_name ??
+          (roundMatches.length === 1 ? 'Finale' : `Round ${roundNum}`),
+        matches: roundMatches.sort(
+          (a, b) => (a.position_in_round ?? 0) - (b.position_in_round ?? 0)
+        ),
+      }));
+  }, [matches]);
+
+  /** Export PDF via print */
+  const handleExportPDF = useCallback(() => {
+    const teamName = (m: ScheduleMatch, slot: 1 | 2) => {
+      const t = slot === 1 ? m.team1 : m.team2;
+      if (t) return t.name;
+      const info = parseNotes(m.notes);
+      if (info?.seed1) return `Seed ${slot === 1 ? info.seed1 : info.seed2}`;
+      return 'TBD';
+    };
+
+    const html = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<title>${tournament?.name ?? 'Tournoi'} — Planning des matchs</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 24px; color: #1a1a1a; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .subtitle { color: #666; font-size: 13px; margin-bottom: 20px; }
+  h2 { font-size: 15px; margin: 20px 0 8px; padding-bottom: 4px; border-bottom: 2px solid #7c3aed; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 12px; }
+  th { background: #f3f0ff; text-align: left; padding: 6px 10px; font-weight: 600; border: 1px solid #ddd; }
+  td { padding: 6px 10px; border: 1px solid #ddd; }
+  tr:nth-child(even) { background: #fafafa; }
+  .status { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 10px; font-weight: 600; }
+  .status-pending { background: #fef3c7; color: #92400e; }
+  .status-ongoing { background: #d1fae5; color: #065f46; }
+  .status-finished { background: #e5e7eb; color: #374151; }
+  .status-cancelled { background: #fee2e2; color: #991b1b; }
+  .winner { font-weight: 700; }
+  .bracket-container { display: flex; gap: 0; align-items: stretch; margin: 16px 0; }
+  .bracket-round { display: flex; flex-direction: column; justify-content: space-around; min-width: 180px; padding: 0 8px; }
+  .bracket-round-title { text-align: center; font-weight: 700; font-size: 11px; color: #7c3aed; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
+  .bracket-match { border: 1px solid #ddd; border-radius: 6px; margin: 4px 0; overflow: hidden; }
+  .bracket-team { padding: 4px 8px; font-size: 11px; display: flex; justify-content: space-between; border-bottom: 1px solid #eee; }
+  .bracket-team:last-child { border-bottom: none; }
+  .bracket-team.winner { background: #f0fdf4; font-weight: 700; }
+  .bracket-time { font-size: 9px; color: #999; text-align: center; padding: 2px; background: #f9fafb; }
+  .meta { font-size: 10px; color: #999; text-align: right; margin-top: 24px; }
+  @media print { body { padding: 12px; } h1 { font-size: 16px; } }
+</style>
+</head>
+<body>
+<h1>${tournament?.name ?? 'Tournoi'} — Planning des matchs</h1>
+<p class="subtitle">Export du ${new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+
+${bracketRounds.length > 1 ? `
+<h2>Vue Bracket</h2>
+<div class="bracket-container">
+${bracketRounds.map((r) => `
+  <div class="bracket-round">
+    <div class="bracket-round-title">${r.roundName}</div>
+    ${r.matches.map((m) => `
+      <div class="bracket-match">
+        <div class="bracket-time">${m.scheduled_at ? new Date(m.scheduled_at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'}</div>
+        <div class="bracket-team${m.winner_team_id === m.team1_id && m.winner_team_id ? ' winner' : ''}">${teamName(m, 1)}</div>
+        <div class="bracket-team${m.winner_team_id === m.team2_id && m.winner_team_id ? ' winner' : ''}">${teamName(m, 2)}</div>
+      </div>
+    `).join('')}
+  </div>
+`).join('')}
+</div>` : ''}
+
+<h2>Liste des matchs</h2>
+${matchDays.map((day) => `
+<h2>${day.label}${day.roundName ? ` — ${day.roundName}` : ''}</h2>
+<table>
+<thead><tr><th>Heure</th><th>Équipe 1</th><th>Équipe 2</th><th>Format</th><th>Statut</th></tr></thead>
+<tbody>
+${day.matches.map((m) => `<tr>
+  <td>${m.scheduled_at ? new Date(m.scheduled_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '—'}</td>
+  <td class="${m.winner_team_id === m.team1_id && m.winner_team_id ? 'winner' : ''}">${teamName(m, 1)}</td>
+  <td class="${m.winner_team_id === m.team2_id && m.winner_team_id ? 'winner' : ''}">${teamName(m, 2)}</td>
+  <td>${m.match_format?.toUpperCase() ?? '—'}</td>
+  <td><span class="status status-${m.status}">${STATUS_CONFIG[m.status].label}</span></td>
+</tr>`).join('')}
+</tbody>
+</table>`).join('')}
+
+<p class="meta">${totalMatches} matchs · ${finishedCount} terminés</p>
+</body></html>`;
+
+    const w = window.open('', '_blank');
+    if (!w) return;
+    w.document.write(html);
+    w.document.close();
+    w.onload = () => {
+      setTimeout(() => w.print(), 300);
+    };
+  }, [matches, matchDays, bracketRounds, tournament, totalMatches, finishedCount]);
 
   /* ---- Mutations ---- */
 
@@ -386,6 +504,33 @@ function AdminBracketBuilderPage(_: StaffProps) {
         {/* ---- Toolbar ---- */}
         <div className="sticky top-0 z-30 bg-[#0a0a0f]/80 backdrop-blur-xl border-b border-white/5">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3 flex-wrap">
+            {/* View mode toggle */}
+            <div className="flex rounded-lg border border-white/10 overflow-hidden">
+              {([
+                { key: 'planning' as ViewMode, label: 'Planning', icon: 'M3 3h4v4H3zm6 0h4v4H9zm-6 6h4v4H3zm6 0h4v4H9z' },
+                { key: 'list' as ViewMode, label: 'Liste', icon: 'M3 4h10M3 8h10M3 12h10' },
+                { key: 'bracket' as ViewMode, label: 'Arbre', icon: 'M2 3v4h4M10 3v4h4M5 7v2h6M8 9v4' },
+              ]).map((v) => (
+                <button
+                  key={v.key}
+                  type="button"
+                  onClick={() => setViewMode(v.key)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
+                    viewMode === v.key
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-white/5 text-neutral-400 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                    <path d={v.icon} stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  {v.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="w-px h-5 bg-white/10" />
+
             <button
               type="button"
               onClick={fetchData}
@@ -411,6 +556,23 @@ function AdminBracketBuilderPage(_: StaffProps) {
                 Modifications non sauvegardées
               </span>
             )}
+
+            <div className="flex-1" />
+
+            {/* PDF Export */}
+            <button
+              type="button"
+              onClick={handleExportPDF}
+              disabled={loading || matches.length === 0}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium border border-white/10 bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-40"
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M4 14h8a1 1 0 001-1V5.5L9.5 2H5a1 1 0 00-1 1v2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M9 2v4h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M2 10h5M5.5 8L7 10l-1.5 2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Exporter PDF
+            </button>
           </div>
         </div>
 
@@ -429,7 +591,7 @@ function AdminBracketBuilderPage(_: StaffProps) {
         </div>
 
         {/* ---- Content ---- */}
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+        <div ref={printRef} className={`${viewMode === 'bracket' ? 'max-w-full' : 'max-w-6xl'} mx-auto px-4 sm:px-6 py-8`}>
           {loading && (
             <div className="flex items-center justify-center py-20">
               <div className="w-8 h-8 border-2 border-purple-500/30 border-t-purple-400 rounded-full animate-spin" />
@@ -451,11 +613,11 @@ function AdminBracketBuilderPage(_: StaffProps) {
             </div>
           )}
 
-          {!loading && matchDays.length > 0 && (
+          {/* ===== PLANNING VIEW (original) ===== */}
+          {!loading && matchDays.length > 0 && viewMode === 'planning' && (
             <div className="space-y-8">
               {matchDays.map((day) => (
                 <section key={day.dateKey}>
-                  {/* Date header */}
                   <div className="flex items-center gap-3 mb-4">
                     <div className="flex items-center gap-2.5">
                       <div className="w-1 h-8 rounded-full bg-gradient-to-b from-purple-400 to-purple-600" />
@@ -476,7 +638,6 @@ function AdminBracketBuilderPage(_: StaffProps) {
                     </span>
                   </div>
 
-                  {/* Match cards */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {day.matches.map((match) => (
                       <MatchCard
@@ -495,6 +656,21 @@ function AdminBracketBuilderPage(_: StaffProps) {
                 </section>
               ))}
             </div>
+          )}
+
+          {/* ===== LIST VIEW ===== */}
+          {!loading && matches.length > 0 && viewMode === 'list' && (
+            <MatchListView
+              matches={matches}
+              matchDays={matchDays}
+            />
+          )}
+
+          {/* ===== BRACKET TREE VIEW ===== */}
+          {!loading && matches.length > 0 && viewMode === 'bracket' && (
+            <BracketTreeView
+              rounds={bracketRounds}
+            />
           )}
         </div>
       </div>
@@ -798,6 +974,226 @@ function SeedSlot({
           </svg>
         </button>
       )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  List View                                                          */
+/* ------------------------------------------------------------------ */
+
+type MatchListViewProps = {
+  matches: ScheduleMatch[];
+  matchDays: { dateKey: string; label: string; roundName: string | null; matches: ScheduleMatch[] }[];
+};
+
+function MatchListView({ matchDays }: MatchListViewProps) {
+  function teamDisplay(m: ScheduleMatch, slot: 1 | 2) {
+    const team = slot === 1 ? m.team1 : m.team2;
+    const teamId = slot === 1 ? m.team1_id : m.team2_id;
+    const isWinner = !!m.winner_team_id && m.winner_team_id === teamId;
+    const info = parseNotes(m.notes);
+    const seed = slot === 1 ? info?.seed1 : info?.seed2;
+
+    return (
+      <div className={`flex items-center gap-2 ${isWinner ? 'text-emerald-300 font-semibold' : ''}`}>
+        {team?.logo_url && (
+          <Image src={team.logo_url} alt={team.name} width={18} height={18} className="w-[18px] h-[18px] rounded object-cover" />
+        )}
+        <span>{team?.name ?? (seed ? `Seed ${seed}` : 'TBD')}</span>
+        {isWinner && <span className="text-[10px] text-emerald-500 font-bold">W</span>}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {matchDays.map((day) => (
+        <section key={day.dateKey}>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-1 h-6 rounded-full bg-gradient-to-b from-purple-400 to-purple-600" />
+            <h2 className="text-base font-bold capitalize">{day.label}</h2>
+            {day.roundName && (
+              <span className="text-xs text-purple-300/60 uppercase tracking-wider font-medium">
+                {day.roundName}
+              </span>
+            )}
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/10">
+                  <th className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">Heure</th>
+                  <th className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">Équipe 1</th>
+                  <th className="text-center px-2 py-2 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">vs</th>
+                  <th className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">Équipe 2</th>
+                  <th className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">Format</th>
+                  <th className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">Round</th>
+                  <th className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">Statut</th>
+                </tr>
+              </thead>
+              <tbody>
+                {day.matches.map((m) => {
+                  const statusCfg = STATUS_CONFIG[m.status];
+                  return (
+                    <tr key={m.id} className="border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors">
+                      <td className="px-3 py-2.5 tabular-nums font-medium text-white/80">
+                        {m.scheduled_at ? formatTime(m.scheduled_at) : '—'}
+                      </td>
+                      <td className="px-3 py-2.5">{teamDisplay(m, 1)}</td>
+                      <td className="px-2 py-2.5 text-center text-[10px] text-neutral-600 font-bold">vs</td>
+                      <td className="px-3 py-2.5">{teamDisplay(m, 2)}</td>
+                      <td className="px-3 py-2.5">
+                        {m.match_format ? (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase bg-white/5 text-neutral-400 border border-white/5">
+                            {m.match_format}
+                          </span>
+                        ) : '—'}
+                      </td>
+                      <td className="px-3 py-2.5 text-xs text-neutral-400">
+                        {m.round_name ?? (m.round_number ? `R${m.round_number}` : '—')}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium border ${statusCfg.bg}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
+                          {statusCfg.label}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Bracket Tree View                                                  */
+/* ------------------------------------------------------------------ */
+
+type BracketRound = {
+  roundNumber: number;
+  roundName: string;
+  matches: ScheduleMatch[];
+};
+
+type BracketTreeViewProps = {
+  rounds: BracketRound[];
+};
+
+function BracketTreeView({ rounds }: BracketTreeViewProps) {
+  if (!rounds.length) return null;
+
+  function teamLabel(m: ScheduleMatch, slot: 1 | 2) {
+    const team = slot === 1 ? m.team1 : m.team2;
+    const info = parseNotes(m.notes);
+    const seed = slot === 1 ? info?.seed1 : info?.seed2;
+    if (team) return { name: team.short_name ?? team.name, logo: team.logo_url };
+    if (seed) return { name: `Seed ${seed}`, logo: null };
+    return { name: 'TBD', logo: null };
+  }
+
+  return (
+    <div className="overflow-x-auto pb-4">
+      <div className="flex items-stretch gap-0 min-w-max">
+        {rounds.map((round, roundIdx) => {
+          // Compute vertical spacing: each subsequent round doubles spacing
+          const spacingMultiplier = Math.pow(2, roundIdx);
+          return (
+            <div key={round.roundNumber} className="flex flex-col items-center">
+              {/* Round header */}
+              <div className="mb-4 px-4">
+                <div className="text-[11px] font-bold text-purple-300 uppercase tracking-wider text-center whitespace-nowrap">
+                  {round.roundName}
+                </div>
+                <div className="text-[10px] text-neutral-500 text-center mt-0.5">
+                  {round.matches.length} match{round.matches.length > 1 ? 's' : ''}
+                </div>
+              </div>
+
+              {/* Matches */}
+              <div
+                className="flex flex-col justify-around flex-1"
+                style={{ gap: `${(spacingMultiplier - 1) * 48 + 12}px` }}
+              >
+                {round.matches.map((m) => {
+                  const statusCfg = STATUS_CONFIG[m.status];
+                  const t1 = teamLabel(m, 1);
+                  const t2 = teamLabel(m, 2);
+                  const w1 = !!m.winner_team_id && m.winner_team_id === m.team1_id;
+                  const w2 = !!m.winner_team_id && m.winner_team_id === m.team2_id;
+
+                  return (
+                    <div key={m.id} className="relative flex items-center">
+                      {/* Connector line from left */}
+                      {roundIdx > 0 && (
+                        <div className="w-4 h-px bg-white/10 -ml-4" />
+                      )}
+
+                      <div className="w-52 rounded-lg border border-white/[0.08] bg-[#12121a] overflow-hidden shadow-lg shadow-black/20">
+                        {/* Match header */}
+                        <div className="flex items-center justify-between px-2.5 py-1.5 bg-white/[0.02] border-b border-white/[0.05]">
+                          <span className="text-[10px] tabular-nums text-neutral-500">
+                            {m.scheduled_at ? formatTime(m.scheduled_at) : '—'}
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            {m.match_format && (
+                              <span className="text-[9px] font-semibold uppercase text-neutral-500">
+                                {m.match_format}
+                              </span>
+                            )}
+                            <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} title={statusCfg.label} />
+                          </div>
+                        </div>
+
+                        {/* Team 1 */}
+                        <div
+                          className={`flex items-center gap-2 px-2.5 py-2 border-b border-white/[0.04] ${
+                            w1 ? 'bg-emerald-500/5' : ''
+                          }`}
+                        >
+                          {t1.logo && (
+                            <Image src={t1.logo} alt="" width={16} height={16} className="w-4 h-4 rounded object-cover" />
+                          )}
+                          <span className={`text-xs truncate flex-1 ${w1 ? 'text-emerald-300 font-semibold' : 'text-white/80'}`}>
+                            {t1.name}
+                          </span>
+                          {w1 && <span className="text-[9px] font-bold text-emerald-400">W</span>}
+                        </div>
+
+                        {/* Team 2 */}
+                        <div
+                          className={`flex items-center gap-2 px-2.5 py-2 ${
+                            w2 ? 'bg-emerald-500/5' : ''
+                          }`}
+                        >
+                          {t2.logo && (
+                            <Image src={t2.logo} alt="" width={16} height={16} className="w-4 h-4 rounded object-cover" />
+                          )}
+                          <span className={`text-xs truncate flex-1 ${w2 ? 'text-emerald-300 font-semibold' : 'text-white/80'}`}>
+                            {t2.name}
+                          </span>
+                          {w2 && <span className="text-[9px] font-bold text-emerald-400">W</span>}
+                        </div>
+                      </div>
+
+                      {/* Connector line to right */}
+                      {roundIdx < rounds.length - 1 && (
+                        <div className="w-4 h-px bg-white/10" />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
