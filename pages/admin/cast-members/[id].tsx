@@ -300,7 +300,7 @@ function AdminCastMemberEditPage({ staff }: Props) {
                     URL de l&apos;image
                   </label>
                   <input
-                    type="url"
+                    type="text"
                     value={form.imageUrl}
                     onChange={(e) => updateField('imageUrl', e.target.value)}
                     placeholder="/img/speaker-images/nom.jpg ou https://..."

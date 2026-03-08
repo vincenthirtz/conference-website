@@ -6,7 +6,7 @@ const dataUses = [
   'Gestion des inscriptions et des comptes (joueuses, staff, bénévoles).',
   'Réponse aux demandes envoyées via le formulaire de contact ou par email.',
   'Organisation des tournois (planning, arbitrage, communications opérationnelles).',
-  'Envoi ponctuel d’informations liées aux événements OW Women’s Cup (pas de prospection commerciale).',
+  'Envoi ponctuel d’informations liées aux événements Women’s Cup (pas de prospection commerciale).',
 ];
 
 const rights = [
@@ -35,7 +35,7 @@ function MentionsLegalesPage() {
             Mentions légales & confidentialité
           </h1>
           <p className="mx-auto mt-4 max-w-3xl text-lg text-gray-200">
-            Informations légales de l’association OW Women&apos;s Cup, cadre
+            Informations légales de l’association Women&apos;s Cup, cadre
             d’utilisation du site et rappel des droits des utilisatrices et
             partenaires.
           </p>
@@ -69,16 +69,19 @@ function MentionsLegalesPage() {
               Éditeur du site
             </p>
             <h2 className="mt-2 text-xl font-semibold">
-              Association OW Women&apos;s Cup
+              Association Women&apos;s Cup
             </h2>
             <p className="mt-2 text-sm text-gray-200">
-              Site édité par l’association OW Women&apos;s Cup, organisation à
+              Site édité par l’association Women&apos;s Cup, organisation à
               but non lucratif (loi 1901) animée par une équipe bénévole pour
               promouvoir l’esport féminin.
             </p>
             <ul className="mt-3 space-y-2 text-sm text-gray-200">
               <li>
-                Responsable de la publication : cellule communication OW
+                Numéro RNA : W691112531.
+              </li>
+              <li>
+                Responsable de la publication : cellule communication
                 Women&apos;s Cup.
               </li>
               <li>
@@ -310,7 +313,7 @@ function MentionsLegalesPage() {
               Contenus & crédits
             </h3>
             <p className="text-sm text-gray-300">
-              Textes, visuels, identité graphique et logo OW Women&apos;s Cup
+              Textes, visuels, identité graphique et logo Women&apos;s Cup
               sont la propriété de l’association ou utilisés avec l’autorisation
               de leurs propriétaires.
             </p>
@@ -345,7 +348,7 @@ function MentionsLegalesPage() {
 const mentionsSeo: SeoProps = {
   title: 'Mentions légales',
   description:
-    "Mentions légales de l'association OW Women's Cup : éditeur du site, hébergement, données personnelles et droits des utilisatrices.",
+    "Mentions légales de l'association Women's Cup : éditeur du site, hébergement, données personnelles et droits des utilisatrices.",
 };
 
 MentionsLegalesPage.seo = mentionsSeo;

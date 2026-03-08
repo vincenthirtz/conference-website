@@ -46,6 +46,9 @@ function AdminCastMembersPage({ staff }: Props) {
   const [loading, setLoading] = useState(false);
   const [members, setMembers] = useState<CastMemberRow[]>([]);
   const [search, setSearch] = useState('');
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [overIdx, setOverIdx] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -123,6 +126,59 @@ function AdminCastMembersPage({ staff }: Props) {
       alert(err?.message || 'Erreur de modification.');
     }
   };
+
+  const onDrop = useCallback(
+    async (fromIndex: number, toIndex: number) => {
+      if (fromIndex === toIndex) return;
+      const reordered = [...members];
+      const [moved] = reordered.splice(fromIndex, 1);
+      reordered.splice(toIndex, 0, moved);
+
+      // Compute new sort_order values
+      const updates: { id: string; sortOrder: number }[] = [];
+      reordered.forEach((m, i) => {
+        if (m.sort_order !== i) {
+          updates.push({ id: m.id, sortOrder: i });
+        }
+      });
+
+      // Optimistic update
+      setMembers(reordered.map((m, i) => ({ ...m, sort_order: i })));
+      setDragIdx(null);
+      setOverIdx(null);
+
+      if (updates.length === 0) return;
+
+      setSaving(true);
+      try {
+        const {
+          data: { session },
+        } = await supabaseClient.auth.getSession();
+        const token = session?.access_token;
+        if (!token) throw new Error('Session staff manquante.');
+
+        await Promise.all(
+          updates.map((u) =>
+            fetch(`/api/admin/cast-members/${u.id}`, {
+              method: 'PATCH',
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ sortOrder: u.sortOrder }),
+            })
+          )
+        );
+      } catch (err: any) {
+        console.error('Reorder error', err);
+        alert('Erreur lors de la sauvegarde de l\u2019ordre.');
+        fetchData();
+      } finally {
+        setSaving(false);
+      }
+    },
+    [members, fetchData]
+  );
 
   const filteredMembers = members.filter(
     (m) =>
@@ -231,11 +287,56 @@ function AdminCastMembersPage({ staff }: Props) {
               </div>
             ) : (
               <div className="divide-y divide-neutral-700/50">
-                {filteredMembers.map((m) => (
+                {saving && (
+                  <div className="px-4 py-2 bg-purple-600/20 text-purple-300 text-xs text-center">
+                    Sauvegarde de l&apos;ordre…
+                  </div>
+                )}
+                {filteredMembers.map((m, idx) => {
+                  const isDragging = dragIdx === idx;
+                  const isOver = overIdx === idx;
+                  const canDrag = !search; // disable drag when filtering
+                  return (
                   <div
                     key={m.id}
-                    className="flex items-center gap-4 p-4 hover:bg-neutral-700/30 transition-colors group"
+                    draggable={canDrag}
+                    onDragStart={(e) => {
+                      setDragIdx(idx);
+                      e.dataTransfer.effectAllowed = 'move';
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = 'move';
+                      setOverIdx(idx);
+                    }}
+                    onDragLeave={() => {
+                      if (overIdx === idx) setOverIdx(null);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (dragIdx !== null) onDrop(dragIdx, idx);
+                    }}
+                    onDragEnd={() => {
+                      setDragIdx(null);
+                      setOverIdx(null);
+                    }}
+                    className={`flex items-center gap-4 p-4 transition-colors group ${
+                      isDragging
+                        ? 'opacity-40 bg-neutral-700/20'
+                        : isOver
+                          ? 'bg-purple-600/10 border-t-2 border-purple-500'
+                          : 'hover:bg-neutral-700/30'
+                    }`}
+                    style={{ cursor: canDrag ? 'grab' : undefined }}
                   >
+                    {/* Drag handle */}
+                    {canDrag && (
+                      <div className="flex-shrink-0 text-neutral-500 hover:text-neutral-300 cursor-grab active:cursor-grabbing">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                        </svg>
+                      </div>
+                    )}
                     {/* Avatar */}
                     <div className="flex-shrink-0">
                       {m.image_url ? (
@@ -346,7 +447,8 @@ function AdminCastMembersPage({ staff }: Props) {
                       </button>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>
