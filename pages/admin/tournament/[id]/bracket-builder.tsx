@@ -251,6 +251,17 @@ function AdminBracketBuilderPage(_: StaffProps) {
       return 'TBD';
     };
 
+    // Detect if this is a Swiss/round-robin (many rounds with equal match counts) vs elimination bracket
+    const isElimination = bracketRounds.length > 1 &&
+      bracketRounds[0].matches.length > bracketRounds[bracketRounds.length - 1].matches.length;
+    const roundCount = bracketRounds.length;
+    // For elimination: scale to fit. For Swiss: use a grid layout.
+    const colWidthPx = isElimination ? 160 : 140;
+    const totalBracketWidth = roundCount * (colWidthPx + 8);
+    // A4 landscape usable ~1020px, portrait ~720px
+    const pageWidth = roundCount > 6 ? 1020 : 720;
+    const scaleFactor = Math.min(1, pageWidth / totalBracketWidth);
+
     const html = `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -272,24 +283,45 @@ function AdminBracketBuilderPage(_: StaffProps) {
   .status-finished { background: #e5e7eb; color: #374151; }
   .status-cancelled { background: #fee2e2; color: #991b1b; }
   .winner { font-weight: 700; }
-  .bracket-container { display: flex; gap: 0; align-items: stretch; margin: 16px 0; }
-  .bracket-round { display: flex; flex-direction: column; justify-content: space-around; min-width: 180px; padding: 0 8px; }
-  .bracket-round-title { text-align: center; font-weight: 700; font-size: 11px; color: #7c3aed; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
-  .bracket-match { border: 1px solid #ddd; border-radius: 6px; margin: 4px 0; overflow: hidden; }
-  .bracket-team { padding: 4px 8px; font-size: 11px; display: flex; justify-content: space-between; border-bottom: 1px solid #eee; }
+  /* Bracket section */
+  .bracket-section { page-break-inside: avoid; margin-bottom: 24px; }
+  .bracket-scaler {
+    transform: scale(${scaleFactor});
+    transform-origin: top left;
+    ${scaleFactor < 1 ? `width: ${100 / scaleFactor}%; height: auto; margin-bottom: -${Math.round((1 - scaleFactor) * 100)}px;` : ''}
+  }
+  .bracket-container { display: flex; gap: 0; align-items: stretch; }
+  .bracket-round { display: flex; flex-direction: column; justify-content: space-around; min-width: ${colWidthPx}px; padding: 0 4px; }
+  .bracket-round-title { text-align: center; font-weight: 700; font-size: 10px; color: #7c3aed; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; white-space: nowrap; }
+  .bracket-match { border: 1px solid #ddd; border-radius: 5px; margin: 3px 0; overflow: hidden; }
+  .bracket-team { padding: 3px 6px; font-size: 10px; display: flex; justify-content: space-between; border-bottom: 1px solid #eee; }
   .bracket-team:last-child { border-bottom: none; }
   .bracket-team.winner { background: #f0fdf4; font-weight: 700; }
-  .bracket-time { font-size: 9px; color: #999; text-align: center; padding: 2px; background: #f9fafb; }
+  .bracket-time { font-size: 8px; color: #999; text-align: center; padding: 2px; background: #f9fafb; }
+  /* Grid layout for Swiss/many rounds */
+  .bracket-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(${colWidthPx}px, 1fr)); gap: 12px; margin: 16px 0; }
+  .bracket-grid-round { border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px; background: #fafafa; }
+  .bracket-grid-round .bracket-round-title { margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid #e5e7eb; }
   .meta { font-size: 10px; color: #999; text-align: right; margin-top: 24px; }
-  @media print { body { padding: 12px; } h1 { font-size: 16px; } }
+  @media print {
+    body { padding: 12px; }
+    h1 { font-size: 16px; }
+    ${roundCount > 6 ? '@page { size: landscape; }' : ''}
+    .bracket-section { page-break-after: always; }
+    table { page-break-inside: auto; }
+    tr { page-break-inside: avoid; }
+  }
 </style>
 </head>
 <body>
 <h1>${tournament?.name ?? 'Tournoi'} — Planning des matchs</h1>
-<p class="subtitle">Export du ${new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+<p class="subtitle">Export du ${new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })} · ${totalMatches} matchs · ${roundCount} journées</p>
 
 ${bracketRounds.length > 1 ? `
+<div class="bracket-section">
 <h2>Vue Bracket</h2>
+${isElimination ? `
+<div class="bracket-scaler">
 <div class="bracket-container">
 ${bracketRounds.map((r) => `
   <div class="bracket-round">
@@ -303,6 +335,22 @@ ${bracketRounds.map((r) => `
     `).join('')}
   </div>
 `).join('')}
+</div>
+</div>` : `
+<div class="bracket-grid">
+${bracketRounds.map((r) => `
+  <div class="bracket-grid-round">
+    <div class="bracket-round-title">${r.roundName}</div>
+    ${r.matches.map((m) => `
+      <div class="bracket-match">
+        <div class="bracket-time">${m.scheduled_at ? new Date(m.scheduled_at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'}</div>
+        <div class="bracket-team${m.winner_team_id === m.team1_id && m.winner_team_id ? ' winner' : ''}">${teamName(m, 1)}</div>
+        <div class="bracket-team${m.winner_team_id === m.team2_id && m.winner_team_id ? ' winner' : ''}">${teamName(m, 2)}</div>
+      </div>
+    `).join('')}
+  </div>
+`).join('')}
+</div>`}
 </div>` : ''}
 
 <h2>Liste des matchs</h2>
