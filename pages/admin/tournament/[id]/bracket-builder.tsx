@@ -1,4 +1,5 @@
 // pages/admin/tournament/[id]/bracket-builder.tsx
+// Planning visuel du tournoi — vue schedule par journée
 
 import { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
@@ -16,15 +17,8 @@ type StaffShape = {
 type StaffProps = {
   staff: StaffShape;
 };
-type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
 
-type StageType =
-  | 'group'
-  | 'bracket'
-  | 'swiss'
-  | 'round_robin'
-  | 'showmatch'
-  | 'other';
+type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
 
 type TeamMini = {
   id: string;
@@ -33,77 +27,120 @@ type TeamMini = {
   logo_url: string | null;
 };
 
-type BracketMatch = {
+type ScheduleMatch = {
   id: string;
   tournament_id: string;
   stage_id: string | null;
-  stage_name?: string | null;
-  stage_type?: StageType | null;
-
   round_number: number | null;
+  round_name: string | null;
   position_in_round: number | null;
-
   status: MatchStatus;
+  match_format: string | null;
   best_of: number | null;
-
   scheduled_at: string | null;
-
   team1_id: string | null;
   team2_id: string | null;
   team1?: TeamMini | null;
   team2?: TeamMini | null;
-
   winner_team_id: string | null;
-
-  // liens de propagation (optionnels)
+  notes: string | null;
   next_match_win_id?: string | null;
   next_match_lose_id?: string | null;
-
-  // infos de layout calculées côté backend (optionnel)
   column_index?: number | null;
   row_index?: number | null;
 };
 
-type BracketApiResponse = {
-  tournament: {
-    id: string;
-    name: string;
-    slug: string | null;
-  } | null;
-  stage?: {
-    id: string;
-    name: string;
-    stage_type: StageType | null;
-  } | null;
-  matches: BracketMatch[];
+type ApiResponse = {
+  tournament: { id: string; name: string; slug: string | null } | null;
+  matches: ScheduleMatch[];
 };
 
 export const getServerSideProps = withStaffPage('manager');
 
-/** Format date courte */
-function formatShortDate(iso: string | null) {
-  if (!iso) return '—';
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                            */
+/* ------------------------------------------------------------------ */
+
+/** Parse "Seed 7 vs Seed 1 — Plaid SPC" → { seed1, seed2, venue } */
+function parseNotes(notes: string | null) {
+  if (!notes) return null;
+  const m = notes.match(
+    /Seed\s*(\d+)\s*vs\s*Seed\s*(\d+)\s*(?:—|–|-)\s*(.+)/i
+  );
+  if (m) return { seed1: m[1], seed2: m[2], venue: m[3].trim() };
+  if (notes.toLowerCase().includes('disponible'))
+    return { seed1: null, seed2: null, venue: 'Plaid SPC' };
+  return null;
+}
+
+const STATUS_CONFIG: Record<
+  MatchStatus,
+  { label: string; dot: string; bg: string }
+> = {
+  pending: {
+    label: 'A venir',
+    dot: 'bg-amber-400',
+    bg: 'bg-amber-400/10 text-amber-300 border-amber-400/20',
+  },
+  ongoing: {
+    label: 'En cours',
+    dot: 'bg-green-400 animate-pulse',
+    bg: 'bg-green-400/10 text-green-300 border-green-400/20',
+  },
+  finished: {
+    label: 'Terminé',
+    dot: 'bg-neutral-500',
+    bg: 'bg-neutral-500/10 text-neutral-400 border-neutral-500/20',
+  },
+  cancelled: {
+    label: 'Annulé',
+    dot: 'bg-red-500',
+    bg: 'bg-red-500/10 text-red-400 border-red-500/20',
+  },
+};
+
+function formatDateHeader(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('fr-FR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+function formatTime(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function isoToLocalInput(iso: string | null): string {
+  if (!iso) return '';
   try {
-    return new Date(iso).toLocaleString();
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   } catch {
-    return iso;
+    return '';
   }
 }
 
-/** Label de colonne / round */
-function roundLabel(columnIndex: number, totalColumns: number) {
-  if (columnIndex === totalColumns - 1) return 'Finale';
-  if (columnIndex === totalColumns - 2) return 'Demi-finales';
-  if (columnIndex === totalColumns - 3) return 'Quarts';
-  return `Round ${columnIndex + 1}`;
+function localInputToIso(value: string): string {
+  if (!value) return '';
+  try {
+    return new Date(value).toISOString();
+  } catch {
+    return '';
+  }
 }
 
-type DragPayload = {
-  matchId: string;
-  slot: 1 | 2;
-};
+type DragPayload = { matchId: string; slot: 1 | 2 };
 
-function AdminBracketBuilderPage({ staff }: StaffProps) {
+/* ------------------------------------------------------------------ */
+/*  Main Page                                                          */
+/* ------------------------------------------------------------------ */
+
+function AdminBracketBuilderPage(_: StaffProps) {
   const router = useRouter();
   const { id } = router.query;
 
@@ -111,43 +148,33 @@ function AdminBracketBuilderPage({ staff }: StaffProps) {
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
-
-  const [tournament, setTournament] =
-    useState<BracketApiResponse['tournament']>(null);
-  const [stage, setStage] = useState<BracketApiResponse['stage'] | null>(null);
-  const [matches, setMatches] = useState<BracketMatch[]>([]);
-
-  // Pour savoir si quelque chose a été modifié
+  const [tournament, setTournament] = useState<ApiResponse['tournament']>(null);
+  const [matches, setMatches] = useState<ScheduleMatch[]>([]);
   const [dirty, setDirty] = useState(false);
+  const [editingDateId, setEditingDateId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
-    fetchBracket();
+    fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  async function fetchBracket() {
+  async function fetchData() {
     if (!id) return;
     setLoading(true);
     setErrorMsg(null);
     setInfoMsg(null);
     setDirty(false);
-
     try {
-      // 👉 Si ton endpoint diffère, adapte ici.
-      // On suppose : GET /api/admin/tournament/[id]/matches?layout=bracket&limit=512&includeGraph=1
       const res = await fetch(
         `/api/admin/tournament/${id}/matches?layout=bracket&limit=512&includeGraph=1`
       );
-
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Impossible de charger le bracket');
+        throw new Error(json.error || 'Impossible de charger les matchs');
       }
-
-      const json: BracketApiResponse = await res.json();
+      const json: ApiResponse = await res.json();
       setTournament(json.tournament);
-      setStage(json.stage ?? null);
       setMatches(json.matches || []);
     } catch (err: any) {
       setErrorMsg(err?.message ?? 'Erreur inattendue');
@@ -156,42 +183,51 @@ function AdminBracketBuilderPage({ staff }: StaffProps) {
     }
   }
 
-  /** Calcul des colonnes pour afficher l'arbre */
-  const columns = useMemo(() => {
-    if (!matches.length) return [] as BracketMatch[][];
-
-    // Si column_index est fourni, on l'utilise, sinon fallback sur round_number.
-    const colMap = new Map<number, BracketMatch[]>();
-
-    for (const m of matches) {
-      const col =
-        m.column_index ?? (m.round_number != null ? m.round_number - 1 : 0);
-
-      if (!colMap.has(col)) colMap.set(col, []);
-      colMap.get(col)!.push(m);
+  /** Group matches by date (YYYY-MM-DD) */
+  const matchDays = useMemo(() => {
+    if (!matches.length) return [];
+    const groups = new Map<
+      string,
+      { dateKey: string; label: string; roundName: string | null; matches: ScheduleMatch[] }
+    >();
+    const sorted = [...matches].sort(
+      (a, b) =>
+        new Date(a.scheduled_at || '').getTime() -
+        new Date(b.scheduled_at || '').getTime()
+    );
+    for (const m of sorted) {
+      const dateKey = m.scheduled_at
+        ? m.scheduled_at.slice(0, 10)
+        : 'no-date';
+      if (!groups.has(dateKey)) {
+        groups.set(dateKey, {
+          dateKey,
+          label: m.scheduled_at ? formatDateHeader(m.scheduled_at) : 'Sans date',
+          roundName: m.round_name,
+          matches: [],
+        });
+      }
+      groups.get(dateKey)!.matches.push(m);
     }
-
-    const sortedCols = Array.from(colMap.entries())
-      .sort((a, b) => a[0] - b[0])
-      .map(([, arr]) =>
-        arr.slice().sort((a, b) => {
-          const ra = a.row_index ?? a.position_in_round ?? 0;
-          const rb = b.row_index ?? b.position_in_round ?? 0;
-          return ra - rb;
-        })
-      );
-
-    return sortedCols;
+    return Array.from(groups.values());
   }, [matches]);
 
-  const totalColumns = columns.length;
+  const totalMatches = matches.length;
+  const finishedCount = matches.filter((m) => m.status === 'finished').length;
 
-  /** Gestion drag & drop */
+  /* ---- Mutations ---- */
 
-  function onDragStart(
-    e: React.DragEvent<HTMLDivElement>,
-    payload: DragPayload
-  ) {
+  function updateScheduledAt(matchId: string, value: string) {
+    setMatches((prev) =>
+      prev.map((m) =>
+        m.id !== matchId ? m : { ...m, scheduled_at: value || null }
+      )
+    );
+    setDirty(true);
+    setEditingDateId(null);
+  }
+
+  function onDragStart(e: React.DragEvent<HTMLDivElement>, payload: DragPayload) {
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('application/json', JSON.stringify(payload));
   }
@@ -209,62 +245,29 @@ function AdminBracketBuilderPage({ staff }: StaffProps) {
     e.preventDefault();
     const raw = e.dataTransfer.getData('application/json');
     if (!raw) return;
-
     let payload: DragPayload;
     try {
       payload = JSON.parse(raw);
     } catch {
       return;
     }
-
-    const { matchId: sourceMatchId, slot: sourceSlot } = payload;
-
-    // Si on drop sur le même slot, on ne fait rien
-    if (sourceMatchId === targetMatchId && sourceSlot === targetSlot) {
-      return;
-    }
-
+    const { matchId: srcId, slot: srcSlot } = payload;
+    if (srcId === targetMatchId && srcSlot === targetSlot) return;
     setMatches((prev) => {
       const copy = prev.map((m) => ({ ...m }));
-
-      const sourceMatch = copy.find((m) => m.id === sourceMatchId);
-      const targetMatch = copy.find((m) => m.id === targetMatchId);
-      if (!sourceMatch || !targetMatch) return prev;
-
-      const sourceTeamId =
-        sourceSlot === 1 ? sourceMatch.team1_id : sourceMatch.team2_id;
-      const sourceTeamObj =
-        sourceSlot === 1
-          ? sourceMatch.team1 || null
-          : sourceMatch.team2 || null;
-
-      const targetTeamId =
-        targetSlot === 1 ? targetMatch.team1_id : targetMatch.team2_id;
-      const targetTeamObj =
-        targetSlot === 1
-          ? targetMatch.team1 || null
-          : targetMatch.team2 || null;
-
-      // Échange entre source & target (swap)
-      if (sourceSlot === 1) {
-        sourceMatch.team1_id = targetTeamId;
-        sourceMatch.team1 = targetTeamObj;
-      } else {
-        sourceMatch.team2_id = targetTeamId;
-        sourceMatch.team2 = targetTeamObj;
-      }
-
-      if (targetSlot === 1) {
-        targetMatch.team1_id = sourceTeamId;
-        targetMatch.team1 = sourceTeamObj;
-      } else {
-        targetMatch.team2_id = sourceTeamId;
-        targetMatch.team2 = sourceTeamObj;
-      }
-
+      const src = copy.find((m) => m.id === srcId);
+      const tgt = copy.find((m) => m.id === targetMatchId);
+      if (!src || !tgt) return prev;
+      const sId = srcSlot === 1 ? src.team1_id : src.team2_id;
+      const sObj = srcSlot === 1 ? src.team1 || null : src.team2 || null;
+      const tId = targetSlot === 1 ? tgt.team1_id : tgt.team2_id;
+      const tObj = targetSlot === 1 ? tgt.team1 || null : tgt.team2 || null;
+      if (srcSlot === 1) { src.team1_id = tId; src.team1 = tObj; }
+      else { src.team2_id = tId; src.team2 = tObj; }
+      if (targetSlot === 1) { tgt.team1_id = sId; tgt.team1 = sObj; }
+      else { tgt.team2_id = sId; tgt.team2 = sObj; }
       return copy;
     });
-
     setDirty(true);
   }
 
@@ -272,190 +275,216 @@ function AdminBracketBuilderPage({ staff }: StaffProps) {
     setMatches((prev) =>
       prev.map((m) => {
         if (m.id !== matchId) return m;
-        const clone = { ...m };
-        if (slot === 1) {
-          clone.team1_id = null;
-          clone.team1 = null;
-        } else {
-          clone.team2_id = null;
-          clone.team2 = null;
-        }
-        return clone;
+        const c = { ...m };
+        if (slot === 1) { c.team1_id = null; c.team1 = null; }
+        else { c.team2_id = null; c.team2 = null; }
+        return c;
       })
     );
     setDirty(true);
   }
 
-  /** Enregistrement des changements (batch) */
   async function handleSave() {
     if (!id) return;
     setSaving(true);
     setErrorMsg(null);
     setInfoMsg(null);
-
     try {
-      // On envoie uniquement les slots d'équipes (pour rester léger)
-      const payload = {
-        matches: matches.map((m) => ({
-          id: m.id,
-          team1_id: m.team1_id,
-          team2_id: m.team2_id,
-        })),
-      };
-
-      // 👉 Adapte si tu préfères PATCH /api/admin/tournament/[id]/matches
       const res = await fetch(`/api/admin/tournament/${id}/bracket`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          action: 'save',
+          matches: matches.map((m) => ({
+            id: m.id,
+            team1_id: m.team1_id,
+            team2_id: m.team2_id,
+            scheduled_at: m.scheduled_at,
+          })),
+        }),
       });
-
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(
-          json.error || 'Erreur lors de l’enregistrement du bracket'
-        );
+        throw new Error(json.error || 'Erreur lors de l\u2019enregistrement');
       }
-
       await res.json();
-      setInfoMsg('Bracket enregistré avec succès.');
+      setInfoMsg('Planning enregistré.');
       setDirty(false);
-      fetchBracket(); // re-sync
+      fetchData();
     } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inconnue lors de l’enregistrement');
+      setErrorMsg(err?.message ?? 'Erreur inconnue');
     } finally {
       setSaving(false);
     }
   }
 
-  const backUrl = `/admin/tournament/${id}`;
-
   return (
     <>
       <Head>
-        <title>Admin – Bracket builder</title>
+        <title>
+          {tournament ? `${tournament.name} — Planning` : 'Planning tournoi'}
+        </title>
       </Head>
 
-      <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-          <div>
+      <div className="min-h-screen bg-[#0a0a0f] text-white">
+        {/* ---- Hero header ---- */}
+        <div className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-900/40 via-transparent to-indigo-900/30" />
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImciIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDYwIEwgNjAgMCIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDMpIiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IGZpbGw9InVybCgjZykiIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiLz48L3N2Zz4=')] opacity-50" />
+          <div className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-24 pb-8">
             <button
               type="button"
-              onClick={() => router.push(backUrl)}
-              className="mb-2 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
+              onClick={() => router.push(`/admin/tournament/${id}`)}
+              className="mb-4 inline-flex items-center gap-1.5 text-sm text-purple-300/70 hover:text-purple-200 transition-colors"
             >
-              ← Retour au tournoi
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="opacity-70">
+                <path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Retour au tournoi
             </button>
-            <h1 className="text-3xl font-bold">Bracket builder</h1>
-            {tournament && (
-              <p className="text-neutral-400 text-sm mt-1">
-                Tournoi :{' '}
-                <span className="font-semibold">{tournament.name}</span>
-                {tournament.slug && (
-                  <>
-                    {' '}
-                    <span className="font-mono bg-neutral-800 border border-neutral-700 px-2 py-0.5 rounded text-xs">
-                      {tournament.slug}
+
+            <div className="flex items-end justify-between flex-wrap gap-4">
+              <div>
+                <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-white via-purple-100 to-purple-300 bg-clip-text text-transparent">
+                  Planning des matchs
+                </h1>
+                {tournament && (
+                  <p className="mt-2 text-purple-200/60 text-sm font-medium">
+                    {tournament.name}
+                    {tournament.slug && (
+                      <span className="ml-2 font-mono text-xs bg-white/5 border border-white/10 px-2 py-0.5 rounded">
+                        {tournament.slug}
+                      </span>
+                    )}
+                  </p>
+                )}
+              </div>
+
+              {/* Stats pills */}
+              {!loading && matches.length > 0 && (
+                <div className="flex gap-2">
+                  <div className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-medium">
+                    <span className="text-purple-300">{totalMatches}</span>{' '}
+                    <span className="text-neutral-400">matchs</span>
+                  </div>
+                  <div className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-medium">
+                    <span className="text-purple-300">{matchDays.length}</span>{' '}
+                    <span className="text-neutral-400">journées</span>
+                  </div>
+                  {finishedCount > 0 && (
+                    <div className="px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs font-medium">
+                      <span className="text-emerald-300">{finishedCount}</span>{' '}
+                      <span className="text-emerald-400/60">terminés</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ---- Toolbar ---- */}
+        <div className="sticky top-0 z-30 bg-[#0a0a0f]/80 backdrop-blur-xl border-b border-white/5">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3 flex-wrap">
+            <button
+              type="button"
+              onClick={fetchData}
+              disabled={loading || saving}
+              className="px-3.5 py-1.5 rounded-lg text-xs font-medium border border-white/10 bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-40"
+            >
+              {loading ? 'Chargement...' : 'Recharger'}
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving || !dirty}
+              className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                saving || !dirty
+                  ? 'bg-purple-900/30 text-purple-300/40 cursor-not-allowed'
+                  : 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-600/20'
+              }`}
+            >
+              {saving ? 'Enregistrement...' : dirty ? 'Enregistrer' : 'Sauvegardé'}
+            </button>
+            {dirty && (
+              <span className="text-[11px] text-amber-400/70">
+                Modifications non sauvegardées
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* ---- Messages ---- */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          {errorMsg && (
+            <div className="mt-4 rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-300">
+              {errorMsg}
+            </div>
+          )}
+          {infoMsg && (
+            <div className="mt-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-4 py-3 text-sm text-emerald-300">
+              {infoMsg}
+            </div>
+          )}
+        </div>
+
+        {/* ---- Content ---- */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+          {loading && (
+            <div className="flex items-center justify-center py-20">
+              <div className="w-8 h-8 border-2 border-purple-500/30 border-t-purple-400 rounded-full animate-spin" />
+            </div>
+          )}
+
+          {!loading && matches.length === 0 && (
+            <div className="text-center py-20">
+              <div className="text-4xl mb-3 opacity-30">&#9917;</div>
+              <p className="text-neutral-400">
+                Aucun match trouvé pour ce tournoi.
+              </p>
+              <Link
+                href={`/admin/tournament/${id}/bracket`}
+                className="mt-4 inline-block text-sm text-purple-400 hover:text-purple-300 underline underline-offset-2"
+              >
+                Créer un bracket
+              </Link>
+            </div>
+          )}
+
+          {!loading && matchDays.length > 0 && (
+            <div className="space-y-8">
+              {matchDays.map((day) => (
+                <section key={day.dateKey}>
+                  {/* Date header */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-1 h-8 rounded-full bg-gradient-to-b from-purple-400 to-purple-600" />
+                      <div>
+                        <h2 className="text-lg font-bold capitalize">
+                          {day.label}
+                        </h2>
+                        {day.roundName && (
+                          <span className="text-xs font-medium text-purple-300/60 uppercase tracking-wider">
+                            {day.roundName}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent" />
+                    <span className="text-xs text-neutral-500 font-medium">
+                      {day.matches.length} match{day.matches.length > 1 ? 's' : ''}
                     </span>
-                  </>
-                )}
-              </p>
-            )}
-            {stage && (
-              <p className="text-neutral-400 text-xs mt-1">
-                Phase :{' '}
-                <Link
-                  href={`/admin/stages/${stage.id}`}
-                  className="underline underline-offset-2 hover:text-white"
-                >
-                  {stage.name}
-                </Link>{' '}
-                {stage.stage_type && (
-                  <span className="uppercase tracking-wide text-[10px] ml-1 bg-neutral-800 border border-neutral-700 px-1.5 py-0.5 rounded">
-                    {stage.stage_type}
-                  </span>
-                )}
-              </p>
-            )}
-          </div>
-        </div>
+                  </div>
 
-        {/* Messages */}
-        {errorMsg && (
-          <div className="mb-4 rounded bg-red-900/60 border border-red-600 px-4 py-3 text-sm">
-            {errorMsg}
-          </div>
-        )}
-        {infoMsg && (
-          <div className="mb-4 rounded bg-emerald-900/60 border border-emerald-600 px-4 py-3 text-sm">
-            {infoMsg}
-          </div>
-        )}
-
-        {/* Toolbar */}
-        <div className="flex flex-wrap items-center gap-3 mb-4">
-          <button
-            type="button"
-            onClick={fetchBracket}
-            disabled={loading || saving}
-            className={`px-4 py-2 rounded text-sm border border-neutral-600 ${
-              loading
-                ? 'bg-neutral-800 cursor-wait'
-                : 'bg-neutral-800 hover:bg-neutral-700'
-            }`}
-          >
-            Recharger depuis le serveur
-          </button>
-
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving || !dirty}
-            className={`px-4 py-2 rounded text-sm font-semibold ${
-              saving || !dirty
-                ? 'bg-blue-900/70 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-700'
-            }`}
-          >
-            {saving
-              ? 'Enregistrement…'
-              : dirty
-                ? 'Enregistrer les changements'
-                : 'Aucun changement'}
-          </button>
-
-          <span className="text-xs text-neutral-500">
-            Astuce : glisse-dépose un slot d’équipe vers un autre pour les
-            échanger.
-          </span>
-        </div>
-
-        {/* Bracket */}
-        {loading && (
-          <div className="text-neutral-300">Chargement du bracket…</div>
-        )}
-
-        {!loading && columns.length === 0 && (
-          <div className="text-neutral-300">
-            Aucun match de bracket trouvé pour ce tournoi / cette phase.
-          </div>
-        )}
-
-        {!loading && columns.length > 0 && (
-          <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 overflow-x-auto">
-            <div className="flex items-stretch gap-6 pt-20 min-w-full">
-              {columns.map((col, colIndex) => (
-                <div key={colIndex} className="flex-1 min-w-[220px]">
-                  <h2 className="text-sm font-semibold text-neutral-200 mb-3 text-center">
-                    {roundLabel(colIndex, totalColumns)}
-                  </h2>
-
-                  <div className="flex flex-col gap-4">
-                    {col.map((match) => (
-                      <BracketMatchCard
+                  {/* Match cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {day.matches.map((match) => (
+                      <MatchCard
                         key={match.id}
                         match={match}
+                        editingDateId={editingDateId}
+                        onEditDate={setEditingDateId}
+                        onScheduleChange={updateScheduledAt}
                         onDragStart={onDragStart}
                         onDragOverSlot={onDragOverSlot}
                         onDropOnSlot={onDropOnSlot}
@@ -463,179 +492,310 @@ function AdminBracketBuilderPage({ staff }: StaffProps) {
                       />
                     ))}
                   </div>
-                </div>
+                </section>
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </>
   );
 }
 
-type BracketMatchCardProps = {
-  match: BracketMatch;
-  onDragStart: (
-    e: React.DragEvent<HTMLDivElement>,
-    payload: DragPayload
-  ) => void;
+/* ------------------------------------------------------------------ */
+/*  Match Card                                                         */
+/* ------------------------------------------------------------------ */
+
+type MatchCardProps = {
+  match: ScheduleMatch;
+  editingDateId: string | null;
+  onEditDate: (id: string | null) => void;
+  onScheduleChange: (id: string, value: string) => void;
+  onDragStart: (e: React.DragEvent<HTMLDivElement>, p: DragPayload) => void;
   onDragOverSlot: (e: React.DragEvent<HTMLDivElement>) => void;
-  onDropOnSlot: (
-    e: React.DragEvent<HTMLDivElement>,
-    matchId: string,
-    slot: 1 | 2
-  ) => void;
-  onClearSlot: (matchId: string, slot: 1 | 2) => void;
+  onDropOnSlot: (e: React.DragEvent<HTMLDivElement>, id: string, slot: 1 | 2) => void;
+  onClearSlot: (id: string, slot: 1 | 2) => void;
 };
 
-function BracketMatchCard({
+function MatchCard({
   match,
+  editingDateId,
+  onEditDate,
+  onScheduleChange,
   onDragStart,
   onDragOverSlot,
   onDropOnSlot,
   onClearSlot,
-}: BracketMatchCardProps) {
+}: MatchCardProps) {
+  const info = parseNotes(match.notes);
+  const statusCfg = STATUS_CONFIG[match.status];
+  const isEditing = editingDateId === match.id;
+  const isTBD = info && info.seed1 === null;
+
   return (
-    <div className="bg-neutral-800 border border-neutral-700 rounded-lg p-3 shadow-sm">
-      <div className="flex justify-between items-center mb-2 text-[11px] text-neutral-400">
+    <div
+      className={`group relative rounded-xl border transition-all duration-200 hover:border-purple-500/30 ${
+        isTBD
+          ? 'bg-gradient-to-br from-purple-950/40 to-indigo-950/40 border-purple-500/20'
+          : 'bg-[#12121a] border-white/[0.06]'
+      }`}
+    >
+      {/* Top bar: time + status + format */}
+      <div className="flex items-center justify-between px-4 pt-3 pb-2">
         <div className="flex items-center gap-2">
-          <span className="font-mono bg-neutral-900 px-1.5 py-0.5 rounded border border-neutral-700">
-            #{match.id.slice(0, 6)}
-          </span>
-          {match.round_number && (
-            <span>
-              R{match.round_number}
-              {match.position_in_round ? ` • M${match.position_in_round}` : ''}
+          {match.scheduled_at && (
+            <button
+              type="button"
+              onClick={() => onEditDate(isEditing ? null : match.id)}
+              className="text-sm font-bold tabular-nums text-white/90 hover:text-purple-300 transition-colors"
+              title="Modifier l'horaire"
+            >
+              {formatTime(match.scheduled_at)}
+            </button>
+          )}
+          {match.match_format && (
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-white/5 text-neutral-400 border border-white/5">
+              {match.match_format}
             </span>
           )}
         </div>
-        <span className="text-[10px]">
-          {match.best_of ? `BO${match.best_of}` : ''}
-        </span>
+        <div className="flex items-center gap-2">
+          <span
+            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium border ${statusCfg.bg}`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
+            {statusCfg.label}
+          </span>
+        </div>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <TeamSlot
-          label="Équipe 1"
-          match={match}
-          slot={1}
-          team={match.team1}
-          teamId={match.team1_id}
-          isWinner={match.winner_team_id === match.team1_id}
-          onDragStart={onDragStart}
-          onDragOverSlot={onDragOverSlot}
-          onDropOnSlot={onDropOnSlot}
-          onClear={() => onClearSlot(match.id, 1)}
-        />
-        <TeamSlot
-          label="Équipe 2"
-          match={match}
-          slot={2}
-          team={match.team2}
-          teamId={match.team2_id}
-          isWinner={match.winner_team_id === match.team2_id}
-          onDragStart={onDragStart}
-          onDragOverSlot={onDragOverSlot}
-          onDropOnSlot={onDropOnSlot}
-          onClear={() => onClearSlot(match.id, 2)}
-        />
-      </div>
-
-      {match.scheduled_at && (
-        <div className="mt-2 text-[11px] text-neutral-500 flex justify-between items-center">
-          <span>{formatShortDate(match.scheduled_at)}</span>
+      {/* Inline date editor */}
+      {isEditing && (
+        <div className="px-4 pb-2">
+          <input
+            type="datetime-local"
+            autoFocus
+            defaultValue={isoToLocalInput(match.scheduled_at)}
+            onBlur={(e) =>
+              onScheduleChange(match.id, localInputToIso(e.target.value))
+            }
+            onKeyDown={(e) => {
+              if (e.key === 'Enter')
+                onScheduleChange(
+                  match.id,
+                  localInputToIso((e.target as HTMLInputElement).value)
+                );
+              if (e.key === 'Escape') onEditDate(null);
+            }}
+            className="w-full px-2.5 py-1.5 rounded-lg border border-purple-500/30 bg-purple-500/10 text-xs text-white focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+          />
         </div>
       )}
+
+      {/* Teams / seeds */}
+      <div className="px-4 pb-3">
+        <div className="flex flex-col gap-1.5">
+          <SeedSlot
+            match={match}
+            slot={1}
+            seed={info?.seed1 ?? null}
+            team={match.team1}
+            teamId={match.team1_id}
+            isWinner={!!match.winner_team_id && match.winner_team_id === match.team1_id}
+            isTBD={!!isTBD}
+            onDragStart={onDragStart}
+            onDragOverSlot={onDragOverSlot}
+            onDropOnSlot={onDropOnSlot}
+            onClear={() => onClearSlot(match.id, 1)}
+          />
+
+          {/* VS divider */}
+          <div className="flex items-center gap-2 px-1">
+            <div className="flex-1 h-px bg-white/[0.04]" />
+            <span className="text-[10px] font-bold text-neutral-600 uppercase tracking-widest">
+              vs
+            </span>
+            <div className="flex-1 h-px bg-white/[0.04]" />
+          </div>
+
+          <SeedSlot
+            match={match}
+            slot={2}
+            seed={info?.seed2 ?? null}
+            team={match.team2}
+            teamId={match.team2_id}
+            isWinner={!!match.winner_team_id && match.winner_team_id === match.team2_id}
+            isTBD={!!isTBD}
+            onDragStart={onDragStart}
+            onDragOverSlot={onDragOverSlot}
+            onDropOnSlot={onDropOnSlot}
+            onClear={() => onClearSlot(match.id, 2)}
+          />
+        </div>
+
+        {/* Venue */}
+        {info?.venue && (
+          <div className="mt-2.5 flex items-center gap-1.5 text-[10px] text-neutral-500">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" className="opacity-50">
+              <path
+                d="M8 1.5C5.5 1.5 3.5 3.5 3.5 6c0 3.5 4.5 8.5 4.5 8.5s4.5-5 4.5-8.5c0-2.5-2-4.5-4.5-4.5z"
+                stroke="currentColor"
+                strokeWidth="1.2"
+              />
+              <circle cx="8" cy="6" r="1.5" stroke="currentColor" strokeWidth="1.2" />
+            </svg>
+            {info.venue}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-type TeamSlotProps = {
-  label: string;
-  match: BracketMatch;
+/* ------------------------------------------------------------------ */
+/*  Seed / Team Slot                                                   */
+/* ------------------------------------------------------------------ */
+
+type SeedSlotProps = {
+  match: ScheduleMatch;
   slot: 1 | 2;
+  seed: string | null;
   team: TeamMini | null | undefined;
   teamId: string | null;
   isWinner: boolean;
-  onDragStart: (
-    e: React.DragEvent<HTMLDivElement>,
-    payload: DragPayload
-  ) => void;
+  isTBD: boolean;
+  onDragStart: (e: React.DragEvent<HTMLDivElement>, p: DragPayload) => void;
   onDragOverSlot: (e: React.DragEvent<HTMLDivElement>) => void;
-  onDropOnSlot: (
-    e: React.DragEvent<HTMLDivElement>,
-    matchId: string,
-    slot: 1 | 2
-  ) => void;
+  onDropOnSlot: (e: React.DragEvent<HTMLDivElement>, id: string, slot: 1 | 2) => void;
   onClear: () => void;
 };
 
-function TeamSlot({
-  label,
+function SeedSlot({
   match,
   slot,
+  seed,
   team,
   teamId,
   isWinner,
+  isTBD,
   onDragStart,
   onDragOverSlot,
   onDropOnSlot,
   onClear,
-}: TeamSlotProps) {
+}: SeedSlotProps) {
   const hasTeam = !!(team || teamId);
+
+  // Seed number color palette
+  const seedColors: Record<string, string> = {
+    '1': 'from-amber-500 to-orange-600',
+    '2': 'from-sky-500 to-blue-600',
+    '3': 'from-emerald-500 to-green-600',
+    '4': 'from-rose-500 to-pink-600',
+    '5': 'from-violet-500 to-purple-600',
+    '6': 'from-cyan-400 to-teal-600',
+    '7': 'from-fuchsia-500 to-pink-600',
+    '8': 'from-lime-500 to-emerald-600',
+  };
+
+  const gradientClass = seed ? seedColors[seed] || 'from-neutral-500 to-neutral-600' : '';
 
   return (
     <div
-      className={`group relative flex items-center justify-between gap-2 px-2 py-1.5 rounded border text-xs ${
+      className={`relative flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
         hasTeam
-          ? 'bg-neutral-900 border-neutral-600'
-          : 'bg-neutral-900/40 border-dashed border-neutral-700'
-      }`}
+          ? 'bg-white/[0.03] hover:bg-white/[0.06]'
+          : isTBD
+            ? 'bg-purple-500/5 border border-dashed border-purple-500/20'
+            : 'bg-white/[0.02] border border-dashed border-white/[0.06]'
+      } ${isWinner ? 'ring-1 ring-emerald-500/30' : ''}`}
       onDragOver={onDragOverSlot}
       onDrop={(e) => onDropOnSlot(e, match.id, slot)}
     >
       <div
-        className="flex items-center gap-2 flex-1 cursor-move"
+        className="flex items-center gap-3 flex-1 cursor-move"
         draggable={hasTeam}
-        onDragStart={(e) =>
-          hasTeam &&
-          onDragStart(e, {
-            matchId: match.id,
-            slot,
-          })
-        }
+        onDragStart={(e) => hasTeam && onDragStart(e, { matchId: match.id, slot })}
       >
-        {team?.logo_url && (
-          <Image
-            src={team.logo_url}
-            alt={team.name}
-            width={24}
-            height={24}
-            className="w-6 h-6 rounded object-cover border border-neutral-700"
-          />
+        {/* Seed badge */}
+        {seed && (
+          <div
+            className={`w-8 h-8 rounded-lg bg-gradient-to-br ${gradientClass} flex items-center justify-center text-sm font-extrabold text-white shadow-lg`}
+          >
+            {seed}
+          </div>
         )}
 
-        <div className="flex flex-col">
-          <span
-            className={`font-semibold ${
-              isWinner ? 'text-emerald-300' : 'text-neutral-100'
-            }`}
-          >
-            {team?.name || teamId || (
-              <span className="text-neutral-500 italic">Slot vide</span>
-            )}
-          </span>
-          <span className="text-[10px] text-neutral-500">{label}</span>
+        {/* TBD badge */}
+        {!seed && isTBD && (
+          <div className="w-8 h-8 rounded-lg bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-[10px] font-bold text-purple-300">
+            ?
+          </div>
+        )}
+
+        {/* Empty badge */}
+        {!seed && !isTBD && (
+          <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-[10px] text-neutral-600">
+            —
+          </div>
+        )}
+
+        {/* Team info or seed label */}
+        <div className="flex flex-col min-w-0">
+          {team ? (
+            <div className="flex items-center gap-2">
+              {team.logo_url && (
+                <Image
+                  src={team.logo_url}
+                  alt={team.name}
+                  width={20}
+                  height={20}
+                  className="w-5 h-5 rounded object-cover"
+                />
+              )}
+              <span
+                className={`text-sm font-semibold truncate ${
+                  isWinner ? 'text-emerald-300' : 'text-white'
+                }`}
+              >
+                {team.name}
+              </span>
+            </div>
+          ) : isTBD ? (
+            <span className="text-sm font-medium text-purple-300/50 italic">
+              Disponible
+            </span>
+          ) : seed ? (
+            <span className="text-sm font-semibold text-white/70">
+              Seed {seed}
+            </span>
+          ) : (
+            <span className="text-xs text-neutral-600 italic">
+              Slot vide
+            </span>
+          )}
+          {teamId && !team && (
+            <span className="text-[10px] text-neutral-500 font-mono truncate">
+              {teamId.slice(0, 8)}
+            </span>
+          )}
         </div>
       </div>
 
+      {/* Winner indicator */}
+      {isWinner && (
+        <div className="text-emerald-400 text-xs font-bold">W</div>
+      )}
+
+      {/* Clear button */}
       {hasTeam && (
         <button
           type="button"
           onClick={onClear}
-          className="text-[10px] text-neutral-500 hover:text-red-400 px-1 py-0.5 rounded"
+          className="opacity-0 group-hover:opacity-100 text-neutral-500 hover:text-red-400 transition-all p-0.5"
         >
-          ✕
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <path d="M4 4l8 8m0-8L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
         </button>
       )}
     </div>
