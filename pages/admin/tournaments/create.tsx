@@ -2,6 +2,10 @@ import { useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import {
+  TOURNAMENT_TEMPLATES,
+  type TournamentTemplate,
+} from '@/config/tournament-templates';
 
 type Props = {
   staff: {
@@ -26,6 +30,23 @@ type CreateTournamentBody = {
   logo_url?: string | null;
   banner_url?: string | null;
 };
+
+function stageTypeBadge(type: string) {
+  switch (type) {
+    case 'bracket':
+      return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
+    case 'swiss':
+      return 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+    case 'group':
+      return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
+    case 'round_robin':
+      return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
+    case 'showmatch':
+      return 'bg-pink-500/20 text-pink-300 border-pink-500/30';
+    default:
+      return 'bg-neutral-500/20 text-neutral-300 border-neutral-500/30';
+  }
+}
 
 export const getServerSideProps = withStaffPage('manager');
 
@@ -62,6 +83,7 @@ function AdminTournamentCreatePage({ staff }: Props) {
     banner_url: '',
   });
 
+  const [selectedTemplate, setSelectedTemplate] = useState<TournamentTemplate | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -119,6 +141,26 @@ function AdminTournamentCreatePage({ staff }: Props) {
       const created = json.tournament;
 
       if (created?.id) {
+        // Apply template if selected
+        if (selectedTemplate) {
+          try {
+            const tplRes = await fetch(
+              `/api/admin/tournament/${created.id}/apply-template`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ templateId: selectedTemplate.id }),
+              }
+            );
+            if (!tplRes.ok) {
+              const tplJson = await tplRes.json().catch(() => ({}));
+              console.error('apply-template error:', tplJson.error);
+            }
+          } catch (tplErr) {
+            console.error('apply-template fetch error:', tplErr);
+          }
+        }
+
         router.push(`/admin/tournament/${created.id}`);
       } else {
         router.push('/admin/tournaments');
@@ -193,6 +235,60 @@ function AdminTournamentCreatePage({ staff }: Props) {
                   {errorMsg}
                 </div>
               )}
+
+              {/* Template selector */}
+              <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4">
+                <h2 className="text-lg font-semibold">Template de structure</h2>
+                <p className="text-xs text-neutral-400">
+                  Choisis un template pour creer automatiquement les stages du tournoi, ou laisse vide pour les configurer manuellement.
+                </p>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  {/* No template option */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTemplate(null)}
+                    className={`p-4 rounded-xl border text-left transition-all ${
+                      !selectedTemplate
+                        ? 'bg-blue-600/20 border-blue-500/50 ring-1 ring-blue-500/30'
+                        : 'bg-neutral-900/50 border-neutral-700 hover:bg-neutral-800 hover:border-neutral-600'
+                    }`}
+                  >
+                    <div className="font-medium text-sm">Aucun template</div>
+                    <div className="text-xs text-neutral-400 mt-1">
+                      Configurer les stages manuellement apres la creation.
+                    </div>
+                  </button>
+
+                  {TOURNAMENT_TEMPLATES.map((tpl) => (
+                    <button
+                      key={tpl.id}
+                      type="button"
+                      onClick={() => setSelectedTemplate(tpl)}
+                      className={`p-4 rounded-xl border text-left transition-all ${
+                        selectedTemplate?.id === tpl.id
+                          ? 'bg-blue-600/20 border-blue-500/50 ring-1 ring-blue-500/30'
+                          : 'bg-neutral-900/50 border-neutral-700 hover:bg-neutral-800 hover:border-neutral-600'
+                      }`}
+                    >
+                      <div className="font-medium text-sm">{tpl.name}</div>
+                      <div className="text-xs text-neutral-400 mt-1">
+                        {tpl.description}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {tpl.stages.map((s, i) => (
+                          <span
+                            key={i}
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${stageTypeBadge(s.stage_type)}`}
+                          >
+                            {s.name}
+                          </span>
+                        ))}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </section>
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Informations generales */}
@@ -504,6 +600,30 @@ function AdminTournamentCreatePage({ staff }: Props) {
                   )}
                 </div>
               </section>
+
+              {selectedTemplate && (
+                <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-3">
+                  <h2 className="text-lg font-semibold">Template selectionne</h2>
+                  <p className="text-sm text-neutral-300 font-medium">{selectedTemplate.name}</p>
+                  <div className="space-y-2">
+                    {selectedTemplate.stages.map((s, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        {i > 0 && (
+                          <svg className="w-3 h-3 text-neutral-600 -mt-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                          </svg>
+                        )}
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${stageTypeBadge(s.stage_type)}`}>
+                          {s.name}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-neutral-500 mt-2">
+                    Les stages seront crees automatiquement apres la creation du tournoi.
+                  </p>
+                </section>
+              )}
 
               <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-3">
                 <h2 className="text-lg font-semibold">Informations</h2>

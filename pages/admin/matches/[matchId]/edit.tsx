@@ -146,6 +146,18 @@ function AdminMatchEditPage({ staff }: StaffProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  // Games (maps) state
+  type GameInput = {
+    map_name: string;
+    map_order: number;
+    team1_score: number;
+    team2_score: number;
+    is_tiebreaker: boolean;
+    went_overtime: boolean;
+  };
+  const [games, setGames] = useState<GameInput[]>([]);
+  const [gamesLoaded, setGamesLoaded] = useState(false);
+
   const [form, setForm] = useState<{
     status: MatchStatus;
     best_of: string;
@@ -153,6 +165,8 @@ function AdminMatchEditPage({ staff }: StaffProps) {
     scheduled_at: string;
     stream_url: string;
     notes: string;
+    team1_score: string;
+    team2_score: string;
   }>({
     status: 'pending',
     best_of: '',
@@ -160,6 +174,8 @@ function AdminMatchEditPage({ staff }: StaffProps) {
     scheduled_at: '',
     stream_url: '',
     notes: '',
+    team1_score: '',
+    team2_score: '',
   });
 
   function updateField<K extends keyof typeof form>(
@@ -182,7 +198,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
     setSuccessMsg(null);
 
     try {
-      const res = await fetch(`/api/admin/matches/${matchId}`);
+      const res = await fetch(`/api/admin/matches/${matchId}?includeGames=1`);
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         throw new Error(json.error || 'Impossible de charger le match');
@@ -190,6 +206,26 @@ function AdminMatchEditPage({ staff }: StaffProps) {
 
       const json: ApiResponse = await res.json();
       const m = json.match;
+
+      // Load games
+      const matchGames = (m as any).games as any[] | undefined;
+      if (matchGames && Array.isArray(matchGames)) {
+        setGames(
+          matchGames
+            .sort((a, b) => (a.map_order ?? 0) - (b.map_order ?? 0))
+            .map((g, idx) => ({
+              map_name: g.map_name || '',
+              map_order: g.map_order ?? idx,
+              team1_score: g.team1_score ?? 0,
+              team2_score: g.team2_score ?? 0,
+              is_tiebreaker: g.is_tiebreaker ?? false,
+              went_overtime: g.went_overtime ?? false,
+            }))
+        );
+      } else {
+        setGames([]);
+      }
+      setGamesLoaded(true);
 
       setMatch(m);
       setTournament(json.tournament ?? null);
@@ -204,6 +240,8 @@ function AdminMatchEditPage({ staff }: StaffProps) {
         scheduled_at: formatToInputDateTime(m.scheduled_at),
         stream_url: m.stream_url || '',
         notes: m.notes || '',
+        team1_score: m.team1_score != null ? String(m.team1_score) : '',
+        team2_score: m.team2_score != null ? String(m.team2_score) : '',
       });
     } catch (err: any) {
       setErrorMsg(
@@ -223,6 +261,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
     setSuccessMsg(null);
 
     try {
+      // 1) Save metadata
       const payload: Partial<Match> = {
         status: form.status,
         best_of: form.best_of ? Number(form.best_of) : null,
@@ -234,23 +273,57 @@ function AdminMatchEditPage({ staff }: StaffProps) {
         notes: form.notes.trim() || null,
       };
 
-      const res = await fetch(`/api/admin/matches/${matchId}`, {
+      const metaRes = await fetch(`/api/admin/matches/${matchId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
+      if (!metaRes.ok) {
+        const json = await metaRes.json().catch(() => ({}));
         throw new Error(json.error || 'Erreur lors de la mise à jour du match');
       }
 
-      const json: ApiResponse = await res.json();
-      setMatch(json.match);
-      setTournament(json.tournament ?? null);
-      setStage(json.stage ?? null);
-      setTeam1(json.team1 ?? null);
-      setTeam2(json.team2 ?? null);
+      // 2) Save score if provided
+      const hasScore = form.team1_score !== '' && form.team2_score !== '';
+      if (hasScore) {
+        const scoreRes = await fetch(`/api/admin/matches/${matchId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            mode: 'score',
+            team1Score: Number(form.team1_score),
+            team2Score: Number(form.team2_score),
+            status: form.status,
+            propagate: true,
+          }),
+        });
+
+        if (!scoreRes.ok) {
+          const json = await scoreRes.json().catch(() => ({}));
+          throw new Error(json.error || 'Erreur lors de la mise à jour du score');
+        }
+      }
+
+      // 3) Save games if any were edited
+      if (games.length > 0 || gamesLoaded) {
+        const gamesRes = await fetch(`/api/matches/${matchId}/games`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            games: games,
+            recomputeMode: hasScore ? 'none' : 'none',
+          }),
+        });
+
+        if (!gamesRes.ok) {
+          const json = await gamesRes.json().catch(() => ({}));
+          throw new Error(json.error || 'Erreur lors de la sauvegarde des maps');
+        }
+      }
+
+      // Refresh match data
+      await fetchMatch();
 
       setSuccessMsg('Match mis à jour avec succès.');
     } catch (err: any) {
@@ -435,6 +508,214 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                   </div>
                 </section>
 
+                {/* Score */}
+                <section className="space-y-4">
+                  <h2 className="font-semibold text-lg">Score</h2>
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1">
+                      <label className="block text-sm mb-1 text-neutral-300">
+                        {team1?.name || 'Équipe 1'}
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={form.team1_score}
+                        onChange={(e) =>
+                          updateField('team1_score', e.target.value)
+                        }
+                        placeholder="0"
+                      />
+                    </div>
+                    <span className="text-xl font-bold text-neutral-400 pt-6">
+                      —
+                    </span>
+                    <div className="flex-1">
+                      <label className="block text-sm mb-1 text-neutral-300">
+                        {team2?.name || 'Équipe 2'}
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={form.team2_score}
+                        onChange={(e) =>
+                          updateField('team2_score', e.target.value)
+                        }
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-neutral-500">
+                    Remplir le score et sauvegarder appliquera le résultat et
+                    propagera dans le bracket automatiquement.
+                  </p>
+                </section>
+
+                {/* Games (maps) */}
+                <section className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="font-semibold text-lg">
+                      Maps ({games.length})
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setGames((prev) => [
+                          ...prev,
+                          {
+                            map_name: '',
+                            map_order: prev.length,
+                            team1_score: 0,
+                            team2_score: 0,
+                            is_tiebreaker: false,
+                            went_overtime: false,
+                          },
+                        ])
+                      }
+                      className="px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-700 text-xs font-medium transition-colors"
+                    >
+                      + Ajouter une map
+                    </button>
+                  </div>
+
+                  {games.length === 0 && (
+                    <p className="text-sm text-neutral-500">
+                      Aucune map enregistrée. Cliquez sur « Ajouter une map »
+                      pour détailler le score par map.
+                    </p>
+                  )}
+
+                  <div className="space-y-3">
+                    {games.map((g, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-start gap-3 p-3 rounded-lg bg-neutral-900/50 border border-neutral-700"
+                      >
+                        <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3">
+                          <div className="col-span-2 md:col-span-1">
+                            <label className="block text-xs text-neutral-400 mb-1">
+                              Map
+                            </label>
+                            <input
+                              type="text"
+                              className="w-full px-2 py-1.5 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              value={g.map_name}
+                              onChange={(e) => {
+                                const updated = [...games];
+                                updated[idx] = {
+                                  ...updated[idx],
+                                  map_name: e.target.value,
+                                };
+                                setGames(updated);
+                              }}
+                              placeholder="Nom de la map"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-neutral-400 mb-1">
+                              {team1?.short_name || team1?.name || 'Éq. 1'}
+                            </label>
+                            <input
+                              type="number"
+                              min={0}
+                              className="w-full px-2 py-1.5 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              value={g.team1_score}
+                              onChange={(e) => {
+                                const updated = [...games];
+                                updated[idx] = {
+                                  ...updated[idx],
+                                  team1_score: Number(e.target.value) || 0,
+                                };
+                                setGames(updated);
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-neutral-400 mb-1">
+                              {team2?.short_name || team2?.name || 'Éq. 2'}
+                            </label>
+                            <input
+                              type="number"
+                              min={0}
+                              className="w-full px-2 py-1.5 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              value={g.team2_score}
+                              onChange={(e) => {
+                                const updated = [...games];
+                                updated[idx] = {
+                                  ...updated[idx],
+                                  team2_score: Number(e.target.value) || 0,
+                                };
+                                setGames(updated);
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col items-center gap-2 pt-5">
+                          <label className="flex items-center gap-1.5 text-xs text-neutral-400 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={g.went_overtime}
+                              onChange={(e) => {
+                                const updated = [...games];
+                                updated[idx] = {
+                                  ...updated[idx],
+                                  went_overtime: e.target.checked,
+                                };
+                                setGames(updated);
+                              }}
+                              className="rounded border-neutral-600 bg-neutral-700"
+                            />
+                            OT
+                          </label>
+                          <label className="flex items-center gap-1.5 text-xs text-neutral-400 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={g.is_tiebreaker}
+                              onChange={(e) => {
+                                const updated = [...games];
+                                updated[idx] = {
+                                  ...updated[idx],
+                                  is_tiebreaker: e.target.checked,
+                                };
+                                setGames(updated);
+                              }}
+                              className="rounded border-neutral-600 bg-neutral-700"
+                            />
+                            TB
+                          </label>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setGames((prev) =>
+                              prev.filter((_, i) => i !== idx)
+                            )
+                          }
+                          className="mt-5 p-1.5 rounded hover:bg-red-900/50 text-neutral-500 hover:text-red-400 transition-colors"
+                          title="Supprimer cette map"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M6 18L18 6M6 6l12 12"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
                 {/* Notes internes */}
                 <section className="space-y-3">
                   <h2 className="font-semibold text-lg">Notes internes</h2>
@@ -550,14 +831,14 @@ function AdminMatchEditPage({ staff }: StaffProps) {
 
                 <div className="mt-3 pt-3 border-t border-neutral-700 text-xs text-neutral-400 space-y-1">
                   <p>
-                    La modification des équipes & du score se fait depuis la
-                    page principale du match (admin) ou via le bracket builder.
+                    Le score et les maps se modifient dans le formulaire
+                    principal. La propagation bracket est automatique.
                   </p>
                   <Link
                     href={backAdminUrl}
                     className="inline-flex items-center gap-1 text-blue-300 hover:underline"
                   >
-                    Ouvrir la page admin du match →
+                    Voir le détail du match →
                   </Link>
                 </div>
               </section>

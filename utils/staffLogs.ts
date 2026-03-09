@@ -28,6 +28,8 @@ export type StaffLogAction =
   | 'delete_team'
   | 'tournament_update'
   | 'create_swiss_round'
+  | 'advance_teams'
+  | 'apply_template'
   | 'other';
 
 export type StaffLog = {
@@ -217,6 +219,8 @@ export function formatStaffLog(log: StaffLog) {
     delete_team: 'Suppression équipe',
     tournament_update: 'Mise à jour tournoi',
     create_swiss_round: 'Création round swiss',
+    advance_teams: 'Avancement équipes',
+    apply_template: 'Application template',
     other: 'Action staff',
   };
 

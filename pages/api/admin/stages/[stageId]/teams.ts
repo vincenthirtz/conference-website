@@ -1,0 +1,330 @@
+// pages/api/admin/stages/[stageId]/teams.ts
+// Admin: gestion des équipes d'une phase (stage)
+// - GET    : liste des équipes de la phase
+// - POST   : ajouter une équipe à la phase
+// - PATCH  : mise à jour seed (unitaire ou bulk)
+// - DELETE : retirer une ou plusieurs équipes de la phase
+
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { supabaseAdmin } from '@/utils/supabase';
+import { withStaffRoute } from '@/utils/staff';
+import { logStaffAction } from '@/utils/staffLogs';
+
+export default withStaffRoute(handler, 'manager');
+
+async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
+  const { stageId } = req.query;
+
+  if (!stageId || Array.isArray(stageId)) {
+    return res.status(400).json({ error: 'Invalid stageId' });
+  }
+
+  try {
+    switch (req.method) {
+      case 'GET':
+        return await handleGet(stageId, req, res);
+      case 'POST':
+        return await handlePost(stageId, req, res, ctx);
+      case 'PATCH':
+        return await handlePatch(stageId, req, res, ctx);
+      case 'DELETE':
+        return await handleDelete(stageId, req, res, ctx);
+      default:
+        return res.status(405).json({ error: 'Method not allowed' });
+    }
+  } catch (err: any) {
+    console.error('[/api/admin/stages/[stageId]/teams] error:', err);
+    return res.status(500).json({
+      error: 'Internal server error',
+      detail: err?.message,
+    });
+  }
+}
+
+/* -----------------------------------------------------------
+ * GET : liste des équipes rattachées à la phase
+ * ---------------------------------------------------------*/
+
+async function handleGet(
+  stageId: string,
+  _req: NextApiRequest,
+  res: NextApiResponse
+) {
+  // Récupérer la phase + tournoi
+  const { data: stage, error: stageErr } = await supabaseAdmin
+    .from('tournament_stages')
+    .select('id, tournament_id, name, stage_type')
+    .eq('id', stageId)
+    .maybeSingle();
+
+  if (stageErr || !stage) {
+    return res.status(404).json({ error: 'Stage not found' });
+  }
+
+  // Récupérer le tournoi
+  const { data: tournament } = await supabaseAdmin
+    .from('tournaments')
+    .select('id, name, slug')
+    .eq('id', stage.tournament_id)
+    .maybeSingle();
+
+  // Récupérer les stage_teams avec infos équipe
+  const { data: teams, error: teamsErr } = await supabaseAdmin
+    .from('stage_teams')
+    .select('stage_id, team_id, seed, is_substitute, notes, team:team_id(id, name, short_name, logo_url)')
+    .eq('stage_id', stageId)
+    .order('seed', { ascending: true, nullsFirst: false });
+
+  if (teamsErr) {
+    console.error('GET stage teams error:', teamsErr);
+    return res.status(500).json({ error: 'Failed to fetch stage teams' });
+  }
+
+  return res.status(200).json({
+    stageId,
+    stage,
+    tournament: tournament ?? null,
+    teams: teams || [],
+  });
+}
+
+/* -----------------------------------------------------------
+ * POST : ajouter une équipe à la phase
+ * Body : { teamId: string, seed?: number | null }
+ * ---------------------------------------------------------*/
+
+async function handlePost(
+  stageId: string,
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: any
+) {
+  const { teamId, seed } = req.body;
+
+  if (!teamId || typeof teamId !== 'string') {
+    return res.status(400).json({ error: 'Missing teamId' });
+  }
+
+  // Vérifier que la phase existe
+  const { data: stage, error: stageErr } = await supabaseAdmin
+    .from('tournament_stages')
+    .select('id, tournament_id')
+    .eq('id', stageId)
+    .maybeSingle();
+
+  if (stageErr || !stage) {
+    return res.status(404).json({ error: 'Stage not found' });
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('stage_teams')
+    .insert({
+      stage_id: stageId,
+      team_id: teamId,
+      seed: typeof seed === 'number' ? seed : null,
+      is_substitute: false,
+      notes: null,
+    })
+    .select('*')
+    .maybeSingle();
+
+  if (error) {
+    console.error('POST stage team error:', error);
+    return res.status(500).json({ error: 'Failed to add team to stage' });
+  }
+
+  if (ctx?.staff?.id) {
+    await logStaffAction({
+      staff_id: ctx.staff.id,
+      action: 'manage_team',
+      entity_type: 'stage_teams',
+      entity_id: stageId,
+      tournament_id: stage.tournament_id,
+      payload: { action: 'add', teamId, seed },
+    });
+  }
+
+  return res.status(201).json({ stageTeam: data });
+}
+
+/* -----------------------------------------------------------
+ * PATCH : mise à jour seed (unitaire ou bulk)
+ *
+ * Unitaire : { teamId: string, seed: number | null }
+ * Bulk     : { seeds: Array<{ teamId: string, seed: number | null }> }
+ * ---------------------------------------------------------*/
+
+async function handlePatch(
+  stageId: string,
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: any
+) {
+  const { teamId, seed, seeds } = req.body;
+
+  // Vérifier que la phase existe
+  const { data: stage, error: stageErr } = await supabaseAdmin
+    .from('tournament_stages')
+    .select('id, tournament_id')
+    .eq('id', stageId)
+    .maybeSingle();
+
+  if (stageErr || !stage) {
+    return res.status(404).json({ error: 'Stage not found' });
+  }
+
+  // Mode bulk
+  if (Array.isArray(seeds)) {
+    const results: Array<{ teamId: string; success: boolean; error?: string }> = [];
+
+    for (const entry of seeds) {
+      if (!entry.teamId || typeof entry.teamId !== 'string') {
+        results.push({ teamId: entry.teamId, success: false, error: 'Invalid teamId' });
+        continue;
+      }
+
+      const seedVal = entry.seed === null || entry.seed === undefined ? null : Number(entry.seed);
+
+      const { error: updErr } = await supabaseAdmin
+        .from('stage_teams')
+        .update({ seed: seedVal })
+        .eq('stage_id', stageId)
+        .eq('team_id', entry.teamId);
+
+      if (updErr) {
+        results.push({ teamId: entry.teamId, success: false, error: updErr.message });
+      } else {
+        results.push({ teamId: entry.teamId, success: true });
+      }
+    }
+
+    if (ctx?.staff?.id) {
+      await logStaffAction({
+        staff_id: ctx.staff.id,
+        action: 'manage_team',
+        entity_type: 'stage_teams',
+        entity_id: stageId,
+        tournament_id: stage.tournament_id,
+        payload: { action: 'bulk_seed', count: seeds.length, seeds },
+      });
+    }
+
+    return res.status(200).json({ bulk: true, results });
+  }
+
+  // Mode unitaire
+  if (!teamId || typeof teamId !== 'string') {
+    return res.status(400).json({ error: 'Missing teamId' });
+  }
+
+  const seedVal = seed === null || seed === undefined ? null : Number(seed);
+
+  const { data, error } = await supabaseAdmin
+    .from('stage_teams')
+    .update({ seed: seedVal })
+    .eq('stage_id', stageId)
+    .eq('team_id', teamId)
+    .select('*')
+    .maybeSingle();
+
+  if (error) {
+    console.error('PATCH stage team error:', error);
+    return res.status(500).json({ error: 'Failed to update seed' });
+  }
+
+  if (ctx?.staff?.id) {
+    await logStaffAction({
+      staff_id: ctx.staff.id,
+      action: 'manage_team',
+      entity_type: 'stage_teams',
+      entity_id: stageId,
+      tournament_id: stage.tournament_id,
+      payload: { action: 'update_seed', teamId, seed: seedVal },
+    });
+  }
+
+  return res.status(200).json({ stageTeam: data });
+}
+
+/* -----------------------------------------------------------
+ * DELETE : retirer une ou plusieurs équipes
+ *
+ * Unitaire : { teamId: string }
+ * Bulk     : { teamIds: string[] }
+ * ---------------------------------------------------------*/
+
+async function handleDelete(
+  stageId: string,
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: any
+) {
+  const { teamId, teamIds } = req.body;
+
+  // Vérifier que la phase existe
+  const { data: stage, error: stageErr } = await supabaseAdmin
+    .from('tournament_stages')
+    .select('id, tournament_id')
+    .eq('id', stageId)
+    .maybeSingle();
+
+  if (stageErr || !stage) {
+    return res.status(404).json({ error: 'Stage not found' });
+  }
+
+  // Mode bulk
+  if (Array.isArray(teamIds) && teamIds.length > 0) {
+    const { error } = await supabaseAdmin
+      .from('stage_teams')
+      .delete()
+      .eq('stage_id', stageId)
+      .in('team_id', teamIds);
+
+    if (error) {
+      console.error('DELETE bulk stage teams error:', error);
+      return res.status(500).json({ error: 'Failed to remove teams' });
+    }
+
+    if (ctx?.staff?.id) {
+      await logStaffAction({
+        staff_id: ctx.staff.id,
+        action: 'manage_team',
+        entity_type: 'stage_teams',
+        entity_id: stageId,
+        tournament_id: stage.tournament_id,
+        payload: { action: 'bulk_remove', teamIds },
+      });
+    }
+
+    return res.status(200).json({ success: true, removed: teamIds.length });
+  }
+
+  // Mode unitaire
+  if (!teamId || typeof teamId !== 'string') {
+    return res.status(400).json({ error: 'Missing teamId or teamIds' });
+  }
+
+  const { error } = await supabaseAdmin
+    .from('stage_teams')
+    .delete()
+    .eq('stage_id', stageId)
+    .eq('team_id', teamId);
+
+  if (error) {
+    console.error('DELETE stage team error:', error);
+    return res.status(500).json({ error: 'Failed to remove team' });
+  }
+
+  if (ctx?.staff?.id) {
+    await logStaffAction({
+      staff_id: ctx.staff.id,
+      action: 'manage_team',
+      entity_type: 'stage_teams',
+      entity_id: stageId,
+      tournament_id: stage.tournament_id,
+      payload: { action: 'remove', teamId },
+    });
+  }
+
+  return res.status(200).json({ success: true });
+}

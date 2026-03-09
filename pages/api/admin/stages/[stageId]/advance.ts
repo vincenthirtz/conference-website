@@ -1,0 +1,198 @@
+// pages/api/admin/stages/[stageId]/advance.ts
+// POST : avance des equipes d'un stage source vers un stage cible.
+// Body : { targetStageId, teamIds, seedMode: 'rank' | 'manual' | 'none' }
+
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { supabaseAdmin } from '@/utils/supabase';
+import { withStaffRoute } from '@/utils/staff';
+import { logStaffAction } from '@/utils/staffLogs';
+import { computeStageStandings } from '@/utils/stages/standings';
+
+type AdvancedTeam = { teamId: string; seed: number | null };
+
+type ApiResponse =
+  | { advanced: AdvancedTeam[]; skipped: string[]; targetStageId: string }
+  | { error: string };
+
+export default withStaffRoute(handler, 'manager');
+
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<ApiResponse>,
+  ctx: any
+) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { stageId } = req.query;
+  if (!stageId || Array.isArray(stageId)) {
+    return res.status(400).json({ error: 'Invalid stageId' });
+  }
+
+  if (!supabaseAdmin) {
+    return res.status(500).json({ error: 'Service Supabase indisponible (service role manquant).' });
+  }
+
+  const sourceStageId = String(stageId);
+  const { targetStageId, teamIds, seedMode } = req.body || {};
+
+  if (!targetStageId || typeof targetStageId !== 'string') {
+    return res.status(400).json({ error: 'targetStageId is required' });
+  }
+
+  if (!Array.isArray(teamIds) || teamIds.length === 0) {
+    return res.status(400).json({ error: 'teamIds must be a non-empty array' });
+  }
+
+  const validSeedModes = ['rank', 'manual', 'none'];
+  const finalSeedMode = validSeedModes.includes(seedMode) ? seedMode : 'none';
+
+  try {
+    // Verify both stages exist and belong to the same tournament
+    const { data: sourceStage, error: srcErr } = await supabaseAdmin
+      .from('tournament_stages')
+      .select('id, tournament_id, stage_type')
+      .eq('id', sourceStageId)
+      .maybeSingle();
+
+    if (srcErr || !sourceStage) {
+      return res.status(404).json({ error: 'Source stage not found' });
+    }
+
+    const { data: targetStage, error: tgtErr } = await supabaseAdmin
+      .from('tournament_stages')
+      .select('id, tournament_id')
+      .eq('id', targetStageId)
+      .maybeSingle();
+
+    if (tgtErr || !targetStage) {
+      return res.status(404).json({ error: 'Target stage not found' });
+    }
+
+    if (sourceStage.tournament_id !== targetStage.tournament_id) {
+      return res.status(400).json({
+        error: 'Les deux stages doivent appartenir au meme tournoi.',
+      });
+    }
+
+    // Verify teamIds are in the source stage
+    const { data: sourceTeams, error: srcTeamsErr } = await supabaseAdmin
+      .from('stage_teams')
+      .select('team_id')
+      .eq('stage_id', sourceStageId);
+
+    if (srcTeamsErr) {
+      return res.status(500).json({ error: 'Failed to fetch source stage teams' });
+    }
+
+    const sourceTeamIds = new Set((sourceTeams || []).map((t: any) => t.team_id));
+    const invalidTeams = teamIds.filter((id: string) => !sourceTeamIds.has(id));
+
+    if (invalidTeams.length > 0) {
+      return res.status(400).json({
+        error: `Equipes non presentes dans le stage source : ${invalidTeams.join(', ')}`,
+      });
+    }
+
+    // Check which teams are already in the target stage
+    const { data: existingTargetTeams } = await supabaseAdmin
+      .from('stage_teams')
+      .select('team_id')
+      .eq('stage_id', targetStageId);
+
+    const existingTargetIds = new Set(
+      (existingTargetTeams || []).map((t: any) => t.team_id)
+    );
+
+    const toAdvance = teamIds.filter((id: string) => !existingTargetIds.has(id));
+    const skipped = teamIds.filter((id: string) => existingTargetIds.has(id));
+
+    if (toAdvance.length === 0) {
+      return res.status(200).json({
+        advanced: [],
+        skipped,
+        targetStageId,
+      });
+    }
+
+    // Compute seeds based on seedMode
+    let seedMap = new Map<string, number | null>();
+
+    if (finalSeedMode === 'rank') {
+      const standings = await computeStageStandings(
+        sourceStageId,
+        sourceStage.stage_type || 'other'
+      );
+      const rankByTeam = new Map<string, number>();
+      for (const s of standings) {
+        rankByTeam.set(s.teamId, s.rank);
+      }
+      for (const id of toAdvance) {
+        seedMap.set(id, rankByTeam.get(id) ?? null);
+      }
+    } else if (finalSeedMode === 'manual') {
+      toAdvance.forEach((id: string, idx: number) => {
+        seedMap.set(id, idx + 1);
+      });
+    } else {
+      for (const id of toAdvance) {
+        seedMap.set(id, null);
+      }
+    }
+
+    // Insert into stage_teams
+    const inserts = toAdvance.map((teamId: string) => ({
+      stage_id: targetStageId,
+      team_id: teamId,
+      seed: seedMap.get(teamId) ?? null,
+      is_substitute: false,
+      notes: null,
+    }));
+
+    const { error: insertErr } = await supabaseAdmin
+      .from('stage_teams')
+      .insert(inserts);
+
+    if (insertErr) {
+      console.error('advance teams insert error:', insertErr);
+      return res.status(500).json({ error: 'Failed to advance teams' });
+    }
+
+    const advanced: AdvancedTeam[] = toAdvance.map((teamId: string) => ({
+      teamId,
+      seed: seedMap.get(teamId) ?? null,
+    }));
+
+    // Log staff action
+    if (ctx?.staff?.id) {
+      try {
+        await logStaffAction({
+          staff_id: ctx.staff.id,
+          action: 'advance_teams',
+          entity_type: 'stage',
+          entity_id: sourceStageId,
+          tournament_id: sourceStage.tournament_id,
+          payload: {
+            source_stage_id: sourceStageId,
+            target_stage_id: targetStageId,
+            advanced_team_ids: toAdvance,
+            skipped_team_ids: skipped,
+            seed_mode: finalSeedMode,
+          },
+        });
+      } catch (e) {
+        console.error('advance teams logStaffAction error:', e);
+      }
+    }
+
+    return res.status(200).json({
+      advanced,
+      skipped,
+      targetStageId,
+    });
+  } catch (err: any) {
+    console.error('[/api/admin/stages/[stageId]/advance] error:', err);
+    return res.status(500).json({ error: err?.message || 'Internal server error' });
+  }
+}

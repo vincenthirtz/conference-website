@@ -157,6 +157,19 @@ function AdminStagePage({ staff }: StaffProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  // Advance modal state
+  const [showAdvanceModal, setShowAdvanceModal] = useState(false);
+  const [advanceStandings, setAdvanceStandings] = useState<
+    { teamId: string; teamName: string | null; rank: number; wins: number; losses: number; draws: number; score: number }[]
+  >([]);
+  const [advanceSelectedIds, setAdvanceSelectedIds] = useState<Set<string>>(new Set());
+  const [advanceTopN, setAdvanceTopN] = useState('');
+  const [advanceTargetStageId, setAdvanceTargetStageId] = useState('');
+  const [advanceSeedMode, setAdvanceSeedMode] = useState<'rank' | 'manual' | 'none'>('rank');
+  const [advanceOtherStages, setAdvanceOtherStages] = useState<{ id: string; name: string; stage_type: string | null }[]>([]);
+  const [advanceLoading, setAdvanceLoading] = useState(false);
+  const [advanceSubmitting, setAdvanceSubmitting] = useState(false);
+
   // Editing state
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -334,6 +347,106 @@ function AdminStagePage({ staff }: StaffProps) {
     }
   }
 
+  async function openAdvanceModal() {
+    if (!stageId || !stage) return;
+    setShowAdvanceModal(true);
+    setAdvanceLoading(true);
+    setAdvanceSelectedIds(new Set());
+    setAdvanceTopN('');
+    setAdvanceTargetStageId('');
+    setAdvanceSeedMode('rank');
+
+    try {
+      // Fetch standings and other stages in parallel
+      const [standingsRes, stagesRes] = await Promise.all([
+        fetch(`/api/admin/stages/${stageId}/standings`),
+        fetch(`/api/admin/tournament/${stage.tournament_id}/stages`),
+      ]);
+
+      if (standingsRes.ok) {
+        const json = await standingsRes.json();
+        setAdvanceStandings(json.standings || []);
+      }
+
+      if (stagesRes.ok) {
+        const json = await stagesRes.json();
+        const others = (json.stages || [])
+          .filter((s: any) => s.id !== stageId)
+          .map((s: any) => ({ id: s.id, name: s.name, stage_type: s.stage_type }));
+        setAdvanceOtherStages(others);
+        if (others.length > 0) setAdvanceTargetStageId(others[0].id);
+      }
+    } catch (err) {
+      console.error('openAdvanceModal error:', err);
+    } finally {
+      setAdvanceLoading(false);
+    }
+  }
+
+  function handleAdvanceTopN(value: string) {
+    setAdvanceTopN(value);
+    const n = parseInt(value, 10);
+    if (!isNaN(n) && n > 0) {
+      const ids = new Set(advanceStandings.slice(0, n).map((s) => s.teamId));
+      setAdvanceSelectedIds(ids);
+    }
+  }
+
+  function toggleAdvanceTeam(teamId: string) {
+    setAdvanceSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(teamId)) next.delete(teamId);
+      else next.add(teamId);
+      return next;
+    });
+    setAdvanceTopN('');
+  }
+
+  async function handleAdvanceSubmit() {
+    if (!stageId || advanceSelectedIds.size === 0 || !advanceTargetStageId) return;
+    setAdvanceSubmitting(true);
+    setErrorMsg(null);
+
+    // Preserve standings order for the selected teams
+    const orderedIds = advanceStandings
+      .filter((s) => advanceSelectedIds.has(s.teamId))
+      .map((s) => s.teamId);
+
+    try {
+      const res = await fetch(`/api/admin/stages/${stageId}/advance`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetStageId: advanceTargetStageId,
+          teamIds: orderedIds,
+          seedMode: advanceSeedMode,
+        }),
+      });
+
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || "Erreur lors de l'avancement");
+      }
+
+      const json = await res.json();
+      const advancedCount = json.advanced?.length ?? 0;
+      const skippedCount = json.skipped?.length ?? 0;
+
+      let msg = `${advancedCount} equipe(s) avancee(s) avec succes.`;
+      if (skippedCount > 0) {
+        msg += ` ${skippedCount} deja presente(s) dans le stage cible.`;
+      }
+
+      setSuccessMsg(msg);
+      setTimeout(() => setSuccessMsg(null), 5000);
+      setShowAdvanceModal(false);
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? "Erreur lors de l'avancement");
+    } finally {
+      setAdvanceSubmitting(false);
+    }
+  }
+
   const tournamentDashboardUrl = tournament
     ? `/admin/tournament/${tournament.id}`
     : stage
@@ -495,6 +608,15 @@ function AdminStagePage({ staff }: StaffProps) {
                     Voir les matchs
                   </Link>
                 )}
+                <button
+                  onClick={openAdvanceModal}
+                  className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                  Avancer des equipes
+                </button>
                 <Link
                   href={`/admin/stages/${stage.id}/history`}
                   className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors flex items-center gap-2"
@@ -864,6 +986,190 @@ function AdminStagePage({ staff }: StaffProps) {
               >
                 {saving ? 'Enregistrement...' : 'Enregistrer'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Advance Modal */}
+      {showAdvanceModal && stage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+              Avancer des equipes
+            </h3>
+
+            {advanceLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="w-6 h-6 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+              </div>
+            ) : (
+              <div className="space-y-5">
+                {/* Target stage selector */}
+                <div>
+                  <label className="block text-sm text-neutral-400 mb-1">
+                    Stage cible
+                  </label>
+                  {advanceOtherStages.length === 0 ? (
+                    <p className="text-sm text-neutral-500">Aucun autre stage dans ce tournoi.</p>
+                  ) : (
+                    <select
+                      value={advanceTargetStageId}
+                      onChange={(e) => setAdvanceTargetStageId(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                    >
+                      {advanceOtherStages.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} ({s.stage_type || 'autre'})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                {/* Top N shortcut */}
+                <div className="flex items-center gap-3">
+                  <label className="text-sm text-neutral-400 whitespace-nowrap">
+                    Avancer les top
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={advanceStandings.length}
+                    value={advanceTopN}
+                    onChange={(e) => handleAdvanceTopN(e.target.value)}
+                    className="w-20 px-3 py-1.5 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                    placeholder="N"
+                  />
+                  <span className="text-sm text-neutral-500">
+                    / {advanceStandings.length} equipes
+                  </span>
+                </div>
+
+                {/* Standings table with checkboxes */}
+                {advanceStandings.length > 0 ? (
+                  <div className="border border-neutral-700 rounded-xl overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-neutral-900/80 text-neutral-400 text-xs uppercase tracking-wider">
+                          <th className="px-3 py-2 text-left w-10">
+                            <input
+                              type="checkbox"
+                              checked={advanceSelectedIds.size === advanceStandings.length}
+                              onChange={() => {
+                                if (advanceSelectedIds.size === advanceStandings.length) {
+                                  setAdvanceSelectedIds(new Set());
+                                } else {
+                                  setAdvanceSelectedIds(new Set(advanceStandings.map((s) => s.teamId)));
+                                }
+                                setAdvanceTopN('');
+                              }}
+                              className="rounded border-neutral-500 bg-neutral-700"
+                            />
+                          </th>
+                          <th className="px-3 py-2 text-left">#</th>
+                          <th className="px-3 py-2 text-left">Equipe</th>
+                          <th className="px-3 py-2 text-center">V</th>
+                          <th className="px-3 py-2 text-center">D</th>
+                          <th className="px-3 py-2 text-center">N</th>
+                          <th className="px-3 py-2 text-right">Pts</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {advanceStandings.map((s) => (
+                          <tr
+                            key={s.teamId}
+                            onClick={() => toggleAdvanceTeam(s.teamId)}
+                            className={`cursor-pointer transition-colors ${
+                              advanceSelectedIds.has(s.teamId)
+                                ? 'bg-emerald-900/30'
+                                : 'hover:bg-neutral-700/50'
+                            }`}
+                          >
+                            <td className="px-3 py-2">
+                              <input
+                                type="checkbox"
+                                checked={advanceSelectedIds.has(s.teamId)}
+                                onChange={() => toggleAdvanceTeam(s.teamId)}
+                                className="rounded border-neutral-500 bg-neutral-700"
+                              />
+                            </td>
+                            <td className="px-3 py-2 text-neutral-500 font-mono text-xs">
+                              {s.rank}
+                            </td>
+                            <td className="px-3 py-2 font-medium">
+                              {s.teamName || s.teamId.slice(0, 8)}
+                            </td>
+                            <td className="px-3 py-2 text-center text-emerald-400">{s.wins}</td>
+                            <td className="px-3 py-2 text-center text-red-400">{s.losses}</td>
+                            <td className="px-3 py-2 text-center text-neutral-400">{s.draws}</td>
+                            <td className="px-3 py-2 text-right font-semibold">{s.score}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-sm text-neutral-500">
+                    Aucune equipe ou aucun match termine dans cette phase.
+                  </p>
+                )}
+
+                {/* Seed mode */}
+                <div>
+                  <label className="block text-sm text-neutral-400 mb-2">
+                    Attribution des seeds
+                  </label>
+                  <div className="flex flex-wrap gap-3">
+                    {(['rank', 'manual', 'none'] as const).map((mode) => (
+                      <label key={mode} className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          type="radio"
+                          name="seedMode"
+                          checked={advanceSeedMode === mode}
+                          onChange={() => setAdvanceSeedMode(mode)}
+                          className="border-neutral-500 bg-neutral-700"
+                        />
+                        <span>
+                          {mode === 'rank' && 'Par classement'}
+                          {mode === 'manual' && 'Par ordre de selection'}
+                          {mode === 'none' && 'Aucun seed'}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-between items-center mt-6">
+              <span className="text-xs text-neutral-500">
+                {advanceSelectedIds.size} equipe(s) selectionnee(s)
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowAdvanceModal(false)}
+                  className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleAdvanceSubmit}
+                  disabled={advanceSubmitting || advanceSelectedIds.size === 0 || !advanceTargetStageId}
+                  className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {advanceSubmitting ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Avancement...
+                    </>
+                  ) : (
+                    'Avancer'
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

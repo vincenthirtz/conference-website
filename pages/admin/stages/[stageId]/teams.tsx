@@ -96,6 +96,13 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
   const [updatingSeedId, setUpdatingSeedId] = useState<string | null>(null);
   const [seedInputs, setSeedInputs] = useState<Record<string, string>>({});
 
+  // Bulk seed
+  const [bulkSeedSaving, setBulkSeedSaving] = useState(false);
+
+  // Bulk selection (pour retrait en masse)
+  const [selectedTeamIds, setSelectedTeamIds] = useState<Set<string>>(new Set());
+  const [bulkRemoving, setBulkRemoving] = useState(false);
+
   useEffect(() => {
     if (!stageId) return;
     fetchStageTeams();
@@ -127,6 +134,7 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
         seedMap[st.team_id] = st.seed != null ? String(st.seed) : '';
       });
       setSeedInputs(seedMap);
+      setSelectedTeamIds(new Set());
 
       // Charger les équipes du tournoi parent
       if (json.stage?.tournament_id) {
@@ -191,7 +199,7 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
         throw new Error(json.error || "Erreur lors de l'ajout de l'équipe");
       }
 
-      await res.json(); // on s'en fiche du détail ici
+      await res.json();
       setInfoMsg('Équipe ajoutée à la phase.');
       setAddTeamId('');
       setAddSeed('');
@@ -271,6 +279,106 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
       );
     } finally {
       setUpdatingSeedId(null);
+    }
+  }
+
+  // --- Bulk seed : sauvegarder tous les seeds d'un coup ---
+  async function handleBulkSeedSave() {
+    if (!stageId) return;
+
+    const seeds = stageTeams.map((st) => {
+      const val = seedInputs[st.team_id] ?? '';
+      return {
+        teamId: st.team_id,
+        seed: val.trim() === '' ? null : Number(val),
+      };
+    });
+
+    setBulkSeedSaving(true);
+    setErrorMsg(null);
+    setInfoMsg(null);
+
+    try {
+      const res = await fetch(`/api/admin/stages/${stageId}/teams`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seeds }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || 'Erreur lors de la mise à jour des seeds');
+      }
+      const json = await res.json();
+      const successCount = json.results?.filter((r: any) => r.success).length ?? 0;
+      setInfoMsg(`Seeds mis à jour pour ${successCount} équipe${successCount > 1 ? 's' : ''}.`);
+      fetchStageTeams();
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? 'Erreur inattendue lors du bulk seed');
+    } finally {
+      setBulkSeedSaving(false);
+    }
+  }
+
+  // --- Auto-seed : numéroter 1, 2, 3… dans l'ordre actuel ---
+  function handleAutoSeed() {
+    const newInputs: Record<string, string> = {};
+    stageTeams.forEach((st, i) => {
+      newInputs[st.team_id] = String(i + 1);
+    });
+    setSeedInputs(newInputs);
+  }
+
+  // --- Sélection bulk ---
+  function toggleTeamSelection(teamId: string) {
+    setSelectedTeamIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(teamId)) {
+        next.delete(teamId);
+      } else {
+        next.add(teamId);
+      }
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selectedTeamIds.size === stageTeams.length) {
+      setSelectedTeamIds(new Set());
+    } else {
+      setSelectedTeamIds(new Set(stageTeams.map((st) => st.team_id)));
+    }
+  }
+
+  async function handleBulkRemoveTeams() {
+    if (!stageId || selectedTeamIds.size === 0) return;
+
+    const count = selectedTeamIds.size;
+    if (!confirm(`Retirer ${count} équipe${count > 1 ? 's' : ''} de cette phase ?`)) {
+      return;
+    }
+
+    setBulkRemoving(true);
+    setErrorMsg(null);
+    setInfoMsg(null);
+
+    try {
+      const res = await fetch(`/api/admin/stages/${stageId}/teams`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamIds: Array.from(selectedTeamIds) }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || 'Erreur lors du retrait en masse');
+      }
+      await res.json();
+      setInfoMsg(`${count} équipe${count > 1 ? 's' : ''} retirée${count > 1 ? 's' : ''} de la phase.`);
+      setSelectedTeamIds(new Set());
+      fetchStageTeams();
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? 'Erreur inattendue lors du retrait en masse');
+    } finally {
+      setBulkRemoving(false);
     }
   }
 
@@ -425,14 +533,58 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
 
             {/* Tableau des équipes de la phase */}
             <section className="bg-neutral-800 border border-neutral-700 rounded-xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-neutral-700 flex justify-between items-center">
+              <div className="px-4 py-3 border-b border-neutral-700 flex flex-wrap justify-between items-center gap-3">
                 <h2 className="text-sm font-semibold">
                   Équipes rattachées à la phase
+                  <span className="ml-2 text-xs text-neutral-400 font-normal">
+                    {stageTeams.length} équipe
+                    {stageTeams.length > 1 ? 's' : ''}
+                  </span>
                 </h2>
-                <span className="text-xs text-neutral-400">
-                  {stageTeams.length} équipe
-                  {stageTeams.length > 1 ? 's' : ''}
-                </span>
+
+                {stageTeams.length > 0 && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={handleAutoSeed}
+                      className="px-3 py-1.5 text-xs rounded bg-neutral-700 hover:bg-neutral-600 border border-neutral-600"
+                      title="Numéroter automatiquement 1, 2, 3… dans l'ordre actuel"
+                    >
+                      Auto-seed 1..N
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleBulkSeedSave}
+                      disabled={bulkSeedSaving}
+                      className={`px-3 py-1.5 text-xs rounded font-semibold ${
+                        bulkSeedSaving
+                          ? 'bg-blue-800 cursor-wait'
+                          : 'bg-blue-600 hover:bg-blue-700'
+                      }`}
+                    >
+                      {bulkSeedSaving
+                        ? 'Sauvegarde…'
+                        : 'Sauvegarder tous les seeds'}
+                    </button>
+
+                    {selectedTeamIds.size > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleBulkRemoveTeams}
+                        disabled={bulkRemoving}
+                        className={`px-3 py-1.5 text-xs rounded font-semibold ${
+                          bulkRemoving
+                            ? 'bg-red-900 cursor-wait'
+                            : 'bg-red-700 hover:bg-red-800'
+                        }`}
+                      >
+                        {bulkRemoving
+                          ? 'Retrait…'
+                          : `Retirer ${selectedTeamIds.size} équipe${selectedTeamIds.size > 1 ? 's' : ''}`}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
               {stageTeams.length === 0 ? (
@@ -443,6 +595,14 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
                 <table className="w-full text-sm">
                   <thead className="bg-neutral-750 text-neutral-300">
                     <tr>
+                      <th className="px-3 py-2 text-center w-10">
+                        <input
+                          type="checkbox"
+                          checked={selectedTeamIds.size === stageTeams.length && stageTeams.length > 0}
+                          onChange={toggleSelectAll}
+                          className="accent-blue-500"
+                        />
+                      </th>
                       <th className="px-4 py-2 text-left">Seed</th>
                       <th className="px-4 py-2 text-left">Équipe</th>
                       <th className="px-4 py-2 text-left">Notes</th>
@@ -453,8 +613,20 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
                     {stageTeams.map((st) => (
                       <tr
                         key={st.team_id}
-                        className="border-t border-neutral-700"
+                        className={`border-t border-neutral-700 ${
+                          selectedTeamIds.has(st.team_id) ? 'bg-blue-900/20' : ''
+                        }`}
                       >
+                        {/* Checkbox */}
+                        <td className="px-3 py-2 align-middle text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedTeamIds.has(st.team_id)}
+                            onChange={() => toggleTeamSelection(st.team_id)}
+                            className="accent-blue-500"
+                          />
+                        </td>
+
                         {/* Seed editable */}
                         <td className="px-4 py-2 align-middle">
                           <div className="flex items-center gap-2">
