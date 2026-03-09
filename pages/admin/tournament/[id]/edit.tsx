@@ -22,7 +22,7 @@ type Tournament = {
   game: string | null;
   status: string | null;
   start_date: string | null;
-  end_at: string | null;
+  end_date: string | null;
   format_type: string | null;
   max_teams: number | null;
   min_players: number | null;
@@ -116,7 +116,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
         game: t.game || '',
         status: t.status || 'draft',
         start_date: t.start_date ? toLocalInputValue(t.start_date) : '',
-        end_at: t.end_at ? toLocalInputValue(t.end_at) : '',
+        end_at: t.end_date ? toLocalInputValue(t.end_date) : '',
         format_type: t.format_type || '',
         max_teams: t.max_teams ? String(t.max_teams) : '',
         min_players: t.min_players ? String(t.min_players) : '',
@@ -165,7 +165,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
 
     setSaving(true);
 
-    const payload: Partial<Tournament> = {
+    const payload: Record<string, any> = {
       name: form.name.trim(),
       slug: form.slug.trim() || null,
       game: form.game.trim() || null,

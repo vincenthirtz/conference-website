@@ -102,6 +102,7 @@ async function handlePut(
 
   // champs modifiables
   const allowedFields: (keyof StageRow)[] = [
+    'tournament_id',
     'name',
     'slug',
     'stage_type',

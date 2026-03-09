@@ -161,10 +161,12 @@ function AdminStagePage({ staff }: StaffProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     name: '',
+    tournament_id: '',
     is_active: false,
     is_public: false,
   });
   const [saving, setSaving] = useState(false);
+  const [allTournaments, setAllTournaments] = useState<{ id: string; name: string }[]>([]);
 
   const fetchStage = useCallback(async () => {
     if (!stageId) return;
@@ -182,6 +184,7 @@ function AdminStagePage({ staff }: StaffProps) {
       setStage(s);
       setEditForm({
         name: s.name || '',
+        tournament_id: s.tournament_id || '',
         is_active: s.is_active || false,
         is_public: s.is_public || false,
       });
@@ -210,6 +213,20 @@ function AdminStagePage({ staff }: StaffProps) {
     fetchStage();
   }, [stageId, fetchStage]);
 
+  async function fetchTournaments() {
+    try {
+      const res = await fetch('/api/admin/tournaments?limit=100');
+      if (res.ok) {
+        const json = await res.json();
+        setAllTournaments(
+          (json.tournaments || []).map((t: any) => ({ id: t.id, name: t.name }))
+        );
+      }
+    } catch (e) {
+      console.error('fetch tournaments error', e);
+    }
+  }
+
   async function handleSaveEdit() {
     if (!stageId || !stage) return;
     setSaving(true);
@@ -232,6 +249,19 @@ function AdminStagePage({ staff }: StaffProps) {
       setIsEditing(false);
       setSuccessMsg('Phase mise à jour avec succès');
       setTimeout(() => setSuccessMsg(null), 3000);
+
+      // Recharger le tournoi parent si changé
+      if (json.stage.tournament_id !== stage.tournament_id) {
+        try {
+          const res2 = await fetch(`/api/admin/tournament/${json.stage.tournament_id}`);
+          if (res2.ok) {
+            const json2 = await res2.json();
+            setTournament(json2.tournament);
+          }
+        } catch (e) {
+          console.error('fetch updated tournament error', e);
+        }
+      }
     } catch (err: any) {
       setErrorMsg(err?.message ?? 'Erreur inattendue');
     } finally {
@@ -446,7 +476,7 @@ function AdminStagePage({ staff }: StaffProps) {
               {/* Quick Actions Bar */}
               <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={() => setIsEditing(true)}
+                  onClick={() => { setIsEditing(true); fetchTournaments(); }}
                   className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors flex items-center gap-2"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -777,6 +807,24 @@ function AdminStagePage({ staff }: StaffProps) {
                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Tournoi rattaché
+                </label>
+                <select
+                  value={editForm.tournament_id}
+                  onChange={(e) => setEditForm({ ...editForm, tournament_id: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">-- Aucun --</option>
+                  {allTournaments.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="space-y-2">
