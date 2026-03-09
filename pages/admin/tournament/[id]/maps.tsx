@@ -72,6 +72,9 @@ function AdminTournamentMapsPage(_: StaffProps) {
   const [useCustomMap, setUseCustomMap] = useState(false);
   const [adding, setAdding] = useState(false);
 
+  // État pour l'ajout groupé
+  const [addingAll, setAddingAll] = useState(false);
+
   // État pour la suppression
   const [deleting, setDeleting] = useState<string | null>(null);
 
@@ -271,6 +274,63 @@ function AdminTournamentMapsPage(_: StaffProps) {
     }
   }
 
+  async function handleAddAllMaps() {
+    if (!tournamentId) return;
+    if (!confirm('Ajouter toutes les maps OW manquantes au pool ?')) return;
+
+    setAddingAll(true);
+    setErrorMsg(null);
+
+    try {
+      // Maps déjà présentes
+      const existingNames = new Set(maps.map((m) => m.map_name));
+      const missing = OVERWATCH_MAPS.filter((m) => !existingNames.has(m.name));
+
+      if (missing.length === 0) {
+        alert('Toutes les maps sont déjà dans le pool.');
+        setAddingAll(false);
+        return;
+      }
+
+      // Construire la liste complète : existantes + manquantes
+      const allMaps = [
+        ...maps.map((m) => ({
+          map_name: m.map_name,
+          map_slug: m.map_slug,
+          map_type: m.map_type,
+          image_url: m.image_url,
+          enabled: m.enabled,
+          order_index: m.order_index,
+        })),
+        ...missing.map((m, idx) => ({
+          map_name: m.name,
+          map_slug: null,
+          map_type: m.type,
+          image_url: m.image,
+          enabled: true,
+          order_index: maps.length + idx,
+        })),
+      ];
+
+      const res = await fetch(`/api/tournament/${tournamentId}/maps`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ maps: allMaps }),
+      });
+
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || "Erreur lors de l'ajout groupé");
+      }
+
+      await fetchMaps();
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Erreur lors de l'ajout groupé");
+    } finally {
+      setAddingAll(false);
+    }
+  }
+
   // Filtrer les maps OW déjà ajoutées
   const availableOWMaps = OVERWATCH_MAPS.filter(
     (owMap) => !maps.some((m) => m.map_name === owMap.name)
@@ -330,6 +390,17 @@ function AdminTournamentMapsPage(_: StaffProps) {
                 >
                   {showAddForm ? '✕ Annuler' : '+ Ajouter une map'}
                 </button>
+                {availableOWMaps.length > 0 && (
+                  <button
+                    onClick={handleAddAllMaps}
+                    disabled={addingAll}
+                    className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium text-sm transition-colors"
+                  >
+                    {addingAll
+                      ? 'Ajout en cours…'
+                      : `+ Ajouter toutes les maps (${availableOWMaps.length})`}
+                  </button>
+                )}
               </div>
 
               {/* Formulaire d'ajout */}
