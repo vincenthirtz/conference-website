@@ -17,6 +17,7 @@ type Body = {
   member_battle_tag?: string | null;
   set_captain?: boolean;
   members?: MemberInput[];
+  tournament_id?: string | null;
 };
 
 type MemberInput = {
@@ -39,6 +40,7 @@ type ApiResponse =
   | {
       team: Record<string, any>;
       members?: MemberResult[];
+      tournament?: { tournament_name: string; stages_count: number };
       info?: string;
     }
   | { error: string };
@@ -322,12 +324,80 @@ export default async function handler(
     }
   }
 
+  // Auto-register team to tournament if tournament_id provided
+  let tournamentRegistration: { tournament_name: string; stages_count: number } | null = null;
+  const tournamentId = body.tournament_id?.toString().trim() || null;
+
+  if (tournamentId) {
+    try {
+      // Verify tournament exists and is published
+      const { data: tournament } = await supabaseAdmin
+        .from('tournaments')
+        .select('id, name, status, max_teams')
+        .eq('id', tournamentId)
+        .single();
+
+      if (tournament && tournament.status === 'published') {
+        // Check max_teams limit
+        let canRegister = true;
+        if (tournament.max_teams) {
+          const { data: existingTeams } = await supabaseAdmin
+            .from('tournament_stage_teams')
+            .select('team_id, tournament_stages!inner(tournament_id)')
+            .eq('tournament_stages.tournament_id', tournamentId);
+
+          const uniqueTeams = new Set(existingTeams?.map(t => t.team_id) || []);
+          if (uniqueTeams.size >= tournament.max_teams) {
+            canRegister = false;
+          }
+        }
+
+        if (canRegister) {
+          // Get all stages for the tournament
+          const { data: stages } = await supabaseAdmin
+            .from('tournament_stages')
+            .select('id')
+            .eq('tournament_id', tournamentId);
+
+          if (stages && stages.length > 0) {
+            const insertData = stages.map(s => ({
+              stage_id: s.id,
+              team_id: createdTeam.id,
+            }));
+
+            const { error: regError } = await supabaseAdmin
+              .from('tournament_stage_teams')
+              .insert(insertData);
+
+            if (!regError) {
+              tournamentRegistration = {
+                tournament_name: tournament.name,
+                stages_count: stages.length,
+              };
+            } else {
+              console.error('[create-with-member] tournament registration error:', regError);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      // Non-blocking: team is created, registration is best-effort
+      console.error('[create-with-member] tournament registration error:', err);
+    }
+  }
+
+  const infoParts: string[] = [];
+  if (insertedMembers.length) infoParts.push('Team created and members added');
+  else infoParts.push('Team created');
+  if (tournamentRegistration) {
+    infoParts.push(`inscrite au tournoi "${tournamentRegistration.tournament_name}"`);
+  }
+
   return res.status(201).json({
     team: createdTeam,
     members: insertedMembers.length ? insertedMembers : undefined,
-    info: insertedMembers.length
-      ? 'Team created and members added (users auto-created if needed)'
-      : 'Team created',
+    tournament: tournamentRegistration || undefined,
+    info: infoParts.join(' — '),
   });
 }
 

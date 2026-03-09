@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
 
@@ -15,8 +16,19 @@ type CreateResponse = {
     captain: boolean;
     battle_tag: string;
   }[];
+  tournament?: {
+    tournament_name: string;
+    stages_count: number;
+  };
   info?: string;
   error?: string;
+};
+
+type TournamentInfo = {
+  id: string;
+  name: string;
+  game: string | null;
+  start_date: string | null;
 };
 
 type MemberForm = {
@@ -27,6 +39,9 @@ type MemberForm = {
 };
 
 export default function PublicCreateTeamPage() {
+  const router = useRouter();
+  const tournamentIdParam = typeof router.query.tournament === 'string' ? router.query.tournament : null;
+
   const [name, setName] = useState('');
   const [shortName, setShortName] = useState('');
   const [country, setCountry] = useState('');
@@ -47,6 +62,20 @@ export default function PublicCreateTeamPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [result, setResult] = useState<CreateResponse | null>(null);
+  const [tournamentInfo, setTournamentInfo] = useState<TournamentInfo | null>(null);
+
+  useEffect(() => {
+    if (!tournamentIdParam) return;
+    fetch(`/api/tournaments`)
+      .then((r) => r.json())
+      .then((data) => {
+        const found = data.tournaments?.find((t: any) => t.id === tournamentIdParam);
+        if (found) {
+          setTournamentInfo({ id: found.id, name: found.name, game: found.game, start_date: found.start_date });
+        }
+      })
+      .catch(() => {});
+  }, [tournamentIdParam]);
 
   function addMemberRow() {
     setMembers((prev) => {
@@ -123,6 +152,7 @@ export default function PublicCreateTeamPage() {
         description: description || null,
         discord: discord || null,
         members: preparedMembers,
+        tournament_id: tournamentIdParam || null,
       };
 
       const res = await fetch('/api/teams/create-with-member', {
@@ -183,6 +213,23 @@ export default function PublicCreateTeamPage() {
               automatiquement) en une seule fois.
             </p>
           </header>
+
+          {tournamentInfo && (
+            <div className="mb-8 rounded-2xl border border-blue-500/30 bg-blue-500/5 px-4 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.14em] text-blue-200/80">
+                  Inscription au tournoi
+                </p>
+                <p className="text-sm text-blue-50/90">
+                  Ton équipe sera automatiquement inscrite au tournoi{' '}
+                  <span className="font-semibold text-white">{tournamentInfo.name}</span>
+                  {tournamentInfo.start_date && (
+                    <> — {new Date(tournamentInfo.start_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</>
+                  )}
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="mb-8 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div>
@@ -472,6 +519,11 @@ export default function PublicCreateTeamPage() {
                   <p className="text-gray-400 text-xs break-all">
                     ID : {result.team.id}
                   </p>
+                  {result.tournament && (
+                    <div className="rounded-xl border border-blue-500/60 bg-blue-500/10 px-3 py-2 text-blue-100">
+                      Inscrite au tournoi &laquo;&nbsp;{result.tournament.tournament_name}&nbsp;&raquo;
+                    </div>
+                  )}
                   {teamSlug && (
                     <Link
                       href={`/team/${teamSlug}`}

@@ -30,9 +30,17 @@ function pickTwoRandom(): [string, string] {
 
 function ActualitesPreviewSection(): JSX.Element {
   const [heroes, setHeroes] = useState<[string, string] | null>(null);
+  const [mixteTournamentId, setMixteTournamentId] = useState<string | null>(null);
 
   useEffect(() => {
     setHeroes(pickTwoRandom());
+    // Fetch the mixed tournament ID from site settings
+    fetch('/api/site-settings?key=mixte_tournament_id')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.value) setMixteTournamentId(data.value);
+      })
+      .catch(() => {});
   }, []);
 
   return (
@@ -154,7 +162,7 @@ function ActualitesPreviewSection(): JSX.Element {
           </div>
 
           <div className="flex flex-wrap gap-4 mt-4 justify-center">
-            <Link href="/team/create">
+            <Link href={mixteTournamentId ? `/team/create?tournament=${mixteTournamentId}` : '/team/create'}>
               <Button type="button" className="px-8 h-[52px]">
                 Inscrire mon équipe
               </Button>
