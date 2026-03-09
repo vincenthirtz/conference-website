@@ -342,7 +342,7 @@ const footerLinks: FooterLink[] = [
   { label: 'Règlement', href: '/rules', Icon: RulesIcon },
   { label: 'Nous contacter', href: '/contact', Icon: MailIcon },
   { label: 'Faire un don', href: '/don', Icon: DonationIcon },
-  { label: 'Actualités OW2', href: '/actualites', Icon: OverwatchNewsIcon },
+  { label: 'Actualités OW', href: '/actualites', Icon: OverwatchNewsIcon },
   // { label: 'Lore & Médias', href: '/lore', Icon: LoreMediaIcon },
   {
     label: 'Mentions légales',

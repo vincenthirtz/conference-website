@@ -10,7 +10,7 @@
 ## Sections de contenu
 - `About/about.tsx` — Section "À propos" (avec vidéo YouTube)
 - `News/HomeNewsSection.tsx` — Aperçu des news sur la home
-- `News/ActualitesPreviewSection.tsx` — Mise en avant du tournoi mixte (anciennement actu OW2)
+- `News/ActualitesPreviewSection.tsx` — Mise en avant du tournoi mixte (anciennement actu OW)
 - `News/PatchNotesSection.tsx` — Section patch notes
 - `Live/LiveTwitchSection.tsx` — Statut live Twitch
 - `Ads/AnnouncementsTicker.tsx` — Bandeau défilant d'annonces

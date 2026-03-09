@@ -5,7 +5,7 @@
 | Page | Description |
 |------|-------------|
 | `/` | Accueil : header, tournoi mixte, à propos, news, Twitch live, contact |
-| `/actualites` | Liste des articles + patch notes OW2 |
+| `/actualites` | Liste des articles + patch notes OW |
 | `/news/[slug]` | Article individuel |
 | `/association` | Présentation de l'association |
 | `/partenaires` | Vitrine des partenaires |

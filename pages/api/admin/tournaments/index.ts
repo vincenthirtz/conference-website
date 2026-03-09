@@ -8,6 +8,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import slugify from 'slugify';
+import { OVERWATCH_MAPS } from '@/config/overwatch-maps';
 
 export type TournamentRow = {
   id: string;
@@ -180,6 +181,29 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: any) {
     } catch (logErr) {
       console.error('logStaffAction(create_tournament) error:', logErr);
     }
+  }
+
+  // Auto-ajouter toutes les maps OW au pool du tournoi
+  try {
+    const mapRows = OVERWATCH_MAPS.map((m, idx) => ({
+      tournament_id: data.id,
+      map_name: m.name,
+      map_slug: slugify(m.name, { lower: true, strict: true }),
+      map_type: m.type,
+      image_url: m.image,
+      enabled: true,
+      order_index: idx,
+    }));
+
+    const { error: mapsErr } = await supabaseAdmin!
+      .from('tournament_maps')
+      .insert(mapRows);
+
+    if (mapsErr) {
+      console.error('Auto-insert tournament_maps error:', mapsErr);
+    }
+  } catch (mapsInsertErr) {
+    console.error('Auto-insert tournament_maps exception:', mapsInsertErr);
   }
 
   return res.status(201).json({ tournament: data });

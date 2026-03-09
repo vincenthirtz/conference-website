@@ -91,7 +91,7 @@ Configuration dynamique du site (clé-valeur).
 ## Tables externes
 
 ### blizzard_news / patch_notes / blizzard_media
-Contenu scrapé depuis Blizzard (actualités, patchs, médias OW2).
+Contenu scrapé depuis Blizzard (actualités, patchs, médias OW).
 
 ### twitch_channels
 Chaînes Twitch partenaires avec statut live.

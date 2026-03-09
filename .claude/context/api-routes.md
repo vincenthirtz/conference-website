@@ -5,9 +5,9 @@
 | Route | Méthodes | Description |
 |-------|----------|-------------|
 | `/api/announcements` | GET | Annonces actives |
-| `/api/blizzard-news` | GET | Actualités OW2 |
-| `/api/blizzard-media` | GET | Médias OW2 (comics, stories) |
-| `/api/patch-notes` | GET | Patch notes OW2 |
+| `/api/blizzard-news` | GET | Actualités OW |
+| `/api/blizzard-media` | GET | Médias OW (comics, stories) |
+| `/api/patch-notes` | GET | Patch notes OW |
 | `/api/cast-members` | GET | Casteurs/streamers actifs |
 | `/api/contact` | POST | Formulaire de contact (rate limited via Supabase) |
 | `/api/maps/stats` | GET | Statistiques des maps |

@@ -159,7 +159,7 @@ export default function LiveTwitchSection() {
                         </div>
                         <p className="text-sm text-gray-300 leading-relaxed">
                           {description ||
-                            `Streams OW2, analyses et cast en direct. Suivez ${label}.`}
+                            `Streams OW, analyses et cast en direct. Suivez ${label}.`}
                         </p>
                         {loadingStatus && (
                           <p className="text-[11px] text-gray-500">
