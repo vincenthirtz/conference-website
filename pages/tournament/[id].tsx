@@ -344,6 +344,20 @@ export default function TournamentPage({
                     Top maps
                   </Button>
                 </Link>
+
+                {tournament.status !== 'completed' &&
+                  tournament.status !== 'finished' && (
+                    <Link
+                      href={`/team/create?tournament=${tournament.id}`}
+                    >
+                      <Button
+                        type="button"
+                        className="px-5 py-2 text-xs font-semibold rounded-full bg-gradient-to-r from-pink-500 to-orange-400 text-black hover:from-pink-400 hover:to-orange-300"
+                      >
+                        Inscrire mon équipe
+                      </Button>
+                    </Link>
+                  )}
               </div>
 
               {tournament.rules_url && (

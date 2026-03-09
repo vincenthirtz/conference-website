@@ -332,9 +332,21 @@ function TournamentCard({ tournament, status }: TournamentCardProps) {
               )}
             </div>
 
-            <span className="text-xs text-purple-300 group-hover:text-purple-200 transition-colors">
-              Voir le tournoi →
-            </span>
+            <div className="flex items-center gap-3">
+              {status !== 'past' && (
+                <Link
+                  href={`/team/create?tournament=${tournament.id}`}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <span className="px-3 py-1 rounded-full text-[11px] font-semibold bg-gradient-to-r from-pink-500 to-orange-400 text-black hover:from-pink-400 hover:to-orange-300 transition-colors">
+                    S&apos;inscrire
+                  </span>
+                </Link>
+              )}
+              <span className="text-xs text-purple-300 group-hover:text-purple-200 transition-colors">
+                Voir →
+              </span>
+            </div>
           </div>
         </div>
       </div>
