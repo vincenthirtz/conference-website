@@ -27,7 +27,7 @@ export type StageRow = {
   is_active: boolean;
   is_public: boolean;
   start_date: string | null;
-  end_at: string | null;
+  end_date: string | null;
   settings: any | null; // JSONB (config spécifique)
   created_at: string;
   updated_at: string | null;
@@ -110,7 +110,7 @@ async function handlePut(
     'is_active',
     'is_public',
     'start_date',
-    'end_at',
+    'end_date',
     'settings',
   ];
 

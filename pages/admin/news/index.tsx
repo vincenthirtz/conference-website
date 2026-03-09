@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
-import { supabaseClient } from '@/utils/supabase';
+import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
 
 type NewsRow = {
   id: string;
@@ -54,6 +54,9 @@ function AdminNewsPage({ staff }: Props) {
   const [loading, setLoading] = useState(false);
   const [news, setNews] = useState<NewsRow[]>([]);
   const [total, setTotal] = useState<number | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<NewsRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // filters
   const [search, setSearch] = useState('');
@@ -64,17 +67,9 @@ function AdminNewsPage({ staff }: Props) {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
+    setErrorMsg(null);
 
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
       const params = new URLSearchParams();
       params.set('limit', String(limit));
       params.set('offset', String(offset));
@@ -82,15 +77,17 @@ function AdminNewsPage({ staff }: Props) {
       if (search.trim()) params.set('search', search);
       if (statusFilter) params.set('status', statusFilter);
 
-      const res = await fetch(`/api/admin/news?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(`/api/admin/news?${params.toString()}`);
       const json: ApiResponse = await res.json();
+
+      if (!res.ok) {
+        throw new Error((json as any)?.error || 'Erreur chargement');
+      }
 
       setNews(json.items || []);
       setTotal(json.total ?? json.items?.length ?? 0);
-    } catch (err) {
-      console.error('Error fetching news', err);
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Erreur chargement');
     } finally {
       setLoading(false);
     }
@@ -106,25 +103,24 @@ function AdminNewsPage({ staff }: Props) {
     fetchData();
   }
 
-  const onDelete = async (id: string) => {
-    if (!confirm('Supprimer cette news ?')) return;
+  const handleDelete = async (item: NewsRow) => {
+    if (!item?.id) return;
+    setDeleting(true);
+    setErrorMsg(null);
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-      const res = await fetch(`/api/admin/news/${id}`, {
+      const res = await fetch(`/api/admin/news/${item.id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
         const json = await res.json().catch(() => null);
         throw new Error(json?.error || 'Suppression impossible');
       }
+      setDeleteTarget(null);
       fetchData();
     } catch (err: any) {
-      alert(err?.message || 'Erreur de suppression.');
+      setErrorMsg(err?.message || 'Erreur de suppression.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -171,6 +167,24 @@ function AdminNewsPage({ staff }: Props) {
               </Link>
             </div>
           </div>
+
+          {/* Messages */}
+          {errorMsg && (
+            <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
+              <svg
+                className="w-5 h-5 text-red-400 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              {errorMsg}
+            </div>
+          )}
 
           {/* Filters */}
           <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6">
@@ -335,7 +349,7 @@ function AdminNewsPage({ staff }: Props) {
                         Modifier
                       </Link>
                       <button
-                        onClick={() => onDelete(n.id)}
+                        onClick={() => setDeleteTarget(n)}
                         className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-300 hover:border-red-400 text-sm transition-colors"
                       >
                         Supprimer
@@ -400,6 +414,22 @@ function AdminNewsPage({ staff }: Props) {
           </div>
         </div>
       </div>
+
+      {/* Delete Modal */}
+      {deleteTarget && (
+        <DeleteConfirmModal
+          title="Supprimer cette news ?"
+          deleting={deleting}
+          errorMsg={errorMsg}
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={() => handleDelete(deleteTarget)}
+        >
+          <p className="text-sm text-neutral-300 bg-neutral-900/50 rounded-xl p-3">
+            Supprimer l&apos;article{' '}
+            <span className="font-semibold text-white">{deleteTarget.title}</span> ?
+          </p>
+        </DeleteConfirmModal>
+      )}
     </>
   );
 }

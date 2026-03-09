@@ -41,7 +41,7 @@ type CreateStageBody = {
   is_active?: boolean;
   is_public?: boolean;
   start_date?: string | null;
-  end_at?: string | null;
+  end_date?: string | null;
   settings?: any | null;
 };
 
@@ -62,6 +62,7 @@ function AdminStageCreatePage({ staff }: StaffProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [dateError, setDateError] = useState<string | null>(null);
 
   const [form, setForm] = useState<{
     tournamentId: string;
@@ -72,7 +73,7 @@ function AdminStageCreatePage({ staff }: StaffProps) {
     is_active: boolean;
     is_public: boolean;
     start_date: string;
-    end_at: string;
+    end_date: string;
     settingsRaw: string;
   }>({
     tournamentId: '',
@@ -83,7 +84,7 @@ function AdminStageCreatePage({ staff }: StaffProps) {
     is_active: true,
     is_public: true,
     start_date: '',
-    end_at: '',
+    end_date: '',
     settingsRaw: '{\n  \n}',
   });
 
@@ -148,9 +149,19 @@ function AdminStageCreatePage({ staff }: StaffProps) {
       setErrorMsg('Merci de sélectionner un tournoi.');
       return;
     }
+    setDateError(null);
+
     if (!form.name.trim()) {
       setErrorMsg('Le nom de la phase est obligatoire.');
       return;
+    }
+
+    if (form.start_date && form.end_date) {
+      if (new Date(form.start_date) >= new Date(form.end_date)) {
+        setDateError('La date de fin doit être postérieure à la date de début.');
+        setErrorMsg('La date de fin doit être postérieure à la date de début.');
+        return;
+      }
     }
 
     let settings: any | null = null;
@@ -171,7 +182,7 @@ function AdminStageCreatePage({ staff }: StaffProps) {
       is_active: form.is_active,
       is_public: form.is_public,
       start_date: toIsoOrNull(form.start_date),
-      end_at: toIsoOrNull(form.end_at),
+      end_date: toIsoOrNull(form.end_date),
       settings,
     };
 
@@ -397,10 +408,18 @@ function AdminStageCreatePage({ staff }: StaffProps) {
                   </label>
                   <input
                     type="datetime-local"
-                    className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={form.end_at}
-                    onChange={(e) => updateField('end_at', e.target.value)}
+                    className={`w-full px-3 py-2 rounded bg-neutral-700 border focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      dateError ? 'border-red-500' : 'border-neutral-600'
+                    }`}
+                    value={form.end_date}
+                    onChange={(e) => {
+                      updateField('end_date', e.target.value);
+                      setDateError(null);
+                    }}
                   />
+                  {dateError && (
+                    <p className="text-xs text-red-400 mt-1">{dateError}</p>
+                  )}
                 </div>
               </div>
             </section>

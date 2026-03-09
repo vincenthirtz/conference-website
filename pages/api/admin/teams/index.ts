@@ -44,7 +44,7 @@ async function handleGet(
   req: NextApiRequest,
   res: NextApiResponse<TeamsApiResponse>
 ) {
-  const { search, isActive, limit, offset, includeTotal } = req.query;
+  const { search, isActive, limit, offset, includeTotal, tournamentId } = req.query;
 
   const limitNum = parseInt(
     (Array.isArray(limit) ? limit[0] : limit) ?? '50',
@@ -73,6 +73,22 @@ async function handleGet(
   if (search && !Array.isArray(search)) {
     const s = `%${search}%`;
     query = query.ilike('name', s);
+  }
+
+  // Filter by tournament: find team IDs linked via tournament_teams
+  if (tournamentId && !Array.isArray(tournamentId)) {
+    const { data: ttRows } = await supabaseAdmin
+      .from('tournament_teams')
+      .select('team_id')
+      .eq('tournament_id', tournamentId);
+
+    const teamIds = (ttRows || []).map((r: any) => r.team_id);
+    if (teamIds.length > 0) {
+      query = query.in('id', teamIds);
+    } else {
+      // No teams in this tournament
+      return res.status(200).json({ teams: [], total: 0 });
+    }
   }
 
   const { data, error, count } = await query;

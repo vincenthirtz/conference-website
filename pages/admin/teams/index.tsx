@@ -57,6 +57,10 @@ function AdminTeamsListPage({ staff }: StaffProps) {
   // filters
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('');
+  const [tournamentFilter, setTournamentFilter] = useState('');
+  const [tournamentOptions, setTournamentOptions] = useState<
+    { id: string; name: string }[]
+  >([]);
 
   const [limit] = useState(25);
   const [offset, setOffset] = useState(0);
@@ -64,7 +68,27 @@ function AdminTeamsListPage({ staff }: StaffProps) {
   useEffect(() => {
     fetchTeams();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [offset, activeFilter]);
+  }, [offset, activeFilter, tournamentFilter]);
+
+  useEffect(() => {
+    async function loadTournaments() {
+      try {
+        const res = await fetch('/api/admin/tournaments?limit=200');
+        if (res.ok) {
+          const json = await res.json();
+          setTournamentOptions(
+            (json.tournaments || []).map((t: any) => ({
+              id: t.id,
+              name: t.name,
+            }))
+          );
+        }
+      } catch {
+        // ignore
+      }
+    }
+    loadTournaments();
+  }, []);
 
   async function fetchTeams() {
     setLoading(true);
@@ -77,6 +101,7 @@ function AdminTeamsListPage({ staff }: StaffProps) {
       params.set('includeTotal', '1');
       if (search.trim()) params.set('search', search.trim());
       if (activeFilter) params.set('isActive', activeFilter);
+      if (tournamentFilter) params.set('tournamentId', tournamentFilter);
 
       const res = await fetch(`/api/admin/teams?${params.toString()}`);
       if (!res.ok) {
@@ -232,6 +257,27 @@ function AdminTeamsListPage({ staff }: StaffProps) {
                   <option value="">Toutes</option>
                   <option value="true">Actives</option>
                   <option value="false">Inactives</option>
+                </select>
+              </div>
+
+              <div className="min-w-[180px]">
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Tournoi
+                </label>
+                <select
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={tournamentFilter}
+                  onChange={(e) => {
+                    setTournamentFilter(e.target.value);
+                    setOffset(0);
+                  }}
+                >
+                  <option value="">Tous les tournois</option>
+                  {tournamentOptions.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 

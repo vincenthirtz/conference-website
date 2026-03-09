@@ -110,7 +110,6 @@ async function handlePatch(
       slug,
       game,
       start_date,
-      end_at,
       end_date,
       format_type,
       max_teams,
@@ -148,8 +147,6 @@ async function handlePatch(
     if (slug !== undefined) updatePayload.slug = slug;
     if (game !== undefined) updatePayload.game = game;
     if (start_date !== undefined) updatePayload.start_date = start_date;
-    // Support both end_at (frontend) and end_date (database)
-    if (end_at !== undefined) updatePayload.end_date = end_at;
     if (end_date !== undefined) updatePayload.end_date = end_date;
     if (format_type !== undefined) updatePayload.format_type = format_type;
     if (max_teams !== undefined) updatePayload.max_teams = max_teams;

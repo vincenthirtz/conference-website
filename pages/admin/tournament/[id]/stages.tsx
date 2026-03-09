@@ -31,7 +31,7 @@ type StageSummary = {
   is_active?: boolean | null;
   is_public?: boolean | null;
   start_date?: string | null;
-  end_at?: string | null;
+  end_date?: string | null;
 };
 
 type MatchesApiResponse = {
@@ -203,9 +203,9 @@ function StagesPage(_: StaffProps) {
                           Débute : {new Date(stage.start_date).toLocaleString()}
                         </span>
                       )}
-                      {stage.end_at && (
+                      {stage.end_date && (
                         <span className="px-2 py-0.5 rounded-full border border-white/10 text-gray-200">
-                          Fin : {new Date(stage.end_at).toLocaleString()}
+                          Fin : {new Date(stage.end_date).toLocaleString()}
                         </span>
                       )}
                     </div>

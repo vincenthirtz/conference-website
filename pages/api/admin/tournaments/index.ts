@@ -60,7 +60,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
  * ---------------------------------------------------------*/
 
 async function handleGet(req: NextApiRequest, res: NextApiResponse) {
-  const { status, search, limit, offset, orderBy, orderDir, includeTotal } =
+  const { status, search, limit, offset, orderBy, orderDir, includeTotal, dateFrom, dateTo } =
     req.query;
 
   const limitNum = parseInt(
@@ -105,6 +105,14 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
   if (search && !Array.isArray(search)) {
     const s = `%${search}%`;
     query = query.or(`name.ilike.${s},slug.ilike.${s}`);
+  }
+
+  if (dateFrom && !Array.isArray(dateFrom)) {
+    query = query.gte('start_date', dateFrom);
+  }
+
+  if (dateTo && !Array.isArray(dateTo)) {
+    query = query.lte('start_date', dateTo);
   }
 
   query = query

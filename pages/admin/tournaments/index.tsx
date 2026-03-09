@@ -11,7 +11,7 @@ type Tournament = {
   game: string | null;
   status: string | null;
   start_date: string | null;
-  end_at: string | null;
+  end_date: string | null;
   format_type: string | null;
   is_public: boolean;
   is_featured: boolean;
@@ -104,6 +104,8 @@ function AdminTournamentsPage({ staff }: Props) {
   // filters
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<string | null>(null);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   const [limit] = useState(20);
   const [offset, setOffset] = useState(0);
@@ -118,6 +120,8 @@ function AdminTournamentsPage({ staff }: Props) {
 
     if (search.trim()) params.set('search', search);
     if (status) params.set('status', status);
+    if (dateFrom) params.set('dateFrom', new Date(dateFrom).toISOString());
+    if (dateTo) params.set('dateTo', new Date(dateTo + 'T23:59:59').toISOString());
 
     const res = await fetch(`/api/admin/tournaments?${params.toString()}`);
     const json: ApiResponse = await res.json();
@@ -125,7 +129,7 @@ function AdminTournamentsPage({ staff }: Props) {
     setTournaments(json.tournaments || []);
     setTotal(json.total);
     setLoading(false);
-  }, [limit, offset, search, status]);
+  }, [limit, offset, search, status, dateFrom, dateTo]);
 
   useEffect(() => {
     fetchData();
@@ -229,6 +233,36 @@ function AdminTournamentsPage({ staff }: Props) {
                   <option value="completed">Terminé</option>
                   <option value="archived">Archivé</option>
                 </select>
+              </div>
+
+              <div className="min-w-[150px]">
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Date début (depuis)
+                </label>
+                <input
+                  type="date"
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={dateFrom}
+                  onChange={(e) => {
+                    setDateFrom(e.target.value);
+                    setOffset(0);
+                  }}
+                />
+              </div>
+
+              <div className="min-w-[150px]">
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Date début (jusqu&apos;au)
+                </label>
+                <input
+                  type="date"
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={dateTo}
+                  onChange={(e) => {
+                    setDateTo(e.target.value);
+                    setOffset(0);
+                  }}
+                />
               </div>
 
               <button

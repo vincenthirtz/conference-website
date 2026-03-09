@@ -43,7 +43,7 @@ type Stage = {
   is_active: boolean;
   is_public: boolean;
   start_date: string | null;
-  end_at: string | null;
+  end_date: string | null;
 };
 
 type Team = {

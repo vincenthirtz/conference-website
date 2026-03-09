@@ -124,6 +124,9 @@ async function handleGet(
     orderDir,
     limit,
     offset,
+    result,
+    dateFrom,
+    dateTo,
   } = req.query;
 
   const limitNum = parseInt(
@@ -208,6 +211,25 @@ async function handleGet(
 
   if (groupKey && !Array.isArray(groupKey)) {
     query = query.eq('group_key', groupKey);
+  }
+
+  // Result filter: win (has winner), bye, no_result (finished without winner)
+  if (result && !Array.isArray(result)) {
+    if (result === 'bye') {
+      query = query.eq('is_bye', true);
+    } else if (result === 'win') {
+      query = query.not('winner_team_id', 'is', null);
+    } else if (result === 'no_result') {
+      query = query.eq('status', 'finished').is('winner_team_id', null);
+    }
+  }
+
+  if (dateFrom && !Array.isArray(dateFrom)) {
+    query = query.gte('scheduled_at', dateFrom);
+  }
+
+  if (dateTo && !Array.isArray(dateTo)) {
+    query = query.lte('scheduled_at', dateTo);
   }
 
   query = query

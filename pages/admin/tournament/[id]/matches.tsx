@@ -159,6 +159,9 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
   const [stageFilter, setStageFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [roundFilter, setRoundFilter] = useState<string>('');
+  const [resultFilter, setResultFilter] = useState<string>('');
+  const [dateFromFilter, setDateFromFilter] = useState<string>('');
+  const [dateToFilter, setDateToFilter] = useState<string>('');
   const [search, setSearch] = useState<string>('');
   const [limit] = useState(25);
   const [offset, setOffset] = useState(0);
@@ -314,6 +317,9 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
       if (stageFilter) params.set('stageId', stageFilter);
       if (statusFilter) params.set('status', statusFilter);
       if (roundFilter) params.set('roundNumber', roundFilter);
+      if (resultFilter) params.set('result', resultFilter);
+      if (dateFromFilter) params.set('dateFrom', new Date(dateFromFilter).toISOString());
+      if (dateToFilter) params.set('dateTo', new Date(dateToFilter + 'T23:59:59').toISOString());
       if (search.trim()) params.set('search', search.trim());
 
       const res = await fetch(
@@ -344,7 +350,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
     if (!id) return;
     fetchMatches();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, offset, stageFilter, statusFilter, roundFilter]);
+  }, [id, offset, stageFilter, statusFilter, roundFilter, resultFilter, dateFromFilter, dateToFilter]);
 
   function handleFilterSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -746,6 +752,46 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                 />
               </div>
 
+              <div className="min-w-[140px]">
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Résultat
+                </label>
+                <select
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  value={resultFilter}
+                  onChange={(e) => setResultFilter(e.target.value)}
+                >
+                  <option value="">Tous</option>
+                  <option value="win">Avec vainqueur</option>
+                  <option value="no_result">Sans vainqueur</option>
+                  <option value="bye">BYE</option>
+                </select>
+              </div>
+
+              <div className="min-w-[140px]">
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Date (depuis)
+                </label>
+                <input
+                  type="date"
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  value={dateFromFilter}
+                  onChange={(e) => setDateFromFilter(e.target.value)}
+                />
+              </div>
+
+              <div className="min-w-[140px]">
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Date (jusqu&apos;au)
+                </label>
+                <input
+                  type="date"
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  value={dateToFilter}
+                  onChange={(e) => setDateToFilter(e.target.value)}
+                />
+              </div>
+
               <div className="flex-1 min-w-[200px]">
                 <label className="block text-sm text-neutral-400 mb-1">
                   Recherche
@@ -800,6 +846,9 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                     setStageFilter('');
                     setStatusFilter('');
                     setRoundFilter('');
+                    setResultFilter('');
+                    setDateFromFilter('');
+                    setDateToFilter('');
                     setSearch('');
                     setOffset(0);
                   }}

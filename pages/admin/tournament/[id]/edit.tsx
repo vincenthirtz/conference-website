@@ -51,13 +51,15 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
 
   const [formReady, setFormReady] = useState(false);
 
+  const [dateError, setDateError] = useState<string | null>(null);
+
   const [form, setForm] = useState<{
     name: string;
     slug: string;
     game: string;
     status: string;
     start_date: string;
-    end_at: string;
+    end_date: string;
     format_type: string;
     max_teams: string;
     min_players: string;
@@ -71,7 +73,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
     game: '',
     status: 'draft',
     start_date: '',
-    end_at: '',
+    end_date: '',
     format_type: '',
     max_teams: '',
     min_players: '',
@@ -116,7 +118,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
         game: t.game || '',
         status: t.status || 'draft',
         start_date: t.start_date ? toLocalInputValue(t.start_date) : '',
-        end_at: t.end_date ? toLocalInputValue(t.end_date) : '',
+        end_date: t.end_date ? toLocalInputValue(t.end_date) : '',
         format_type: t.format_type || '',
         max_teams: t.max_teams ? String(t.max_teams) : '',
         min_players: t.min_players ? String(t.min_players) : '',
@@ -157,10 +159,19 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
 
     setErrorMsg(null);
     setSuccessMsg(null);
+    setDateError(null);
 
     if (!form.name.trim()) {
       setErrorMsg('Le nom du tournoi est obligatoire.');
       return;
+    }
+
+    if (form.start_date && form.end_date) {
+      if (new Date(form.start_date) >= new Date(form.end_date)) {
+        setDateError('La date de fin doit être postérieure à la date de début.');
+        setErrorMsg('La date de fin doit être postérieure à la date de début.');
+        return;
+      }
     }
 
     setSaving(true);
@@ -173,7 +184,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
       start_date: form.start_date
         ? new Date(form.start_date).toISOString()
         : null,
-      end_at: form.end_at ? new Date(form.end_at).toISOString() : null,
+      end_date: form.end_date ? new Date(form.end_date).toISOString() : null,
       format_type: form.format_type || null,
       max_teams: form.max_teams ? Number(form.max_teams) : null,
       min_players: form.min_players ? Number(form.min_players) : null,
@@ -420,10 +431,20 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                         </label>
                         <input
                           type="datetime-local"
-                          className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          value={form.end_at}
-                          onChange={(e) => updateField('end_at', e.target.value)}
+                          className={`w-full px-3 py-2 rounded-lg bg-neutral-900/50 border focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                            dateError
+                              ? 'border-red-500'
+                              : 'border-neutral-600'
+                          }`}
+                          value={form.end_date}
+                          onChange={(e) => {
+                            updateField('end_date', e.target.value);
+                            setDateError(null);
+                          }}
                         />
+                        {dateError && (
+                          <p className="text-xs text-red-400 mt-1">{dateError}</p>
+                        )}
                       </div>
 
                       <div>
