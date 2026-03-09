@@ -57,6 +57,13 @@ type ApiResponse = {
   matches: ScheduleMatch[];
 };
 
+type TournamentTeam = {
+  id: string;
+  team_id: string;
+  seed: number | null;
+  team: { id: string; name: string; logo_url: string | null };
+};
+
 export const getServerSideProps = withStaffPage('manager');
 
 /* ------------------------------------------------------------------ */
@@ -155,6 +162,7 @@ function AdminBracketBuilderPage(_: StaffProps) {
   const [dirty, setDirty] = useState(false);
   const [editingDateId, setEditingDateId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('planning');
+  const [tournamentTeams, setTournamentTeams] = useState<TournamentTeam[]>([]);
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -170,21 +178,60 @@ function AdminBracketBuilderPage(_: StaffProps) {
     setInfoMsg(null);
     setDirty(false);
     try {
-      const res = await fetch(
-        `/api/admin/tournament/${id}/matches?layout=bracket&limit=512&includeGraph=1`
-      );
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
+      const [matchRes, teamsRes] = await Promise.all([
+        fetch(`/api/admin/tournament/${id}/matches?layout=bracket&limit=512&includeGraph=1`),
+        fetch(`/api/admin/tournament/${id}/teams`),
+      ]);
+      if (!matchRes.ok) {
+        const json = await matchRes.json().catch(() => ({}));
         throw new Error(json.error || 'Impossible de charger les matchs');
       }
-      const json: ApiResponse = await res.json();
+      const json: ApiResponse = await matchRes.json();
       setTournament(json.tournament);
       setMatches(json.matches || []);
+
+      if (teamsRes.ok) {
+        const teamsJson = await teamsRes.json();
+        setTournamentTeams(teamsJson.teams || []);
+      }
     } catch (err: any) {
       setErrorMsg(err?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
+  }
+
+  /** Teams already placed in a match slot — exclude from picker */
+  const assignedTeamIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const m of matches) {
+      if (m.team1_id) ids.add(m.team1_id);
+      if (m.team2_id) ids.add(m.team2_id);
+    }
+    return ids;
+  }, [matches]);
+
+  /** Available teams for assignment (not yet placed in a slot) */
+  const availableTeams = useMemo(
+    () => tournamentTeams.filter((t) => !assignedTeamIds.has(t.team_id)),
+    [tournamentTeams, assignedTeamIds]
+  );
+
+  function assignTeamToSlot(matchId: string, slot: 1 | 2, team: TournamentTeam) {
+    setMatches((prev) =>
+      prev.map((m) => {
+        if (m.id !== matchId) return m;
+        const teamMini: TeamMini = {
+          id: team.team.id,
+          name: team.team.name,
+          short_name: null,
+          logo_url: team.team.logo_url,
+        };
+        if (slot === 1) return { ...m, team1_id: team.team_id, team1: teamMini };
+        return { ...m, team2_id: team.team_id, team2: teamMini };
+      })
+    );
+    setDirty(true);
   }
 
   /** Group matches by date (YYYY-MM-DD) */
@@ -698,6 +745,8 @@ ${day.matches.map((m) => `<tr>
                         onDragOverSlot={onDragOverSlot}
                         onDropOnSlot={onDropOnSlot}
                         onClearSlot={clearSlot}
+                        availableTeams={availableTeams}
+                        onAssignTeam={assignTeamToSlot}
                       />
                     ))}
                   </div>
@@ -739,6 +788,8 @@ type MatchCardProps = {
   onDragOverSlot: (e: React.DragEvent<HTMLDivElement>) => void;
   onDropOnSlot: (e: React.DragEvent<HTMLDivElement>, id: string, slot: 1 | 2) => void;
   onClearSlot: (id: string, slot: 1 | 2) => void;
+  availableTeams: TournamentTeam[];
+  onAssignTeam: (matchId: string, slot: 1 | 2, team: TournamentTeam) => void;
 };
 
 function MatchCard({
@@ -750,6 +801,8 @@ function MatchCard({
   onDragOverSlot,
   onDropOnSlot,
   onClearSlot,
+  availableTeams,
+  onAssignTeam,
 }: MatchCardProps) {
   const info = parseNotes(match.notes);
   const statusCfg = STATUS_CONFIG[match.status];
@@ -831,6 +884,8 @@ function MatchCard({
             onDragOverSlot={onDragOverSlot}
             onDropOnSlot={onDropOnSlot}
             onClear={() => onClearSlot(match.id, 1)}
+            availableTeams={availableTeams}
+            onAssignTeam={(team) => onAssignTeam(match.id, 1, team)}
           />
 
           {/* VS divider */}
@@ -854,6 +909,8 @@ function MatchCard({
             onDragOverSlot={onDragOverSlot}
             onDropOnSlot={onDropOnSlot}
             onClear={() => onClearSlot(match.id, 2)}
+            availableTeams={availableTeams}
+            onAssignTeam={(team) => onAssignTeam(match.id, 2, team)}
           />
         </div>
 
@@ -892,6 +949,8 @@ type SeedSlotProps = {
   onDragOverSlot: (e: React.DragEvent<HTMLDivElement>) => void;
   onDropOnSlot: (e: React.DragEvent<HTMLDivElement>, id: string, slot: 1 | 2) => void;
   onClear: () => void;
+  availableTeams: TournamentTeam[];
+  onAssignTeam: (team: TournamentTeam) => void;
 };
 
 function SeedSlot({
@@ -906,7 +965,12 @@ function SeedSlot({
   onDragOverSlot,
   onDropOnSlot,
   onClear,
+  availableTeams,
+  onAssignTeam,
 }: SeedSlotProps) {
+  const [showPicker, setShowPicker] = useState(false);
+  const [pickerSearch, setPickerSearch] = useState('');
+  const pickerRef = useRef<HTMLDivElement>(null);
   const hasTeam = !!(team || teamId);
 
   // Seed number color palette
@@ -922,21 +986,46 @@ function SeedSlot({
   };
 
   const gradientClass = seed ? seedColors[seed] || 'from-neutral-500 to-neutral-600' : '';
+  const canPick = !hasTeam && availableTeams.length > 0;
+
+  const filteredPickerTeams = availableTeams.filter((t) =>
+    t.team.name.toLowerCase().includes(pickerSearch.toLowerCase())
+  );
+
+  // Close picker on click outside
+  useEffect(() => {
+    if (!showPicker) return;
+    function handleClick(e: MouseEvent) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setShowPicker(false);
+        setPickerSearch('');
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showPicker]);
 
   return (
     <div
+      ref={pickerRef}
       className={`relative flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
         hasTeam
           ? 'bg-white/[0.03] hover:bg-white/[0.06]'
           : isTBD
             ? 'bg-purple-500/5 border border-dashed border-purple-500/20'
             : 'bg-white/[0.02] border border-dashed border-white/[0.06]'
-      } ${isWinner ? 'ring-1 ring-emerald-500/30' : ''}`}
+      } ${isWinner ? 'ring-1 ring-emerald-500/30' : ''} ${canPick && !showPicker ? 'cursor-pointer hover:border-purple-500/40' : ''}`}
       onDragOver={onDragOverSlot}
       onDrop={(e) => onDropOnSlot(e, match.id, slot)}
+      onClick={() => {
+        if (canPick && !showPicker) {
+          setShowPicker(true);
+          setPickerSearch('');
+        }
+      }}
     >
       <div
-        className="flex items-center gap-3 flex-1 cursor-move"
+        className={`flex items-center gap-3 flex-1 ${hasTeam ? 'cursor-move' : ''}`}
         draggable={hasTeam}
         onDragStart={(e) => hasTeam && onDragStart(e, { matchId: match.id, slot })}
       >
@@ -1005,6 +1094,15 @@ function SeedSlot({
         </div>
       </div>
 
+      {/* Assign hint */}
+      {canPick && !showPicker && (
+        <div className="text-[10px] text-purple-400/60 flex-shrink-0">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+        </div>
+      )}
+
       {/* Winner indicator */}
       {isWinner && (
         <div className="text-emerald-400 text-xs font-bold">W</div>
@@ -1021,6 +1119,61 @@ function SeedSlot({
             <path d="M4 4l8 8m0-8L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
         </button>
+      )}
+
+      {/* Team picker dropdown */}
+      {showPicker && (
+        <div
+          className="absolute top-full left-0 right-0 mt-1 z-50 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="p-2">
+            <input
+              type="text"
+              autoFocus
+              placeholder="Rechercher une équipe…"
+              value={pickerSearch}
+              onChange={(e) => setPickerSearch(e.target.value)}
+              className="w-full px-2.5 py-1.5 rounded-lg bg-neutral-800 border border-neutral-600 text-xs text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+            />
+          </div>
+          <div className="max-h-48 overflow-y-auto">
+            {filteredPickerTeams.length === 0 ? (
+              <div className="px-3 py-2 text-xs text-neutral-500 text-center">
+                Aucune équipe disponible
+              </div>
+            ) : (
+              filteredPickerTeams.map((t) => (
+                <button
+                  key={t.team_id}
+                  type="button"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-purple-600/20 transition-colors"
+                  onClick={() => {
+                    onAssignTeam(t);
+                    setShowPicker(false);
+                    setPickerSearch('');
+                  }}
+                >
+                  {t.team.logo_url && (
+                    <Image
+                      src={t.team.logo_url}
+                      alt={t.team.name}
+                      width={20}
+                      height={20}
+                      className="w-5 h-5 rounded object-cover flex-shrink-0"
+                    />
+                  )}
+                  <span className="text-sm text-white truncate">{t.team.name}</span>
+                  {t.seed != null && (
+                    <span className="ml-auto text-[10px] text-neutral-500 flex-shrink-0">
+                      Seed {t.seed}
+                    </span>
+                  )}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
