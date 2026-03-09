@@ -68,6 +68,7 @@ type GenerateSwissRoundBody = {
   roundNumber?: number;
   scoreConfig?: Partial<SwissScoreConfig>;
   allowRematchesFallback?: boolean;
+  dryRun?: boolean;
 };
 
 type GeneratedSwissMatch = {
@@ -79,12 +80,24 @@ type GeneratedSwissMatch = {
   status: MatchStatus;
 };
 
+type DryRunPairing = {
+  team1_id: string;
+  team1_name: string | null;
+  team2_id: string | null;
+  team2_name: string | null;
+  is_bye: boolean;
+  team1_score: number;
+  team2_score: number;
+};
+
 type GenerateSwissRoundResponse = {
   stageId: string;
   tournamentId: string;
   roundNumber: number;
   hasRematches: boolean;
-  createdMatches: GeneratedSwissMatch[];
+  dryRun?: boolean;
+  preview?: DryRunPairing[];
+  createdMatches?: GeneratedSwissMatch[];
   byeMatchId?: string | null;
 };
 
@@ -282,6 +295,40 @@ async function handler(
     if (pairings.length === 0) {
       return res.status(400).json({
         error: 'Swiss pairing produced no matches',
+      });
+    }
+
+    // 9b) Dry run: return preview without inserting
+    if (body.dryRun) {
+      // Fetch team names for preview
+      const teamIds = participantsRows.map((p) => p.team_id);
+      const { data: teamsData } = await supabaseAdmin
+        .from('teams')
+        .select('id, name, short_name')
+        .in('id', teamIds);
+
+      const teamNameMap = new Map<string, string | null>();
+      for (const t of teamsData || []) {
+        teamNameMap.set(t.id, t.name ?? t.short_name ?? null);
+      }
+
+      const preview: DryRunPairing[] = pairings.map((p) => ({
+        team1_id: p.player1Id,
+        team1_name: teamNameMap.get(p.player1Id) ?? null,
+        team2_id: p.player2Id ?? null,
+        team2_name: p.player2Id ? (teamNameMap.get(p.player2Id) ?? null) : null,
+        is_bye: p.isBye,
+        team1_score: p.isBye ? (mergedScoreConfig.bye ?? 1) : 0,
+        team2_score: 0,
+      }));
+
+      return res.status(200).json({
+        stageId: id,
+        tournamentId,
+        roundNumber: nextRound,
+        hasRematches,
+        dryRun: true,
+        preview,
       });
     }
 

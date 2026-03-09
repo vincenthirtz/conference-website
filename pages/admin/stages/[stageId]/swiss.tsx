@@ -146,6 +146,19 @@ function AdminSwissStagePage({ staff }: StaffProps) {
   const [rounds, setRounds] = useState<SwissRound[]>([]);
 
   const [loadingGenerate, setLoadingGenerate] = useState(false);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+
+  // Swiss round preview
+  type PreviewPairing = {
+    team1_id: string;
+    team1_name: string | null;
+    team2_id: string | null;
+    team2_name: string | null;
+    is_bye: boolean;
+  };
+  const [preview, setPreview] = useState<PreviewPairing[] | null>(null);
+  const [previewRound, setPreviewRound] = useState<number | null>(null);
+  const [previewHasRematches, setPreviewHasRematches] = useState(false);
 
   useEffect(() => {
     if (!stageId) return;
@@ -187,7 +200,42 @@ function AdminSwissStagePage({ staff }: StaffProps) {
     return Math.max(...rounds.map((r) => r.round_number));
   }
 
-  async function handleGenerateNextRound() {
+  async function handlePreviewNextRound() {
+    if (!stageId) return;
+    setLoadingPreview(true);
+    setErrorMsg(null);
+    setInfoMsg(null);
+    setPreview(null);
+
+    try {
+      const res = await fetch(
+        `/api/admin/stages/${stageId}/generate-swiss-round`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dryRun: true }),
+        }
+      );
+
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(
+          json.error || "Erreur lors de l'apercu des pairings Swiss"
+        );
+      }
+
+      const json = await res.json();
+      setPreview(json.preview || []);
+      setPreviewRound(json.roundNumber ?? null);
+      setPreviewHasRematches(json.hasRematches ?? false);
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? "Erreur lors de l'apercu");
+    } finally {
+      setLoadingPreview(false);
+    }
+  }
+
+  async function handleConfirmGenerate() {
     if (!stageId) return;
     setLoadingGenerate(true);
     setErrorMsg(null);
@@ -199,7 +247,6 @@ function AdminSwissStagePage({ staff }: StaffProps) {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          // body vide = "next round auto" côté backend
           body: JSON.stringify({}),
         }
       );
@@ -207,7 +254,7 @@ function AdminSwissStagePage({ staff }: StaffProps) {
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         throw new Error(
-          json.error || 'Erreur lors de la génération de la ronde Swiss'
+          json.error || 'Erreur lors de la generation de la ronde Swiss'
         );
       }
 
@@ -216,14 +263,24 @@ function AdminSwissStagePage({ staff }: StaffProps) {
       const createdCount = json.createdMatches?.length ?? 0;
 
       setInfoMsg(
-        `Ronde Swiss #${roundNumber} générée : ${createdCount} matchs créés.`
+        `Ronde Swiss #${roundNumber} generee : ${createdCount} matchs crees.`
       );
+      setPreview(null);
+      setPreviewRound(null);
       fetchSwissData();
     } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur lors de la génération de la ronde');
+      setErrorMsg(err?.message ?? 'Erreur lors de la generation de la ronde');
     } finally {
       setLoadingGenerate(false);
     }
+  }
+
+  function handleExportCsv() {
+    if (!stageId) return;
+    window.open(
+      `/api/admin/stages/${stageId}/standings?export=csv`,
+      '_blank'
+    );
   }
 
   const backStageUrl = `/admin/stages/${stageId}`;
@@ -304,32 +361,117 @@ function AdminSwissStagePage({ staff }: StaffProps) {
                 : 'bg-neutral-800 hover:bg-neutral-700'
             }`}
           >
-            Rafraîchir les données
+            Rafraichir les donnees
           </button>
 
           <button
             type="button"
-            onClick={handleGenerateNextRound}
-            disabled={loadingGenerate}
+            onClick={handlePreviewNextRound}
+            disabled={loadingPreview || loadingGenerate}
             className={`px-4 py-2 rounded text-sm font-semibold ${
-              loadingGenerate
+              loadingPreview
                 ? 'bg-blue-800 cursor-wait'
                 : 'bg-blue-600 hover:bg-blue-700'
             }`}
           >
-            {loadingGenerate
-              ? 'Génération en cours…'
-              : 'Générer la prochaine ronde Swiss'}
+            {loadingPreview
+              ? 'Calcul en cours…'
+              : 'Apercu de la prochaine ronde'}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            disabled={!stageId || standings.length === 0}
+            className="px-4 py-2 rounded text-sm border border-neutral-600 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Exporter CSV
           </button>
 
           <p className="text-xs text-neutral-500">
-            La génération utilise le système de pairing Swiss (victoires,
-            Buchholz, etc.) et évite les rematches autant que possible.
+            La generation utilise le systeme de pairing Swiss (victoires,
+            Buchholz, etc.) et evite les rematches autant que possible.
           </p>
         </div>
 
+        {/* Swiss round preview panel */}
+        {preview && preview.length > 0 && (
+          <section className="bg-neutral-800/80 border border-blue-500/40 rounded-xl p-5 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-sm font-semibold">
+                  Apercu — Ronde #{previewRound ?? '?'}
+                </h3>
+                <p className="text-xs text-neutral-400 mt-0.5">
+                  {preview.length} match{preview.length > 1 ? 'es' : ''} proposes
+                  {previewHasRematches && (
+                    <span className="ml-2 text-amber-400 font-medium">
+                      (contient des rematches)
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="divide-y divide-neutral-700/50 mb-4">
+              {preview.map((p, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center gap-4 py-2.5 text-sm"
+                >
+                  <span className="w-8 text-center text-neutral-500 text-xs font-mono">
+                    {idx + 1}
+                  </span>
+                  <span className="flex-1 font-medium">
+                    {p.team1_name || p.team1_id.slice(0, 8)}
+                  </span>
+                  {p.is_bye ? (
+                    <span className="px-2 py-0.5 rounded bg-neutral-700 text-xs text-neutral-400">
+                      BYE
+                    </span>
+                  ) : (
+                    <>
+                      <span className="text-neutral-500 text-xs">vs</span>
+                      <span className="flex-1 font-medium">
+                        {p.team2_name || (p.team2_id ?? 'TBD').slice(0, 8)}
+                      </span>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={handleConfirmGenerate}
+                disabled={loadingGenerate}
+                className={`px-4 py-2 rounded text-sm font-semibold ${
+                  loadingGenerate
+                    ? 'bg-emerald-800 cursor-wait'
+                    : 'bg-emerald-600 hover:bg-emerald-700'
+                }`}
+              >
+                {loadingGenerate
+                  ? 'Generation en cours…'
+                  : 'Confirmer et generer'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPreview(null);
+                  setPreviewRound(null);
+                }}
+                className="px-4 py-2 rounded text-sm bg-neutral-700 hover:bg-neutral-600"
+              >
+                Annuler
+              </button>
+            </div>
+          </section>
+        )}
+
         {loading && (
-          <div className="text-neutral-300">Chargement des données Swiss…</div>
+          <div className="text-neutral-300">Chargement des donnees Swiss…</div>
         )}
 
         {!loading && !stage && !errorMsg && (

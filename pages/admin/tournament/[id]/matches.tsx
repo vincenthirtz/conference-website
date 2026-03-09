@@ -1,6 +1,6 @@
 // pages/admin/tournament/[id]/matches.ts
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -174,11 +174,15 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
   const [qsSaving, setQsSaving] = useState(false);
 
   // Bulk selection
-  const [selectedMatchIds, setSelectedMatchIds] = useState<Set<string>>(new Set());
+  const [selectedMatchIds, setSelectedMatchIds] = useState<Set<string>>(
+    new Set()
+  );
 
   // Bulk scheduling
   const [bulkScheduleMode, setBulkScheduleMode] = useState(false);
-  const [bulkScheduleInputs, setBulkScheduleInputs] = useState<Record<string, string>>({});
+  const [bulkScheduleInputs, setBulkScheduleInputs] = useState<
+    Record<string, string>
+  >({});
   const [bulkScheduleSaving, setBulkScheduleSaving] = useState(false);
 
   // Bulk delete
@@ -186,6 +190,113 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
   // Info messages
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
+
+  // View mode: list or calendar
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+
+  // Conflict detection: find teams scheduled at overlapping times
+  const conflicts = useMemo(() => {
+    const scheduled = matches.filter(
+      (m) => m.scheduled_at && m.status !== 'cancelled'
+    );
+    const found: Map<
+      string,
+      { matchIds: string[]; teamName: string; time: string }
+    > = new Map();
+
+    for (let i = 0; i < scheduled.length; i++) {
+      for (let j = i + 1; j < scheduled.length; j++) {
+        const a = scheduled[i];
+        const b = scheduled[j];
+        const aStart = new Date(a.scheduled_at!).getTime();
+        const bStart = new Date(b.scheduled_at!).getTime();
+        // Consider matches as overlapping if they start within 30 minutes of each other
+        const OVERLAP_WINDOW = 30 * 60 * 1000;
+        if (Math.abs(aStart - bStart) >= OVERLAP_WINDOW) continue;
+
+        const sharedTeams: { id: string; name: string }[] = [];
+        if (
+          a.team1_id &&
+          (a.team1_id === b.team1_id || a.team1_id === b.team2_id)
+        ) {
+          sharedTeams.push({
+            id: a.team1_id,
+            name: a.team1?.name || a.team1_id,
+          });
+        }
+        if (
+          a.team2_id &&
+          (a.team2_id === b.team1_id || a.team2_id === b.team2_id)
+        ) {
+          sharedTeams.push({
+            id: a.team2_id,
+            name: a.team2?.name || a.team2_id,
+          });
+        }
+
+        for (const team of sharedTeams) {
+          const key = `${team.id}-${Math.min(aStart, bStart)}`;
+          const existing = found.get(key);
+          if (existing) {
+            if (!existing.matchIds.includes(a.id)) existing.matchIds.push(a.id);
+            if (!existing.matchIds.includes(b.id)) existing.matchIds.push(b.id);
+          } else {
+            found.set(key, {
+              matchIds: [a.id, b.id],
+              teamName: team.name,
+              time: formatDateTime(a.scheduled_at),
+            });
+          }
+        }
+      }
+    }
+    return found;
+  }, [matches]);
+
+  // Set of match IDs involved in conflicts (for highlighting)
+  const conflictMatchIds = useMemo(() => {
+    const ids = new Set<string>();
+    conflicts.forEach((c) => c.matchIds.forEach((id) => ids.add(id)));
+    return ids;
+  }, [conflicts]);
+
+  // Calendar data: group matches by date
+  const calendarDays = useMemo(() => {
+    const scheduled = matches.filter((m) => m.scheduled_at);
+    const unscheduled = matches.filter((m) => !m.scheduled_at);
+
+    const byDate = new Map<string, Match[]>();
+    for (const m of scheduled) {
+      const d = new Date(m.scheduled_at!);
+      const dateKey = d.toLocaleDateString('fr-FR', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+      const arr = byDate.get(dateKey) || [];
+      arr.push(m);
+      byDate.set(dateKey, arr);
+    }
+
+    // Sort matches within each day by time
+    byDate.forEach((arr) => {
+      arr.sort(
+        (a, b) =>
+          new Date(a.scheduled_at!).getTime() -
+          new Date(b.scheduled_at!).getTime()
+      );
+    });
+
+    // Sort days chronologically
+    const sortedDays = Array.from(byDate.entries()).sort((a, b) => {
+      const aTime = new Date(a[1][0].scheduled_at!).getTime();
+      const bTime = new Date(b[1][0].scheduled_at!).getTime();
+      return aTime - bTime;
+    });
+
+    return { sortedDays, unscheduled };
+  }, [matches]);
 
   async function fetchMatches() {
     if (!id) return;
@@ -354,14 +465,18 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
   async function handleBulkScheduleSave() {
     if (!stageFilter) {
-      setErrorMsg('La planification en masse nécessite de filtrer par phase (stage).');
+      setErrorMsg(
+        'La planification en masse nécessite de filtrer par phase (stage).'
+      );
       return;
     }
 
-    const schedules = Object.entries(bulkScheduleInputs).map(([matchId, dt]) => ({
-      matchId,
-      scheduled_at: dt ? new Date(dt).toISOString() : null,
-    }));
+    const schedules = Object.entries(bulkScheduleInputs).map(
+      ([matchId, dt]) => ({
+        matchId,
+        scheduled_at: dt ? new Date(dt).toISOString() : null,
+      })
+    );
 
     if (schedules.length === 0) return;
 
@@ -378,15 +493,21 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Erreur lors de la planification en masse');
+        throw new Error(
+          json.error || 'Erreur lors de la planification en masse'
+        );
       }
 
       const json = await res.json();
-      setInfoMsg(`${json.successCount ?? 0} match${(json.successCount ?? 0) > 1 ? 'es' : ''} planifié${(json.successCount ?? 0) > 1 ? 's' : ''}.`);
+      setInfoMsg(
+        `${json.successCount ?? 0} match${(json.successCount ?? 0) > 1 ? 'es' : ''} planifié${(json.successCount ?? 0) > 1 ? 's' : ''}.`
+      );
       setBulkScheduleMode(false);
       fetchMatches();
     } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue lors de la planification en masse');
+      setErrorMsg(
+        err?.message ?? 'Erreur inattendue lors de la planification en masse'
+      );
     } finally {
       setBulkScheduleSaving(false);
     }
@@ -395,7 +516,9 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
   // --- Bulk delete/cancel ---
   async function handleBulkDelete(hard: boolean) {
     if (!stageFilter) {
-      setErrorMsg('La suppression en masse nécessite de filtrer par phase (stage).');
+      setErrorMsg(
+        'La suppression en masse nécessite de filtrer par phase (stage).'
+      );
       return;
     }
 
@@ -403,7 +526,11 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
     const count = selectedMatchIds.size;
     const action = hard ? 'supprimer définitivement' : 'annuler';
-    if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} ${count} match${count > 1 ? 'es' : ''} ?`)) {
+    if (
+      !confirm(
+        `${action.charAt(0).toUpperCase() + action.slice(1)} ${count} match${count > 1 ? 'es' : ''} ?`
+      )
+    ) {
       return;
     }
 
@@ -427,10 +554,14 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
       }
 
       const verb = hard ? 'supprimé' : 'annulé';
-      setInfoMsg(`${count} match${count > 1 ? 'es' : ''} ${verb}${count > 1 ? 's' : ''}.`);
+      setInfoMsg(
+        `${count} match${count > 1 ? 'es' : ''} ${verb}${count > 1 ? 's' : ''}.`
+      );
       fetchMatches();
     } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue lors de la suppression en masse');
+      setErrorMsg(
+        err?.message ?? 'Erreur inattendue lors de la suppression en masse'
+      );
     } finally {
       setBulkDeleting(false);
     }
@@ -483,7 +614,9 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                       </span>
                     )}
                     {total !== null && (
-                      <span className="ml-2">• {total} match{total > 1 ? 'es' : ''}</span>
+                      <span className="ml-2">
+                        • {total} match{total > 1 ? 'es' : ''}
+                      </span>
                     )}
                   </p>
                 )}
@@ -678,11 +811,98 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
             </form>
           </section>
 
+          {/* View toggle & conflict warnings */}
+          <div className="flex flex-wrap items-center gap-4 mb-6">
+            <div className="flex rounded-xl overflow-hidden border border-neutral-700">
+              <button
+                type="button"
+                onClick={() => setViewMode('list')}
+                className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
+                  viewMode === 'list'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-neutral-800 text-neutral-400 hover:text-white'
+                }`}
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 10h16M4 14h16M4 18h16"
+                  />
+                </svg>
+                Liste
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('calendar')}
+                className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
+                  viewMode === 'calendar'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-neutral-800 text-neutral-400 hover:text-white'
+                }`}
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+                Calendrier
+              </button>
+            </div>
+
+            {conflicts.size > 0 && (
+              <div className="flex-1 rounded-xl bg-orange-900/40 border border-orange-500/50 px-4 py-3 text-sm flex items-start gap-2">
+                <svg
+                  className="w-5 h-5 text-orange-400 flex-shrink-0 mt-0.5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <div>
+                  <span className="font-semibold text-orange-300">
+                    {conflicts.size} conflit{conflicts.size > 1 ? 's' : ''}{' '}
+                    horaire{conflicts.size > 1 ? 's' : ''} detecte
+                    {conflicts.size > 1 ? 's' : ''}
+                  </span>
+                  <ul className="mt-1 space-y-0.5">
+                    {Array.from(conflicts.values()).map((c, i) => (
+                      <li key={i} className="text-orange-200/80 text-xs">
+                        <span className="font-medium">{c.teamName}</span> —{' '}
+                        {c.matchIds.length} matches vers {c.time}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Bulk actions bar */}
           {selectedMatchIds.size > 0 && (
             <section className="bg-blue-900/30 border border-blue-500/40 rounded-2xl p-4 mb-6 flex flex-wrap items-center gap-3">
               <span className="text-sm font-medium">
-                {selectedMatchIds.size} match{selectedMatchIds.size > 1 ? 'es' : ''} sélectionné{selectedMatchIds.size > 1 ? 's' : ''}
+                {selectedMatchIds.size} match
+                {selectedMatchIds.size > 1 ? 'es' : ''} sélectionné
+                {selectedMatchIds.size > 1 ? 's' : ''}
               </span>
 
               <div className="flex-1" />
@@ -732,7 +952,8 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
           {bulkScheduleMode && selectedMatchIds.size > 0 && (
             <section className="bg-neutral-800/50 backdrop-blur border border-blue-500/30 rounded-2xl p-5 mb-6">
               <h3 className="text-sm font-semibold mb-3">
-                Planification en masse ({selectedMatchIds.size} match{selectedMatchIds.size > 1 ? 'es' : ''})
+                Planification en masse ({selectedMatchIds.size} match
+                {selectedMatchIds.size > 1 ? 'es' : ''})
               </h3>
 
               <div className="flex items-end gap-4 mb-4 flex-wrap">
@@ -789,7 +1010,9 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                       : 'bg-blue-600 hover:bg-blue-700'
                   }`}
                 >
-                  {bulkScheduleSaving ? 'Sauvegarde…' : 'Sauvegarder les horaires'}
+                  {bulkScheduleSaving
+                    ? 'Sauvegarde…'
+                    : 'Sauvegarder les horaires'}
                 </button>
                 <button
                   type="button"
@@ -802,205 +1025,420 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
               {!stageFilter && (
                 <p className="mt-2 text-xs text-amber-400">
-                  Filtrez par phase (stage) pour activer la planification en masse.
+                  Filtrez par phase (stage) pour activer la planification en
+                  masse.
                 </p>
               )}
             </section>
           )}
 
-          {/* Matches List */}
-          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
-            {loading ? (
-              <div className="flex items-center justify-center py-20">
-                <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
-              </div>
-            ) : matches.length === 0 ? (
-              <div className="text-center py-20 text-neutral-400">
-                <svg
-                  className="w-12 h-12 mx-auto mb-4 text-neutral-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+          {/* Calendar View */}
+          {viewMode === 'calendar' && !loading && matches.length > 0 && (
+            <section className="space-y-6 mb-6">
+              {calendarDays.sortedDays.map(([dateLabel, dayMatches]) => (
+                <div
+                  key={dateLabel}
+                  className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                Aucun match trouve pour ces filtres.
-              </div>
-            ) : (
-              <div className="divide-y divide-neutral-700/50">
-                {/* Select all row */}
-                <div className="px-4 py-2 bg-neutral-900/30 flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={selectedMatchIds.size === matches.length && matches.length > 0}
-                    onChange={toggleSelectAll}
-                    className="accent-blue-500"
-                  />
-                  <span className="text-xs text-neutral-400">
-                    Tout sélectionner
-                  </span>
-                </div>
+                  <div className="px-5 py-3 bg-neutral-900/50 border-b border-neutral-700/50">
+                    <h3 className="text-sm font-semibold capitalize">
+                      {dateLabel}
+                    </h3>
+                    <span className="text-xs text-neutral-400">
+                      {dayMatches.length} match
+                      {dayMatches.length > 1 ? 'es' : ''}
+                    </span>
+                  </div>
 
-                {matches.map((m) => (
-                  <div
-                    key={m.id}
-                    className={`p-4 hover:bg-neutral-700/30 transition-colors ${
-                      selectedMatchIds.has(m.id) ? 'bg-blue-900/15' : ''
-                    }`}
-                  >
-                    <div className="flex items-center gap-4 flex-wrap">
-                      {/* Checkbox */}
-                      <input
-                        type="checkbox"
-                        checked={selectedMatchIds.has(m.id)}
-                        onChange={() => toggleMatchSelection(m.id)}
-                        className="accent-blue-500 flex-shrink-0"
-                      />
+                  <div className="divide-y divide-neutral-700/30">
+                    {dayMatches.map((m) => {
+                      const time = new Date(m.scheduled_at!).toLocaleTimeString(
+                        'fr-FR',
+                        {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        }
+                      );
+                      const hasConflict = conflictMatchIds.has(m.id);
 
-                      {/* Stage & Round info */}
-                      <div className="w-40 flex-shrink-0">
-                        <div className="font-medium text-sm">{stageLabel(m.stage)}</div>
-                        <div className="text-xs text-neutral-400">
-                          Round {m.round_number ?? '—'}
-                          {m.best_of ? ` • BO${m.best_of}` : ''}
-                        </div>
-                        <div className="text-[10px] text-neutral-500 font-mono mt-1">
-                          #{m.id.slice(0, 8)}
-                        </div>
-                      </div>
-
-                      {/* Teams & Score */}
-                      <div className="flex-1 flex items-center justify-center gap-4 min-w-[300px]">
-                        <TeamCell
-                          team={m.team1}
-                          fallbackId={m.team1?.name || undefined}
-                          isWinner={m.winner_team_id === m.team1_id}
-                          align="right"
-                        />
-
-                        <div className="flex flex-col items-center">
-                          <div className="text-xl font-bold px-4 py-1 bg-neutral-900/50 rounded-lg">
-                            {typeof m.team1_score === 'number' ||
-                            typeof m.team2_score === 'number'
-                              ? `${m.team1_score ?? 0} - ${m.team2_score ?? 0}`
-                              : 'vs'}
+                      return (
+                        <div
+                          key={m.id}
+                          className={`flex items-center gap-4 px-5 py-3 hover:bg-neutral-700/20 transition-colors ${
+                            hasConflict
+                              ? 'border-l-4 border-l-orange-500 bg-orange-900/10'
+                              : ''
+                          }`}
+                        >
+                          {/* Time slot */}
+                          <div className="w-16 flex-shrink-0 text-center">
+                            <div className="text-lg font-bold text-blue-400">
+                              {time}
+                            </div>
                           </div>
-                          <span
-                            className={`mt-2 px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(
-                              m.status
-                            )}`}
-                          >
-                            {statusLabel(m.status)}
+
+                          {/* Conflict icon */}
+                          {hasConflict && (
+                            <span
+                              title="Conflit horaire"
+                              className="text-orange-400 flex-shrink-0"
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                            </span>
+                          )}
+
+                          {/* Teams */}
+                          <div className="flex-1 flex items-center gap-3 min-w-0">
+                            <span className="font-medium text-sm truncate">
+                              {m.team1?.short_name || m.team1?.name || 'TBD'}
+                            </span>
+                            <span className="text-neutral-500 text-xs">vs</span>
+                            <span className="font-medium text-sm truncate">
+                              {m.team2?.short_name || m.team2?.name || 'TBD'}
+                            </span>
+                          </div>
+
+                          {/* Score / Status */}
+                          <div className="flex-shrink-0 flex items-center gap-2">
+                            {typeof m.team1_score === 'number' ||
+                            typeof m.team2_score === 'number' ? (
+                              <span className="font-£bold text-sm bg-neutral-900/50 px-3 py-1 rounded-lg">
+                                {m.team1_score ?? 0} - {m.team2_score ?? 0}
+                              </span>
+                            ) : null}
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(m.status)}`}
+                            >
+                              {statusLabel(m.status)}
+                            </span>
+                          </div>
+
+                          {/* Stage info */}
+                          <div className="w-32 flex-shrink-0 text-right">
+                            <div className="text-xs text-neutral-400 truncate">
+                              {stageLabel(m.stage)}
+                            </div>
+                            <div className="text-[10px] text-neutral-500">
+                              R{m.round_number ?? '?'}
+                              {m.best_of ? ` • BO${m.best_of}` : ''}
+                            </div>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex gap-1.5 flex-shrink-0">
+                            <Link
+                              href={`/admin/matches/${m.id}/edit`}
+                              className="px-2.5 py-1 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-xs font-medium transition-colors"
+                            >
+                              Editer
+                            </Link>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              {/* Unscheduled matches */}
+              {calendarDays.unscheduled.length > 0 && (
+                <div className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
+                  <div className="px-5 py-3 bg-neutral-900/50 border-b border-neutral-700/50">
+                    <h3 className="text-sm font-semibold text-neutral-400">
+                      Non planifies
+                    </h3>
+                    <span className="text-xs text-neutral-500">
+                      {calendarDays.unscheduled.length} match
+                      {calendarDays.unscheduled.length > 1 ? 'es' : ''} sans
+                      horaire
+                    </span>
+                  </div>
+                  <div className="divide-y divide-neutral-700/30">
+                    {calendarDays.unscheduled.map((m) => (
+                      <div
+                        key={m.id}
+                        className="flex items-center gap-4 px-5 py-3"
+                      >
+                        <div className="w-16 flex-shrink-0 text-center">
+                          <span className="text-neutral-600 text-sm">—</span>
+                        </div>
+                        <div className="flex-1 flex items-center gap-3 min-w-0">
+                          <span className="font-medium text-sm truncate text-neutral-400">
+                            {m.team1?.short_name || m.team1?.name || 'TBD'}
+                          </span>
+                          <span className="text-neutral-600 text-xs">vs</span>
+                          <span className="font-medium text-sm truncate text-neutral-400">
+                            {m.team2?.short_name || m.team2?.name || 'TBD'}
                           </span>
                         </div>
-
-                        <TeamCell
-                          team={m.team2}
-                          fallbackId={m.team2?.name || undefined}
-                          isWinner={m.winner_team_id === m.team2_id}
-                          align="left"
-                        />
-                      </div>
-
-                      {/* Schedule */}
-                      <div className="w-32 text-right flex-shrink-0">
-                        <div className="text-sm text-neutral-300">
-                          {formatDateTime(m.scheduled_at)}
-                        </div>
-                        {m.completed_at && (
-                          <div className="text-[10px] text-neutral-500">
-                            Termine {formatDateTime(m.completed_at)}
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(m.status)}`}
+                        >
+                          {statusLabel(m.status)}
+                        </span>
+                        <div className="w-32 flex-shrink-0 text-right">
+                          <div className="text-xs text-neutral-400 truncate">
+                            {stageLabel(m.stage)}
                           </div>
-                        )}
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex gap-2 flex-shrink-0">
-                        {m.status !== 'cancelled' && (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              quickScoreId === m.id
-                                ? setQuickScoreId(null)
-                                : openQuickScore(m)
-                            }
-                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                              quickScoreId === m.id
-                                ? 'bg-amber-600 text-white'
-                                : 'bg-amber-600/20 text-amber-300 hover:bg-amber-600/40'
-                            }`}
-                          >
-                            Score
-                          </button>
-                        )}
+                        </div>
                         <Link
                           href={`/admin/matches/${m.id}/edit`}
-                          className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-xs font-medium transition-colors"
+                          className="px-2.5 py-1 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-xs font-medium transition-colors"
                         >
                           Editer
                         </Link>
-                        <Link
-                          href={`/match/${m.id}`}
-                          target="_blank"
-                          className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium transition-colors"
-                        >
-                          Voir
-                        </Link>
                       </div>
-                    </div>
-
-                    {/* Inline Quick Score */}
-                    {quickScoreId === m.id && (
-                      <div className="mt-3 flex items-center gap-3 pl-40">
-                        <span className="text-xs text-neutral-400 w-20 text-right truncate">
-                          {m.team1?.short_name || m.team1?.name || 'Éq. 1'}
-                        </span>
-                        <input
-                          type="number"
-                          min={0}
-                          className="w-16 px-2 py-1.5 rounded-lg bg-neutral-900 border border-neutral-600 text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-500"
-                          value={qs1}
-                          onChange={(e) => setQs1(e.target.value)}
-                          autoFocus
-                        />
-                        <span className="text-neutral-500 font-bold">—</span>
-                        <input
-                          type="number"
-                          min={0}
-                          className="w-16 px-2 py-1.5 rounded-lg bg-neutral-900 border border-neutral-600 text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-500"
-                          value={qs2}
-                          onChange={(e) => setQs2(e.target.value)}
-                        />
-                        <span className="text-xs text-neutral-400 w-20 truncate">
-                          {m.team2?.short_name || m.team2?.name || 'Éq. 2'}
-                        </span>
-                        <button
-                          type="button"
-                          disabled={qs1 === '' || qs2 === '' || qsSaving}
-                          onClick={() => handleQuickScore(m.id)}
-                          className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {qsSaving ? '...' : 'Valider'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setQuickScoreId(null)}
-                          className="px-2 py-1.5 rounded-lg text-neutral-500 hover:text-neutral-300 text-xs transition-colors"
-                        >
-                          Annuler
-                        </button>
-                      </div>
-                    )}
+                    ))}
                   </div>
-                ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* Calendar loading / empty state */}
+          {viewMode === 'calendar' && loading && (
+            <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
+              <div className="flex items-center justify-center py-20">
+                <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
               </div>
-            )}
-          </section>
+            </section>
+          )}
+          {viewMode === 'calendar' && !loading && matches.length === 0 && (
+            <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-20 text-center text-neutral-400 mb-6">
+              Aucun match trouve pour ces filtres.
+            </section>
+          )}
+
+          {/* Matches List */}
+          {viewMode === 'list' && (
+            <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
+              {loading ? (
+                <div className="flex items-center justify-center py-20">
+                  <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+                </div>
+              ) : matches.length === 0 ? (
+                <div className="text-center py-20 text-neutral-400">
+                  <svg
+                    className="w-12 h-12 mx-auto mb-4 text-neutral-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  Aucun match trouve pour ces filtres.
+                </div>
+              ) : (
+                <div className="divide-y divide-neutral-700/50">
+                  {/* Select all row */}
+                  <div className="px-4 py-2 bg-neutral-900/30 flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={
+                        selectedMatchIds.size === matches.length &&
+                        matches.length > 0
+                      }
+                      onChange={toggleSelectAll}
+                      className="accent-blue-500"
+                    />
+                    <span className="text-xs text-neutral-400">
+                      Tout sélectionner
+                    </span>
+                  </div>
+
+                  {matches.map((m) => (
+                    <div
+                      key={m.id}
+                      className={`p-4 hover:bg-neutral-700/30 transition-colors ${
+                        selectedMatchIds.has(m.id) ? 'bg-blue-900/15' : ''
+                      } ${conflictMatchIds.has(m.id) ? 'border-l-4 border-l-orange-500' : ''}`}
+                    >
+                      <div className="flex items-center gap-4 flex-wrap">
+                        {/* Conflict indicator */}
+                        {conflictMatchIds.has(m.id) && (
+                          <span
+                            title="Conflit horaire"
+                            className="text-orange-400 flex-shrink-0"
+                          >
+                            <svg
+                              className="w-5 h-5"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          </span>
+                        )}
+
+                        {/* Checkbox */}
+                        <input
+                          type="checkbox"
+                          checked={selectedMatchIds.has(m.id)}
+                          onChange={() => toggleMatchSelection(m.id)}
+                          className="accent-blue-500 flex-shrink-0"
+                        />
+
+                        {/* Stage & Round info */}
+                        <div className="w-40 flex-shrink-0">
+                          <div className="font-medium text-sm">
+                            {stageLabel(m.stage)}
+                          </div>
+                          <div className="text-xs text-neutral-400">
+                            Round {m.round_number ?? '—'}
+                            {m.best_of ? ` • BO${m.best_of}` : ''}
+                          </div>
+                          <div className="text-[10px] text-neutral-500 font-mono mt-1">
+                            #{m.id.slice(0, 8)}
+                          </div>
+                        </div>
+
+                        {/* Teams & Score */}
+                        <div className="flex-1 flex items-center justify-center gap-4 min-w-[300px]">
+                          <TeamCell
+                            team={m.team1}
+                            fallbackId={m.team1?.name || undefined}
+                            isWinner={m.winner_team_id === m.team1_id}
+                            align="right"
+                          />
+
+                          <div className="flex flex-col items-center">
+                            <div className="text-xl font-bold px-4 py-1 bg-neutral-900/50 rounded-lg">
+                              {typeof m.team1_score === 'number' ||
+                              typeof m.team2_score === 'number'
+                                ? `${m.team1_score ?? 0} - ${m.team2_score ?? 0}`
+                                : 'vs'}
+                            </div>
+                            <span
+                              className={`mt-2 px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(
+                                m.status
+                              )}`}
+                            >
+                              {statusLabel(m.status)}
+                            </span>
+                          </div>
+
+                          <TeamCell
+                            team={m.team2}
+                            fallbackId={m.team2?.name || undefined}
+                            isWinner={m.winner_team_id === m.team2_id}
+                            align="left"
+                          />
+                        </div>
+
+                        {/* Schedule */}
+                        <div className="w-32 text-right flex-shrink-0">
+                          <div className="text-sm text-neutral-300">
+                            {formatDateTime(m.scheduled_at)}
+                          </div>
+                          {m.completed_at && (
+                            <div className="text-[10px] text-neutral-500">
+                              Termine {formatDateTime(m.completed_at)}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex gap-2 flex-shrink-0">
+                          {m.status !== 'cancelled' && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                quickScoreId === m.id
+                                  ? setQuickScoreId(null)
+                                  : openQuickScore(m)
+                              }
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                quickScoreId === m.id
+                                  ? 'bg-amber-600 text-white'
+                                  : 'bg-amber-600/20 text-amber-300 hover:bg-amber-600/40'
+                              }`}
+                            >
+                              Score
+                            </button>
+                          )}
+                          <Link
+                            href={`/admin/matches/${m.id}/edit`}
+                            className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-xs font-medium transition-colors"
+                          >
+                            Editer
+                          </Link>
+                          <Link
+                            href={`/match/${m.id}`}
+                            target="_blank"
+                            className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium transition-colors"
+                          >
+                            Voir
+                          </Link>
+                        </div>
+                      </div>
+
+                      {/* Inline Quick Score */}
+                      {quickScoreId === m.id && (
+                        <div className="mt-3 flex items-center gap-3 pl-40">
+                          <span className="text-xs text-neutral-400 w-20 text-right truncate">
+                            {m.team1?.short_name || m.team1?.name || 'Éq. 1'}
+                          </span>
+                          <input
+                            type="number"
+                            min={0}
+                            className="w-16 px-2 py-1.5 rounded-lg bg-neutral-900 border border-neutral-600 text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-500"
+                            value={qs1}
+                            onChange={(e) => setQs1(e.target.value)}
+                            autoFocus
+                          />
+                          <span className="text-neutral-500 font-bold">—</span>
+                          <input
+                            type="number"
+                            min={0}
+                            className="w-16 px-2 py-1.5 rounded-lg bg-neutral-900 border border-neutral-600 text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-500"
+                            value={qs2}
+                            onChange={(e) => setQs2(e.target.value)}
+                          />
+                          <span className="text-xs text-neutral-400 w-20 truncate">
+                            {m.team2?.short_name || m.team2?.name || 'Éq. 2'}
+                          </span>
+                          <button
+                            type="button"
+                            disabled={qs1 === '' || qs2 === '' || qsSaving}
+                            onClick={() => handleQuickScore(m.id)}
+                            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {qsSaving ? '...' : 'Valider'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setQuickScoreId(null)}
+                            className="px-2 py-1.5 rounded-lg text-neutral-500 hover:text-neutral-300 text-xs transition-colors"
+                          >
+                            Annuler
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
 
           {/* Pagination */}
           {matches.length > 0 && (
@@ -1068,12 +1506,19 @@ type TeamCellProps = {
   align?: 'left' | 'right';
 };
 
-function TeamCell({ team, fallbackId, isWinner, align = 'left' }: TeamCellProps) {
+function TeamCell({
+  team,
+  fallbackId,
+  isWinner,
+  align = 'left',
+}: TeamCellProps) {
   const label = team?.name || fallbackId || 'TBD';
   const short = team?.short_name || null;
 
   return (
-    <div className={`flex items-center gap-3 w-40 ${align === 'right' ? 'flex-row-reverse text-right' : ''}`}>
+    <div
+      className={`flex items-center gap-3 w-40 ${align === 'right' ? 'flex-row-reverse text-right' : ''}`}
+    >
       {team?.logo_url ? (
         <Image
           src={team.logo_url}
@@ -1088,10 +1533,14 @@ function TeamCell({ team, fallbackId, isWinner, align = 'left' }: TeamCellProps)
         </div>
       )}
       <div className="flex-1 min-w-0">
-        <div className={`font-semibold text-sm truncate ${isWinner ? 'text-emerald-400' : ''}`}>
+        <div
+          className={`font-semibold text-sm truncate ${isWinner ? 'text-emerald-400' : ''}`}
+        >
           {label}
         </div>
-        {short && <div className="text-xs text-neutral-500 truncate">{short}</div>}
+        {short && (
+          <div className="text-xs text-neutral-500 truncate">{short}</div>
+        )}
       </div>
     </div>
   );

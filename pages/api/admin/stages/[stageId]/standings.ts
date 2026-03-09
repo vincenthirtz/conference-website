@@ -1,5 +1,6 @@
 // pages/api/admin/stages/[stageId]/standings.ts
 // GET : retourne le classement generique d'un stage.
+// GET ?export=csv : exporte le classement en CSV.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
@@ -31,12 +32,13 @@ async function handler(
   }
 
   const id = String(stageId);
+  const exportFormat = req.query.export === 'csv' ? 'csv' : null;
 
   try {
-    // Fetch stage to get type
+    // Fetch stage to get type and name
     const { data: stage, error: stageErr } = await supabaseAdmin
       .from('tournament_stages')
-      .select('id, stage_type')
+      .select('id, stage_type, name')
       .eq('id', id)
       .maybeSingle();
 
@@ -46,6 +48,44 @@ async function handler(
 
     const stageType = stage.stage_type || 'other';
     const standings = await computeStageStandings(id, stageType);
+
+    if (exportFormat === 'csv') {
+      const header = [
+        'rank',
+        'team_name',
+        'wins',
+        'losses',
+        'draws',
+        'score',
+        'seed',
+      ];
+
+      const escapeCsv = (v: string | number | null | undefined) => {
+        const s = String(v ?? '');
+        return s.includes(',') || s.includes('"') || s.includes('\n')
+          ? `"${s.replace(/"/g, '""')}"`
+          : s;
+      };
+
+      const rows = standings.map((s) =>
+        [
+          s.rank,
+          escapeCsv(s.teamName),
+          s.wins,
+          s.losses,
+          s.draws,
+          s.score,
+          s.seed ?? '',
+        ].join(',')
+      );
+
+      const csv = [header.join(','), ...rows].join('\n');
+      const filename = `standings-${(stage.name || id).replace(/[^a-zA-Z0-9_-]/g, '_')}.csv`;
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.status(200).end(csv);
+      return;
+    }
 
     return res.status(200).json({
       stageId: id,
