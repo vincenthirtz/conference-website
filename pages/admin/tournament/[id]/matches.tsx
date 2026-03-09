@@ -142,21 +142,44 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
   // Bulk delete
   const [bulkDeleting, setBulkDeleting] = useState(false);
 
+  // Bulk edit
+  const [bulkEditMode, setBulkEditMode] = useState(false);
+  const [bulkEditFields, setBulkEditFields] = useState<{
+    status?: string;
+    best_of?: number | null;
+    round_number?: number | null;
+    notes?: string;
+  }>({});
+  const [bulkEditSaving, setBulkEditSaving] = useState(false);
+
+  // CSV import
+  const [csvImportMode, setCsvImportMode] = useState(false);
+  const [csvText, setCsvText] = useState('');
+  const [csvImporting, setCsvImporting] = useState(false);
+  const [csvPreview, setCsvPreview] = useState<
+    Array<{ team1: string; team2: string; round?: string; scheduled_at?: string; best_of?: string }>
+  >([]);
+
   // Info messages
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
   // View mode: list or calendar
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
 
-  // Conflict detection: find teams scheduled at overlapping times
+  // Conflict detection: find teams and resources scheduled at overlapping times
+  type Conflict = {
+    matchIds: string[];
+    label: string;
+    type: 'team' | 'resource';
+    time: string;
+  };
+
   const conflicts = useMemo(() => {
     const scheduled = matches.filter(
       (m) => m.scheduled_at && m.status !== 'cancelled'
     );
-    const found: Map<
-      string,
-      { matchIds: string[]; teamName: string; time: string }
-    > = new Map();
+    const found: Map<string, Conflict> = new Map();
+    const OVERLAP_WINDOW = 30 * 60 * 1000;
 
     for (let i = 0; i < scheduled.length; i++) {
       for (let j = i + 1; j < scheduled.length; j++) {
@@ -164,10 +187,9 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
         const b = scheduled[j];
         const aStart = new Date(a.scheduled_at!).getTime();
         const bStart = new Date(b.scheduled_at!).getTime();
-        // Consider matches as overlapping if they start within 30 minutes of each other
-        const OVERLAP_WINDOW = 30 * 60 * 1000;
         if (Math.abs(aStart - bStart) >= OVERLAP_WINDOW) continue;
 
+        // Team conflicts
         const sharedTeams: { id: string; name: string }[] = [];
         if (
           a.team1_id &&
@@ -189,7 +211,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
         }
 
         for (const team of sharedTeams) {
-          const key = `${team.id}-${Math.min(aStart, bStart)}`;
+          const key = `team-${team.id}-${Math.min(aStart, bStart)}`;
           const existing = found.get(key);
           if (existing) {
             if (!existing.matchIds.includes(a.id)) existing.matchIds.push(a.id);
@@ -197,7 +219,29 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
           } else {
             found.set(key, {
               matchIds: [a.id, b.id],
-              teamName: team.name,
+              label: team.name,
+              type: 'team',
+              time: formatDateTime(a.scheduled_at),
+            });
+          }
+        }
+
+        // Resource (stream) conflicts — same stream_url at same time
+        if (
+          a.stream_url &&
+          b.stream_url &&
+          a.stream_url.trim().toLowerCase() === b.stream_url.trim().toLowerCase()
+        ) {
+          const key = `stream-${a.stream_url.trim().toLowerCase()}-${Math.min(aStart, bStart)}`;
+          const existing = found.get(key);
+          if (existing) {
+            if (!existing.matchIds.includes(a.id)) existing.matchIds.push(a.id);
+            if (!existing.matchIds.includes(b.id)) existing.matchIds.push(b.id);
+          } else {
+            found.set(key, {
+              matchIds: [a.id, b.id],
+              label: a.stream_url,
+              type: 'resource',
               time: formatDateTime(a.scheduled_at),
             });
           }
@@ -524,6 +568,161 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
     }
   }
 
+  // --- Bulk edit ---
+  async function handleBulkEditSave() {
+    if (!stageFilter) {
+      setErrorMsg("L'édition en masse nécessite de filtrer par phase (stage).");
+      return;
+    }
+    if (selectedMatchIds.size === 0) return;
+
+    const fields: Record<string, unknown> = {};
+    if (bulkEditFields.status) fields.status = bulkEditFields.status;
+    if (bulkEditFields.best_of !== undefined) fields.best_of = bulkEditFields.best_of;
+    if (bulkEditFields.round_number !== undefined) fields.round_number = bulkEditFields.round_number;
+    if (bulkEditFields.notes !== undefined) fields.notes = bulkEditFields.notes;
+
+    if (Object.keys(fields).length === 0) {
+      setErrorMsg('Aucun champ à modifier.');
+      return;
+    }
+
+    setBulkEditSaving(true);
+    setErrorMsg(null);
+    setInfoMsg(null);
+
+    try {
+      const res = await fetch(`/api/admin/stages/${stageFilter}/bulk-matches`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          matchIds: Array.from(selectedMatchIds),
+          fields,
+        }),
+      });
+
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || "Erreur lors de l'édition en masse");
+      }
+
+      const json = await res.json();
+      setInfoMsg(
+        `${json.count ?? selectedMatchIds.size} match(es) mis à jour.`
+      );
+      setBulkEditMode(false);
+      setBulkEditFields({});
+      fetchMatches();
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? "Erreur inattendue lors de l'édition en masse");
+    } finally {
+      setBulkEditSaving(false);
+    }
+  }
+
+  // --- CSV import ---
+  function parseCsvPreview(text: string) {
+    const lines = text.trim().split('\n').filter((l) => l.trim());
+    if (lines.length === 0) { setCsvPreview([]); return; }
+
+    // Detect separator
+    const sep = lines[0].includes('\t') ? '\t' : lines[0].includes(';') ? ';' : ',';
+
+    const rows: typeof csvPreview = [];
+    const headerLine = lines[0].toLowerCase();
+    const hasHeader = headerLine.includes('team1') || headerLine.includes('equipe');
+    const dataLines = hasHeader ? lines.slice(1) : lines;
+
+    for (const line of dataLines) {
+      const cols = line.split(sep).map((c) => c.trim().replace(/^"|"$/g, ''));
+      if (cols.length >= 2) {
+        rows.push({
+          team1: cols[0],
+          team2: cols[1],
+          round: cols[2] || undefined,
+          scheduled_at: cols[3] || undefined,
+          best_of: cols[4] || undefined,
+        });
+      }
+    }
+    setCsvPreview(rows);
+  }
+
+  async function handleCsvImport() {
+    if (!id || csvPreview.length === 0) return;
+
+    setCsvImporting(true);
+    setErrorMsg(null);
+    setInfoMsg(null);
+
+    try {
+      // Resolve team names to IDs
+      const teamsRes = await fetch(`/api/admin/tournament/${id}/teams`);
+      if (!teamsRes.ok) throw new Error('Impossible de charger les équipes');
+      const teamsJson = await teamsRes.json();
+      const teams: Array<{ id: string; name: string; short_name: string | null }> = teamsJson.teams || [];
+
+      const findTeam = (name: string) => {
+        const lower = name.toLowerCase().trim();
+        return teams.find(
+          (t) =>
+            t.name.toLowerCase() === lower ||
+            (t.short_name && t.short_name.toLowerCase() === lower)
+        );
+      };
+
+      const matchPayloads = csvPreview.map((row) => {
+        const t1 = findTeam(row.team1);
+        const t2 = findTeam(row.team2);
+
+        return {
+          stage_id: stageFilter || null,
+          team1_id: t1?.id || null,
+          team2_id: t2?.id || null,
+          round_number: row.round ? parseInt(row.round, 10) || null : null,
+          scheduled_at: row.scheduled_at ? new Date(row.scheduled_at).toISOString() : null,
+          best_of: row.best_of ? parseInt(row.best_of, 10) || null : null,
+          status: 'pending' as const,
+        };
+      });
+
+      const unresolved = csvPreview.filter(
+        (row, i) => !matchPayloads[i].team1_id || !matchPayloads[i].team2_id
+      );
+
+      if (unresolved.length > 0) {
+        const names = unresolved
+          .flatMap((r) => [r.team1, r.team2])
+          .filter((n, i, arr) => arr.indexOf(n) === i && !findTeam(n));
+        throw new Error(
+          `Équipes introuvables : ${names.slice(0, 5).join(', ')}${names.length > 5 ? '...' : ''}`
+        );
+      }
+
+      const res = await fetch(`/api/admin/tournament/${id}/matches`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ matches: matchPayloads }),
+      });
+
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || "Erreur lors de l'import");
+      }
+
+      const json = await res.json();
+      setInfoMsg(`${json.matches?.length ?? 0} match(es) importé(s) depuis le CSV.`);
+      setCsvImportMode(false);
+      setCsvText('');
+      setCsvPreview([]);
+      fetchMatches();
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? "Erreur lors de l'import CSV");
+    } finally {
+      setCsvImporting(false);
+    }
+  }
+
   const backUrl = `/admin/tournament/${id}`;
 
   return (
@@ -608,6 +807,21 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                     Auto-scheduler
                   </>
                 )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCsvImportMode(!csvImportMode)}
+                className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 ${
+                  csvImportMode
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-neutral-800 hover:bg-neutral-700 border border-neutral-700'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                Import CSV
               </button>
             </div>
           </div>
@@ -886,7 +1100,10 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                   <ul className="mt-1 space-y-0.5">
                     {Array.from(conflicts.values()).map((c, i) => (
                       <li key={i} className="text-orange-200/80 text-xs">
-                        <span className="font-medium">{c.teamName}</span> —{' '}
+                        <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] mr-1 ${c.type === 'team' ? 'bg-orange-700/50' : 'bg-purple-700/50'}`}>
+                          {c.type === 'team' ? 'Equipe' : 'Stream'}
+                        </span>
+                        <span className="font-medium">{c.label}</span> —{' '}
                         {c.matchIds.length} matches vers {c.time}
                       </li>
                     ))}
@@ -907,14 +1124,23 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
               <div className="flex-1" />
 
-              {!bulkScheduleMode && (
-                <button
-                  type="button"
-                  onClick={enterBulkScheduleMode}
-                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-xs font-medium transition-colors"
-                >
-                  Planifier en masse
-                </button>
+              {!bulkScheduleMode && !bulkEditMode && (
+                <>
+                  <button
+                    type="button"
+                    onClick={enterBulkScheduleMode}
+                    className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-xs font-medium transition-colors"
+                  >
+                    Planifier en masse
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBulkEditMode(true)}
+                    className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-xs font-medium transition-colors"
+                  >
+                    Editer en masse
+                  </button>
+                </>
               )}
 
               <button
@@ -940,6 +1166,8 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                 onClick={() => {
                   setSelectedMatchIds(new Set());
                   setBulkScheduleMode(false);
+                  setBulkEditMode(false);
+                  setBulkEditFields({});
                 }}
                 className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-xs font-medium transition-colors"
               >
@@ -1029,6 +1257,213 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                   masse.
                 </p>
               )}
+            </section>
+          )}
+
+          {/* Bulk edit panel */}
+          {bulkEditMode && selectedMatchIds.size > 0 && (
+            <section className="bg-neutral-800/50 backdrop-blur border border-purple-500/30 rounded-2xl p-5 mb-6">
+              <h3 className="text-sm font-semibold mb-3">
+                Edition en masse ({selectedMatchIds.size} match
+                {selectedMatchIds.size > 1 ? 'es' : ''})
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1">
+                    Statut
+                  </label>
+                  <select
+                    className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    value={bulkEditFields.status ?? ''}
+                    onChange={(e) =>
+                      setBulkEditFields((prev) => ({
+                        ...prev,
+                        status: e.target.value || undefined,
+                      }))
+                    }
+                  >
+                    <option value="">— Ne pas modifier —</option>
+                    <option value="pending">A venir</option>
+                    <option value="ongoing">En cours</option>
+                    <option value="finished">Termine</option>
+                    <option value="cancelled">Annule</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1">
+                    Format (BO)
+                  </label>
+                  <select
+                    className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    value={bulkEditFields.best_of ?? ''}
+                    onChange={(e) =>
+                      setBulkEditFields((prev) => ({
+                        ...prev,
+                        best_of: e.target.value
+                          ? parseInt(e.target.value, 10)
+                          : undefined,
+                      }))
+                    }
+                  >
+                    <option value="">— Ne pas modifier —</option>
+                    <option value="1">BO1</option>
+                    <option value="3">BO3</option>
+                    <option value="5">BO5</option>
+                    <option value="7">BO7</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1">
+                    Numero de round
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    placeholder="— Ne pas modifier —"
+                    className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    value={bulkEditFields.round_number ?? ''}
+                    onChange={(e) =>
+                      setBulkEditFields((prev) => ({
+                        ...prev,
+                        round_number: e.target.value
+                          ? parseInt(e.target.value, 10)
+                          : undefined,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1">
+                    Notes
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="— Ne pas modifier —"
+                    className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    value={bulkEditFields.notes ?? ''}
+                    onChange={(e) =>
+                      setBulkEditFields((prev) => ({
+                        ...prev,
+                        notes: e.target.value || undefined,
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={handleBulkEditSave}
+                  disabled={bulkEditSaving}
+                  className={`px-4 py-2 rounded-lg font-semibold text-sm ${
+                    bulkEditSaving
+                      ? 'bg-purple-800 cursor-wait'
+                      : 'bg-purple-600 hover:bg-purple-700'
+                  }`}
+                >
+                  {bulkEditSaving ? 'Sauvegarde…' : 'Appliquer les modifications'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBulkEditMode(false);
+                    setBulkEditFields({});
+                  }}
+                  className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm transition-colors"
+                >
+                  Fermer
+                </button>
+              </div>
+
+              {!stageFilter && (
+                <p className="mt-2 text-xs text-amber-400">
+                  Filtrez par phase (stage) pour activer l&apos;edition en masse.
+                </p>
+              )}
+            </section>
+          )}
+
+          {/* CSV import panel */}
+          {csvImportMode && (
+            <section className="bg-neutral-800/50 backdrop-blur border border-emerald-500/30 rounded-2xl p-5 mb-6">
+              <h3 className="text-sm font-semibold mb-3">
+                Import CSV de matchs
+              </h3>
+              <p className="text-xs text-neutral-400 mb-3">
+                Format : <code className="bg-neutral-900 px-1 rounded">team1, team2, round, date_heure, best_of</code> (seules les 2 premières colonnes sont obligatoires).
+                Les noms d&apos;équipes doivent correspondre aux noms ou abréviations existantes. Séparateurs acceptés : virgule, point-virgule, tabulation.
+              </p>
+
+              <textarea
+                className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-600 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 min-h-[120px]"
+                placeholder={"Team Alpha, Team Beta, 1, 2026-03-15T14:00, 3\nTeam Gamma, Team Delta, 1, 2026-03-15T15:00, 3"}
+                value={csvText}
+                onChange={(e) => {
+                  setCsvText(e.target.value);
+                  parseCsvPreview(e.target.value);
+                }}
+                rows={6}
+              />
+
+              {csvPreview.length > 0 && (
+                <div className="mt-3 rounded-lg bg-neutral-900/50 border border-neutral-700 p-3">
+                  <p className="text-xs text-neutral-400 mb-2">
+                    Apercu : {csvPreview.length} match(es) detecte(s)
+                  </p>
+                  <div className="max-h-40 overflow-y-auto space-y-1">
+                    {csvPreview.map((row, i) => (
+                      <div key={i} className="text-xs flex items-center gap-2">
+                        <span className="text-neutral-500 w-6">{i + 1}.</span>
+                        <span className="font-medium">{row.team1}</span>
+                        <span className="text-neutral-500">vs</span>
+                        <span className="font-medium">{row.team2}</span>
+                        {row.round && (
+                          <span className="text-neutral-500">R{row.round}</span>
+                        )}
+                        {row.scheduled_at && (
+                          <span className="text-neutral-500">{row.scheduled_at}</span>
+                        )}
+                        {row.best_of && (
+                          <span className="text-neutral-500">BO{row.best_of}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-3 mt-4">
+                <button
+                  type="button"
+                  onClick={handleCsvImport}
+                  disabled={csvImporting || csvPreview.length === 0}
+                  className={`px-4 py-2 rounded-lg font-semibold text-sm ${
+                    csvImporting
+                      ? 'bg-emerald-800 cursor-wait'
+                      : 'bg-emerald-600 hover:bg-emerald-700'
+                  } disabled:opacity-50`}
+                >
+                  {csvImporting
+                    ? 'Import en cours…'
+                    : `Importer ${csvPreview.length} match(es)`}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCsvImportMode(false);
+                    setCsvText('');
+                    setCsvPreview([]);
+                  }}
+                  className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm transition-colors"
+                >
+                  Fermer
+                </button>
+              </div>
             </section>
           )}
 

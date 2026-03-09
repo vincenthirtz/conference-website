@@ -1,6 +1,7 @@
 // pages/api/admin/stages/[stageId]/bulk-matches.ts
 // Admin: opérations en masse sur les matchs d'une phase
 // - PATCH  : planification en masse (scheduled_at pour plusieurs matchs)
+// - PUT    : édition en masse (status, best_of, round_number, notes…)
 // - DELETE : suppression/annulation en masse
 
 import type { NextApiRequest, NextApiResponse } from 'next';
@@ -32,6 +33,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
     switch (req.method) {
       case 'PATCH':
         return await handleBulkSchedule(stageId, stage.tournament_id, req, res, ctx);
+      case 'PUT':
+        return await handleBulkUpdate(stageId, stage.tournament_id, req, res, ctx);
       case 'DELETE':
         return await handleBulkDelete(stageId, stage.tournament_id, req, res, ctx);
       default:
@@ -108,6 +111,98 @@ async function handleBulkSchedule(
   }
 
   return res.status(200).json({ results, successCount });
+}
+
+/* -----------------------------------------------------------
+ * PUT : édition en masse (status, best_of, round_number, notes…)
+ *
+ * Body :
+ *  { matchIds: string[], fields: { status?, best_of?, round_number?, notes?, stream_url?, lobby_code? } }
+ * ---------------------------------------------------------*/
+
+const VALID_STATUSES = ['pending', 'ongoing', 'finished', 'cancelled'];
+const BULK_EDITABLE_FIELDS = ['status', 'best_of', 'round_number', 'notes', 'stream_url', 'lobby_code'] as const;
+
+async function handleBulkUpdate(
+  stageId: string,
+  tournamentId: string,
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: any
+) {
+  const { matchIds, fields } = req.body;
+
+  if (!Array.isArray(matchIds) || matchIds.length === 0) {
+    return res.status(400).json({ error: "Body must include non-empty array 'matchIds'" });
+  }
+
+  if (!fields || typeof fields !== 'object' || Object.keys(fields).length === 0) {
+    return res.status(400).json({ error: "Body must include non-empty object 'fields'" });
+  }
+
+  // Build update payload with only allowed fields
+  const updatePayload: Record<string, unknown> = {};
+
+  for (const key of BULK_EDITABLE_FIELDS) {
+    if (key in fields) {
+      updatePayload[key] = fields[key];
+    }
+  }
+
+  if (Object.keys(updatePayload).length === 0) {
+    return res.status(400).json({
+      error: `No valid fields. Allowed: ${BULK_EDITABLE_FIELDS.join(', ')}`,
+    });
+  }
+
+  // Validate status
+  if ('status' in updatePayload && !VALID_STATUSES.includes(updatePayload.status as string)) {
+    return res.status(400).json({
+      error: `Invalid status. Allowed: ${VALID_STATUSES.join(', ')}`,
+    });
+  }
+
+  // Validate best_of
+  if ('best_of' in updatePayload && updatePayload.best_of !== null) {
+    const bo = Number(updatePayload.best_of);
+    if (!Number.isInteger(bo) || bo < 1 || bo > 15) {
+      return res.status(400).json({ error: 'best_of must be an integer between 1 and 15' });
+    }
+    updatePayload.best_of = bo;
+  }
+
+  const { error, count } = await supabaseAdmin
+    .from('matches')
+    .update(updatePayload)
+    .eq('stage_id', stageId)
+    .in('id', matchIds);
+
+  if (error) {
+    console.error('bulk update matches error:', error);
+    return res.status(500).json({ error: 'Failed to update matches' });
+  }
+
+  if (ctx?.staff?.id) {
+    await logStaffAction({
+      staff_id: ctx.staff.id,
+      action: 'staff_batch_action',
+      entity_type: 'match',
+      entity_id: stageId,
+      tournament_id: tournamentId,
+      payload: {
+        action: 'bulk_update',
+        matchIds,
+        fields: updatePayload,
+        count: matchIds.length,
+      },
+    });
+  }
+
+  return res.status(200).json({
+    success: true,
+    count: count ?? matchIds.length,
+    fields: updatePayload,
+  });
 }
 
 /* -----------------------------------------------------------

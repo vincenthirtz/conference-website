@@ -30,6 +30,7 @@ export type StaffLogAction =
   | 'create_swiss_round'
   | 'advance_teams'
   | 'apply_template'
+  | 'clone_stage'
   | 'other';
 
 export type StaffLog = {
@@ -221,6 +222,7 @@ export function formatStaffLog(log: StaffLog) {
     create_swiss_round: 'Création round swiss',
     advance_teams: 'Avancement équipes',
     apply_template: 'Application template',
+    clone_stage: 'Clonage phase',
     other: 'Action staff',
   };
 
