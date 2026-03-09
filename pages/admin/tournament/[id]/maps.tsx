@@ -202,6 +202,28 @@ function AdminTournamentMapsPage(_: StaffProps) {
     }
   }
 
+  async function handleDeleteAllMaps() {
+    if (!tournamentId) return;
+    if (!confirm('Supprimer TOUTES les maps du pool ? Cette action est irréversible.')) return;
+
+    setErrorMsg(null);
+
+    try {
+      const res = await fetch(`/api/tournament/${tournamentId}/maps`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || 'Erreur lors de la suppression');
+      }
+
+      await fetchMaps();
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Erreur lors de la suppression');
+    }
+  }
+
   function handleEditClick(map: TournamentMapRow) {
     setEditingMap(map);
     setEditMapName(map.map_name);
@@ -399,6 +421,14 @@ function AdminTournamentMapsPage(_: StaffProps) {
                     {addingAll
                       ? 'Ajout en cours…'
                       : `+ Ajouter toutes les maps (${availableOWMaps.length})`}
+                  </button>
+                )}
+                {maps.length > 0 && (
+                  <button
+                    onClick={handleDeleteAllMaps}
+                    className="px-4 py-2 rounded-lg bg-red-600/80 hover:bg-red-700 text-white font-medium text-sm transition-colors"
+                  >
+                    Supprimer toutes les maps
                   </button>
                 )}
               </div>
