@@ -128,6 +128,37 @@ async function handlePut(
     });
   }
 
+  // --- Validation des champs ---
+
+  // Nom non vide
+  if ('name' in body && (typeof body.name !== 'string' || body.name.trim().length === 0)) {
+    return res.status(400).json({ error: 'Le nom du stage ne peut pas être vide' });
+  }
+
+  // order_index >= 0
+  if ('order_index' in body && body.order_index !== null) {
+    if (typeof body.order_index !== 'number' || !Number.isInteger(body.order_index) || body.order_index < 0) {
+      return res.status(400).json({ error: 'order_index doit être un entier >= 0' });
+    }
+  }
+
+  // stage_type valide
+  const VALID_STAGE_TYPES: StageType[] = ['group', 'bracket', 'swiss', 'round_robin', 'showmatch', 'other'];
+  if ('stage_type' in body && body.stage_type !== null) {
+    if (!VALID_STAGE_TYPES.includes(body.stage_type)) {
+      return res.status(400).json({
+        error: `stage_type invalide. Valeurs acceptées : ${VALID_STAGE_TYPES.join(', ')}`,
+      });
+    }
+  }
+
+  // Cohérence des dates : start_date < end_date
+  if ('start_date' in body && 'end_date' in body) {
+    if (body.start_date && body.end_date && new Date(body.start_date) >= new Date(body.end_date)) {
+      return res.status(400).json({ error: 'start_date doit être antérieure à end_date' });
+    }
+  }
+
   updatePayload.updated_at = new Date().toISOString();
 
   // récupérer l'état avant update pour log
@@ -139,6 +170,13 @@ async function handlePut(
 
   if (fetchErr || !before) {
     return res.status(404).json({ error: 'Stage not found' });
+  }
+
+  // Vérifier la cohérence des dates avec les valeurs existantes
+  const effectiveStart = 'start_date' in body ? body.start_date : before.start_date;
+  const effectiveEnd = 'end_date' in body ? body.end_date : before.end_date;
+  if (effectiveStart && effectiveEnd && new Date(effectiveStart) >= new Date(effectiveEnd)) {
+    return res.status(400).json({ error: 'start_date doit être antérieure à end_date' });
   }
 
   const { data, error } = await supabaseAdmin

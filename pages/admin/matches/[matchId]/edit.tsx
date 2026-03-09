@@ -6,64 +6,14 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Image from 'next/image';
 import { withStaffPage } from '@/utils/staff';
-
-type StaffShape = {
-  id: string;
-  role: string;
-  display_name: string | null;
-};
-
-type StaffProps = {
-  staff: StaffShape;
-};
-type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
-
-type StageType =
-  | 'group'
-  | 'bracket'
-  | 'swiss'
-  | 'round_robin'
-  | 'showmatch'
-  | 'other';
-
-type TeamMini = {
-  id: string;
-  name: string;
-  short_name: string | null;
-  logo_url: string | null;
-};
-
-type Match = {
-  id: string;
-  tournament_id: string;
-  stage_id: string | null;
-  round_number: number | null;
-  status: MatchStatus;
-  best_of: number | null;
-  scheduled_at: string | null;
-  started_at: string | null;
-  completed_at: string | null;
-  team1_id: string | null;
-  team2_id: string | null;
-  team1_score: number | null;
-  team2_score: number | null;
-  winner_team_id: string | null;
-  stream_url: string | null;
-  notes: string | null;
-  // éventuels champs supplémentaires ignorés par le form
-};
-
-type TournamentMini = {
-  id: string;
-  name: string;
-  slug: string | null;
-};
-
-type StageMini = {
-  id: string;
-  name: string;
-  stage_type: StageType | null;
-};
+import type {
+  StaffProps,
+  Match,
+  MatchStatus,
+  TournamentMini,
+  StageMini,
+  TeamMini,
+} from '@/types/admin';
 
 type ApiResponse = {
   match: Match;

@@ -137,6 +137,19 @@ async function handlePut(
       });
     }
 
+    if (!Number.isInteger(team1Score) || !Number.isInteger(team2Score) || team1Score < 0 || team2Score < 0) {
+      return res.status(400).json({
+        error: 'Les scores doivent être des entiers >= 0',
+      });
+    }
+
+    const VALID_MATCH_STATUSES = ['pending', 'ongoing', 'finished', 'cancelled'];
+    if (status !== undefined && !VALID_MATCH_STATUSES.includes(status)) {
+      return res.status(400).json({
+        error: `Statut invalide. Valeurs acceptées : ${VALID_MATCH_STATUSES.join(', ')}`,
+      });
+    }
+
     const result = await applyMatchScore({
       matchId,
       team1Score,
@@ -188,6 +201,29 @@ async function handlePut(
       error:
         "No valid meta fields in body. Use mode='score' for score updates.",
     });
+  }
+
+  // Validation des champs meta
+  const VALID_MATCH_STATUSES_META = ['pending', 'ongoing', 'finished', 'cancelled'];
+  if ('status' in updatePayload && !VALID_MATCH_STATUSES_META.includes(updatePayload.status)) {
+    return res.status(400).json({
+      error: `Statut invalide. Valeurs acceptées : ${VALID_MATCH_STATUSES_META.join(', ')}`,
+    });
+  }
+
+  const VALID_BRACKET_SIDES = ['wb', 'lb', 'final', 'none'];
+  if ('bracket_side' in updatePayload && updatePayload.bracket_side !== null && !VALID_BRACKET_SIDES.includes(updatePayload.bracket_side)) {
+    return res.status(400).json({
+      error: `bracket_side invalide. Valeurs acceptées : ${VALID_BRACKET_SIDES.join(', ')}`,
+    });
+  }
+
+  if ('next_match_win_slot' in updatePayload && updatePayload.next_match_win_slot !== null && ![1, 2].includes(updatePayload.next_match_win_slot)) {
+    return res.status(400).json({ error: 'next_match_win_slot doit être 1 ou 2' });
+  }
+
+  if ('next_match_lose_slot' in updatePayload && updatePayload.next_match_lose_slot !== null && ![1, 2].includes(updatePayload.next_match_lose_slot)) {
+    return res.status(400).json({ error: 'next_match_lose_slot doit être 1 ou 2' });
   }
 
   if (!supabaseAdmin) {

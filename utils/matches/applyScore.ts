@@ -41,6 +41,20 @@ export async function applyMatchScore(
     propagateBracket = true,
   } = input;
 
+  // 0) Validation des scores
+  if (
+    typeof team1Score !== 'number' ||
+    typeof team2Score !== 'number' ||
+    !Number.isInteger(team1Score) ||
+    !Number.isInteger(team2Score) ||
+    team1Score < 0 ||
+    team2Score < 0
+  ) {
+    throw new Error(
+      'Scores invalides : team1Score et team2Score doivent être des entiers >= 0'
+    );
+  }
+
   // 1) Récupérer le match actuel
   const { data: match, error: fetchErr } = await supabaseAdmin
     .from('matches')
@@ -115,12 +129,21 @@ export async function applyMatchScore(
     updatePayload.completed_at = newCompletedAt;
   }
 
-  // 6) Reset propagation avant de changer les équipes
+  // 6) Sauvegarder l'état précédent pour rollback éventuel
+  const previousState = {
+    team1_score: match.team1_score,
+    team2_score: match.team2_score,
+    winner_team_id: match.winner_team_id,
+    status: match.status,
+    completed_at: match.completed_at,
+  };
+
+  // 7) Reset propagation avant de changer les équipes
   if (propagateBracket) {
     await resetPropagationForMatch(matchId);
   }
 
-  // 7) Update du match
+  // 8) Update du match
   const { data: updated, error: updateErr } = await supabaseAdmin
     .from('matches')
     .update(updatePayload)
@@ -133,13 +156,30 @@ export async function applyMatchScore(
     throw new Error('Erreur lors de la mise à jour du match');
   }
 
-  // 8) Propagation du vainqueur/perdant dans le bracket
+  // 9) Propagation du vainqueur/perdant dans le bracket
+  //    En cas d'échec, on rollback le match à son état précédent
+  //    pour éviter une incohérence bracket (match finished mais non propagé).
   if (propagateBracket && newStatus === 'finished') {
     try {
       await propagateBracketForMatch(matchId);
     } catch (e) {
-      console.error('applyMatchScore: propagateBracketForMatch error', e);
-      // on n'échoue pas forcément l'API pour ça, mais on log
+      console.error('applyMatchScore: propagateBracketForMatch error — rollback match', e);
+
+      // Rollback : restaurer l'état précédent du match
+      const { error: rollbackErr } = await supabaseAdmin
+        .from('matches')
+        .update(previousState)
+        .eq('id', matchId);
+
+      if (rollbackErr) {
+        console.error('applyMatchScore: rollback failed!', rollbackErr);
+      }
+
+      throw new Error(
+        `Propagation bracket échouée, match restauré à son état précédent. Détail : ${
+          e instanceof Error ? e.message : String(e)
+        }`
+      );
     }
   }
 

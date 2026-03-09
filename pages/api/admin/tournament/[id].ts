@@ -119,11 +119,39 @@ async function handlePatch(
       banner_url,
     } = req.body;
 
-    // Valider le statut si fourni
-    if (status !== undefined) {
-      if (!VALID_STATUSES.includes(status)) {
+    // --- Validation des champs ---
+
+    // Statut
+    if (status !== undefined && !VALID_STATUSES.includes(status)) {
+      return res.status(400).json({
+        error: `Statut invalide. Valeurs acceptées : ${VALID_STATUSES.join(', ')}`,
+      });
+    }
+
+    // Nom non vide
+    if (name !== undefined && (typeof name !== 'string' || name.trim().length === 0)) {
+      return res.status(400).json({ error: 'Le nom du tournoi ne peut pas être vide' });
+    }
+
+    // max_teams doit être un entier > 0
+    if (max_teams !== undefined && max_teams !== null) {
+      if (typeof max_teams !== 'number' || !Number.isInteger(max_teams) || max_teams < 1) {
+        return res.status(400).json({ error: 'max_teams doit être un entier >= 1' });
+      }
+    }
+
+    // min_players doit être un entier > 0
+    if (min_players !== undefined && min_players !== null) {
+      if (typeof min_players !== 'number' || !Number.isInteger(min_players) || min_players < 1) {
+        return res.status(400).json({ error: 'min_players doit être un entier >= 1' });
+      }
+    }
+
+    // Cohérence des dates : start_date < end_date
+    if (start_date !== undefined && end_date !== undefined) {
+      if (start_date && end_date && new Date(start_date) >= new Date(end_date)) {
         return res.status(400).json({
-          error: `Statut invalide. Valeurs acceptées : ${VALID_STATUSES.join(', ')}`,
+          error: 'start_date doit être antérieure à end_date',
         });
       }
     }
@@ -137,6 +165,16 @@ async function handlePatch(
 
     if (fetchErr || !before) {
       return res.status(404).json({ error: 'Tournament not found' });
+    }
+
+    // Vérifier la cohérence des dates avec les valeurs existantes
+    // (quand une seule date est modifiée)
+    const effectiveStart = start_date !== undefined ? start_date : before.start_date;
+    const effectiveEnd = end_date !== undefined ? end_date : before.end_date;
+    if (effectiveStart && effectiveEnd && new Date(effectiveStart) >= new Date(effectiveEnd)) {
+      return res.status(400).json({
+        error: 'start_date doit être antérieure à end_date',
+      });
     }
 
     // Construire l'objet de mise à jour

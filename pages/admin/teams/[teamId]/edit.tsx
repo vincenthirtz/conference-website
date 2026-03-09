@@ -4,40 +4,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Image from 'next/image';
 import { withStaffPage } from '@/utils/staff';
-
-type StaffShape = {
-  id: string;
-  role: string;
-  display_name: string | null;
-};
-
-type StaffProps = {
-  staff: StaffShape;
-};
-
-type TeamRow = {
-  id: string;
-  name: string;
-  short_name?: string | null;
-  logo_url?: string | null;
-  banner_url?: string | null;
-  country?: string | null;
-  description?: string | null;
-  twitter?: string | null;
-  discord?: string | null;
-  website?: string | null;
-  is_active?: boolean;
-  captain_id?: string | null;
-};
-
-type TeamMemberRow = {
-  id: string;
-  team_id: string;
-  user_id: string;
-  role: string;
-  battle_tag?: string | null;
-  created_at: string;
-};
+import type { StaffProps, TeamRow, TeamMemberRow } from '@/types/admin';
 
 type TournamentRow = {
   id: string;

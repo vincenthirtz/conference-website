@@ -3,33 +3,12 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import { withStaffPage } from '@/utils/staff';
-
-type Tournament = {
-  id: string;
-  name: string;
-  slug: string | null;
-  game: string | null;
-  status: string | null;
-  start_date: string | null;
-  end_date: string | null;
-  format_type: string | null;
-  is_public: boolean;
-  is_featured: boolean;
-  logo_url: string | null;
-  created_at: string;
-};
+import { useUrlFilters } from '@/utils/useUrlFilters';
+import type { StaffProps, Tournament } from '@/types/admin';
 
 type ApiResponse = {
   tournaments: Tournament[];
   total: number | null;
-};
-
-type Props = {
-  staff: {
-    id: string;
-    role: string;
-    display_name: string;
-  };
 };
 
 function statusLabel(status: string | null) {
@@ -96,25 +75,30 @@ function formatDate(d: string | null) {
   }
 }
 
-function AdminTournamentsPage({ staff }: Props) {
+const T_FILTER_KEYS = ['search', 'status', 'dateFrom', 'dateTo', 'offset'] as const;
+const LIMIT = 20;
+
+function AdminTournamentsPage({ staff }: StaffProps) {
+  const { filters, setFilter, setFilters } = useUrlFilters(T_FILTER_KEYS);
+
+  const search = filters.search ?? '';
+  const status = filters.status ?? null;
+  const dateFrom = filters.dateFrom ?? '';
+  const dateTo = filters.dateTo ?? '';
+  const offset = Number(filters.offset) || 0;
+
   const [loading, setLoading] = useState(false);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [total, setTotal] = useState<number | null>(null);
 
-  // filters
-  const [search, setSearch] = useState('');
-  const [status, setStatus] = useState<string | null>(null);
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-
-  const [limit] = useState(20);
-  const [offset, setOffset] = useState(0);
+  // Local search input (synced to URL on submit)
+  const [searchInput, setSearchInput] = useState(search);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
 
     const params = new URLSearchParams();
-    params.set('limit', String(limit));
+    params.set('limit', String(LIMIT));
     params.set('offset', String(offset));
     params.set('includeTotal', '1');
 
@@ -129,7 +113,7 @@ function AdminTournamentsPage({ staff }: Props) {
     setTournaments(json.tournaments || []);
     setTotal(json.total);
     setLoading(false);
-  }, [limit, offset, search, status, dateFrom, dateTo]);
+  }, [offset, search, status, dateFrom, dateTo]);
 
   useEffect(() => {
     fetchData();
@@ -137,8 +121,7 @@ function AdminTournamentsPage({ staff }: Props) {
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setOffset(0);
-    fetchData();
+    setFilters({ search: searchInput.trim() || null, offset: null });
   }
 
   return (
@@ -211,8 +194,8 @@ function AdminTournamentsPage({ staff }: Props) {
                     type="text"
                     placeholder="Nom ou slug..."
                     className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
                   />
                 </div>
               </div>
@@ -224,7 +207,7 @@ function AdminTournamentsPage({ staff }: Props) {
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={status || ''}
-                  onChange={(e) => setStatus(e.target.value || null)}
+                  onChange={(e) => setFilters({ status: e.target.value || null, offset: null })}
                 >
                   <option value="">Tous les statuts</option>
                   <option value="draft">Brouillon</option>
@@ -244,8 +227,7 @@ function AdminTournamentsPage({ staff }: Props) {
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={dateFrom}
                   onChange={(e) => {
-                    setDateFrom(e.target.value);
-                    setOffset(0);
+                    setFilters({ dateFrom: e.target.value || null, offset: null });
                   }}
                 />
               </div>
@@ -259,8 +241,7 @@ function AdminTournamentsPage({ staff }: Props) {
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={dateTo}
                   onChange={(e) => {
-                    setDateTo(e.target.value);
-                    setOffset(0);
+                    setFilters({ dateTo: e.target.value || null, offset: null });
                   }}
                 />
               </div>
@@ -410,7 +391,7 @@ function AdminTournamentsPage({ staff }: Props) {
             <button
               type="button"
               disabled={offset === 0}
-              onClick={() => setOffset(Math.max(0, offset - limit))}
+              onClick={() => setFilter('offset', String(Math.max(0, offset - LIMIT)) || null)}
               className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <svg
@@ -436,8 +417,8 @@ function AdminTournamentsPage({ staff }: Props) {
 
             <button
               type="button"
-              disabled={total !== null && offset + limit >= total}
-              onClick={() => setOffset(offset + limit)}
+              disabled={total !== null && offset + LIMIT >= total}
+              onClick={() => setFilter('offset', String(offset + LIMIT))}
               className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               Suivant

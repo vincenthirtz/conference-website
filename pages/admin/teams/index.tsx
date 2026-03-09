@@ -1,30 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import { withStaffPage } from '@/utils/staff';
-
-type StaffShape = {
-  id: string;
-  role: string;
-  display_name: string | null;
-};
-
-type StaffProps = {
-  staff: StaffShape;
-};
-
-type TeamRow = {
-  id: string;
-  name: string;
-  slug: string | null;
-  short_name: string | null;
-  country: string | null;
-  logo_url: string | null;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string | null;
-};
+import { useUrlFilters } from '@/utils/useUrlFilters';
+import type { StaffProps, TeamRow } from '@/types/admin';
 
 type TeamsApiResponse = {
   teams: TeamRow[];
@@ -46,57 +26,37 @@ function formatDate(d: string | null) {
 
 export const getServerSideProps = withStaffPage('manager');
 
+const FILTER_KEYS = ['search', 'isActive', 'tournamentId', 'offset'] as const;
+const LIMIT = 25;
+
 function AdminTeamsListPage({ staff }: StaffProps) {
+  const { filters, setFilter, setFilters } = useUrlFilters(FILTER_KEYS);
+
+  const search = filters.search ?? '';
+  const activeFilter = filters.isActive ?? '';
+  const tournamentFilter = filters.tournamentId ?? '';
+  const offset = Number(filters.offset) || 0;
+
   const [teams, setTeams] = useState<TeamRow[]>([]);
   const [total, setTotal] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TeamRow | null>(null);
   const [deleting, setDeleting] = useState(false);
-
-  // filters
-  const [search, setSearch] = useState('');
-  const [activeFilter, setActiveFilter] = useState('');
-  const [tournamentFilter, setTournamentFilter] = useState('');
   const [tournamentOptions, setTournamentOptions] = useState<
     { id: string; name: string }[]
   >([]);
 
-  const [limit] = useState(25);
-  const [offset, setOffset] = useState(0);
+  // Local search input (synced to URL on submit)
+  const [searchInput, setSearchInput] = useState(search);
 
-  useEffect(() => {
-    fetchTeams();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [offset, activeFilter, tournamentFilter]);
-
-  useEffect(() => {
-    async function loadTournaments() {
-      try {
-        const res = await fetch('/api/admin/tournaments?limit=200');
-        if (res.ok) {
-          const json = await res.json();
-          setTournamentOptions(
-            (json.tournaments || []).map((t: any) => ({
-              id: t.id,
-              name: t.name,
-            }))
-          );
-        }
-      } catch {
-        // ignore
-      }
-    }
-    loadTournaments();
-  }, []);
-
-  async function fetchTeams() {
+  const fetchTeams = useCallback(async () => {
     setLoading(true);
     setErrorMsg(null);
 
     try {
       const params = new URLSearchParams();
-      params.set('limit', String(limit));
+      params.set('limit', String(LIMIT));
       params.set('offset', String(offset));
       params.set('includeTotal', '1');
       if (search.trim()) params.set('search', search.trim());
@@ -117,7 +77,31 @@ function AdminTeamsListPage({ staff }: StaffProps) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [offset, search, activeFilter, tournamentFilter]);
+
+  useEffect(() => {
+    fetchTeams();
+  }, [fetchTeams]);
+
+  useEffect(() => {
+    async function loadTournaments() {
+      try {
+        const res = await fetch('/api/admin/tournaments?limit=200');
+        if (res.ok) {
+          const json = await res.json();
+          setTournamentOptions(
+            (json.tournaments || []).map((t: any) => ({
+              id: t.id,
+              name: t.name,
+            }))
+          );
+        }
+      } catch {
+        // ignore
+      }
+    }
+    loadTournaments();
+  }, []);
 
   async function handleDelete(team: TeamRow) {
     if (!team?.id) return;
@@ -142,8 +126,7 @@ function AdminTeamsListPage({ staff }: StaffProps) {
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setOffset(0);
-    fetchTeams();
+    setFilters({ search: searchInput.trim() || null, offset: null });
   }
 
   return (
@@ -236,8 +219,8 @@ function AdminTeamsListPage({ staff }: StaffProps) {
                     type="text"
                     placeholder="Nom ou slug..."
                     className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
                   />
                 </div>
               </div>
@@ -250,8 +233,7 @@ function AdminTeamsListPage({ staff }: StaffProps) {
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={activeFilter}
                   onChange={(e) => {
-                    setActiveFilter(e.target.value);
-                    setOffset(0);
+                    setFilters({ isActive: e.target.value || null, offset: null });
                   }}
                 >
                   <option value="">Toutes</option>
@@ -268,8 +250,7 @@ function AdminTeamsListPage({ staff }: StaffProps) {
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={tournamentFilter}
                   onChange={(e) => {
-                    setTournamentFilter(e.target.value);
-                    setOffset(0);
+                    setFilters({ tournamentId: e.target.value || null, offset: null });
                   }}
                 >
                   <option value="">Tous les tournois</option>
@@ -452,7 +433,7 @@ function AdminTeamsListPage({ staff }: StaffProps) {
             <button
               type="button"
               disabled={offset === 0 || loading}
-              onClick={() => setOffset(Math.max(0, offset - limit))}
+              onClick={() => setFilter('offset', String(Math.max(0, offset - LIMIT)) || null)}
               className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <svg
@@ -478,8 +459,8 @@ function AdminTeamsListPage({ staff }: StaffProps) {
 
             <button
               type="button"
-              disabled={loading || (total !== null && offset + limit >= total)}
-              onClick={() => setOffset(offset + limit)}
+              disabled={loading || (total !== null && offset + LIMIT >= total)}
+              onClick={() => setFilter('offset', String(offset + LIMIT))}
               className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               Suivant

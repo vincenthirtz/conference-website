@@ -155,6 +155,28 @@ async function handlePut(
     });
   }
 
+  // --- Validation des champs ---
+
+  // Nom non vide
+  if ('name' in body && (typeof body.name !== 'string' || body.name.trim().length === 0)) {
+    return res.status(400).json({ error: "Le nom de l'équipe ne peut pas être vide" });
+  }
+
+  // short_name non vide si fourni
+  if ('short_name' in body && body.short_name !== null && (typeof body.short_name !== 'string' || body.short_name.trim().length === 0)) {
+    return res.status(400).json({ error: 'short_name ne peut pas être une chaîne vide' });
+  }
+
+  // URLs basiques (logo_url, banner_url, website)
+  const urlFields = ['logo_url', 'banner_url', 'website'] as const;
+  for (const field of urlFields) {
+    if (field in body && body[field] !== null && body[field] !== '') {
+      if (typeof body[field] !== 'string') {
+        return res.status(400).json({ error: `${field} doit être une chaîne de caractères` });
+      }
+    }
+  }
+
   updatePayload.updated_at = new Date().toISOString();
 
   const { data: before, error: fetchErr } = await supabaseAdmin

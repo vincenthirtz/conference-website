@@ -5,51 +5,10 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-
-type StaffShape = {
-  id: string;
-  role: string;
-  display_name: string | null;
-};
-
-type StaffProps = {
-  staff: StaffShape;
-};
-
-type StageType =
-  | 'group'
-  | 'bracket'
-  | 'swiss'
-  | 'round_robin'
-  | 'showmatch'
-  | 'other';
-
-type Stage = {
-  id: string;
-  tournament_id: string;
-  name: string;
-  slug: string | null;
-  stage_type: StageType | null;
-  order_index: number | null;
-  is_active: boolean;
-  is_public: boolean;
-  start_date: string | null;
-  end_date: string | null;
-  settings: any | null;
-  created_at: string;
-  updated_at: string | null;
-};
+import type { StaffProps, Stage, StageType, Tournament } from '@/types/admin';
 
 type StageApiResponse = {
   stage: Stage;
-};
-
-type Tournament = {
-  id: string;
-  name: string;
-  slug: string | null;
-  game: string | null;
-  logo_url: string | null;
 };
 
 type TournamentApiResponse = {

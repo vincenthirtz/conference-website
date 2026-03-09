@@ -5,34 +5,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
-
-type StaffShape = {
-  id: string;
-  role: string;
-  display_name: string | null;
-};
-
-type StaffProps = {
-  staff: StaffShape;
-};
-type Tournament = {
-  id: string;
-  name: string;
-  slug: string | null;
-  game: string | null;
-  status: string | null;
-  start_date: string | null;
-  end_date: string | null;
-  format_type: string | null;
-  max_teams: number | null;
-  min_players: number | null;
-  is_public: boolean;
-  is_featured: boolean;
-  logo_url: string | null;
-  banner_url: string | null;
-  created_at: string;
-  updated_at: string | null;
-};
+import type { StaffProps, Tournament } from '@/types/admin';
 
 type ApiResponse = {
   tournament: Tournament;

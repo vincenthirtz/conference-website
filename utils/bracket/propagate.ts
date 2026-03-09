@@ -76,6 +76,19 @@ export async function propagateBracketForMatch(
   let updatedWinMatchId: string | null | undefined = null;
   let updatedLoseMatchId: string | null | undefined = null;
 
+  // Vérifier la cohérence des liens bracket :
+  // si next_match_win_id est défini, next_match_win_slot doit l'être aussi (et inversement)
+  if (match.next_match_win_id && !match.next_match_win_slot) {
+    throw new Error(
+      `Match ${matchId} : next_match_win_id défini (${match.next_match_win_id}) mais next_match_win_slot est null. Corrigez la structure du bracket.`
+    );
+  }
+  if (match.next_match_lose_id && !match.next_match_lose_slot) {
+    throw new Error(
+      `Match ${matchId} : next_match_lose_id défini (${match.next_match_lose_id}) mais next_match_lose_slot est null. Corrigez la structure du bracket.`
+    );
+  }
+
   // Propage le vainqueur
   if (match.next_match_win_id && match.next_match_win_slot) {
     updatedWinMatchId = await applyTeamToNextMatchSlot(
@@ -84,12 +97,6 @@ export async function propagateBracketForMatch(
       match.next_match_win_slot,
       winnerTeamId
     );
-
-    if (chain && updatedWinMatchId && winnerTeamId) {
-      // On chaîne seulement si le match suivant a déjà un résultat
-      // (ou si tu veux cascade complète).
-      // Ici : on laisse simple, on ne recall pas récursivement par défaut.
-    }
   }
 
   // Propage le perdant (loser bracket / match de classement)
@@ -100,10 +107,6 @@ export async function propagateBracketForMatch(
       match.next_match_lose_slot,
       loserTeamId
     );
-
-    if (chain && updatedLoseMatchId && loserTeamId) {
-      // Idem : propagation en profondeur possible si besoin.
-    }
   }
 
   return {
@@ -235,6 +238,13 @@ async function applyTeamToNextMatchSlot(
 ): Promise<string | null> {
   if (!nextMatchId) return null;
 
+  // Valider le slot
+  if (slot !== 1 && slot !== 2) {
+    throw new Error(
+      `Slot invalide (${slot}) pour le match ${nextMatchId}. Valeurs acceptées : 1, 2.`
+    );
+  }
+
   // On check que le match suivant appartient bien au même tournoi, par sécurité.
   const field = slot === 1 ? 'team1_id' : 'team2_id';
 
@@ -247,15 +257,18 @@ async function applyTeamToNextMatchSlot(
     .maybeSingle();
 
   if (error) {
-    console.error('applyTeamToNextMatchSlot error:', error, {
-      nextMatchId,
-      slot,
-      teamId,
-    });
-    return null;
+    throw new Error(
+      `Échec de propagation vers match ${nextMatchId} (slot ${slot}) : ${error.message}`
+    );
   }
 
-  return updated?.id ?? null;
+  if (!updated) {
+    throw new Error(
+      `Match cible ${nextMatchId} introuvable dans le tournoi ${tournamentId}. Lien bracket invalide.`
+    );
+  }
+
+  return updated.id;
 }
 
 /* -----------------------------------------------------------

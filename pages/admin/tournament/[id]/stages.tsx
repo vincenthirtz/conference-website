@@ -6,40 +6,15 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-
-type StaffShape = {
-  id: string;
-  role: string;
-  display_name: string | null;
-};
-
-type StaffProps = { staff: StaffShape };
-
-type StageType =
-  | 'group'
-  | 'bracket'
-  | 'swiss'
-  | 'round_robin'
-  | 'showmatch'
-  | 'other';
-
-type StageSummary = {
-  id: string;
-  name: string;
-  stage_type: StageType | null;
-  order_index: number | null;
-  is_active?: boolean | null;
-  is_public?: boolean | null;
-  start_date?: string | null;
-  end_date?: string | null;
-};
+import type {
+  StaffProps,
+  StageType,
+  StageSummary,
+  TournamentMini,
+} from '@/types/admin';
 
 type MatchesApiResponse = {
-  tournament: {
-    id: string;
-    name: string;
-    slug: string | null;
-  } | null;
+  tournament: TournamentMini | null;
   stages: StageSummary[];
 };
 
