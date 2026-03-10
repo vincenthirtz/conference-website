@@ -141,8 +141,9 @@ export default function AdminNewsEdit({ staff }: Props) {
         {form && (
           <form
             onSubmit={onSubmit}
-            className="bg-neutral-800 border border-neutral-700 rounded-xl p-6 space-y-4 max-w-5xl"
+            className="bg-neutral-800 border border-neutral-700 rounded-xl p-6 max-w-5xl"
           >
+            <fieldset disabled={saving} className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <Field
                 label="Titre"
@@ -236,11 +237,12 @@ export default function AdminNewsEdit({ staff }: Props) {
               </button>
               <Link
                 href="/admin/news"
-                className="px-4 py-2 rounded-lg border border-white/15 hover:border-white/30"
+                className={`px-4 py-2 rounded-lg border border-white/15 hover:border-white/30${saving ? ' pointer-events-none opacity-50' : ''}`}
               >
                 Retour
               </Link>
             </div>
+            </fieldset>
           </form>
         )}
       </div>

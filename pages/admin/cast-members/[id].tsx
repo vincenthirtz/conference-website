@@ -180,6 +180,7 @@ function AdminCastMemberEditPage({ staff }: Props) {
             </div>
           ) : (
             <form onSubmit={handleSubmit}>
+              <fieldset disabled={saving} className="contents">
               <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-6 max-w-2xl">
                 {error && (
                   <div className="rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-start gap-3">
@@ -370,7 +371,7 @@ function AdminCastMemberEditPage({ staff }: Props) {
                   <button
                     type="button"
                     onClick={() => router.push('/admin/cast-members')}
-                    className="px-5 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+                    className={`px-5 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors${saving ? ' pointer-events-none opacity-50' : ''}`}
                   >
                     Annuler
                   </button>
@@ -405,6 +406,7 @@ function AdminCastMemberEditPage({ staff }: Props) {
                   </button>
                 </div>
               </section>
+              </fieldset>
             </form>
           )}
         </div>

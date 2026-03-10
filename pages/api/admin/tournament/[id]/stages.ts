@@ -1,7 +1,8 @@
 // pages/api/admin/tournament/[id]/stages.ts
 // Admin: gestion des phases (stages) d'un tournoi
-// - GET  : liste des phases du tournoi
-// - POST : créer une nouvelle phase
+// - GET   : liste des phases du tournoi
+// - POST  : créer une nouvelle phase
+// - PATCH : réordonner les phases (order_index)
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
@@ -57,6 +58,8 @@ async function handler(
         return await handleGet(tournamentId, res);
       case 'POST':
         return await handlePost(tournamentId, req, res, ctx);
+      case 'PATCH':
+        return await handlePatch(tournamentId, req, res, ctx);
       default:
         return res.status(405).json({ error: 'Method not allowed' });
     }
@@ -235,4 +238,85 @@ async function handlePost(
   return res.status(201).json({
     stage: data as Stage,
   });
+}
+
+async function handlePatch(
+  tournamentId: string,
+  req: NextApiRequest,
+  res: NextApiResponse<ApiResponse>,
+  ctx: any
+) {
+  if (!supabaseAdmin) {
+    return res.status(500).json({ error: 'Database service unavailable (missing service role).' });
+  }
+
+  const { stages } = req.body || {};
+
+  if (!Array.isArray(stages) || stages.length === 0) {
+    return res.status(400).json({ error: 'stages must be a non-empty array of { id, order_index }' });
+  }
+
+  // Validate each entry
+  for (const entry of stages) {
+    if (!entry.id || typeof entry.id !== 'string') {
+      return res.status(400).json({ error: 'Each stage entry must have a valid id' });
+    }
+    if (typeof entry.order_index !== 'number' || !Number.isInteger(entry.order_index) || entry.order_index < 0) {
+      return res.status(400).json({ error: 'Each stage entry must have an integer order_index >= 0' });
+    }
+  }
+
+  // Verify the tournament exists
+  const { data: tournament, error: tournamentError } = await supabaseAdmin
+    .from('tournaments')
+    .select('id, name')
+    .eq('id', tournamentId)
+    .maybeSingle();
+
+  if (tournamentError || !tournament) {
+    return res.status(404).json({ error: 'Tournament not found' });
+  }
+
+  // Update each stage's order_index
+  const errors: string[] = [];
+  for (const entry of stages) {
+    const { error } = await supabaseAdmin
+      .from('tournament_stages')
+      .update({ order_index: entry.order_index })
+      .eq('id', entry.id)
+      .eq('tournament_id', tournamentId);
+
+    if (error) {
+      errors.push(`Failed to update stage ${entry.id}: ${error.message}`);
+    }
+  }
+
+  if (errors.length > 0) {
+    console.error('admin PATCH tournament stages errors:', errors);
+    return res.status(500).json({ error: 'Some stages failed to update' });
+  }
+
+  // Log staff action
+  if (ctx?.staff?.id) {
+    try {
+      await logStaffAction({
+        staff_id: ctx.staff.id,
+        action: 'update_stage',
+        entity_type: 'tournament',
+        entity_id: tournamentId,
+        tournament_id: tournamentId,
+        payload: {
+          stages: stages.map((s: { id: string; order_index: number }) => ({
+            id: s.id,
+            order_index: s.order_index,
+          })),
+        },
+      });
+    } catch (e) {
+      console.error('logStaffAction error:', e);
+    }
+  }
+
+  // Return updated list
+  return await handleGet(tournamentId, res);
 }

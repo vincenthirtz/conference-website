@@ -1,11 +1,12 @@
 // pages/admin/matches/[matchId]/edit.tsx
 
-import { useEffect, useState } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Image from 'next/image';
 import { withStaffPage } from '@/utils/staff';
+import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import type {
   StaffProps,
   Match,
@@ -14,6 +15,13 @@ import type {
   StageMini,
   TeamMini,
 } from '@/types/admin';
+
+const STATUS_ORDER: Record<string, number> = {
+  pending: 0,
+  ongoing: 1,
+  finished: 2,
+  cancelled: 3,
+};
 
 type ApiResponse = {
   match: Match;
@@ -95,6 +103,16 @@ function AdminMatchEditPage({ staff }: StaffProps) {
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Status regression confirmation
+  const [showStatusConfirm, setShowStatusConfirm] = useState(false);
+  const [pendingSubmit, setPendingSubmit] = useState<(() => void) | null>(null);
+
+  // Forfeit workflow
+  const [showForfeitDialog, setShowForfeitDialog] = useState(false);
+  const [forfeitTeamId, setForfeitTeamId] = useState<string | null>(null);
+  const [forfeitSaving, setForfeitSaving] = useState(false);
+  const [forfeitError, setForfeitError] = useState<string | null>(null);
 
   // Games (maps) state
   type GameInput = {
@@ -202,8 +220,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
     }
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  const doSubmit = useCallback(async () => {
     if (!matchId || !match) return;
 
     setSaving(true);
@@ -280,6 +297,69 @@ function AdminMatchEditPage({ staff }: StaffProps) {
       setErrorMsg(err?.message ?? 'Erreur inattendue lors de la mise à jour');
     } finally {
       setSaving(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchId, match, form, games, gamesLoaded]);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!matchId || !match) return;
+
+    // Check for status regression
+    const currentOrder = STATUS_ORDER[match.status] ?? -1;
+    const newOrder = STATUS_ORDER[form.status] ?? -1;
+
+    if (newOrder < currentOrder) {
+      setPendingSubmit(() => doSubmit);
+      setShowStatusConfirm(true);
+      return;
+    }
+
+    doSubmit();
+  }
+
+  async function handleForfeitConfirm() {
+    if (!matchId || !match || !forfeitTeamId) return;
+
+    setForfeitSaving(true);
+    setForfeitError(null);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    try {
+      const bestOf = match.best_of ?? 1;
+      const winsNeeded = Math.ceil(bestOf / 2);
+
+      const isForfeitTeam1 = forfeitTeamId === match.team1_id;
+      const team1Score = isForfeitTeam1 ? 0 : winsNeeded;
+      const team2Score = isForfeitTeam1 ? winsNeeded : 0;
+
+      const res = await fetch(`/api/admin/matches/${matchId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'score',
+          team1Score,
+          team2Score,
+          status: 'finished',
+          propagate: true,
+          forfeit_team_id: forfeitTeamId,
+        }),
+      });
+
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || 'Erreur lors du forfait');
+      }
+
+      setShowForfeitDialog(false);
+      setForfeitTeamId(null);
+      await fetchMatch();
+      setSuccessMsg('Forfait enregistré avec succès.');
+    } catch (err: any) {
+      setForfeitError(err?.message ?? 'Erreur inattendue lors du forfait');
+    } finally {
+      setForfeitSaving(false);
     }
   }
 
@@ -501,6 +581,41 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                     propagera dans le bracket automatiquement.
                   </p>
                 </section>
+
+                {/* Forfait / No-show */}
+                {match.team1_id && match.team2_id && match.status !== 'finished' && (
+                  <section className="space-y-4">
+                    <h2 className="font-semibold text-lg">Forfait / No-show</h2>
+                    <p className="text-xs text-neutral-500">
+                      Déclarer un forfait termine le match et attribue la victoire
+                      à l&apos;équipe adverse.
+                    </p>
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForfeitTeamId(match.team1_id);
+                          setForfeitError(null);
+                          setShowForfeitDialog(true);
+                        }}
+                        className="flex-1 px-3 py-2 rounded bg-red-900/40 border border-red-700/60 text-red-300 hover:bg-red-900/60 text-sm font-medium transition-colors"
+                      >
+                        Forfait {team1?.name || 'Équipe 1'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForfeitTeamId(match.team2_id);
+                          setForfeitError(null);
+                          setShowForfeitDialog(true);
+                        }}
+                        className="flex-1 px-3 py-2 rounded bg-red-900/40 border border-red-700/60 text-red-300 hover:bg-red-900/60 text-sm font-medium transition-colors"
+                      >
+                        Forfait {team2?.name || 'Équipe 2'}
+                      </button>
+                    </div>
+                  </section>
+                )}
 
                 {/* Games (maps) */}
                 <section className="space-y-4">
@@ -796,6 +911,69 @@ function AdminMatchEditPage({ staff }: StaffProps) {
           </div>
         )}
       </div>
+
+      {/* Status regression confirmation dialog */}
+      {showStatusConfirm && (
+        <ConfirmDialog
+          title="Régression de statut"
+          subtitle={`Vous allez passer le statut de « ${statusLabel(match!.status)} » à « ${statusLabel(form.status)} ».`}
+          variant="warning"
+          loading={saving}
+          confirmLabel="Confirmer le changement"
+          confirmingLabel="Enregistrement..."
+          onCancel={() => {
+            setShowStatusConfirm(false);
+            setPendingSubmit(null);
+          }}
+          onConfirm={() => {
+            setShowStatusConfirm(false);
+            if (pendingSubmit) {
+              pendingSubmit();
+              setPendingSubmit(null);
+            }
+          }}
+        >
+          <p className="text-sm text-neutral-300">
+            Cette action ramène le match à un état antérieur. Les données de
+            score et de propagation pourraient être impactées. Voulez-vous
+            continuer ?
+          </p>
+        </ConfirmDialog>
+      )}
+
+      {/* Forfeit confirmation dialog */}
+      {showForfeitDialog && forfeitTeamId && (
+        <ConfirmDialog
+          title="Confirmer le forfait"
+          subtitle={`${
+            forfeitTeamId === match!.team1_id
+              ? team1?.name || 'Équipe 1'
+              : team2?.name || 'Équipe 2'
+          } sera déclaré forfait.`}
+          variant="danger"
+          loading={forfeitSaving}
+          errorMsg={forfeitError}
+          confirmLabel="Déclarer forfait"
+          confirmingLabel="Enregistrement..."
+          onCancel={() => {
+            setShowForfeitDialog(false);
+            setForfeitTeamId(null);
+            setForfeitError(null);
+          }}
+          onConfirm={handleForfeitConfirm}
+        >
+          <p className="text-sm text-neutral-300">
+            La victoire sera attribuée à{' '}
+            <strong>
+              {forfeitTeamId === match!.team1_id
+                ? team2?.name || 'Équipe 2'
+                : team1?.name || 'Équipe 1'}
+            </strong>{' '}
+            et le match sera marqué comme terminé. Cette action sera propagée
+            dans le bracket.
+          </p>
+        </ConfirmDialog>
+      )}
     </>
   );
 }

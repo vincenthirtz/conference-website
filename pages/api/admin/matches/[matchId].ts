@@ -152,6 +152,7 @@ async function handlePut(
       winnerTeamId,
       status,
       propagate = true,
+      forfeit_team_id,
     } = req.body;
 
     if (typeof team1Score !== 'number' || typeof team2Score !== 'number') {
@@ -171,6 +172,14 @@ async function handlePut(
       return res.status(400).json({
         error: `Invalid status. Allowed values: ${VALID_MATCH_STATUSES.join(', ')}`,
       });
+    }
+
+    // If forfeit, update the notes field to record which team forfeited
+    if (typeof forfeit_team_id === 'string' && forfeit_team_id) {
+      await supabaseAdmin
+        .from('matches')
+        .update({ notes: `[FORFAIT] team_id=${forfeit_team_id}` })
+        .eq('id', matchId);
     }
 
     const result = await applyMatchScore({

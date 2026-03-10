@@ -46,6 +46,9 @@ function StagesPage(_: StaffProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [stages, setStages] = useState<StageSummary[]>([]);
   const [tournamentName, setTournamentName] = useState<string>('Tournoi');
+  const [reorderMode, setReorderMode] = useState(false);
+  const [reordering, setReordering] = useState(false);
+  const [orderChanged, setOrderChanged] = useState(false);
 
   useEffect(() => {
     if (!tournamentId) return;
@@ -79,6 +82,56 @@ function StagesPage(_: StaffProps) {
     }
   }
 
+  function getSortedStages() {
+    return [...stages].sort(
+      (a, b) =>
+        (a.order_index ?? 0) - (b.order_index ?? 0) ||
+        a.name.localeCompare(b.name)
+    );
+  }
+
+  function moveStage(index: number, direction: 'up' | 'down') {
+    const sorted = getSortedStages();
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= sorted.length) return;
+
+    // Swap order_index values
+    const temp = sorted[index].order_index;
+    sorted[index] = { ...sorted[index], order_index: sorted[targetIndex].order_index };
+    sorted[targetIndex] = { ...sorted[targetIndex], order_index: temp };
+
+    setStages(sorted);
+    setOrderChanged(true);
+  }
+
+  async function saveOrder() {
+    setReordering(true);
+    setErrorMsg(null);
+    try {
+      const payload = stages.map((s) => ({
+        id: s.id,
+        order_index: s.order_index ?? 0,
+      }));
+      const res = await fetch(`/api/admin/tournament/${tournamentId}/stages`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stages: payload }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || "Impossible d'enregistrer l'ordre");
+      }
+      const json = await res.json();
+      setStages(json.stages || []);
+      setOrderChanged(false);
+      setReorderMode(false);
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Erreur lors de l'enregistrement");
+    } finally {
+      setReordering(false);
+    }
+  }
+
   return (
     <>
       <Head>
@@ -102,6 +155,36 @@ function StagesPage(_: StaffProps) {
               >
                 Voir les matchs
               </Link>
+              {stages.length > 1 && (
+                <button
+                  onClick={() => {
+                    if (reorderMode && orderChanged) {
+                      // Cancel: refetch original order
+                      setOrderChanged(false);
+                      setReorderMode(false);
+                      fetchStages();
+                    } else {
+                      setReorderMode(!reorderMode);
+                    }
+                  }}
+                  className={`px-3 py-1.5 rounded-lg border text-sm ${
+                    reorderMode
+                      ? 'bg-red-500/20 border-red-400/40 text-red-200 hover:bg-red-500/30'
+                      : 'bg-white/10 border-white/15 hover:bg-white/15'
+                  }`}
+                >
+                  {reorderMode ? 'Annuler' : 'Réorganiser'}
+                </button>
+              )}
+              {reorderMode && orderChanged && (
+                <button
+                  onClick={saveOrder}
+                  disabled={reordering}
+                  className="px-3 py-1.5 rounded-lg bg-purple-600 border border-purple-400/40 text-sm hover:bg-purple-500 disabled:opacity-50"
+                >
+                  {reordering ? 'Enregistrement…' : "Enregistrer l'ordre"}
+                </button>
+              )}
               <button
                 onClick={() => fetchStages()}
                 className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm hover:bg-white/10"
@@ -130,26 +213,43 @@ function StagesPage(_: StaffProps) {
           )}
 
           {stages.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {stages
-                .slice()
-                .sort(
-                  (a, b) =>
-                    (a.order_index ?? 0) - (b.order_index ?? 0) ||
-                    a.name.localeCompare(b.name)
-                )
-                .map((stage) => (
+            <div className={reorderMode ? 'flex flex-col gap-3' : 'grid grid-cols-1 md:grid-cols-2 gap-4'}>
+              {getSortedStages().map((stage, idx) => (
                   <div
                     key={stage.id}
-                    className="p-4 rounded-xl bg-white/5 border border-white/10"
+                    className={`p-4 rounded-xl bg-white/5 border ${
+                      reorderMode ? 'border-purple-400/30' : 'border-white/10'
+                    }`}
                   >
                     <div className="flex items-center justify-between gap-3 mb-2">
-                      <div>
-                        <p className="text-sm font-semibold">{stage.name}</p>
-                        <p className="text-xs text-gray-400">
-                          {typeLabel(stage.stage_type)} · Ordre{' '}
-                          {stage.order_index ?? '—'}
-                        </p>
+                      <div className="flex items-center gap-3">
+                        {reorderMode && (
+                          <div className="flex flex-col gap-1">
+                            <button
+                              onClick={() => moveStage(idx, 'up')}
+                              disabled={idx === 0}
+                              className="px-2 py-0.5 rounded bg-white/10 border border-white/15 text-xs hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                              title="Monter"
+                            >
+                              &#9650;
+                            </button>
+                            <button
+                              onClick={() => moveStage(idx, 'down')}
+                              disabled={idx === stages.length - 1}
+                              className="px-2 py-0.5 rounded bg-white/10 border border-white/15 text-xs hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                              title="Descendre"
+                            >
+                              &#9660;
+                            </button>
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-sm font-semibold">{stage.name}</p>
+                          <p className="text-xs text-gray-400">
+                            {typeLabel(stage.stage_type)} · Ordre{' '}
+                            {stage.order_index ?? '—'}
+                          </p>
+                        </div>
                       </div>
                       <Link
                         href={`/admin/stages/${stage.id}`}

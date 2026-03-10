@@ -185,8 +185,9 @@ function AdminEditPartnerPage({ staff }: Props) {
 
           <form
             onSubmit={handleSubmit}
-            className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 sm:p-8 space-y-6"
+            className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 sm:p-8"
           >
+            <fieldset disabled={saving} className="space-y-6">
             {error && (
               <div className="rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
                 <svg
@@ -371,11 +372,12 @@ function AdminEditPartnerPage({ staff }: Props) {
               </button>
               <Link
                 href="/admin/partners"
-                className="px-6 py-3 rounded-xl border border-neutral-600 text-sm font-semibold text-white text-center transition hover:bg-neutral-800"
+                className={`px-6 py-3 rounded-xl border border-neutral-600 text-sm font-semibold text-white text-center transition hover:bg-neutral-800${saving ? ' pointer-events-none opacity-50' : ''}`}
               >
                 Retour
               </Link>
             </div>
+            </fieldset>
           </form>
         </div>
       </div>

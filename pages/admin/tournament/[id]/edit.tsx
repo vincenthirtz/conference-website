@@ -281,6 +281,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
 
           {!loading && formReady && (
             <form onSubmit={handleSubmit} className="space-y-6">
+              <fieldset disabled={saving} className="space-y-6">
               {/* Grid layout like dashboard */}
               <div className="grid gap-6 lg:grid-cols-3">
                 {/* Left Column - Main fields */}
@@ -628,7 +629,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
 
                       <Link
                         href={`/admin/tournament/${id}`}
-                        className="w-full px-4 py-3 rounded-xl border border-neutral-600 text-neutral-200 hover:bg-neutral-700/50 text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                        className={`w-full px-4 py-3 rounded-xl border border-neutral-600 text-neutral-200 hover:bg-neutral-700/50 text-sm font-medium transition-colors flex items-center justify-center gap-2${saving ? ' pointer-events-none opacity-50' : ''}`}
                       >
                         <svg
                           className="w-4 h-4"
@@ -649,6 +650,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                   </section>
                 </div>
               </div>
+              </fieldset>
             </form>
           )}
         </div>

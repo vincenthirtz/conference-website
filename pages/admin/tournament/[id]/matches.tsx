@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import type {
   StaffProps,
   Match,
@@ -141,6 +142,8 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
   // Bulk delete
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [pendingBulkDeleteHard, setPendingBulkDeleteHard] = useState(false);
 
   // Bulk edit
   const [bulkEditMode, setBulkEditMode] = useState(false);
@@ -515,7 +518,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
   }
 
   // --- Bulk delete/cancel ---
-  async function handleBulkDelete(hard: boolean) {
+  function handleBulkDelete(hard: boolean) {
     if (!stageFilter) {
       setErrorMsg(
         'La suppression en masse nécessite de filtrer par phase (stage).'
@@ -525,15 +528,13 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
     if (selectedMatchIds.size === 0) return;
 
+    setPendingBulkDeleteHard(hard);
+    setShowBulkDeleteConfirm(true);
+  }
+
+  async function executeBulkDelete() {
+    const hard = pendingBulkDeleteHard;
     const count = selectedMatchIds.size;
-    const action = hard ? 'supprimer définitivement' : 'annuler';
-    if (
-      !confirm(
-        `${action.charAt(0).toUpperCase() + action.slice(1)} ${count} match${count > 1 ? 'es' : ''} ?`
-      )
-    ) {
-      return;
-    }
 
     setBulkDeleting(true);
     setErrorMsg(null);
@@ -1930,6 +1931,29 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
           )}
         </div>
       </div>
+      {showBulkDeleteConfirm && (
+        <ConfirmDialog
+          variant="danger"
+          title={
+            pendingBulkDeleteHard
+              ? `Supprimer définitivement ${selectedMatchIds.size} match${selectedMatchIds.size > 1 ? 'es' : ''} ?`
+              : `Annuler ${selectedMatchIds.size} match${selectedMatchIds.size > 1 ? 'es' : ''} ?`
+          }
+          subtitle={
+            pendingBulkDeleteHard
+              ? 'Cette action est irréversible. Les matches seront définitivement supprimés.'
+              : undefined
+          }
+          confirmLabel={pendingBulkDeleteHard ? 'Supprimer' : 'Annuler les matches'}
+          confirmingLabel={pendingBulkDeleteHard ? 'Suppression...' : 'Annulation...'}
+          loading={bulkDeleting}
+          onConfirm={async () => {
+            await executeBulkDelete();
+            setShowBulkDeleteConfirm(false);
+          }}
+          onCancel={() => setShowBulkDeleteConfirm(false)}
+        />
+      )}
     </>
   );
 }

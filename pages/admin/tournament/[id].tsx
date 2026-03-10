@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import type { MatchStatus } from '@/types/admin';
 
 type StaffShape = {
@@ -196,6 +197,14 @@ const STATUS_OPTIONS = [
   { value: 'archived', label: 'Archivé', color: 'bg-neutral-700', icon: '📦' },
 ];
 
+const STATUS_ORDER: Record<string, number> = {
+  draft: 0,
+  published: 1,
+  running: 2,
+  completed: 3,
+  archived: 4,
+};
+
 const STAGE_TYPE_OPTIONS = [
   { value: 'bracket', label: 'Bracket' },
   { value: 'swiss', label: 'Swiss' },
@@ -257,6 +266,21 @@ function AdminTournamentPage({ staff }: StaffProps) {
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const [teamSeed, setTeamSeed] = useState<string>('');
   const [addingTeam, setAddingTeam] = useState(false);
+
+  // Status regression confirmation
+  const [showStatusConfirm, setShowStatusConfirm] = useState(false);
+  const [pendingStatusValue, setPendingStatusValue] = useState<string | null>(null);
+
+  // Remove team confirmation
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  const [pendingRemoveTeamId, setPendingRemoveTeamId] = useState<string | null>(null);
+
+  // Bulk team add
+  const [showBulkAddModal, setShowBulkAddModal] = useState(false);
+  const [bulkSelectedTeamIds, setBulkSelectedTeamIds] = useState<Set<string>>(new Set());
+  const [bulkAdding, setBulkAdding] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState({ done: 0, total: 0 });
+  const [bulkSearchFilter, setBulkSearchFilter] = useState('');
 
   // New stage modal
   const [showNewStageModal, setShowNewStageModal] = useState(false);
@@ -366,9 +390,24 @@ function AdminTournamentPage({ staff }: StaffProps) {
     fetchRecentMatches();
   }, [id, fetchTournament, fetchStages, fetchTournamentTeams, fetchRecentMatches]);
 
-  async function updateStatus(newStatus: string) {
+  function updateStatus(newStatus: string) {
     if (!id || !tournament) return;
     if (newStatus === tournament.status) return;
+
+    const currentOrder = STATUS_ORDER[tournament.status ?? 'draft'] ?? 0;
+    const newOrder = STATUS_ORDER[newStatus] ?? 0;
+
+    if (newOrder < currentOrder) {
+      setPendingStatusValue(newStatus);
+      setShowStatusConfirm(true);
+      return;
+    }
+
+    performStatusUpdate(newStatus);
+  }
+
+  async function performStatusUpdate(newStatus: string) {
+    if (!id || !tournament) return;
 
     setUpdatingStatus(true);
     setErrorMsg(null);
@@ -430,11 +469,16 @@ function AdminTournamentPage({ staff }: StaffProps) {
     }
   }
 
-  async function handleRemoveTeam(tournamentTeamId: string) {
-    if (!confirm('Retirer cette équipe du tournoi ?')) return;
+  function handleRemoveTeam(tournamentTeamId: string) {
+    setPendingRemoveTeamId(tournamentTeamId);
+    setShowRemoveConfirm(true);
+  }
+
+  async function performRemoveTeam() {
+    if (!pendingRemoveTeamId) return;
 
     try {
-      const res = await fetch(`/api/admin/tournament/${id}/teams/${tournamentTeamId}`, {
+      const res = await fetch(`/api/admin/tournament/${id}/teams/${pendingRemoveTeamId}`, {
         method: 'DELETE',
       });
 
@@ -448,7 +492,52 @@ function AdminTournamentPage({ staff }: StaffProps) {
       fetchTournamentTeams();
     } catch (err: any) {
       setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } finally {
+      setShowRemoveConfirm(false);
+      setPendingRemoveTeamId(null);
     }
+  }
+
+  async function handleBulkAddTeams() {
+    if (bulkSelectedTeamIds.size === 0 || !id) return;
+    setBulkAdding(true);
+    setErrorMsg(null);
+
+    const teamIds = Array.from(bulkSelectedTeamIds);
+    setBulkProgress({ done: 0, total: teamIds.length });
+
+    let failCount = 0;
+    for (let i = 0; i < teamIds.length; i++) {
+      try {
+        const res = await fetch(`/api/admin/tournament/${id}/teams`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ team_id: teamIds[i] }),
+        });
+
+        if (!res.ok) {
+          failCount++;
+        }
+      } catch {
+        failCount++;
+      }
+      setBulkProgress({ done: i + 1, total: teamIds.length });
+    }
+
+    setBulkAdding(false);
+    setShowBulkAddModal(false);
+    setBulkSelectedTeamIds(new Set());
+    setBulkSearchFilter('');
+
+    if (failCount === 0) {
+      setSuccessMsg(`${teamIds.length} équipe(s) ajoutée(s) avec succès`);
+    } else {
+      setSuccessMsg(
+        `${teamIds.length - failCount}/${teamIds.length} équipe(s) ajoutée(s) (${failCount} erreur(s))`
+      );
+    }
+    setTimeout(() => setSuccessMsg(null), 4000);
+    fetchTournamentTeams();
   }
 
   async function handleCreateStage() {
@@ -866,28 +955,54 @@ function AdminTournamentPage({ staff }: StaffProps) {
                         </svg>
                         Équipes ({tournamentTeams.length})
                       </h2>
-                      <button
-                        onClick={() => {
-                          setShowAddTeamModal(true);
-                          fetchAllTeams();
-                        }}
-                        className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors flex items-center gap-1.5"
-                      >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            setShowAddTeamModal(true);
+                            fetchAllTeams();
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors flex items-center gap-1.5"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 4v16m8-8H4"
-                          />
-                        </svg>
-                        Ajouter
-                      </button>
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 4v16m8-8H4"
+                            />
+                          </svg>
+                          Ajouter
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowBulkAddModal(true);
+                            setBulkSelectedTeamIds(new Set());
+                            setBulkSearchFilter('');
+                            fetchAllTeams();
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors flex items-center gap-1.5"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+                            />
+                          </svg>
+                          Ajouter en masse
+                        </button>
+                      </div>
                     </div>
 
                     {loadingTeams ? (
@@ -1473,6 +1588,174 @@ function AdminTournamentPage({ staff }: StaffProps) {
                 className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {addingTeam ? 'Ajout...' : 'Ajouter'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Status Regression Confirm Dialog */}
+      {showStatusConfirm && pendingStatusValue && (
+        <ConfirmDialog
+          title="Rétrograder le statut ?"
+          subtitle={`Vous allez passer de « ${statusLabel(tournament?.status ?? null)} » à « ${statusLabel(pendingStatusValue)} ». Cette action peut avoir des conséquences sur les données du tournoi.`}
+          variant="warning"
+          loading={updatingStatus}
+          confirmLabel="Rétrograder"
+          confirmingLabel="Mise à jour..."
+          onCancel={() => {
+            setShowStatusConfirm(false);
+            setPendingStatusValue(null);
+          }}
+          onConfirm={() => {
+            setShowStatusConfirm(false);
+            performStatusUpdate(pendingStatusValue);
+            setPendingStatusValue(null);
+          }}
+        />
+      )}
+
+      {/* Remove Team Confirm Dialog */}
+      {showRemoveConfirm && pendingRemoveTeamId && (
+        <ConfirmDialog
+          title="Retirer cette équipe ?"
+          subtitle="L'équipe sera retirée du tournoi. Cette action est irréversible."
+          variant="danger"
+          loading={false}
+          confirmLabel="Retirer"
+          onCancel={() => {
+            setShowRemoveConfirm(false);
+            setPendingRemoveTeamId(null);
+          }}
+          onConfirm={performRemoveTeam}
+        />
+      )}
+
+      {/* Bulk Add Teams Modal */}
+      {showBulkAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
+            <h3 className="text-lg font-semibold mb-4">Ajouter plusieurs équipes</h3>
+
+            {/* Search filter */}
+            <input
+              type="text"
+              value={bulkSearchFilter}
+              onChange={(e) => setBulkSearchFilter(e.target.value)}
+              placeholder="Rechercher une équipe..."
+              className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3 text-sm"
+            />
+
+            {/* Select all / deselect all */}
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-neutral-400">
+                {bulkSelectedTeamIds.size} équipe(s) sélectionnée(s)
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const filtered = availableTeamsToAdd
+                      .filter((t) => t.name.toLowerCase().includes(bulkSearchFilter.toLowerCase()))
+                      .map((t) => t.id);
+                    setBulkSelectedTeamIds(new Set(filtered));
+                  }}
+                  className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  Tout sélectionner
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBulkSelectedTeamIds(new Set())}
+                  className="text-xs text-neutral-400 hover:text-neutral-300 transition-colors"
+                >
+                  Tout désélectionner
+                </button>
+              </div>
+            </div>
+
+            {/* Team checkbox list */}
+            <div className="max-h-64 overflow-y-auto space-y-1 mb-4 border border-neutral-700 rounded-lg p-2">
+              {availableTeamsToAdd
+                .filter((t) => t.name.toLowerCase().includes(bulkSearchFilter.toLowerCase()))
+                .map((team) => (
+                  <label
+                    key={team.id}
+                    className="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-neutral-700/50 cursor-pointer transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={bulkSelectedTeamIds.has(team.id)}
+                      onChange={(e) => {
+                        const next = new Set(bulkSelectedTeamIds);
+                        if (e.target.checked) {
+                          next.add(team.id);
+                        } else {
+                          next.delete(team.id);
+                        }
+                        setBulkSelectedTeamIds(next);
+                      }}
+                      className="rounded border-neutral-600 bg-neutral-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
+                    />
+                    {team.logo_url && (
+                      <Image
+                        src={team.logo_url}
+                        alt=""
+                        width={20}
+                        height={20}
+                        className="w-5 h-5 rounded object-cover"
+                      />
+                    )}
+                    <span className="text-sm">{team.name}</span>
+                  </label>
+                ))}
+              {availableTeamsToAdd.filter((t) =>
+                t.name.toLowerCase().includes(bulkSearchFilter.toLowerCase())
+              ).length === 0 && (
+                <div className="text-neutral-500 text-sm text-center py-4">
+                  Aucune équipe disponible
+                </div>
+              )}
+            </div>
+
+            {/* Progress indicator */}
+            {bulkAdding && (
+              <div className="mb-4">
+                <div className="flex items-center gap-2 text-xs text-neutral-400 mb-1">
+                  <div className="w-3 h-3 border border-neutral-500 border-t-white rounded-full animate-spin" />
+                  Ajout en cours... {bulkProgress.done}/{bulkProgress.total}
+                </div>
+                <div className="w-full bg-neutral-700 rounded-full h-1.5">
+                  <div
+                    className="bg-blue-500 h-1.5 rounded-full transition-all"
+                    style={{
+                      width: `${bulkProgress.total > 0 ? (bulkProgress.done / bulkProgress.total) * 100 : 0}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setShowBulkAddModal(false);
+                  setBulkSelectedTeamIds(new Set());
+                  setBulkSearchFilter('');
+                }}
+                disabled={bulkAdding}
+                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleBulkAddTeams}
+                disabled={bulkSelectedTeamIds.size === 0 || bulkAdding}
+                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {bulkAdding
+                  ? `Ajout... (${bulkProgress.done}/${bulkProgress.total})`
+                  : `Ajouter ${bulkSelectedTeamIds.size > 0 ? `(${bulkSelectedTeamIds.size})` : ''}`}
               </button>
             </div>
           </div>
