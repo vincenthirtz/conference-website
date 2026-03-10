@@ -31,13 +31,13 @@ async function handler(
 ) {
   const { id } = req.query;
   if (!id || Array.isArray(id)) {
-    return res.status(400).json({ error: 'ID manquant' });
+    return res.status(400).json({ error: 'Missing ID.' });
   }
 
   if (!supabaseAdmin) {
     return res
       .status(500)
-      .json({ error: 'Service Supabase indisponible (service role manquant).' });
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
   const admin = supabaseAdmin!;
 
@@ -52,11 +52,11 @@ async function handler(
       console.error('[admin/news/id] fetch error', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de charger la news.' });
+        .json({ error: 'Failed to load the article.' });
     }
 
     if (!data) {
-      return res.status(404).json({ error: 'News introuvable.' });
+      return res.status(404).json({ error: 'Article not found.' });
     }
 
     return res.status(200).json(data);
@@ -67,7 +67,7 @@ async function handler(
     if (!body?.title || !body.content) {
       return res
         .status(400)
-        .json({ error: 'Titre et contenu sont obligatoires.' });
+        .json({ error: 'Title and content are required.' });
     }
 
     const { data: existing, error: existingErr } = await admin
@@ -80,7 +80,7 @@ async function handler(
       console.error('[admin/news/id] fetch existing error', existingErr);
       return res
         .status(500)
-        .json({ error: 'Impossible de charger la news existante.' });
+        .json({ error: 'Failed to load the existing article.' });
     }
 
     const tagValue = normalizeTag(body.tag ?? existing?.tag ?? '');
@@ -120,7 +120,7 @@ async function handler(
       console.error('[admin/news/id] update error', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de mettre à jour la news.' });
+        .json({ error: 'Failed to update the article.' });
     }
 
     return res.status(200).json(data);
@@ -133,7 +133,7 @@ async function handler(
       console.error('[admin/news/id] delete error', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de supprimer la news.' });
+        .json({ error: 'Failed to delete the article.' });
     }
 
     return res.status(204).end();

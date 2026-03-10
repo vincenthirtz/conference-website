@@ -9,6 +9,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { StaffLog, formatStaffLog } from '@/utils/staffLogs';
+import { parsePagination } from '@/utils/apiHelpers';
 
 type TeamHistoryResponse = {
   teamId: string;
@@ -44,12 +45,9 @@ async function handler(
      *  - action?: string       (ex: "update_team", "create_match", "join_stage", ...)
      *  - limit?: number        (par défaut 200)
      */
-    const { entityType, action, limit } = req.query;
+    const { entityType, action } = req.query;
 
-    const limitNum = parseInt(
-      (Array.isArray(limit) ? limit[0] : limit) ?? '200',
-      10
-    );
+    const { limit: limitNum } = parsePagination(req, { limit: 200 });
 
     // 1) Logs directement attachés à l'équipe (entity_type = "team")
     let directLogsQuery = supabaseAdmin

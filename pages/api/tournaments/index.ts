@@ -4,6 +4,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
+import { parsePagination } from '@/utils/apiHelpers';
 
 export type PublicTournament = {
   id: string;
@@ -35,16 +36,9 @@ export default async function handler(
   }
 
   try {
-    const { status, limit, offset } = req.query;
+    const { status } = req.query;
 
-    const limitNum = parseInt(
-      (Array.isArray(limit) ? limit[0] : limit) ?? '50',
-      10
-    );
-    const offsetNum = parseInt(
-      (Array.isArray(offset) ? offset[0] : offset) ?? '0',
-      10
-    );
+    const { limit: limitNum, offset: offsetNum } = parsePagination(req, { limit: 50 });
 
     const selectColumns = `
       id,

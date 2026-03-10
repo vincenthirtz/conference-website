@@ -43,7 +43,7 @@ export default async function handler(
   if (!supabaseAdmin) {
     return res
       .status(500)
-      .json({ error: 'Supabase admin non configuré (service role manquant).' });
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
 
   const authHeader = req.headers.authorization;
@@ -53,14 +53,14 @@ export default async function handler(
       : undefined;
 
   if (!token) {
-    return res.status(401).json({ error: 'Token requis.' });
+    return res.status(401).json({ error: 'Token required.' });
   }
 
   const { data: userData, error: userErr } = await supabaseAdmin.auth.getUser(
     token
   );
   if (userErr || !userData?.user) {
-    return res.status(401).json({ error: 'Utilisateur non authentifié.' });
+    return res.status(401).json({ error: 'User not authenticated.' });
   }
   const userId = userData.user.id;
 
@@ -79,7 +79,7 @@ export default async function handler(
       console.error('[teams/my] membership error:', membershipErr);
       return res
         .status(500)
-        .json({ error: 'Impossible de charger votre équipe.' });
+        .json({ error: 'Failed to load your team.' });
     }
 
     if (!membership) {
@@ -109,7 +109,7 @@ export default async function handler(
       console.error('[teams/my] members error:', membersErr);
       return res
         .status(500)
-        .json({ error: 'Impossible de charger les membres de votre équipe.' });
+        .json({ error: 'Failed to load your team members.' });
     }
 
     return res.status(200).json({
@@ -122,7 +122,7 @@ export default async function handler(
   if (req.method === 'PATCH') {
     const body = req.body as UpdateBody;
     if (!body?.teamId) {
-      return res.status(400).json({ error: 'teamId requis.' });
+      return res.status(400).json({ error: 'teamId required.' });
     }
 
     // Vérifier capitaine
@@ -137,7 +137,7 @@ export default async function handler(
       console.error('[teams/my] membership check error:', membershipErr);
       return res
         .status(500)
-        .json({ error: 'Impossible de vérifier vos droits sur cette équipe.' });
+        .json({ error: 'Failed to verify your permissions on this team.' });
     }
 
     const isCaptain =
@@ -145,7 +145,7 @@ export default async function handler(
       Boolean((membership as any)?.is_captain);
 
     if (!isCaptain) {
-      return res.status(403).json({ error: 'Accès réservé au capitaine.' });
+      return res.status(403).json({ error: 'Access restricted to team captain.' });
     }
 
     const updatePayload: Record<string, any> = {};
@@ -167,7 +167,7 @@ export default async function handler(
       console.error('[teams/my] update error:', updateErr);
       return res
         .status(500)
-        .json({ error: "Impossible de mettre à jour l'équipe." });
+        .json({ error: 'Failed to update team.' });
     }
 
     return res.status(200).json({ team: null, members: [], isCaptain: true });

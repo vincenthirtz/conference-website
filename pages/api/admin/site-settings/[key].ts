@@ -11,13 +11,13 @@ async function handler(
   if (!supabaseAdmin) {
     return res
       .status(500)
-      .json({ error: 'Service Supabase indisponible (service role manquant).' });
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
   const admin = supabaseAdmin!;
 
   const { key } = req.query;
   if (!key || typeof key !== 'string') {
-    return res.status(400).json({ error: 'Clé manquante.' });
+    return res.status(400).json({ error: 'Missing key.' });
   }
 
   if (req.method === 'GET') {
@@ -31,7 +31,7 @@ async function handler(
       console.error('[admin/site-settings] get error', error);
       return res
         .status(404)
-        .json({ error: 'Paramètre introuvable.' });
+        .json({ error: 'Setting not found.' });
     }
     return res.status(200).json(data);
   }
@@ -40,7 +40,7 @@ async function handler(
     const { value, description } = req.body;
 
     if (value === undefined) {
-      return res.status(400).json({ error: 'Valeur requise.' });
+      return res.status(400).json({ error: 'Value required.' });
     }
 
     const updatePayload: Record<string, any> = {
@@ -63,7 +63,7 @@ async function handler(
       console.error('[admin/site-settings] update error', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de mettre à jour le paramètre.' });
+        .json({ error: 'Failed to update the setting.' });
     }
 
     await logStaffAction({
@@ -87,7 +87,7 @@ async function handler(
       console.error('[admin/site-settings] delete error', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de supprimer le paramètre.' });
+        .json({ error: 'Failed to delete the setting.' });
     }
 
     await logStaffAction({

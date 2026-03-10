@@ -54,7 +54,7 @@ async function handleGet(
   res: NextApiResponse<ApiResponse>
 ) {
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Service Supabase indisponible (service role manquant).' });
+    return res.status(500).json({ error: 'Database service unavailable (missing service role).' });
   }
 
   const { data, error } = await supabaseAdmin
@@ -93,7 +93,7 @@ async function handlePatch(
   ctx: any
 ) {
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Service Supabase indisponible (service role manquant).' });
+    return res.status(500).json({ error: 'Database service unavailable (missing service role).' });
   }
 
   const { seed, status } = req.body || {};
@@ -174,7 +174,7 @@ async function handleDelete(
   ctx: any
 ) {
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Service Supabase indisponible (service role manquant).' });
+    return res.status(500).json({ error: 'Database service unavailable (missing service role).' });
   }
 
   // Récupérer l'équipe avant suppression pour le log

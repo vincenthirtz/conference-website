@@ -13,7 +13,7 @@ export default async function handler(
   if (!supabaseAdmin) {
     return res
       .status(500)
-      .json({ error: 'Service Supabase indisponible.' });
+      .json({ error: 'Database service unavailable.' });
   }
 
   const { data, error } = await supabaseAdmin
@@ -26,7 +26,7 @@ export default async function handler(
     console.error('[api/cast-members] error', error);
     return res
       .status(500)
-      .json({ error: 'Impossible de charger les casteuses.' });
+      .json({ error: 'Failed to load cast members.' });
   }
 
   // Transform to camelCase for frontend consumption

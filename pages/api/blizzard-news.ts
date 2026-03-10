@@ -281,7 +281,7 @@ export default async function handler(
   } catch (error) {
     console.error('[/api/blizzard-news] error:', error);
     return res.status(500).json({
-      error: "Impossible de charger les actualités d'Overwatch 2.",
+      error: "Failed to load Overwatch 2 news.",
     });
   }
 }

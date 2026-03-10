@@ -4,6 +4,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
+import { parsePagination, sanitizeSearch } from '@/utils/apiHelpers';
 
 export type PublicTeam = {
   id: string;
@@ -27,16 +28,8 @@ export default async function handler(
   }
 
   try {
-    const { search, limit, offset } = req.query;
-
-    const limitNum = parseInt(
-      (Array.isArray(limit) ? limit[0] : limit) ?? '100',
-      10
-    );
-    const offsetNum = parseInt(
-      (Array.isArray(offset) ? offset[0] : offset) ?? '0',
-      10
-    );
+    const { limit: limitNum, offset: offsetNum } = parsePagination(req, { limit: 100 });
+    const search = sanitizeSearch(req.query.search);
 
     let query = supabaseAdmin
       .from('teams')
@@ -45,8 +38,8 @@ export default async function handler(
       });
 
     // Recherche par nom
-    if (search && !Array.isArray(search) && search.trim()) {
-      const s = `%${search.trim()}%`;
+    if (search) {
+      const s = `%${search}%`;
       query = query.or(`name.ilike.${s},short_name.ilike.${s}`);
     }
 

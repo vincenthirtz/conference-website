@@ -7,8 +7,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
-
-type BracketSide = 'wb' | 'lb' | 'final' | 'none';
+import type { BracketSide } from '@/types/admin';
 
 export default withStaffRoute(handler, 'manager');
 

@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
+import { sanitizeSearch } from '@/utils/apiHelpers';
 
 type TeamStatsRow = {
   team_id: string;
@@ -69,7 +70,7 @@ async function handler(
   res: NextApiResponse<ResponseData>
 ) {
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Service Supabase indisponible.' });
+    return res.status(500).json({ error: 'Database service unavailable.' });
   }
 
   if (req.method !== 'GET') {
@@ -81,7 +82,6 @@ async function handler(
     limit = '100',
     offset = '0',
     tournamentId,
-    search,
     minMatches = '0',
     sortBy,
     sortDir,
@@ -90,6 +90,7 @@ async function handler(
 
   const limitNum = Math.max(1, Math.min(1000, Number(limit) || 100));
   const offsetNum = Math.max(0, Number(offset) || 0);
+  const search = sanitizeSearch(req.query.search);
   const minMatchesNum = Math.max(0, Number(minMatches) || 0);
   const sortByNormalized = normalizeSortBy(
     typeof sortBy === 'string' ? sortBy : null
@@ -133,10 +134,9 @@ async function handler(
     query = query.eq('tournament_id', tournamentId);
   }
 
-  if (search && typeof search === 'string' && search.trim()) {
-    const term = search.trim();
+  if (search) {
     query = query.or(
-      `team_name.ilike.%${term}%,team_short_name.ilike.%${term}%`
+      `team_name.ilike.%${search}%,team_short_name.ilike.%${search}%`
     );
   }
 
@@ -146,7 +146,7 @@ async function handler(
     console.error('[/api/admin/stats/teams] fetch error', error);
     return res
       .status(500)
-      .json({ error: 'Impossible de charger les stats équipes.' });
+      .json({ error: 'Failed to load team stats.' });
   }
 
   const stats: TeamStatsRow[] = (data || []).map((row: any) => ({

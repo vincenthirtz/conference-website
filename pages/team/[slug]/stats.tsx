@@ -8,6 +8,7 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
+import type { MatchStatus } from '@/types/admin';
 
 type Team = {
   id: string;
@@ -29,8 +30,6 @@ type TeamStatsView = {
   total_maps_won: number;
   total_maps_lost: number;
 };
-
-type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
 
 type MatchRow = {
   id: string;

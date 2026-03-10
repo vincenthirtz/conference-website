@@ -20,11 +20,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { teamId } = req.query;
 
   if (!teamId || typeof teamId !== 'string') {
-    return res.status(400).json({ error: 'teamId requis' });
+    return res.status(400).json({ error: 'teamId required' });
   }
 
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Configuration Supabase manquante' });
+    return res.status(500).json({ error: 'Database not configured' });
   }
 
   // Verify team exists
@@ -35,7 +35,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     .single();
 
   if (teamError || !team) {
-    return res.status(404).json({ error: 'Équipe non trouvée' });
+    return res.status(404).json({ error: 'Team not found' });
   }
 
   if (req.method === 'GET') {
@@ -45,13 +45,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   } else if (req.method === 'DELETE') {
     return handleDelete(req, res, teamId, team.name);
   } else {
-    return res.status(405).json({ error: 'Méthode non autorisée' });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 }
 
 async function handleGet(req: NextApiRequest, res: NextApiResponse, teamId: string) {
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Configuration Supabase manquante' });
+    return res.status(500).json({ error: 'Database not configured' });
   }
 
   try {
@@ -131,7 +131,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse, teamId: stri
     });
   } catch (err: any) {
     console.error('GET /api/admin/teams/[teamId]/tournaments error:', err);
-    return res.status(500).json({ error: err.message || 'Erreur serveur' });
+    return res.status(500).json({ error: err.message || 'Internal server error' });
   }
 }
 
@@ -144,11 +144,11 @@ async function handlePost(
   const { tournamentId, stageId } = req.body;
 
   if (!tournamentId || typeof tournamentId !== 'string') {
-    return res.status(400).json({ error: 'tournamentId requis' });
+    return res.status(400).json({ error: 'tournamentId required' });
   }
 
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Configuration Supabase manquante' });
+    return res.status(500).json({ error: 'Database not configured' });
   }
 
   try {
@@ -160,11 +160,11 @@ async function handlePost(
       .single();
 
     if (tournamentError || !tournament) {
-      return res.status(404).json({ error: 'Tournoi non trouvé' });
+      return res.status(404).json({ error: 'Tournament not found' });
     }
 
     if (tournament.status !== 'published') {
-      return res.status(400).json({ error: 'Le tournoi doit être publié pour y inscrire une équipe' });
+      return res.status(400).json({ error: 'Tournament must be published to register a team' });
     }
 
     // Check if team has enough players (min_players validation)
@@ -180,7 +180,7 @@ async function handlePost(
 
       if ((playerCount || 0) < tournament.min_players) {
         return res.status(400).json({
-          error: `L'équipe doit avoir au moins ${tournament.min_players} joueuse(s) pour s'inscrire à ce tournoi. Actuellement: ${playerCount || 0} membre(s).`
+          error: `Team must have at least ${tournament.min_players} player(s) to register. Current: ${playerCount || 0} member(s).`
         });
       }
     }
@@ -199,7 +199,7 @@ async function handlePost(
       const uniqueTeams = new Set(existingTeams?.map(t => t.team_id) || []);
       if (uniqueTeams.size >= tournament.max_teams) {
         return res.status(400).json({
-          error: `Le tournoi a atteint la limite de ${tournament.max_teams} équipes`
+          error: `Tournament has reached the limit of ${tournament.max_teams} teams`
         });
       }
     }
@@ -216,7 +216,7 @@ async function handlePost(
         .single();
 
       if (stageError || !stage) {
-        return res.status(404).json({ error: 'Stage non trouvé pour ce tournoi' });
+        return res.status(404).json({ error: 'Stage not found for this tournament' });
       }
 
       targetStageIds = [stageId];
@@ -233,7 +233,7 @@ async function handlePost(
 
       if (!stages || stages.length === 0) {
         return res.status(400).json({
-          error: 'Le tournoi n\'a pas de stages. Créez un stage d\'abord.'
+          error: 'Tournament has no stages. Create a stage first.'
         });
       }
 
@@ -253,7 +253,7 @@ async function handlePost(
 
     if (existingRegistrations && existingRegistrations.length > 0) {
       return res.status(400).json({
-        error: 'L\'équipe est déjà inscrite à ce tournoi'
+        error: 'Team is already registered for this tournament'
       });
     }
 
@@ -292,12 +292,12 @@ async function handlePost(
 
     return res.status(201).json({
       success: true,
-      message: `Équipe inscrite à ${targetStageIds.length} stage(s)`,
+      message: `Team registered to ${targetStageIds.length} stage(s)`,
       registrations: inserted,
     });
   } catch (err: any) {
     console.error('POST /api/admin/teams/[teamId]/tournaments error:', err);
-    return res.status(500).json({ error: err.message || 'Erreur serveur' });
+    return res.status(500).json({ error: err.message || 'Internal server error' });
   }
 }
 
@@ -310,11 +310,11 @@ async function handleDelete(
   const { tournamentId } = req.body;
 
   if (!tournamentId || typeof tournamentId !== 'string') {
-    return res.status(400).json({ error: 'tournamentId requis' });
+    return res.status(400).json({ error: 'tournamentId required' });
   }
 
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Configuration Supabase manquante' });
+    return res.status(500).json({ error: 'Database not configured' });
   }
 
   try {
@@ -326,7 +326,7 @@ async function handleDelete(
       .single();
 
     if (tournamentError || !tournament) {
-      return res.status(404).json({ error: 'Tournoi non trouvé' });
+      return res.status(404).json({ error: 'Tournament not found' });
     }
 
     // Get all stages for this tournament
@@ -342,7 +342,7 @@ async function handleDelete(
     if (!stages || stages.length === 0) {
       return res.status(200).json({
         success: true,
-        message: 'Aucun stage trouvé pour ce tournoi',
+        message: 'No stage found for this tournament',
       });
     }
 
@@ -380,11 +380,11 @@ async function handleDelete(
 
     return res.status(200).json({
       success: true,
-      message: `Équipe désinscrite (${count || 0} entrée(s) supprimée(s))`,
+      message: `Team unregistered (${count || 0} entry(ies) removed)`,
     });
   } catch (err: any) {
     console.error('DELETE /api/admin/teams/[teamId]/tournaments error:', err);
-    return res.status(500).json({ error: err.message || 'Erreur serveur' });
+    return res.status(500).json({ error: err.message || 'Internal server error' });
   }
 }
 

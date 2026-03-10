@@ -74,7 +74,7 @@ async function handler(
     // BattleTag est obligatoire pour rejoindre une équipe
     if (!battleTag || typeof battleTag !== 'string' || !battleTag.trim()) {
       return res.status(400).json({
-        error: 'BattleTag est obligatoire pour rejoindre une équipe',
+        error: 'BattleTag is required to join a team',
       });
     }
 
@@ -83,7 +83,7 @@ async function handler(
     const re = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
     if (!re.test(trimmedBattleTag)) {
       return res.status(400).json({
-        error: 'BattleTag invalide (format Pseudo#0000)',
+        error: 'Invalid BattleTag (format Name#0000)',
       });
     }
     const battleTagValue = trimmedBattleTag;
@@ -193,7 +193,7 @@ async function handler(
         const re = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
         if (!re.test(trimmed)) {
           return res.status(400).json({
-            error: 'BattleTag invalide (format Pseudo#0000)',
+            error: 'Invalid BattleTag (format Name#0000)',
           });
         }
         updatePayload.battle_tag = trimmed;

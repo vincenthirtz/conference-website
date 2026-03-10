@@ -26,7 +26,7 @@ async function handler(
   if (!supabaseAdmin) {
     return res
       .status(500)
-      .json({ error: 'Service Supabase indisponible (service role manquant).' });
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
   const admin = supabaseAdmin!;
 
@@ -50,7 +50,7 @@ async function handler(
       console.error('[admin/announcements] list error', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de charger les annonces.' });
+        .json({ error: 'Failed to load announcements.' });
     }
 
     return res.status(200).json({ items: data ?? [] });
@@ -61,7 +61,7 @@ async function handler(
     if (!body.title || !body.message) {
       return res
         .status(400)
-        .json({ error: 'Titre et message sont obligatoires.' });
+        .json({ error: 'Title and message are required.' });
     }
 
     const insertPayload = {
@@ -87,7 +87,7 @@ async function handler(
       console.error('[admin/announcements] create error', error);
       return res
         .status(500)
-        .json({ error: "Impossible de créer l'annonce.", detail: error.message });
+        .json({ error: "Failed to create the announcement.", detail: error.message });
     }
 
     return res.status(201).json(data);

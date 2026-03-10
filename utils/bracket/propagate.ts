@@ -2,14 +2,14 @@
 // Logique de propagation des équipes dans le bracket
 // à partir d'un match terminé (winner / loser → prochains matchs).
 import { supabaseAdmin } from '../supabase';
+import type { MatchStatus, BracketSide } from '@/types/admin';
 
 /* -----------------------------------------------------------
  * Types (adaptés à ta structure existante)
  * ---------------------------------------------------------*/
 
-export type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
-
-export type BracketSide = 'wb' | 'lb' | 'final' | 'none';
+export type { MatchStatus } from '@/types/admin';
+export type { BracketSide } from '@/types/admin';
 
 export type MatchRow = {
   id: string;

@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
+import { sanitizeSearch } from '@/utils/apiHelpers';
 
 type MapStatsRow = {
   map_name: string;
@@ -61,7 +62,7 @@ async function handler(
   res: NextApiResponse<ResponseData>
 ) {
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Service Supabase indisponible.' });
+    return res.status(500).json({ error: 'Database service unavailable.' });
   }
 
   if (req.method !== 'GET') {
@@ -73,7 +74,6 @@ async function handler(
     limit = '100',
     offset = '0',
     tournamentId,
-    search,
     minMatches = '0',
     sortBy,
     sortDir,
@@ -82,6 +82,7 @@ async function handler(
 
   const limitNum = Math.max(1, Math.min(1000, Number(limit) || 100));
   const offsetNum = Math.max(0, Number(offset) || 0);
+  const search = sanitizeSearch(req.query.search);
   const minMatchesNum = Math.max(0, Number(minMatches) || 0);
   const sortByNormalized = normalizeSortBy(
     typeof sortBy === 'string' ? sortBy : null
@@ -113,9 +114,8 @@ async function handler(
     })
     .range(offsetNum, offsetNum + limitNum - 1);
 
-  if (search && typeof search === 'string' && search.trim()) {
-    const term = search.trim();
-    query = query.ilike('map_name', `%${term}%`);
+  if (search) {
+    query = query.ilike('map_name', `%${search}%`);
   }
 
   const { data, error, count } = await query;
@@ -124,7 +124,7 @@ async function handler(
     console.error('[/api/admin/stats/maps] fetch error', error);
     return res
       .status(500)
-      .json({ error: 'Impossible de charger les stats maps.' });
+      .json({ error: 'Failed to load map stats.' });
   }
 
   // Transformer les données de la vue vers le format attendu par le frontend

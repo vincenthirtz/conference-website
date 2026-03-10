@@ -33,6 +33,7 @@ import type {
   SwissScoreConfig,
   SwissStandingParticipant,
 } from '@/types/swiss';
+import type { MatchStatus } from '@/types/admin';
 
 type StageRow = {
   id: string;
@@ -47,8 +48,6 @@ type StageTeamRow = {
   team_id: string;
   seed: number | null;
 };
-
-type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
 
 type DbMatchRow = {
   id: string;

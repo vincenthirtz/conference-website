@@ -38,7 +38,7 @@ export default async function handler(
     console.error('[news/rss] error', error);
     return res
       .status(500)
-      .json({ error: 'Impossible de générer le flux RSS.' });
+      .json({ error: 'Failed to generate RSS feed.' });
   }
 
   const items = data ?? [];

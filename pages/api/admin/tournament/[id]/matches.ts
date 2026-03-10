@@ -7,10 +7,11 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
+import type { MatchStatus, BracketSide } from '@/types/admin';
+import { parsePagination } from '@/utils/apiHelpers';
 
-export type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
-
-export type BracketSide = 'wb' | 'lb' | 'final' | 'none';
+export type { MatchStatus } from '@/types/admin';
+export type { BracketSide } from '@/types/admin';
 
 export type MatchRow = {
   id: string;
@@ -122,21 +123,12 @@ async function handleGet(
     includeGames,
     orderBy,
     orderDir,
-    limit,
-    offset,
     result,
     dateFrom,
     dateTo,
   } = req.query;
 
-  const limitNum = parseInt(
-    (Array.isArray(limit) ? limit[0] : limit) ?? '200',
-    10
-  );
-  const offsetNum = parseInt(
-    (Array.isArray(offset) ? offset[0] : offset) ?? '0',
-    10
-  );
+  const { limit: limitNum, offset: offsetNum } = parsePagination(req, { limit: 200, maxLimit: 512 });
 
   const orderField =
     orderBy === 'scheduled_at'

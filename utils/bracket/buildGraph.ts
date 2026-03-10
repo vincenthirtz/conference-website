@@ -2,7 +2,8 @@
 // Construction d'un graphe de bracket à partir des matchs
 // (utilise directement les liens next_match_win_id / next_match_lose_id).
 
-export type BracketSide = 'wb' | 'lb' | 'final' | 'none';
+import type { BracketSide } from '@/types/admin';
+export type { BracketSide } from '@/types/admin';
 
 export type MatchForGraph = {
   id: string;

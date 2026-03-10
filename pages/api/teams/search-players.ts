@@ -33,7 +33,7 @@ export default async function handler(
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    return res.status(401).json({ error: 'Non authentifié' });
+    return res.status(401).json({ error: 'Not authenticated' });
   }
 
   // Check if user is captain of a team
@@ -44,7 +44,7 @@ export default async function handler(
     .maybeSingle();
 
   if (!captainTeam) {
-    return res.status(403).json({ error: 'Vous devez être capitaine d\'une équipe' });
+    return res.status(403).json({ error: 'You must be a team captain' });
   }
 
   const { q } = req.query;

@@ -90,7 +90,7 @@ async function createComment(
 
   // Captcha simple sans token
   if (captchaValue !== 'owc') {
-    return res.status(400).json({ error: 'Captcha invalide' });
+    return res.status(400).json({ error: 'Invalid captcha' });
   }
 
   if (!trimmedNewsId) {

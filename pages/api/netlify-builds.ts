@@ -47,7 +47,7 @@ export default async function handler(
     const text = await apiRes.text();
     return res
       .status(apiRes.status)
-      .json({ error: 'Erreur API Netlify', details: text });
+      .json({ error: 'Netlify API error', details: text });
   }
 
   const builds = (await apiRes.json()) as Build[];

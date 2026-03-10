@@ -21,13 +21,13 @@ async function handler(
   if (!supabaseAdmin) {
     return res
       .status(500)
-      .json({ error: 'Service Supabase indisponible (service role manquant).' });
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
   const admin = supabaseAdmin!;
 
   const { id } = req.query;
   if (!id || typeof id !== 'string') {
-    return res.status(400).json({ error: 'ID manquant.' });
+    return res.status(400).json({ error: 'Missing ID.' });
   }
 
   if (req.method === 'GET') {
@@ -41,7 +41,7 @@ async function handler(
       console.error('[admin/cast-members] get error', error);
       return res
         .status(404)
-        .json({ error: 'Casteuse introuvable ou inaccessible.' });
+        .json({ error: 'Cast member not found.' });
     }
     return res.status(200).json(data);
   }
@@ -80,7 +80,7 @@ async function handler(
       console.error('[admin/cast-members] update error', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de mettre à jour la casteuse.' });
+        .json({ error: 'Failed to update the cast member.' });
     }
 
     return res.status(200).json(data);
@@ -96,7 +96,7 @@ async function handler(
       console.error('[admin/cast-members] delete error', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de supprimer la casteuse.' });
+        .json({ error: 'Failed to delete the cast member.' });
     }
 
     return res.status(204).end();

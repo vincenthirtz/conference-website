@@ -8,9 +8,7 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
-
-type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
-type BracketSide = 'wb' | 'lb' | 'final' | 'none';
+import type { MatchStatus, BracketSide } from '@/types/admin';
 
 type SimpleTeam = {
   id: string;

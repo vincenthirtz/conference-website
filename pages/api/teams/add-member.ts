@@ -32,7 +32,7 @@ export default async function handler(
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    return res.status(401).json({ error: 'Non authentifié' });
+    return res.status(401).json({ error: 'Not authenticated' });
   }
 
   // Check if user is captain of a team
@@ -43,7 +43,7 @@ export default async function handler(
     .maybeSingle();
 
   if (!captainTeam) {
-    return res.status(403).json({ error: 'Vous devez être capitaine d\'une équipe' });
+    return res.status(403).json({ error: 'You must be a team captain' });
   }
 
   const { userId, email, role, battleTag } = req.body || {};
@@ -57,7 +57,7 @@ export default async function handler(
     const re = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
     if (!re.test(trimmed)) {
       throw new Error(
-        "BattleTag requis (format Pseudo#0000, alphanumérique + # + 3 à 6 chiffres)"
+        "BattleTag required (format Name#0000, alphanumeric + # + 3 to 6 digits)"
       );
     }
     return trimmed;
@@ -67,7 +67,7 @@ export default async function handler(
   try {
     battleTagValue = validateBattleTag(battleTag);
   } catch (err: any) {
-    return res.status(400).json({ error: err?.message || 'BattleTag invalide' });
+    return res.status(400).json({ error: err?.message || 'Invalid BattleTag' });
   }
 
   try {

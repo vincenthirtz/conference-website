@@ -21,7 +21,7 @@ async function handler(
   if (!supabaseAdmin) {
     return res
       .status(500)
-      .json({ error: 'Service Supabase indisponible (service role manquant).' });
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
   const admin = supabaseAdmin!;
 
@@ -46,7 +46,7 @@ async function handler(
       console.error('[admin/cast-members] list error', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de charger les casteuses.' });
+        .json({ error: 'Failed to load cast members.' });
     }
 
     return res.status(200).json({ items: data ?? [] });
@@ -57,7 +57,7 @@ async function handler(
     if (!body.name) {
       return res
         .status(400)
-        .json({ error: 'Le nom est obligatoire.' });
+        .json({ error: 'Name is required.' });
     }
 
     // Récupérer le prochain sort_order
@@ -92,7 +92,7 @@ async function handler(
       console.error('[admin/cast-members] create error', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de créer la casteuse.', detail: error.message });
+        .json({ error: 'Failed to create the cast member.', detail: error.message });
     }
 
     return res.status(201).json(data);

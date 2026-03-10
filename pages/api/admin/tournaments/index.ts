@@ -7,6 +7,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
+import { parsePagination, sanitizeSearch } from '@/utils/apiHelpers';
 import slugify from 'slugify';
 import { OVERWATCH_MAPS } from '@/config/overwatch-maps';
 
@@ -60,17 +61,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
  * ---------------------------------------------------------*/
 
 async function handleGet(req: NextApiRequest, res: NextApiResponse) {
-  const { status, search, limit, offset, orderBy, orderDir, includeTotal, dateFrom, dateTo } =
+  const { status, orderBy, orderDir, includeTotal, dateFrom, dateTo } =
     req.query;
 
-  const limitNum = parseInt(
-    (Array.isArray(limit) ? limit[0] : limit) ?? '50',
-    10
-  );
-  const offsetNum = parseInt(
-    (Array.isArray(offset) ? offset[0] : offset) ?? '0',
-    10
-  );
+  const { limit: limitNum, offset: offsetNum } = parsePagination(req, { limit: 50 });
+  const search = sanitizeSearch(req.query.search);
 
   const orderByParam = Array.isArray(orderBy) ? orderBy[0] : orderBy;
   const orderByField =
@@ -102,7 +97,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
     query = query.eq('status', status);
   }
 
-  if (search && !Array.isArray(search)) {
+  if (search) {
     const s = `%${search}%`;
     query = query.or(`name.ilike.${s},slug.ilike.${s}`);
   }

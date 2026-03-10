@@ -13,7 +13,7 @@ export default async function handler(
   if (!supabaseAdmin) {
     return res
       .status(500)
-      .json({ error: 'Service Supabase indisponible.' });
+      .json({ error: 'Database service unavailable.' });
   }
 
   const { key } = req.query;
@@ -44,7 +44,7 @@ export default async function handler(
 
   if (error) {
     console.error('[site-settings] list error', error);
-    return res.status(500).json({ error: 'Impossible de charger les paramètres.' });
+    return res.status(500).json({ error: 'Failed to load settings.' });
   }
 
   // Convert to key-value object for easier consumption

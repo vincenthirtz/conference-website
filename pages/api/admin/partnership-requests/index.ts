@@ -10,7 +10,7 @@ async function handler(
   if (!supabaseAdmin) {
     return res
       .status(500)
-      .json({ error: 'Service Supabase indisponible (service role manquant).' });
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
   const admin = supabaseAdmin!;
 
@@ -41,7 +41,7 @@ async function handler(
     console.error('[admin/partnership-requests] list error', error);
     return res
       .status(500)
-      .json({ error: 'Impossible de charger les demandes.' });
+      .json({ error: 'Failed to load requests.' });
   }
 
   // Count by status for stats

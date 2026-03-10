@@ -33,13 +33,13 @@ async function handler(
   if (!supabaseAdmin) {
     return res
       .status(500)
-      .json({ error: 'Service Supabase indisponible (service role manquant).' });
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
   const admin = supabaseAdmin;
 
   const { id } = req.query;
   if (!id || typeof id !== 'string') {
-    return res.status(400).json({ error: 'ID adhérent requis.' });
+    return res.status(400).json({ error: 'Member ID required.' });
   }
 
   // GET - Récupérer un adhérent
@@ -51,7 +51,7 @@ async function handler(
       .single();
 
     if (error || !data) {
-      return res.status(404).json({ error: 'Adhérent introuvable.' });
+      return res.status(404).json({ error: 'Member not found.' });
     }
 
     // Récupérer l'historique des paiements
@@ -84,7 +84,7 @@ async function handler(
       if (existing) {
         return res
           .status(400)
-          .json({ error: 'Un autre adhérent utilise déjà cet email.' });
+          .json({ error: 'Another member already uses this email.' });
       }
       updates.email = newEmail;
     }
@@ -108,7 +108,7 @@ async function handler(
     updates.updated_by = ctx.staff?.id || null;
 
     if (Object.keys(updates).length === 1) {
-      return res.status(400).json({ error: 'Aucune modification fournie.' });
+      return res.status(400).json({ error: 'No changes provided.' });
     }
 
     const { data, error } = await admin
@@ -122,11 +122,11 @@ async function handler(
       console.error('[admin/adherents] update error', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de mettre à jour l\'adhérent.', detail: error.message });
+        .json({ error: 'Failed to update the member.', detail: error.message });
     }
 
     if (!data) {
-      return res.status(404).json({ error: 'Adhérent introuvable.' });
+      return res.status(404).json({ error: 'Member not found.' });
     }
 
     if (ctx.staff?.id) {
@@ -155,7 +155,7 @@ async function handler(
       .single();
 
     if (!existing) {
-      return res.status(404).json({ error: 'Adhérent introuvable.' });
+      return res.status(404).json({ error: 'Member not found.' });
     }
 
     const { error } = await admin.from('adherents').delete().eq('id', id);
@@ -164,7 +164,7 @@ async function handler(
       console.error('[admin/adherents] delete error', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de supprimer l\'adhérent.', detail: error.message });
+        .json({ error: 'Failed to delete the member.', detail: error.message });
     }
 
     if (ctx.staff?.id) {

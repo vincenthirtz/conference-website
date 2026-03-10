@@ -19,13 +19,13 @@ async function handler(
   if (!supabaseAdmin) {
     return res
       .status(500)
-      .json({ error: 'Service Supabase indisponible (service role manquant).' });
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
   const admin = supabaseAdmin!;
 
   const { id } = req.query;
   if (!id || typeof id !== 'string') {
-    return res.status(400).json({ error: 'ID manquant.' });
+    return res.status(400).json({ error: 'Missing ID.' });
   }
 
   if (req.method === 'GET') {
@@ -39,7 +39,7 @@ async function handler(
       console.error('[admin/twitch-channels] get error', error);
       return res
         .status(404)
-        .json({ error: 'Chaîne introuvable ou inaccessible.' });
+        .json({ error: 'Channel not found.' });
     }
     return res.status(200).json(data);
   }
@@ -74,11 +74,11 @@ async function handler(
       if (error.code === '23505') {
         return res
           .status(400)
-          .json({ error: 'Cette chaîne existe déjà.' });
+          .json({ error: 'This channel already exists.' });
       }
       return res
         .status(500)
-        .json({ error: 'Impossible de mettre à jour la chaîne.' });
+        .json({ error: 'Failed to update the channel.' });
     }
 
     return res.status(200).json(data);
@@ -94,7 +94,7 @@ async function handler(
       console.error('[admin/twitch-channels] delete error', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de supprimer la chaîne.' });
+        .json({ error: 'Failed to delete the channel.' });
     }
 
     return res.status(204).end();

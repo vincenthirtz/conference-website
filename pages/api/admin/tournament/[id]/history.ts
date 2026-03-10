@@ -8,6 +8,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { StaffLog, formatStaffLog } from '@/utils/staffLogs';
+import { parsePagination } from '@/utils/apiHelpers';
 
 type TournamentHistoryResponse = {
   tournamentId: string;
@@ -43,12 +44,9 @@ async function handler(
      *  - action?: string        (filtre sur le type d'action: "update_tournament", "create_tournament", ...)
      *  - limit?: number         (par défaut 200)
      */
-    const { entityType, action, limit } = req.query;
+    const { entityType, action } = req.query;
 
-    const limitNum = parseInt(
-      (Array.isArray(limit) ? limit[0] : limit) ?? '200',
-      10
-    );
+    const { limit: limitNum } = parsePagination(req, { limit: 200 });
 
     let query = supabaseAdmin
       .from('staff_logs')

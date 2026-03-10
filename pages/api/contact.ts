@@ -32,7 +32,7 @@ export default async function handler(
   if (!supabaseAdmin) {
     return res
       .status(500)
-      .json({ error: 'Service indisponible.' });
+      .json({ error: 'Service unavailable.' });
   }
 
   // Get IP for rate limiting and logging
@@ -75,7 +75,7 @@ export default async function handler(
 
   if (error) {
     console.error('[api/contact] insert error', error);
-    return res.status(500).json({ error: 'Impossible de sauvegarder le message.' });
+    return res.status(500).json({ error: 'Failed to save message.' });
   }
 
   return res.status(201).json({

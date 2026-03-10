@@ -19,7 +19,7 @@ async function handler(
   if (!supabaseAdmin) {
     return res
       .status(500)
-      .json({ error: 'Service Supabase indisponible (service role manquant).' });
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
   const admin = supabaseAdmin!;
 
@@ -33,7 +33,7 @@ async function handler(
       console.error('[admin/site-settings] list error', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de charger les paramètres.' });
+        .json({ error: 'Failed to load settings.' });
     }
 
     return res.status(200).json({ items: data ?? [] });
@@ -43,7 +43,7 @@ async function handler(
     const { key, value, description } = req.body;
 
     if (!key?.trim() || value === undefined) {
-      return res.status(400).json({ error: 'Clé et valeur requises.' });
+      return res.status(400).json({ error: 'Key and value required.' });
     }
 
     const { data, error } = await admin
@@ -64,7 +64,7 @@ async function handler(
       console.error('[admin/site-settings] upsert error', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de sauvegarder le paramètre.' });
+        .json({ error: 'Failed to save the setting.' });
     }
 
     await logStaffAction({

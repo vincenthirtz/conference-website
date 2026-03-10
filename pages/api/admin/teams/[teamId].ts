@@ -159,12 +159,12 @@ async function handlePut(
 
   // Nom non vide
   if ('name' in body && (typeof body.name !== 'string' || body.name.trim().length === 0)) {
-    return res.status(400).json({ error: "Le nom de l'équipe ne peut pas être vide" });
+    return res.status(400).json({ error: 'Team name cannot be empty' });
   }
 
   // short_name non vide si fourni
   if ('short_name' in body && body.short_name !== null && (typeof body.short_name !== 'string' || body.short_name.trim().length === 0)) {
-    return res.status(400).json({ error: 'short_name ne peut pas être une chaîne vide' });
+    return res.status(400).json({ error: 'short_name cannot be empty' });
   }
 
   // URLs basiques (logo_url, banner_url, website)
@@ -172,7 +172,7 @@ async function handlePut(
   for (const field of urlFields) {
     if (field in body && body[field] !== null && body[field] !== '') {
       if (typeof body[field] !== 'string') {
-        return res.status(400).json({ error: `${field} doit être une chaîne de caractères` });
+        return res.status(400).json({ error: `${field} must be a string` });
       }
     }
   }

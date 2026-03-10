@@ -109,7 +109,7 @@ export default async function handler(
     const re = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
     if (!re.test(trimmed)) {
       throw new Error(
-        "BattleTag invalide. Format attendu : Pseudo#0000 (alphanumérique + # + 3 à 6 chiffres)."
+        "Invalid BattleTag. Expected format: Name#0000 (alphanumeric + # + 3 to 6 digits)."
       );
     }
     return trimmed;
@@ -120,7 +120,7 @@ export default async function handler(
     const resolvedRole = body.member_role?.trim() || 'player';
     const memberBattleTag = body.member_battle_tag?.trim() || '';
     if (!memberBattleTag) {
-      return res.status(400).json({ error: 'BattleTag requis pour le membre.' });
+      return res.status(400).json({ error: 'BattleTag required for the member.' });
     }
     if (memberUserId) {
       try {
@@ -131,7 +131,7 @@ export default async function handler(
           battle_tag: validateBattleTag(memberBattleTag),
         });
       } catch (err: any) {
-        return res.status(400).json({ error: err?.message || 'BattleTag invalide' });
+        return res.status(400).json({ error: err?.message || 'Invalid BattleTag' });
       }
     } else if (memberEmail) {
       try {
@@ -160,7 +160,7 @@ export default async function handler(
       if (!m.battle_tag) {
         return res
           .status(400)
-          .json({ error: 'BattleTag requis pour chaque membre.' });
+          .json({ error: 'BattleTag required for each member.' });
       }
 
       if (m.user_id) {
@@ -172,7 +172,7 @@ export default async function handler(
             battle_tag: validateBattleTag(m.battle_tag),
           });
         } catch (err: any) {
-          return res.status(400).json({ error: err?.message || 'BattleTag invalide' });
+          return res.status(400).json({ error: err?.message || 'Invalid BattleTag' });
         }
         continue;
       }

@@ -7,8 +7,7 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
-
-type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
+import type { MatchStatus } from '@/types/admin';
 
 type SimpleTeam = {
   id: string;

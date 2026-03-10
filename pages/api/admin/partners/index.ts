@@ -22,7 +22,7 @@ async function handler(
   if (!supabaseAdmin) {
     return res
       .status(500)
-      .json({ error: 'Service Supabase indisponible (service role manquant).' });
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
   const admin = supabaseAdmin!;
 
@@ -53,7 +53,7 @@ async function handler(
       console.error('[admin/partners] list error', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de charger les partenaires.' });
+        .json({ error: 'Failed to load partners.' });
     }
 
     return res.status(200).json({ items: data ?? [] });
@@ -64,14 +64,14 @@ async function handler(
     if (!body?.name || !body.description || !body.category) {
       return res
         .status(400)
-        .json({ error: 'Nom, description et catégorie sont obligatoires.' });
+        .json({ error: 'Name, description and category are required.' });
     }
 
     const validCategories = ['super', 'major', 'cultural'];
     if (!validCategories.includes(body.category)) {
       return res
         .status(400)
-        .json({ error: 'Catégorie invalide. Valeurs acceptées: super, major, cultural.' });
+        .json({ error: 'Invalid category. Allowed values: super, major, cultural.' });
     }
 
     const insertPayload = {
@@ -95,7 +95,7 @@ async function handler(
       console.error('[admin/partners] create error', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de créer le partenaire.', detail: error.message });
+        .json({ error: 'Failed to create the partner.', detail: error.message });
     }
 
     if (ctx.staff?.id) {

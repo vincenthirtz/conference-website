@@ -21,7 +21,7 @@ export default async function handler(
   if (!supabaseAdmin) {
     return res
       .status(500)
-      .json({ error: 'Service Supabase indisponible.' });
+      .json({ error: 'Database service unavailable.' });
   }
 
   try {
@@ -36,7 +36,7 @@ export default async function handler(
       console.error('[/api/twitch-channels] fetch error', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de charger les chaînes.' });
+        .json({ error: 'Failed to load channels.' });
     }
 
     const items: TwitchChannelPublic[] = (data || []).map((row) => ({
@@ -53,6 +53,6 @@ export default async function handler(
     return res.status(200).json({ items });
   } catch (err) {
     console.error('[/api/twitch-channels] error', err);
-    return res.status(500).json({ error: 'Erreur serveur.' });
+    return res.status(500).json({ error: 'Internal server error.' });
   }
 }

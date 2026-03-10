@@ -5,8 +5,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
-
-type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
+import type { MatchStatus } from '@/types/admin';
 
 type MatchRow = {
   id: string;

@@ -33,7 +33,7 @@ async function handler(
   if (!supabaseAdmin) {
     return res
       .status(500)
-      .json({ error: 'Service Supabase indisponible (service role manquant).' });
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
   const admin = supabaseAdmin!;
 
@@ -60,7 +60,7 @@ async function handler(
       console.error('[admin/news] list error', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de charger les news.' });
+        .json({ error: 'Failed to load articles.' });
     }
 
     return res.status(200).json({ items: data ?? [] });
@@ -71,7 +71,7 @@ async function handler(
     if (!body?.title || !body.content) {
       return res
         .status(400)
-        .json({ error: 'Titre et contenu sont obligatoires.' });
+        .json({ error: 'Title and content are required.' });
     }
 
     const slug = normalizeSlug(body.title, body.slug);
@@ -104,7 +104,7 @@ async function handler(
       console.error('[admin/news] create error', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de créer la news.', detail: error.message });
+        .json({ error: 'Failed to create the article.', detail: error.message });
     }
 
     return res.status(201).json(data);

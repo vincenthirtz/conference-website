@@ -6,12 +6,12 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
+import type { MatchStatus } from '@/types/admin';
+import { parsePagination } from '@/utils/apiHelpers';
 
 /* -----------------------------------------------------------
  * Types
  * ---------------------------------------------------------*/
-
-type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
 
 type MatchRow = {
   id: string;
@@ -55,7 +55,7 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { tournamentId, limit, minGames } = req.query;
+  const { tournamentId, minGames } = req.query;
 
   if (!tournamentId || Array.isArray(tournamentId)) {
     return res.status(400).json({
@@ -63,10 +63,7 @@ export default async function handler(
     });
   }
 
-  const limitNum = parseInt(
-    (Array.isArray(limit) ? limit[0] : limit) ?? '20',
-    10
-  );
+  const { limit: limitNum } = parsePagination(req, { limit: 20 });
   const minGamesNum = parseInt(
     (Array.isArray(minGames) ? minGames[0] : minGames) ?? '1',
     10

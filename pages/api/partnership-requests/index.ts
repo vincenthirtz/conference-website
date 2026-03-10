@@ -12,7 +12,7 @@ export default async function handler(
   if (!supabaseAdmin) {
     return res
       .status(500)
-      .json({ error: 'Service Supabase indisponible.' });
+      .json({ error: 'Database service unavailable.' });
   }
 
   if (req.method !== 'POST') {
@@ -58,7 +58,7 @@ export default async function handler(
     console.error('[api/partnership-requests] insert error', error);
     return res
       .status(500)
-      .json({ error: 'Impossible d\'envoyer la demande. Veuillez réessayer.' });
+      .json({ error: 'Failed to send request. Please try again.' });
   }
 
   return res.status(201).json({

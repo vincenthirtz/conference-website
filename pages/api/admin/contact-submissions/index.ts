@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
+import { sanitizeSearch } from '@/utils/apiHelpers';
 
 async function handler(
   req: NextApiRequest,
@@ -9,7 +10,7 @@ async function handler(
   if (!supabaseAdmin) {
     return res
       .status(500)
-      .json({ error: 'Service Supabase indisponible (service role manquant).' });
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
   const admin = supabaseAdmin!;
 
@@ -17,7 +18,7 @@ async function handler(
     const limit = Math.max(1, Math.min(200, Number(req.query.limit) || 50));
     const offset = Math.max(0, Number(req.query.offset) || 0);
     const status = req.query.status as string | undefined;
-    const search = req.query.search as string | undefined;
+    const search = sanitizeSearch(req.query.search);
 
     let query = admin
       .from('contact_submissions')
@@ -31,8 +32,8 @@ async function handler(
     }
 
     // Search by name or email
-    if (search?.trim()) {
-      const searchTerm = `%${search.trim()}%`;
+    if (search) {
+      const searchTerm = `%${search}%`;
       query = query.or(`name.ilike.${searchTerm},email.ilike.${searchTerm}`);
     }
 
@@ -42,7 +43,7 @@ async function handler(
       console.error('[admin/contact-submissions] list error', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de charger les messages.' });
+        .json({ error: 'Failed to load messages.' });
     }
 
     return res.status(200).json({

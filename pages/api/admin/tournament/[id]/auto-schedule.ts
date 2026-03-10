@@ -43,9 +43,8 @@ import type {
   MatchToSchedule,
   AutoSchedulerConfig,
   MatchFormat,
+  MatchStatus,
 } from '@/types/matches';
-
-type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
 
 type DbMatchRow = {
   id: string;

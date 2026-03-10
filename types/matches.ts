@@ -1,4 +1,5 @@
-export type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
+import type { MatchStatus } from '@/types/admin';
+export type { MatchStatus } from '@/types/admin';
 
 export type MatchFormat = 'bo1' | 'bo2' | 'bo3' | 'bo5' | 'bo7';
 

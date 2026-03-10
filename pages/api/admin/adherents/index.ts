@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, StaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
+import { sanitizeSearch } from '@/utils/apiHelpers';
 
 type AdherentPayload = {
   firstName: string;
@@ -33,7 +34,7 @@ async function handler(
   if (!supabaseAdmin) {
     return res
       .status(500)
-      .json({ error: 'Service Supabase indisponible (service role manquant).' });
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
   const admin = supabaseAdmin;
 
@@ -41,13 +42,13 @@ async function handler(
   if (req.method === 'GET') {
     const {
       limit = '100',
-      search,
       paymentStatus,
       year,
       role,
       active,
     } = req.query;
     const limitNum = Math.max(1, Math.min(500, Number(limit) || 100));
+    const search = sanitizeSearch(req.query.search);
 
     let query = admin
       .from('adherents')
@@ -57,8 +58,8 @@ async function handler(
       .limit(limitNum);
 
     // Filtre par recherche (nom, prénom, email)
-    if (search && typeof search === 'string' && search.trim()) {
-      const searchTerm = `%${search.trim()}%`;
+    if (search) {
+      const searchTerm = `%${search}%`;
       query = query.or(
         `last_name.ilike.${searchTerm},first_name.ilike.${searchTerm},email.ilike.${searchTerm},member_number.ilike.${searchTerm}`
       );
@@ -92,7 +93,7 @@ async function handler(
       console.error('[admin/adherents] list error', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de charger les adhérents.' });
+        .json({ error: 'Failed to load members.' });
     }
 
     // Récupérer les stats
@@ -120,7 +121,7 @@ async function handler(
     if (!body?.firstName?.trim() || !body?.lastName?.trim() || !body?.email?.trim()) {
       return res
         .status(400)
-        .json({ error: 'Prénom, nom et email sont obligatoires.' });
+        .json({ error: 'First name, last name and email are required.' });
     }
 
     // Vérifier que l'email n'existe pas déjà
@@ -133,7 +134,7 @@ async function handler(
     if (existing) {
       return res
         .status(400)
-        .json({ error: 'Un adhérent avec cet email existe déjà.' });
+        .json({ error: 'A member with this email already exists.' });
     }
 
     const insertPayload = {
@@ -169,7 +170,7 @@ async function handler(
       console.error('[admin/adherents] create error', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de créer l\'adhérent.', detail: error.message });
+        .json({ error: 'Failed to create the member.', detail: error.message });
     }
 
     if (ctx.staff?.id) {

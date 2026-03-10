@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import type { MatchStatus } from '@/types/admin';
 
 type StaffShape = {
   id: string;
@@ -60,8 +61,6 @@ type TournamentTeam = {
   status?: string | null;
   team: Team;
 };
-
-type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
 
 type RecentMatch = {
   id: string;

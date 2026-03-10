@@ -18,7 +18,7 @@ export default async function handler(
   if (!supabaseAdmin) {
     return res
       .status(500)
-      .json({ error: 'Supabase admin non configure (service role manquant).' });
+      .json({ error: 'Database not configured (missing service role).' });
   }
 
   // Authentification via Bearer token
@@ -29,14 +29,14 @@ export default async function handler(
       : undefined;
 
   if (!token) {
-    return res.status(401).json({ error: 'Token requis.' });
+    return res.status(401).json({ error: 'Token required.' });
   }
 
   const { data: userData, error: userErr } =
     await supabaseAdmin.auth.getUser(token);
 
   if (userErr || !userData?.user) {
-    return res.status(401).json({ error: 'Utilisateur non authentifie.' });
+    return res.status(401).json({ error: 'Not authenticated.' });
   }
 
   const user = userData.user;
@@ -55,7 +55,7 @@ export default async function handler(
       console.error('[demandes/join] GET error:', demandesErr);
       return res
         .status(500)
-        .json({ error: 'Impossible de charger les demandes.' });
+        .json({ error: 'Failed to load requests.' });
     }
 
     // Enrichir avec les infos d'equipe si team_id present
@@ -127,7 +127,7 @@ export default async function handler(
 
     if (existingErr) {
       console.error('[demandes/join] check existing error:', existingErr);
-      return res.status(500).json({ error: 'Erreur lors de la verification.' });
+      return res.status(500).json({ error: 'Verification error.' });
     }
 
     if (existingDemande) {
@@ -173,7 +173,7 @@ export default async function handler(
       console.error('[demandes/join] insert error:', insertErr);
       return res
         .status(500)
-        .json({ error: 'Impossible de creer la demande.' });
+        .json({ error: 'Failed to create request.' });
     }
 
     return res.status(201).json({

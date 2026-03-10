@@ -7,6 +7,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
+import { parsePagination, sanitizeSearch } from '@/utils/apiHelpers';
 
 export type DemandeType = 'join' | 'leave' | 'captain_request' | 'other';
 
@@ -119,25 +120,16 @@ async function handleGet(
     userId,
     from,
     to,
-    search,
     includeUser,
     includeTeam,
     includeTournament,
-    limit,
-    offset,
     orderBy,
     orderDir,
     includeTotal,
   } = req.query;
 
-  const limitNum = parseInt(
-    (Array.isArray(limit) ? limit[0] : limit) ?? '50',
-    10
-  );
-  const offsetNum = parseInt(
-    (Array.isArray(offset) ? offset[0] : offset) ?? '0',
-    10
-  );
+  const { limit: limitNum, offset: offsetNum } = parsePagination(req, { limit: 50 });
+  const search = sanitizeSearch(req.query.search);
 
   const withUser = includeUser === '1' || includeUser === 'true';
   const withTeam = includeTeam === '1' || includeTeam === 'true';
@@ -236,7 +228,7 @@ async function handleGet(
     query = query.lte('created_at', to);
   }
 
-  if (search && !Array.isArray(search)) {
+  if (search) {
     const s = `%${search}%`;
     query = query.or(
       `comment.ilike.${s},staff_note.ilike.${s},source.ilike.${s}`

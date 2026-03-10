@@ -63,6 +63,54 @@ export function filterAllowedFields<T extends Record<string, unknown>>(
 }
 
 /**
+ * Extract and validate pagination parameters (limit + offset) from query string.
+ * Clamps values to safe ranges and provides defaults.
+ */
+export function parsePagination(
+  req: NextApiRequest,
+  defaults: { limit?: number; offset?: number; maxLimit?: number } = {}
+): { limit: number; offset: number } {
+  const { limit: defaultLimit = 50, offset: defaultOffset = 0, maxLimit = 1000 } = defaults;
+  const rawLimit = req.query.limit;
+  const rawOffset = req.query.offset;
+
+  const limit = Math.max(
+    1,
+    Math.min(
+      maxLimit,
+      parseInt(
+        (Array.isArray(rawLimit) ? rawLimit[0] : rawLimit) ?? String(defaultLimit),
+        10
+      ) || defaultLimit
+    )
+  );
+
+  const offset = Math.max(
+    0,
+    parseInt(
+      (Array.isArray(rawOffset) ? rawOffset[0] : rawOffset) ?? String(defaultOffset),
+      10
+    ) || defaultOffset
+  );
+
+  return { limit, offset };
+}
+
+/**
+ * Sanitize a search query parameter: handle arrays, trim, and cap length.
+ * Returns a clean string or empty string if invalid.
+ */
+export function sanitizeSearch(
+  raw: string | string[] | undefined,
+  maxLength: number = 500
+): string {
+  if (!raw) return '';
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (!value) return '';
+  return value.trim().slice(0, maxLength);
+}
+
+/**
  * Check if hard delete was requested via query parameter.
  */
 export function isHardDelete(req: NextApiRequest): boolean {

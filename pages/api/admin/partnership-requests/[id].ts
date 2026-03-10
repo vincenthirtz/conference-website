@@ -16,13 +16,13 @@ async function handler(
   if (!supabaseAdmin) {
     return res
       .status(500)
-      .json({ error: 'Service Supabase indisponible (service role manquant).' });
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
   const admin = supabaseAdmin!;
 
   const { id } = req.query;
   if (!id || typeof id !== 'string') {
-    return res.status(400).json({ error: 'ID demande requis.' });
+    return res.status(400).json({ error: 'Request ID required.' });
   }
 
   if (req.method === 'GET') {
@@ -33,7 +33,7 @@ async function handler(
       .single();
 
     if (error || !data) {
-      return res.status(404).json({ error: 'Demande introuvable.' });
+      return res.status(404).json({ error: 'Request not found.' });
     }
 
     // Mark as read if new
@@ -56,7 +56,7 @@ async function handler(
     if (body.status !== undefined) {
       const validStatuses = ['new', 'read', 'contacted', 'negotiating', 'accepted', 'declined', 'archived'];
       if (!validStatuses.includes(body.status)) {
-        return res.status(400).json({ error: 'Statut invalide.' });
+        return res.status(400).json({ error: 'Invalid status.' });
       }
       updates.status = body.status;
 
@@ -74,7 +74,7 @@ async function handler(
     }
 
     if (Object.keys(updates).length === 0) {
-      return res.status(400).json({ error: 'Aucune modification fournie.' });
+      return res.status(400).json({ error: 'No changes provided.' });
     }
 
     // Fetch the current request data before update (needed for auto-creating partner)
@@ -134,11 +134,11 @@ async function handler(
       console.error('[admin/partnership-requests] update error', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de mettre à jour la demande.', detail: error.message });
+        .json({ error: 'Failed to update the request.', detail: error.message });
     }
 
     if (!data) {
-      return res.status(404).json({ error: 'Demande introuvable.' });
+      return res.status(404).json({ error: 'Request not found.' });
     }
 
     if (ctx.staff?.id) {
@@ -162,7 +162,7 @@ async function handler(
       .single();
 
     if (!existing) {
-      return res.status(404).json({ error: 'Demande introuvable.' });
+      return res.status(404).json({ error: 'Request not found.' });
     }
 
     const { error } = await admin.from('partnership_requests').delete().eq('id', id);
@@ -171,7 +171,7 @@ async function handler(
       console.error('[admin/partnership-requests] delete error', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de supprimer la demande.', detail: error.message });
+        .json({ error: 'Failed to delete the request.', detail: error.message });
     }
 
     if (ctx.staff?.id) {

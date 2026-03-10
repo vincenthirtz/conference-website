@@ -15,13 +15,13 @@ async function handler(
   if (!supabaseAdmin) {
     return res
       .status(500)
-      .json({ error: 'Service Supabase indisponible (service role manquant).' });
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
   const admin = supabaseAdmin!;
 
   const { id } = req.query;
   if (!id || typeof id !== 'string') {
-    return res.status(400).json({ error: 'ID manquant.' });
+    return res.status(400).json({ error: 'Missing ID.' });
   }
 
   if (req.method === 'GET') {
@@ -35,7 +35,7 @@ async function handler(
       console.error('[admin/contact-submissions] get error', error);
       return res
         .status(404)
-        .json({ error: 'Message introuvable.' });
+        .json({ error: 'Message not found.' });
     }
     return res.status(200).json(data);
   }
@@ -47,7 +47,7 @@ async function handler(
     if (body.status) {
       const validStatuses = ['new', 'read', 'replied', 'archived', 'spam'];
       if (!validStatuses.includes(body.status)) {
-        return res.status(400).json({ error: 'Statut invalide.' });
+        return res.status(400).json({ error: 'Invalid status.' });
       }
       updatePayload.status = body.status;
 
@@ -75,7 +75,7 @@ async function handler(
       console.error('[admin/contact-submissions] update error', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de mettre à jour le message.' });
+        .json({ error: 'Failed to update the message.' });
     }
 
     return res.status(200).json(data);
@@ -84,7 +84,7 @@ async function handler(
   if (req.method === 'DELETE') {
     // Only admins can delete
     if (!hasAtLeastRole(ctx.role, 'admin')) {
-      return res.status(403).json({ error: 'Seuls les admins peuvent supprimer.' });
+      return res.status(403).json({ error: 'Only admins can delete.' });
     }
 
     const { error } = await admin
@@ -96,7 +96,7 @@ async function handler(
       console.error('[admin/contact-submissions] delete error', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de supprimer le message.' });
+        .json({ error: 'Failed to delete the message.' });
     }
 
     return res.status(204).end();

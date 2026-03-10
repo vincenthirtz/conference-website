@@ -26,7 +26,7 @@ export default async function handler(
     );
     return res.status(500).json({
       error:
-        'Configuration Supabase incomplète (service role manquant). Ajoute SUPABASE_SERVICE_ROLE_KEY.',
+        'Supabase configuration incomplete (missing service role). Add SUPABASE_SERVICE_ROLE_KEY.',
     });
   }
 
@@ -85,7 +85,7 @@ export default async function handler(
     if (Object.keys(updatePayload).length === 0) {
       return res
         .status(400)
-        .json({ error: 'Aucun champ à mettre à jour (displayName, avatarUrl).' });
+        .json({ error: 'No fields to update (displayName, avatarUrl).' });
     }
 
     const doUpdate = async (withAvatar = true) =>
@@ -121,11 +121,11 @@ export default async function handler(
       console.error('[/api/admin/me] update error:', updateError);
       return res
         .status(500)
-        .json({ error: 'Impossible de mettre à jour le profil.' });
+        .json({ error: 'Failed to update the profile.' });
     }
 
     if (!updated) {
-      return res.status(404).json({ error: 'Profil staff introuvable.' });
+      return res.status(404).json({ error: 'Staff profile not found.' });
     }
 
     // Forcer avatar_url à null si absent du select

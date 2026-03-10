@@ -19,7 +19,7 @@ async function handler(
   if (!supabaseAdmin) {
     return res
       .status(500)
-      .json({ error: 'Service Supabase indisponible (service role manquant).' });
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
   const admin = supabaseAdmin!;
 
@@ -44,7 +44,7 @@ async function handler(
       console.error('[admin/twitch-channels] list error', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de charger les chaînes.' });
+        .json({ error: 'Failed to load channels.' });
     }
 
     return res.status(200).json({ items: data ?? [] });
@@ -55,7 +55,7 @@ async function handler(
     if (!body.channel || !body.label) {
       return res
         .status(400)
-        .json({ error: 'Channel et label sont obligatoires.' });
+        .json({ error: 'Channel and label are required.' });
     }
 
     // Récupérer le prochain sort_order
@@ -89,11 +89,11 @@ async function handler(
       if (error.code === '23505') {
         return res
           .status(400)
-          .json({ error: 'Cette chaîne existe déjà.' });
+          .json({ error: 'This channel already exists.' });
       }
       return res
         .status(500)
-        .json({ error: 'Impossible de créer la chaîne.', detail: error.message });
+        .json({ error: 'Failed to create the channel.', detail: error.message });
     }
 
     return res.status(201).json(data);

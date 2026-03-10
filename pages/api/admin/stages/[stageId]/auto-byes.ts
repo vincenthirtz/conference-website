@@ -23,8 +23,7 @@ import {
   resetPropagationForMatch,
   propagateBracketForMatch,
 } from '@/utils/bracket/propagate';
-
-type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
+import type { MatchStatus } from '@/types/admin';
 
 type DbMatchRow = {
   id: string;

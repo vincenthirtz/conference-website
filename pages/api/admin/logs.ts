@@ -26,6 +26,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { StaffLog, formatStaffLog } from '@/utils/staffLogs';
+import { parsePagination, sanitizeSearch } from '@/utils/apiHelpers';
 
 export type AdminLogsResponse = {
   logs: Array<ReturnType<typeof formatStaffLog>>;
@@ -52,21 +53,12 @@ async function handler(
       action,
       from,
       to,
-      search,
-      limit,
-      offset,
       orderDir,
       includeTotal,
     } = req.query;
 
-    const limitNum = parseInt(
-      (Array.isArray(limit) ? limit[0] : limit) ?? '100',
-      10
-    );
-    const offsetNum = parseInt(
-      (Array.isArray(offset) ? offset[0] : offset) ?? '0',
-      10
-    );
+    const { limit: limitNum, offset: offsetNum } = parsePagination(req, { limit: 100 });
+    const search = sanitizeSearch(req.query.search);
 
     const ascending = orderDir === 'asc' ? true : false;
 
@@ -104,7 +96,7 @@ async function handler(
       query = query.lte('created_at', to);
     }
 
-    if (search && !Array.isArray(search)) {
+    if (search) {
       const s = `%${search}%`;
       query = query.or(`action.ilike.${s},entity_type.ilike.${s}`);
     }

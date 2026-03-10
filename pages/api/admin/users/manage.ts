@@ -36,7 +36,7 @@ async function handler(
   res: NextApiResponse<ListResponse | UpdateResponse | { error: string }>
 ) {
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Supabase admin non configuré.' });
+    return res.status(500).json({ error: 'Database service unavailable (missing service role).' });
   }
 
   if (req.method === 'GET') {
@@ -53,7 +53,7 @@ async function handler(
       console.error('[admin/users/manage] list error:', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de charger les utilisateurs.' });
+        .json({ error: 'Failed to load users.' });
     }
 
     const items =
@@ -132,7 +132,7 @@ async function handler(
         const re = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
         if (!re.test(trimmedTag)) {
           return res.status(400).json({
-            error: 'BattleTag invalide (format Pseudo#0000)',
+            error: 'Invalid BattleTag (format Name#0000)',
           });
         }
       }
@@ -145,14 +145,14 @@ async function handler(
 
       if (updateErr) {
         console.error('[admin/users/manage] battle_tag update error:', updateErr);
-        return res.status(500).json({ error: 'Impossible de mettre à jour le BattleTag.' });
+        return res.status(500).json({ error: 'Failed to update BattleTag.' });
       }
 
       return res.status(200).json({ success: true });
     }
 
     if (!userId || typeof role !== 'string') {
-      return res.status(400).json({ error: 'userId et role requis.' });
+      return res.status(400).json({ error: 'userId and role required.' });
     }
 
     // Récupérer le compte cible (pour vérifier son rôle actuel)
@@ -162,7 +162,7 @@ async function handler(
       console.error('[admin/users/manage] get target error:', targetErr);
       return res
         .status(404)
-        .json({ error: "Utilisateur cible introuvable ou inaccessible." });
+        .json({ error: 'Target user not found or inaccessible.' });
     }
 
     const targetRole = (target.user.user_metadata as any)?.role ?? null;
@@ -185,7 +185,7 @@ async function handler(
     if (targetIsProtected && requesterRole !== 'owner') {
       return res.status(403).json({
         error:
-          'Seul un owner peut modifier un compte owner ou admin. Action refusée.',
+          'Only an owner can modify an owner or admin account. Action denied.',
       });
     }
 
@@ -200,7 +200,7 @@ async function handler(
       console.error('[admin/users/manage] update error:', error);
       return res
         .status(500)
-        .json({ error: "Impossible de mettre à jour l'utilisateur." });
+        .json({ error: 'Failed to update user.' });
     }
 
     // Synchroniser la table staff selon le rôle

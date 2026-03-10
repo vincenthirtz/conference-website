@@ -22,13 +22,13 @@ async function handler(
   if (!supabaseAdmin) {
     return res
       .status(500)
-      .json({ error: 'Service Supabase indisponible (service role manquant).' });
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
   const admin = supabaseAdmin!;
 
   const { id } = req.query;
   if (!id || typeof id !== 'string') {
-    return res.status(400).json({ error: 'ID partenaire requis.' });
+    return res.status(400).json({ error: 'Partner ID required.' });
   }
 
   if (req.method === 'GET') {
@@ -39,7 +39,7 @@ async function handler(
       .single();
 
     if (error || !data) {
-      return res.status(404).json({ error: 'Partenaire introuvable.' });
+      return res.status(404).json({ error: 'Partner not found.' });
     }
 
     return res.status(200).json(data);
@@ -56,7 +56,7 @@ async function handler(
       if (!validCategories.includes(body.category)) {
         return res
           .status(400)
-          .json({ error: 'Catégorie invalide. Valeurs acceptées: super, major, cultural.' });
+          .json({ error: 'Invalid category. Allowed values: super, major, cultural.' });
       }
       updates.category = body.category;
     }
@@ -67,7 +67,7 @@ async function handler(
     if (body.isActive !== undefined) updates.is_active = body.isActive;
 
     if (Object.keys(updates).length === 0) {
-      return res.status(400).json({ error: 'Aucune modification fournie.' });
+      return res.status(400).json({ error: 'No changes provided.' });
     }
 
     const { data, error } = await admin
@@ -81,11 +81,11 @@ async function handler(
       console.error('[admin/partners] update error', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de mettre à jour le partenaire.', detail: error.message });
+        .json({ error: 'Failed to update the partner.', detail: error.message });
     }
 
     if (!data) {
-      return res.status(404).json({ error: 'Partenaire introuvable.' });
+      return res.status(404).json({ error: 'Partner not found.' });
     }
 
     if (ctx.staff?.id) {
@@ -109,7 +109,7 @@ async function handler(
       .single();
 
     if (!existing) {
-      return res.status(404).json({ error: 'Partenaire introuvable.' });
+      return res.status(404).json({ error: 'Partner not found.' });
     }
 
     const { error } = await admin.from('partners').delete().eq('id', id);
@@ -118,7 +118,7 @@ async function handler(
       console.error('[admin/partners] delete error', error);
       return res
         .status(500)
-        .json({ error: 'Impossible de supprimer le partenaire.', detail: error.message });
+        .json({ error: 'Failed to delete the partner.', detail: error.message });
     }
 
     if (ctx.staff?.id) {

@@ -29,7 +29,7 @@ async function handler(
   }
 
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Service Supabase indisponible (service role manquant).' });
+    return res.status(500).json({ error: 'Database service unavailable (missing service role).' });
   }
 
   const tournamentId = String(id);

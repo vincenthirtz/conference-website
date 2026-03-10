@@ -7,6 +7,9 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
+import type { MatchStatus as BaseMatchStatus } from '@/types/admin';
+
+type MatchStatus = BaseMatchStatus | 'completed';
 
 type Tournament = {
   id: string;
@@ -32,8 +35,6 @@ type SimpleTeam = {
   short_name?: string | null;
   logo_url?: string | null;
 };
-
-type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'completed' | 'cancelled';
 
 type SimpleMatch = {
   id: string;

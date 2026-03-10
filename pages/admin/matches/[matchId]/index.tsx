@@ -6,6 +6,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import type { MatchStatus } from '@/types/admin';
 
 type TeamMini = {
   id: string;
@@ -36,8 +37,6 @@ type GameRow = {
   is_tiebreaker: boolean | null;
   went_overtime: boolean | null;
 };
-
-type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled' | string;
 
 type MatchRow = {
   id: string;

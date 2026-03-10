@@ -44,7 +44,7 @@ export default async function handler(
     console.error('[news] public list error', error);
     return res
       .status(500)
-      .json({ error: 'Impossible de charger les actualités.' });
+      .json({ error: 'Failed to load news.' });
   }
 
   const items =

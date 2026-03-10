@@ -8,7 +8,7 @@ export default async function handler(
   if (!supabaseAdmin) {
     return res
       .status(500)
-      .json({ error: 'Service Supabase indisponible.' });
+      .json({ error: 'Database service unavailable.' });
   }
 
   if (req.method !== 'GET') {
@@ -35,7 +35,7 @@ export default async function handler(
     console.error('[api/partners] error', error);
     return res
       .status(500)
-      .json({ error: 'Impossible de charger les partenaires.' });
+      .json({ error: 'Failed to load partners.' });
   }
 
   return res.status(200).json({ items: data ?? [] });

@@ -28,7 +28,7 @@ export default async function handler(
   if (!admin) {
     return res
       .status(500)
-      .json({ error: 'Service Supabase indisponible (annonces).' });
+      .json({ error: 'Database service unavailable.' });
   }
 
   const limit = Math.max(1, Math.min(20, Number(req.query.limit) || 10));
@@ -44,7 +44,7 @@ export default async function handler(
     console.error('[announcements] public list error', error);
     return res
       .status(500)
-      .json({ error: 'Impossible de charger les annonces.' });
+      .json({ error: 'Failed to load announcements.' });
   }
 
   const items =

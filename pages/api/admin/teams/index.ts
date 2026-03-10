@@ -4,6 +4,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
+import { parsePagination, sanitizeSearch } from '@/utils/apiHelpers';
 
 export type TeamRow = {
   id: string;
@@ -44,16 +45,10 @@ async function handleGet(
   req: NextApiRequest,
   res: NextApiResponse<TeamsApiResponse>
 ) {
-  const { search, isActive, limit, offset, includeTotal, tournamentId } = req.query;
+  const { isActive, includeTotal, tournamentId } = req.query;
 
-  const limitNum = parseInt(
-    (Array.isArray(limit) ? limit[0] : limit) ?? '50',
-    10
-  );
-  const offsetNum = parseInt(
-    (Array.isArray(offset) ? offset[0] : offset) ?? '0',
-    10
-  );
+  const { limit: limitNum, offset: offsetNum } = parsePagination(req, { limit: 50 });
+  const search = sanitizeSearch(req.query.search);
 
   const activeFilter =
     isActive === 'true' ? true : isActive === 'false' ? false : undefined;
@@ -70,7 +65,7 @@ async function handleGet(
     query = query.eq('is_active', activeFilter);
   }
 
-  if (search && !Array.isArray(search)) {
+  if (search) {
     const s = `%${search}%`;
     query = query.ilike('name', s);
   }

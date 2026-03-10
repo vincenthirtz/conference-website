@@ -3,6 +3,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
+import { parsePagination, sanitizeSearch } from '@/utils/apiHelpers';
 
 type CommentRow = {
   id: string;
@@ -44,15 +45,8 @@ async function listComments(
   req: NextApiRequest,
   res: NextApiResponse<ListResponse>
 ) {
-  const limit = Math.min(
-    200,
-    Math.max(1, parseInt((req.query.limit || '50').toString(), 10) || 50)
-  );
-  const offset = Math.max(
-    0,
-    parseInt((req.query.offset || '0').toString(), 10) || 0
-  );
-  const search = (req.query.search || '').toString().trim();
+  const { limit, offset } = parsePagination(req, { limit: 50, maxLimit: 200 });
+  const search = sanitizeSearch(req.query.search);
   const newsId = (req.query.newsId || '').toString().trim();
 
   let query = supabaseAdmin

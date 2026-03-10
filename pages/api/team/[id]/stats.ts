@@ -6,6 +6,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
+import type { MatchStatus } from '@/types/admin';
 
 /* -----------------------------------------------------------
  * Types
@@ -29,8 +30,6 @@ type TeamStatsView = {
   total_maps_won: number;
   total_maps_lost: number;
 };
-
-type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
 
 type MatchRow = {
   id: string;
