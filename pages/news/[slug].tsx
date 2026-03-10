@@ -4,9 +4,33 @@ import Heading from '@/components/Typography/heading';
 import Button from '@/components/Buttons/button';
 import Link from 'next/link';
 import { supabaseAdmin, getServerClient } from '@/utils/supabase';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Fragment, type ReactNode } from 'react';
 
 const SITE_NAME = "OW Women's Cup";
+
+/** Turn plain-text URLs into clickable <a> links, preserving surrounding text. */
+function linkifyContent(text: string): ReactNode {
+  const urlPattern = /(https?:\/\/[^\s<>"')\]]+)/g;
+  const parts = text.split(urlPattern);
+  if (parts.length === 1) return text;
+  // split with a capturing group alternates: text, match, text, match, …
+  // odd-index parts are the captured URLs
+  return parts.map((part, i) =>
+    i % 2 === 1 ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-purple-300 underline hover:text-purple-200 break-all"
+      >
+        {part}
+      </a>
+    ) : (
+      <Fragment key={i}>{part}</Fragment>
+    )
+  );
+}
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || '';
 
 function toAbsoluteUrl(path: string | null | undefined): string | undefined {
@@ -218,7 +242,7 @@ export default function NewsSlugPage({
             </div>
 
             <div className="mt-8 space-y-4 text-lg leading-relaxed text-gray-100 whitespace-pre-wrap">
-              {content || 'Pas de contenu pour cette news.'}
+              {content ? linkifyContent(content) : 'Pas de contenu pour cette news.'}
             </div>
 
             <div className="mt-10">
