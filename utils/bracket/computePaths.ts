@@ -1,54 +1,24 @@
 // lib/bracket/computePaths.ts
 // Utilitaires pour passer du graphe de bracket à un layout exploitable par le front
 // (colonnes, rangées, et "paths" entre les matchs).
-import {
+import type {
   BracketGraph,
   BracketColumn,
   BracketColumnsByKey,
+  MatchPosition,
+  BracketEdgePath,
+  BracketLayout,
+} from '@/types/bracket';
+import {
   buildColumnsBySideAndGroup,
-  makeSideGroupKey,
   listSideGroupKeys,
 } from './buildGraph';
 
-/* -----------------------------------------------------------
- * Types de layout
- * ---------------------------------------------------------*/
-
-/**
- * Position d'un match dans la grille d'un side+group
- * - sideGroupKey : "wb::A", "lb::", "final::" etc.
- * - columnIndex : index de la colonne (0 = plus tôt dans le bracket)
- * - rowIndex : index de la rangée (0 = en haut)
- */
-export type MatchPosition = {
-  sideGroupKey: string;
-  columnIndex: number;
-  rowIndex: number;
-};
-
-/**
- * Représente un "edge" (liaison) entre deux matchs dans la grille.
- * Cela ne dessine rien par lui-même, mais donne tout ce qu'il faut
- * au front pour faire des lignes (SVG, canvas, etc.).
- */
-export type BracketEdgePath = {
-  fromMatchId: string;
-  toMatchId: string;
-  from: MatchPosition;
-  to: MatchPosition;
-};
-
-/**
- * Layout complet pour un bracket :
- * - columnsByKey : colonnes de matchs pour chaque side+group
- * - positions : map matchId -> position
- * - edges : liaisons calculées entre les matchs
- */
-export type BracketLayout = {
-  columnsByKey: BracketColumnsByKey;
-  positions: Record<string, MatchPosition>;
-  edges: BracketEdgePath[];
-};
+export type {
+  MatchPosition,
+  BracketEdgePath,
+  BracketLayout,
+} from '@/types/bracket';
 
 /* -----------------------------------------------------------
  * Fonction principale

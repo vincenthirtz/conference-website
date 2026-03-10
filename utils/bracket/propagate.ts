@@ -2,45 +2,11 @@
 // Logique de propagation des équipes dans le bracket
 // à partir d'un match terminé (winner / loser → prochains matchs).
 import { supabaseAdmin } from '../supabase';
-import type { MatchStatus, BracketSide } from '@/types/admin';
-
-/* -----------------------------------------------------------
- * Types (adaptés à ta structure existante)
- * ---------------------------------------------------------*/
+import type { MatchRow, PropagationResult } from '@/types/bracket';
 
 export type { MatchStatus } from '@/types/admin';
 export type { BracketSide } from '@/types/admin';
-
-export type MatchRow = {
-  id: string;
-  tournament_id: string;
-  stage_id: string | null;
-  status: MatchStatus;
-  is_bye: boolean | null;
-
-  team1_id: string | null;
-  team2_id: string | null;
-  team1_score: number | null;
-  team2_score: number | null;
-  winner_team_id: string | null;
-
-  bracket_side: BracketSide;
-  round_number: number | null;
-  group_key: string | null;
-
-  next_match_win_id: string | null;
-  next_match_win_slot: 1 | 2 | null;
-  next_match_lose_id: string | null;
-  next_match_lose_slot: 1 | 2 | null;
-};
-
-export type PropagationResult = {
-  matchId: string;
-  winnerTeamId: string | null;
-  loserTeamId: string | null;
-  updatedWinMatchId?: string | null;
-  updatedLoseMatchId?: string | null;
-};
+export type { MatchRow, PropagationResult } from '@/types/bracket';
 
 /* -----------------------------------------------------------
  * Entrée principale : à appeler après update d'un match

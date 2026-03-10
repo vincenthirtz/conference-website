@@ -5,7 +5,7 @@ import type {
   SetStateAction,
 } from 'react';
 import type { City, Speaker, Team, SVGTypes } from './types';
-import type { StaffRole } from '@/utils/staff';
+import type { StaffRole } from './admin';
 
 export type ButtonType = 'button' | 'submit' | 'reset' | undefined;
 

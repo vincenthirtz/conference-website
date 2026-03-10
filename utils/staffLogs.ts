@@ -1,64 +1,19 @@
 // lib/staffLogs.ts
 // Gestion centralisée des logs staff (inserts + lecture + filtres)
 import { supabaseAdmin } from './supabase';
-import type { StaffRole } from './staff';
+import type {
+  StaffLogAction,
+  StaffLog,
+  StaffLogInsert,
+  StaffLogsFilters,
+} from '@/types/staffLogs';
 
-/* -----------------------------------------------------------
- * Types
- * ---------------------------------------------------------*/
-
-export type StaffLogAction =
-  | 'login'
-  | 'logout'
-  | 'view_admin_page'
-  | 'create_tournament'
-  | 'update_tournament'
-  | 'delete_tournament'
-  | 'create_stage'
-  | 'update_stage'
-  | 'delete_stage'
-  | 'create_match'
-  | 'update_match'
-  | 'delete_match'
-  | 'update_bracket'
-  | 'update_scores'
-  | 'staff_batch_action'
-  | 'manage_team'
-  | 'update_team'
-  | 'delete_team'
-  | 'tournament_update'
-  | 'create_swiss_round'
-  | 'advance_teams'
-  | 'apply_template'
-  | 'clone_stage'
-  | 'other';
-
-export type StaffLog = {
-  id: string;
-  created_at: string;
-  staff_id: string;
-  action: StaffLogAction;
-  entity_type: string | null;
-  entity_id: string | null;
-  tournament_id: string | null;
-  payload: Record<string, any> | null;
-  staff: {
-    id: string;
-    auth_user_id: string;
-    role: StaffRole;
-    display_name: string | null;
-    avatar_url: string | null;
-  } | null;
-};
-
-export type StaffLogInsert = {
-  staff_id: string;
-  action: StaffLogAction;
-  entity_type?: string | null;
-  entity_id?: string | null;
-  tournament_id?: string | null;
-  payload?: Record<string, any> | null;
-};
+export type {
+  StaffLogAction,
+  StaffLog,
+  StaffLogInsert,
+  StaffLogsFilters,
+} from '@/types/staffLogs';
 
 /* -----------------------------------------------------------
  * Insert log (utilisé dans staff.ts)
@@ -121,16 +76,6 @@ export async function fetchStaffLogs(limit = 100): Promise<StaffLog[]> {
 /* -----------------------------------------------------------
  * Version filtrable : pour /admin/logs
  * ---------------------------------------------------------*/
-
-export type StaffLogsFilters = {
-  staff_id?: string | null;
-  action?: StaffLogAction | null;
-  tournament_id?: string | null;
-  entity_type?: string | null;
-  date_from?: string | null; // ISO
-  date_to?: string | null; // ISO
-  search?: string | null; // match text in payload
-};
 
 export async function fetchStaffLogsFiltered(
   filters: StaffLogsFilters,

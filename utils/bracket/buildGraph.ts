@@ -3,42 +3,20 @@
 // (utilise directement les liens next_match_win_id / next_match_lose_id).
 
 import type { BracketSide } from '@/types/admin';
+import type {
+  MatchForGraph,
+  BracketMatchNode,
+  BracketGraph,
+  BracketColumn,
+  BracketColumnsByKey,
+} from '@/types/bracket';
+
 export type { BracketSide } from '@/types/admin';
-
-export type MatchForGraph = {
-  id: string;
-  tournament_id: string;
-  bracket_side: BracketSide;
-  round_number: number | null;
-  group_key: string | null;
-
-  next_match_win_id: string | null;
-  next_match_lose_id: string | null;
-};
-
-export type BracketMatchNode = {
-  id: string;
-  tournamentId: string;
-  side: BracketSide;
-  groupKey: string | null;
-  roundNumber: number | null;
-
-  // Liens vers les prochains matchs (dans la DB)
-  nextWinId: string | null;
-  nextLoseId: string | null;
-
-  // Liens calculés dans le graphe (incoming/outgoing orientés)
-  incomingFrom: string[]; // matches qui feed ce match (par win/lose)
-  outgoingTo: string[]; // matches vers lesquels ce match feed
-};
-
-export type BracketGraph = {
-  nodes: Record<string, BracketMatchNode>;
-  // Matches sans parents (entrée de l'arbre, par side+group)
-  rootsBySideAndGroup: Record<string, string[]>; // key = `${side}::${groupKey || ""}`
-  // Matches sans enfant (finales, petites finales, etc.)
-  leavesBySideAndGroup: Record<string, string[]>;
-};
+export type {
+  MatchForGraph,
+  BracketMatchNode,
+  BracketGraph,
+} from '@/types/bracket';
 
 /* -----------------------------------------------------------
  * Construction du graphe brut
@@ -113,12 +91,7 @@ export function buildBracketGraph(matches: MatchForGraph[]): BracketGraph {
  * Construction de colonnes exploitable par le front
  * ---------------------------------------------------------*/
 
-export type BracketColumn = {
-  // IDs de matchs dans cette colonne, dans un ordre stable
-  matchIds: string[];
-};
-
-export type BracketColumnsByKey = Record<string, BracketColumn[]>; // key = side::group
+export type { BracketColumn, BracketColumnsByKey } from '@/types/bracket';
 
 /**
  * Construit des colonnes de bracket par side+group à partir du graphe.

@@ -8,32 +8,15 @@ import type {
 } from 'next';
 import type { User } from '@supabase/supabase-js';
 import { supabaseAdmin, getServerClient } from './supabase';
+import type { StaffRole } from '@/types/admin';
+import type { StaffMember, StaffContext } from '@/types/staff';
+
+export type { StaffRole } from '@/types/admin';
+export type { StaffMember, StaffContext } from '@/types/staff';
 
 /* -----------------------------------------------------------
  * Types & constantes
  * ---------------------------------------------------------*/
-
-export type StaffRole =
-  | 'owner'
-  | 'admin'
-  | 'manager'
-  | 'caster';
-
-export type StaffMember = {
-  id: string;
-  auth_user_id: string;
-  email: string;
-  role: StaffRole;
-  display_name: string | null;
-  avatar_url: string | null; // optionnel en DB, pas grave si la colonne n'existe pas
-  created_at: string;
-};
-
-export type StaffContext = {
-  user: User | null;
-  staff: StaffMember | null;
-  role: StaffRole | null;
-};
 
 export class StaffUnauthorizedError extends Error {
   statusCode = 403;
