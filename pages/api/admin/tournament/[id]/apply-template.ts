@@ -40,8 +40,26 @@ async function handler(
   }
 
   try {
-    // Verify template exists
-    const template = TOURNAMENT_TEMPLATES.find((t) => t.id === templateId);
+    // Verify template exists (check built-in first, then custom)
+    let template = TOURNAMENT_TEMPLATES.find((t) => t.id === templateId);
+
+    if (!template) {
+      const { data: settingsRow } = await supabaseAdmin
+        .from('site_settings')
+        .select('value')
+        .eq('key', 'custom_tournament_templates')
+        .maybeSingle();
+
+      if (settingsRow?.value) {
+        try {
+          const custom = JSON.parse(settingsRow.value);
+          if (Array.isArray(custom)) {
+            template = custom.find((t: any) => t.id === templateId);
+          }
+        } catch { /* ignore */ }
+      }
+    }
+
     if (!template) {
       return res.status(400).json({ error: `Template "${templateId}" not found` });
     }

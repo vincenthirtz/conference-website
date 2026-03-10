@@ -17,7 +17,7 @@ type StaffProps = {
 
 type DeletedItem = {
   id: string;
-  type: 'stage' | 'team' | 'match';
+  type: 'stage' | 'team' | 'match' | 'announcement' | 'partner' | 'cast_member' | 'adherent';
   name: string;
   details: string | null;
   deleted_at: string | null;
@@ -34,6 +34,14 @@ function typeLabel(type: string) {
       return 'Equipe';
     case 'match':
       return 'Match';
+    case 'announcement':
+      return 'Annonce';
+    case 'partner':
+      return 'Partenaire';
+    case 'cast_member':
+      return 'Casteur';
+    case 'adherent':
+      return 'Adherent';
     default:
       return type;
   }
@@ -47,6 +55,14 @@ function typeColor(type: string) {
       return 'bg-blue-600/20 text-blue-300 border-blue-500/30';
     case 'match':
       return 'bg-amber-600/20 text-amber-300 border-amber-500/30';
+    case 'announcement':
+      return 'bg-emerald-600/20 text-emerald-300 border-emerald-500/30';
+    case 'partner':
+      return 'bg-pink-600/20 text-pink-300 border-pink-500/30';
+    case 'cast_member':
+      return 'bg-cyan-600/20 text-cyan-300 border-cyan-500/30';
+    case 'adherent':
+      return 'bg-orange-600/20 text-orange-300 border-orange-500/30';
     default:
       return 'bg-neutral-600/20 text-neutral-300 border-neutral-500/30';
   }
@@ -226,6 +242,10 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
               <option value="stage">Phases</option>
               <option value="team">Equipes</option>
               <option value="match">Matches</option>
+              <option value="announcement">Annonces</option>
+              <option value="partner">Partenaires</option>
+              <option value="cast_member">Casteurs</option>
+              <option value="adherent">Adherents</option>
             </select>
 
             <button

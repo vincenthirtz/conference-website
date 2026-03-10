@@ -1,9 +1,12 @@
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import slugify from 'slugify';
 import { supabaseClient } from '@/utils/supabase';
 import { withStaffPage } from '@/utils/staff';
+import { useAutoSave } from '@/utils/useAutoSave';
+import DraftBanner from '@/components/admin/DraftBanner';
+import AutoSaveIndicator from '@/components/admin/AutoSaveIndicator';
 
 type Props = {
   staff: {
@@ -32,6 +35,15 @@ export default function AdminNewsCreate({ staff }: Props) {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
+
+  const { draftRestored, lastSaved, clearDraft, restoreDraft } = useAutoSave(form, {
+    key: 'news_new',
+  });
+
+  useEffect(() => {
+    if (draftRestored) setShowDraftBanner(true);
+  }, [draftRestored]);
 
   const updateField = (key: string, value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -63,6 +75,7 @@ export default function AdminNewsCreate({ staff }: Props) {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || 'Création impossible');
+      clearDraft();
       router.push(`/admin/news/${json.id}`);
     } catch (err: any) {
       setError(err?.message || 'Erreur inattendue.');
@@ -117,6 +130,20 @@ export default function AdminNewsCreate({ staff }: Props) {
           <div className="grid gap-6 lg:grid-cols-[2fr,1fr] items-start">
             {/* Form */}
             <div className="space-y-6">
+              {showDraftBanner && (
+                <DraftBanner
+                  lastSaved={lastSaved}
+                  onRestore={() => {
+                    const draft = restoreDraft();
+                    if (draft) setForm(draft);
+                    setShowDraftBanner(false);
+                  }}
+                  onDiscard={() => {
+                    clearDraft();
+                    setShowDraftBanner(false);
+                  }}
+                />
+              )}
               {error && (
                 <div className="rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
                   <svg
@@ -272,6 +299,7 @@ export default function AdminNewsCreate({ staff }: Props) {
 
                 {/* Actions */}
                 <div className="flex items-center gap-3 pt-2">
+                  <AutoSaveIndicator lastSaved={lastSaved} />
                   <button
                     type="submit"
                     disabled={loading}

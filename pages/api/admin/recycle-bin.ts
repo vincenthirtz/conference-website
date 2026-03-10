@@ -9,7 +9,7 @@ import { logStaffAction } from '@/utils/staffLogs';
 
 type DeletedItem = {
   id: string;
-  type: 'stage' | 'team' | 'match';
+  type: 'stage' | 'team' | 'match' | 'announcement' | 'partner' | 'cast_member' | 'adherent';
   name: string;
   details: string | null;
   deleted_at: string | null;
@@ -134,6 +134,91 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse<ApiResponse>)
     }
   }
 
+  // 4) Soft-deleted announcements (is_active = false)
+  if (!typeFilter || typeFilter === 'announcement') {
+    const { data: announcements } = await supabaseAdmin!
+      .from('announcements')
+      .select('id, title, message, updated_at')
+      .eq('is_active', false)
+      .order('updated_at', { ascending: false })
+      .limit(100);
+
+    for (const a of announcements || []) {
+      items.push({
+        id: a.id,
+        type: 'announcement',
+        name: a.title || 'Annonce sans titre',
+        details: a.message ? a.message.slice(0, 60) : null,
+        deleted_at: a.updated_at,
+        tournament_id: null,
+      });
+    }
+  }
+
+  // 5) Soft-deleted partners (is_active = false)
+  if (!typeFilter || typeFilter === 'partner') {
+    const { data: partners } = await supabaseAdmin!
+      .from('partners')
+      .select('id, name, category, updated_at')
+      .eq('is_active', false)
+      .order('updated_at', { ascending: false })
+      .limit(100);
+
+    for (const p of partners || []) {
+      items.push({
+        id: p.id,
+        type: 'partner',
+        name: p.name || 'Partenaire sans nom',
+        details: p.category || null,
+        deleted_at: p.updated_at,
+        tournament_id: null,
+      });
+    }
+  }
+
+  // 6) Soft-deleted cast members (is_active = false)
+  if (!typeFilter || typeFilter === 'cast_member') {
+    const { data: castMembers } = await supabaseAdmin!
+      .from('cast_members')
+      .select('id, display_name, role, updated_at')
+      .eq('is_active', false)
+      .order('updated_at', { ascending: false })
+      .limit(100);
+
+    for (const c of castMembers || []) {
+      items.push({
+        id: c.id,
+        type: 'cast_member',
+        name: c.display_name || 'Membre sans nom',
+        details: c.role || null,
+        deleted_at: c.updated_at,
+        tournament_id: null,
+      });
+    }
+  }
+
+  // 7) Soft-deleted adherents (is_active = false)
+  if (!typeFilter || typeFilter === 'adherent') {
+    const { data: adherents } = await supabaseAdmin!
+      .from('adherents')
+      .select('id, first_name, last_name, email, updated_at')
+      .eq('is_active', false)
+      .order('updated_at', { ascending: false })
+      .limit(100);
+
+    for (const a of adherents || []) {
+      const fullName = [a.first_name, a.last_name].filter(Boolean).join(' ');
+      items.push({
+        id: a.id,
+        type: 'adherent',
+        name: fullName || 'Adherent sans nom',
+        details: a.email || null,
+        deleted_at: a.updated_at,
+        tournament_id: null,
+      });
+    }
+  }
+
   // Sort all by deleted_at descending
   items.sort((a, b) => {
     const da = a.deleted_at ? new Date(a.deleted_at).getTime() : 0;
@@ -183,6 +268,42 @@ async function handleRestore(
           .update({ status: 'pending', updated_at: nowIso })
           .eq('id', id)
           .eq('status', 'cancelled');
+
+        if (error) throw error;
+        break;
+      }
+      case 'announcement': {
+        const { error } = await supabaseAdmin!
+          .from('announcements')
+          .update({ is_active: true, updated_at: nowIso })
+          .eq('id', id);
+
+        if (error) throw error;
+        break;
+      }
+      case 'partner': {
+        const { error } = await supabaseAdmin!
+          .from('partners')
+          .update({ is_active: true, updated_at: nowIso })
+          .eq('id', id);
+
+        if (error) throw error;
+        break;
+      }
+      case 'cast_member': {
+        const { error } = await supabaseAdmin!
+          .from('cast_members')
+          .update({ is_active: true, updated_at: nowIso })
+          .eq('id', id);
+
+        if (error) throw error;
+        break;
+      }
+      case 'adherent': {
+        const { error } = await supabaseAdmin!
+          .from('adherents')
+          .update({ is_active: true, updated_at: nowIso })
+          .eq('id', id);
 
         if (error) throw error;
         break;

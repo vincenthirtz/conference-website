@@ -142,12 +142,39 @@ function DashboardPage(_: StaffProps) {
                   Progression du tournoi
                 </p>
               </div>
-              <button
-                onClick={fetchDashboard}
-                className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors"
-              >
-                Rafraichir
-              </button>
+              <div className="flex items-center gap-2">
+                <div className="relative group">
+                  <button
+                    type="button"
+                    className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Exporter
+                  </button>
+                  <div className="invisible group-hover:visible absolute right-0 mt-1 w-48 bg-neutral-800 border border-neutral-700 rounded-xl shadow-lg z-10 py-1">
+                    <a
+                      href={`/api/admin/tournament/${tournamentId}/export-results?format=csv`}
+                      className="block px-4 py-2 text-sm hover:bg-neutral-700 transition-colors"
+                    >
+                      Resultats CSV
+                    </a>
+                    <a
+                      href={`/api/admin/tournament/${tournamentId}/export-results?format=json`}
+                      className="block px-4 py-2 text-sm hover:bg-neutral-700 transition-colors"
+                    >
+                      Resultats JSON
+                    </a>
+                  </div>
+                </div>
+                <button
+                  onClick={fetchDashboard}
+                  className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors"
+                >
+                  Rafraichir
+                </button>
+              </div>
             </div>
           </div>
 

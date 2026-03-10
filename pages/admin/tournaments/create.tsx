@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
@@ -6,6 +6,9 @@ import {
   TOURNAMENT_TEMPLATES,
   type TournamentTemplate,
 } from '@/config/tournament-templates';
+import { useAutoSave } from '@/utils/useAutoSave';
+import DraftBanner from '@/components/admin/DraftBanner';
+import AutoSaveIndicator from '@/components/admin/AutoSaveIndicator';
 
 type Props = {
   staff: {
@@ -52,6 +55,14 @@ export const getServerSideProps = withStaffPage('manager');
 
 function AdminTournamentCreatePage({ staff }: Props) {
   const router = useRouter();
+  const [customTemplates, setCustomTemplates] = useState<TournamentTemplate[]>([]);
+
+  useEffect(() => {
+    fetch('/api/admin/tournament-templates')
+      .then((r) => r.json())
+      .then((json) => setCustomTemplates(json.templates || []))
+      .catch(() => {});
+  }, []);
 
   const [form, setForm] = useState<{
     name: string;
@@ -87,6 +98,15 @@ function AdminTournamentCreatePage({ staff }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [dateError, setDateError] = useState<string | null>(null);
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
+
+  const { draftRestored, lastSaved, clearDraft, restoreDraft } = useAutoSave(form, {
+    key: 'tournament_create',
+  });
+
+  useEffect(() => {
+    if (draftRestored) setShowDraftBanner(true);
+  }, [draftRestored]);
 
   function updateField<K extends keyof typeof form>(
     key: K,
@@ -152,6 +172,7 @@ function AdminTournamentCreatePage({ staff }: Props) {
       const created = json.tournament;
 
       if (created?.id) {
+        clearDraft();
         // Apply template if selected
         if (selectedTemplate) {
           try {
@@ -230,6 +251,20 @@ function AdminTournamentCreatePage({ staff }: Props) {
           <div className="grid gap-6 lg:grid-cols-[2fr,1fr] items-start">
             {/* Form */}
             <div className="space-y-6">
+              {showDraftBanner && (
+                <DraftBanner
+                  lastSaved={lastSaved}
+                  onRestore={() => {
+                    const draft = restoreDraft();
+                    if (draft) setForm(draft);
+                    setShowDraftBanner(false);
+                  }}
+                  onDiscard={() => {
+                    clearDraft();
+                    setShowDraftBanner(false);
+                  }}
+                />
+              )}
               {errorMsg && (
                 <div className="rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
                   <svg
@@ -271,7 +306,7 @@ function AdminTournamentCreatePage({ staff }: Props) {
                     </div>
                   </button>
 
-                  {TOURNAMENT_TEMPLATES.map((tpl) => (
+                  {[...TOURNAMENT_TEMPLATES, ...customTemplates].map((tpl) => (
                     <button
                       key={tpl.id}
                       type="button"
@@ -509,6 +544,7 @@ function AdminTournamentCreatePage({ staff }: Props) {
 
                 {/* Actions */}
                 <div className="flex items-center gap-3 pt-2">
+                  <AutoSaveIndicator lastSaved={lastSaved} />
                   <button
                     type="submit"
                     disabled={submitting}

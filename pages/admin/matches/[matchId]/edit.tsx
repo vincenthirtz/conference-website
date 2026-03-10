@@ -7,6 +7,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { withStaffPage } from '@/utils/staff';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
+import MatchReadinessChecklist from '@/components/admin/MatchReadinessChecklist';
 import type {
   StaffProps,
   Match,
@@ -907,6 +908,16 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                   </Link>
                 </div>
               </section>
+
+              {match.status !== 'finished' && (
+                <MatchReadinessChecklist
+                  match={match}
+                  team1Name={team1?.name ?? null}
+                  team2Name={team2?.name ?? null}
+                  tournamentStatus={tournament?.status ?? null}
+                  stageActive={stage?.is_active ?? null}
+                />
+              )}
             </aside>
           </div>
         )}

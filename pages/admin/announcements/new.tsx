@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { supabaseClient } from '@/utils/supabase';
+import { useAutoSave } from '@/utils/useAutoSave';
+import DraftBanner from '@/components/admin/DraftBanner';
+import AutoSaveIndicator from '@/components/admin/AutoSaveIndicator';
 
 type Props = {
   staff: {
@@ -41,6 +44,15 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
 
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
+
+  const { draftRestored, lastSaved, clearDraft, restoreDraft } = useAutoSave(form, {
+    key: 'announcement_new',
+  });
+
+  useEffect(() => {
+    if (draftRestored) setShowDraftBanner(true);
+  }, [draftRestored]);
 
   function updateField<K extends keyof FormState>(
     key: K,
@@ -99,6 +111,7 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
         throw new Error(json.error || "Erreur lors de la création de l'annonce");
       }
 
+      clearDraft();
       router.push('/admin/announcements');
     } catch (err: any) {
       setErrorMsg(
@@ -154,6 +167,20 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
           <div className="grid gap-6 lg:grid-cols-[2fr,1fr] items-start">
             {/* Form */}
             <div className="space-y-6">
+              {showDraftBanner && (
+                <DraftBanner
+                  lastSaved={lastSaved}
+                  onRestore={() => {
+                    const draft = restoreDraft();
+                    if (draft) setForm(draft);
+                    setShowDraftBanner(false);
+                  }}
+                  onDiscard={() => {
+                    clearDraft();
+                    setShowDraftBanner(false);
+                  }}
+                />
+              )}
               {errorMsg && (
                 <div className="rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
                   <svg

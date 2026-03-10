@@ -32,7 +32,8 @@ async function handler(
   }
 
   const id = String(stageId);
-  const exportFormat = req.query.export === 'csv' ? 'csv' : null;
+  const exportParam = req.query.export as string | undefined;
+  const exportFormat = exportParam === 'csv' ? 'csv' : exportParam === 'json' ? 'json' : null;
 
   try {
     // Fetch stage to get type and name
@@ -84,6 +85,30 @@ async function handler(
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       res.status(200).end(csv);
+      return;
+    }
+
+    if (exportFormat === 'json') {
+      const exportData = {
+        stageId: id,
+        stageName: stage.name,
+        stageType,
+        exportedAt: new Date().toISOString(),
+        standings: standings.map((s) => ({
+          rank: s.rank,
+          teamName: s.teamName,
+          teamId: s.teamId,
+          wins: s.wins,
+          losses: s.losses,
+          draws: s.draws,
+          score: s.score,
+          seed: s.seed,
+        })),
+      };
+      const filename = `standings-${(stage.name || id).replace(/[^a-zA-Z0-9_-]/g, '_')}.json`;
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.status(200).end(JSON.stringify(exportData, null, 2));
       return;
     }
 

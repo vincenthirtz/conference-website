@@ -61,6 +61,7 @@ export type TournamentMini = {
   id: string;
   name: string;
   slug: string | null;
+  status?: string | null;
 };
 
 /* -----------------------------------------------------------
@@ -108,6 +109,7 @@ export type StageMini = {
   id: string;
   name: string;
   stage_type: StageType | null;
+  is_active?: boolean | null;
 };
 
 /* -----------------------------------------------------------

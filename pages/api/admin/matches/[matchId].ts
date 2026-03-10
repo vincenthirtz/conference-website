@@ -80,8 +80,8 @@ async function handleGet(
     next_match_lose_slot,
     team1:team1_id(id, name, short_name, logo_url),
     team2:team2_id(id, name, short_name, logo_url),
-    stage:stage_id(id, name, stage_type),
-    tournament:tournament_id(id, name, slug)
+    stage:stage_id(id, name, stage_type, is_active),
+    tournament:tournament_id(id, name, slug, status)
   `;
 
   if (!supabaseAdmin) {

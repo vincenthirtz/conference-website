@@ -4,6 +4,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { supabaseClient } from '@/utils/supabase';
+import { useAutoSave } from '@/utils/useAutoSave';
+import DraftBanner from '@/components/admin/DraftBanner';
+import AutoSaveIndicator from '@/components/admin/AutoSaveIndicator';
 
 type Props = {
   staff: {
@@ -40,6 +43,7 @@ function AdminNewAdherentPage({ staff }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cotisationAmount, setCotisationAmount] = useState<number>(0);
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
 
   const currentYear = new Date().getFullYear();
   const today = new Date().toISOString().split('T')[0];
@@ -65,6 +69,14 @@ function AdminNewAdherentPage({ staff }: Props) {
     role: 'member',
     notes: '',
   });
+
+  const { draftRestored, lastSaved, clearDraft, restoreDraft } = useAutoSave(form, {
+    key: 'adherent_new',
+  });
+
+  useEffect(() => {
+    if (draftRestored) setShowDraftBanner(true);
+  }, [draftRestored]);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -141,6 +153,7 @@ function AdminNewAdherentPage({ staff }: Props) {
         throw new Error(json.error || 'Erreur lors de la création.');
       }
 
+      clearDraft();
       router.push('/admin/adherents');
     } catch (err: any) {
       setError(err.message || 'Une erreur est survenue.');
@@ -201,6 +214,20 @@ function AdminNewAdherentPage({ staff }: Props) {
             onSubmit={handleSubmit}
             className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 sm:p-8 space-y-8"
           >
+            {showDraftBanner && (
+              <DraftBanner
+                lastSaved={lastSaved}
+                onRestore={() => {
+                  const draft = restoreDraft();
+                  if (draft) setForm(draft);
+                  setShowDraftBanner(false);
+                }}
+                onDiscard={() => {
+                  clearDraft();
+                  setShowDraftBanner(false);
+                }}
+              />
+            )}
             {error && (
               <div className="rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
                 <svg
