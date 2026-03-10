@@ -19,6 +19,8 @@ type GameRow = {
   map_order: number | null;
   team1_score: number | null;
   team2_score: number | null;
+  winner_team_id: string | null;
+  duration_minutes: number | null;
   is_tiebreaker: boolean | null;
   went_overtime: boolean | null;
   created_at: string;
@@ -30,6 +32,8 @@ type GameInput = {
   map_order?: number | null;
   team1_score?: number | null;
   team2_score?: number | null;
+  winner_team_id?: string | null;
+  duration_minutes?: number | null;
   is_tiebreaker?: boolean | null;
   went_overtime?: boolean | null;
 };
@@ -106,6 +110,8 @@ async function handlePost(
     map_order: body.map_order ?? null,
     team1_score: body.team1_score ?? 0,
     team2_score: body.team2_score ?? 0,
+    winner_team_id: body.winner_team_id ?? null,
+    duration_minutes: body.duration_minutes ?? null,
     is_tiebreaker: body.is_tiebreaker ?? false,
     went_overtime: body.went_overtime ?? false,
   };
@@ -181,6 +187,8 @@ async function handlePut(
     map_order: typeof g.map_order === 'number' ? g.map_order : idx,
     team1_score: g.team1_score ?? 0,
     team2_score: g.team2_score ?? 0,
+    winner_team_id: g.winner_team_id ?? null,
+    duration_minutes: g.duration_minutes ?? null,
     is_tiebreaker: g.is_tiebreaker ?? false,
     went_overtime: g.went_overtime ?? false,
   }));
@@ -207,13 +215,48 @@ async function handlePut(
   let recomputeResult: any = null;
 
   if (recomputeMode === 'from_games') {
-    const total = computeTotalsFromGames(newGames);
+    // Fetch match to know team IDs for winner deduction per game
+    const { data: matchRow } = await supabaseAdmin
+      .from('matches')
+      .select('team1_id, team2_id')
+      .eq('id', matchId)
+      .maybeSingle();
+
+    const team1Id = matchRow?.team1_id ?? null;
+    const team2Id = matchRow?.team2_id ?? null;
+
+    // Auto-fill winner_team_id on games that don't have one set
+    if (team1Id && team2Id && newGames.length > 0) {
+      const updates: { id: string; winner_team_id: string }[] = [];
+      for (const g of newGames) {
+        if (!g.winner_team_id && g.team1_score != null && g.team2_score != null) {
+          const w =
+            g.team1_score > g.team2_score
+              ? team1Id
+              : g.team2_score > g.team1_score
+                ? team2Id
+                : null;
+          if (w) {
+            (g as any).winner_team_id = w;
+            updates.push({ id: g.id, winner_team_id: w });
+          }
+        }
+      }
+      // Batch-update winner_team_id on games rows
+      for (const u of updates) {
+        await supabaseAdmin
+          .from('games')
+          .update({ winner_team_id: u.winner_team_id })
+          .eq('id', u.id);
+      }
+    }
+
+    const total = computeMapWinsFromGames(newGames, team1Id, team2Id);
     try {
       recomputeResult = await applyMatchScore({
         matchId,
         team1Score: total.team1,
         team2Score: total.team2,
-        // winnerTeamId déduit automatiquement si possible
         markFinished: true,
         propagateBracket: true,
         staffId: ctx.staff?.id ?? null,
@@ -285,16 +328,24 @@ async function handleDelete(matchId: string, res: NextApiResponse, ctx: any) {
  * Helpers
  * ---------------------------------------------------------*/
 
-function computeTotalsFromGames(games: GameRow[]): {
-  team1: number;
-  team2: number;
-} {
+/**
+ * Count map wins per team (for BO scoring: 2-1 in a BO3, not round sums).
+ * A game is won by the team with more rounds in that game.
+ */
+function computeMapWinsFromGames(
+  games: GameRow[],
+  team1Id: string | null,
+  team2Id: string | null
+): { team1: number; team2: number } {
   let t1 = 0;
   let t2 = 0;
 
   for (const g of games) {
-    t1 += g.team1_score ?? 0;
-    t2 += g.team2_score ?? 0;
+    const s1 = g.team1_score ?? 0;
+    const s2 = g.team2_score ?? 0;
+    if (s1 > s2) t1 += 1;
+    else if (s2 > s1) t2 += 1;
+    // ties don't count as a map win for either side
   }
 
   return { team1: t1, team2: t2 };

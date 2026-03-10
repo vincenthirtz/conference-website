@@ -30,6 +30,8 @@ type GameRow = {
   map_name: string | null;
   team1_score: number | null;
   team2_score: number | null;
+  winner_team_id: string | null;
+  duration_minutes: number | null;
   is_tiebreaker: boolean | null;
   went_overtime: boolean | null;
 };
@@ -55,6 +57,7 @@ export type MapTopStat = {
   gamesPlayed: number;
   totalRounds: number;
   avgRounds: number;
+  avgDuration: number | null; // average game duration in minutes
   overtimes: number;
   tiebreakers: number;
   usageRate: number; // 0–1
@@ -68,11 +71,21 @@ export type MapTopStat = {
   teamWinrates: TeamMapWinrate[];
 };
 
+export type TeamMapTendency = {
+  teamId: string;
+  teamName: string;
+  totalVetos: number; // number of veto sequences this team participated in
+  bans: { mapName: string; count: number; rate: number }[];
+  picks: { mapName: string; count: number; rate: number }[];
+};
+
 export type MapsStatsApiResponse = {
   tournamentId: string;
   totalGames: number;
   totalVetoMatches: number;
   maps: MapTopStat[];
+  neverPlayed: string[]; // maps in pool but never played in a game
+  teamTendencies: TeamMapTendency[];
 };
 
 export default async function handler(
@@ -123,6 +136,8 @@ export default async function handler(
         totalGames: 0,
         totalVetoMatches: 0,
         maps: [],
+        neverPlayed: [],
+        teamTendencies: [],
       };
       return res.status(200).json(empty);
     }
@@ -131,7 +146,7 @@ export default async function handler(
     const { data: gamesData, error: gErr } = await supabaseAdmin
       .from('games')
       .select(
-        'match_id, map_name, team1_score, team2_score, is_tiebreaker, went_overtime'
+        'match_id, map_name, team1_score, team2_score, winner_team_id, duration_minutes, is_tiebreaker, went_overtime'
       )
       .in('match_id', matchIds);
 
@@ -207,11 +222,34 @@ export default async function handler(
       filtered = filtered.slice(0, limitNum);
     }
 
+    // 8) Never-played maps: maps in the tournament pool with 0 games
+    const playedMapNames = new Set(stats.filter((s) => s.gamesPlayed > 0).map((s) => s.mapName));
+    let neverPlayed: string[] = [];
+    {
+      const { data: poolData } = await supabaseAdmin
+        .from('tournament_maps')
+        .select('map_name')
+        .eq('tournament_id', tournamentId)
+        .eq('enabled', true);
+
+      if (poolData) {
+        neverPlayed = poolData
+          .map((m: any) => m.map_name as string)
+          .filter((name: string) => !playedMapNames.has(name))
+          .sort();
+      }
+    }
+
+    // 9) Team tendencies: per-team ban/pick patterns from vetos
+    const teamTendencies = computeTeamTendencies(vetos, teamNames);
+
     const response: MapsStatsApiResponse = {
       tournamentId,
       totalGames,
       totalVetoMatches,
       maps: filtered,
+      neverPlayed,
+      teamTendencies,
     };
 
     return res.status(200).json(response);
@@ -240,6 +278,8 @@ function computeMapStats(
     totalRounds: number;
     overtimes: number;
     tiebreakers: number;
+    totalDuration: number;
+    durationCount: number;
   };
 
   type TeamAgg = {
@@ -261,6 +301,8 @@ function computeMapStats(
       totalRounds: 0,
       overtimes: 0,
       tiebreakers: 0,
+      totalDuration: 0,
+      durationCount: 0,
     };
 
     entry.games += 1;
@@ -269,27 +311,44 @@ function computeMapStats(
     entry.totalRounds += s1 + s2;
     if (g.went_overtime) entry.overtimes += 1;
     if (g.is_tiebreaker) entry.tiebreakers += 1;
+    if (g.duration_minutes != null) {
+      entry.totalDuration += g.duration_minutes;
+      entry.durationCount += 1;
+    }
     gameAgg.set(key, entry);
 
     // Per-team winrate on this map
     const match = matchById.get(g.match_id);
-    if (match && s1 !== s2) {
-      const winnerId = s1 > s2 ? match.team1_id : match.team2_id;
-      const loserId = s1 > s2 ? match.team2_id : match.team1_id;
+    if (match) {
+      // Determine winner: use winner_team_id if set, else fall back to scores
+      let winnerId: string | null = null;
+      let loserId: string | null = null;
+      if (g.winner_team_id) {
+        winnerId = g.winner_team_id;
+        loserId =
+          g.winner_team_id === match.team1_id
+            ? match.team2_id
+            : match.team1_id;
+      } else if (s1 !== s2) {
+        winnerId = s1 > s2 ? match.team1_id : match.team2_id;
+        loserId = s1 > s2 ? match.team2_id : match.team1_id;
+      }
 
-      if (!teamMapAgg.has(key)) teamMapAgg.set(key, new Map());
-      const mapTeams = teamMapAgg.get(key)!;
+      if (winnerId) {
+        if (!teamMapAgg.has(key)) teamMapAgg.set(key, new Map());
+        const mapTeams = teamMapAgg.get(key)!;
 
-      for (const [teamId, isWin] of [
-        [winnerId, true],
-        [loserId, false],
-      ] as [string | null, boolean][]) {
-        if (!teamId) continue;
-        const ta = mapTeams.get(teamId) || { gamesPlayed: 0, wins: 0, losses: 0 };
-        ta.gamesPlayed += 1;
-        if (isWin) ta.wins += 1;
-        else ta.losses += 1;
-        mapTeams.set(teamId, ta);
+        for (const [teamId, isWin] of [
+          [winnerId, true],
+          [loserId, false],
+        ] as [string | null, boolean][]) {
+          if (!teamId) continue;
+          const ta = mapTeams.get(teamId) || { gamesPlayed: 0, wins: 0, losses: 0 };
+          ta.gamesPlayed += 1;
+          if (isWin) ta.wins += 1;
+          else ta.losses += 1;
+          mapTeams.set(teamId, ta);
+        }
       }
     }
   }
@@ -320,6 +379,10 @@ function computeMapStats(
     const ve = vetoAgg.get(mapName);
     const gamesPlayed = ge?.games ?? 0;
     const avgRounds = gamesPlayed > 0 ? (ge?.totalRounds ?? 0) / gamesPlayed : 0;
+    const avgDuration =
+      ge && ge.durationCount > 0
+        ? Math.round(ge.totalDuration / ge.durationCount)
+        : null;
 
     // Build team winrates for this map
     const teamWinrates: TeamMapWinrate[] = [];
@@ -347,6 +410,7 @@ function computeMapStats(
       gamesPlayed,
       totalRounds: ge?.totalRounds ?? 0,
       avgRounds,
+      avgDuration,
       overtimes: ge?.overtimes ?? 0,
       tiebreakers: ge?.tiebreakers ?? 0,
       usageRate: 0, // filled later
@@ -360,4 +424,73 @@ function computeMapStats(
   });
 
   return list;
+}
+
+/* -----------------------------------------------------------
+ * Tendances par équipe (maps favorites / toujours bannies)
+ * ---------------------------------------------------------*/
+
+function computeTeamTendencies(
+  vetos: VetoRow[],
+  teamNames: Map<string, string>
+): TeamMapTendency[] {
+  // teamId -> { totalVetos (unique matches), bans: map->count, picks: map->count }
+  type TeamAcc = {
+    matchIds: Set<string>;
+    bans: Map<string, number>;
+    picks: Map<string, number>;
+  };
+
+  const acc = new Map<string, TeamAcc>();
+
+  for (const v of vetos) {
+    if (!v.team_id) continue; // decider has no team
+    const ta = acc.get(v.team_id) || {
+      matchIds: new Set(),
+      bans: new Map(),
+      picks: new Map(),
+    };
+    ta.matchIds.add(v.match_id);
+    if (v.action === 'ban') {
+      ta.bans.set(v.map_name, (ta.bans.get(v.map_name) || 0) + 1);
+    } else if (v.action === 'pick') {
+      ta.picks.set(v.map_name, (ta.picks.get(v.map_name) || 0) + 1);
+    }
+    acc.set(v.team_id, ta);
+  }
+
+  const result: TeamMapTendency[] = [];
+
+  acc.forEach((ta, teamId) => {
+    const totalVetos = ta.matchIds.size;
+
+    const bans = Array.from(ta.bans.entries())
+      .map(([mapName, count]) => ({
+        mapName,
+        count,
+        rate: totalVetos > 0 ? count / totalVetos : 0,
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    const picks = Array.from(ta.picks.entries())
+      .map(([mapName, count]) => ({
+        mapName,
+        count,
+        rate: totalVetos > 0 ? count / totalVetos : 0,
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    result.push({
+      teamId,
+      teamName: teamNames.get(teamId) || teamId,
+      totalVetos,
+      bans,
+      picks,
+    });
+  });
+
+  // Sort by number of veto participations desc
+  result.sort((a, b) => b.totalVetos - a.totalVetos);
+
+  return result;
 }

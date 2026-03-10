@@ -45,6 +45,8 @@ type GameRow = {
   map_name: string | null;
   team1_score: number | null;
   team2_score: number | null;
+  winner_team_id: string | null;
+  duration_minutes: number | null;
   is_tiebreaker: boolean | null;
   went_overtime: boolean | null;
 };
@@ -60,6 +62,7 @@ export type MapStat = {
   diff: number;
   overtimes: number;
   tiebreakers: number;
+  avgDuration: number | null; // average duration in minutes (null if no data)
 };
 
 export type TeamStatsApiResponse = {
@@ -136,7 +139,7 @@ export default async function handler(
       const { data: gamesData, error: gErr } = await supabaseAdmin
         .from('games')
         .select(
-          'match_id, map_name, team1_score, team2_score, is_tiebreaker, went_overtime'
+          'match_id, map_name, team1_score, team2_score, winner_team_id, duration_minutes, is_tiebreaker, went_overtime'
         )
         .in('match_id', matchIds);
 
@@ -187,6 +190,8 @@ function computeMapStatsForTeam(
     roundsAgainst: number;
     overtimes: number;
     tiebreakers: number;
+    totalDuration: number;
+    durationCount: number;
   };
 
   const agg = new Map<string, Agg>();
@@ -209,6 +214,8 @@ function computeMapStatsForTeam(
       roundsAgainst: 0,
       overtimes: 0,
       tiebreakers: 0,
+      totalDuration: 0,
+      durationCount: 0,
     };
 
     entry.games += 1;
@@ -216,20 +223,34 @@ function computeMapStatsForTeam(
     const s1 = g.team1_score ?? 0;
     const s2 = g.team2_score ?? 0;
 
+    // Use winner_team_id if available, else fall back to score comparison
+    if (g.winner_team_id) {
+      if (g.winner_team_id === teamId) entry.wins += 1;
+      else entry.losses += 1;
+    } else {
+      if (isTeam1) {
+        if (s1 > s2) entry.wins += 1;
+        else if (s1 < s2) entry.losses += 1;
+      } else if (isTeam2) {
+        if (s2 > s1) entry.wins += 1;
+        else if (s2 < s1) entry.losses += 1;
+      }
+    }
+
     if (isTeam1) {
       entry.roundsFor += s1;
       entry.roundsAgainst += s2;
-      if (s1 > s2) entry.wins += 1;
-      else if (s1 < s2) entry.losses += 1;
-    } else if (isTeam2) {
+    } else {
       entry.roundsFor += s2;
       entry.roundsAgainst += s1;
-      if (s2 > s1) entry.wins += 1;
-      else if (s2 < s1) entry.losses += 1;
     }
 
     if (g.went_overtime) entry.overtimes += 1;
     if (g.is_tiebreaker) entry.tiebreakers += 1;
+    if (g.duration_minutes != null) {
+      entry.totalDuration += g.duration_minutes;
+      entry.durationCount += 1;
+    }
 
     agg.set(key, entry);
   }
@@ -245,6 +266,10 @@ function computeMapStatsForTeam(
     diff: entry.roundsFor - entry.roundsAgainst,
     overtimes: entry.overtimes,
     tiebreakers: entry.tiebreakers,
+    avgDuration:
+      entry.durationCount > 0
+        ? Math.round(entry.totalDuration / entry.durationCount)
+        : null,
   }));
 
   // tri par nombre de games desc, puis winrate desc
