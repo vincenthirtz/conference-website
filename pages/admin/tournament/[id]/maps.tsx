@@ -376,6 +376,12 @@ function AdminTournamentMapsPage(_: StaffProps) {
             </div>
             <div className="flex gap-2">
               <Link
+                href={`/admin/tournament/${tournamentId}/map-draw`}
+                className="px-3 py-1.5 rounded-lg bg-purple-600/80 border border-purple-500/30 text-sm hover:bg-purple-600"
+              >
+                Tirage de maps
+              </Link>
+              <Link
                 href={`/admin/tournament/${tournamentId}/matches`}
                 className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/15 text-sm hover:bg-white/15"
               >
