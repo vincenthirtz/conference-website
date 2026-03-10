@@ -169,6 +169,11 @@ export function formatStaffLog(log: StaffLog) {
     apply_template: 'Application template',
     clone_stage: 'Clonage phase',
     auto_seed_bracket: 'Seeding automatique bracket',
+    update_group_assignments: 'Mise à jour groupes',
+    auto_distribute_groups: 'Distribution auto groupes',
+    bulk_schedule: 'Planification en masse',
+    bulk_update: 'Modification en masse',
+    map_veto: 'Veto de maps',
     other: 'Action staff',
   };
 

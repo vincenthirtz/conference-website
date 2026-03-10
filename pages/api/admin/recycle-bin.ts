@@ -128,7 +128,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse<ApiResponse>)
         type: 'match',
         name: `${t1} vs ${t2}`,
         details: m.round_number ? `Round ${m.round_number}` : null,
-        deleted_at: m.updated_at,
+        deleted_at: m.deleted_at,
         tournament_id: m.tournament_id,
       });
     }

@@ -25,6 +25,11 @@ export type StaffLogAction =
   | 'apply_template'
   | 'clone_stage'
   | 'auto_seed_bracket'
+  | 'update_group_assignments'
+  | 'auto_distribute_groups'
+  | 'bulk_schedule'
+  | 'bulk_update'
+  | 'map_veto'
   | 'other';
 
 export type StaffLog = {

@@ -24,6 +24,20 @@ type MatchRow = {
   id: string;
   status: string;
   is_bye: boolean | null;
+  team1_id: string | null;
+  team2_id: string | null;
+};
+
+type VetoRow = {
+  match_id: string;
+  action: string;
+  team_id: string | null;
+  map_name: string;
+};
+
+type TeamMini = {
+  id: string;
+  name: string;
 };
 
 type GameRow = {
@@ -35,6 +49,15 @@ type GameRow = {
   went_overtime: boolean | null;
 };
 
+type TeamMapWinrate = {
+  teamId: string;
+  teamName: string;
+  gamesPlayed: number;
+  wins: number;
+  losses: number;
+  winrate: number;
+};
+
 type MapStat = {
   mapName: string;
   gamesPlayed: number;
@@ -43,11 +66,20 @@ type MapStat = {
   overtimes: number;
   overtimesRate: number; // 0–1
   tiebreakers: number;
+  // Veto stats
+  timesBanned: number;
+  timesPicked: number;
+  timesDecider: number;
+  banRate: number;
+  pickRate: number;
+  // Team winrates
+  teamWinrates: TeamMapWinrate[];
 };
 
 type Props = {
   tournament: Tournament;
   maps: MapStat[];
+  hasVetoData: boolean;
 };
 
 export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
@@ -74,7 +106,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   // 2) Matches du tournoi (on exclut les annulés & bye)
   const { data: matchesData, error: mErr } = await supabaseAdmin
     .from('matches')
-    .select('id, status, is_bye')
+    .select('id, status, is_bye, team1_id, team2_id')
     .eq('tournament_id', id)
     .neq('status', 'cancelled');
 
@@ -82,10 +114,12 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     console.error('maps page matches error:', mErr);
   }
 
-  const matches = (matchesData || []) as MatchRow[];
-  const matchIds = matches.filter((m) => !m.is_bye).map((m) => m.id);
+  const allMatches = (matchesData || []) as MatchRow[];
+  const matches = allMatches.filter((m) => !m.is_bye);
+  const matchIds = matches.map((m) => m.id);
 
   let maps: MapStat[] = [];
+  let hasVetoData = false;
 
   if (matchIds.length > 0) {
     // 3) Games de ces matchs
@@ -96,11 +130,42 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       )
       .in('match_id', matchIds);
 
-    if (gErr) {
-      console.error('maps page games error:', gErr);
-    } else {
+    // 4) Veto data
+    let vetos: VetoRow[] = [];
+    const { data: vetoData, error: vErr } = await supabaseAdmin
+      .from('match_map_vetos')
+      .select('match_id, action, team_id, map_name')
+      .in('match_id', matchIds);
+
+    if (!vErr && vetoData) {
+      vetos = vetoData as VetoRow[];
+      hasVetoData = vetos.length > 0;
+    }
+
+    // 5) Fetch team names for winrates
+    const teamIdSet = new Set<string>();
+    for (const m of matches) {
+      if (m.team1_id) teamIdSet.add(m.team1_id);
+      if (m.team2_id) teamIdSet.add(m.team2_id);
+    }
+    const teamNames = new Map<string, string>();
+    if (teamIdSet.size > 0) {
+      const { data: teamsData } = await supabaseAdmin
+        .from('teams')
+        .select('id, name')
+        .in('id', Array.from(teamIdSet));
+      for (const t of (teamsData || []) as TeamMini[]) {
+        teamNames.set(t.id, t.name);
+      }
+    }
+
+    // Build match lookup
+    const matchById = new Map<string, MatchRow>();
+    matches.forEach((m) => matchById.set(m.id, m));
+
+    if (!gErr) {
       const games = (gamesData || []) as GameRow[];
-      maps = computeMapStats(games);
+      maps = computeMapStats(games, vetos, matchById, teamNames);
     }
   }
 
@@ -108,11 +173,12 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     props: {
       tournament: tournament as Tournament,
       maps,
+      hasVetoData,
     },
   };
 };
 
-export default function TournamentMapsPage({ tournament, maps }: Props) {
+export default function TournamentMapsPage({ tournament, maps, hasVetoData }: Props) {
   const dateRangeLabel = formatTournamentDates(
     tournament.start_date,
     tournament.end_date
@@ -223,6 +289,26 @@ export default function TournamentMapsPage({ tournament, maps }: Props) {
                   label="Tiebreakers"
                   value={maps.reduce((acc, m) => acc + m.tiebreakers, 0)}
                 />
+                {hasVetoData && (
+                  <>
+                    <StatCard
+                      label="Total bans"
+                      value={maps.reduce((acc, m) => acc + m.timesBanned, 0)}
+                    />
+                    <StatCard
+                      label="Map la + bannie"
+                      value={
+                        [...maps].sort((a, b) => b.timesBanned - a.timesBanned)[0]
+                          ?.mapName || '—'
+                      }
+                      hint={
+                        [...maps].sort((a, b) => b.timesBanned - a.timesBanned)[0]
+                          ? `${[...maps].sort((a, b) => b.timesBanned - a.timesBanned)[0].timesBanned} bans`
+                          : undefined
+                      }
+                    />
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -258,10 +344,15 @@ export default function TournamentMapsPage({ tournament, maps }: Props) {
                     <tr className="text-gray-400 border-b border-white/10">
                       <th className="text-left py-1.5 pr-3">Map</th>
                       <th className="text-right py-1.5 px-3">Games</th>
-                      <th className="text-right py-1.5 px-3">Rounds totaux</th>
-                      <th className="text-right py-1.5 px-3">Rounds moyens</th>
+                      <th className="text-right py-1.5 px-3">Rounds moy.</th>
                       <th className="text-right py-1.5 px-3">Overtimes</th>
-                      <th className="text-right py-1.5 pl-3">Tiebreakers</th>
+                      {hasVetoData && (
+                        <>
+                          <th className="text-right py-1.5 px-3">Bans</th>
+                          <th className="text-right py-1.5 px-3">Picks</th>
+                        </>
+                      )}
+                      <th className="text-right py-1.5 pl-3">Winrates</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -280,9 +371,6 @@ export default function TournamentMapsPage({ tournament, maps }: Props) {
                           {m.gamesPlayed}
                         </td>
                         <td className="py-1.5 px-3 text-right text-gray-100">
-                          {m.totalRounds}
-                        </td>
-                        <td className="py-1.5 px-3 text-right text-gray-100">
                           {m.avgRounds.toFixed(1)}
                         </td>
                         <td className="py-1.5 px-3 text-right">
@@ -291,8 +379,48 @@ export default function TournamentMapsPage({ tournament, maps }: Props) {
                             ({(m.overtimesRate * 100).toFixed(0)}%)
                           </span>
                         </td>
-                        <td className="py-1.5 pl-3 text-right text-gray-100">
-                          {m.tiebreakers}
+                        {hasVetoData && (
+                          <>
+                            <td className="py-1.5 px-3 text-right">
+                              <span className="text-red-300">{m.timesBanned}</span>
+                              <span className="text-[10px] text-gray-500 ml-1">
+                                ({(m.banRate * 100).toFixed(0)}%)
+                              </span>
+                            </td>
+                            <td className="py-1.5 px-3 text-right">
+                              <span className="text-emerald-300">{m.timesPicked}</span>
+                              {m.timesDecider > 0 && (
+                                <span className="text-[10px] text-yellow-400 ml-1">
+                                  +{m.timesDecider}d
+                                </span>
+                              )}
+                            </td>
+                          </>
+                        )}
+                        <td className="py-1.5 pl-3 text-right">
+                          {m.teamWinrates.length > 0 ? (
+                            <div className="flex flex-col items-end gap-0.5">
+                              {m.teamWinrates.slice(0, 3).map((tw) => (
+                                <span key={tw.teamId} className="text-[10px]">
+                                  <span className="text-gray-400">{tw.teamName}</span>{' '}
+                                  <span
+                                    className={
+                                      tw.winrate >= 0.5
+                                        ? 'text-emerald-300'
+                                        : 'text-red-300'
+                                    }
+                                  >
+                                    {(tw.winrate * 100).toFixed(0)}%
+                                  </span>
+                                  <span className="text-gray-500 ml-0.5">
+                                    ({tw.wins}V-{tw.losses}D)
+                                  </span>
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-gray-500">—</span>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -316,21 +444,28 @@ export default function TournamentMapsPage({ tournament, maps }: Props) {
  * Calcul des stats de maps
  * ────────────────────────────────────────────*/
 
-function computeMapStats(games: GameRow[]): MapStat[] {
-  const map = new Map<
-    string,
-    {
-      games: number;
-      totalRounds: number;
-      overtimes: number;
-      tiebreakers: number;
-    }
-  >();
+function computeMapStats(
+  games: GameRow[],
+  vetos: VetoRow[],
+  matchById: Map<string, MatchRow>,
+  teamNames: Map<string, string>
+): MapStat[] {
+  type GameAgg = {
+    games: number;
+    totalRounds: number;
+    overtimes: number;
+    tiebreakers: number;
+  };
+
+  type TeamAgg = { gamesPlayed: number; wins: number; losses: number };
+
+  const gameAgg = new Map<string, GameAgg>();
+  const teamMapAgg = new Map<string, Map<string, TeamAgg>>();
 
   for (const g of games) {
     if (!g.map_name) continue;
     const key = g.map_name;
-    const entry = map.get(key) || {
+    const entry = gameAgg.get(key) || {
       games: 0,
       totalRounds: 0,
       overtimes: 0,
@@ -341,32 +476,96 @@ function computeMapStats(games: GameRow[]): MapStat[] {
     const r1 = g.team1_score ?? 0;
     const r2 = g.team2_score ?? 0;
     entry.totalRounds += r1 + r2;
-
     if (g.went_overtime) entry.overtimes += 1;
     if (g.is_tiebreaker) entry.tiebreakers += 1;
+    gameAgg.set(key, entry);
 
-    map.set(key, entry);
+    // Per-team winrate on this map
+    const match = matchById.get(g.match_id);
+    if (match && r1 !== r2) {
+      const winnerId = r1 > r2 ? match.team1_id : match.team2_id;
+      const loserId = r1 > r2 ? match.team2_id : match.team1_id;
+
+      if (!teamMapAgg.has(key)) teamMapAgg.set(key, new Map());
+      const mapTeams = teamMapAgg.get(key)!;
+
+      for (const [teamId, isWin] of [
+        [winnerId, true],
+        [loserId, false],
+      ] as [string | null, boolean][]) {
+        if (!teamId) continue;
+        const ta = mapTeams.get(teamId) || { gamesPlayed: 0, wins: 0, losses: 0 };
+        ta.gamesPlayed += 1;
+        if (isWin) ta.wins += 1;
+        else ta.losses += 1;
+        mapTeams.set(teamId, ta);
+      }
+    }
   }
 
-  const list: MapStat[] = Array.from(map.entries()).map(([mapName, entry]) => {
-    const avgRounds = entry.games > 0 ? entry.totalRounds / entry.games : 0;
-    const overtimesRate = entry.games > 0 ? entry.overtimes / entry.games : 0;
+  // Veto aggregation
+  const vetoMatchIds = new Set(vetos.map((v) => v.match_id));
+  const totalVetoMatches = vetoMatchIds.size;
+
+  type VetoAgg = { bans: number; picks: number; deciders: number };
+  const vetoAgg = new Map<string, VetoAgg>();
+  for (const v of vetos) {
+    const entry = vetoAgg.get(v.map_name) || { bans: 0, picks: 0, deciders: 0 };
+    if (v.action === 'ban') entry.bans += 1;
+    else if (v.action === 'pick') entry.picks += 1;
+    else if (v.action === 'decider') entry.deciders += 1;
+    vetoAgg.set(v.map_name, entry);
+  }
+
+  // Merge all map names
+  const allMapNames = new Set<string>();
+  gameAgg.forEach((_, k) => allMapNames.add(k));
+
+  const list: MapStat[] = Array.from(allMapNames).map((mapName) => {
+    const ge = gameAgg.get(mapName)!;
+    const ve = vetoAgg.get(mapName);
+    const avgRounds = ge.games > 0 ? ge.totalRounds / ge.games : 0;
+    const overtimesRate = ge.games > 0 ? ge.overtimes / ge.games : 0;
+
+    // Build team winrates
+    const teamWinrates: TeamMapWinrate[] = [];
+    const mapTeams = teamMapAgg.get(mapName);
+    if (mapTeams) {
+      mapTeams.forEach((ta, teamId) => {
+        teamWinrates.push({
+          teamId,
+          teamName: teamNames.get(teamId) || teamId,
+          gamesPlayed: ta.gamesPlayed,
+          wins: ta.wins,
+          losses: ta.losses,
+          winrate: ta.gamesPlayed > 0 ? ta.wins / ta.gamesPlayed : 0,
+        });
+      });
+      teamWinrates.sort((a, b) => {
+        if (b.winrate !== a.winrate) return b.winrate - a.winrate;
+        return b.gamesPlayed - a.gamesPlayed;
+      });
+    }
 
     return {
       mapName,
-      gamesPlayed: entry.games,
-      totalRounds: entry.totalRounds,
+      gamesPlayed: ge.games,
+      totalRounds: ge.totalRounds,
       avgRounds,
-      overtimes: entry.overtimes,
+      overtimes: ge.overtimes,
       overtimesRate,
-      tiebreakers: entry.tiebreakers,
+      tiebreakers: ge.tiebreakers,
+      timesBanned: ve?.bans ?? 0,
+      timesPicked: ve?.picks ?? 0,
+      timesDecider: ve?.deciders ?? 0,
+      banRate: totalVetoMatches > 0 ? (ve?.bans ?? 0) / totalVetoMatches : 0,
+      pickRate: totalVetoMatches > 0 ? (ve?.picks ?? 0) / totalVetoMatches : 0,
+      teamWinrates,
     };
   });
 
   list.sort((a, b) => {
-    if (b.gamesPlayed !== a.gamesPlayed) {
-      return b.gamesPlayed - a.gamesPlayed;
-    }
+    if (b.gamesPlayed !== a.gamesPlayed) return b.gamesPlayed - a.gamesPlayed;
     return b.totalRounds - a.totalRounds;
   });
 
@@ -438,10 +637,16 @@ function TopMapCard({ rank, stat }: { rank: number; stat: MapStat }) {
             %)
           </span>
         </span>
-        <span>
-          Tiebreakers :{' '}
-          <span className="text-gray-100">{stat.tiebreakers}</span>
-        </span>
+        {stat.timesBanned > 0 && (
+          <span>
+            Bans : <span className="text-red-300">{stat.timesBanned}</span>
+          </span>
+        )}
+        {stat.timesPicked > 0 && (
+          <span>
+            Picks : <span className="text-emerald-300">{stat.timesPicked}</span>
+          </span>
+        )}
       </div>
     </div>
   );

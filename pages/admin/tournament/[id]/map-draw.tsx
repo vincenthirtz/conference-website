@@ -305,6 +305,12 @@ ${filledMaps.map((m, i) => `
             </div>
             <div className="flex gap-2">
               <Link
+                href={`/admin/tournament/${tournamentId}/veto`}
+                className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/15 text-sm hover:bg-white/15"
+              >
+                Pick / Ban
+              </Link>
+              <Link
                 href={`/admin/tournament/${tournamentId}/maps`}
                 className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/15 text-sm hover:bg-white/15"
               >

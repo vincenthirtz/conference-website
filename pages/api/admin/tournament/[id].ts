@@ -206,7 +206,7 @@ async function handlePatch(
 
     // --- Gardes de transition de statut ---
     if (status !== undefined && status !== before.status) {
-      const guards = await checkStatusTransitionGuards(tournamentId, before.status, status);
+      const guards = await checkStatusTransitionGuards(id as string, before.status, status);
       if (guards) {
         return res.status(400).json({ error: guards.error, warnings: guards.warnings } as any);
       }
