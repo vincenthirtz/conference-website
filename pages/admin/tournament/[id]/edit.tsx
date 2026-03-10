@@ -6,6 +6,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
 import type { StaffProps, Tournament } from '@/types/admin';
+import { TOURNAMENT_TIMEZONES } from '@/utils/timezone';
 
 type ApiResponse = {
   tournament: Tournament;
@@ -33,6 +34,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
     status: string;
     start_date: string;
     end_date: string;
+    timezone: string;
     format_type: string;
     max_teams: string;
     min_players: string;
@@ -47,6 +49,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
     status: 'draft',
     start_date: '',
     end_date: '',
+    timezone: 'Europe/Paris',
     format_type: '',
     max_teams: '',
     min_players: '',
@@ -92,6 +95,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
         status: t.status || 'draft',
         start_date: t.start_date ? toLocalInputValue(t.start_date) : '',
         end_date: t.end_date ? toLocalInputValue(t.end_date) : '',
+        timezone: t.timezone || 'Europe/Paris',
         format_type: t.format_type || '',
         max_teams: t.max_teams ? String(t.max_teams) : '',
         min_players: t.min_players ? String(t.min_players) : '',
@@ -158,6 +162,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
         ? new Date(form.start_date).toISOString()
         : null,
       end_date: form.end_date ? new Date(form.end_date).toISOString() : null,
+      timezone: form.timezone || null,
       format_type: form.format_type || null,
       max_teams: form.max_teams ? Number(form.max_teams) : null,
       min_players: form.min_players ? Number(form.min_players) : null,
@@ -419,6 +424,26 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                         {dateError && (
                           <p className="text-xs text-red-400 mt-1">{dateError}</p>
                         )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm mb-1 text-neutral-300">
+                          Fuseau horaire
+                        </label>
+                        <select
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={form.timezone}
+                          onChange={(e) => updateField('timezone', e.target.value)}
+                        >
+                          {TOURNAMENT_TIMEZONES.map((tz) => (
+                            <option key={tz.value} value={tz.value}>
+                              {tz.label}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-xs text-neutral-500 mt-1">
+                          Les horaires seront affiches dans ce fuseau.
+                        </p>
                       </div>
 
                       <div>

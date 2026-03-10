@@ -44,6 +44,7 @@ export type Tournament = {
   status: TournamentStatus | string | null;
   start_date: string | null;
   end_date: string | null;
+  timezone: string | null;
   format_type: FormatType | string | null;
   max_teams: number | null;
   min_players: number | null;

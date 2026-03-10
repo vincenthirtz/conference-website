@@ -27,6 +27,7 @@ export type ScheduleMatch = {
   team2?: TeamMini | null;
   winner_team_id: string | null;
   notes: string | null;
+  bracket_side?: 'wb' | 'lb' | 'final' | 'none' | null;
   next_match_win_id?: string | null;
   next_match_lose_id?: string | null;
   column_index?: number | null;

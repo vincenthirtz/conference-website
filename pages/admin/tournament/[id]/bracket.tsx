@@ -26,10 +26,12 @@ function AdminBracketPage(_: StaffProps) {
   const [loading, setLoading] = useState(true);
 
   // Formulaire de création
+  const [bracketType, setBracketType] = useState<'single' | 'double'>('single');
   const [size, setSize] = useState(8);
   const [bestOf, setBestOf] = useState(3);
   const [startDate, setStartDate] = useState('');
   const [intervalMinutes, setIntervalMinutes] = useState(60);
+  const [grandFinalReset, setGrandFinalReset] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -65,11 +67,12 @@ function AdminBracketPage(_: StaffProps) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            action: 'generate',
+            action: bracketType === 'double' ? 'generate_double_elim' : 'generate',
             size,
             bestOf,
             startDate: startDate || undefined,
             intervalMinutes,
+            ...(bracketType === 'double' ? { grandFinalReset } : {}),
           }),
         }
       );
@@ -95,8 +98,24 @@ function AdminBracketPage(_: StaffProps) {
     }
   }
 
-  const totalRounds = Math.log2(size);
-  const totalMatches = size - 1;
+  const wbRounds = Math.log2(size);
+  const totalRounds = wbRounds;
+  const singleElimMatches = size - 1;
+
+  // Double elim: WB matches + LB matches + GF (+ optional reset)
+  function computeDoubleElimMatches() {
+    const lbRounds = 2 * (wbRounds - 1);
+    let lbTotal = 0;
+    let lbCurrentTeams = size / 2;
+    for (let lbR = 1; lbR <= lbRounds; lbR++) {
+      if (lbR === 1) { lbTotal += lbCurrentTeams / 2; lbCurrentTeams = lbCurrentTeams / 2; }
+      else if (lbR % 2 === 0) { lbTotal += lbCurrentTeams; }
+      else { lbTotal += lbCurrentTeams / 2; lbCurrentTeams = lbCurrentTeams / 2; }
+    }
+    return singleElimMatches + lbTotal + 1 + (grandFinalReset ? 1 : 0);
+  }
+
+  const totalMatches = bracketType === 'double' ? computeDoubleElimMatches() : singleElimMatches;
 
   return (
     <>
@@ -153,9 +172,8 @@ function AdminBracketPage(_: StaffProps) {
                   Créer un nouveau bracket
                 </h2>
                 <p className="text-sm text-neutral-400">
-                  Génère la structure du bracket (single elimination) sans
-                  avoir besoin d'équipes enregistrées. Les slots pourront
-                  être remplis ensuite.
+                  Genere la structure du bracket sans equipes. Les slots
+                  pourront etre remplis ensuite.
                 </p>
               </div>
 
@@ -171,6 +189,37 @@ function AdminBracketPage(_: StaffProps) {
               )}
 
               <form onSubmit={handleGenerate} className="space-y-5">
+                {/* Type de bracket */}
+                <div>
+                  <label className="block text-sm font-medium text-neutral-200 mb-2">
+                    Type de bracket
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setBracketType('single')}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${
+                        bracketType === 'single'
+                          ? 'bg-purple-600 border-purple-500 text-white'
+                          : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
+                      }`}
+                    >
+                      Single Elimination
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBracketType('double')}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${
+                        bracketType === 'double'
+                          ? 'bg-purple-600 border-purple-500 text-white'
+                          : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
+                      }`}
+                    >
+                      Double Elimination
+                    </button>
+                  </div>
+                </div>
+
                 {/* Taille du bracket */}
                 <div>
                   <label className="block text-sm font-medium text-neutral-200 mb-2">
@@ -262,20 +311,42 @@ function AdminBracketPage(_: StaffProps) {
                   />
                 </div>
 
+                {/* Double elim options */}
+                {bracketType === 'double' && (
+                  <div>
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={grandFinalReset}
+                        onChange={(e) => setGrandFinalReset(e.target.checked)}
+                        className="rounded border-neutral-500 bg-neutral-700"
+                      />
+                      <span className="font-medium text-neutral-200">Grand Final Reset</span>
+                    </label>
+                    <p className="mt-1 text-xs text-neutral-500 ml-6">
+                      Si le joueur venant du Loser Bracket gagne la Grande Finale,
+                      un match supplementaire est joue pour departager.
+                    </p>
+                  </div>
+                )}
+
                 {/* Aperçu visuel */}
                 <div className="rounded-lg border border-neutral-700 bg-neutral-900/50 p-4">
                   <h3 className="text-sm font-medium text-neutral-300 mb-3">
-                    Aperçu de la structure
+                    Apercu de la structure
                   </h3>
+                  {/* Winners bracket preview */}
+                  {bracketType === 'double' && (
+                    <p className="text-xs text-purple-300 uppercase tracking-wider mb-2 font-semibold">Winners Bracket</p>
+                  )}
                   <div className="flex items-center gap-4 overflow-x-auto pb-2">
                     {Array.from({ length: totalRounds }, (_, r) => {
                       const matchesInRound = size / Math.pow(2, r + 1);
                       let label: string;
-                      if (r + 1 === totalRounds) label = 'Finale';
-                      else if (r + 1 === totalRounds - 1) label = 'Demi';
-                      else if (r + 1 === totalRounds - 2 && totalRounds >= 3)
-                        label = 'Quarts';
-                      else label = `R${r + 1}`;
+                      if (r + 1 === totalRounds) label = bracketType === 'double' ? 'WB Finale' : 'Finale';
+                      else if (r + 1 === totalRounds - 1) label = bracketType === 'double' ? 'WB Demi' : 'Demi';
+                      else if (r + 1 === totalRounds - 2 && totalRounds >= 3) label = bracketType === 'double' ? 'WB Quarts' : 'Quarts';
+                      else label = bracketType === 'double' ? `WB R${r + 1}` : `R${r + 1}`;
 
                       return (
                         <div key={r} className="flex-shrink-0 text-center">
@@ -298,7 +369,64 @@ function AdminBracketPage(_: StaffProps) {
                         </div>
                       );
                     })}
+                    {bracketType === 'double' && (
+                      <div className="flex-shrink-0 text-center">
+                        <div className="text-[10px] uppercase tracking-wider text-amber-400 mb-2">
+                          GF{grandFinalReset ? ' + Reset' : ''}
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <div className="w-20 h-8 rounded border border-amber-700/50 bg-amber-900/20 flex items-center justify-center text-[10px] text-amber-300">
+                            GF
+                          </div>
+                          {grandFinalReset && (
+                            <div className="w-20 h-8 rounded border border-amber-700/30 bg-amber-900/10 flex items-center justify-center text-[10px] text-amber-400/70">
+                              Reset
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
+                  {/* Losers bracket preview */}
+                  {bracketType === 'double' && (
+                    <>
+                      <p className="text-xs text-red-300 uppercase tracking-wider mb-2 mt-4 font-semibold">Losers Bracket</p>
+                      <div className="flex items-center gap-4 overflow-x-auto pb-2">
+                        {(() => {
+                          const lbRoundsCount = 2 * (wbRounds - 1);
+                          const rounds: { label: string; count: number }[] = [];
+                          let lbTeams = size / 2;
+                          for (let lbR = 1; lbR <= lbRoundsCount; lbR++) {
+                            let count: number;
+                            if (lbR === 1) { count = lbTeams / 2; lbTeams = lbTeams / 2; }
+                            else if (lbR % 2 === 0) { count = lbTeams; }
+                            else { count = lbTeams / 2; lbTeams = lbTeams / 2; }
+                            rounds.push({
+                              label: lbR === lbRoundsCount ? 'LB Finale' : `LB R${lbR}`,
+                              count,
+                            });
+                          }
+                          return rounds.map((rd, idx) => (
+                            <div key={idx} className="flex-shrink-0 text-center">
+                              <div className="text-[10px] uppercase tracking-wider text-neutral-500 mb-2">
+                                {rd.label}
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                {Array.from({ length: rd.count }, (_, i) => (
+                                  <div
+                                    key={i}
+                                    className="w-20 h-8 rounded border border-red-800/40 bg-red-900/10 flex items-center justify-center text-[10px] text-red-400/70"
+                                  >
+                                    M{i + 1}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <button

@@ -24,6 +24,7 @@ export type StaffLogAction =
   | 'advance_teams'
   | 'apply_template'
   | 'clone_stage'
+  | 'auto_seed_bracket'
   | 'other';
 
 export type StaffLog = {

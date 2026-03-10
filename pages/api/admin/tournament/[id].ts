@@ -16,6 +16,7 @@ type TournamentDetail = {
   status: string | null;
   start_date: string | null;
   end_date: string | null;
+  timezone: string | null;
   max_teams: number | null;
   created_at: string;
   updated_at: string | null;
@@ -71,6 +72,7 @@ async function handleGet(
         status,
         start_date,
         end_date,
+        timezone,
         max_teams,
         created_at,
         updated_at
@@ -111,6 +113,7 @@ async function handlePatch(
       game,
       start_date,
       end_date,
+      timezone,
       format_type,
       max_teams,
       min_players,
@@ -210,6 +213,7 @@ async function handlePatch(
     if (game !== undefined) updatePayload.game = game;
     if (start_date !== undefined) updatePayload.start_date = start_date;
     if (end_date !== undefined) updatePayload.end_date = end_date;
+    if (timezone !== undefined) updatePayload.timezone = timezone;
     if (format_type !== undefined) updatePayload.format_type = format_type;
     if (max_teams !== undefined) updatePayload.max_teams = max_teams;
     if (min_players !== undefined) updatePayload.min_players = min_players;
@@ -237,6 +241,7 @@ async function handlePatch(
         status,
         start_date,
         end_date,
+        timezone,
         max_teams,
         created_at,
         updated_at

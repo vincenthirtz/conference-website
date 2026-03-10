@@ -126,8 +126,18 @@ function AdminStagePage({ staff }: StaffProps) {
   const [advanceTargetStageId, setAdvanceTargetStageId] = useState('');
   const [advanceSeedMode, setAdvanceSeedMode] = useState<'rank' | 'manual' | 'none'>('rank');
   const [advanceOtherStages, setAdvanceOtherStages] = useState<{ id: string; name: string; stage_type: string | null }[]>([]);
+  const [advanceMinScore, setAdvanceMinScore] = useState('');
+  const [advanceMinWins, setAdvanceMinWins] = useState('');
   const [advanceLoading, setAdvanceLoading] = useState(false);
   const [advanceSubmitting, setAdvanceSubmitting] = useState(false);
+
+  // Auto-seed modal state
+  const [showAutoSeedModal, setShowAutoSeedModal] = useState(false);
+  const [autoSeedSourceStageId, setAutoSeedSourceStageId] = useState('');
+  const [autoSeedPattern, setAutoSeedPattern] = useState<'standard' | 'sequential'>('standard');
+  const [autoSeedOtherStages, setAutoSeedOtherStages] = useState<{ id: string; name: string; stage_type: string | null }[]>([]);
+  const [autoSeedLoading, setAutoSeedLoading] = useState(false);
+  const [autoSeedSubmitting, setAutoSeedSubmitting] = useState(false);
 
   // Clone state
   const [cloning, setCloning] = useState(false);
@@ -315,6 +325,8 @@ function AdminStagePage({ staff }: StaffProps) {
     setAdvanceLoading(true);
     setAdvanceSelectedIds(new Set());
     setAdvanceTopN('');
+    setAdvanceMinScore('');
+    setAdvanceMinWins('');
     setAdvanceTargetStageId('');
     setAdvanceSeedMode('rank');
 
@@ -347,9 +359,37 @@ function AdminStagePage({ staff }: StaffProps) {
 
   function handleAdvanceTopN(value: string) {
     setAdvanceTopN(value);
+    setAdvanceMinScore('');
+    setAdvanceMinWins('');
     const n = parseInt(value, 10);
     if (!isNaN(n) && n > 0) {
       const ids = new Set(advanceStandings.slice(0, n).map((s) => s.teamId));
+      setAdvanceSelectedIds(ids);
+    }
+  }
+
+  function handleAdvanceMinScore(value: string) {
+    setAdvanceMinScore(value);
+    setAdvanceTopN('');
+    setAdvanceMinWins('');
+    const threshold = parseFloat(value);
+    if (!isNaN(threshold)) {
+      const ids = new Set(
+        advanceStandings.filter((s) => s.score >= threshold).map((s) => s.teamId)
+      );
+      setAdvanceSelectedIds(ids);
+    }
+  }
+
+  function handleAdvanceMinWins(value: string) {
+    setAdvanceMinWins(value);
+    setAdvanceTopN('');
+    setAdvanceMinScore('');
+    const threshold = parseInt(value, 10);
+    if (!isNaN(threshold) && threshold > 0) {
+      const ids = new Set(
+        advanceStandings.filter((s) => s.wins >= threshold).map((s) => s.teamId)
+      );
       setAdvanceSelectedIds(ids);
     }
   }
@@ -406,6 +446,63 @@ function AdminStagePage({ staff }: StaffProps) {
       setErrorMsg(err?.message ?? "Erreur lors de l'avancement");
     } finally {
       setAdvanceSubmitting(false);
+    }
+  }
+
+  async function openAutoSeedModal() {
+    if (!stageId || !stage || stage.stage_type !== 'bracket') return;
+    setShowAutoSeedModal(true);
+    setAutoSeedLoading(true);
+    setAutoSeedSourceStageId('');
+    setAutoSeedPattern('standard');
+
+    try {
+      const stagesRes = await fetch(`/api/admin/tournament/${stage.tournament_id}/stages`);
+      if (stagesRes.ok) {
+        const json = await stagesRes.json();
+        const sources = (json.stages || [])
+          .filter((s: any) => s.id !== stageId && ['swiss', 'group', 'round_robin'].includes(s.stage_type))
+          .map((s: any) => ({ id: s.id, name: s.name, stage_type: s.stage_type }));
+        setAutoSeedOtherStages(sources);
+        if (sources.length > 0) setAutoSeedSourceStageId(sources[0].id);
+      }
+    } catch (err) {
+      console.error('openAutoSeedModal error:', err);
+    } finally {
+      setAutoSeedLoading(false);
+    }
+  }
+
+  async function handleAutoSeedSubmit() {
+    if (!stageId || !autoSeedSourceStageId) return;
+    setAutoSeedSubmitting(true);
+    setErrorMsg(null);
+
+    try {
+      const res = await fetch(`/api/admin/stages/${stageId}/auto-seed`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sourceStageId: autoSeedSourceStageId,
+          seedingPattern: autoSeedPattern,
+        }),
+      });
+
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || 'Erreur lors du seeding automatique');
+      }
+
+      const json = await res.json();
+      setSuccessMsg(
+        `Seeding automatique applique : ${json.seeded?.length ?? 0} equipes placees dans ${json.totalMatches} matchs.`
+      );
+      setTimeout(() => setSuccessMsg(null), 5000);
+      setShowAutoSeedModal(false);
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? 'Erreur lors du seeding automatique');
+    } finally {
+      setAutoSeedSubmitting(false);
     }
   }
 
@@ -752,6 +849,33 @@ function AdminStagePage({ staff }: StaffProps) {
                         </div>
                       </button>
 
+                      {stage.stage_type === 'bracket' && (
+                        <button
+                          type="button"
+                          onClick={openAutoSeedModal}
+                          disabled={loadingActions}
+                          className={`p-4 rounded-xl border text-left transition-all ${
+                            loadingActions
+                              ? 'bg-neutral-800/50 border-neutral-700 cursor-wait opacity-50'
+                              : 'bg-purple-900/20 border-purple-700/50 hover:bg-purple-900/30 hover:border-purple-600/50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-purple-600/20 flex items-center justify-center">
+                              <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                              </svg>
+                            </div>
+                            <div>
+                              <div className="font-medium text-sm text-purple-200">Seeding automatique</div>
+                              <div className="text-xs text-purple-400/70">
+                                Peupler le bracket depuis un classement
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                      )}
+
                       {stage.stage_type === 'swiss' && (
                         <button
                           type="button"
@@ -1008,6 +1132,112 @@ function AdminStagePage({ staff }: StaffProps) {
           </div>
         </div>
       )}
+      {/* Auto-Seed Modal */}
+      {showAutoSeedModal && stage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+              </svg>
+              Seeding automatique
+            </h3>
+
+            {autoSeedLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="w-6 h-6 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm text-neutral-400 mb-1">
+                    Stage source (classement)
+                  </label>
+                  {autoSeedOtherStages.length === 0 ? (
+                    <p className="text-sm text-neutral-500">
+                      Aucun stage group/swiss/round-robin dans ce tournoi.
+                    </p>
+                  ) : (
+                    <select
+                      value={autoSeedSourceStageId}
+                      onChange={(e) => setAutoSeedSourceStageId(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                    >
+                      {autoSeedOtherStages.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} ({s.stage_type})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm text-neutral-400 mb-2">
+                    Methode de placement
+                  </label>
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="radio"
+                        name="autoSeedPattern"
+                        checked={autoSeedPattern === 'standard'}
+                        onChange={() => setAutoSeedPattern('standard')}
+                        className="border-neutral-500 bg-neutral-700"
+                      />
+                      <div>
+                        <span className="font-medium">Standard</span>
+                        <span className="text-neutral-500 ml-1">
+                          — 1vN, 2v(N-1)... evite les confrontations precoces
+                        </span>
+                      </div>
+                    </label>
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="radio"
+                        name="autoSeedPattern"
+                        checked={autoSeedPattern === 'sequential'}
+                        onChange={() => setAutoSeedPattern('sequential')}
+                        className="border-neutral-500 bg-neutral-700"
+                      />
+                      <div>
+                        <span className="font-medium">Sequentiel</span>
+                        <span className="text-neutral-500 ml-1">
+                          — 1v2, 3v4... placement lineaire
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                onClick={() => setShowAutoSeedModal(false)}
+                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleAutoSeedSubmit}
+                disabled={autoSeedSubmitting || !autoSeedSourceStageId || autoSeedOtherStages.length === 0}
+                className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {autoSeedSubmitting ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Seeding...
+                  </>
+                ) : (
+                  'Appliquer le seeding'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Advance Modal */}
       {showAdvanceModal && stage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -1047,23 +1277,53 @@ function AdminStagePage({ staff }: StaffProps) {
                   )}
                 </div>
 
-                {/* Top N shortcut */}
-                <div className="flex items-center gap-3">
-                  <label className="text-sm text-neutral-400 whitespace-nowrap">
-                    Avancer les top
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={advanceStandings.length}
-                    value={advanceTopN}
-                    onChange={(e) => handleAdvanceTopN(e.target.value)}
-                    className="w-20 px-3 py-1.5 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                    placeholder="N"
-                  />
-                  <span className="text-sm text-neutral-500">
-                    / {advanceStandings.length} equipes
-                  </span>
+                {/* Criteria filters */}
+                <div className="bg-neutral-900/50 border border-neutral-700 rounded-xl p-4 space-y-3">
+                  <p className="text-xs text-neutral-400 uppercase tracking-wider font-semibold mb-2">
+                    Criteres de selection
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs text-neutral-500 mb-1">Top N</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={1}
+                          max={advanceStandings.length}
+                          value={advanceTopN}
+                          onChange={(e) => handleAdvanceTopN(e.target.value)}
+                          className="w-full px-3 py-1.5 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                          placeholder="N"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-neutral-500 mb-1">Score minimum</label>
+                      <input
+                        type="number"
+                        min={0}
+                        step="any"
+                        value={advanceMinScore}
+                        onChange={(e) => handleAdvanceMinScore(e.target.value)}
+                        className="w-full px-3 py-1.5 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                        placeholder="Ex: 6"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-neutral-500 mb-1">Victoires minimum</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={advanceMinWins}
+                        onChange={(e) => handleAdvanceMinWins(e.target.value)}
+                        className="w-full px-3 py-1.5 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                        placeholder="Ex: 3"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-neutral-500">
+                    {advanceSelectedIds.size} / {advanceStandings.length} equipe(s) selectionnee(s)
+                  </p>
                 </div>
 
                 {/* Standings table with checkboxes */}

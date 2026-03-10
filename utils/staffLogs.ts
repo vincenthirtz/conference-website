@@ -168,6 +168,7 @@ export function formatStaffLog(log: StaffLog) {
     advance_teams: 'Avancement équipes',
     apply_template: 'Application template',
     clone_stage: 'Clonage phase',
+    auto_seed_bracket: 'Seeding automatique bracket',
     other: 'Action staff',
   };
 

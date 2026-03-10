@@ -162,11 +162,21 @@ function AdminBracketBuilderPage(_: StaffProps) {
   const totalMatches = matches.length;
   const finishedCount = matches.filter((m) => m.status === 'finished').length;
 
+  /** Detect if this is a double elimination bracket */
+  const isDoubleElim = useMemo(
+    () => matches.some((m) => m.bracket_side === 'lb'),
+    [matches]
+  );
+
   /** Build bracket rounds from matches for tree view */
   const bracketRounds: BracketRound[] = useMemo(() => {
     if (!matches.length) return [];
+    // For double elim, only show WB + GF in main tree
+    const filtered = isDoubleElim
+      ? matches.filter((m) => m.bracket_side === 'wb' || m.bracket_side === 'final')
+      : matches;
     const roundMap = new Map<number, ScheduleMatch[]>();
-    for (const m of matches) {
+    for (const m of filtered) {
       const r = m.round_number ?? 0;
       if (!roundMap.has(r)) roundMap.set(r, []);
       roundMap.get(r)!.push(m);
@@ -182,7 +192,28 @@ function AdminBracketBuilderPage(_: StaffProps) {
           (a, b) => (a.position_in_round ?? 0) - (b.position_in_round ?? 0)
         ),
       }));
-  }, [matches]);
+  }, [matches, isDoubleElim]);
+
+  /** Build loser bracket rounds (for double elim) */
+  const loserBracketRounds: BracketRound[] = useMemo(() => {
+    if (!isDoubleElim || !matches.length) return [];
+    const lbMatches = matches.filter((m) => m.bracket_side === 'lb');
+    const roundMap = new Map<number, ScheduleMatch[]>();
+    for (const m of lbMatches) {
+      const r = m.round_number ?? 0;
+      if (!roundMap.has(r)) roundMap.set(r, []);
+      roundMap.get(r)!.push(m);
+    }
+    return Array.from(roundMap.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([roundNum, roundMatches]) => ({
+        roundNumber: roundNum,
+        roundName: roundMatches[0]?.round_name ?? `LB Round ${roundNum}`,
+        matches: roundMatches.sort(
+          (a, b) => (a.position_in_round ?? 0) - (b.position_in_round ?? 0)
+        ),
+      }));
+  }, [matches, isDoubleElim]);
 
   /** Export PDF via print */
   const handleExportPDF = useCallback(() => {
@@ -646,9 +677,25 @@ ${day.matches.map((m) => `<tr>
 
           {/* ===== BRACKET TREE VIEW ===== */}
           {!loading && matches.length > 0 && viewMode === 'bracket' && (
-            <BracketTreeView
-              rounds={bracketRounds}
-            />
+            <>
+              {isDoubleElim && (
+                <h3 className="text-sm font-bold uppercase tracking-wider text-purple-300 mb-2">
+                  Winners Bracket
+                </h3>
+              )}
+              <BracketTreeView rounds={bracketRounds} />
+
+              {isDoubleElim && loserBracketRounds.length > 0 && (
+                <>
+                  <div className="mt-8 mb-2 pt-6 border-t border-red-500/20">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-red-300">
+                      Losers Bracket
+                    </h3>
+                  </div>
+                  <BracketTreeView rounds={loserBracketRounds} />
+                </>
+              )}
+            </>
           )}
         </div>
       </div>
