@@ -1,6 +1,7 @@
 // pages/api/admin/tournament/[id]/apply-template.ts
 // Applique un template pre-defini a un tournoi (cree les stages automatiquement).
-// POST : { templateId: string }
+// POST : { templateId: string, append?: boolean }
+// append=true : ajoute les stages du template apres les stages existants
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
@@ -33,7 +34,7 @@ async function handler(
   }
 
   const tournamentId = String(id);
-  const { templateId } = req.body || {};
+  const { templateId, append } = req.body || {};
 
   if (!templateId || typeof templateId !== 'string') {
     return res.status(400).json({ error: 'templateId is required' });
@@ -75,18 +76,25 @@ async function handler(
       return res.status(404).json({ error: 'Tournament not found' });
     }
 
-    // Check tournament has no stages yet
+    // Check existing stages
     const { data: existingStages } = await supabaseAdmin
       .from('tournament_stages')
-      .select('id')
+      .select('id, order_index')
       .eq('tournament_id', tournamentId)
-      .limit(1);
+      .order('order_index', { ascending: false });
 
-    if (existingStages && existingStages.length > 0) {
+    const hasExisting = existingStages && existingStages.length > 0;
+
+    if (hasExisting && !append) {
       return res.status(400).json({
-        error: 'Ce tournoi a deja des stages. Supprimez-les avant d\'appliquer un template.',
+        error: 'Ce tournoi a deja des stages. Supprimez-les avant d\'appliquer un template, ou utilisez le mode "append".',
       });
     }
+
+    // In append mode, start order_index after the last existing stage
+    const startIndex = hasExisting
+      ? (existingStages![0].order_index ?? existingStages!.length - 1) + 1
+      : 0;
 
     // Create stages from template
     const stageInserts = template.stages.map((s, idx) => ({
@@ -98,7 +106,7 @@ async function handler(
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-|-$/g, ''),
       stage_type: s.stage_type,
-      order_index: idx,
+      order_index: startIndex + idx,
       is_active: false,
       is_public: false,
       start_date: null,
@@ -128,6 +136,7 @@ async function handler(
           payload: {
             template_id: templateId,
             template_name: template.name,
+            append: !!append,
             created_stage_ids: createdStages.map((s: any) => s.id),
           },
         });

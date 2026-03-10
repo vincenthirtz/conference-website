@@ -300,6 +300,27 @@ function AdminTournamentPage({ staff }: StaffProps) {
   const [recentMatches, setRecentMatches] = useState<RecentMatch[]>([]);
   const [loadingMatches, setLoadingMatches] = useState(false);
 
+  // Status guards
+  type StatusGuard = { status: string; label: string; allowed: boolean; reason?: string };
+  const [statusGuards, setStatusGuards] = useState<StatusGuard[]>([]);
+
+  // Conflict detection
+  type Conflict = {
+    type: string;
+    team_id: string;
+    team_name: string;
+    match_a: { id: string; scheduled_at: string; estimated_end: string; stage_name: string | null; round_number: number | null };
+    match_b: { id: string; scheduled_at: string; estimated_end: string; stage_name: string | null; round_number: number | null };
+    overlap_minutes: number;
+  };
+  const [conflicts, setConflicts] = useState<Conflict[] | null>(null);
+  const [loadingConflicts, setLoadingConflicts] = useState(false);
+  const [showConflicts, setShowConflicts] = useState(false);
+
+  // Clone
+  const [cloning, setCloning] = useState(false);
+  const [showCloneConfirm, setShowCloneConfirm] = useState(false);
+
   const fetchTournament = useCallback(async () => {
     if (!id) return;
     setLoading(true);
@@ -382,13 +403,69 @@ function AdminTournamentPage({ staff }: StaffProps) {
     }
   }, [id]);
 
+  const fetchStatusGuards = useCallback(async () => {
+    if (!id) return;
+    try {
+      const res = await fetch(`/api/admin/tournament/${id}/status-guards`);
+      if (res.ok) {
+        const json = await res.json();
+        setStatusGuards(json.guards || []);
+      }
+    } catch {
+      // Silently fail
+    }
+  }, [id]);
+
+  const fetchConflicts = useCallback(async () => {
+    if (!id) return;
+    setLoadingConflicts(true);
+    try {
+      const res = await fetch(`/api/admin/tournament/${id}/conflicts`);
+      if (res.ok) {
+        const json = await res.json();
+        setConflicts(json.conflicts || []);
+      }
+    } catch {
+      setConflicts(null);
+    } finally {
+      setLoadingConflicts(false);
+    }
+  }, [id]);
+
+  async function handleCloneTournament() {
+    if (!id || cloning) return;
+    setCloning(true);
+    setErrorMsg(null);
+    try {
+      const res = await fetch(`/api/admin/tournament/${id}/clone`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || 'Impossible de cloner le tournoi');
+      }
+      const json = await res.json();
+      if (json.tournament?.id) {
+        router.push(`/admin/tournament/${json.tournament.id}`);
+      }
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? 'Erreur lors du clonage');
+    } finally {
+      setCloning(false);
+      setShowCloneConfirm(false);
+    }
+  }
+
   useEffect(() => {
     if (!id) return;
     fetchTournament();
     fetchStages();
     fetchTournamentTeams();
     fetchRecentMatches();
-  }, [id, fetchTournament, fetchStages, fetchTournamentTeams, fetchRecentMatches]);
+    fetchStatusGuards();
+  }, [id, fetchTournament, fetchStages, fetchTournamentTeams, fetchRecentMatches, fetchStatusGuards]);
 
   function updateStatus(newStatus: string) {
     if (!id || !tournament) return;
@@ -429,6 +506,7 @@ function AdminTournamentPage({ staff }: StaffProps) {
       setTournament(json.tournament);
       setSuccessMsg(`Statut modifié : ${statusLabel(newStatus)}`);
       setTimeout(() => setSuccessMsg(null), 3000);
+      fetchStatusGuards();
     } catch (err: any) {
       setErrorMsg(err?.message ?? 'Erreur inattendue');
     } finally {
@@ -801,6 +879,50 @@ function AdminTournamentPage({ staff }: StaffProps) {
                   </svg>
                   Historique
                 </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowConflicts(true);
+                    fetchConflicts();
+                  }}
+                  className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors flex items-center gap-2"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                  Conflits
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCloneConfirm(true)}
+                  disabled={cloning}
+                  className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                    />
+                  </svg>
+                  Cloner
+                </button>
               </div>
 
               {/* Main Grid */}
@@ -887,7 +1009,7 @@ function AdminTournamentPage({ staff }: StaffProps) {
                     </div>
                   </section>
 
-                  {/* Status Control */}
+                  {/* Status Workflow */}
                   <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
                     <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                       <svg
@@ -903,40 +1025,105 @@ function AdminTournamentPage({ staff }: StaffProps) {
                           d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                         />
                       </svg>
-                      Statut du tournoi
+                      Workflow du tournoi
                     </h2>
 
-                    <div className="flex flex-wrap gap-2">
-                      {STATUS_OPTIONS.map((option) => (
-                        <button
-                          key={option.value}
-                          type="button"
-                          onClick={() => updateStatus(option.value)}
-                          disabled={updatingStatus}
-                          className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
-                            tournament.status === option.value
-                              ? `${option.color} text-white ring-2 ring-white/20 shadow-lg`
-                              : 'bg-neutral-700/50 text-neutral-300 hover:bg-neutral-700 hover:text-white'
-                          } ${updatingStatus ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                          <span>{option.icon}</span>
-                          {option.label}
-                          {tournament.status === option.value && (
-                            <svg
-                              className="w-4 h-4"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                          )}
-                        </button>
-                      ))}
+                    {/* Progress bar */}
+                    <div className="mb-5">
+                      <div className="flex items-center justify-between mb-2">
+                        {STATUS_OPTIONS.map((option, idx) => {
+                          const currentIdx = STATUS_OPTIONS.findIndex(
+                            (o) => o.value === tournament.status
+                          );
+                          const isCurrent = option.value === tournament.status;
+                          const isPast = idx < currentIdx;
+                          const guard = statusGuards.find((g) => g.status === option.value);
+
+                          return (
+                            <div key={option.value} className="flex flex-col items-center flex-1">
+                              <div className="relative flex items-center w-full">
+                                {idx > 0 && (
+                                  <div
+                                    className={`absolute left-0 right-1/2 h-0.5 top-1/2 -translate-y-1/2 ${
+                                      isPast || isCurrent ? 'bg-emerald-500' : 'bg-neutral-700'
+                                    }`}
+                                  />
+                                )}
+                                {idx < STATUS_OPTIONS.length - 1 && (
+                                  <div
+                                    className={`absolute left-1/2 right-0 h-0.5 top-1/2 -translate-y-1/2 ${
+                                      isPast ? 'bg-emerald-500' : 'bg-neutral-700'
+                                    }`}
+                                  />
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (!isCurrent && guard?.allowed !== false) {
+                                      updateStatus(option.value);
+                                    }
+                                  }}
+                                  disabled={updatingStatus || isCurrent || guard?.allowed === false}
+                                  title={
+                                    isCurrent
+                                      ? 'Statut actuel'
+                                      : guard?.allowed === false
+                                        ? guard.reason
+                                        : `Passer en ${option.label}`
+                                  }
+                                  className={`relative z-10 mx-auto w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all ${
+                                    isCurrent
+                                      ? `${option.color} border-white/40 text-white ring-2 ring-white/20 shadow-lg scale-110`
+                                      : isPast
+                                        ? 'bg-emerald-600 border-emerald-400 text-white'
+                                        : guard?.allowed === false
+                                          ? 'bg-neutral-800 border-neutral-600 text-neutral-500 cursor-not-allowed'
+                                          : 'bg-neutral-800 border-neutral-600 text-neutral-400 hover:border-neutral-400 hover:text-white cursor-pointer'
+                                  }`}
+                                >
+                                  {isPast ? (
+                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                  ) : (
+                                    <span>{idx + 1}</span>
+                                  )}
+                                </button>
+                              </div>
+                              <span
+                                className={`text-[10px] mt-1.5 text-center leading-tight ${
+                                  isCurrent ? 'text-white font-semibold' : 'text-neutral-500'
+                                }`}
+                              >
+                                {option.label}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
+
+                    {/* Guard warnings */}
+                    {statusGuards.filter((g) => !g.allowed && g.status !== tournament.status && g.reason && g.reason !== 'Statut actuel').length > 0 && (
+                      <div className="space-y-1.5 mt-3">
+                        {statusGuards
+                          .filter((g) => !g.allowed && g.status !== tournament.status && g.reason && g.reason !== 'Statut actuel')
+                          .map((g) => (
+                            <div
+                              key={g.status}
+                              className="flex items-start gap-2 text-xs text-amber-300/80 bg-amber-900/20 border border-amber-500/20 rounded-lg px-3 py-2"
+                            >
+                              <svg className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                              </svg>
+                              <span>
+                                <strong>{g.label}</strong> : {g.reason}
+                              </span>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+
                     {updatingStatus && (
                       <div className="text-xs text-neutral-400 mt-3 flex items-center gap-2">
                         <div className="w-3 h-3 border border-neutral-500 border-t-white rounded-full animate-spin" />
@@ -1826,6 +2013,128 @@ function AdminTournamentPage({ staff }: StaffProps) {
                 className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {creatingStage ? 'Création...' : 'Créer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Clone Confirm Dialog */}
+      {showCloneConfirm && (
+        <ConfirmDialog
+          title="Cloner ce tournoi ?"
+          subtitle={`Une copie de « ${tournament?.name ?? ''} » sera créée en mode brouillon, avec les mêmes stages, map pool et settings, mais sans équipes ni résultats.`}
+          variant="warning"
+          loading={cloning}
+          confirmLabel="Cloner"
+          confirmingLabel="Clonage..."
+          onCancel={() => setShowCloneConfirm(false)}
+          onConfirm={handleCloneTournament}
+        />
+      )}
+
+      {/* Conflicts Modal */}
+      {showConflicts && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-2xl shadow-2xl max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                Rapport de conflits
+              </h3>
+              <button
+                onClick={() => setShowConflicts(false)}
+                className="p-1.5 rounded-lg hover:bg-neutral-700 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {loadingConflicts ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="w-6 h-6 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+              </div>
+            ) : conflicts === null ? (
+              <div className="text-neutral-400 text-sm py-8 text-center">
+                Erreur lors du chargement des conflits.
+              </div>
+            ) : conflicts.length === 0 ? (
+              <div className="flex flex-col items-center py-12 text-center">
+                <svg className="w-12 h-12 text-emerald-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-emerald-300 font-medium">Aucun conflit détecté</p>
+                <p className="text-neutral-500 text-xs mt-1">
+                  Aucune équipe ne joue deux matchs en même temps.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-y-auto flex-1 space-y-3 pr-1">
+                <div className="text-sm text-amber-300 bg-amber-900/30 border border-amber-500/20 rounded-lg px-3 py-2 mb-3">
+                  {conflicts.length} conflit{conflicts.length > 1 ? 's' : ''} détecté{conflicts.length > 1 ? 's' : ''}
+                </div>
+                {conflicts.map((c, i) => (
+                  <div
+                    key={i}
+                    className="bg-neutral-900/70 border border-red-500/20 rounded-xl p-4 space-y-2"
+                  >
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="px-2 py-0.5 rounded-full text-xs bg-red-500/20 text-red-300 border border-red-500/30">
+                        Chevauchement {c.overlap_minutes} min
+                      </span>
+                      <span className="font-medium text-white">{c.team_name}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div className="bg-neutral-800/50 rounded-lg p-2.5">
+                        <div className="text-neutral-500 mb-1">Match A</div>
+                        <div className="text-neutral-300">
+                          {c.match_a.stage_name && <span>{c.match_a.stage_name} · </span>}
+                          {c.match_a.round_number && <span>Round {c.match_a.round_number}</span>}
+                        </div>
+                        <div className="text-neutral-400 mt-1">
+                          {new Date(c.match_a.scheduled_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
+                          {' → '}
+                          {new Date(c.match_a.estimated_end).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+                      <div className="bg-neutral-800/50 rounded-lg p-2.5">
+                        <div className="text-neutral-500 mb-1">Match B</div>
+                        <div className="text-neutral-300">
+                          {c.match_b.stage_name && <span>{c.match_b.stage_name} · </span>}
+                          {c.match_b.round_number && <span>Round {c.match_b.round_number}</span>}
+                        </div>
+                        <div className="text-neutral-400 mt-1">
+                          {new Date(c.match_b.scheduled_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
+                          {' → '}
+                          {new Date(c.match_b.estimated_end).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-neutral-700">
+              <button
+                onClick={() => {
+                  setShowConflicts(false);
+                  setConflicts(null);
+                }}
+                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+              >
+                Fermer
+              </button>
+              <button
+                onClick={fetchConflicts}
+                disabled={loadingConflicts}
+                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                {loadingConflicts ? 'Analyse...' : 'Re-analyser'}
               </button>
             </div>
           </div>

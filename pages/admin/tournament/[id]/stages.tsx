@@ -6,6 +6,10 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import {
+  TOURNAMENT_TEMPLATES,
+  type TournamentTemplate,
+} from '@/config/tournament-templates';
 import type {
   StaffProps,
   StageType,
@@ -49,6 +53,13 @@ function StagesPage(_: StaffProps) {
   const [reorderMode, setReorderMode] = useState(false);
   const [reordering, setReordering] = useState(false);
   const [orderChanged, setOrderChanged] = useState(false);
+
+  // Template append
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [customTemplates, setCustomTemplates] = useState<TournamentTemplate[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<TournamentTemplate | null>(null);
+  const [applyingTemplate, setApplyingTemplate] = useState(false);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (!tournamentId) return;
@@ -132,6 +143,63 @@ function StagesPage(_: StaffProps) {
     }
   }
 
+  async function openTemplateModal() {
+    setShowTemplateModal(true);
+    setSelectedTemplate(null);
+    try {
+      const res = await fetch('/api/admin/tournament-templates');
+      if (res.ok) {
+        const json = await res.json();
+        setCustomTemplates(json.templates || []);
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  async function handleAppendTemplate() {
+    if (!selectedTemplate || !tournamentId) return;
+    setApplyingTemplate(true);
+    setErrorMsg(null);
+    try {
+      const res = await fetch(`/api/admin/tournament/${tournamentId}/apply-template`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ templateId: selectedTemplate.id, append: true }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || "Impossible d'appliquer le template");
+      }
+      setShowTemplateModal(false);
+      setSelectedTemplate(null);
+      setSuccessMsg(`Template « ${selectedTemplate.name} » ajouté`);
+      setTimeout(() => setSuccessMsg(null), 3000);
+      fetchStages();
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Erreur lors de l'application du template");
+    } finally {
+      setApplyingTemplate(false);
+    }
+  }
+
+  function stageTypeBadge(type: string) {
+    switch (type) {
+      case 'bracket':
+        return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
+      case 'swiss':
+        return 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+      case 'group':
+        return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
+      case 'round_robin':
+        return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
+      case 'showmatch':
+        return 'bg-pink-500/20 text-pink-300 border-pink-500/30';
+      default:
+        return 'bg-neutral-500/20 text-neutral-300 border-neutral-500/30';
+    }
+  }
+
   return (
     <>
       <Head>
@@ -186,6 +254,12 @@ function StagesPage(_: StaffProps) {
                 </button>
               )}
               <button
+                onClick={openTemplateModal}
+                className="px-3 py-1.5 rounded-lg bg-blue-600/80 border border-blue-400/40 text-sm hover:bg-blue-500"
+              >
+                + Bloc template
+              </button>
+              <button
                 onClick={() => fetchStages()}
                 className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm hover:bg-white/10"
               >
@@ -193,6 +267,15 @@ function StagesPage(_: StaffProps) {
               </button>
             </div>
           </div>
+
+          {successMsg && (
+            <div className="mb-4 p-3 rounded-lg bg-emerald-900/40 border border-emerald-500/40 text-emerald-200 text-sm flex items-center gap-2">
+              <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              {successMsg}
+            </div>
+          )}
 
           {loading && (
             <div className="p-4 rounded-lg bg-white/5 border border-white/10">
@@ -290,6 +373,67 @@ function StagesPage(_: StaffProps) {
           )}
         </div>
       </div>
+
+      {/* Template Append Modal */}
+      {showTemplateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
+            <h3 className="text-lg font-semibold mb-2">Ajouter un bloc template</h3>
+            <p className="text-xs text-neutral-400 mb-4">
+              Les phases du template seront ajoutées après les phases existantes.
+            </p>
+
+            <div className="grid gap-2 max-h-72 overflow-y-auto pr-1 mb-4">
+              {[...TOURNAMENT_TEMPLATES, ...customTemplates].map((tpl) => (
+                <button
+                  key={tpl.id}
+                  type="button"
+                  onClick={() => setSelectedTemplate(tpl)}
+                  className={`p-3 rounded-xl border text-left transition-all ${
+                    selectedTemplate?.id === tpl.id
+                      ? 'bg-blue-600/20 border-blue-500/50 ring-1 ring-blue-500/30'
+                      : 'bg-neutral-900/50 border-neutral-700 hover:bg-neutral-800 hover:border-neutral-600'
+                  }`}
+                >
+                  <div className="font-medium text-sm">{tpl.name}</div>
+                  <div className="text-xs text-neutral-400 mt-0.5">
+                    {tpl.description}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {tpl.stages.map((s, i) => (
+                      <span
+                        key={i}
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${stageTypeBadge(s.stage_type)}`}
+                      >
+                        {s.name}
+                      </span>
+                    ))}
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setShowTemplateModal(false);
+                  setSelectedTemplate(null);
+                }}
+                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleAppendTemplate}
+                disabled={!selectedTemplate || applyingTemplate}
+                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {applyingTemplate ? 'Application...' : 'Ajouter les phases'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

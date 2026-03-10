@@ -204,6 +204,14 @@ async function handlePatch(
       });
     }
 
+    // --- Gardes de transition de statut ---
+    if (status !== undefined && status !== before.status) {
+      const guards = await checkStatusTransitionGuards(tournamentId, before.status, status);
+      if (guards) {
+        return res.status(400).json({ error: guards.error, warnings: guards.warnings } as any);
+      }
+    }
+
     // Construire l'objet de mise à jour
     const updatePayload: Record<string, any> = {};
 
@@ -285,4 +293,66 @@ async function handlePatch(
       .status(500)
       .json({ error: err?.message || 'Internal server error' });
   }
+}
+
+/* -----------------------------------------------------------
+ * Gardes de transition de statut
+ * Vérifie les pré-conditions avant d'autoriser un changement de statut.
+ * Retourne null si OK, sinon un objet { error, warnings }.
+ * ---------------------------------------------------------*/
+async function checkStatusTransitionGuards(
+  tournamentId: string,
+  currentStatus: string | null,
+  newStatus: string
+): Promise<{ error: string; warnings?: string[] } | null> {
+  // published -> doit avoir au moins 1 stage
+  if (newStatus === 'published') {
+    const { data: stages } = await supabaseAdmin!
+      .from('tournament_stages')
+      .select('id')
+      .eq('tournament_id', tournamentId)
+      .limit(1);
+
+    if (!stages || stages.length === 0) {
+      return {
+        error: 'Impossible de publier : le tournoi doit avoir au moins 1 phase (stage).',
+      };
+    }
+  }
+
+  // running -> doit avoir au moins 1 stage avec des équipes
+  if (newStatus === 'running') {
+    const { data: stages } = await supabaseAdmin!
+      .from('tournament_stages')
+      .select('id')
+      .eq('tournament_id', tournamentId)
+      .limit(1);
+
+    if (!stages || stages.length === 0) {
+      return {
+        error: 'Impossible de lancer : le tournoi doit avoir au moins 1 phase (stage).',
+      };
+    }
+
+    const { data: teams } = await supabaseAdmin!
+      .from('tournament_teams')
+      .select('id')
+      .eq('tournament_id', tournamentId)
+      .limit(1);
+
+    if (!teams || teams.length === 0) {
+      return {
+        error: 'Impossible de lancer : le tournoi doit avoir au moins 1 équipe inscrite.',
+      };
+    }
+  }
+
+  // completed -> ne peut venir que de running
+  if (newStatus === 'completed' && currentStatus !== 'running') {
+    return {
+      error: 'Impossible de terminer : le tournoi doit être en cours (running) pour être marqué comme terminé.',
+    };
+  }
+
+  return null;
 }
