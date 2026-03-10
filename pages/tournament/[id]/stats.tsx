@@ -83,20 +83,29 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     return { notFound: true };
   }
 
-  // 2) Récupérer les équipes engagées via tournament_stage_teams
-  const { data: stageTeams, error: stErr } = await supabaseAdmin
-    .from('tournament_stage_teams')
-    .select(
-      `
-      team:teams (
-        id,
-        name,
-        short_name,
-        logo_url
-      )
-    `
-    )
-    .eq('stage_id.tournament_id', id); // si Supabase râle, remplace par un .in sur stage_id
+  // 2) Récupérer les équipes engagées via stage_teams
+  const { data: stages } = await supabaseAdmin
+    .from('tournament_stages')
+    .select('id')
+    .eq('tournament_id', id);
+
+  const stageIds = (stages || []).map((s: any) => s.id);
+
+  const { data: stageTeams, error: stErr } = stageIds.length > 0
+    ? await supabaseAdmin
+        .from('stage_teams')
+        .select(
+          `
+          team:teams (
+            id,
+            name,
+            short_name,
+            logo_url
+          )
+        `
+        )
+        .in('stage_id', stageIds)
+    : { data: null, error: null };
 
   if (stErr) {
     console.error('stats page stage_teams error:', stErr);

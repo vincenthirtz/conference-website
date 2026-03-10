@@ -342,7 +342,7 @@ export default async function handler(
         let canRegister = true;
         if (tournament.max_teams) {
           const { data: existingTeams } = await supabaseAdmin
-            .from('tournament_stage_teams')
+            .from('stage_teams')
             .select('team_id, tournament_stages!inner(tournament_id)')
             .eq('tournament_stages.tournament_id', tournamentId);
 
@@ -366,7 +366,7 @@ export default async function handler(
             }));
 
             const { error: regError } = await supabaseAdmin
-              .from('tournament_stage_teams')
+              .from('stage_teams')
               .insert(insertData);
 
             if (!regError) {

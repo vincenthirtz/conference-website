@@ -8,7 +8,7 @@ import { logStaffAction } from '@/utils/staffLogs';
  * Retrieve tournaments a team is registered for and available tournaments
  *
  * POST /api/admin/teams/[teamId]/tournaments
- * Register a team to a tournament (creates entry in tournament_stage_teams for all stages or first stage)
+ * Register a team to a tournament (creates entry in stage_teams for all stages or first stage)
  * Body: { tournamentId: string, stageId?: string }
  *
  * DELETE /api/admin/teams/[teamId]/tournaments
@@ -66,9 +66,9 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse, teamId: stri
       throw tournamentsError;
     }
 
-    // Get tournaments the team is registered for (via tournament_stage_teams)
+    // Get tournaments the team is registered for (via stage_teams)
     const { data: registrations, error: registrationsError } = await supabaseAdmin
-      .from('tournament_stage_teams')
+      .from('stage_teams')
       .select(`
         stage_id,
         team_id,
@@ -188,7 +188,7 @@ async function handlePost(
     // Check if max_teams limit is reached
     if (tournament.max_teams) {
       const { data: existingTeams, error: countError } = await supabaseAdmin
-        .from('tournament_stage_teams')
+        .from('stage_teams')
         .select('team_id, tournament_stages!inner(tournament_id)')
         .eq('tournament_stages.tournament_id', tournamentId);
 
@@ -242,7 +242,7 @@ async function handlePost(
 
     // Check if team is already registered to any of these stages
     const { data: existingRegistrations, error: existingError } = await supabaseAdmin
-      .from('tournament_stage_teams')
+      .from('stage_teams')
       .select('stage_id')
       .eq('team_id', teamId)
       .in('stage_id', targetStageIds);
@@ -257,14 +257,14 @@ async function handlePost(
       });
     }
 
-    // Insert into tournament_stage_teams for each stage
+    // Insert into stage_teams for each stage
     const insertData = targetStageIds.map(stgId => ({
       stage_id: stgId,
       team_id: teamId,
     }));
 
     const { data: inserted, error: insertError } = await supabaseAdmin
-      .from('tournament_stage_teams')
+      .from('stage_teams')
       .insert(insertData)
       .select();
 
@@ -348,9 +348,9 @@ async function handleDelete(
 
     const stageIds = stages.map(s => s.id);
 
-    // Delete from tournament_stage_teams
+    // Delete from stage_teams
     const { error: deleteError, count } = await supabaseAdmin
-      .from('tournament_stage_teams')
+      .from('stage_teams')
       .delete({ count: 'exact' })
       .eq('team_id', teamId)
       .in('stage_id', stageIds);

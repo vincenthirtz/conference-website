@@ -198,7 +198,7 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (ctx)
 
   // Try stage_teams
   const { data: stageTeams } = await supabaseAdmin
-    .from('tournament_stage_teams')
+    .from('stage_teams')
     .select(`
       stage:tournament_stages (
         tournament:tournaments (

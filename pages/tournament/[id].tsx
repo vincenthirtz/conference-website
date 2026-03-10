@@ -182,7 +182,7 @@ export const getServerSideProps: GetServerSideProps<
   if (stages && stages.length > 0) {
     const stageIds = stages.map((s: any) => s.id);
     const { data: stageTeams, error: stErr } = await supabaseAdmin
-      .from('tournament_stage_teams')
+      .from('stage_teams')
       .select(
         `
         team:teams ( id, name, short_name, logo_url )
