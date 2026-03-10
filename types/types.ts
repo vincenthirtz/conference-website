@@ -71,24 +71,6 @@ export interface SocialWithIcon {
   icon: ({ className, fill }: SVGTypes) => React.JSX.Element;
 }
 
-export interface CfpForm {
-  Fullname: string;
-  Email: string;
-  Bio: string;
-  Social: string;
-  Title: string;
-  Description: string;
-  Format: string;
-  Level: string;
-  AdditionalInfo: string;
-}
-
-export interface CfpStepProps {
-  setStep: (e: React.FormEvent<HTMLFormElement> | null, step: number) => void;
-  setForm: React.Dispatch<React.SetStateAction<Partial<CfpForm>>>;
-  data: Partial<CfpForm>;
-}
-
 export interface SelectOptions {
   value: string;
   label: string;

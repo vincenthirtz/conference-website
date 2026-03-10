@@ -3,6 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
 import { supabaseClient } from '@/utils/supabase';
+import { useDebounce } from '@/hooks/useDebounce';
 
 type AdherentRow = {
   id: string;
@@ -68,6 +69,7 @@ function AdminAdherentsPage({ staff }: Props) {
   const [adherents, setAdherents] = useState<AdherentRow[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string | null>(null);
   const [yearFilter, setYearFilter] = useState<string | null>(null);
   const [roleFilter, setRoleFilter] = useState<string | null>(null);
@@ -89,7 +91,7 @@ function AdminAdherentsPage({ staff }: Props) {
       }
 
       const params = new URLSearchParams();
-      if (search.trim()) params.set('search', search.trim());
+      if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
       if (paymentStatusFilter) params.set('paymentStatus', paymentStatusFilter);
       if (yearFilter) params.set('year', yearFilter);
       if (roleFilter) params.set('role', roleFilter);
@@ -118,7 +120,7 @@ function AdminAdherentsPage({ staff }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [search, paymentStatusFilter, yearFilter, roleFilter]);
+  }, [debouncedSearch, paymentStatusFilter, yearFilter, roleFilter]);
 
   useEffect(() => {
     fetchData();

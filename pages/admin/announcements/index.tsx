@@ -3,6 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
+import { useDebounce } from '@/hooks/useDebounce';
 
 type AnnouncementRow = {
   id: string;
@@ -66,6 +67,7 @@ function AdminAnnouncementsPage({ staff }: Props) {
 
   // filters
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
   const [limit] = useState(20);
@@ -80,7 +82,7 @@ function AdminAnnouncementsPage({ staff }: Props) {
       params.set('limit', String(limit));
       params.set('offset', String(offset));
 
-      if (search.trim()) params.set('search', search);
+      if (debouncedSearch.trim()) params.set('search', debouncedSearch);
       if (statusFilter) params.set('status', statusFilter);
 
       const res = await fetch(`/api/admin/announcements?${params.toString()}`);
@@ -97,7 +99,7 @@ function AdminAnnouncementsPage({ staff }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [limit, offset, search, statusFilter]);
+  }, [limit, offset, debouncedSearch, statusFilter]);
 
   useEffect(() => {
     fetchData();

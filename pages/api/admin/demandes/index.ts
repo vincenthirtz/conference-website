@@ -158,12 +158,7 @@ async function handleGet(
 
   let select = baseColumns;
 
-  // Note: profiles table doesn't exist, so we skip user data for now
-  // The user_id is still included in baseColumns
-  if (withUser) {
-    // TODO: Create profiles table or fetch user data separately
-    // For now, we skip the user join to avoid errors
-  }
+  // User data is fetched from Supabase Auth after the main query (no profiles table)
 
   // Include team data using the explicit foreign key relationship name
   // Requires: demandes_team_id_fkey constraint to be set up in database
@@ -251,6 +246,43 @@ async function handleGet(
   const safeDemandes = (Array.isArray(data)
     ? data
     : []) as unknown as DemandeWithRelations[];
+
+  // Enrich with user data from Supabase Auth when requested
+  if (withUser && safeDemandes.length > 0) {
+    const uniqueUserIds = [
+      ...new Set(safeDemandes.map((d) => d.user_id).filter(Boolean)),
+    ] as string[];
+
+    const userMap = new Map<
+      string,
+      { id: string; username: string | null; battle_tag: string | null; discord: string | null }
+    >();
+
+    await Promise.all(
+      uniqueUserIds.map(async (uid) => {
+        try {
+          const { data: userData } = await supabaseAdmin!.auth.admin.getUserById(uid);
+          if (userData?.user) {
+            const meta = userData.user.user_metadata ?? {};
+            userMap.set(uid, {
+              id: uid,
+              username: (meta.display_name as string) || userData.user.email || null,
+              battle_tag: (meta.battle_tag as string) || null,
+              discord: (meta.discord as string) || null,
+            });
+          }
+        } catch {
+          // Skip users that can't be fetched
+        }
+      })
+    );
+
+    for (const demande of safeDemandes) {
+      if (demande.user_id && userMap.has(demande.user_id)) {
+        demande.user = userMap.get(demande.user_id)!;
+      }
+    }
+  }
 
   return res.status(200).json({
     demandes: safeDemandes,
