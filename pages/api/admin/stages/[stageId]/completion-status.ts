@@ -29,7 +29,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // Fetch stage
     const { data: stage, error: stageErr } = await supabaseAdmin
       .from('tournament_stages')
-      .select('id, tournament_id, name, stage_type, order_index')
+      .select('id, tournament_id, name, stage_type, order_index, settings')
       .eq('id', id)
       .maybeSingle();
 
@@ -78,7 +78,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       }
     }
 
-    const canAdvance = isComplete && nextStage !== null;
+    const advancementRules = stage.settings?.advancement_rules ?? null;
+    const hasAutoAdvancement = !!(
+      advancementRules?.advance_top && advancementRules?.target_stage_id
+    );
+    const canAdvance = isComplete && (nextStage !== null || hasAutoAdvancement);
 
     return res.status(200).json({
       stageId: id,
@@ -91,6 +95,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       isComplete,
       nextStage,
       canAdvance,
+      advancementRules: hasAutoAdvancement ? advancementRules : undefined,
     });
   } catch (err: any) {
     console.error('[/api/admin/stages/[stageId]/completion-status] error:', err);

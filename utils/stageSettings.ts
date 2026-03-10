@@ -29,10 +29,21 @@ const bracketSettingsSchema = z
   })
   .passthrough();
 
+/** Advancement rules (shared across stage types) */
+const advancementRulesSchema = z
+  .object({
+    advance_top: z.number().int().min(1).max(128),
+    target_stage_id: z.string().uuid(),
+    seed_by: z.enum(['standings', 'manual', 'none']).optional(),
+  })
+  .optional();
+
 /** Swiss */
 const swissSettingsSchema = z
   .object({
     total_rounds: z.number().int().min(1).max(20).optional(),
+    win_threshold: z.number().int().min(1).max(20).optional(),
+    loss_threshold: z.number().int().min(1).max(20).optional(),
     win_points: z.number().min(0).optional(),
     draw_points: z.number().min(0).optional(),
     loss_points: z.number().min(0).optional(),
@@ -40,6 +51,7 @@ const swissSettingsSchema = z
     allow_rematches: z.boolean().optional(),
     use_buchholz: z.boolean().optional(),
     use_median_buchholz: z.boolean().optional(),
+    advancement_rules: advancementRulesSchema,
   })
   .passthrough();
 
@@ -51,6 +63,7 @@ const roundRobinSettingsSchema = z
     draw_points: z.number().min(0).optional(),
     loss_points: z.number().min(0).optional(),
     home_away: z.boolean().optional(),
+    advancement_rules: advancementRulesSchema,
   })
   .passthrough();
 
@@ -64,6 +77,7 @@ const groupSettingsSchema = z
     win_points: z.number().min(0).optional(),
     draw_points: z.number().min(0).optional(),
     loss_points: z.number().min(0).optional(),
+    advancement_rules: advancementRulesSchema,
   })
   .passthrough();
 

@@ -1,6 +1,11 @@
 // pages/api/admin/stages/[stageId]/advance.ts
 // POST : avance des equipes d'un stage source vers un stage cible.
-// Body : { targetStageId, teamIds, seedMode: 'rank' | 'manual' | 'none' }
+//
+// Mode manuel : { targetStageId, teamIds, seedMode: 'rank' | 'manual' | 'none' }
+// Mode auto   : { auto: true }
+//   → lit advancement_rules depuis settings du stage :
+//     { advance_top: N, target_stage_id: "uuid", seed_by: "standings" | "manual" | "none" }
+//   → récupère le classement, filtre les N premiers, les inscrit dans le stage cible
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
@@ -11,7 +16,12 @@ import { computeStageStandings } from '@/utils/stages/standings';
 type AdvancedTeam = { teamId: string; seed: number | null };
 
 type ApiResponse =
-  | { advanced: AdvancedTeam[]; skipped: string[]; targetStageId: string }
+  | {
+      advanced: AdvancedTeam[];
+      skipped: string[];
+      targetStageId: string;
+      sourceStageCompleted?: boolean;
+    }
   | { error: string };
 
 export default withStaffRoute(handler, 'manager');
@@ -35,24 +45,12 @@ async function handler(
   }
 
   const sourceStageId = String(stageId);
-  const { targetStageId, teamIds, seedMode } = req.body || {};
-
-  if (!targetStageId || typeof targetStageId !== 'string') {
-    return res.status(400).json({ error: 'targetStageId is required' });
-  }
-
-  if (!Array.isArray(teamIds) || teamIds.length === 0) {
-    return res.status(400).json({ error: 'teamIds must be a non-empty array' });
-  }
-
-  const validSeedModes = ['rank', 'manual', 'none'];
-  const finalSeedMode = validSeedModes.includes(seedMode) ? seedMode : 'none';
 
   try {
-    // Verify both stages exist and belong to the same tournament
+    // Fetch source stage (needed for both modes)
     const { data: sourceStage, error: srcErr } = await supabaseAdmin
       .from('tournament_stages')
-      .select('id, tournament_id, stage_type')
+      .select('id, tournament_id, stage_type, settings, is_active')
       .eq('id', sourceStageId)
       .maybeSingle();
 
@@ -60,6 +58,61 @@ async function handler(
       return res.status(404).json({ error: 'Source stage not found' });
     }
 
+    // Resolve parameters: auto mode reads from settings, manual mode from body
+    let targetStageId: string;
+    let teamIds: string[];
+    let finalSeedMode: string;
+    let isAutoMode = false;
+
+    if (req.body?.auto === true) {
+      isAutoMode = true;
+      const rules = sourceStage.settings?.advancement_rules;
+
+      if (!rules || !rules.advance_top || !rules.target_stage_id) {
+        return res.status(400).json({
+          error:
+            'Mode auto : advancement_rules manquant dans les settings du stage. ' +
+            'Requis : { advance_top, target_stage_id, seed_by? }',
+        });
+      }
+
+      targetStageId = rules.target_stage_id;
+      finalSeedMode = rules.seed_by || 'standings';
+
+      // Compute standings and take top N
+      const standings = await computeStageStandings(
+        sourceStageId,
+        sourceStage.stage_type || 'other'
+      );
+
+      const advanceTop = Number(rules.advance_top);
+      teamIds = standings.slice(0, advanceTop).map((s) => s.teamId);
+
+      if (teamIds.length === 0) {
+        return res.status(400).json({
+          error: 'Aucune equipe a avancer : le classement est vide.',
+        });
+      }
+    } else {
+      // Manual mode — original behavior
+      const body = req.body || {};
+      targetStageId = body.targetStageId;
+      teamIds = body.teamIds;
+      const seedMode = body.seedMode;
+
+      if (!targetStageId || typeof targetStageId !== 'string') {
+        return res.status(400).json({ error: 'targetStageId is required' });
+      }
+
+      if (!Array.isArray(teamIds) || teamIds.length === 0) {
+        return res.status(400).json({ error: 'teamIds must be a non-empty array' });
+      }
+
+      const validSeedModes = ['rank', 'manual', 'none'];
+      finalSeedMode = validSeedModes.includes(seedMode) ? seedMode : 'none';
+    }
+
+    // Verify target stage exists and belongs to the same tournament
     const { data: targetStage, error: tgtErr } = await supabaseAdmin
       .from('tournament_stages')
       .select('id, tournament_id')
@@ -117,9 +170,10 @@ async function handler(
     }
 
     // Compute seeds based on seedMode
+    const seedModeForRank = finalSeedMode === 'standings' ? 'rank' : finalSeedMode;
     let seedMap = new Map<string, number | null>();
 
-    if (finalSeedMode === 'rank') {
+    if (seedModeForRank === 'rank') {
       const standings = await computeStageStandings(
         sourceStageId,
         sourceStage.stage_type || 'other'
@@ -131,7 +185,7 @@ async function handler(
       for (const id of toAdvance) {
         seedMap.set(id, rankByTeam.get(id) ?? null);
       }
-    } else if (finalSeedMode === 'manual') {
+    } else if (seedModeForRank === 'manual') {
       toAdvance.forEach((id: string, idx: number) => {
         seedMap.set(id, idx + 1);
       });
@@ -164,6 +218,16 @@ async function handler(
       seed: seedMap.get(teamId) ?? null,
     }));
 
+    // In auto mode, mark source stage as completed
+    let sourceStageCompleted = false;
+    if (isAutoMode && sourceStage.is_active) {
+      await supabaseAdmin
+        .from('tournament_stages')
+        .update({ is_active: false })
+        .eq('id', sourceStageId);
+      sourceStageCompleted = true;
+    }
+
     // Log staff action
     if (ctx?.staff?.id) {
       try {
@@ -174,11 +238,13 @@ async function handler(
           entity_id: sourceStageId,
           tournament_id: sourceStage.tournament_id,
           payload: {
+            auto: isAutoMode,
             source_stage_id: sourceStageId,
             target_stage_id: targetStageId,
             advanced_team_ids: toAdvance,
             skipped_team_ids: skipped,
             seed_mode: finalSeedMode,
+            source_stage_completed: sourceStageCompleted,
           },
         });
       } catch (e) {
@@ -190,6 +256,7 @@ async function handler(
       advanced,
       skipped,
       targetStageId,
+      ...(sourceStageCompleted ? { sourceStageCompleted } : {}),
     });
   } catch (err: any) {
     console.error('[/api/admin/stages/[stageId]/advance] error:', err);

@@ -89,6 +89,13 @@ type DryRunPairing = {
   team2_score: number;
 };
 
+type EliminatedTeam = {
+  teamId: string;
+  reason: 'win_threshold' | 'loss_threshold';
+  wins: number;
+  losses: number;
+};
+
 type GenerateSwissRoundResponse = {
   stageId: string;
   tournamentId: string;
@@ -98,6 +105,8 @@ type GenerateSwissRoundResponse = {
   preview?: DryRunPairing[];
   createdMatches?: GeneratedSwissMatch[];
   byeMatchId?: string | null;
+  eliminatedTeams?: EliminatedTeam[];
+  stageCompleted?: boolean;
 };
 
 // Rôle minimum : manager
@@ -289,9 +298,78 @@ async function handler(
       }
     }
 
-    // 7) Construire la liste des participants pour le pairing
+    // 6b) Élimination par seuils win/loss
+    const winThreshold: number | null =
+      typeof typedStage.settings?.win_threshold === 'number'
+        ? typedStage.settings.win_threshold
+        : null;
+    const lossThreshold: number | null =
+      typeof typedStage.settings?.loss_threshold === 'number'
+        ? typedStage.settings.loss_threshold
+        : null;
+
+    // Calculer les W/L par équipe à partir des matchs terminés
+    const winsMap = new Map<string, number>();
+    const lossesMap = new Map<string, number>();
+    for (const m of pastMatches) {
+      if (!m.team1_id) continue;
+      if (m.is_bye) {
+        winsMap.set(m.team1_id, (winsMap.get(m.team1_id) ?? 0) + 1);
+        continue;
+      }
+      if (!m.team2_id) continue;
+      if (m.winner_team_id === m.team1_id) {
+        winsMap.set(m.team1_id, (winsMap.get(m.team1_id) ?? 0) + 1);
+        lossesMap.set(m.team2_id, (lossesMap.get(m.team2_id) ?? 0) + 1);
+      } else if (m.winner_team_id === m.team2_id) {
+        winsMap.set(m.team2_id, (winsMap.get(m.team2_id) ?? 0) + 1);
+        lossesMap.set(m.team1_id, (lossesMap.get(m.team1_id) ?? 0) + 1);
+      }
+    }
+
+    const eliminatedTeams: EliminatedTeam[] = [];
+    const eliminatedIds = new Set<string>();
+
+    for (const p of participantsRows) {
+      const tid = p.team_id;
+      const wins = winsMap.get(tid) ?? 0;
+      const losses = lossesMap.get(tid) ?? 0;
+
+      if (winThreshold !== null && wins >= winThreshold) {
+        eliminatedTeams.push({ teamId: tid, reason: 'win_threshold', wins, losses });
+        eliminatedIds.add(tid);
+      } else if (lossThreshold !== null && losses >= lossThreshold) {
+        eliminatedTeams.push({ teamId: tid, reason: 'loss_threshold', wins, losses });
+        eliminatedIds.add(tid);
+      }
+    }
+
+    // Filtrer les participants actifs (non éliminés)
+    const activeParticipants = participantsRows.filter(
+      (p) => !eliminatedIds.has(p.team_id)
+    );
+
+    // Vérifier si le stage est terminé (tous éliminés ou ≤ 1 restant)
+    if (activeParticipants.length <= 1) {
+      // Marquer le stage comme completed si possible
+      await supabaseAdmin
+        .from('tournament_stages')
+        .update({ is_active: false })
+        .eq('id', id);
+
+      return res.status(200).json({
+        stageId: id,
+        tournamentId,
+        roundNumber: nextRound,
+        hasRematches: false,
+        eliminatedTeams,
+        stageCompleted: true,
+      });
+    }
+
+    // 7) Construire la liste des participants pour le pairing (actifs uniquement)
     const swissParticipantsForPairing: PairingParticipant[] =
-      participantsRows.map((p, idx) => {
+      activeParticipants.map((p, idx) => {
         const id = p.team_id;
         const seed = typeof p.seed === 'number' ? p.seed : idx + 1;
         const score = scoreByTeam.get(id) ?? 0;
@@ -351,6 +429,7 @@ async function handler(
         hasRematches,
         dryRun: true,
         preview,
+        ...(eliminatedTeams.length > 0 ? { eliminatedTeams } : {}),
       });
     }
 
@@ -462,6 +541,7 @@ async function handler(
       hasRematches,
       createdMatches,
       byeMatchId: byeMatch?.id ?? null,
+      ...(eliminatedTeams.length > 0 ? { eliminatedTeams } : {}),
     };
 
     return res.status(200).json(response);
