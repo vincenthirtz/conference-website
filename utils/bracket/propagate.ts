@@ -3,6 +3,7 @@
 // à partir d'un match terminé (winner / loser → prochains matchs).
 import { supabaseAdmin } from '../supabase';
 import type { MatchRow, PropagationResult } from '@/types/bracket';
+import type { TiebreakerPolicy } from '@/types/admin';
 
 export type { MatchStatus } from '@/types/admin';
 export type { BracketSide } from '@/types/admin';
@@ -37,13 +38,56 @@ export async function propagateBracketForMatch(
     };
   }
 
-  const { winnerTeamId, loserTeamId } = computeWinnerLoserFromMatch(match);
+  // Calcul du winner/loser (synchrone, sans tiebreaker)
+  let { winnerTeamId, loserTeamId } = computeWinnerLoserFromMatch(match);
+
+  let tiebreakerApplied: PropagationResult['tiebreakerApplied'] = null;
+  let tiebreakerMatchId: string | null = null;
+
+  // En cas d'égalité, tenter de résoudre via le tiebreaker du stage
+  if (
+    !winnerTeamId &&
+    match.team1_id &&
+    match.team2_id &&
+    match.team1_score !== null &&
+    match.team2_score !== null &&
+    match.team1_score === match.team2_score &&
+    match.stage_id
+  ) {
+    const tiebreaker = await resolveTiebreaker(match);
+
+    if (tiebreaker.policy === 'extra_round') {
+      // Créer un match de barrage au lieu de propager
+      tiebreakerMatchId = await createTiebreakerMatch(match);
+      tiebreakerApplied = 'extra_round';
+
+      return {
+        matchId,
+        winnerTeamId: null,
+        loserTeamId: null,
+        tiebreakerApplied,
+        tiebreakerMatchId,
+      };
+    }
+
+    if (tiebreaker.winnerTeamId) {
+      winnerTeamId = tiebreaker.winnerTeamId;
+      loserTeamId =
+        winnerTeamId === match.team1_id ? match.team2_id : match.team1_id;
+      tiebreakerApplied = tiebreaker.policy as 'map_diff' | 'seed';
+
+      // Mettre à jour le winner_team_id sur le match
+      await supabaseAdmin
+        .from('matches')
+        .update({ winner_team_id: winnerTeamId })
+        .eq('id', matchId);
+    }
+  }
 
   let updatedWinMatchId: string | null | undefined = null;
   let updatedLoseMatchId: string | null | undefined = null;
 
-  // Vérifier la cohérence des liens bracket :
-  // si next_match_win_id est défini, next_match_win_slot doit l'être aussi (et inversement)
+  // Vérifier la cohérence des liens bracket
   if (match.next_match_win_id && !match.next_match_win_slot) {
     throw new Error(
       `Match ${matchId} : next_match_win_id défini (${match.next_match_win_id}) mais next_match_win_slot est null. Corrigez la structure du bracket.`
@@ -81,6 +125,8 @@ export async function propagateBracketForMatch(
     loserTeamId,
     updatedWinMatchId,
     updatedLoseMatchId,
+    tiebreakerApplied,
+    tiebreakerMatchId,
   };
 }
 
@@ -334,6 +380,158 @@ export async function restorePropagationSlots(
   if (updates.length > 0) {
     await Promise.all(updates);
   }
+}
+
+/* -----------------------------------------------------------
+ * Tiebreaker resolution
+ * ---------------------------------------------------------*/
+
+type TiebreakerResult = {
+  policy: TiebreakerPolicy;
+  winnerTeamId: string | null;
+};
+
+/**
+ * Récupère la politique de tiebreaker du stage et tente de résoudre l'égalité.
+ */
+async function resolveTiebreaker(match: MatchRow): Promise<TiebreakerResult> {
+  if (!match.stage_id) {
+    return { policy: 'manual', winnerTeamId: null };
+  }
+
+  const { data: stage } = await supabaseAdmin
+    .from('tournament_stages')
+    .select('tiebreaker_policy')
+    .eq('id', match.stage_id)
+    .maybeSingle();
+
+  const policy: TiebreakerPolicy = stage?.tiebreaker_policy || 'manual';
+
+  if (policy === 'manual') {
+    return { policy, winnerTeamId: null };
+  }
+
+  if (policy === 'extra_round') {
+    return { policy, winnerTeamId: null };
+  }
+
+  if (policy === 'map_diff') {
+    const winner = await resolveByMapDiff(match);
+    return { policy, winnerTeamId: winner };
+  }
+
+  if (policy === 'seed') {
+    const winner = await resolveBySeed(match);
+    return { policy, winnerTeamId: winner };
+  }
+
+  return { policy: 'manual', winnerTeamId: null };
+}
+
+/**
+ * Départage par différence de score sur les games (maps) individuelles.
+ * Le team ayant le meilleur différentiel de score total l'emporte.
+ * En cas d'égalité de différentiel, retourne null (fallback manual).
+ */
+async function resolveByMapDiff(match: MatchRow): Promise<string | null> {
+  const { data: games } = await supabaseAdmin
+    .from('games')
+    .select('team1_score, team2_score')
+    .eq('match_id', match.id);
+
+  if (!games || games.length === 0) return null;
+
+  let team1Total = 0;
+  let team2Total = 0;
+
+  for (const g of games) {
+    team1Total += g.team1_score ?? 0;
+    team2Total += g.team2_score ?? 0;
+  }
+
+  if (team1Total > team2Total) return match.team1_id;
+  if (team2Total > team1Total) return match.team2_id;
+
+  return null; // Différentiel identique → pas de résolution
+}
+
+/**
+ * Départage par seed : le mieux seedé (seed le plus bas) l'emporte.
+ * Cherche les seeds dans stage_teams pour le stage du match.
+ */
+async function resolveBySeed(match: MatchRow): Promise<string | null> {
+  if (!match.stage_id || !match.team1_id || !match.team2_id) return null;
+
+  const { data: stageTeams } = await supabaseAdmin
+    .from('stage_teams')
+    .select('team_id, seed')
+    .eq('stage_id', match.stage_id)
+    .in('team_id', [match.team1_id, match.team2_id]);
+
+  if (!stageTeams || stageTeams.length < 2) return null;
+
+  const t1 = stageTeams.find((st: any) => st.team_id === match.team1_id);
+  const t2 = stageTeams.find((st: any) => st.team_id === match.team2_id);
+
+  if (!t1?.seed && !t2?.seed) return null; // Aucun seed défini
+  if (!t1?.seed) return match.team2_id; // Seul team2 a un seed
+  if (!t2?.seed) return match.team1_id; // Seul team1 a un seed
+
+  if (t1.seed < t2.seed) return match.team1_id;
+  if (t2.seed < t1.seed) return match.team2_id;
+
+  return null; // Même seed → pas de résolution
+}
+
+/**
+ * Crée un match de barrage (extra round) lié au match à égalité.
+ * Le barrage reprend les mêmes équipes et les mêmes liens de propagation.
+ * Le match original perd ses liens de propagation (le barrage les reprend).
+ */
+async function createTiebreakerMatch(match: MatchRow): Promise<string> {
+  // 1) Créer le match de barrage avec les liens de propagation du match original
+  const { data: tbMatch, error: insertErr } = await supabaseAdmin
+    .from('matches')
+    .insert({
+      tournament_id: match.tournament_id,
+      stage_id: match.stage_id,
+      team1_id: match.team1_id,
+      team2_id: match.team2_id,
+      status: 'pending',
+      is_bye: false,
+      round_number: match.round_number,
+      bracket_side: match.bracket_side,
+      group_key: match.group_key,
+      round_name: 'Tiebreaker',
+      notes: `Barrage suite à égalité sur le match ${match.id}`,
+      // Le barrage hérite des liens de propagation
+      next_match_win_id: match.next_match_win_id,
+      next_match_win_slot: match.next_match_win_slot,
+      next_match_lose_id: match.next_match_lose_id,
+      next_match_lose_slot: match.next_match_lose_slot,
+    })
+    .select('id')
+    .single();
+
+  if (insertErr || !tbMatch) {
+    throw new Error(
+      `Échec de création du match de barrage : ${insertErr?.message || 'unknown'}`
+    );
+  }
+
+  // 2) Retirer les liens de propagation du match original
+  //    (c'est le barrage qui propagera maintenant)
+  await supabaseAdmin
+    .from('matches')
+    .update({
+      next_match_win_id: tbMatch.id,
+      next_match_win_slot: null,
+      next_match_lose_id: null,
+      next_match_lose_slot: null,
+    })
+    .eq('id', match.id);
+
+  return tbMatch.id;
 }
 
 /* -----------------------------------------------------------

@@ -97,4 +97,6 @@ export type PropagationResult = {
   loserTeamId: string | null;
   updatedWinMatchId?: string | null;
   updatedLoseMatchId?: string | null;
+  tiebreakerApplied?: 'map_diff' | 'seed' | 'extra_round' | null;
+  tiebreakerMatchId?: string | null;
 };

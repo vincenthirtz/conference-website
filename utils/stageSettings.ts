@@ -23,6 +23,9 @@ const bracketSettingsSchema = z
     third_place_match: z.boolean().optional(),
     grand_final_reset: z.boolean().optional(),
     seeding_method: z.enum(['manual', 'random', 'standings']).optional(),
+    tiebreaker_policy: z
+      .enum(['manual', 'extra_round', 'map_diff', 'seed'])
+      .optional(),
   })
   .passthrough();
 

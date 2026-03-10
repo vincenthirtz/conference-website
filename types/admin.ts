@@ -76,6 +76,8 @@ export type StageType =
   | 'showmatch'
   | 'other';
 
+export type TiebreakerPolicy = 'manual' | 'extra_round' | 'map_diff' | 'seed';
+
 export type Stage = {
   id: string;
   tournament_id: string;
@@ -87,6 +89,7 @@ export type Stage = {
   is_public: boolean;
   start_date: string | null;
   end_date: string | null;
+  tiebreaker_policy: TiebreakerPolicy | null;
   settings: any | null;
   created_at: string;
   updated_at: string | null;
