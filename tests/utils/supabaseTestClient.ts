@@ -38,7 +38,8 @@ export async function deleteTestUser(email: string) {
     perPage: 100,
   });
   if (error) throw error;
-  const user = data?.users?.find(
+  const users = (data as any)?.users as { id: string; email?: string }[] | undefined;
+  const user = users?.find(
     (u) => u.email?.toLowerCase() === email.toLowerCase()
   );
   if (user) {
@@ -136,7 +137,8 @@ export async function deleteTestStaff(email: string) {
     perPage: 100,
   });
 
-  const user = data?.users?.find(
+  const users = (data as any)?.users as { id: string; email?: string }[] | undefined;
+  const user = users?.find(
     (u) => u.email?.toLowerCase() === email.toLowerCase()
   );
 
