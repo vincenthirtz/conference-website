@@ -7,6 +7,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
+import { validateStageSettings } from '@/utils/stageSettings';
 
 type StageType =
   | 'group'
@@ -117,6 +118,36 @@ async function handlePost(
     return res.status(400).json({ error: 'name is required' });
   }
 
+  // Validation du stage_type
+  const VALID_STAGE_TYPES: StageType[] = [
+    'group', 'bracket', 'swiss', 'round_robin', 'showmatch', 'other',
+  ];
+  if (stage_type && !VALID_STAGE_TYPES.includes(stage_type)) {
+    return res.status(400).json({
+      error: `Invalid stage_type. Allowed values: ${VALID_STAGE_TYPES.join(', ')}`,
+    });
+  }
+
+  // Validation des dates ISO
+  if (start_date && isNaN(Date.parse(start_date))) {
+    return res.status(400).json({ error: 'start_date is not a valid date' });
+  }
+  if (end_date && isNaN(Date.parse(end_date))) {
+    return res.status(400).json({ error: 'end_date is not a valid date' });
+  }
+
+  // Cohérence des dates : start_date < end_date
+  if (start_date && end_date && new Date(start_date) >= new Date(end_date)) {
+    return res.status(400).json({ error: 'start_date must be before end_date' });
+  }
+
+  // Validation de order_index
+  if (order_index !== undefined && order_index !== null) {
+    if (typeof order_index !== 'number' || !Number.isInteger(order_index) || order_index < 0) {
+      return res.status(400).json({ error: 'order_index must be an integer >= 0' });
+    }
+  }
+
   // Vérifier que le tournoi existe
   const { data: tournament, error: tournamentError } = await supabaseAdmin
     .from('tournaments')
@@ -140,6 +171,13 @@ async function handlePost(
 
     const maxOrder = existingStages?.[0]?.order_index ?? -1;
     finalOrderIndex = (typeof maxOrder === 'number' ? maxOrder : -1) + 1;
+  }
+
+  // Validation des settings JSON par rapport au type de stage
+  const effectiveType = stage_type || 'other';
+  const settingsValidation = validateStageSettings(effectiveType, settings);
+  if (!settingsValidation.valid) {
+    return res.status(400).json({ error: settingsValidation.error });
   }
 
   // Générer un slug si non fourni

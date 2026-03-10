@@ -8,6 +8,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
+import { validateStageSettings } from '@/utils/stageSettings';
 
 export type StageType =
   | 'group'
@@ -152,10 +153,31 @@ async function handlePut(
     }
   }
 
+  // Validation des dates ISO
+  if ('start_date' in body && body.start_date !== null && isNaN(Date.parse(body.start_date))) {
+    return res.status(400).json({ error: 'start_date is not a valid date' });
+  }
+  if ('end_date' in body && body.end_date !== null && isNaN(Date.parse(body.end_date))) {
+    return res.status(400).json({ error: 'end_date is not a valid date' });
+  }
+
   // Cohérence des dates : start_date < end_date
   if ('start_date' in body && 'end_date' in body) {
     if (body.start_date && body.end_date && new Date(body.start_date) >= new Date(body.end_date)) {
       return res.status(400).json({ error: 'start_date must be before end_date' });
+    }
+  }
+
+  // Validation des settings JSON par rapport au type de stage
+  if ('settings' in body && body.settings !== null) {
+    // Utiliser le stage_type du body, ou celui en base (récupéré après)
+    const effectiveType = body.stage_type ?? null; // résolu plus bas si null
+    // Si stage_type pas dans le body, on le résoudra après fetch du stage
+    if (effectiveType) {
+      const settingsResult = validateStageSettings(effectiveType, body.settings);
+      if (!settingsResult.valid) {
+        return res.status(400).json({ error: settingsResult.error });
+      }
     }
   }
 
@@ -170,6 +192,15 @@ async function handlePut(
 
   if (fetchErr || !before) {
     return res.status(404).json({ error: 'Stage not found' });
+  }
+
+  // Validation des settings avec le stage_type résolu (body ou existant en base)
+  if ('settings' in body && body.settings !== null && !('stage_type' in body)) {
+    const resolvedType = (before as any).stage_type ?? 'other';
+    const settingsResult = validateStageSettings(resolvedType, body.settings);
+    if (!settingsResult.valid) {
+      return res.status(400).json({ error: settingsResult.error });
+    }
   }
 
   // Vérifier la cohérence des dates avec les valeurs existantes

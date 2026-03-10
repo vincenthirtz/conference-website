@@ -147,12 +147,36 @@ async function handlePatch(
       }
     }
 
+    // Validation des dates ISO
+    if (start_date !== undefined && start_date !== null && isNaN(Date.parse(start_date))) {
+      return res.status(400).json({ error: 'start_date is not a valid date' });
+    }
+    if (end_date !== undefined && end_date !== null && isNaN(Date.parse(end_date))) {
+      return res.status(400).json({ error: 'end_date is not a valid date' });
+    }
+
     // Cohérence des dates : start_date < end_date
     if (start_date !== undefined && end_date !== undefined) {
       if (start_date && end_date && new Date(start_date) >= new Date(end_date)) {
         return res.status(400).json({
           error: 'start_date must be before end_date',
         });
+      }
+    }
+
+    // Vérifier l'unicité du slug si modifié
+    if (slug !== undefined && slug !== null) {
+      const { data: existingSlug } = await supabaseAdmin!
+        .from('tournaments')
+        .select('id')
+        .eq('slug', slug)
+        .neq('id', id)
+        .maybeSingle();
+
+      if (existingSlug) {
+        return res.status(409).json({
+          error: `Un tournoi avec le slug "${slug}" existe déjà.`,
+        } as any);
       }
     }
 

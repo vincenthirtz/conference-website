@@ -70,6 +70,7 @@ async function handleGet(
     winner_team_id,
     scheduled_at,
     completed_at,
+    updated_at,
     stream_url,
     lobby_code,
     notes,
@@ -120,6 +121,28 @@ async function handlePut(
   ctx: any
 ) {
   const { mode } = req.body as { mode?: 'score' | 'meta' };
+
+  // --- Optimistic locking ---
+  // Si le client envoie expected_updated_at, on vérifie que le match n'a pas
+  // été modifié entre-temps. Cela protège contre les mises à jour concurrentes.
+  const { expected_updated_at } = req.body as { expected_updated_at?: string };
+
+  if (expected_updated_at) {
+    const { data: current } = await supabaseAdmin
+      .from('matches')
+      .select('updated_at')
+      .eq('id', matchId)
+      .maybeSingle();
+
+    if (current && current.updated_at !== expected_updated_at) {
+      return res.status(409).json({
+        error:
+          'Ce match a été modifié par un autre utilisateur. Rechargez la page et réessayez.',
+        code: 'CONFLICT',
+        server_updated_at: current.updated_at,
+      });
+    }
+  }
 
   if (mode === 'score' || hasScorePayload(req.body)) {
     // --- Update score (avec helper applyMatchScore) ---
@@ -202,6 +225,9 @@ async function handlePut(
         "No valid meta fields in body. Use mode='score' for score updates.",
     });
   }
+
+  // Toujours mettre à jour updated_at pour l'optimistic locking
+  updatePayload.updated_at = new Date().toISOString();
 
   // Validation des champs meta
   const VALID_MATCH_STATUSES_META = ['pending', 'ongoing', 'finished', 'cancelled'];

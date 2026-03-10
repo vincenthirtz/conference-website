@@ -238,6 +238,105 @@ async function applyTeamToNextMatchSlot(
 }
 
 /* -----------------------------------------------------------
+ * Snapshot des slots de propagation (pour rollback)
+ * ---------------------------------------------------------*/
+
+export type PropagationSnapshot = {
+  winMatchId: string | null;
+  winSlotField: 'team1_id' | 'team2_id' | null;
+  winSlotValue: string | null;
+  loseMatchId: string | null;
+  loseSlotField: 'team1_id' | 'team2_id' | null;
+  loseSlotValue: string | null;
+};
+
+/**
+ * Capture l'état actuel des slots de propagation
+ * (les team_id dans les matchs suivants) avant de les modifier.
+ * Permet un rollback précis en cas d'échec ultérieur.
+ */
+export async function snapshotPropagationSlots(
+  matchId: string
+): Promise<PropagationSnapshot> {
+  const snapshot: PropagationSnapshot = {
+    winMatchId: null,
+    winSlotField: null,
+    winSlotValue: null,
+    loseMatchId: null,
+    loseSlotField: null,
+    loseSlotValue: null,
+  };
+
+  const match = await fetchMatchWithLinks(matchId);
+  if (!match) return snapshot;
+
+  if (match.next_match_win_id && match.next_match_win_slot) {
+    const field =
+      match.next_match_win_slot === 1 ? 'team1_id' : 'team2_id';
+    snapshot.winMatchId = match.next_match_win_id;
+    snapshot.winSlotField = field;
+
+    const { data } = await supabaseAdmin
+      .from('matches')
+      .select('team1_id, team2_id')
+      .eq('id', match.next_match_win_id)
+      .maybeSingle();
+    snapshot.winSlotValue = (data as Record<string, any>)?.[field] ?? null;
+  }
+
+  if (match.next_match_lose_id && match.next_match_lose_slot) {
+    const field =
+      match.next_match_lose_slot === 1 ? 'team1_id' : 'team2_id';
+    snapshot.loseMatchId = match.next_match_lose_id;
+    snapshot.loseSlotField = field;
+
+    const { data } = await supabaseAdmin
+      .from('matches')
+      .select('team1_id, team2_id')
+      .eq('id', match.next_match_lose_id)
+      .maybeSingle();
+    snapshot.loseSlotValue = (data as Record<string, any>)?.[field] ?? null;
+  }
+
+  return snapshot;
+}
+
+/**
+ * Restaure les slots de propagation à leur état capturé par un snapshot.
+ */
+export async function restorePropagationSlots(
+  snapshot: PropagationSnapshot
+): Promise<void> {
+  const updates: Promise<any>[] = [];
+
+  if (snapshot.winMatchId && snapshot.winSlotField) {
+    updates.push(
+      Promise.resolve(
+        supabaseAdmin
+          .from('matches')
+          .update({ [snapshot.winSlotField]: snapshot.winSlotValue })
+          .eq('id', snapshot.winMatchId)
+      )
+    );
+  }
+
+  if (snapshot.loseMatchId && snapshot.loseSlotField) {
+    updates.push(
+      Promise.resolve(
+        supabaseAdmin
+          .from('matches')
+          .update({ [snapshot.loseSlotField]: snapshot.loseSlotValue })
+          .eq('id', snapshot.loseMatchId)
+      )
+    );
+  }
+
+  if (updates.length > 0) {
+    await Promise.all(updates);
+  }
+}
+
+/* -----------------------------------------------------------
  * Helper optionnel : reset complet de la propagation
  * (par ex. si tu annules un match ou modifies son résultat)
  * ---------------------------------------------------------*/
@@ -253,18 +352,19 @@ export async function resetPropagationForMatch(matchId: string): Promise<void> {
   const match = await fetchMatchWithLinks(matchId);
   if (!match) return;
 
-  const updates: PromiseLike<any>[] = [];
+  const updates: Promise<any>[] = [];
 
   if (match.next_match_win_id && match.next_match_win_slot) {
     const field = match.next_match_win_slot === 1 ? 'team1_id' : 'team2_id';
 
     updates.push(
-      supabaseAdmin
-        .from('matches')
-        .update({ [field]: null })
-        .eq('id', match.next_match_win_id)
-        .eq('tournament_id', match.tournament_id)
-        .then()
+      Promise.resolve(
+        supabaseAdmin
+          .from('matches')
+          .update({ [field]: null })
+          .eq('id', match.next_match_win_id)
+          .eq('tournament_id', match.tournament_id)
+      )
     );
   }
 
@@ -272,12 +372,13 @@ export async function resetPropagationForMatch(matchId: string): Promise<void> {
     const field = match.next_match_lose_slot === 1 ? 'team1_id' : 'team2_id';
 
     updates.push(
-      supabaseAdmin
-        .from('matches')
-        .update({ [field]: null })
-        .eq('id', match.next_match_lose_id)
-        .eq('tournament_id', match.tournament_id)
-        .then()
+      Promise.resolve(
+        supabaseAdmin
+          .from('matches')
+          .update({ [field]: null })
+          .eq('id', match.next_match_lose_id)
+          .eq('tournament_id', match.tournament_id)
+      )
     );
   }
 

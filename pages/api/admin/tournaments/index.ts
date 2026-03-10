@@ -148,6 +148,37 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: any) {
       ? body.slug.trim()
       : slugify(body.name, { lower: true, strict: true });
 
+  // Vérifier l'unicité du slug
+  const { data: existing } = await supabaseAdmin!
+    .from('tournaments')
+    .select('id')
+    .eq('slug', slug)
+    .maybeSingle();
+
+  if (existing) {
+    return res.status(409).json({
+      error: `Un tournoi avec le slug "${slug}" existe déjà. Choisissez un nom ou slug différent.`,
+    });
+  }
+
+  // Validation des dates
+  if (body.start_date && isNaN(Date.parse(body.start_date))) {
+    return res.status(400).json({ error: 'start_date is not a valid date' });
+  }
+  if (body.end_date && isNaN(Date.parse(body.end_date))) {
+    return res.status(400).json({ error: 'end_date is not a valid date' });
+  }
+  if (body.start_date && body.end_date && new Date(body.start_date) >= new Date(body.end_date)) {
+    return res.status(400).json({ error: 'start_date must be before end_date' });
+  }
+
+  // Validation max_teams
+  if (body.max_teams !== undefined && body.max_teams !== null) {
+    if (typeof body.max_teams !== 'number' || !Number.isInteger(body.max_teams) || body.max_teams < 1) {
+      return res.status(400).json({ error: 'max_teams must be an integer >= 1' });
+    }
+  }
+
   const payload = {
     name: body.name,
     slug,

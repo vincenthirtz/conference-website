@@ -5,7 +5,10 @@ import { supabaseAdmin } from '../supabase';
 import {
   resetPropagationForMatch,
   propagateBracketForMatch,
+  snapshotPropagationSlots,
+  restorePropagationSlots,
 } from '../bracket/propagate';
+import type { PropagationSnapshot } from '../bracket/propagate';
 import { logStaffAction } from '../staffLogs';
 import type {
   ApplyMatchScoreInput,
@@ -130,7 +133,7 @@ export async function applyMatchScore(
   }
 
   // 6) Sauvegarder l'état précédent pour rollback éventuel
-  const previousState = {
+  const previousMatchState = {
     team1_score: match.team1_score,
     team2_score: match.team2_score,
     winner_team_id: match.winner_team_id,
@@ -138,12 +141,33 @@ export async function applyMatchScore(
     completed_at: match.completed_at,
   };
 
-  // 7) Reset propagation avant de changer les équipes
+  // 7) Snapshot des slots de propagation AVANT le reset,
+  //    pour pouvoir restaurer l'état complet en cas d'échec.
+  let propagationSnapshot: PropagationSnapshot | null = null;
   if (propagateBracket) {
-    await resetPropagationForMatch(matchId);
+    propagationSnapshot = await snapshotPropagationSlots(matchId);
   }
 
-  // 8) Update du match
+  // 8) Reset propagation avant de changer les équipes
+  if (propagateBracket) {
+    try {
+      await resetPropagationForMatch(matchId);
+    } catch (e) {
+      // Si le reset échoue, restaurer le snapshot et abandonner
+      if (propagationSnapshot) {
+        await restorePropagationSlots(propagationSnapshot).catch((re) =>
+          console.error('applyMatchScore: restore after reset failure failed', re)
+        );
+      }
+      throw new Error(
+        `Reset de la propagation échoué. Aucune modification appliquée. Détail : ${
+          e instanceof Error ? e.message : String(e)
+        }`
+      );
+    }
+  }
+
+  // 9) Update du match
   const { data: updated, error: updateErr } = await supabaseAdmin
     .from('matches')
     .update(updatePayload)
@@ -153,37 +177,59 @@ export async function applyMatchScore(
 
   if (updateErr || !updated) {
     console.error('applyMatchScore: update match error', updateErr);
+
+    // Rollback : restaurer les slots de propagation vidés par le reset
+    if (propagationSnapshot) {
+      await restorePropagationSlots(propagationSnapshot).catch((re) =>
+        console.error('applyMatchScore: restore after update failure failed', re)
+      );
+    }
+
     throw new Error('Erreur lors de la mise à jour du match');
   }
 
-  // 9) Propagation du vainqueur/perdant dans le bracket
-  //    En cas d'échec, on rollback le match à son état précédent
-  //    pour éviter une incohérence bracket (match finished mais non propagé).
+  // 10) Propagation du vainqueur/perdant dans le bracket
+  //     En cas d'échec, on rollback le match ET les slots de propagation
+  //     pour éviter une incohérence bracket.
   if (propagateBracket && newStatus === 'finished') {
     try {
       await propagateBracketForMatch(matchId);
     } catch (e) {
-      console.error('applyMatchScore: propagateBracketForMatch error — rollback match', e);
+      console.error('applyMatchScore: propagateBracketForMatch error — rollback', e);
 
-      // Rollback : restaurer l'état précédent du match
-      const { error: rollbackErr } = await supabaseAdmin
-        .from('matches')
-        .update(previousState)
-        .eq('id', matchId);
+      // Rollback complet : match + slots de propagation
+      const rollbackOps: Promise<any>[] = [
+        Promise.resolve(
+          supabaseAdmin
+            .from('matches')
+            .update(previousMatchState)
+            .eq('id', matchId)
+        ).then(({ error: rollbackErr }) => {
+          if (rollbackErr) {
+            console.error('applyMatchScore: match rollback failed!', rollbackErr);
+          }
+        }),
+      ];
 
-      if (rollbackErr) {
-        console.error('applyMatchScore: rollback failed!', rollbackErr);
+      if (propagationSnapshot) {
+        rollbackOps.push(
+          restorePropagationSlots(propagationSnapshot).catch((re) =>
+            console.error('applyMatchScore: propagation slot restore failed', re)
+          )
+        );
       }
 
+      await Promise.all(rollbackOps);
+
       throw new Error(
-        `Propagation bracket échouée, match restauré à son état précédent. Détail : ${
+        `Propagation bracket échouée, match et bracket restaurés à leur état précédent. Détail : ${
           e instanceof Error ? e.message : String(e)
         }`
       );
     }
   }
 
-  // 9) Log staff
+  // 11) Log staff
   if (staffId) {
     try {
       await logStaffAction({
