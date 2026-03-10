@@ -9,7 +9,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { parsePagination, sanitizeSearch } from '@/utils/apiHelpers';
 
-export type DemandeType = 'join' | 'leave' | 'captain_request' | 'other';
+export type DemandeType = 'join' | 'leave' | 'captain_request' | 'team_registration' | 'other';
 
 export type DemandeStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
@@ -377,7 +377,36 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: any) {
     });
   }
 
-  // 3) Log staff (batch)
+  // 3) Side-effects: when approving team_registration demandes, create tournament_teams
+  if (newStatus === 'approved' && afterList) {
+    for (const d of afterList as DemandeRow[]) {
+      if (d.type === 'team_registration' && d.team_id && d.tournament_id) {
+        // Check if not already registered
+        const { data: existingReg } = await supabaseAdmin
+          .from('tournament_teams')
+          .select('id')
+          .eq('tournament_id', d.tournament_id)
+          .eq('team_id', d.team_id)
+          .maybeSingle();
+
+        if (!existingReg) {
+          const { error: regErr } = await supabaseAdmin
+            .from('tournament_teams')
+            .insert({
+              tournament_id: d.tournament_id,
+              team_id: d.team_id,
+              status: 'registered',
+            });
+
+          if (regErr) {
+            console.error('auto-register team_registration error:', regErr);
+          }
+        }
+      }
+    }
+  }
+
+  // 4) Log staff (batch)
   if (staffId) {
     try {
       await logStaffAction({

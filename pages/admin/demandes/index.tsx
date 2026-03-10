@@ -14,7 +14,7 @@ type StaffShape = {
   display_name: string | null;
 };
 
-type DemandeType = 'join_team' | 'leave_team' | 'captain_request';
+type DemandeType = 'join_team' | 'leave_team' | 'captain_request' | 'team_registration';
 
 type DemandeStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
@@ -112,6 +112,8 @@ function typeLabel(type: DemandeType) {
       return 'Quitter';
     case 'captain_request':
       return 'Capitaine';
+    case 'team_registration':
+      return 'Inscription';
     default:
       return type;
   }
@@ -125,6 +127,8 @@ function typeColor(type: DemandeType) {
       return 'bg-amber-600/20 text-amber-300 border border-amber-500/30';
     case 'captain_request':
       return 'bg-purple-600/20 text-purple-300 border border-purple-500/30';
+    case 'team_registration':
+      return 'bg-blue-600/20 text-blue-300 border border-blue-500/30';
     default:
       return 'bg-neutral-700 text-neutral-100';
   }
@@ -187,6 +191,11 @@ function AdminDemandesPage() {
 
   const [limit] = useState(50);
   const [offset, setOffset] = useState(0);
+
+  // Batch selection
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [batchProcessing, setBatchProcessing] = useState(false);
+  const [batchMsg, setBatchMsg] = useState<string | null>(null);
 
   // 1) Guard staff : check session + /api/admin/me
   useEffect(() => {
@@ -311,6 +320,61 @@ function AdminDemandesPage() {
       setErrorMsg(err?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
+    }
+  }
+
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selected.size === demandes.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(demandes.map((d) => d.id)));
+    }
+  }
+
+  async function handleBatchAction(newStatus: 'approved' | 'rejected') {
+    if (selected.size === 0) return;
+    setBatchProcessing(true);
+    setErrorMsg(null);
+    setBatchMsg(null);
+
+    try {
+      const res = await fetch('/api/admin/demandes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          action: 'updateStatus',
+          demandeIds: Array.from(selected),
+          newStatus,
+        }),
+      });
+
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || 'Erreur');
+      }
+
+      const json = await res.json();
+      setBatchMsg(
+        `${json.updatedCount} demande(s) ${newStatus === 'approved' ? 'approuvee(s)' : 'refusee(s)'}.`
+      );
+      setSelected(new Set());
+      fetchDemandes();
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? 'Erreur');
+    } finally {
+      setBatchProcessing(false);
     }
   }
 
@@ -472,6 +536,7 @@ function AdminDemandesPage() {
                   <option value="captain_request">Devenir capitaine</option>
                   <option value="join_team">Rejoindre une equipe</option>
                   <option value="leave_team">Quitter une equipe</option>
+                  <option value="team_registration">Inscription tournoi</option>
                 </select>
               </div>
 
@@ -588,6 +653,49 @@ function AdminDemandesPage() {
             </form>
           </section>
 
+          {/* Batch success message */}
+          {batchMsg && (
+            <div className="mb-6 rounded-xl bg-emerald-900/40 border border-emerald-500/50 px-4 py-3 text-sm flex items-center gap-2">
+              <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              {batchMsg}
+            </div>
+          )}
+
+          {/* Batch action bar */}
+          {selected.size > 0 && (
+            <div className="mb-4 flex items-center gap-3 bg-blue-900/30 border border-blue-500/30 rounded-xl px-4 py-3">
+              <span className="text-sm font-medium">
+                {selected.size} selectionne{selected.size > 1 ? 's' : ''}
+              </span>
+              <div className="flex-1" />
+              <button
+                type="button"
+                onClick={() => handleBatchAction('approved')}
+                disabled={batchProcessing}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                Approuver
+              </button>
+              <button
+                type="button"
+                onClick={() => handleBatchAction('rejected')}
+                disabled={batchProcessing}
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                Refuser
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelected(new Set())}
+                className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm transition-colors"
+              >
+                Deselectionner
+              </button>
+            </div>
+          )}
+
           {/* Demandes List */}
           <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
             {loading ? (
@@ -613,12 +721,37 @@ function AdminDemandesPage() {
               </div>
             ) : (
               <div className="divide-y divide-neutral-700/50">
+                {/* Select all header */}
+                <div className="px-4 py-3 bg-neutral-800/80 flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={selected.size === demandes.length && demandes.length > 0}
+                    onChange={toggleSelectAll}
+                    className="w-4 h-4 rounded border-neutral-600 bg-neutral-900"
+                  />
+                  <span className="text-xs text-neutral-400 uppercase tracking-wide font-medium">
+                    Tout selectionner
+                  </span>
+                </div>
+
                 {demandes.map((d) => (
-                  <Link
+                  <div
                     key={d.id}
-                    href={`/admin/demandes/${d.id}`}
-                    className="flex items-center gap-4 p-4 hover:bg-neutral-700/30 transition-colors group"
+                    className={`flex items-center gap-4 p-4 hover:bg-neutral-700/30 transition-colors group ${
+                      selected.has(d.id) ? 'bg-blue-900/10' : ''
+                    }`}
                   >
+                    <input
+                      type="checkbox"
+                      checked={selected.has(d.id)}
+                      onChange={() => toggleSelect(d.id)}
+                      className="w-4 h-4 rounded border-neutral-600 bg-neutral-900 flex-shrink-0"
+                    />
+
+                    <Link
+                      href={`/admin/demandes/${d.id}`}
+                      className="flex items-center gap-4 flex-1 min-w-0"
+                    >
                     {/* Icon / Avatar */}
                     <div className="flex-shrink-0">
                       {d.user?.avatar_url ? (
@@ -744,7 +877,8 @@ function AdminDemandesPage() {
                         d="M9 5l7 7-7 7"
                       />
                     </svg>
-                  </Link>
+                    </Link>
+                  </div>
                 ))}
               </div>
             )}

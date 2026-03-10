@@ -284,11 +284,13 @@ async function handleDelete(
   }
 
   // soft delete
+  const nowIso = new Date().toISOString();
   const { data, error } = await supabaseAdmin
     .from('teams')
     .update({
       is_active: false,
-      updated_at: new Date().toISOString(),
+      deleted_at: nowIso,
+      updated_at: nowIso,
     })
     .eq('id', id)
     .select('*')

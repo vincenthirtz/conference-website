@@ -48,13 +48,13 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse<ApiResponse>)
   const typeFilter = req.query.type as string | undefined;
   const items: DeletedItem[] = [];
 
-  // 1) Soft-deleted stages (is_active = false)
+  // 1) Soft-deleted stages (deleted_at IS NOT NULL)
   if (!typeFilter || typeFilter === 'stage') {
     const { data: stages } = await supabaseAdmin!
       .from('tournament_stages')
-      .select('id, name, stage_type, tournament_id, updated_at')
-      .eq('is_active', false)
-      .order('updated_at', { ascending: false })
+      .select('id, name, stage_type, tournament_id, deleted_at')
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false })
       .limit(100);
 
     for (const s of stages || []) {
@@ -63,19 +63,19 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse<ApiResponse>)
         type: 'stage',
         name: s.name || 'Phase sans nom',
         details: s.stage_type || null,
-        deleted_at: s.updated_at,
+        deleted_at: s.deleted_at,
         tournament_id: s.tournament_id,
       });
     }
   }
 
-  // 2) Soft-deleted teams (is_active = false)
+  // 2) Soft-deleted teams (deleted_at IS NOT NULL)
   if (!typeFilter || typeFilter === 'team') {
     const { data: teams } = await supabaseAdmin!
       .from('teams')
-      .select('id, name, short_name, updated_at')
-      .eq('is_active', false)
-      .order('updated_at', { ascending: false })
+      .select('id, name, short_name, deleted_at')
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false })
       .limit(100);
 
     for (const t of teams || []) {
@@ -84,21 +84,21 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse<ApiResponse>)
         type: 'team',
         name: t.name || 'Equipe sans nom',
         details: t.short_name || null,
-        deleted_at: t.updated_at,
+        deleted_at: t.deleted_at,
         tournament_id: null,
       });
     }
   }
 
-  // 3) Cancelled matches (status = 'cancelled')
+  // 3) Soft-deleted matches (deleted_at IS NOT NULL)
   if (!typeFilter || typeFilter === 'match') {
     const { data: matches } = await supabaseAdmin!
       .from('matches')
       .select(
-        'id, tournament_id, stage_id, round_number, team1_id, team2_id, updated_at'
+        'id, tournament_id, stage_id, round_number, team1_id, team2_id, deleted_at'
       )
-      .eq('status', 'cancelled')
-      .order('updated_at', { ascending: false })
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false })
       .limit(100);
 
     // Fetch team names for match labels
@@ -134,13 +134,13 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse<ApiResponse>)
     }
   }
 
-  // 4) Soft-deleted announcements (is_active = false)
+  // 4) Soft-deleted announcements (deleted_at IS NOT NULL)
   if (!typeFilter || typeFilter === 'announcement') {
     const { data: announcements } = await supabaseAdmin!
       .from('announcements')
-      .select('id, title, message, updated_at')
-      .eq('is_active', false)
-      .order('updated_at', { ascending: false })
+      .select('id, title, message, deleted_at')
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false })
       .limit(100);
 
     for (const a of announcements || []) {
@@ -149,19 +149,19 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse<ApiResponse>)
         type: 'announcement',
         name: a.title || 'Annonce sans titre',
         details: a.message ? a.message.slice(0, 60) : null,
-        deleted_at: a.updated_at,
+        deleted_at: a.deleted_at,
         tournament_id: null,
       });
     }
   }
 
-  // 5) Soft-deleted partners (is_active = false)
+  // 5) Soft-deleted partners (deleted_at IS NOT NULL)
   if (!typeFilter || typeFilter === 'partner') {
     const { data: partners } = await supabaseAdmin!
       .from('partners')
-      .select('id, name, category, updated_at')
-      .eq('is_active', false)
-      .order('updated_at', { ascending: false })
+      .select('id, name, category, deleted_at')
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false })
       .limit(100);
 
     for (const p of partners || []) {
@@ -170,19 +170,19 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse<ApiResponse>)
         type: 'partner',
         name: p.name || 'Partenaire sans nom',
         details: p.category || null,
-        deleted_at: p.updated_at,
+        deleted_at: p.deleted_at,
         tournament_id: null,
       });
     }
   }
 
-  // 6) Soft-deleted cast members (is_active = false)
+  // 6) Soft-deleted cast members (deleted_at IS NOT NULL)
   if (!typeFilter || typeFilter === 'cast_member') {
     const { data: castMembers } = await supabaseAdmin!
       .from('cast_members')
-      .select('id, display_name, role, updated_at')
-      .eq('is_active', false)
-      .order('updated_at', { ascending: false })
+      .select('id, display_name, role, deleted_at')
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false })
       .limit(100);
 
     for (const c of castMembers || []) {
@@ -191,19 +191,19 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse<ApiResponse>)
         type: 'cast_member',
         name: c.display_name || 'Membre sans nom',
         details: c.role || null,
-        deleted_at: c.updated_at,
+        deleted_at: c.deleted_at,
         tournament_id: null,
       });
     }
   }
 
-  // 7) Soft-deleted adherents (is_active = false)
+  // 7) Soft-deleted adherents (deleted_at IS NOT NULL)
   if (!typeFilter || typeFilter === 'adherent') {
     const { data: adherents } = await supabaseAdmin!
       .from('adherents')
-      .select('id, first_name, last_name, email, updated_at')
-      .eq('is_active', false)
-      .order('updated_at', { ascending: false })
+      .select('id, first_name, last_name, email, deleted_at')
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false })
       .limit(100);
 
     for (const a of adherents || []) {
@@ -213,7 +213,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse<ApiResponse>)
         type: 'adherent',
         name: fullName || 'Adherent sans nom',
         details: a.email || null,
-        deleted_at: a.updated_at,
+        deleted_at: a.deleted_at,
         tournament_id: null,
       });
     }
@@ -247,7 +247,7 @@ async function handleRestore(
       case 'stage': {
         const { error } = await supabaseAdmin!
           .from('tournament_stages')
-          .update({ is_active: true, is_public: true, updated_at: nowIso })
+          .update({ is_active: true, is_public: true, deleted_at: null, updated_at: nowIso })
           .eq('id', id);
 
         if (error) throw error;
@@ -256,7 +256,7 @@ async function handleRestore(
       case 'team': {
         const { error } = await supabaseAdmin!
           .from('teams')
-          .update({ is_active: true, updated_at: nowIso })
+          .update({ is_active: true, deleted_at: null, updated_at: nowIso })
           .eq('id', id);
 
         if (error) throw error;
@@ -265,9 +265,8 @@ async function handleRestore(
       case 'match': {
         const { error } = await supabaseAdmin!
           .from('matches')
-          .update({ status: 'pending', updated_at: nowIso })
-          .eq('id', id)
-          .eq('status', 'cancelled');
+          .update({ status: 'pending', deleted_at: null, updated_at: nowIso })
+          .eq('id', id);
 
         if (error) throw error;
         break;
@@ -275,7 +274,7 @@ async function handleRestore(
       case 'announcement': {
         const { error } = await supabaseAdmin!
           .from('announcements')
-          .update({ is_active: true, updated_at: nowIso })
+          .update({ is_active: true, deleted_at: null, updated_at: nowIso })
           .eq('id', id);
 
         if (error) throw error;
@@ -284,7 +283,7 @@ async function handleRestore(
       case 'partner': {
         const { error } = await supabaseAdmin!
           .from('partners')
-          .update({ is_active: true, updated_at: nowIso })
+          .update({ is_active: true, deleted_at: null, updated_at: nowIso })
           .eq('id', id);
 
         if (error) throw error;
@@ -293,7 +292,7 @@ async function handleRestore(
       case 'cast_member': {
         const { error } = await supabaseAdmin!
           .from('cast_members')
-          .update({ is_active: true, updated_at: nowIso })
+          .update({ is_active: true, deleted_at: null, updated_at: nowIso })
           .eq('id', id);
 
         if (error) throw error;
@@ -302,7 +301,7 @@ async function handleRestore(
       case 'adherent': {
         const { error } = await supabaseAdmin!
           .from('adherents')
-          .update({ is_active: true, updated_at: nowIso })
+          .update({ is_active: true, deleted_at: null, updated_at: nowIso })
           .eq('id', id);
 
         if (error) throw error;
