@@ -38,7 +38,10 @@ function ActualitesPreviewSection(): JSX.Element {
     fetch('/api/site-settings?key=mixte_tournament_id')
       .then((r) => r.json())
       .then((data) => {
-        if (data.value) setMixteTournamentId(data.value);
+        // Only accept valid UUIDs to avoid displaying unrelated values (e.g. YouTube IDs)
+        if (data.value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.value)) {
+          setMixteTournamentId(data.value);
+        }
       })
       .catch(() => {});
   }, []);
