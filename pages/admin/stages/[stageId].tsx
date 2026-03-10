@@ -142,6 +142,27 @@ function AdminStagePage({ staff }: StaffProps) {
   // Clone state
   const [cloning, setCloning] = useState(false);
 
+  // Swiss status state
+  const [swissStatus, setSwissStatus] = useState<{
+    currentRound: number;
+    totalRounds: number | null;
+    roundStatus: { round: number; total: number; finished: number; pending: number; ongoing: number };
+    allCurrentRoundFinished: boolean;
+    canGenerateNext: boolean;
+    isComplete: boolean;
+  } | null>(null);
+
+  // Completion status state
+  const [completionStatus, setCompletionStatus] = useState<{
+    totalMatches: number;
+    finishedMatches: number;
+    pendingMatches: number;
+    ongoingMatches: number;
+    isComplete: boolean;
+    nextStage: { id: string; name: string; stage_type: string | null } | null;
+    canAdvance: boolean;
+  } | null>(null);
+
   // Editing state
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -193,10 +214,45 @@ function AdminStagePage({ staff }: StaffProps) {
     }
   }, [stageId]);
 
+  const fetchSwissStatus = useCallback(async () => {
+    if (!stageId) return;
+    try {
+      const res = await fetch(`/api/admin/stages/${stageId}/swiss-status`);
+      if (res.ok) {
+        const json = await res.json();
+        setSwissStatus(json);
+      }
+    } catch (e) {
+      console.error('fetchSwissStatus error', e);
+    }
+  }, [stageId]);
+
+  const fetchCompletionStatus = useCallback(async () => {
+    if (!stageId) return;
+    try {
+      const res = await fetch(`/api/admin/stages/${stageId}/completion-status`);
+      if (res.ok) {
+        const json = await res.json();
+        setCompletionStatus(json);
+      }
+    } catch (e) {
+      console.error('fetchCompletionStatus error', e);
+    }
+  }, [stageId]);
+
   useEffect(() => {
     if (!stageId) return;
     fetchStage();
   }, [stageId, fetchStage]);
+
+  // Fetch Swiss status and completion status after stage is loaded
+  useEffect(() => {
+    if (!stage) return;
+    fetchCompletionStatus();
+    if (stage.stage_type === 'swiss') {
+      fetchSwissStatus();
+    }
+  }, [stage, fetchCompletionStatus, fetchSwissStatus]);
 
   async function fetchTournaments() {
     try {
@@ -312,6 +368,9 @@ function AdminStagePage({ staff }: StaffProps) {
         `Nouvelle ronde Swiss #${json.roundNumber} générée : ${json.createdMatches?.length ?? 0} matchs.`
       );
       setTimeout(() => setSuccessMsg(null), 5000);
+      // Refresh Swiss and completion status
+      fetchSwissStatus();
+      fetchCompletionStatus();
     } catch (err: any) {
       setErrorMsg(err?.message ?? 'Erreur lors de la génération Swiss');
     } finally {
@@ -912,6 +971,160 @@ function AdminStagePage({ staff }: StaffProps) {
                     )}
                   </section>
 
+                  {/* Swiss Status Panel */}
+                  {stage.stage_type === 'swiss' && swissStatus && (
+                    <section className="bg-neutral-800/50 backdrop-blur border border-amber-700/30 rounded-2xl p-6">
+                      <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        Progression Swiss
+                      </h2>
+
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                        <div className="bg-neutral-900/50 rounded-xl p-3 text-center">
+                          <div className="text-2xl font-bold text-amber-300">{swissStatus.currentRound}</div>
+                          <div className="text-xs text-neutral-500">Round actuel</div>
+                        </div>
+                        <div className="bg-neutral-900/50 rounded-xl p-3 text-center">
+                          <div className="text-2xl font-bold">{swissStatus.totalRounds ?? '∞'}</div>
+                          <div className="text-xs text-neutral-500">Rounds total</div>
+                        </div>
+                        <div className="bg-neutral-900/50 rounded-xl p-3 text-center">
+                          <div className="text-2xl font-bold text-emerald-400">{swissStatus.roundStatus.finished}</div>
+                          <div className="text-xs text-neutral-500">Matchs finis (R{swissStatus.currentRound})</div>
+                        </div>
+                        <div className="bg-neutral-900/50 rounded-xl p-3 text-center">
+                          <div className="text-2xl font-bold text-orange-400">
+                            {swissStatus.roundStatus.pending + swissStatus.roundStatus.ongoing}
+                          </div>
+                          <div className="text-xs text-neutral-500">En attente (R{swissStatus.currentRound})</div>
+                        </div>
+                      </div>
+
+                      {/* Progress bar */}
+                      {swissStatus.totalRounds && (
+                        <div className="mb-4">
+                          <div className="flex justify-between text-xs text-neutral-500 mb-1">
+                            <span>Progression globale</span>
+                            <span>{swissStatus.currentRound} / {swissStatus.totalRounds} rounds</span>
+                          </div>
+                          <div className="h-2 bg-neutral-700 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-amber-500 rounded-full transition-all"
+                              style={{
+                                width: `${Math.min(100, (swissStatus.currentRound / swissStatus.totalRounds) * 100)}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {swissStatus.isComplete ? (
+                        <div className="bg-emerald-900/30 border border-emerald-700/50 rounded-xl p-4 flex items-center gap-3">
+                          <svg className="w-6 h-6 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                          <div>
+                            <div className="font-medium text-emerald-300">Swiss terminé</div>
+                            <div className="text-xs text-emerald-400/70">
+                              Tous les {swissStatus.totalRounds} rounds sont completes.
+                            </div>
+                          </div>
+                        </div>
+                      ) : swissStatus.canGenerateNext ? (
+                        <div className="bg-amber-900/20 border border-amber-700/50 rounded-xl p-4 flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <svg className="w-6 h-6 text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                            <div>
+                              <div className="font-medium text-amber-200">Round {swissStatus.currentRound} terminé</div>
+                              <div className="text-xs text-amber-400/70">
+                                Tous les matchs sont finis. Prêt pour le round {swissStatus.currentRound + 1}
+                                {swissStatus.totalRounds ? ` / ${swissStatus.totalRounds}` : ''}.
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            onClick={handleGenerateSwissRound}
+                            disabled={loadingActions}
+                            className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-sm font-medium transition-colors flex-shrink-0 disabled:opacity-50 flex items-center gap-2"
+                          >
+                            {loadingActions ? (
+                              <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            ) : (
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                              </svg>
+                            )}
+                            Generer Round {swissStatus.currentRound + 1}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="bg-neutral-900/50 border border-neutral-700 rounded-xl p-4 flex items-center gap-3">
+                          <div className="w-6 h-6 text-neutral-500">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <div className="font-medium text-neutral-300">Round {swissStatus.currentRound} en cours</div>
+                            <div className="text-xs text-neutral-500">
+                              {swissStatus.roundStatus.pending + swissStatus.roundStatus.ongoing} match(s) restant(s) à terminer.
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </section>
+                  )}
+
+                  {/* Stage Completion & Auto-Advance Banner */}
+                  {completionStatus && completionStatus.totalMatches > 0 && completionStatus.isComplete && (
+                    <section className="bg-emerald-900/20 backdrop-blur border border-emerald-700/40 rounded-2xl p-6">
+                      <h2 className="text-lg font-semibold mb-3 flex items-center gap-2 text-emerald-200">
+                        <svg className="w-5 h-5 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        Phase terminée
+                      </h2>
+
+                      <p className="text-sm text-emerald-300/80 mb-4">
+                        Les {completionStatus.finishedMatches} matchs de cette phase sont terminés.
+                      </p>
+
+                      {completionStatus.canAdvance && completionStatus.nextStage && (
+                        <div className="bg-emerald-900/30 border border-emerald-600/40 rounded-xl p-4 flex items-center justify-between gap-4">
+                          <div>
+                            <div className="font-medium text-emerald-200 text-sm">
+                              Avancer vers : {completionStatus.nextStage.name}
+                            </div>
+                            <div className="text-xs text-emerald-400/60">
+                              {completionStatus.nextStage.stage_type
+                                ? stageTypeLabel(completionStatus.nextStage.stage_type as StageType)
+                                : 'Phase suivante'}
+                            </div>
+                          </div>
+                          <button
+                            onClick={openAdvanceModal}
+                            className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors flex-shrink-0 flex items-center gap-2"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                            </svg>
+                            Avancer des equipes
+                          </button>
+                        </div>
+                      )}
+
+                      {!completionStatus.canAdvance && !completionStatus.nextStage && (
+                        <p className="text-xs text-emerald-400/60">
+                          Aucune phase suivante configurée. Créez une nouvelle phase dans le tournoi pour avancer des equipes.
+                        </p>
+                      )}
+                    </section>
+                  )}
+
                   {/* Settings JSON */}
                   <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
                     <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
@@ -949,6 +1162,28 @@ function AdminStagePage({ staff }: StaffProps) {
                             <div>
                               <div className="font-medium text-sm">Matchs</div>
                               <div className="text-xs text-neutral-500">De cette phase</div>
+                            </div>
+                          </div>
+                          <svg className="w-5 h-5 text-neutral-500 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </Link>
+                      )}
+
+                      {(stage.stage_type === 'group' || stage.stage_type === 'round_robin') && (
+                        <Link
+                          href={`/admin/stages/${stage.id}/groups`}
+                          className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-neutral-900/50 hover:bg-neutral-700/50 transition-colors group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-blue-600/20 flex items-center justify-center">
+                              <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                              </svg>
+                            </div>
+                            <div>
+                              <div className="font-medium text-sm">Poules / Groupes</div>
+                              <div className="text-xs text-neutral-500">Gérer les assignations</div>
                             </div>
                           </div>
                           <svg className="w-5 h-5 text-neutral-500 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">

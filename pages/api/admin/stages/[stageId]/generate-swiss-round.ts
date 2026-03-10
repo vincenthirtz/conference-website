@@ -216,6 +216,29 @@ async function handler(
       });
     }
 
+    // Enforce total_rounds limit from settings
+    const totalRounds = typedStage.settings?.total_rounds;
+    if (typeof totalRounds === 'number' && totalRounds > 0 && nextRound > totalRounds) {
+      return res.status(400).json({
+        error: `Impossible de generer le round ${nextRound} : le nombre maximum de rounds est ${totalRounds}. Modifiez les settings du stage pour augmenter total_rounds.`,
+      });
+    }
+
+    // Check that all matches in the current round are finished before generating the next
+    if (maxExistingRound > 0) {
+      const currentRoundMatches = allMatches.filter(
+        (m) => m.round_number === maxExistingRound
+      );
+      const unfinished = currentRoundMatches.filter(
+        (m) => m.status !== 'finished'
+      );
+      if (unfinished.length > 0) {
+        return res.status(400).json({
+          error: `${unfinished.length} match(s) du round ${maxExistingRound} ne sont pas termines. Terminez-les avant de generer le round suivant.`,
+        });
+      }
+    }
+
     // 4) Construire les résultats Swiss à partir des matchs terminés
     const mergedScoreConfig: SwissScoreConfig = {
       ...defaultSwissScoreConfig,

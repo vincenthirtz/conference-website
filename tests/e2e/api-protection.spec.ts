@@ -11,6 +11,29 @@ test.describe('Admin API protection', () => {
     { method: 'GET', path: '/api/admin/me' },
   ];
 
+  // Stage-level endpoints protected by withStaffRoute
+  const stageEndpoints = [
+    { method: 'GET', path: '/api/admin/stages/fake-id/completion-status' },
+    { method: 'GET', path: '/api/admin/stages/fake-id/swiss-status' },
+    { method: 'GET', path: '/api/admin/stages/fake-id/groups' },
+  ];
+
+  for (const endpoint of stageEndpoints) {
+    test(`${endpoint.method} ${endpoint.path} returns 401 or 403 without auth`, async ({ request }) => {
+      const response = await request.get(endpoint.path);
+      expect([401, 403]).toContain(response.status());
+    });
+
+    test(`${endpoint.method} ${endpoint.path} returns 401 or 403 with invalid token`, async ({ request }) => {
+      const response = await request.get(endpoint.path, {
+        headers: {
+          Authorization: 'Bearer invalid_token_xyz123',
+        },
+      });
+      expect([401, 403]).toContain(response.status());
+    });
+  }
+
   // Endpoints that return 403 when not authenticated (staff role check)
   const endpoints403 = [
     { method: 'GET', path: '/api/admin/news' },
