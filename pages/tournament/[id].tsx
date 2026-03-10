@@ -167,7 +167,7 @@ export const getServerSideProps: GetServerSideProps<
     )
     .eq('tournament_id', tournamentId)
     .neq('status', 'cancelled')
-    .order('scheduled_at', { ascending: false })
+    .order('scheduled_at', { ascending: true })
     .limit(40);
 
   if (mErr) {
