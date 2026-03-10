@@ -105,7 +105,7 @@ async function handlePost(
     return res.status(400).json({ error: 'Missing teamId' });
   }
 
-  // Vérifier que la phase existe
+  // Vérifier que la phase existe et récupérer le tournoi
   const { data: stage, error: stageErr } = await supabaseAdmin
     .from('tournament_stages')
     .select('id, tournament_id')
@@ -116,6 +116,83 @@ async function handlePost(
     return res.status(404).json({ error: 'Stage not found' });
   }
 
+  // --- Roster validation ---
+  const warnings: string[] = [];
+
+  // Fetch tournament min_players and team members in parallel
+  const [tournamentRes, membersRes] = await Promise.all([
+    supabaseAdmin
+      .from('tournaments')
+      .select('id, min_players')
+      .eq('id', stage.tournament_id)
+      .maybeSingle(),
+    supabaseAdmin
+      .from('team_members')
+      .select('user_id')
+      .eq('team_id', teamId),
+  ]);
+
+  const tournament = tournamentRes.data;
+  const members = membersRes.data || [];
+  const memberCount = members.length;
+
+  // 1. Check min_players requirement
+  if (tournament?.min_players && memberCount < tournament.min_players) {
+    warnings.push(
+      `Roster incomplet : ${memberCount} joueur(s) sur ${tournament.min_players} minimum requis`
+    );
+  }
+
+  // 2. Check player uniqueness across all teams already registered in the tournament
+  if (members.length > 0) {
+    const memberUserIds = members
+      .map((m: { user_id: string | null }) => m.user_id)
+      .filter(Boolean) as string[];
+
+    if (memberUserIds.length > 0) {
+      // Get all stages for this tournament
+      const { data: tournamentStages } = await supabaseAdmin
+        .from('tournament_stages')
+        .select('id')
+        .eq('tournament_id', stage.tournament_id);
+
+      const stageIds = (tournamentStages || []).map((s: { id: string }) => s.id);
+
+      if (stageIds.length > 0) {
+        // Get all teams already registered in any stage of this tournament
+        const { data: registeredStageTeams } = await supabaseAdmin
+          .from('stage_teams')
+          .select('team_id')
+          .in('stage_id', stageIds)
+          .neq('team_id', teamId);
+
+        const otherTeamIds = [
+          ...new Set((registeredStageTeams || []).map((st: { team_id: string }) => st.team_id)),
+        ];
+
+        if (otherTeamIds.length > 0) {
+          // Find members of other registered teams that overlap with this team's members
+          const { data: duplicateMembers } = await supabaseAdmin
+            .from('team_members')
+            .select('user_id, team_id, teams!inner(name)')
+            .in('team_id', otherTeamIds)
+            .in('user_id', memberUserIds);
+
+          if (duplicateMembers && duplicateMembers.length > 0) {
+            const duplicates = duplicateMembers.map((d: any) => {
+              const teamName = Array.isArray(d.teams) ? d.teams[0]?.name : d.teams?.name;
+              return `user_id=${d.user_id} (équipe: ${teamName || d.team_id})`;
+            });
+            warnings.push(
+              `Joueur(s) déjà inscrit(s) dans une autre équipe du tournoi : ${duplicates.join(', ')}`
+            );
+          }
+        }
+      }
+    }
+  }
+
+  // --- Insert stage_team ---
   const { data, error } = await supabaseAdmin
     .from('stage_teams')
     .insert({
@@ -140,11 +217,14 @@ async function handlePost(
       entity_type: 'stage_teams',
       entity_id: stageId,
       tournament_id: stage.tournament_id,
-      payload: { action: 'add', teamId, seed },
+      payload: { action: 'add', teamId, seed, warnings },
     });
   }
 
-  return res.status(201).json({ stageTeam: data });
+  return res.status(201).json({
+    stageTeam: data,
+    ...(warnings.length > 0 ? { warnings } : {}),
+  });
 }
 
 /* -----------------------------------------------------------
