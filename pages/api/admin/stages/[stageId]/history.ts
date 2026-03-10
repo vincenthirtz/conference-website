@@ -62,7 +62,7 @@ async function handler(
         entity_id,
         tournament_id,
         payload,
-        staff:staff(
+        staff:staff!fk_staff_logs_staff(
           id,
           auth_user_id,
           role,
@@ -107,7 +107,7 @@ async function handler(
         entity_id,
         tournament_id,
         payload,
-        staff:staff(
+        staff:staff!fk_staff_logs_staff(
           id,
           auth_user_id,
           role,
