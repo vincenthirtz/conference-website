@@ -18,7 +18,7 @@ type NewsItem = {
   commentsCount?: number;
 };
 
-const DEFAULT_LIMIT = 9;
+const DEFAULT_LIMIT = 6;
 
 const formatTagLabel = (tag?: string | null) => {
   if (!tag) return 'General';

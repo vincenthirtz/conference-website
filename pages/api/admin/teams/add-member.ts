@@ -63,7 +63,7 @@ async function handler(
     // Vérifier l'équipe
     const { data: team, error: teamErr } = await supabaseAdmin
       .from('teams')
-      .select('id, name')
+      .select('id, name, logo_url')
       .eq('id', teamId)
       .maybeSingle();
     if (teamErr || !team) {
@@ -148,13 +148,16 @@ async function handler(
 
     // Créer une news auto
     try {
+      const playerName = battleTagValue.split('#')[0];
+      const teamName = team?.name || 'une equipe';
       const newsSlug = `team-${teamId}-member-${Date.now().toString(36)}`;
       await supabaseAdmin.from('news').insert({
-        title: `Nouveau membre dans ${team?.name || 'une équipe'}`,
+        title: `${playerName} rejoint ${teamName}`,
         slug: newsSlug,
         tag: 'teams',
-        excerpt: `Un nouveau membre rejoint ${team?.name || 'l’équipe'}.`,
-        content: `Une nouvelle recrue a rejoint ${team?.name || 'l’équipe'} en tant que ${memberPayload.role}. Bienvenue !`,
+        excerpt: `${playerName} rejoint ${teamName} en tant que ${memberPayload.role}.`,
+        content: `${playerName} a rejoint ${teamName} en tant que ${memberPayload.role}. Bienvenue !`,
+        image_url: team?.logo_url ?? null,
         status: 'published',
         published_at: new Date().toISOString(),
       });

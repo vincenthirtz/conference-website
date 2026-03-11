@@ -43,7 +43,7 @@ export default async function handler(
   // Check if user is captain of a team
   const { data: captainTeam } = await supabaseAdmin
     .from('teams')
-    .select('id, name')
+    .select('id, name, logo_url')
     .eq('captain_id', user.id)
     .maybeSingle();
 
@@ -142,13 +142,15 @@ export default async function handler(
 
     // Create auto news
     try {
+      const playerName = battleTagValue.split('#')[0];
       const newsSlug = `team-${captainTeam.id}-member-${Date.now().toString(36)}`;
       await supabaseAdmin.from('news').insert({
-        title: `Nouveau membre dans ${captainTeam.name}`,
+        title: `${playerName} rejoint ${captainTeam.name}`,
         slug: newsSlug,
         tag: 'teams',
-        excerpt: `Un nouveau membre rejoint ${captainTeam.name}.`,
-        content: `Une nouvelle recrue a rejoint ${captainTeam.name} en tant que ${memberPayload.role}. Bienvenue !`,
+        excerpt: `${playerName} rejoint ${captainTeam.name} en tant que ${memberPayload.role}.`,
+        content: `${playerName} a rejoint ${captainTeam.name} en tant que ${memberPayload.role}. Bienvenue !`,
+        image_url: captainTeam.logo_url ?? null,
         status: 'published',
         published_at: new Date().toISOString(),
       });
