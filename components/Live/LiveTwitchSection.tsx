@@ -81,7 +81,7 @@ export default function LiveTwitchSection() {
   return (
     <div
       id="tickets"
-      className="flex items-center flex-col justify-center pt-20 lg:pt-0"
+      className="flex items-center flex-col justify-center pt-20"
     >
       <div className="text-xl text-white font-semibold border-b-2 border-blue-400 mb-1">
         Live
