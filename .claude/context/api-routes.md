@@ -49,7 +49,6 @@ Toutes nécessitent un Bearer token + rôle staff minimum.
 | `/api/admin/announcements/[id]` | GET/PATCH/DELETE | manager | CRUD annonce |
 | `/api/admin/cast-members` | GET/POST/PATCH/DELETE | manager | Casteurs |
 | `/api/admin/comments` | GET/PATCH | manager | Modération commentaires |
-| `/api/admin/contact-submissions` | GET | manager | Soumissions contact |
 | `/api/admin/demandes` | GET | manager | Demandes joueurs |
 | `/api/admin/news` | GET/POST | manager | Articles |
 | `/api/admin/news/[id]` | GET/PATCH/DELETE | manager | CRUD article |

@@ -35,14 +35,6 @@ export const VALID_STAGE_TYPES: StageType[] = [
   'other',
 ];
 
-export const VALID_CONTACT_STATUSES = [
-  'new',
-  'read',
-  'replied',
-  'archived',
-  'spam',
-] as const;
-
 export const VALID_PARTNERSHIP_STATUSES = [
   'new',
   'read',

@@ -62,7 +62,6 @@ Toutes protégées par `withStaffPage(minRole)`. Redirection vers `/admin/login`
 - `/admin/cast-members/*` — Gestion casteurs
 - `/admin/announcements/*` — Bannières d'annonces
 - `/admin/twitch-channels/*` — Chaînes Twitch
-- `/admin/contact-submissions` — Messages contact
 - `/admin/demandes` — Demandes joueurs
 - `/admin/site-settings` — Configuration du site
 - `/admin/users/manage` — Gestion staff
