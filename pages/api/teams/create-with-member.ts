@@ -5,6 +5,7 @@ import {
   findOrCreateUserByEmail,
   listUsersEmailMap,
 } from '@/utils/find-or-create-user';
+import { sendTeamJoinEmail } from '@/utils/email';
 
 type Body = {
   name?: string;
@@ -323,6 +324,27 @@ export default async function handler(
         error:
           captainErr.message ||
           'Members added but failed to set captain (check teams.captain_id)',
+      });
+    }
+  }
+
+  // Send team join emails (non-blocking)
+  // Build a userId→email lookup from the input data
+  const userIdToEmail = new Map<string, string>();
+  for (const cm of cleanedMembers) {
+    if (cm.email) {
+      const rec = memberRecords.find((r) => r.battle_tag === cm.battle_tag);
+      if (rec) userIdToEmail.set(rec.user_id, cm.email);
+    }
+  }
+  if (memberEmail && memberRecords.length === 1) {
+    userIdToEmail.set(memberRecords[0].user_id, memberEmail);
+  }
+  for (const m of insertedMembers) {
+    const email = userIdToEmail.get(m.user_id);
+    if (email) {
+      sendTeamJoinEmail(email, createdTeam.name, m.role).catch((err) => {
+        console.error('[create-with-member] team join email error:', err);
       });
     }
   }

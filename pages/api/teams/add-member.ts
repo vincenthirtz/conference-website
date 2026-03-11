@@ -7,6 +7,7 @@ import {
   findOrCreateUserByEmail,
   listUsersEmailMap,
 } from '@/utils/find-or-create-user';
+import { sendTeamJoinEmail } from '@/utils/email';
 
 type AddMemberResponse =
   | {
@@ -121,6 +122,22 @@ export default async function handler(
           ? 'Ce joueur est déjà dans une équipe'
           : 'Échec de l\'ajout du membre';
       return res.status(400).json({ error: msg });
+    }
+
+    // Send team join email (non-blocking)
+    const memberEmail = typeof email === 'string' ? email.trim().toLowerCase() : null;
+    if (memberEmail) {
+      sendTeamJoinEmail(memberEmail, captainTeam.name, memberPayload.role).catch((err) => {
+        console.error('[add-member] team join email error:', err);
+      });
+    } else if (resolvedUserId) {
+      supabaseAdmin.auth.admin.getUserById(resolvedUserId).then(({ data }) => {
+        if (data?.user?.email) {
+          sendTeamJoinEmail(data.user.email, captainTeam.name, memberPayload.role).catch((err) => {
+            console.error('[add-member] team join email error:', err);
+          });
+        }
+      }).catch(() => {});
     }
 
     // Create auto news

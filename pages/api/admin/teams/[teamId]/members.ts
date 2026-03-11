@@ -8,6 +8,7 @@ import {
   findOrCreateUserByEmail,
   listUsersEmailMap,
 } from '@/utils/find-or-create-user';
+import { sendTeamJoinEmail } from '@/utils/email';
 
 type TeamMemberRow = {
   id: string;
@@ -162,6 +163,23 @@ async function handler(
           .from('teams')
           .update({ captain_id: resolvedUserId })
           .eq('id', teamId);
+      }
+
+      // Send team join email (non-blocking)
+      const memberEmail = typeof email === 'string' ? email.trim().toLowerCase() : null;
+      if (memberEmail) {
+        sendTeamJoinEmail(memberEmail, team.name, memberPayload.role).catch((err) => {
+          console.error('[members POST] team join email error:', err);
+        });
+      } else {
+        // Resolve email from auth if userId was provided directly
+        supabaseAdmin.auth.admin.getUserById(resolvedUserId).then(({ data }) => {
+          if (data?.user?.email) {
+            sendTeamJoinEmail(data.user.email, team.name, memberPayload.role).catch((err) => {
+              console.error('[members POST] team join email error:', err);
+            });
+          }
+        }).catch(() => {});
       }
 
       return res.status(201).json({

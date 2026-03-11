@@ -3,6 +3,7 @@
 
 import crypto from 'crypto';
 import { supabaseAdmin } from '@/utils/supabase';
+import { sendWelcomeEmail } from '@/utils/email';
 
 /**
  * Build an email→userId map from Supabase Auth (paginated).
@@ -71,6 +72,11 @@ export async function findOrCreateUserByEmail(
   }
 
   emailMap.set(normalizedEmail, data.user.id);
+
+  // Send welcome email with credentials (non-blocking)
+  sendWelcomeEmail(normalizedEmail, generatedPassword).catch((err) => {
+    console.error('[findOrCreateUserByEmail] welcome email error:', err);
+  });
 
   return { userId: data.user.id, created: true };
 }

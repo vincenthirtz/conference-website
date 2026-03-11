@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
+import { sendAccountDeletedEmail } from '@/utils/email';
 
 type TeamMembership = {
   team_id: string;
@@ -340,6 +341,14 @@ async function handler(
       .from('staff')
       .delete()
       .eq('auth_user_id', userId);
+
+    // Send account deleted email before deleting (non-blocking)
+    const deletedEmail = target.user.email;
+    if (deletedEmail) {
+      sendAccountDeletedEmail(deletedEmail).catch((err) => {
+        console.error('[admin/users/manage] account deleted email error:', err);
+      });
+    }
 
     // Delete auth user
     const { error: deleteErr } =
