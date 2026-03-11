@@ -210,10 +210,10 @@ export default function ActualitesPage() {
   return (
     <>
       <Head>
-        <title>Actualités Overwatch 2 | OW World Cup</title>
+        <title>Actualités Overwatch | OW World Cup</title>
         <meta
           name="description"
-          content="Dernières actualités, patch notes et mises à jour d'Overwatch 2 par Blizzard."
+          content="Dernières actualités, patch notes et mises à jour d'Overwatch par Blizzard."
         />
       </Head>
 
@@ -225,7 +225,7 @@ export default function ActualitesPage() {
               Actualités
             </div>
             <Heading typeStyle="heading-lg" className="text-gradient">
-              Overwatch 2
+              Overwatch
             </Heading>
             <div className="max-w-2xl mx-auto mt-4">
               <Paragraph typeStyle="body-lg" textColor="text-neutral-300">

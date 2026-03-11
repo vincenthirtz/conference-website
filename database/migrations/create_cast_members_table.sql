@@ -47,7 +47,7 @@ CREATE TRIGGER cast_members_updated_at
 
 COMMENT ON TABLE cast_members IS 'Cast members displayed on the association page';
 COMMENT ON COLUMN cast_members.name IS 'Display name of the cast member';
-COMMENT ON COLUMN cast_members.title IS 'Title/role (e.g., Streameuse Overwatch 2)';
+COMMENT ON COLUMN cast_members.title IS 'Title/role (e.g., Streameuse Overwatch)';
 COMMENT ON COLUMN cast_members.image_url IS 'URL to profile image';
 COMMENT ON COLUMN cast_members.twitch_url IS 'Full Twitch URL or other link';
 COMMENT ON COLUMN cast_members.city IS 'Location (e.g., France, Suisse)';
@@ -57,7 +57,7 @@ COMMENT ON COLUMN cast_members.sort_order IS 'Display order (lower = first)';
 -- Initial data from speakers.json
 INSERT INTO cast_members (name, title, image_url, twitch_url, city, is_active, is_promo, sort_order)
 VALUES
-  ('Gwadael', 'Streameuse Overwatch 2', '/img/speaker-images/gwadael.jpg', 'https://www.twitch.tv/gwadael', 'France', true, false, 1),
-  ('Crocheh', 'Streameuse Overwatch 2', '/img/speaker-images/crocheh.jpeg', 'https://www.twitch.tv/crocheh', 'Suisse', true, false, 2),
+  ('Gwadael', 'Streameuse Overwatch', '/img/speaker-images/gwadael.jpg', 'https://www.twitch.tv/gwadael', 'France', true, false, 1),
+  ('Crocheh', 'Streameuse Overwatch', '/img/speaker-images/crocheh.jpeg', 'https://www.twitch.tv/crocheh', 'Suisse', true, false, 2),
   ('Envie de rejoindre le cast ?', '', '/img/mic.jpg', '/contact', '', true, true, 3)
 ON CONFLICT DO NOTHING;

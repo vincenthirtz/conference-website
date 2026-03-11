@@ -380,7 +380,7 @@ function AdminTournamentCreatePage({ staff }: Props) {
                         className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         value={form.game}
                         onChange={(e) => updateField('game', e.target.value)}
-                        placeholder="Overwatch 2"
+                        placeholder="Overwatch"
                       />
                     </div>
 

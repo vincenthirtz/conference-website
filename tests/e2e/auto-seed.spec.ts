@@ -78,7 +78,7 @@ test.describe.serial('Auto-seed E2E (API)', () => {
         name: `E2E AutoSeed ${TS}`,
         slug: `e2e-autoseed-${TS}`,
         status: 'running',
-        game: 'Overwatch 2',
+        game: 'Overwatch',
       })
       .select('id')
       .maybeSingle();
@@ -180,7 +180,7 @@ test.describe.serial('Auto-seed E2E (API)', () => {
         name: `E2E AutoSeed Other ${TS}`,
         slug: `e2e-autoseed-other-${TS}`,
         status: 'running',
-        game: 'Overwatch 2',
+        game: 'Overwatch',
       })
       .select('id')
       .maybeSingle();

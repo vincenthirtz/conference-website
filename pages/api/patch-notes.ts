@@ -236,7 +236,7 @@ export default async function handler(
     console.error('[/api/patch-notes] failed to load patch notes', error);
     return res.status(500).json({
       error:
-        "Failed to load Overwatch 2 patch notes.",
+        "Failed to load Overwatch patch notes.",
     });
   }
 }

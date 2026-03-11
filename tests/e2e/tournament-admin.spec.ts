@@ -18,7 +18,7 @@ test.describe('Admin tournament CRUD (direct supabase)', () => {
         name: BASE_NAME,
         slug,
         status: 'draft',
-        game: 'Overwatch 2',
+        game: 'Overwatch',
       })
       .select('id, name, slug, status')
       .maybeSingle();

@@ -168,7 +168,7 @@ function AdminCastMemberNewPage({ staff }: Props) {
                     type="text"
                     value={form.title}
                     onChange={(e) => updateField('title', e.target.value)}
-                    placeholder="ex: Streameuse Overwatch 2"
+                    placeholder="ex: Streameuse Overwatch"
                     className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                   />
                 </div>

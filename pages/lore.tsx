@@ -190,10 +190,10 @@ export default function LorePage() {
   return (
     <>
       <Head>
-        <title>Lore & Médias Overwatch 2 | OW World Cup</title>
+        <title>Lore & Médias Overwatch | OW World Cup</title>
         <meta
           name="description"
-          content="Découvrez l'univers d'Overwatch 2 : bandes dessinées, nouvelles, musiques et images officielles de Blizzard."
+          content="Découvrez l'univers d'Overwatch : bandes dessinées, nouvelles, musiques et images officielles de Blizzard."
         />
       </Head>
 
@@ -205,7 +205,7 @@ export default function LorePage() {
               Univers & Lore
             </div>
             <Heading typeStyle="heading-lg" className="text-gradient">
-              Médias Overwatch 2
+              Médias Overwatch
             </Heading>
             <div className="max-w-2xl mx-auto mt-4">
               <Paragraph typeStyle="body-lg" textColor="text-neutral-300">

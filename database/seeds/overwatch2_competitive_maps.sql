@@ -1,4 +1,4 @@
--- Seed data: Overwatch 2 Competitive Maps
+-- Seed data: Overwatch Competitive Maps
 -- Insert all competitive maps with their official images
 -- Note: Replace 'e8fa740c-d92b-49d8-a654-05a37d0eea3b' with the actual tournament UUID
 

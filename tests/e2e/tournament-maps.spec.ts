@@ -15,7 +15,7 @@ test.describe('Tournament map pool CRUD (direct supabase)', () => {
     const slug = slugify(TOURNAMENT_NAME, { lower: true, strict: true });
     const { data, error } = await supabaseTestClient
       .from('tournaments')
-      .insert({ name: TOURNAMENT_NAME, slug, status: 'draft', game: 'Overwatch 2' })
+      .insert({ name: TOURNAMENT_NAME, slug, status: 'draft', game: 'Overwatch' })
       .select('id')
       .maybeSingle();
     expect(error).toBeNull();

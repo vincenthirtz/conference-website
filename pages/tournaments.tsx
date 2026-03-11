@@ -131,7 +131,7 @@ export default function TournamentsPage({ tournaments }: TournamentsPageProps) {
               <span className="px-1.5 py-[2px] rounded-full bg-gradient-to-r from-purple-400/90 to-pink-400/90 text-black font-semibold">
                 Compétition
               </span>
-              <span>Overwatch 2</span>
+              <span>Overwatch</span>
             </div>
 
             <Heading typeStyle="heading-lg" className="text-gradient mb-4">

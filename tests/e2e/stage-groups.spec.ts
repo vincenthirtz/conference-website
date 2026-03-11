@@ -22,7 +22,7 @@ test.describe('Stage groups & pool management (direct supabase)', () => {
     const slug = slugify(TOURNAMENT_NAME, { lower: true, strict: true });
     const { data: t } = await supabaseTestClient
       .from('tournaments')
-      .insert({ name: TOURNAMENT_NAME, slug, status: 'running', game: 'Overwatch 2' })
+      .insert({ name: TOURNAMENT_NAME, slug, status: 'running', game: 'Overwatch' })
       .select('id')
       .maybeSingle();
     tournamentId = t!.id;

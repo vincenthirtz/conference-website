@@ -23,7 +23,7 @@ test.describe('Game-level tracking & map stats', () => {
     const slug = slugify(TOURNAMENT_NAME, { lower: true, strict: true });
     const { data: t, error: tErr } = await supabaseTestClient
       .from('tournaments')
-      .insert({ name: TOURNAMENT_NAME, slug, status: 'running', game: 'Overwatch 2' })
+      .insert({ name: TOURNAMENT_NAME, slug, status: 'running', game: 'Overwatch' })
       .select('id')
       .maybeSingle();
     if (tErr) throw new Error(`Tournament insert failed: ${tErr.message}`);

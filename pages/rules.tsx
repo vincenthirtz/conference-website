@@ -7,7 +7,7 @@ const ruleSections = [
     items: [
       '5v5 obligatoire : 1 Tank, 2 D\u00e9g\u00e2ts, 2 Soutien (Role Queue).',
       'H\u00e9ros uniques : aucun doublon autoris\u00e9 dans une m\u00eame \u00e9quipe.',
-      "Patch en cours : toutes les parties se jouent sur la derni\u00e8re version live d'Overwatch 2 (pas de rollbacks).",
+      "Patch en cours : toutes les parties se jouent sur la derni\u00e8re version live d'Overwatch (pas de rollbacks).",
       'Objets de workshop, mods, macros ou scripts interdits.',
     ],
   },
@@ -65,7 +65,7 @@ const references = [
     href: 'https://www.blizzard.com/fr-fr/legal/7f2d718d-142f-4a68-9272-5c587f1addfb/overwatch-2-code-of-conduct',
   },
   {
-    label: 'Notes de mise \u00e0 jour Overwatch 2 (patch live)',
+    label: 'Notes de mise \u00e0 jour Overwatch (patch live)',
     href: 'https://overwatch.blizzard.com/fr-fr/news/patch-notes/',
   },
   {
@@ -88,10 +88,10 @@ function RulesPage() {
             R&egrave;glement officiel
           </p>
           <h1 className="mt-3 text-4xl font-bold leading-tight sm:text-5xl md:text-6xl">
-            R&egrave;gles officielles Overwatch 2
+            R&egrave;gles officielles Overwatch
           </h1>
           <p className="mx-auto mt-4 max-w-3xl text-lg text-gray-200">
-            R&eacute;sum&eacute; des param&egrave;tres comp&eacute;titifs Overwatch 2 utilis&eacute;s pour l&apos;OW
+            R&eacute;sum&eacute; des param&egrave;tres comp&eacute;titifs Overwatch utilis&eacute;s pour l&apos;OW
             Women&apos;s Cup. Toute l&apos;organisation se base sur les r&egrave;gles
             officielles Blizzard, adapt&eacute;es au format du tournoi.
           </p>
@@ -203,9 +203,9 @@ function RulesPage() {
 }
 
 const rulesSeo: SeoProps = {
-  title: 'R\u00e8gles officielles Overwatch 2',
+  title: 'R\u00e8gles officielles Overwatch',
   description:
-    "Param\u00e8tres comp\u00e9titifs, modes et conduite officielle Overwatch 2 utilis\u00e9s pour l'OW Women's Cup, bas\u00e9s sur les r\u00e8gles Blizzard.",
+    "Param\u00e8tres comp\u00e9titifs, modes et conduite officielle Overwatch utilis\u00e9s pour l'OW Women's Cup, bas\u00e9s sur les r\u00e8gles Blizzard.",
 };
 
 RulesPage.seo = rulesSeo;

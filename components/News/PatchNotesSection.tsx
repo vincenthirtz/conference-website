@@ -212,7 +212,7 @@ function PatchNotesSection(): JSX.Element {
           typeStyle="heading-md"
           className="text-gradient text-center lg:mt-3"
         >
-          Patch notes Overwatch 2
+          Patch notes Overwatch
         </Heading>
         <div className="max-w-2xl">
           <Paragraph
@@ -220,7 +220,7 @@ function PatchNotesSection(): JSX.Element {
             className="mt-4"
             textColor="text-gray-200"
           >
-            Les dernières mises à jour officielles d&apos;Overwatch 2, à jour
+            Les dernières mises à jour officielles d&apos;Overwatch, à jour
             directement depuis le site de Blizzard.
           </Paragraph>
         </div>

@@ -179,7 +179,7 @@ export default function MatchPage({ match }: Props) {
                   OW Women&apos;s Cup
                 </span>
                 <span className="text-gray-200">
-                  {match.tournament.game || 'Overwatch 2'}
+                  {match.tournament.game || 'Overwatch'}
                 </span>
                 <span className="w-[1px] h-3 bg-white/20" />
                 <span className={statusChipClass}>{statusLabel}</span>

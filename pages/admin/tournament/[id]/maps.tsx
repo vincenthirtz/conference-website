@@ -457,7 +457,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
                           : 'bg-white/5 text-gray-300 hover:bg-white/10'
                       }`}
                     >
-                      Map Overwatch 2
+                      Map Overwatch
                     </button>
                     <button
                       onClick={() => setUseCustomMap(true)}
@@ -476,7 +476,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
                     <div className="space-y-3">
                       <div>
                         <label className="block text-sm text-gray-300 mb-2">
-                          Sélectionner une map Overwatch 2
+                          Sélectionner une map Overwatch
                         </label>
                         <select
                           value={selectedOWMap}

@@ -1,7 +1,7 @@
 -- Migration: Créer la table patch_notes
 -- Date: 2026-01-11
 -- Description:
---   Table pour stocker les patch notes Overwatch 2 récupérés depuis Blizzard.
+--   Table pour stocker les patch notes Overwatch récupérés depuis Blizzard.
 --   Permet de garder un historique et d'afficher les 4 derniers même si
 --   la page Blizzard ne les expose plus dans le HTML initial.
 
@@ -25,7 +25,7 @@ CREATE INDEX IF NOT EXISTS idx_patch_notes_date_parsed ON patch_notes(date_parse
 CREATE INDEX IF NOT EXISTS idx_patch_notes_created_at ON patch_notes(created_at DESC);
 
 -- Commentaires pour documentation
-COMMENT ON TABLE patch_notes IS 'Stockage des patch notes Overwatch 2 récupérés depuis Blizzard';
+COMMENT ON TABLE patch_notes IS 'Stockage des patch notes Overwatch récupérés depuis Blizzard';
 COMMENT ON COLUMN patch_notes.id IS 'ID unique correspondant à l''anchor sur la page Blizzard';
 COMMENT ON COLUMN patch_notes.date_parsed IS 'Date parsée pour permettre un tri chronologique correct';
 COMMENT ON COLUMN patch_notes.heroes IS 'Liste JSON des héros modifiés avec leurs détails';

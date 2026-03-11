@@ -649,7 +649,7 @@ export default function TeamPage({
                             {tournament.name}
                           </p>
                           <div className="flex items-center gap-2 text-xs text-gray-400">
-                            <span>{tournament.game || 'Overwatch 2'}</span>
+                            <span>{tournament.game || 'Overwatch'}</span>
                             <span className="text-gray-600">•</span>
                             <StatusBadge status={tournament.status} />
                           </div>

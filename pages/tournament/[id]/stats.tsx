@@ -208,7 +208,7 @@ export default function TournamentStatsPage({ tournament, teamStats }: Props) {
                   OW Women&apos;s Cup
                 </span>
                 <span className="text-gray-200">
-                  {tournament.game || 'Overwatch 2'}
+                  {tournament.game || 'Overwatch'}
                 </span>
                 <span className="w-[1px] h-3 bg-white/20" />
                 <span className={statusColor}>{statusLabel}</span>

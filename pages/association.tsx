@@ -38,7 +38,7 @@ const pillars = [
 ];
 
 const commitments = [
-  'Respect des règles officielles Overwatch 2 et du code de conduite Blizzard.',
+  'Respect des règles officielles Overwatch et du code de conduite Blizzard.',
   'Charte anti-harcèlement et procédure de signalement claire (staff dédié).',
   'Priorité aux opportunités pour les talents féminins : joueuses, casters, admins, graphistes.',
   "Transparence budgétaire : rapports d'impact et allocation des dons par poste.",
