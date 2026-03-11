@@ -10,32 +10,42 @@ type SiteSection = {
 const siteSections: SiteSection[] = [
   {
     title: 'Pages principales',
-    description: 'Navigation générale du site public.',
+    description: 'Navigation g\u00e9n\u00e9rale du site public.',
     links: [
       { label: 'Accueil', href: '/' },
       { label: "L'association", href: '/association' },
       { label: 'Partenaires', href: '/partenaires' },
       { label: 'Tournoi 2025', href: '/tournoi' },
       { label: 'Timeline 2026', href: '/timeline-2026' },
+      { label: 'Tous les tournois', href: '/tournaments' },
+    ],
+  },
+  {
+    title: 'Contenu & m\u00e9dias',
+    description: 'Actualit\u00e9s, lore et ressources Overwatch.',
+    links: [
+      { label: 'Actualit\u00e9s', href: '/actualites' },
+      { label: 'Lore & m\u00e9dias', href: '/lore' },
+      { label: 'Hero Picker', href: '/hero-picker' },
     ],
   },
   {
     title: 'Participer',
-    description: 'Inscription, équipes et échanges avec le staff.',
+    description: 'Inscription, \u00e9quipes et \u00e9changes avec le staff.',
     links: [
       { label: 'Inscription staff / joueur', href: '/register' },
-      { label: 'Créer une équipe', href: '/team/create' },
+      { label: 'Cr\u00e9er une \u00e9quipe', href: '/team/create' },
       { label: 'Contact', href: '/contact' },
       { label: 'Faire un don', href: '/don' },
     ],
   },
   {
     title: 'Infos officielles',
-    description: 'Documents et références clés pour le tournoi.',
+    description: 'Documents et r\u00e9f\u00e9rences cl\u00e9s pour le tournoi.',
     links: [
-      { label: 'Règlement', href: '/rules' },
-      { label: 'Mentions légales', href: '/mentions-legales' },
-      { label: 'Déploiements', href: '/builds' },
+      { label: 'R\u00e8glement', href: '/rules' },
+      { label: 'Mentions l\u00e9gales', href: '/mentions-legales' },
+      { label: 'D\u00e9ploiements', href: '/builds' },
     ],
   },
   {
@@ -48,12 +58,12 @@ const siteSections: SiteSection[] = [
   },
   {
     title: 'Espace staff',
-    description: 'Accès réservé à l’organisation.',
+    description: "Acc\u00e8s r\u00e9serv\u00e9 \u00e0 l'organisation.",
     links: [
       { label: 'Dashboard staff', href: '/admin' },
       { label: 'Connexion staff', href: '/admin/login' },
-      { label: 'Mot de passe oublié', href: '/admin/forgot-password' },
-      { label: 'Réinitialiser le mot de passe', href: '/admin/reset-password' },
+      { label: 'Mot de passe oubli\u00e9', href: '/admin/forgot-password' },
+      { label: 'R\u00e9initialiser le mot de passe', href: '/admin/reset-password' },
     ],
   },
 ];
@@ -73,23 +83,23 @@ function SiteMapPage() {
             Plan du site
           </p>
           <h1 className="mt-4 text-4xl font-bold leading-tight sm:text-5xl">
-            Tous les liens internes, en un coup d&apos;œil
+            Tous les liens internes, en un coup d&apos;&#339;il
           </h1>
           <p className="mt-4 max-w-3xl text-lg text-gray-200">
-            Retrouvez ici l’ensemble des pages publiques et des accès staff. Le
+            Retrouvez ici l&apos;ensemble des pages publiques et des acc&egrave;s staff. Le
             sitemap XML reste disponible pour les moteurs de recherche et les
-            intégrations externes.
+            int&eacute;grations externes.
           </p>
           <div className="mt-6 inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-gray-200">
             <span className="rounded-full bg-purple-500/20 px-2 py-[2px] text-[11px] font-semibold uppercase tracking-[0.18em] text-purple-100">
               Ressource
             </span>
-            <a
+            <Link
               href="/sitemap.xml"
               className="font-semibold text-white underline decoration-purple-300/60 decoration-2 underline-offset-4"
             >
               Ouvrir le sitemap.xml
-            </a>
+            </Link>
           </div>
         </div>
       </div>
@@ -141,7 +151,7 @@ function SiteMapPage() {
 const siteMapSeo: SeoProps = {
   title: 'Plan du site',
   description:
-    "Parcourez l'ensemble des liens internes de l'OW Women's Cup (pages publiques, participation, staff) et accédez au sitemap XML.",
+    "Parcourez l'ensemble des liens internes de l'OW Women's Cup (pages publiques, participation, staff) et acc\u00e9dez au sitemap XML.",
 };
 
 SiteMapPage.seo = siteMapSeo;
