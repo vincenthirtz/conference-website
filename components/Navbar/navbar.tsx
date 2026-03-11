@@ -265,7 +265,11 @@ function Navbar(): JSX.Element {
           minRole: 'admin',
           children: [
             { title: 'Liste des news', ref: '/admin/news', minRole: 'admin' },
-            { title: 'Créer une news', ref: '/admin/news/new', minRole: 'admin' },
+            {
+              title: 'Créer une news',
+              ref: '/admin/news/new',
+              minRole: 'admin',
+            },
           ],
         },
         {
@@ -418,19 +422,27 @@ function Navbar(): JSX.Element {
         } ${drop && 'bg-[#1B1130]/90'}`}
         style={{ top: headerOffset }}
       >
-        <div className={!isStaff ? "mx-auto max-w-7xl px-4 py-5 flex justify-between h-[75px] w-full items-center" : ""}>
+        <div
+          className={
+            !isStaff
+              ? 'mx-auto max-w-7xl px-4 flex justify-between h-[75px] w-full items-center'
+              : ''
+          }
+        >
           <div
             className="flex items-center sm:justify-between sm:w-full z-[99]"
             data-test="nav-Home"
           >
             <Link href="/">
-              <div className={`flex items-center cursor-pointer shrink-0 ${isStaff ? 'hidden' : ''}`}>
+              <div
+                className={`flex items-center cursor-pointer shrink-0 ${isStaff ? 'hidden' : ''}`}
+              >
                 <Image
                   src="/img/logos/2025-logo.png"
                   alt="conference logo"
                   width={150}
                   height={33}
-                  className="block"
+                  className="block pt-10"
                   priority
                 />
               </div>
@@ -752,7 +764,9 @@ function AdminTopBar({
         <div className="flex items-center gap-3 pr-4 border-r border-neutral-800 whitespace-nowrap">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span className="font-medium text-neutral-200">{staffName || 'Staff'}</span>
+            <span className="font-medium text-neutral-200">
+              {staffName || 'Staff'}
+            </span>
           </div>
           {staffRole && (
             <span className="px-2 py-0.5 rounded-md bg-neutral-800 text-[10px] uppercase tracking-wider text-neutral-400 font-medium">
@@ -794,17 +808,26 @@ function AdminTopBar({
                   stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
                 </svg>
               </button>
               {openMenu === cat.title && (
                 <div className="absolute left-0 top-[calc(100%+8px)] min-w-[220px] rounded-xl bg-neutral-900 border border-neutral-800 shadow-2xl overflow-hidden z-[130]">
                   {cat.children?.map((child) => {
-                    const hasNestedChildren = child.children && child.children.length > 0;
+                    const hasNestedChildren =
+                      child.children && child.children.length > 0;
 
                     if (hasNestedChildren) {
                       return (
-                        <div key={child.title} className="border-b border-neutral-800 last:border-b-0">
+                        <div
+                          key={child.title}
+                          className="border-b border-neutral-800 last:border-b-0"
+                        >
                           <button
                             onClick={() => toggleSubMenu(child.title)}
                             className={`w-full px-4 py-2.5 text-[13px] flex items-center justify-between transition-colors ${
@@ -816,13 +839,20 @@ function AdminTopBar({
                             <span>{child.title}</span>
                             <svg
                               className={`w-3 h-3 transition-transform ${
-                                openSubMenu === child.title ? 'rotate-180' : 'rotate-0'
+                                openSubMenu === child.title
+                                  ? 'rotate-180'
+                                  : 'rotate-0'
                               }`}
                               fill="none"
                               stroke="currentColor"
                               viewBox="0 0 24 24"
                             >
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 9l-7 7-7-7"
+                              />
                             </svg>
                           </button>
                           {openSubMenu === child.title && (
