@@ -5,19 +5,19 @@ const ruleSections = [
   {
     title: 'Composition & restrictions',
     items: [
-      '5v5 obligatoire : 1 Tank, 2 Dégâts, 2 Soutien (Role Queue).',
-      'Héros uniques : aucun doublon autorisé dans une même équipe.',
-      'Patch en cours : toutes les parties se jouent sur la dernière version live d’Overwatch 2 (pas de rollbacks).',
+      '5v5 obligatoire : 1 Tank, 2 D\u00e9g\u00e2ts, 2 Soutien (Role Queue).',
+      'H\u00e9ros uniques : aucun doublon autoris\u00e9 dans une m\u00eame \u00e9quipe.',
+      "Patch en cours : toutes les parties se jouent sur la derni\u00e8re version live d'Overwatch 2 (pas de rollbacks).",
       'Objets de workshop, mods, macros ou scripts interdits.',
     ],
   },
   {
-    title: 'Paramètres de salon officiels',
+    title: 'Param\u00e8tres de salon officiels',
     items: [
-      'Préréglage : Règles de compétition.',
-      'Score limité par mode (ex. Contrôle en BO3).',
-      'Temps de préparation 45 s (départ) / 35 s (mi-temps).',
-      'Pause technique : uniquement en cas de bug ou déconnexion, max 5 min par équipe.',
+      'Pr\u00e9r\u00e9glage : R\u00e8gles de comp\u00e9tition.',
+      'Score limit\u00e9 par mode (ex. Contr\u00f4le en BO3).',
+      'Temps de pr\u00e9paration 45 s (d\u00e9part) / 35 s (mi-temps).',
+      'Pause technique : uniquement en cas de bug ou d\u00e9connexion, max 5 min par \u00e9quipe.',
     ],
   },
   {
@@ -25,36 +25,37 @@ const ruleSections = [
     items: [
       'Aucun exploit, stream sniping ou partage de compte.',
       'Chat vocal et textuel soumis au Code de conduite Blizzard.',
-      'Résolution des litiges : décision finale par l’arbitrage tournoi.',
+      "R\u00e9solution des litiges : d\u00e9cision finale par l'arbitrage tournoi.",
+      'Rejoindre le Discord du tournoi est obligatoire : https://discord.gg/gERSsjC3Vd',
     ],
   },
 ];
 
 const modeDetails = [
   {
-    mode: 'Contrôle (Control)',
+    mode: 'Contr\u00f4le (Control)',
     rules:
-      'BO3 sur trois points de contrôle. Si 1-1, manche décisive. Overtime si une équipe conteste ou est sur le point de capturer.',
+      'BO3 sur trois points de contr\u00f4le. Si 1-1, manche d\u00e9cisive. Overtime si une \u00e9quipe conteste ou est sur le point de capturer.',
   },
   {
     mode: 'Hybride (Assaut/ Escorte)',
     rules:
-      'Att/Def : capture du point A puis escorte du convoi. Victoire à la meilleure progression; overtime si la progression est contestée.',
+      "Att/Def : capture du point A puis escorte du convoi. Victoire \u00e0 la meilleure progression; overtime si la progression est contest\u00e9e.",
   },
   {
     mode: 'Escorte (Escort)',
     rules:
-      'Att/Def : escorte pure du convoi jusqu’au point final. Si égalité après les deux manches, reprise avec banque de temps; meilleure distance départage.',
+      "Att/Def : escorte pure du convoi jusqu'au point final. Si \u00e9galit\u00e9 apr\u00e8s les deux manches, reprise avec banque de temps; meilleure distance d\u00e9partage.",
   },
   {
     mode: 'Flashpoint',
     rules:
-      'Points de capture successifs, premier à 2 points. Overtime si un point est contesté. Reset d’ultimes à chaque prise.',
+      "Points de capture successifs, premier \u00e0 2 points. Overtime si un point est contest\u00e9. Reset d'ultimes \u00e0 chaque prise.",
   },
   {
     mode: 'Push',
     rules:
-      'Robot central. Équipe gagnante : distance la plus avancée. Overtime si le robot est contesté ou proche du marqueur de l’adversaire.',
+      "\u00c9quipe gagnante : distance la plus avanc\u00e9e. Overtime si le robot est contest\u00e9 ou proche du marqueur de l'adversaire.",
   },
 ];
 
@@ -64,11 +65,11 @@ const references = [
     href: 'https://www.blizzard.com/fr-fr/legal/7f2d718d-142f-4a68-9272-5c587f1addfb/overwatch-2-code-of-conduct',
   },
   {
-    label: 'Notes de mise à jour Overwatch 2 (patch live)',
+    label: 'Notes de mise \u00e0 jour Overwatch 2 (patch live)',
     href: 'https://overwatch.blizzard.com/fr-fr/news/patch-notes/',
   },
   {
-    label: 'Paramètres « Règles de compétition » (guide officiel)',
+    label: 'Param\u00e8tres \u00ab R\u00e8gles de comp\u00e9tition \u00bb (guide officiel)',
     href: 'https://overwatch.blizzard.com/fr-fr/news/23997317/',
   },
 ];
@@ -84,15 +85,15 @@ function RulesPage() {
 
         <div className="relative mx-auto max-w-5xl px-6 pt-32 pb-14 text-center">
           <p className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-200">
-            Règlement officiel
+            R&egrave;glement officiel
           </p>
           <h1 className="mt-3 text-4xl font-bold leading-tight sm:text-5xl md:text-6xl">
-            Règles officielles Overwatch 2
+            R&egrave;gles officielles Overwatch 2
           </h1>
           <p className="mx-auto mt-4 max-w-3xl text-lg text-gray-200">
-            Résumé des paramètres compétitifs Overwatch 2 utilisés pour l’OW
-            Women&apos;s Cup. Toute l’organisation se base sur les règles
-            officielles Blizzard, adaptées au format du tournoi.
+            R&eacute;sum&eacute; des param&egrave;tres comp&eacute;titifs Overwatch 2 utilis&eacute;s pour l&apos;OW
+            Women&apos;s Cup. Toute l&apos;organisation se base sur les r&egrave;gles
+            officielles Blizzard, adapt&eacute;es au format du tournoi.
           </p>
         </div>
       </div>
@@ -114,7 +115,25 @@ function RulesPage() {
                       className="mt-[6px] h-2 w-2 rounded-full bg-purple-400"
                       aria-hidden
                     />
-                    <span>{item}</span>
+                    <span>
+                      {/https?:\/\/\S+/.test(item)
+                        ? item.split(/(https?:\/\/\S+)/).map((part, i) =>
+                            /^https?:\/\//.test(part) ? (
+                              <Link
+                                key={i}
+                                href={part}
+                                target="_blank"
+                                rel="noreferrer noopener"
+                                className="text-purple-300 underline hover:text-purple-200"
+                              >
+                                {part}
+                              </Link>
+                            ) : (
+                              part
+                            )
+                          )
+                        : item}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -133,8 +152,8 @@ function RulesPage() {
               </h3>
             </div>
             <p className="text-sm text-gray-200">
-              S’applique avec le préréglage « Règles de compétition » dans les
-              salons personnalisés.
+              S&apos;applique avec le pr&eacute;r&eacute;glage &laquo; R&egrave;gles de comp&eacute;tition &raquo; dans les
+              salons personnalis&eacute;s.
             </p>
           </div>
 
@@ -156,11 +175,11 @@ function RulesPage() {
         <section className="space-y-4">
           <div className="flex flex-col gap-2">
             <p className="text-xs uppercase tracking-[0.18em] text-gray-300">
-              Références officielles
+              R&eacute;f&eacute;rences officielles
             </p>
             <h3 className="text-2xl font-bold text-white">Sources Blizzard</h3>
             <p className="text-sm text-gray-300">
-              Consultez les documents officiels pour les mises à jour de règles,
+              Consultez les documents officiels pour les mises &agrave; jour de r&egrave;gles,
               de maps ou de patchs.
             </p>
           </div>
@@ -184,9 +203,9 @@ function RulesPage() {
 }
 
 const rulesSeo: SeoProps = {
-  title: 'Règles officielles Overwatch 2',
+  title: 'R\u00e8gles officielles Overwatch 2',
   description:
-    "Paramètres compétitifs, modes et conduite officielle Overwatch 2 utilisés pour l'OW Women's Cup, basés sur les règles Blizzard.",
+    "Param\u00e8tres comp\u00e9titifs, modes et conduite officielle Overwatch 2 utilis\u00e9s pour l'OW Women's Cup, bas\u00e9s sur les r\u00e8gles Blizzard.",
 };
 
 RulesPage.seo = rulesSeo;

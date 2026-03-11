@@ -116,6 +116,10 @@ export function sendTeamJoinEmail(
         <h2 style="color: #6d28d9;">Bienvenue dans ${escapeHtml(teamName)} !</h2>
         <p>Vous avez été ajouté(e) à l'équipe <strong>${escapeHtml(teamName)}</strong> en tant que <strong>${escapeHtml(role)}</strong>.</p>
         <p>Connectez-vous pour voir votre équipe et les prochains matchs.</p>
+        <p style="margin-top: 16px;">
+          <strong>Important :</strong> rejoignez le Discord du tournoi pour rester inform&eacute;(e) des matchs et annonces :
+          <a href="https://discord.gg/gERSsjC3Vd" style="color: #7c3aed; text-decoration: underline;">https://discord.gg/gERSsjC3Vd</a>
+        </p>
         <p style="margin-top: 24px; font-size: 13px; color: #888;">
           Si vous pensez que c'est une erreur, contactez l'organisateur du tournoi.
         </p>
