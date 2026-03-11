@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
-import { sendAccountDeletedEmail } from '@/utils/email';
+import { sendAccountDeletedEmail, sendWelcomeEmail } from '@/utils/email';
+import crypto from 'crypto';
 
 type TeamMembership = {
   team_id: string;
@@ -124,6 +125,33 @@ async function handler(
 
   if (req.method === 'PATCH') {
     const { userId, role, teamId, battleTag } = req.body || {};
+
+    // Resend credentials: reset password and send welcome email
+    if (userId && req.body.action === 'resend_credentials') {
+      const { data: target, error: targetErr } =
+        await supabaseAdmin.auth.admin.getUserById(userId);
+      if (targetErr || !target?.user) {
+        return res.status(404).json({ error: 'User not found.' });
+      }
+
+      const newPassword = generatePassword(16);
+      const { error: updateErr } = await supabaseAdmin.auth.admin.updateUserById(
+        userId,
+        { password: newPassword }
+      );
+
+      if (updateErr) {
+        console.error('[admin/users/manage] reset password error:', updateErr);
+        return res.status(500).json({ error: 'Failed to reset password.' });
+      }
+
+      const email = target.user.email;
+      if (email) {
+        await sendWelcomeEmail(email, newPassword);
+      }
+
+      return res.status(200).json({ success: true });
+    }
 
     // Special case: update battle_tag for a specific team membership
     if (userId && teamId && typeof battleTag === 'string') {
@@ -363,4 +391,14 @@ async function handler(
 
   res.setHeader('Allow', 'GET,PATCH,DELETE');
   return res.status(405).json({ error: 'Method not allowed' });
+}
+
+function generatePassword(length = 16) {
+  const buffer = crypto.randomBytes(length);
+  const alphabet =
+    'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz0123456789!@$%^*';
+  return Array.from(buffer)
+    .map((byte) => alphabet[byte % alphabet.length])
+    .join('')
+    .slice(0, length);
 }

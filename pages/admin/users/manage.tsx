@@ -120,6 +120,9 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
   const [deletingUser, setDeletingUser] = useState<UserLite | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  // Resend credentials
+  const [resendingUser, setResendingUser] = useState<string | null>(null);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
 
@@ -320,6 +323,41 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       setEditError(err?.message || 'Erreur inattendue');
     } finally {
       setEditSaving(false);
+    }
+  };
+
+  const resendCredentials = async (user: UserLite) => {
+    if (!user.email) return;
+    if (!confirm(`Réinitialiser le mot de passe et envoyer les identifiants à ${user.email} ?`)) return;
+
+    setResendingUser(user.id);
+    try {
+      const {
+        data: { session },
+      } = await supabaseClient.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('Session staff manquante.');
+
+      const res = await fetch('/api/admin/users/manage', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userId: user.id, action: 'resend_credentials' }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        throw new Error(json.error || 'Envoi impossible.');
+      }
+
+      setSuccessMsg(`Identifiants envoyés à ${user.email}`);
+      setTimeout(() => setSuccessMsg(null), 4000);
+    } catch (err: any) {
+      alert(err?.message || 'Erreur lors de l\'envoi.');
+    } finally {
+      setResendingUser(null);
     }
   };
 
@@ -631,6 +669,18 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                           </option>
                         ))}
                       </select>
+
+                      <button
+                        type="button"
+                        title="Renvoyer identifiants"
+                        onClick={() => resendCredentials(u)}
+                        disabled={resendingUser === u.id || !u.email}
+                        className="p-2 rounded-lg text-neutral-400 hover:text-amber-400 hover:bg-neutral-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                      </button>
 
                       <button
                         type="button"
