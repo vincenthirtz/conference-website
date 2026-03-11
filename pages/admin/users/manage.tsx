@@ -110,6 +110,16 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
   const [battleTagSaving, setBattleTagSaving] = useState(false);
   const [battleTagError, setBattleTagError] = useState<string | null>(null);
 
+  // Edit user modal
+  const [editingUser, setEditingUser] = useState<UserLite | null>(null);
+  const [editDisplayName, setEditDisplayName] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  // Delete confirmation
+  const [deletingUser, setDeletingUser] = useState<UserLite | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
 
@@ -258,6 +268,95 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       setBattleTagError(err?.message || 'Erreur inattendue');
     } finally {
       setBattleTagSaving(false);
+    }
+  };
+
+  const openEditUser = (user: UserLite) => {
+    setEditingUser(user);
+    setEditDisplayName(user.display_name || '');
+    setEditError(null);
+  };
+
+  const saveEditUser = async () => {
+    if (!editingUser) return;
+    setEditSaving(true);
+    setEditError(null);
+
+    try {
+      const {
+        data: { session },
+      } = await supabaseClient.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('Session staff manquante.');
+
+      const res = await fetch('/api/admin/users/manage', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          userId: editingUser.id,
+          display_name: editDisplayName.trim(),
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        throw new Error(json.error || 'Mise à jour impossible.');
+      }
+
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === editingUser.id
+            ? { ...u, display_name: editDisplayName.trim() || null }
+            : u
+        )
+      );
+      setEditingUser(null);
+      setSuccessMsg('Utilisateur mis à jour');
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (err: any) {
+      setEditError(err?.message || 'Erreur inattendue');
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  const deleteUser = async () => {
+    if (!deletingUser) return;
+    setDeleteLoading(true);
+
+    try {
+      const {
+        data: { session },
+      } = await supabaseClient.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('Session staff manquante.');
+
+      const res = await fetch('/api/admin/users/manage', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userId: deletingUser.id }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        throw new Error(json.error || 'Suppression impossible.');
+      }
+
+      setUsers((prev) => prev.filter((u) => u.id !== deletingUser!.id));
+      setTotal((prev) => (prev !== null ? prev - 1 : prev));
+      setDeletingUser(null);
+      setSuccessMsg('Utilisateur supprimé');
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (err: any) {
+      alert(err?.message || 'Erreur lors de la suppression.');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -518,8 +617,8 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                       )}
                     </div>
 
-                    {/* Role selector */}
-                    <div className="flex-shrink-0">
+                    {/* Actions */}
+                    <div className="flex-shrink-0 flex items-center gap-2">
                       <select
                         value={u.role || 'member'}
                         onChange={(e) => changeRole(u.id, e.target.value)}
@@ -532,6 +631,28 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                           </option>
                         ))}
                       </select>
+
+                      <button
+                        type="button"
+                        title="Modifier"
+                        onClick={() => openEditUser(u)}
+                        className="p-2 rounded-lg text-neutral-400 hover:text-blue-400 hover:bg-neutral-700 transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+
+                      <button
+                        type="button"
+                        title="Supprimer"
+                        onClick={() => setDeletingUser(u)}
+                        className="p-2 rounded-lg text-neutral-400 hover:text-red-400 hover:bg-neutral-700 transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -592,6 +713,102 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
           </div>
         </div>
       </div>
+
+      {/* Edit User Modal */}
+      {editingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h3 className="text-lg font-semibold mb-2">Modifier l&apos;utilisateur</h3>
+            <p className="text-sm text-neutral-400 mb-4">
+              {editingUser.email || editingUser.id}
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Nom affiché
+                </label>
+                <input
+                  type="text"
+                  value={editDisplayName}
+                  onChange={(e) => setEditDisplayName(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  placeholder="Nom affiché"
+                />
+              </div>
+
+              {editError && (
+                <div className="rounded-lg bg-red-900/40 border border-red-500/50 px-3 py-2 text-sm text-red-200">
+                  {editError}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                onClick={() => setEditingUser(null)}
+                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={saveEditUser}
+                disabled={editSaving}
+                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {editSaving && (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                )}
+                {editSaving ? 'Enregistrement...' : 'Enregistrer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h3 className="text-lg font-semibold mb-2 text-red-400">
+              Supprimer l&apos;utilisateur
+            </h3>
+            <p className="text-sm text-neutral-300 mb-2">
+              Êtes-vous sûr de vouloir supprimer cet utilisateur ?
+            </p>
+            <div className="bg-neutral-900/50 rounded-lg px-3 py-2 mb-4">
+              <p className="text-sm font-medium text-white">
+                {deletingUser.display_name || 'Utilisateur'}
+              </p>
+              <p className="text-xs text-neutral-400 font-mono">
+                {deletingUser.email || deletingUser.id}
+              </p>
+            </div>
+            <p className="text-xs text-red-300 mb-4">
+              Cette action est irréversible. Le compte, ses appartenances aux équipes et son accès staff seront supprimés.
+            </p>
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setDeletingUser(null)}
+                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={deleteUser}
+                disabled={deleteLoading}
+                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {deleteLoading && (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                )}
+                {deleteLoading ? 'Suppression...' : 'Supprimer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Battle Tag Edit Modal */}
       {editingBattleTag && (

@@ -170,7 +170,7 @@ function ActualitesPreviewSection(): JSX.Element {
                 Inscrire mon équipe
               </Button>
             </Link>
-            <Link href="/timeline-2026">
+            <Link href={mixteTournamentId ? `/tournament/${mixteTournamentId}` : '/tournament/tournoi-mixte'}>
               <Button type="button" overlay className="px-8 h-[52px] border border-white/20 hover:border-white/40 transition">
                 Voir le programme
               </Button>

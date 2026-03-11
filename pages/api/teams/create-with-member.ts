@@ -1,7 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import crypto from 'crypto';
 import slugify from 'slugify';
 import { supabaseAdmin } from '@/utils/supabase';
+import {
+  findOrCreateUserByEmail,
+  listUsersEmailMap,
+} from '@/utils/find-or-create-user';
 
 type Body = {
   name?: string;
@@ -401,83 +404,3 @@ export default async function handler(
   });
 }
 
-async function listUsersEmailMap() {
-  const emailMap = new Map<string, string>();
-  const perPage = 1000;
-  const maxPages = 5;
-
-  for (let page = 1; page <= maxPages; page++) {
-    const { data: usersData, error: listErr } =
-      await supabaseAdmin.auth.admin.listUsers({
-        page,
-        perPage,
-      });
-
-    if (listErr) {
-      console.error(
-        '[/api/teams/create-with-member] listUsers error:',
-        listErr
-      );
-      throw new Error(listErr.message || 'Failed to list users');
-    }
-
-    usersData?.users?.forEach((u) => {
-      const emailLower = u.email?.toLowerCase();
-      if (emailLower) emailMap.set(emailLower, u.id);
-    });
-
-    if (!usersData?.users || usersData.users.length < perPage) {
-      break;
-    }
-  }
-
-  return emailMap;
-}
-
-async function findOrCreateUserByEmail(
-  email: string,
-  role: string,
-  emailMap: Map<string, string>
-): Promise<{ userId: string; created: boolean }> {
-  const normalizedEmail = email.trim().toLowerCase();
-  if (!normalizedEmail) {
-    throw new Error('Email is required to create a user');
-  }
-
-  const existingId = emailMap.get(normalizedEmail);
-  if (existingId) {
-    return { userId: existingId, created: false };
-  }
-
-  const generatedPassword = generatePassword(16);
-  const { data, error } = await supabaseAdmin.auth.admin.createUser({
-    email: normalizedEmail,
-    password: generatedPassword,
-    email_confirm: true,
-    user_metadata: {
-      role: role || 'player',
-    },
-  });
-
-  if (error || !data?.user?.id) {
-    console.error('[/api/teams/create-with-member] createUser error:', error);
-    throw new Error(error?.message || 'Failed to create user');
-  }
-
-  emailMap.set(normalizedEmail, data.user.id);
-
-  return {
-    userId: data.user.id,
-    created: true,
-  };
-}
-
-function generatePassword(length = 16) {
-  const buffer = crypto.randomBytes(length);
-  const alphabet =
-    'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz0123456789!@$%^*';
-  return Array.from(buffer)
-    .map((byte) => alphabet[byte % alphabet.length])
-    .join('')
-    .slice(0, length);
-}

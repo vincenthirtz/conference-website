@@ -3,6 +3,10 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin, getServerClient } from '@/utils/supabase';
+import {
+  findOrCreateUserByEmail,
+  listUsersEmailMap,
+} from '@/utils/find-or-create-user';
 
 type AddMemberResponse =
   | {
@@ -71,33 +75,29 @@ export default async function handler(
   }
 
   try {
-    // Resolve user by email if needed
+    // Resolve user by email (or create if not found)
     if (!resolvedUserId) {
       if (!email || typeof email !== 'string') {
         return res.status(400).json({ error: 'Provide userId or email to find the user' });
       }
 
-      const emailLower = email.toLowerCase();
-      const { data: usersData, error: listErr } =
-        await supabaseAdmin.auth.admin.listUsers({
-          page: 1,
-          perPage: 100,
+      try {
+        const emailMap = await listUsersEmailMap();
+        const { userId, created } = await findOrCreateUserByEmail(
+          email,
+          typeof role === 'string' && role.trim() ? role.trim() : 'player',
+          emailMap
+        );
+        resolvedUserId = userId;
+        if (created) {
+          console.log(`[add-member] auto-created user for ${email}`);
+        }
+      } catch (err: any) {
+        console.error('[add-member] findOrCreateUser error:', err);
+        return res.status(500).json({
+          error: err?.message || 'Failed to find or create user',
         });
-
-      if (listErr) {
-        console.error('add-member listUsers error:', listErr);
-        return res.status(500).json({ error: listErr.message || 'Failed to list users' });
       }
-
-      const found = usersData?.users?.find(
-        (u) => u.email?.toLowerCase() === emailLower
-      );
-
-      if (!found?.id) {
-        return res.status(404).json({ error: 'User not found for this email' });
-      }
-
-      resolvedUserId = found.id;
     }
 
     // Insert into team_members

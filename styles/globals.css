@@ -21,6 +21,12 @@ body {
   overflow-x: hidden;
 }
 
+/* Fix select option text visibility on dark backgrounds */
+select option {
+  color: #111;
+  background: #fff;
+}
+
 .text-gradient {
   background: linear-gradient(
     230deg,

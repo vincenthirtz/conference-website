@@ -39,7 +39,10 @@ export const OVERWATCH_MAPS: OverwatchMap[] = [
   // Push
   { name: 'Colosseo', type: 'push', image: `${CDN}/colosseo.jpg` },
   { name: 'Esperança', type: 'push', image: `${CDN}/esperanca.jpg` },
-  { name: 'New Junk City', type: 'push', image: `${CDN}/new-junk-city.jpg` },
   { name: 'New Queen Street', type: 'push', image: `${CDN}/new-queen-street.jpg` },
   { name: 'Runasapi', type: 'push', image: `${CDN}/runasapi.jpg` },
+  // Flashpoint
+  { name: 'New Junk City', type: 'flashpoint', image: `${CDN}/new-junk-city.jpg` },
+  { name: 'Suravasa', type: 'flashpoint', image: `${CDN}/suravasa.jpg` },
+  { name: 'Throne of Aatlis', type: 'flashpoint', image: `${CDN}/throne-of-aatlis.jpg` },
 ];

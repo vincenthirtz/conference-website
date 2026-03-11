@@ -195,5 +195,6 @@ export type TeamMemberRow = {
   user_id: string;
   role: string;
   battle_tag?: string | null;
+  is_substitute: boolean;
   created_at: string;
 };

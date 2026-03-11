@@ -4,6 +4,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
+import {
+  findOrCreateUserByEmail,
+  listUsersEmailMap,
+} from '@/utils/find-or-create-user';
 
 type TeamMemberRow = {
   id: string;
@@ -11,8 +15,11 @@ type TeamMemberRow = {
   user_id: string;
   role: string;
   battle_tag?: string | null;
+  is_substitute: boolean;
   created_at: string;
 };
+
+const MEMBER_SELECT = 'id, team_id, user_id, role, battle_tag, is_substitute, created_at';
 
 type MembersResponse =
   | {
@@ -47,10 +54,9 @@ async function handler(
   if (req.method === 'GET') {
     const { data, error, count } = await supabaseAdmin
       .from('team_members')
-      .select('id, team_id, user_id, role, battle_tag, created_at', {
-        count: 'exact',
-      })
+      .select(MEMBER_SELECT, { count: 'exact' })
       .eq('team_id', teamId)
+      .order('is_substitute', { ascending: true })
       .order('created_at', { ascending: true });
 
     if (error) {
@@ -66,7 +72,7 @@ async function handler(
 
   // POST - Ajouter un membre
   if (req.method === 'POST') {
-    const { userId, email, role, battleTag, setCaptain } = req.body || {};
+    const { userId, email, role, battleTag, setCaptain, isSubstitute } = req.body || {};
 
     let resolvedUserId =
       typeof userId === 'string' && userId.trim().length > 0 ? userId.trim() : '';
@@ -99,7 +105,7 @@ async function handler(
         return res.status(404).json({ error: 'Team not found' });
       }
 
-      // Résoudre l'utilisateur par email si nécessaire
+      // Résoudre l'utilisateur par email (ou le créer s'il n'existe pas)
       if (!resolvedUserId) {
         if (!email || typeof email !== 'string') {
           return res
@@ -107,29 +113,23 @@ async function handler(
             .json({ error: 'Provide userId or email to find the user' });
         }
 
-        const emailLower = email.toLowerCase();
-        const { data: usersData, error: listErr } =
-          await supabaseAdmin.auth.admin.listUsers({
-            page: 1,
-            perPage: 100,
+        try {
+          const emailMap = await listUsersEmailMap();
+          const { userId, created } = await findOrCreateUserByEmail(
+            email,
+            typeof role === 'string' && role.trim() ? role.trim() : 'player',
+            emailMap
+          );
+          resolvedUserId = userId;
+          if (created) {
+            console.log(`[members POST] auto-created user for ${email}`);
+          }
+        } catch (err: any) {
+          console.error('[members POST] findOrCreateUser error:', err);
+          return res.status(500).json({
+            error: err?.message || 'Failed to find or create user',
           });
-
-        if (listErr) {
-          console.error('add-member listUsers error:', listErr);
-          return res
-            .status(500)
-            .json({ error: listErr.message || 'Failed to list users' });
         }
-
-        const found = usersData?.users?.find(
-          (u) => u.email?.toLowerCase() === emailLower
-        );
-
-        if (!found?.id) {
-          return res.status(404).json({ error: 'User not found for this email' });
-        }
-
-        resolvedUserId = found.id;
       }
 
       // Insérer dans team_members (battle_tag est toujours requis)
@@ -138,12 +138,13 @@ async function handler(
         user_id: resolvedUserId,
         role: typeof role === 'string' && role.trim() ? role.trim() : 'player',
         battle_tag: battleTagValue,
+        is_substitute: isSubstitute === true,
       };
 
       const { data: member, error: insertErr } = await supabaseAdmin
         .from('team_members')
         .insert(memberPayload)
-        .select('id, team_id, user_id, role, battle_tag, created_at')
+        .select(MEMBER_SELECT)
         .maybeSingle();
 
       if (insertErr) {
@@ -175,14 +176,67 @@ async function handler(
     }
   }
 
-  // PATCH - Modifier un membre
+  // PATCH - Modifier un membre ou échanger deux membres (swap)
   if (req.method === 'PATCH') {
-    const { memberId, role, battleTag } = req.body || {};
+    const { memberId, role, battleTag, isSubstitute, swapWithMemberId } = req.body || {};
 
     if (!memberId || typeof memberId !== 'string') {
       return res.status(400).json({ error: 'memberId is required' });
     }
 
+    // Swap: exchange is_substitute between two members
+    if (typeof swapWithMemberId === 'string' && swapWithMemberId.trim()) {
+      try {
+        // Fetch both members
+        const { data: memberA, error: errA } = await supabaseAdmin
+          .from('team_members')
+          .select(MEMBER_SELECT)
+          .eq('id', memberId)
+          .eq('team_id', teamId)
+          .maybeSingle();
+
+        const { data: memberB, error: errB } = await supabaseAdmin
+          .from('team_members')
+          .select(MEMBER_SELECT)
+          .eq('id', swapWithMemberId.trim())
+          .eq('team_id', teamId)
+          .maybeSingle();
+
+        if (errA || errB || !memberA || !memberB) {
+          return res.status(404).json({ error: 'One or both members not found' });
+        }
+
+        // Swap is_substitute values
+        const { error: upA } = await supabaseAdmin
+          .from('team_members')
+          .update({ is_substitute: memberB.is_substitute })
+          .eq('id', memberA.id)
+          .eq('team_id', teamId);
+
+        const { error: upB } = await supabaseAdmin
+          .from('team_members')
+          .update({ is_substitute: memberA.is_substitute })
+          .eq('id', memberB.id)
+          .eq('team_id', teamId);
+
+        if (upA || upB) {
+          console.error('[members PATCH swap] error:', upA, upB);
+          return res.status(500).json({ error: 'Failed to swap members' });
+        }
+
+        return res.status(200).json({
+          success: true,
+          info: `Swapped ${memberA.battle_tag} and ${memberB.battle_tag}`,
+        });
+      } catch (err: any) {
+        console.error('[members PATCH swap] error:', err);
+        return res.status(500).json({
+          error: err?.message || 'Internal server error',
+        });
+      }
+    }
+
+    // Standard update
     const updatePayload: any = {};
     if (typeof role === 'string') {
       updatePayload.role = role.trim() || 'player';
@@ -201,6 +255,9 @@ async function handler(
         updatePayload.battle_tag = null;
       }
     }
+    if (typeof isSubstitute === 'boolean') {
+      updatePayload.is_substitute = isSubstitute;
+    }
 
     if (Object.keys(updatePayload).length === 0) {
       return res.status(400).json({ error: 'No fields to update' });
@@ -212,7 +269,7 @@ async function handler(
         .update(updatePayload)
         .eq('id', memberId)
         .eq('team_id', teamId)
-        .select('id, team_id, user_id, role, battle_tag, created_at')
+        .select(MEMBER_SELECT)
         .maybeSingle();
 
       if (updateErr) {

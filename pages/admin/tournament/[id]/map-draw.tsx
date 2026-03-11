@@ -32,6 +32,7 @@ const TYPE_LABEL: Record<string, string> = {
   hybrid: 'Hybride',
   escort: 'Convoi',
   push: 'Push',
+  flashpoint: 'Flashpoint',
 };
 
 function typeLabel(t: string | null | undefined) {
@@ -45,6 +46,7 @@ function typeBadgeColor(t: string | null | undefined): string {
     case 'escort': return 'border-amber-400/50 text-amber-200 bg-amber-600/20';
     case 'hybrid': return 'border-emerald-400/50 text-emerald-200 bg-emerald-600/20';
     case 'push': return 'border-pink-400/50 text-pink-200 bg-pink-600/20';
+    case 'flashpoint': return 'border-orange-400/50 text-orange-200 bg-orange-600/20';
     default: return 'border-gray-400/50 text-gray-200 bg-gray-600/20';
   }
 }

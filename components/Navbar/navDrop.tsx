@@ -39,15 +39,14 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(
           {/* ----------------------------------------------------
               🔐 Bloc Staff (mobile) – même logique que Navbar
              ---------------------------------------------------- */}
-          {!adminLoading && (
-            <>
+          <>
               {/* Pas connecté staff → lien Connexion staff */}
               {!isStaff && (
                 <div className="mb-6">
                   <Link
                     href="/admin/login"
                     onClick={() => setDrop(false)}
-                    className="block text-white rounded-lg border border-purple-400/50 px-4 py-3 text-center font-medium hover:bg-purple-600/30 transition"
+                    className={`block text-white rounded-lg border border-purple-400/50 px-4 py-3 text-center font-medium hover:bg-purple-600/30 transition-all ${adminLoading ? 'opacity-0' : 'opacity-100'}`}
                   >
                     Connexion staff
                   </Link>
@@ -152,8 +151,7 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(
                   )}
                 </div>
               )}
-            </>
-          )}
+          </>
 
           {/* ----------------------------------------------------
               🌐 Liens publics déjà existants

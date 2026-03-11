@@ -44,7 +44,11 @@ VALUES
   -- Push
   ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Colosseo', 'push', 'https://overwatch.blizzard.com/static/media/screenshots/maps/colosseo.jpg', true, 24),
   ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Esperança', 'push', 'https://overwatch.blizzard.com/static/media/screenshots/maps/esperanca.jpg', true, 25),
-  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'New Junk City', 'push', 'https://overwatch.blizzard.com/static/media/screenshots/maps/new-junk-city.jpg', true, 26),
-  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'New Queen Street', 'push', 'https://overwatch.blizzard.com/static/media/screenshots/maps/new-queen-street.jpg', true, 27),
-  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Runasapi', 'push', 'https://overwatch.blizzard.com/static/media/screenshots/maps/runasapi.jpg', true, 28)
+  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'New Queen Street', 'push', 'https://overwatch.blizzard.com/static/media/screenshots/maps/new-queen-street.jpg', true, 26),
+  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Runasapi', 'push', 'https://overwatch.blizzard.com/static/media/screenshots/maps/runasapi.jpg', true, 27),
+
+  -- Flashpoint
+  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'New Junk City', 'flashpoint', 'https://overwatch.blizzard.com/static/media/screenshots/maps/new-junk-city.jpg', true, 28),
+  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Suravasa', 'flashpoint', 'https://overwatch.blizzard.com/static/media/screenshots/maps/suravasa.jpg', true, 29),
+  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Throne of Aatlis', 'flashpoint', 'https://overwatch.blizzard.com/static/media/screenshots/maps/throne-of-aatlis.jpg', true, 30)
 ON CONFLICT DO NOTHING;

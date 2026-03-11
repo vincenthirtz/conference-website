@@ -36,7 +36,9 @@
       "Bash(git add pages/tournament/[id].tsx pages/tournaments.tsx)",
       "Bash(git add pages/admin/announcements/index.tsx pages/admin/news/index.tsx pages/admin/stages/create.tsx pages/admin/teams/index.tsx pages/admin/tournament/[id].tsx pages/admin/tournament/[id]/edit.tsx pages/admin/tournament/[id]/matches.tsx pages/admin/tournament/[id]/stages.tsx pages/admin/tournaments/create.tsx pages/admin/tournaments/index.tsx pages/api/admin/stages/[stageId].ts pages/api/admin/teams/index.ts pages/api/admin/tournament/[id].ts pages/api/admin/tournament/[id]/matches.ts pages/api/admin/tournaments/index.ts components/admin/ database/migrations/rename_end_at_to_end_date_on_stages.sql)",
       "Bash(wc -l /Users/Alicia/Documents/Vincent/conference-website/pages/admin/tournament/[id]/matches.tsx)",
-      "Bash(git add pages/admin/matches/[matchId]/edit.tsx pages/admin/stages/[stageId].tsx pages/admin/teams/[teamId]/edit.tsx pages/admin/teams/index.tsx pages/admin/tournament/[id]/edit.tsx pages/admin/tournament/[id]/matches.tsx pages/admin/tournament/[id]/stages.tsx pages/admin/tournaments/index.tsx pages/api/admin/matches/[matchId].ts pages/api/admin/stages/[stageId].ts pages/api/admin/teams/[teamId].ts pages/api/admin/tournament/[id].ts utils/bracket/propagate.ts utils/matches/applyScore.ts types/admin.ts utils/useUrlFilters.ts tsconfig.tsbuildinfo .claude/settings.local.json)"
+      "Bash(git add pages/admin/matches/[matchId]/edit.tsx pages/admin/stages/[stageId].tsx pages/admin/teams/[teamId]/edit.tsx pages/admin/teams/index.tsx pages/admin/tournament/[id]/edit.tsx pages/admin/tournament/[id]/matches.tsx pages/admin/tournament/[id]/stages.tsx pages/admin/tournaments/index.tsx pages/api/admin/matches/[matchId].ts pages/api/admin/stages/[stageId].ts pages/api/admin/teams/[teamId].ts pages/api/admin/tournament/[id].ts utils/bracket/propagate.ts utils/matches/applyScore.ts types/admin.ts utils/useUrlFilters.ts tsconfig.tsbuildinfo .claude/settings.local.json)",
+      "Bash(npx next:*)",
+      "Bash(find /c/Users/hirtz/depot/conference-website -type f \\\\\\(-name *schema* -o -name *migration* -o -name *database* \\\\\\))"
     ]
   }
 }

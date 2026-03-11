@@ -44,6 +44,7 @@ const TYPE_LABEL: Record<string, string> = {
   hybrid: 'Hybride',
   escort: 'Convoi',
   push: 'Push',
+  flashpoint: 'Flashpoint',
 };
 
 function typeLabel(t: string | null | undefined) {
@@ -519,6 +520,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
                           <option value="escort">Convoi</option>
                           <option value="hybrid">Hybride</option>
                           <option value="push">Push</option>
+                          <option value="flashpoint">Flashpoint</option>
                         </select>
                       </div>
                       <div>

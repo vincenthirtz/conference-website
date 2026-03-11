@@ -151,6 +151,51 @@ async function handler(
       return res.status(200).json({ success: true });
     }
 
+    // Handle display_name update
+    if (userId && typeof req.body.display_name === 'string' && role === undefined) {
+      const { data: target, error: targetErr } =
+        await supabaseAdmin.auth.admin.getUserById(userId);
+      if (targetErr || !target?.user) {
+        return res.status(404).json({ error: 'User not found.' });
+      }
+
+      const existingMeta = (target.user.user_metadata as any) || {};
+      const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
+        userId,
+        { user_metadata: { ...existingMeta, display_name: req.body.display_name.trim() || null } }
+      );
+
+      if (error || !data?.user) {
+        console.error('[admin/users/manage] display_name update error:', error);
+        return res.status(500).json({ error: 'Failed to update display name.' });
+      }
+
+      // Sync staff display_name if exists
+      const { data: existingStaff } = await supabaseAdmin
+        .from('staff')
+        .select('id')
+        .eq('auth_user_id', userId)
+        .maybeSingle();
+      if (existingStaff?.id) {
+        await supabaseAdmin
+          .from('staff')
+          .update({ display_name: req.body.display_name.trim() || null })
+          .eq('auth_user_id', userId);
+      }
+
+      const u = data.user;
+      return res.status(200).json({
+        success: true,
+        user: {
+          id: u.id,
+          email: u.email ?? null,
+          role: (u.user_metadata as any)?.role ?? null,
+          display_name: (u.user_metadata as any)?.display_name ?? null,
+          created_at: u.created_at ?? null,
+        },
+      });
+    }
+
     if (!userId || typeof role !== 'string') {
       return res.status(400).json({ error: 'userId and role required.' });
     }
@@ -248,6 +293,65 @@ async function handler(
     return res.status(200).json({ success: true, user: userLite });
   }
 
-  res.setHeader('Allow', 'GET,PATCH');
+  if (req.method === 'DELETE') {
+    const { userId } = req.body || {};
+
+    if (!userId || typeof userId !== 'string') {
+      return res.status(400).json({ error: 'userId required.' });
+    }
+
+    // Fetch target to check protection
+    const { data: target, error: targetErr } =
+      await supabaseAdmin.auth.admin.getUserById(userId);
+    if (targetErr || !target?.user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    const targetRole = (target.user.user_metadata as any)?.role ?? null;
+    let targetStaffRole: string | null = null;
+    const { data: targetStaff } = await supabaseAdmin
+      .from('staff')
+      .select('role')
+      .eq('auth_user_id', userId)
+      .maybeSingle();
+    if (targetStaff?.role) targetStaffRole = targetStaff.role;
+
+    const requesterRole = (req as any)?.context?.staff?.role || null;
+    const targetIsProtected =
+      targetRole === 'owner' ||
+      targetRole === 'admin' ||
+      targetStaffRole === 'owner' ||
+      targetStaffRole === 'admin';
+
+    if (targetIsProtected && requesterRole !== 'owner') {
+      return res.status(403).json({
+        error: 'Only an owner can delete an owner or admin account.',
+      });
+    }
+
+    // Remove team memberships
+    await supabaseAdmin
+      .from('team_members')
+      .delete()
+      .eq('user_id', userId);
+
+    // Remove staff entry if exists
+    await supabaseAdmin
+      .from('staff')
+      .delete()
+      .eq('auth_user_id', userId);
+
+    // Delete auth user
+    const { error: deleteErr } =
+      await supabaseAdmin.auth.admin.deleteUser(userId);
+    if (deleteErr) {
+      console.error('[admin/users/manage] delete error:', deleteErr);
+      return res.status(500).json({ error: 'Failed to delete user.' });
+    }
+
+    return res.status(200).json({ success: true });
+  }
+
+  res.setHeader('Allow', 'GET,PATCH,DELETE');
   return res.status(405).json({ error: 'Method not allowed' });
 }

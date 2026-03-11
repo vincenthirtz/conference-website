@@ -628,15 +628,13 @@ function Navbar(): JSX.Element {
                  ------------------------------------------------ */}
               {!isStaff && (
                 <div className="ml-10">
-                  {!adminLoading && (
-                    <Link
-                      href="/admin/login"
-                      className="text-sm border border-red-500/80 rounded-full px-3 py-1 hover:bg-red-500/20 hover:border-red-300 transition-colors text-red-300 flex items-center gap-2"
-                    >
-                      <span className="w-2 h-2 rounded-full bg-red-500" />
-                      Connexion
-                    </Link>
-                  )}
+                  <Link
+                    href="/admin/login"
+                    className={`text-sm border border-red-500/80 rounded-full px-3 py-1 hover:bg-red-500/20 hover:border-red-300 transition-all text-red-300 flex items-center gap-2 ${adminLoading ? 'opacity-0' : 'opacity-100'}`}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-red-500" />
+                    Connexion
+                  </Link>
                 </div>
               )}
             </div>
