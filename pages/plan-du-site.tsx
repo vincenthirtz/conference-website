@@ -25,6 +25,7 @@ const siteSections: SiteSection[] = [
     description: 'Actualit\u00e9s, lore et ressources Overwatch.',
     links: [
       { label: 'Actualit\u00e9s', href: '/actualites' },
+      { label: 'Live', href: '/live' },
       { label: 'Lore & m\u00e9dias', href: '/lore' },
       { label: 'Hero Picker', href: '/hero-picker' },
     ],

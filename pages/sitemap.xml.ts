@@ -11,6 +11,7 @@ const publicRoutes = [
   { path: '/association', priority: '0.7', changefreq: 'monthly' },
   { path: '/partenaires', priority: '0.7', changefreq: 'monthly' },
   { path: '/hero-picker', priority: '0.6', changefreq: 'monthly' },
+  { path: '/live', priority: '0.7', changefreq: 'daily' },
   { path: '/contact', priority: '0.6', changefreq: 'monthly' },
   { path: '/don', priority: '0.6', changefreq: 'monthly' },
   { path: '/register', priority: '0.8', changefreq: 'weekly' },
