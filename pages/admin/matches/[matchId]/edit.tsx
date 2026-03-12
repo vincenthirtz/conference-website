@@ -104,6 +104,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [conflictMsg, setConflictMsg] = useState<string | null>(null);
 
   // Status regression confirmation
   const [showStatusConfirm, setShowStatusConfirm] = useState(false);
@@ -114,6 +115,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
   const [forfeitTeamId, setForfeitTeamId] = useState<string | null>(null);
   const [forfeitSaving, setForfeitSaving] = useState(false);
   const [forfeitError, setForfeitError] = useState<string | null>(null);
+  const [warningMsgs, setWarningMsgs] = useState<string[]>([]);
 
   // Games (maps) state
   type GameInput = {
@@ -227,10 +229,11 @@ function AdminMatchEditPage({ staff }: StaffProps) {
     setSaving(true);
     setErrorMsg(null);
     setSuccessMsg(null);
+    setConflictMsg(null);
 
     try {
-      // 1) Save metadata
-      const payload: Partial<Match> = {
+      // 1) Save metadata (with optimistic locking)
+      const payload: Partial<Match> & { expected_updated_at?: string | null } = {
         status: form.status,
         best_of: form.best_of ? Number(form.best_of) : null,
         round_number: form.round_number ? Number(form.round_number) : null,
@@ -239,6 +242,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
           : null,
         stream_url: form.stream_url.trim() || null,
         notes: form.notes.trim() || null,
+        expected_updated_at: match.updated_at ?? null,
       };
 
       const metaRes = await fetch(`/api/admin/matches/${matchId}`, {
@@ -249,7 +253,27 @@ function AdminMatchEditPage({ staff }: StaffProps) {
 
       if (!metaRes.ok) {
         const json = await metaRes.json().catch(() => ({}));
+        if (metaRes.status === 409 || json.code === 'CONFLICT') {
+          setConflictMsg(
+            json.error ||
+              'Ce match a été modifié par un autre utilisateur. Rechargez la page et réessayez.'
+          );
+          await fetchMatch();
+          return;
+        }
+        if (json.code === 'TOURNAMENT_COMPLETED') {
+          setErrorMsg(json.error);
+          return;
+        }
         throw new Error(json.error || 'Erreur lors de la mise à jour du match');
+      }
+
+      // Check for warnings (e.g., scheduled outside tournament dates)
+      const metaJson = await metaRes.json().catch(() => ({}));
+      if (metaJson.warnings && Array.isArray(metaJson.warnings)) {
+        setWarningMsgs(metaJson.warnings);
+      } else {
+        setWarningMsgs([]);
       }
 
       // 2) Save score if provided
@@ -264,11 +288,20 @@ function AdminMatchEditPage({ staff }: StaffProps) {
             team2Score: Number(form.team2_score),
             status: form.status,
             propagate: true,
+            expected_updated_at: match.updated_at ?? null,
           }),
         });
 
         if (!scoreRes.ok) {
           const json = await scoreRes.json().catch(() => ({}));
+          if (scoreRes.status === 409 || json.code === 'CONFLICT') {
+            setConflictMsg(
+              json.error ||
+                'Ce match a été modifié par un autre utilisateur. Rechargez la page et réessayez.'
+            );
+            await fetchMatch();
+            return;
+          }
           throw new Error(json.error || 'Erreur lors de la mise à jour du score');
         }
       }
@@ -423,6 +456,22 @@ function AdminMatchEditPage({ staff }: StaffProps) {
         </div>
 
         {/* Messages */}
+        {conflictMsg && (
+          <div className="mb-4 rounded bg-amber-900/60 border border-amber-500 px-4 py-3 text-sm flex items-start gap-3">
+            <span className="text-amber-400 text-lg leading-none mt-0.5">&#9888;</span>
+            <div>
+              <p className="font-semibold text-amber-200 mb-1">Modification concurrente</p>
+              <p className="text-amber-100/80">{conflictMsg}</p>
+              <button
+                type="button"
+                onClick={() => { setConflictMsg(null); fetchMatch(); }}
+                className="mt-2 px-3 py-1 rounded bg-amber-700/50 hover:bg-amber-700/80 text-amber-100 text-xs font-medium transition-colors"
+              >
+                Recharger le match
+              </button>
+            </div>
+          </div>
+        )}
         {errorMsg && (
           <div className="mb-4 rounded bg-red-900/60 border border-red-600 px-4 py-3 text-sm">
             {errorMsg}
@@ -431,6 +480,14 @@ function AdminMatchEditPage({ staff }: StaffProps) {
         {successMsg && (
           <div className="mb-4 rounded bg-emerald-900/60 border border-emerald-600 px-4 py-3 text-sm">
             {successMsg}
+          </div>
+        )}
+        {warningMsgs.length > 0 && (
+          <div className="mb-4 rounded bg-amber-900/40 border border-amber-600/60 px-4 py-3 text-sm text-amber-200">
+            <p className="font-semibold mb-1">Avertissements</p>
+            <ul className="list-disc list-inside space-y-0.5">
+              {warningMsgs.map((w, i) => <li key={i}>{w}</li>)}
+            </ul>
           </div>
         )}
 

@@ -8,6 +8,8 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import type { BracketSide } from '@/types/admin';
+import type { MatchForGraph } from '@/types/bracket';
+import { buildBracketGraph, validateBracketGraph } from '@/utils/bracket/buildGraph';
 
 export default withStaffRoute(handler, 'manager');
 
@@ -32,10 +34,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
       return await handleGenerateDoubleElim(tournamentId, req, res, ctx);
     } else if (action === 'save') {
       return await handleSave(tournamentId, req, res, ctx);
+    } else if (action === 'validate') {
+      return await handleValidate(tournamentId, req, res);
     } else {
       return res
         .status(400)
-        .json({ error: "action must be 'generate', 'generate_double_elim', or 'save'" });
+        .json({ error: "action must be 'generate', 'generate_double_elim', 'save', or 'validate'" });
     }
   } catch (err: any) {
     console.error('[/api/admin/tournament/[id]/bracket] error:', err);
@@ -348,6 +352,55 @@ async function handleSave(
   }
 
   return res.status(200).json({ ok: true, updated: matches.length });
+}
+
+/* -----------------------------------------------------------
+ * VALIDATE : détecte les cycles, orphelins et matchs déconnectés
+ *
+ * Body :
+ *  { action: "validate", stageId?: string }
+ * ---------------------------------------------------------*/
+
+async function handleValidate(
+  tournamentId: string,
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  const { stageId } = req.body;
+
+  let query = supabaseAdmin
+    .from('matches')
+    .select(
+      'id, tournament_id, round_number, bracket_side, group_key, next_match_win_id, next_match_lose_id'
+    )
+    .eq('tournament_id', tournamentId)
+    .neq('status', 'cancelled');
+
+  if (stageId && typeof stageId === 'string') {
+    query = query.eq('stage_id', stageId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('bracket validate: fetch error', error);
+    return res.status(500).json({ error: 'Failed to fetch matches' });
+  }
+
+  const matches: MatchForGraph[] = (data || []).map((m: any) => ({
+    id: m.id,
+    tournament_id: m.tournament_id,
+    round_number: m.round_number ?? 0,
+    bracket_side: m.bracket_side ?? 'none',
+    group_key: m.group_key ?? null,
+    next_match_win_id: m.next_match_win_id ?? null,
+    next_match_lose_id: m.next_match_lose_id ?? null,
+  }));
+
+  const graph = buildBracketGraph(matches);
+  const validation = validateBracketGraph(graph);
+
+  return res.status(200).json(validation);
 }
 
 /* -----------------------------------------------------------

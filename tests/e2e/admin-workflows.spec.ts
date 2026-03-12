@@ -518,7 +518,7 @@ test.describe.serial('Admin workflows E2E (API)', () => {
       // Le winner de semi1 doit être dans le slot correspondant de la finale
       const slotField =
         semi1.next_match_win_slot === 1 ? 'team1_id' : 'team2_id';
-      expect(finaleAfter![slotField as keyof typeof finaleAfter]).toBe(
+      expect((finaleAfter as Record<string, unknown>)?.[slotField]).toBe(
         bracketTeamIds[0]
       );
     });

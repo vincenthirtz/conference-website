@@ -66,7 +66,7 @@ test.describe('Tournament map pool CRUD (direct supabase)', () => {
     expect(data![0].map_name).toBe('Busan');
   });
 
-  test('Ajouter plusieurs maps et vérifier l'ordre', async () => {
+  test("Ajouter plusieurs maps et vérifier l'ordre", async () => {
     if (!supabaseTestClient || !tournamentId) return;
 
     const mapsToAdd = [

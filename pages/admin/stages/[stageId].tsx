@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import type { StaffProps, Stage, StageType, Tournament } from '@/types/admin';
+import AdvancementRulesEditor from '@/components/admin/AdvancementRulesEditor';
+import type { AdvancementRules } from '@/components/admin/AdvancementRulesEditor';
 
 type StageApiResponse = {
   stage: Stage;
@@ -174,6 +176,11 @@ function AdminStagePage({ staff }: StaffProps) {
   const [saving, setSaving] = useState(false);
   const [allTournaments, setAllTournaments] = useState<{ id: string; name: string }[]>([]);
 
+  // Advancement rules editor state
+  const [advancementRulesDraft, setAdvancementRulesDraft] = useState<AdvancementRules | null>(null);
+  const [advancementSiblingStages, setAdvancementSiblingStages] = useState<{ id: string; name: string; stage_type: string | null }[]>([]);
+  const [advancementSaving, setAdvancementSaving] = useState(false);
+
   const fetchStage = useCallback(async () => {
     if (!stageId) return;
     setLoading(true);
@@ -195,7 +202,10 @@ function AdminStagePage({ staff }: StaffProps) {
         is_public: s.is_public || false,
       });
 
-      // Charger le tournoi parent
+      // Init advancement rules draft from settings
+      setAdvancementRulesDraft(s.settings?.advancement_rules ?? null);
+
+      // Charger le tournoi parent + sibling stages
       if (s.tournament_id) {
         try {
           const res2 = await fetch(`/api/admin/tournament/${s.tournament_id}`);
@@ -205,6 +215,20 @@ function AdminStagePage({ staff }: StaffProps) {
           }
         } catch (e) {
           console.error('fetch parent tournament error', e);
+        }
+
+        // Fetch sibling stages for advancement target dropdown
+        try {
+          const stagesRes = await fetch(`/api/admin/tournament/${s.tournament_id}/stages`);
+          if (stagesRes.ok) {
+            const stagesJson = await stagesRes.json();
+            const siblings = (stagesJson.stages || [])
+              .filter((st: any) => st.id !== s.id)
+              .map((st: any) => ({ id: st.id, name: st.name, stage_type: st.stage_type }));
+            setAdvancementSiblingStages(siblings);
+          }
+        } catch (e) {
+          console.error('fetch sibling stages error', e);
         }
       }
     } catch (err: any) {
@@ -1125,19 +1149,90 @@ function AdminStagePage({ staff }: StaffProps) {
                     </section>
                   )}
 
-                  {/* Settings JSON */}
+                  {/* Advancement Rules */}
+                  <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
+                    <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                      <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                      </svg>
+                      Regles d&apos;avancement
+                    </h2>
+                    <p className="text-xs text-neutral-500 mb-4">
+                      Configurez comment les equipes avancent automatiquement vers la phase suivante.
+                    </p>
+
+                    <AdvancementRulesEditor
+                      value={advancementRulesDraft}
+                      availableStages={advancementSiblingStages}
+                      onChange={setAdvancementRulesDraft}
+                      disabled={advancementSaving}
+                    />
+
+                    <div className="mt-4 flex justify-end">
+                      <button
+                        type="button"
+                        disabled={advancementSaving}
+                        onClick={async () => {
+                          if (!stageId) return;
+                          setAdvancementSaving(true);
+                          setErrorMsg(null);
+                          setSuccessMsg(null);
+                          try {
+                            const currentSettings = stage.settings ?? {};
+                            const newSettings = { ...currentSettings };
+                            if (advancementRulesDraft) {
+                              newSettings.advancement_rules = advancementRulesDraft;
+                            } else {
+                              delete newSettings.advancement_rules;
+                            }
+                            const res = await fetch(`/api/admin/stages/${stageId}`, {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ settings: newSettings }),
+                            });
+                            if (!res.ok) {
+                              const json = await res.json().catch(() => ({}));
+                              throw new Error(json.error || 'Erreur lors de la sauvegarde');
+                            }
+                            setSuccessMsg('Regles d\'avancement mises a jour.');
+                            await fetchStage();
+                          } catch (err: any) {
+                            setErrorMsg(err?.message ?? 'Erreur inattendue');
+                          } finally {
+                            setAdvancementSaving(false);
+                          }
+                        }}
+                        className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                          advancementSaving
+                            ? 'bg-blue-800 cursor-wait text-blue-200'
+                            : 'bg-blue-600 hover:bg-blue-700 text-white'
+                        }`}
+                      >
+                        {advancementSaving ? 'Sauvegarde...' : 'Enregistrer les regles'}
+                      </button>
+                    </div>
+                  </section>
+
+                  {/* Settings JSON (autres parametres) */}
                   <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
                     <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
                       <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                       </svg>
-                      Configuration (settings)
+                      Configuration avancee (JSON)
                     </h2>
                     <p className="text-xs text-neutral-500 mb-4">
-                      Configuration avancée de la phase (format, options spécifiques...).
+                      Autres parametres de la phase (format, tiebreaker...). Les regles d&apos;avancement sont editables ci-dessus.
                     </p>
                     <pre className="bg-neutral-900/80 border border-neutral-700 rounded-xl p-4 text-xs overflow-x-auto text-neutral-300 font-mono">
-                      {JSON.stringify(stage.settings ?? {}, null, 2)}
+                      {JSON.stringify(
+                        (() => {
+                          const { advancement_rules: _, ...rest } = stage.settings ?? {};
+                          return rest;
+                        })(),
+                        null,
+                        2
+                      )}
                     </pre>
                   </section>
                 </div>

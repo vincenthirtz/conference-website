@@ -171,6 +171,113 @@ export function buildColumnsBySideAndGroup(
 }
 
 /* -----------------------------------------------------------
+ * Validation du graphe : cycles et matchs orphelins
+ * ---------------------------------------------------------*/
+
+export type BracketValidationResult = {
+  valid: boolean;
+  /** IDs des matchs impliqués dans des cycles (liens circulaires) */
+  cycleMatchIds: string[];
+  /** IDs des matchs orphelins (ni root, ni leaf, et sans aucun lien incoming/outgoing) */
+  orphanMatchIds: string[];
+  /** IDs des matchs non connectés au "grand final" (leaf unique) d'un side+group */
+  disconnectedMatchIds: string[];
+};
+
+/**
+ * Valide le graphe de bracket :
+ * - Détecte les cycles (liens circulaires match1→match2→match1)
+ * - Détecte les matchs orphelins (aucun lien entrant ni sortant)
+ * - Détecte les matchs déconnectés (non atteignables depuis les roots)
+ */
+export function validateBracketGraph(graph: BracketGraph): BracketValidationResult {
+  const cycleMatchIds: string[] = [];
+  const orphanMatchIds: string[] = [];
+  const disconnectedMatchIds: string[] = [];
+
+  // 1) Détection d'orphelins : matchs sans lien entrant NI sortant
+  for (const node of Object.values(graph.nodes)) {
+    if (node.incomingFrom.length === 0 && node.outgoingTo.length === 0) {
+      orphanMatchIds.push(node.id);
+    }
+  }
+
+  // 2) Détection de cycles via DFS avec 3 couleurs (white/gray/black)
+  const WHITE = 0, GRAY = 1, BLACK = 2;
+  const color: Record<string, number> = {};
+  for (const id of Object.keys(graph.nodes)) {
+    color[id] = WHITE;
+  }
+
+  const cycleSet = new Set<string>();
+
+  function dfs(nodeId: string): boolean {
+    color[nodeId] = GRAY;
+    const node = graph.nodes[nodeId];
+    if (node) {
+      for (const nextId of node.outgoingTo) {
+        if (color[nextId] === GRAY) {
+          // Back edge → cycle détecté
+          cycleSet.add(nodeId);
+          cycleSet.add(nextId);
+          return true;
+        }
+        if (color[nextId] === WHITE) {
+          if (dfs(nextId)) {
+            cycleSet.add(nodeId);
+          }
+        }
+      }
+    }
+    color[nodeId] = BLACK;
+    return false;
+  }
+
+  for (const id of Object.keys(graph.nodes)) {
+    if (color[id] === WHITE) {
+      dfs(id);
+    }
+  }
+
+  cycleMatchIds.push(...cycleSet);
+
+  // 3) Détection de matchs déconnectés : non atteignables depuis les roots
+  const reachable = new Set<string>();
+  const allRootIds: string[] = [];
+  for (const rootIds of Object.values(graph.rootsBySideAndGroup)) {
+    allRootIds.push(...rootIds);
+  }
+
+  const stack = [...allRootIds];
+  while (stack.length > 0) {
+    const id = stack.pop()!;
+    if (reachable.has(id)) continue;
+    reachable.add(id);
+    const node = graph.nodes[id];
+    if (node) {
+      for (const nextId of node.outgoingTo) {
+        if (!reachable.has(nextId)) {
+          stack.push(nextId);
+        }
+      }
+    }
+  }
+
+  for (const id of Object.keys(graph.nodes)) {
+    if (!reachable.has(id) && !orphanMatchIds.includes(id)) {
+      disconnectedMatchIds.push(id);
+    }
+  }
+
+  return {
+    valid: cycleMatchIds.length === 0 && orphanMatchIds.length === 0 && disconnectedMatchIds.length === 0,
+    cycleMatchIds,
+    orphanMatchIds,
+    disconnectedMatchIds,
+  };
+}
+
+/* -----------------------------------------------------------
  * Helpers pour le front
  * ---------------------------------------------------------*/
 

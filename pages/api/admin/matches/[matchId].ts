@@ -144,6 +144,31 @@ async function handlePut(
     }
   }
 
+  // --- Guard: reject score/meta changes if tournament is completed ---
+  {
+    const { data: matchForGuard } = await supabaseAdmin
+      .from('matches')
+      .select('tournament_id')
+      .eq('id', matchId)
+      .maybeSingle();
+
+    if (matchForGuard?.tournament_id) {
+      const { data: tournament } = await supabaseAdmin
+        .from('tournaments')
+        .select('status')
+        .eq('id', matchForGuard.tournament_id)
+        .maybeSingle();
+
+      if (tournament?.status === 'completed') {
+        return res.status(403).json({
+          error:
+            'Impossible de modifier ce match : le tournoi est terminé (status=completed). Réouvrez le tournoi pour effectuer des modifications.',
+          code: 'TOURNAMENT_COMPLETED',
+        });
+      }
+    }
+  }
+
   if (mode === 'score' || hasScorePayload(req.body)) {
     // --- Update score (avec helper applyMatchScore) ---
     const {
@@ -275,6 +300,34 @@ async function handlePut(
     return res.status(404).json({ error: 'Match not found' });
   }
 
+  // --- Warning: scheduled_at outside tournament date range ---
+  const warnings: string[] = [];
+  const scheduledAtValue = 'scheduled_at' in updatePayload
+    ? updatePayload.scheduled_at
+    : before.scheduled_at;
+
+  if (scheduledAtValue && before.tournament_id) {
+    const { data: tournament } = await supabaseAdmin
+      .from('tournaments')
+      .select('start_date, end_date')
+      .eq('id', before.tournament_id)
+      .maybeSingle();
+
+    if (tournament) {
+      const scheduledTime = new Date(scheduledAtValue).getTime();
+      if (tournament.start_date && scheduledTime < new Date(tournament.start_date).getTime()) {
+        warnings.push(
+          `Le match est planifié avant le début du tournoi (${tournament.start_date})`
+        );
+      }
+      if (tournament.end_date && scheduledTime > new Date(tournament.end_date).getTime()) {
+        warnings.push(
+          `Le match est planifié après la fin du tournoi (${tournament.end_date})`
+        );
+      }
+    }
+  }
+
   const { data: updated, error: updErr } = await supabaseAdmin
     .from('matches')
     .update(updatePayload)
@@ -300,11 +353,15 @@ async function handlePut(
         mode: 'meta',
         before,
         after: updated,
+        ...(warnings.length > 0 ? { warnings } : {}),
       },
     });
   }
 
-  return res.status(200).json({ match: updated });
+  return res.status(200).json({
+    match: updated,
+    ...(warnings.length > 0 ? { warnings } : {}),
+  });
 }
 
 /* -----------------------------------------------------------

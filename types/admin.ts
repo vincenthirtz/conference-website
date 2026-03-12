@@ -153,6 +153,7 @@ export type Match = {
   next_match_win_slot: 1 | 2 | null;
   next_match_lose_id: string | null;
   next_match_lose_slot: 1 | 2 | null;
+  updated_at: string | null;
 };
 
 /* -----------------------------------------------------------

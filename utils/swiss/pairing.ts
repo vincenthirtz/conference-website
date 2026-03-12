@@ -153,6 +153,14 @@ function pickByeIfNeeded(pool: SwissParticipant[]): SwissPairing | null {
  * ---------------------------------------------------------*/
 
 /**
+ * Limite maximale d'itérations pour le backtracking.
+ * Empêche les boucles quasi-infinies avec un grand nombre de participants.
+ * 100 000 itérations suffisent largement pour ~30 équipes ; au-delà,
+ * on tombe sur le fallback greedy (avec rematches possibles).
+ */
+const BACKTRACK_MAX_ITERATIONS = 100_000;
+
+/**
  * Essaie de générer des pairings sans rematch via backtracking.
  *
  * @param ids liste des IDs à apparier (longueur paire)
@@ -165,8 +173,23 @@ function backtrackPairings(
   alreadyPlayed: Record<string, Record<string, boolean>>,
   outPairs: { p1: string; p2: string }[]
 ): boolean {
+  const counter = { value: 0 };
+  return _backtrack(ids, alreadyPlayed, outPairs, counter);
+}
+
+function _backtrack(
+  ids: string[],
+  alreadyPlayed: Record<string, Record<string, boolean>>,
+  outPairs: { p1: string; p2: string }[],
+  counter: { value: number }
+): boolean {
   if (ids.length === 0) {
     return true;
+  }
+
+  counter.value++;
+  if (counter.value > BACKTRACK_MAX_ITERATIONS) {
+    return false; // budget épuisé → fallback greedy
   }
 
   const first = ids[0];
@@ -182,7 +205,7 @@ function backtrackPairings(
 
     outPairs.push({ p1: first, p2: candidate });
 
-    if (backtrackPairings(remaining, alreadyPlayed, outPairs)) {
+    if (_backtrack(remaining, alreadyPlayed, outPairs, counter)) {
       return true;
     }
 

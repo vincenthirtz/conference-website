@@ -192,6 +192,35 @@ async function handler(
     // 5) Appeler l'autoscheduler
     const result = autoScheduleMatches(matchesToSchedule, config);
 
+    // 5b) Vérifier si les matchs planifiés tombent hors des dates du tournoi
+    const warnings: string[] = [];
+    {
+      const { data: tournament } = await supabaseAdmin
+        .from('tournaments')
+        .select('start_date, end_date')
+        .eq('id', tournamentId)
+        .maybeSingle();
+
+      if (tournament) {
+        const startLimit = tournament.start_date ? new Date(tournament.start_date).getTime() : null;
+        const endLimit = tournament.end_date ? new Date(tournament.end_date).getTime() : null;
+        let outOfRange = 0;
+
+        for (const s of result.scheduled) {
+          const t = new Date(s.startAt).getTime();
+          if ((startLimit && t < startLimit) || (endLimit && t > endLimit)) {
+            outOfRange++;
+          }
+        }
+
+        if (outOfRange > 0) {
+          warnings.push(
+            `${outOfRange} match(s) planifié(s) en dehors des dates du tournoi (${tournament.start_date ?? '?'} — ${tournament.end_date ?? '?'})`
+          );
+        }
+      }
+    }
+
     // 6) Appliquer les mises à jour de scheduled_at
     const updates = result.scheduled.map((s) =>
       supabaseAdmin
@@ -240,6 +269,7 @@ async function handler(
       tournamentId,
       scheduled: result.scheduled,
       unscheduledMatchIds: result.unscheduledMatchIds,
+      ...(warnings.length > 0 ? { warnings } : {}),
     };
 
     return res.status(200).json(response);

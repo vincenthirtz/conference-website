@@ -88,6 +88,21 @@ export async function applyMatchScore(
     throw new Error('Match introuvable');
   }
 
+  // 1b) Vérifier que le tournoi n'est pas terminé (completed)
+  if (match.tournament_id) {
+    const { data: tournament } = await supabaseAdmin
+      .from('tournaments')
+      .select('status')
+      .eq('id', match.tournament_id)
+      .maybeSingle();
+
+    if (tournament?.status === 'completed') {
+      throw new Error(
+        'Impossible de modifier le score : le tournoi est terminé (status=completed). Réouvrez le tournoi pour effectuer des modifications.'
+      );
+    }
+  }
+
   const currentStatus: MatchStatus = match.status;
 
   // 2) Déterminer le status cible
