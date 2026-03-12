@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
 import { supabaseClient } from '@/utils/supabase';
 
 export default function AdminResetPasswordPage() {
+  const router = useRouter();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
@@ -11,44 +13,58 @@ export default function AdminResetPasswordPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  function hydrateSessionFromHash() {
-    if (typeof window === 'undefined') return { done: false };
-    const hash = window.location.hash.replace(/^#/, '');
-    const params = new URLSearchParams(hash);
-    const access_token = params.get('access_token');
-    const refresh_token = params.get('refresh_token');
-    if (!access_token || !refresh_token) return { done: false };
-    return {
-      done: true,
-      promise: supabaseClient.auth.setSession({ access_token, refresh_token }),
-    };
-  }
-
   useEffect(() => {
-    const hashed = hydrateSessionFromHash();
-    if (hashed.done && hashed.promise) {
-      hashed.promise
-        .then(({ error }) => {
+    if (!router.isReady) return;
+
+    async function initSession() {
+      // 1) PKCE flow : Supabase envoie ?code=xxx dans la query string
+      const code = router.query.code as string | undefined;
+      if (code) {
+        const { error } = await supabaseClient.auth.exchangeCodeForSession(code);
+        if (error) {
+          setErrorMsg(
+            error.message ||
+              'Impossible de restaurer la session de récupération.'
+          );
+        }
+        setSessionReady(true);
+        return;
+      }
+
+      // 2) Legacy implicit flow : tokens dans le hash fragment
+      if (typeof window !== 'undefined') {
+        const hash = window.location.hash.replace(/^#/, '');
+        const params = new URLSearchParams(hash);
+        const access_token = params.get('access_token');
+        const refresh_token = params.get('refresh_token');
+        if (access_token && refresh_token) {
+          const { error } = await supabaseClient.auth.setSession({
+            access_token,
+            refresh_token,
+          });
           if (error) {
             setErrorMsg(
               error.message ||
                 'Impossible de restaurer la session de récupération.'
             );
           }
-        })
-        .finally(() => setSessionReady(true));
-      return;
-    }
+          setSessionReady(true);
+          return;
+        }
+      }
 
-    supabaseClient.auth.getSession().then(({ error, data }) => {
+      // 3) Fallback : session déjà active (cookie)
+      const { error, data } = await supabaseClient.auth.getSession();
       if (error || !data.session) {
         setErrorMsg(
           "Lien invalide ou session absente. Rouvre le lien de réinitialisation depuis l'email."
         );
       }
       setSessionReady(true);
-    });
-  }, []);
+    }
+
+    initSession();
+  }, [router.isReady, router.query.code]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
