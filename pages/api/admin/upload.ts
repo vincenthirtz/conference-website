@@ -1,12 +1,11 @@
 // pages/api/admin/upload.ts
-// Upload d'image (logo/bannière) vers le serveur
-// Reçoit un fichier en base64 dans le body JSON, sauvegarde dans public/img/teams-images/
+// Upload d'image (logo/bannière) vers Supabase Storage
+// Reçoit un fichier en base64 dans le body JSON, sauvegarde dans le bucket "teams-images"
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { withStaffRoute } from '@/utils/staff';
-import path from 'path';
-import fs from 'fs';
 import crypto from 'crypto';
+import { supabaseAdmin } from '@/utils/supabase';
 
 export const config = {
   api: {
@@ -22,13 +21,17 @@ const ALLOWED_TYPES: Record<string, string> = {
   'image/webp': '.webp',
 };
 
-const UPLOAD_DIR = path.join(process.cwd(), 'public', 'img', 'teams-images');
+const BUCKET = 'teams-images';
 
 export default withStaffRoute(handler, 'manager');
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  if (!supabaseAdmin) {
+    return res.status(500).json({ error: 'Service role key manquante côté serveur.' });
   }
 
   const { data, mimeType, filename } = req.body;
@@ -48,7 +51,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Décoder le base64
   let buffer: Buffer;
   try {
-    // Supprimer le préfixe data:image/...;base64, s'il existe
     const base64Data = data.replace(/^data:[^;]+;base64,/, '');
     buffer = Buffer.from(base64Data, 'base64');
   } catch {
@@ -60,42 +62,39 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(400).json({ error: 'Image trop lourde (max 2 Mo)' });
   }
 
-  // Générer un nom de fichier unique basé sur le nom original ou un hash
+  // Générer un nom de fichier unique
   const hash = crypto.randomBytes(8).toString('hex');
   const safeName = filename
     ? filename
-        .replace(/\.[^.]+$/, '') // retirer l'extension
-        .replace(/[^a-zA-Z0-9_-]/g, '_') // caractères safe uniquement
+        .replace(/\.[^.]+$/, '')
+        .replace(/[^a-zA-Z0-9_-]/g, '_')
         .substring(0, 40)
     : 'logo';
-  const finalFilename = `${safeName}-${hash}${ext}`;
+  const filePath = `${safeName}-${hash}${ext}`;
 
-  // S'assurer que le dossier existe
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+  // Upload vers Supabase Storage
+  const { error: uploadError } = await supabaseAdmin.storage
+    .from(BUCKET)
+    .upload(filePath, buffer, {
+      contentType: mimeType,
+      upsert: false,
+    });
 
-  const filePath = path.join(UPLOAD_DIR, finalFilename);
-
-  // Vérifier que le chemin résolu reste bien dans UPLOAD_DIR (sécurité)
-  const resolvedPath = path.resolve(filePath);
-  if (!resolvedPath.startsWith(path.resolve(UPLOAD_DIR))) {
-    return res.status(400).json({ error: 'Nom de fichier invalide' });
-  }
-
-  try {
-    fs.writeFileSync(resolvedPath, buffer);
-  } catch (err: any) {
-    console.error('[upload] write error:', err);
+  if (uploadError) {
+    console.error('[upload] Supabase Storage error:', uploadError);
     return res.status(500).json({
-      error: "Impossible d'écrire le fichier",
-      detail: err?.message,
-      path: resolvedPath,
+      error: "Impossible d'uploader le fichier",
+      detail: uploadError.message,
     });
   }
 
-  const publicUrl = `/img/teams-images/${finalFilename}`;
+  // Obtenir l'URL publique
+  const { data: publicUrlData } = supabaseAdmin.storage
+    .from(BUCKET)
+    .getPublicUrl(filePath);
 
   return res.status(200).json({
-    url: publicUrl,
-    filename: finalFilename,
+    url: publicUrlData.publicUrl,
+    filename: filePath,
   });
 }
