@@ -113,31 +113,20 @@ async function handler(
           return res.status(404).json({ error: 'Tournoi introuvable' });
         }
 
-        // Get already-registered teams to avoid duplicates
-        const { data: existing } = await supabaseAdmin
+        // Upsert to safely handle concurrent requests (ignore duplicates)
+        const rows = teamIds.map((tid) => ({
+          tournament_id: tournamentId,
+          team_id: tid,
+          status: 'registered',
+        }));
+
+        const { data: upserted, error } = await supabaseAdmin
           .from('tournament_teams')
-          .select('team_id')
-          .eq('tournament_id', tournamentId)
-          .in('team_id', teamIds);
+          .upsert(rows, { onConflict: 'tournament_id,team_id', ignoreDuplicates: true })
+          .select('id');
 
-        const existingIds = new Set((existing || []).map((r: any) => r.team_id));
-        const newTeamIds = teamIds.filter((id) => !existingIds.has(id));
-
-        if (newTeamIds.length > 0) {
-          const rows = newTeamIds.map((tid) => ({
-            tournament_id: tournamentId,
-            team_id: tid,
-            status: 'registered',
-          }));
-
-          const { error } = await supabaseAdmin
-            .from('tournament_teams')
-            .insert(rows);
-
-          if (error) throw error;
-        }
-
-        count = newTeamIds.length;
+        if (error) throw error;
+        count = upserted?.length ?? 0;
         break;
       }
 

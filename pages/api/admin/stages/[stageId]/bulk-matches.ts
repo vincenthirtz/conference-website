@@ -72,6 +72,25 @@ async function handleBulkSchedule(
   }
 
   const results: Array<{ matchId: string; success: boolean; error?: string }> = [];
+  // Track successful updates so we can rollback on partial failure if requested
+  const succeeded: Array<{ matchId: string; previousScheduledAt: string | null }> = [];
+
+  // Snapshot current scheduled_at values for rollback capability
+  const validMatchIds = schedules
+    .filter((e: any) => e.matchId && typeof e.matchId === 'string')
+    .map((e: any) => e.matchId);
+
+  const { data: snapshots } = validMatchIds.length > 0
+    ? await supabaseAdmin
+        .from('matches')
+        .select('id, scheduled_at')
+        .eq('stage_id', stageId)
+        .in('id', validMatchIds)
+    : { data: [] };
+
+  const snapshotMap = new Map(
+    (snapshots || []).map((s: any) => [s.id, s.scheduled_at])
+  );
 
   for (const entry of schedules) {
     if (!entry.matchId || typeof entry.matchId !== 'string') {
@@ -87,7 +106,27 @@ async function handleBulkSchedule(
 
     if (error) {
       results.push({ matchId: entry.matchId, success: false, error: error.message });
+
+      // Rollback all previously successful updates in this batch
+      if (succeeded.length > 0) {
+        for (const prev of succeeded) {
+          await supabaseAdmin
+            .from('matches')
+            .update({ scheduled_at: prev.previousScheduledAt })
+            .eq('id', prev.matchId)
+            .eq('stage_id', stageId);
+        }
+        return res.status(500).json({
+          error: `Partial failure at match ${entry.matchId}. All ${succeeded.length} previous updates have been rolled back.`,
+          failedMatchId: entry.matchId,
+          detail: error.message,
+        });
+      }
     } else {
+      succeeded.push({
+        matchId: entry.matchId,
+        previousScheduledAt: snapshotMap.get(entry.matchId) ?? null,
+      });
       results.push({ matchId: entry.matchId, success: true });
     }
   }

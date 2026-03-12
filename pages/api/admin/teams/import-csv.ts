@@ -152,15 +152,14 @@ async function handler(
       }
     }
 
-    // Register to tournament if specified
+    // Register to tournament if specified (upsert to avoid duplicate constraint violation)
     if (tournamentId) {
       const { error: ttErr } = await supabaseAdmin
         .from('tournament_teams')
-        .insert({
-          tournament_id: tournamentId,
-          team_id: team.id,
-          status: 'registered',
-        });
+        .upsert(
+          { tournament_id: tournamentId, team_id: team.id, status: 'registered' },
+          { onConflict: 'tournament_id,team_id', ignoreDuplicates: true }
+        );
 
       if (ttErr) {
         result.errors.push({

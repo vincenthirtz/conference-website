@@ -352,48 +352,52 @@ async function handleDelete(
     return res.status(404).json({ error: 'Stage not found' });
   }
 
-  // Mode bulk
-  if (Array.isArray(teamIds) && teamIds.length > 0) {
-    const { error } = await supabaseAdmin
-      .from('stage_teams')
-      .delete()
-      .eq('stage_id', stageId)
-      .in('team_id', teamIds);
+  // Resolve list of team IDs to remove
+  const idsToRemove: string[] = Array.isArray(teamIds) && teamIds.length > 0
+    ? teamIds
+    : teamId && typeof teamId === 'string'
+      ? [teamId]
+      : [];
 
-    if (error) {
-      console.error('DELETE bulk stage teams error:', error);
-      return res.status(500).json({ error: 'Failed to remove teams' });
-    }
-
-    if (ctx?.staff?.id) {
-      await logStaffAction({
-        staff_id: ctx.staff.id,
-        action: 'manage_team',
-        entity_type: 'stage_teams',
-        entity_id: stageId,
-        tournament_id: stage.tournament_id,
-        payload: { action: 'bulk_remove', teamIds },
-      });
-    }
-
-    return res.status(200).json({ success: true, removed: teamIds.length });
-  }
-
-  // Mode unitaire
-  if (!teamId || typeof teamId !== 'string') {
+  if (idsToRemove.length === 0) {
     return res.status(400).json({ error: 'Missing teamId or teamIds' });
   }
 
+  // Clean up matches referencing these teams in the same stage
+  // Nullify team slots rather than deleting matches (preserves bracket structure)
+  const [cleanT1, cleanT2] = await Promise.all([
+    supabaseAdmin
+      .from('matches')
+      .update({ team1_id: null, team1_score: null, winner_team_id: null })
+      .eq('stage_id', stageId)
+      .in('team1_id', idsToRemove),
+    supabaseAdmin
+      .from('matches')
+      .update({ team2_id: null, team2_score: null, winner_team_id: null })
+      .eq('stage_id', stageId)
+      .in('team2_id', idsToRemove),
+  ]);
+
+  if (cleanT1.error) {
+    console.error('cleanup matches team1 error:', cleanT1.error);
+  }
+  if (cleanT2.error) {
+    console.error('cleanup matches team2 error:', cleanT2.error);
+  }
+
+  // Delete the stage_teams entries
   const { error } = await supabaseAdmin
     .from('stage_teams')
     .delete()
     .eq('stage_id', stageId)
-    .eq('team_id', teamId);
+    .in('team_id', idsToRemove);
 
   if (error) {
-    console.error('DELETE stage team error:', error);
-    return res.status(500).json({ error: 'Failed to remove team' });
+    console.error('DELETE stage teams error:', error);
+    return res.status(500).json({ error: 'Failed to remove teams' });
   }
+
+  const isBulk = Array.isArray(teamIds) && teamIds.length > 0;
 
   if (ctx?.staff?.id) {
     await logStaffAction({
@@ -402,9 +406,14 @@ async function handleDelete(
       entity_type: 'stage_teams',
       entity_id: stageId,
       tournament_id: stage.tournament_id,
-      payload: { action: 'remove', teamId },
+      payload: isBulk
+        ? { action: 'bulk_remove', teamIds: idsToRemove }
+        : { action: 'remove', teamId: idsToRemove[0] },
     });
   }
 
-  return res.status(200).json({ success: true });
+  return res.status(200).json({
+    success: true,
+    ...(isBulk ? { removed: idsToRemove.length } : {}),
+  });
 }

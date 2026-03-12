@@ -221,10 +221,23 @@ async function handler(
     // In auto mode, mark source stage as completed
     let sourceStageCompleted = false;
     if (isAutoMode && sourceStage.is_active) {
-      await supabaseAdmin
+      const { error: deactivateErr } = await supabaseAdmin
         .from('tournament_stages')
         .update({ is_active: false })
         .eq('id', sourceStageId);
+
+      if (deactivateErr) {
+        // Rollback: remove the teams we just inserted into the target stage
+        console.error('advance deactivate source stage error:', deactivateErr);
+        await supabaseAdmin
+          .from('stage_teams')
+          .delete()
+          .eq('stage_id', targetStageId)
+          .in('team_id', toAdvance);
+        return res.status(500).json({
+          error: 'Failed to deactivate source stage. Advancement rolled back.',
+        });
+      }
       sourceStageCompleted = true;
     }
 

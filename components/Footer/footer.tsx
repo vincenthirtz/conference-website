@@ -386,8 +386,39 @@ function LiveIcon({ className, fill }: Readonly<SVGTypes>): JSX.Element {
   );
 }
 
+function AboutIcon({ className, fill }: Readonly<SVGTypes>): JSX.Element {
+  const stroke = fill || 'currentColor';
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="10"
+        fill="none"
+        stroke={stroke}
+        strokeWidth="1.6"
+      />
+      <line
+        x1="12"
+        y1="11"
+        x2="12"
+        y2="17"
+        stroke={stroke}
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+      <circle cx="12" cy="7.5" r="1" fill={stroke} />
+    </svg>
+  );
+}
+
 const footerLinks: FooterLink[] = [
   { label: 'Live', href: '/live', Icon: LiveIcon },
+  { label: 'À propos', href: '/about', Icon: AboutIcon },
   { label: 'Règlement', href: '/rules', Icon: RulesIcon },
   { label: 'Nous contacter', href: '/contact', Icon: MailIcon },
   { label: 'Faire un don', href: '/don', Icon: DonationIcon },

@@ -257,6 +257,22 @@ async function applyTeamToNextMatchSlot(
     );
   }
 
+  // Vérifier que l'équipe est bien inscrite au tournoi avant de propager
+  if (teamId) {
+    const { data: registration } = await supabaseAdmin
+      .from('tournament_teams')
+      .select('team_id')
+      .eq('tournament_id', tournamentId)
+      .eq('team_id', teamId)
+      .maybeSingle();
+
+    if (!registration) {
+      throw new Error(
+        `Équipe ${teamId} non inscrite au tournoi ${tournamentId}. Propagation annulée.`
+      );
+    }
+  }
+
   // On check que le match suivant appartient bien au même tournoi, par sécurité.
   const field = slot === 1 ? 'team1_id' : 'team2_id';
 

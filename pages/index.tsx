@@ -1,6 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
 import Header from '@/components/Header/header';
-import About from '@/components/About/about';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import HomeNewsSection from '@/components/News/HomeNewsSection';
 import AnnouncementsTicker from '@/components/Ads/AnnouncementsTicker';
@@ -18,9 +17,6 @@ function Home() {
 
       <ActualitesPreviewSection />
       {/* <Popup /> */}
-      <div id="about" className="mt-20">
-        <About />
-      </div>
       <HomeNewsSection />
       <div id="sponsors" className="mt-20"></div>
 
