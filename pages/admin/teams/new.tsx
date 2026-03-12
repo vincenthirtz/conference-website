@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import LogoUpload from '@/components/admin/LogoUpload';
 
 type StaffShape = {
   id: string;
@@ -251,21 +252,11 @@ function AdminNewTeamPage({ staff }: StaffProps) {
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm text-neutral-300 mb-1">
-                      URL du logo
-                    </label>
-                    <input
-                      className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
-                      type="text"
-                      value={logoUrl}
-                      onChange={(e) => setLogoUrl(e.target.value)}
-                      placeholder="https://..."
-                    />
-                    <p className="mt-1 text-xs text-neutral-500">
-                      Idealement un PNG ou WebP carre (512x512).
-                    </p>
-                  </div>
+                  <LogoUpload
+                    value={logoUrl}
+                    onChange={setLogoUrl}
+                    label="Logo de l'équipe"
+                  />
 
                   <div>
                     <label className="block text-sm text-neutral-300 mb-1">

@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Image from 'next/image';
 import { withStaffPage } from '@/utils/staff';
+import LogoUpload from '@/components/admin/LogoUpload';
 import type { StaffProps, TeamRow, TeamMemberRow } from '@/types/admin';
 
 type TournamentRow = {
@@ -604,16 +605,11 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                     </div>
 
                     <div className="grid gap-4 md:grid-cols-2">
-                      <div>
-                        <label className="block text-sm text-neutral-400 mb-1">URL Logo</label>
-                        <input
-                          type="text"
-                          value={logoUrl}
-                          onChange={(e) => setLogoUrl(e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
-                          placeholder="https://..."
-                        />
-                      </div>
+                      <LogoUpload
+                        value={logoUrl}
+                        onChange={setLogoUrl}
+                        label="Logo"
+                      />
                       <div>
                         <label className="block text-sm text-neutral-400 mb-1">URL Bannière</label>
                         <input
