@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import slugify from 'slugify';
 import { supabaseClient } from '@/utils/supabase';
 import { withStaffPage } from '@/utils/staff';
+import LogoUpload from '@/components/admin/LogoUpload';
 
 type Props = {
   staff: {
@@ -173,10 +174,11 @@ export default function AdminNewsEdit({ staff }: Props) {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <Field
-                label="Image (URL)"
+              <LogoUpload
                 value={form.imageUrl}
-                onChange={(v) => updateField('imageUrl', v)}
+                onChange={(url) => updateField('imageUrl', url)}
+                label="Image"
+                hint="PNG, JPEG ou WebP, max 2 Mo."
               />
               <div className="grid gap-2">
                 <label className="text-sm text-neutral-300">Statut</label>

@@ -7,6 +7,7 @@ import { withStaffPage } from '@/utils/staff';
 import { useAutoSave } from '@/utils/useAutoSave';
 import DraftBanner from '@/components/admin/DraftBanner';
 import AutoSaveIndicator from '@/components/admin/AutoSaveIndicator';
+import LogoUpload from '@/components/admin/LogoUpload';
 
 type Props = {
   staff: {
@@ -215,15 +216,11 @@ export default function AdminNewsCreate({ staff }: Props) {
                     </div>
 
                     <div>
-                      <label className="block text-sm text-neutral-300 mb-1">
-                        Image (URL)
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
+                      <LogoUpload
                         value={form.imageUrl}
-                        onChange={(e) => updateField('imageUrl', e.target.value)}
-                        placeholder="https://..."
+                        onChange={(url) => updateField('imageUrl', url)}
+                        label="Image"
+                        hint="PNG, JPEG ou WebP, max 2 Mo."
                       />
                     </div>
                   </div>
