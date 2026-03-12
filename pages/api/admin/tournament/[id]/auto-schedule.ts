@@ -161,20 +161,43 @@ async function handler(
       });
     }
 
-    // 3) Transformer en MatchToSchedule pour l'algo
-    const matchesToSchedule: MatchToSchedule[] = toScheduleRows.map((m) => ({
+    // 3) Inclure les matchs déjà planifiés comme "locked" pour éviter
+    //    le double-booking (une équipe programmée au même créneau)
+    const alreadyScheduledRows = allMatches.filter(
+      (m) => !m.is_bye && m.scheduled_at && m.status !== 'cancelled'
+    );
+
+    const lockedMatches: MatchToSchedule[] = alreadyScheduledRows.map((m) => ({
       id: m.id,
       tournamentId: m.tournament_id,
       stageId: m.stage_id,
       team1Id: m.team1_id,
       team2Id: m.team2_id,
       format: (m.match_format || 'bo3') as MatchFormat,
-      resourceId: null, // on laisse la config définir defaultResourceId
+      resourceId: null,
       roundNumber: m.round_number ?? undefined,
       priority: m.round_number ?? undefined,
-      pinnedStartAt: null,
-      locked: false,
+      pinnedStartAt: m.scheduled_at,
+      locked: true,
     }));
+
+    // Transformer les matchs à scheduler
+    const matchesToSchedule: MatchToSchedule[] = [
+      ...lockedMatches,
+      ...toScheduleRows.map((m) => ({
+        id: m.id,
+        tournamentId: m.tournament_id,
+        stageId: m.stage_id,
+        team1Id: m.team1_id,
+        team2Id: m.team2_id,
+        format: (m.match_format || 'bo3') as MatchFormat,
+        resourceId: null,
+        roundNumber: m.round_number ?? undefined,
+        priority: m.round_number ?? undefined,
+        pinnedStartAt: null as string | null,
+        locked: false,
+      })),
+    ];
 
     // 4) Construire la config de scheduler
     const config: AutoSchedulerConfig = {

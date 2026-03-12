@@ -120,14 +120,21 @@ async function handler(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
 
     const tournamentTeams = tournamentTeamsData || [];
 
-    // Fetch stage teams counts
+    // Fetch stage teams counts in a single query instead of N+1
     const stageTeamCounts = new Map<string, number>();
-    for (const stage of stages) {
-      const { count } = await supabaseAdmin
+    if (stages.length > 0) {
+      const stageIds = stages.map((s) => s.id);
+      const { data: stageTeamsData } = await supabaseAdmin
         .from('stage_teams')
-        .select('*', { count: 'exact', head: true })
-        .eq('stage_id', stage.id);
-      stageTeamCounts.set(stage.id, count ?? 0);
+        .select('stage_id')
+        .in('stage_id', stageIds);
+
+      for (const row of stageTeamsData || []) {
+        stageTeamCounts.set(
+          row.stage_id,
+          (stageTeamCounts.get(row.stage_id) ?? 0) + 1
+        );
+      }
     }
 
     // Build stage progress
@@ -284,6 +291,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
     const completionPercent = totalMatches > 0
       ? Math.round((finishedMatches / totalMatches) * 100)
       : 0;
+
+    // Cache 30s, stale-while-revalidate 60s pour les gros tournois
+    res.setHeader(
+      'Cache-Control',
+      'private, max-age=30, stale-while-revalidate=60'
+    );
 
     return res.status(200).json({
       tournament: {

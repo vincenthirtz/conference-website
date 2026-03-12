@@ -52,6 +52,9 @@ export function computeRequiredWins(format: MatchSeriesFormat): number {
   }
 
   // Fallback safe : 1 victoire
+  console.warn(
+    `[computeRequiredWins] Format inconnu : "${format}". Fallback à 1 victoire requise.`
+  );
   return 1;
 }
 

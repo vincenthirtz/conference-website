@@ -122,6 +122,123 @@ describe('autoScheduleMatches', () => {
     expect(result.scheduled[0].matchId).toBe('m-high');
     expect(result.scheduled[1].matchId).toBe('m-low');
   });
+
+  it('avoids double-booking when locked matches occupy team slots', () => {
+    // m-locked is already scheduled (locked) with teamA at 10:00
+    // m-new also involves teamA → must not overlap with m-locked
+    const matches = [
+      makeMatch('m-locked', {
+        team1Id: 'teamA',
+        team2Id: 'teamB',
+        locked: true,
+        pinnedStartAt: '2026-03-10T10:00:00.000Z',
+        format: 'bo3', // 45 min
+      }),
+      makeMatch('m-new', {
+        team1Id: 'teamA',
+        team2Id: 'teamC',
+        format: 'bo1', // 20 min
+      }),
+    ];
+
+    const config = makeConfig({ teamRestMinutes: 15 });
+    const result = autoScheduleMatches(matches, config);
+
+    expect(result.scheduled).toHaveLength(2);
+
+    const locked = result.scheduled.find((s) => s.matchId === 'm-locked')!;
+    const newMatch = result.scheduled.find((s) => s.matchId === 'm-new')!;
+
+    const lockedEnd = new Date(locked.endAt);
+    const newStart = new Date(newMatch.startAt);
+
+    // m-new must start at least 15 min after m-locked ends (team rest)
+    expect(newStart.getTime()).toBeGreaterThanOrEqual(
+      lockedEnd.getTime() + 15 * 60_000
+    );
+  });
+
+  it('prevents scheduling at same time as locked match for same team', () => {
+    // Two locked matches block teamA from 10:00–10:45 and 11:00–11:45
+    // A new match with teamA must be scheduled after 11:45 + rest
+    const matches = [
+      makeMatch('m-locked-1', {
+        team1Id: 'teamA',
+        team2Id: 'teamX',
+        locked: true,
+        pinnedStartAt: '2026-03-10T10:00:00.000Z',
+        format: 'bo3',
+      }),
+      makeMatch('m-locked-2', {
+        team1Id: 'teamY',
+        team2Id: 'teamA',
+        locked: true,
+        pinnedStartAt: '2026-03-10T11:00:00.000Z',
+        format: 'bo3',
+      }),
+      makeMatch('m-new', {
+        team1Id: 'teamA',
+        team2Id: 'teamZ',
+        format: 'bo1',
+      }),
+    ];
+
+    const config = makeConfig({ teamRestMinutes: 15 });
+    const result = autoScheduleMatches(matches, config);
+
+    expect(result.scheduled).toHaveLength(3);
+
+    const newMatch = result.scheduled.find((s) => s.matchId === 'm-new')!;
+    const locked2 = result.scheduled.find((s) => s.matchId === 'm-locked-2')!;
+    const locked2End = new Date(locked2.endAt);
+    const newStart = new Date(newMatch.startAt);
+
+    // Must start after locked-2 ends + team rest
+    expect(newStart.getTime()).toBeGreaterThanOrEqual(
+      locked2End.getTime() + 15 * 60_000
+    );
+  });
+
+  it('does not double-book when both teams overlap with locked matches', () => {
+    // teamA busy at 10:00, teamB busy at 11:00
+    // A match teamA vs teamB must wait for both to be free
+    const matches = [
+      makeMatch('m-locked-a', {
+        team1Id: 'teamA',
+        team2Id: 'teamX',
+        locked: true,
+        pinnedStartAt: '2026-03-10T10:00:00.000Z',
+        format: 'bo3', // ends ~10:45
+      }),
+      makeMatch('m-locked-b', {
+        team1Id: 'teamB',
+        team2Id: 'teamY',
+        locked: true,
+        pinnedStartAt: '2026-03-10T11:00:00.000Z',
+        format: 'bo3', // ends ~11:45
+      }),
+      makeMatch('m-new', {
+        team1Id: 'teamA',
+        team2Id: 'teamB',
+        format: 'bo1',
+      }),
+    ];
+
+    const config = makeConfig({ teamRestMinutes: 15 });
+    const result = autoScheduleMatches(matches, config);
+
+    expect(result.scheduled).toHaveLength(3);
+
+    const newMatch = result.scheduled.find((s) => s.matchId === 'm-new')!;
+    const lockedB = result.scheduled.find((s) => s.matchId === 'm-locked-b')!;
+    const lockedBEnd = new Date(lockedB.endAt);
+    const newStart = new Date(newMatch.startAt);
+
+    // Must wait for teamB (the later one) + rest
+    expect(newStart.getTime()).toBeGreaterThanOrEqual(
+      lockedBEnd.getTime() + 15 * 60_000
+    );
+  });
 });
 
 describe('makeDayWindow', () => {

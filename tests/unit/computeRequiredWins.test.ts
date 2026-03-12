@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   computeRequiredWins,
   hasTeamReachedRequiredWins,
@@ -25,6 +25,34 @@ describe('computeRequiredWins', () => {
     expect(computeRequiredWins(undefined)).toBe(1);
     expect(computeRequiredWins('unknown')).toBe(1);
     expect(computeRequiredWins('')).toBe(1);
+  });
+
+  it('logs a warning for unknown string formats', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    computeRequiredWins('freeforall');
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Format inconnu')
+    );
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('freeforall')
+    );
+
+    warnSpy.mockRestore();
+  });
+
+  it('does not warn for known formats', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    computeRequiredWins('bo3');
+    computeRequiredWins('bo5');
+    computeRequiredWins('single_map');
+    computeRequiredWins(null);
+    computeRequiredWins(undefined);
+
+    expect(warnSpy).not.toHaveBeenCalled();
+
+    warnSpy.mockRestore();
   });
 
   it('is case-insensitive', () => {

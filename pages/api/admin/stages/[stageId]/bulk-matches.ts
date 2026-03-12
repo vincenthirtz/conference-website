@@ -31,6 +31,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
 
   try {
     switch (req.method) {
+      case 'POST':
+        return await handleBulkUndo(stageId, stage.tournament_id, req, res, ctx);
       case 'PATCH':
         return await handleBulkSchedule(stageId, stage.tournament_id, req, res, ctx);
       case 'PUT':
@@ -149,7 +151,16 @@ async function handleBulkSchedule(
     });
   }
 
-  return res.status(200).json({ results, successCount });
+  // Build undo payload so the client can revert this operation
+  const undoPayload = {
+    type: 'bulk_schedule' as const,
+    snapshots: succeeded.map((s) => ({
+      matchId: s.matchId,
+      fields: { scheduled_at: s.previousScheduledAt },
+    })),
+  };
+
+  return res.status(200).json({ results, successCount, undoPayload });
 }
 
 /* -----------------------------------------------------------
@@ -210,6 +221,15 @@ async function handleBulkUpdate(
     updatePayload.best_of = bo;
   }
 
+  // Snapshot current values for undo
+  const fieldKeys = Object.keys(updatePayload);
+  const selectFields = ['id', ...fieldKeys].join(', ');
+  const { data: snapshotRows } = await supabaseAdmin
+    .from('matches')
+    .select(selectFields)
+    .eq('stage_id', stageId)
+    .in('id', matchIds);
+
   const { error, count } = await supabaseAdmin
     .from('matches')
     .update(updatePayload)
@@ -220,6 +240,18 @@ async function handleBulkUpdate(
     console.error('bulk update matches error:', error);
     return res.status(500).json({ error: 'Failed to update matches' });
   }
+
+  // Build undo payload from snapshots
+  const undoPayload = {
+    type: 'bulk_update' as const,
+    snapshots: (snapshotRows || []).map((row: any) => {
+      const fields: Record<string, unknown> = {};
+      for (const k of fieldKeys) {
+        fields[k] = row[k] ?? null;
+      }
+      return { matchId: row.id as string, fields };
+    }),
+  };
 
   if (ctx?.staff?.id) {
     await logStaffAction({
@@ -241,6 +273,7 @@ async function handleBulkUpdate(
     success: true,
     count: count ?? matchIds.length,
     fields: updatePayload,
+    undoPayload,
   });
 }
 
@@ -267,6 +300,30 @@ async function handleBulkDelete(
     return res.status(400).json({
       error: "Body must include non-empty array 'matchIds'",
     });
+  }
+
+  // Snapshot for undo (only useful for soft cancel, hard delete is irreversible)
+  let undoPayload: { type: string; snapshots: { matchId: string; fields: Record<string, unknown> }[] } | null = null;
+
+  if (!hard) {
+    const { data: snapshotRows } = await supabaseAdmin
+      .from('matches')
+      .select('id, status, team1_score, team2_score, winner_team_id')
+      .eq('stage_id', stageId)
+      .in('id', matchIds);
+
+    undoPayload = {
+      type: 'bulk_cancel',
+      snapshots: (snapshotRows || []).map((row: any) => ({
+        matchId: row.id as string,
+        fields: {
+          status: row.status,
+          team1_score: row.team1_score,
+          team2_score: row.team2_score,
+          winner_team_id: row.winner_team_id,
+        },
+      })),
+    };
   }
 
   if (hard) {
@@ -317,5 +374,90 @@ async function handleBulkDelete(
     success: true,
     count: matchIds.length,
     hard,
+    ...(undoPayload ? { undoPayload } : {}),
   });
+}
+
+/* -----------------------------------------------------------
+ * POST : annulation (undo) d'une opération batch
+ *
+ * Body :
+ *  {
+ *    action: "undo",
+ *    undoPayload: {
+ *      type: "bulk_schedule" | "bulk_update" | "bulk_cancel",
+ *      snapshots: Array<{ matchId: string, fields: Record<string, unknown> }>
+ *    }
+ *  }
+ *
+ * Restaure les valeurs précédentes pour chaque match.
+ * ---------------------------------------------------------*/
+
+async function handleBulkUndo(
+  stageId: string,
+  tournamentId: string,
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: any
+) {
+  const { action, undoPayload } = req.body;
+
+  if (action !== 'undo') {
+    return res.status(400).json({ error: "POST body must include action: 'undo'" });
+  }
+
+  if (
+    !undoPayload ||
+    !undoPayload.type ||
+    !Array.isArray(undoPayload.snapshots) ||
+    undoPayload.snapshots.length === 0
+  ) {
+    return res.status(400).json({
+      error: "Body must include undoPayload with type and non-empty snapshots array",
+    });
+  }
+
+  const snapshots: Array<{ matchId: string; fields: Record<string, unknown> }> =
+    undoPayload.snapshots;
+
+  const results: Array<{ matchId: string; success: boolean; error?: string }> = [];
+
+  for (const snap of snapshots) {
+    if (!snap.matchId || typeof snap.matchId !== 'string' || !snap.fields) {
+      results.push({ matchId: snap.matchId, success: false, error: 'Invalid snapshot entry' });
+      continue;
+    }
+
+    const { error } = await supabaseAdmin
+      .from('matches')
+      .update(snap.fields)
+      .eq('id', snap.matchId)
+      .eq('stage_id', stageId);
+
+    if (error) {
+      results.push({ matchId: snap.matchId, success: false, error: error.message });
+    } else {
+      results.push({ matchId: snap.matchId, success: true });
+    }
+  }
+
+  const successCount = results.filter((r) => r.success).length;
+
+  if (ctx?.staff?.id) {
+    await logStaffAction({
+      staff_id: ctx.staff.id,
+      action: 'staff_batch_action',
+      entity_type: 'match',
+      entity_id: stageId,
+      tournament_id: tournamentId,
+      payload: {
+        action: 'bulk_undo',
+        originalType: undoPayload.type,
+        count: snapshots.length,
+        successCount,
+      },
+    });
+  }
+
+  return res.status(200).json({ success: successCount > 0, results, successCount });
 }
