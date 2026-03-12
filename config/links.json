@@ -19,10 +19,6 @@
     "ref": "/tournament/tournoi-mixte"
   },
   {
-    "title": "Live",
-    "ref": "/live"
-  },
-  {
     "title": "Partenaires",
     "ref": "/partenaires"
   }

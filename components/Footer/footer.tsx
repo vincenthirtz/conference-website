@@ -338,7 +338,56 @@ type FooterLink = {
   external?: boolean;
 };
 
+function LiveIcon({ className, fill }: Readonly<SVGTypes>): JSX.Element {
+  const stroke = fill || 'currentColor';
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="3"
+        fill={stroke}
+        stroke={stroke}
+        strokeWidth="1.6"
+      />
+      <path
+        d="M7.5 7.5a6.4 6.4 0 0 0 0 9"
+        fill="none"
+        stroke={stroke}
+        strokeLinecap="round"
+        strokeWidth="1.6"
+      />
+      <path
+        d="M16.5 7.5a6.4 6.4 0 0 1 0 9"
+        fill="none"
+        stroke={stroke}
+        strokeLinecap="round"
+        strokeWidth="1.6"
+      />
+      <path
+        d="M4.5 4.5a11 11 0 0 0 0 15"
+        fill="none"
+        stroke={stroke}
+        strokeLinecap="round"
+        strokeWidth="1.6"
+      />
+      <path
+        d="M19.5 4.5a11 11 0 0 1 0 15"
+        fill="none"
+        stroke={stroke}
+        strokeLinecap="round"
+        strokeWidth="1.6"
+      />
+    </svg>
+  );
+}
+
 const footerLinks: FooterLink[] = [
+  { label: 'Live', href: '/live', Icon: LiveIcon },
   { label: 'Règlement', href: '/rules', Icon: RulesIcon },
   { label: 'Nous contacter', href: '/contact', Icon: MailIcon },
   { label: 'Faire un don', href: '/don', Icon: DonationIcon },
