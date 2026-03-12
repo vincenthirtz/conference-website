@@ -49,7 +49,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   let buffer: Buffer;
   try {
     // Supprimer le préfixe data:image/...;base64, s'il existe
-    const base64Data = data.replace(/^data:image\/\w+;base64,/, '');
+    const base64Data = data.replace(/^data:[^;]+;base64,/, '');
     buffer = Buffer.from(base64Data, 'base64');
   } catch {
     return res.status(400).json({ error: 'Données base64 invalides' });
@@ -85,7 +85,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     fs.writeFileSync(resolvedPath, buffer);
   } catch (err: any) {
     console.error('[upload] write error:', err);
-    return res.status(500).json({ error: "Impossible d'écrire le fichier" });
+    return res.status(500).json({
+      error: "Impossible d'écrire le fichier",
+      detail: err?.message,
+      path: resolvedPath,
+    });
   }
 
   const publicUrl = `/img/teams-images/${finalFilename}`;
