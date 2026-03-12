@@ -199,7 +199,8 @@ function computeSwissStageStandings(
  * Group / Round Robin standings
  * ---------------------------------------------------------*/
 
-function computeGroupStandings(
+/** @internal Exported for testing */
+export function computeGroupStandings(
   stageTeams: StageTeamRow[],
   finishedMatches: DbMatch[]
 ): StageStanding[] {
@@ -285,7 +286,8 @@ function computeGroupStandings(
  * Bracket standings (based on elimination round)
  * ---------------------------------------------------------*/
 
-function computeBracketStandings(
+/** @internal Exported for testing */
+export function computeBracketStandings(
   stageTeams: StageTeamRow[],
   finishedMatches: DbMatch[],
   allMatches: DbMatch[]
