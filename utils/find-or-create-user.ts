@@ -82,11 +82,17 @@ export async function findOrCreateUserByEmail(
 }
 
 function generatePassword(length = 16) {
-  const buffer = crypto.randomBytes(length);
   const alphabet =
     'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz0123456789!@$%^*';
-  return Array.from(buffer)
-    .map((byte) => alphabet[byte % alphabet.length])
-    .join('')
-    .slice(0, length);
+  const maxValid = 256 - (256 % alphabet.length);
+  const result: string[] = [];
+  while (result.length < length) {
+    const bytes = crypto.randomBytes(length - result.length);
+    for (const byte of bytes) {
+      if (byte < maxValid && result.length < length) {
+        result.push(alphabet[byte % alphabet.length]);
+      }
+    }
+  }
+  return result.join('');
 }

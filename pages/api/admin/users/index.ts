@@ -5,12 +5,13 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import crypto from 'crypto';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
+import { sendWelcomeEmail } from '@/utils/email';
 
 type CreateUserResponse =
   | {
       userId: string;
       email: string;
-      tempPassword?: string;
+      passwordSentByEmail: boolean;
     }
   | { error: string };
 
@@ -25,9 +26,7 @@ async function handler(
   }
 
   if (!supabaseAdmin) {
-    return res
-      .status(500)
-      .json({ error: 'Supabase service role not configured' });
+    return res.status(503).json({ error: 'Service unavailable.' });
   }
 
   const { email, password, display_name, role } = req.body || {};
@@ -57,28 +56,43 @@ async function handler(
       console.error('[/api/admin/users] createUser error:', error);
       return res
         .status(500)
-        .json({ error: error?.message || 'Failed to create user' });
+        .json({ error: 'Failed to create user' });
+    }
+
+    // Send password by email only — never expose it in the API response
+    let passwordSentByEmail = false;
+    try {
+      await sendWelcomeEmail(safeEmail, plainPassword);
+      passwordSentByEmail = true;
+    } catch (emailErr) {
+      console.error('[/api/admin/users] welcome email error:', emailErr);
     }
 
     return res.status(201).json({
       userId: data.user.id,
       email: safeEmail,
-      tempPassword: plainPassword,
+      passwordSentByEmail,
     });
   } catch (err: any) {
     console.error('[/api/admin/users] internal error:', err);
     return res
       .status(500)
-      .json({ error: err?.message || 'Internal server error' });
+      .json({ error: 'Internal server error' });
   }
 }
 
 function generatePassword(length = 16) {
-  const buffer = crypto.randomBytes(length);
   const alphabet =
     'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz0123456789!@$%^*';
-  return Array.from(buffer)
-    .map((byte) => alphabet[byte % alphabet.length])
-    .join('')
-    .slice(0, length);
+  const maxValid = 256 - (256 % alphabet.length);
+  const result: string[] = [];
+  while (result.length < length) {
+    const bytes = crypto.randomBytes(length - result.length);
+    for (const byte of bytes) {
+      if (byte < maxValid && result.length < length) {
+        result.push(alphabet[byte % alphabet.length]);
+      }
+    }
+  }
+  return result.join('');
 }

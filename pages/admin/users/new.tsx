@@ -271,16 +271,13 @@ function AdminCreateUserPage({ staff }: StaffProps) {
                         {success.user.email}
                       </span>
                     </p>
-                    {success.user.tempPassword && (
-                      <p className="text-amber-300">
-                        Mot de passe :{' '}
-                        <span className="font-mono text-xs bg-amber-900/50 px-2 py-0.5 rounded border border-amber-500/30">
-                          {success.user.tempPassword}
-                        </span>
-                        <br />
-                        <span className="text-xs text-amber-400">
-                          Notez-le, il ne sera pas affiché à nouveau.
-                        </span>
+                    {success.user.passwordSentByEmail ? (
+                      <p className="text-emerald-300 text-xs">
+                        Le mot de passe a été envoyé par email à l&apos;utilisateur.
+                      </p>
+                    ) : (
+                      <p className="text-amber-300 text-xs">
+                        L&apos;email de bienvenue n&apos;a pas pu être envoyé. Utilisez &quot;Renvoyer les identifiants&quot; depuis la gestion des utilisateurs.
                       </p>
                     )}
                   </div>
