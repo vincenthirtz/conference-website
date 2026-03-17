@@ -4,6 +4,7 @@ import {
   partnershipRequestSchema,
   formatZodError,
 } from '@/utils/validation';
+import { applyRateLimit } from '@/utils/rateLimit';
 
 export default async function handler(
   req: NextApiRequest,
@@ -19,6 +20,9 @@ export default async function handler(
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  // Rate limiting: 5 requests per hour
+  if (applyRateLimit(req, res, { max: 5, windowMs: 60 * 60 * 1000 }, 'partnership')) return;
 
   // Validation
   const parsed = partnershipRequestSchema.safeParse(req.body);

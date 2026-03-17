@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin, getServerClient } from '@/utils/supabase';
+import { applyRateLimit } from '@/utils/rateLimit';
 
 type Comment = {
   id: string;
@@ -76,6 +77,9 @@ async function createComment(
       .status(500)
       .json({ error: 'Supabase service role missing for comments' });
   }
+
+  // Rate limiting: 10 comments per 10 minutes
+  if (applyRateLimit(req, res, { max: 10, windowMs: 10 * 60 * 1000 }, 'comments')) return;
 
   const { newsId, content, authorName, honeypot, captcha } = req.body || {};
   const trimmedContent = (content || '').toString().trim();

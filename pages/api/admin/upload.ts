@@ -23,6 +23,21 @@ const ALLOWED_TYPES: Record<string, string> = {
 
 const BUCKET = 'teams-images';
 
+// Magic bytes signatures for allowed image types
+const MAGIC_BYTES: Record<string, number[][]> = {
+  'image/png': [[0x89, 0x50, 0x4e, 0x47]],
+  'image/jpeg': [[0xff, 0xd8, 0xff]],
+  'image/webp': [[0x52, 0x49, 0x46, 0x46]], // RIFF header
+};
+
+function validateMagicBytes(buffer: Buffer, mimeType: string): boolean {
+  const signatures = MAGIC_BYTES[mimeType];
+  if (!signatures) return false;
+  return signatures.some((sig) =>
+    sig.every((byte, i) => buffer[i] === byte)
+  );
+}
+
 export default withStaffRoute(handler, 'manager');
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -60,6 +75,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Vérifier la taille (max 2 Mo)
   if (buffer.length > 2 * 1024 * 1024) {
     return res.status(400).json({ error: 'Image trop lourde (max 2 Mo)' });
+  }
+
+  // Vérifier les magic bytes (le contenu correspond bien au type MIME déclaré)
+  if (!validateMagicBytes(buffer, mimeType)) {
+    return res.status(400).json({
+      error: 'Le contenu du fichier ne correspond pas au type MIME déclaré.',
+    });
   }
 
   // Générer un nom de fichier unique

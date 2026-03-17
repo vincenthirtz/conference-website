@@ -1,27 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { contactSchema, formatZodError } from '@/utils/validation';
 import { sendEmail } from '@/utils/email';
+import { applyRateLimit } from '@/utils/rateLimit';
 
 const CONTACT_EMAIL = 'owwomenscup@gmail.com';
-
-// Simple in-memory rate limiting (resets on server restart)
-const rateLimitMap = new Map<string, number[]>();
-const RATE_LIMIT_MAX = 5;
-const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const timestamps = rateLimitMap.get(ip) ?? [];
-  const recent = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
-  rateLimitMap.set(ip, recent);
-  return recent.length >= RATE_LIMIT_MAX;
-}
-
-function recordRequest(ip: string) {
-  const timestamps = rateLimitMap.get(ip) ?? [];
-  timestamps.push(Date.now());
-  rateLimitMap.set(ip, timestamps);
-}
 
 function escapeHtml(str: string): string {
   return str
@@ -40,18 +22,8 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Get IP for rate limiting
-  const ip =
-    (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
-    req.socket.remoteAddress ||
-    'unknown';
-
-  // Rate limiting
-  if (isRateLimited(ip)) {
-    return res.status(429).json({
-      error: 'Trop de messages envoyés. Réessaie dans une heure.',
-    });
-  }
+  // Rate limiting: 5 requests per hour
+  if (applyRateLimit(req, res, { max: 5, windowMs: 60 * 60 * 1000 }, 'contact')) return;
 
   // Validation
   const parsed = contactSchema.safeParse(req.body);
@@ -93,8 +65,6 @@ export default async function handler(
     console.error('[api/contact] email send error:', result.error);
     return res.status(500).json({ error: "Erreur lors de l'envoi du message." });
   }
-
-  recordRequest(ip);
 
   return res.status(201).json({
     ok: true,
