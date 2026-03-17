@@ -434,104 +434,93 @@ const footerLinks: FooterLink[] = [
     href: '/plan-du-site',
     Icon: SitemapIcon,
   },
-  {
-    label: 'Déploiements',
-    href: '/builds',
-    Icon: DeployIcon,
-  },
 ];
 
 function Footer(): JSX.Element {
   return (
-    <div
-      className="container relative overflow-hidden"
+    <footer
+      className="w-full bg-[#130d22] border-t border-white/5 pt-12 pb-6 px-4"
       data-test="footer"
     >
-      <div className="relative z-10">
-        <div
-          className="w-full flex justify-between items-center p-4 sm:flex-col sm:gap-3"
-          data-test="footer-asyncAPI-logo"
-        >
-          <div className="flex items-center justify-center gap-4 mb-3">
+      <div className="max-w-5xl mx-auto flex flex-col items-center gap-8">
+        {/* Social links */}
+        <div className="flex items-center gap-5 flex-wrap justify-center">
+          <a
+            href="https://www.tiktok.com/@ow_womenscup"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors"
+          >
+            <svg
+              className="w-5 h-5"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 0 0-.79-.05A6.34 6.34 0 0 0 3.15 15a6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.34-6.34V8.71a8.21 8.21 0 0 0 4.76 1.51v-3.45a4.85 4.85 0 0 1-1-.08Z" />
+            </svg>
+            <span className="text-sm">TikTok</span>
+          </a>
+          {socials.map((social: SocialWithIcon) => {
+            const IconComponent = social.icon;
+            return (
+              <a
+                key={social.name}
+                href={social.href}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors"
+              >
+                <IconComponent className="w-5 h-5" fill="currentColor" />
+                <span className="text-sm">{social.name}</span>
+              </a>
+            );
+          })}
+        </div>
+
+        {/* Navigation links */}
+        <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
+          {footerLinks.map(({ label, href, Icon, external }) => {
+            const linkClass =
+              'flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors';
+
+            const linkContent = (
+              <>
+                <Icon className="w-4 h-4" fill="currentColor" />
+                <span>{label}</span>
+              </>
+            );
+
+            return external ? (
+              <a key={label} href={href} className={linkClass}>
+                {linkContent}
+              </a>
+            ) : (
+              <Link key={label} href={href} className={linkClass}>
+                {linkContent}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Bottom */}
+        <div className="flex flex-col items-center gap-3 text-xs text-gray-500">
+          <span className="text-center">
+            Association WOMEN&apos;S CUP &mdash; Tous droits réservés &mdash;
+            Fait avec ❤️ par{' '}
             <a
-              href="https://www.tiktok.com/@ow_womenscup"
+              href="https://www.twitch.tv/arukdo"
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-1.5 text-white hover:underline duration-200 ease-in-out"
+              className="text-gray-400 hover:text-white transition-colors"
             >
-              <svg
-                className="w-5 h-5"
-                viewBox="0 0 24 24"
-                fill="white"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 0 0-.79-.05A6.34 6.34 0 0 0 3.15 15a6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.34-6.34V8.71a8.21 8.21 0 0 0 4.76 1.51v-3.45a4.85 4.85 0 0 1-1-.08Z" />
-              </svg>
-              <span className="text-[14px]">TikTok</span>
+              Arukdo
             </a>
-            {socials.map((social: SocialWithIcon) => {
-              const IconComponent = social.icon;
-              return (
-                <a
-                  key={social.name}
-                  href={social.href}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-1.5 text-white hover:underline duration-200 ease-in-out"
-                >
-                  <IconComponent className="w-5 h-5" fill="white" />
-                  <span className="text-[14px]">{social.name}</span>
-                </a>
-              );
-            })}
-          </div>
-          <div className="mt-2 text-[14px] text-gray-100 ">
-            <div className="flex items-center gap-6">
-              {footerLinks.map(({ label, href, Icon, external }) => {
-                const linkContent = (
-                  <>
-                    <span>{label}</span>
-                    <Icon className="w-4 h-4 ml-2" fill="white" />
-                  </>
-                );
-
-                const linkClass =
-                  'hover:underline text-white duration-200 ease-in-out flex items-center';
-
-                return external ? (
-                  <a key={label} href={href} className={linkClass}>
-                    {linkContent}
-                  </a>
-                ) : (
-                  <Link key={label} href={href} className={linkClass}>
-                    {linkContent}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-          <div></div>
-          <div className="flex items-center justify-between sm:flex-col sm:items-center">
-            <div className="text-white text-center flex items-center gap-2 flex-wrap justify-center">
-              <span>
-                Association WOMEN&apos;S CUP - Tous droits réservés - Fait avec
-                ❤️ par{' '}
-                <a
-                  href="https://www.twitch.tv/arukdo"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Arukdo
-                </a>
-                .
-              </span>
-              <span className="hidden sm:inline">|</span>
-              <CookieSettingsButton />
-            </div>
-          </div>
+          </span>
+          <CookieSettingsButton />
         </div>
       </div>
-    </div>
+    </footer>
   );
 }
 
