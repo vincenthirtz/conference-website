@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { load } from 'cheerio';
 import { supabaseAdmin } from '@/utils/supabase';
+import { applyRateLimit } from '@/utils/rateLimit';
 
 const MEDIA_URL = 'https://overwatch.blizzard.com/fr-fr/media/';
 const BASE_URL = 'https://overwatch.blizzard.com';
@@ -1488,6 +1489,9 @@ export default async function handler(
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  // Rate limiting: 20 requests per minute (scraping is expensive)
+  if (applyRateLimit(req, res, { max: 20, windowMs: 60 * 1000 }, 'blizzard-media')) return;
 
   const type = req.query.type as MediaType | undefined;
   const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);

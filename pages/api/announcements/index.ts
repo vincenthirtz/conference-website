@@ -15,6 +15,17 @@ type AnnouncementRow = {
   updated_at: string;
 };
 
+function sanitizeUrl(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    if (['http:', 'https:'].includes(parsed.protocol)) return url;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -53,7 +64,7 @@ export default async function handler(
       title: row.title,
       message: row.message,
       ctaLabel: row.cta_label,
-      ctaUrl: row.cta_url,
+      ctaUrl: sanitizeUrl(row.cta_url),
       priority: row.priority ?? 0,
       startsAt: row.starts_at,
       endsAt: row.ends_at,

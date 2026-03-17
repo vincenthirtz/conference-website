@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import crypto from 'crypto';
 import { supabaseAdmin } from '@/utils/supabase';
 
 type Body = {
@@ -31,19 +32,15 @@ export default async function handler(
   }
 
   if (!DISCORD_TEAM_SECRET) {
-    return res
-      .status(500)
-      .json({ error: 'Discord shared secret not configured' });
+    return res.status(503).json({ error: 'Service unavailable.' });
   }
 
   if (!supabaseAdmin) {
-    return res
-      .status(500)
-      .json({ error: 'Supabase service role not configured' });
+    return res.status(503).json({ error: 'Service unavailable.' });
   }
 
   const token = extractToken(req);
-  if (token !== DISCORD_TEAM_SECRET) {
+  if (!token || !safeEqual(token, DISCORD_TEAM_SECRET)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -175,4 +172,11 @@ function extractToken(req: NextApiRequest) {
   const raw = Array.isArray(auth) ? auth[0] : auth;
   if (!raw) return null;
   return raw.startsWith('Bearer ') ? raw.slice(7).trim() : raw.trim();
+}
+
+function safeEqual(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
 }

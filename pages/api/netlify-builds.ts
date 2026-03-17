@@ -25,13 +25,17 @@ type Build = {
 };
 
 export default async function handler(
-  _req: NextApiRequest,
+  req: NextApiRequest,
   res: NextApiResponse
 ) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   if (!NETLIFY_SITE_ID || !NETLIFY_API_TOKEN) {
-    return res.status(500).json({
-      error:
-        'NETLIFY_SITE_ID et NETLIFY_API_TOKEN doivent être configurés pour lister les builds.',
+    return res.status(503).json({
+      error: 'Service unavailable.',
     });
   }
 
@@ -44,10 +48,10 @@ export default async function handler(
   });
 
   if (!apiRes.ok) {
-    const text = await apiRes.text();
+    console.error('[netlify-builds] API error:', apiRes.status);
     return res
-      .status(apiRes.status)
-      .json({ error: 'Netlify API error', details: text });
+      .status(502)
+      .json({ error: 'Failed to fetch builds.' });
   }
 
   const builds = (await apiRes.json()) as Build[];

@@ -58,9 +58,7 @@ export default async function handler(
   }
 
   if (!CLIENT_ID || !CLIENT_SECRET) {
-    return res.status(500).json({
-      error: 'Twitch API credentials missing (TWITCH_CLIENT_ID / TWITCH_CLIENT_SECRET)',
-    });
+    return res.status(503).json({ error: 'Service unavailable.' });
   }
 
   const channelsParam = req.query.channels;
@@ -74,6 +72,10 @@ export default async function handler(
 
   if (cleanChannels.length === 0) {
     return res.status(400).json({ error: 'channels query param required' });
+  }
+
+  if (cleanChannels.length > 100) {
+    return res.status(400).json({ error: 'Maximum 100 channels allowed.' });
   }
 
   try {

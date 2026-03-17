@@ -72,7 +72,11 @@ export default async function handler(
 
     const teamId = body.teamId.trim();
     const tournamentId = body.tournamentId.trim();
-    const message = body.message?.trim() || null;
+    const rawMessage = body.message?.trim() || null;
+    if (rawMessage && rawMessage.length > 1000) {
+      return res.status(400).json({ error: 'Message trop long (max 1000 caractères).' });
+    }
+    const message = rawMessage?.slice(0, 1000) || null;
 
     // Verify team exists and user is captain
     const { data: team, error: teamErr } = await supabaseAdmin
