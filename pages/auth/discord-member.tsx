@@ -10,7 +10,9 @@ export default function DiscordMemberRedirect() {
   useEffect(() => {
     const ensureRole = async () => {
       try {
-        const next = (router.query.next as string) || '/';
+        // Validate redirect target to prevent open redirects
+        const rawNext = (router.query.next as string) || '/';
+        const next = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/';
         const code = router.query.code as string | undefined;
         const state = router.query.state as string | undefined;
 

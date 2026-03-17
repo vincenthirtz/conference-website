@@ -6,6 +6,7 @@ import {
   listUsersEmailMap,
 } from '@/utils/find-or-create-user';
 import { sendTeamJoinEmail } from '@/utils/email';
+import { applyRateLimit } from '@/utils/rateLimit';
 
 type Body = {
   name?: string;
@@ -57,10 +58,11 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Rate limiting: 5 team creations per hour
+  if (applyRateLimit(req, res, { max: 5, windowMs: 60 * 60 * 1000 }, 'create-team')) return;
+
   if (!supabaseAdmin) {
-    return res
-      .status(500)
-      .json({ error: 'Supabase service role not configured' });
+    return res.status(503).json({ error: 'Service unavailable.' });
   }
 
   const body: Body = req.body || {};

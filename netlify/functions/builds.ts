@@ -27,11 +27,8 @@ type Build = {
 export const handler: Handler = async () => {
   if (!NETLIFY_SITE_ID || !NETLIFY_API_TOKEN) {
     return {
-      statusCode: 500,
-      body: JSON.stringify({
-        error:
-          'NETLIFY_SITE_ID et NETLIFY_API_TOKEN doivent être configurés pour lister les builds.',
-      }),
+      statusCode: 503,
+      body: JSON.stringify({ error: 'Service unavailable.' }),
     };
   }
 
@@ -44,10 +41,10 @@ export const handler: Handler = async () => {
   });
 
   if (!res.ok) {
-    const text = await res.text();
+    console.error('[netlify/builds] API error:', res.status);
     return {
-      statusCode: res.status,
-      body: JSON.stringify({ error: 'Erreur API Netlify', details: text }),
+      statusCode: 502,
+      body: JSON.stringify({ error: 'Failed to fetch builds.' }),
     };
   }
 

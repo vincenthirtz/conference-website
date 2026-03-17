@@ -8,6 +8,7 @@ import {
   listUsersEmailMap,
 } from '@/utils/find-or-create-user';
 import { sendTeamJoinEmail } from '@/utils/email';
+import { applyRateLimit } from '@/utils/rateLimit';
 
 type AddMemberResponse =
   | {
@@ -27,6 +28,9 @@ export default async function handler(
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  // Rate limiting: 10 member additions per 10 minutes
+  if (applyRateLimit(req, res, { max: 10, windowMs: 10 * 60 * 1000 }, 'add-member')) return;
 
   if (!supabaseAdmin) {
     return res.status(500).json({ error: 'Supabase admin not configured' });

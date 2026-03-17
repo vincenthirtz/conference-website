@@ -76,8 +76,8 @@ export default function AdminResetPasswordPage() {
       return;
     }
 
-    if (password.trim().length < 6) {
-      setErrorMsg('Le mot de passe doit contenir au moins 6 caractères.');
+    if (password.trim().length < 8) {
+      setErrorMsg('Le mot de passe doit contenir au moins 8 caractères.');
       return;
     }
     if (password !== confirm) {
@@ -149,6 +149,8 @@ export default function AdminResetPasswordPage() {
                   <input
                     id="password"
                     type="password"
+                    autoComplete="new-password"
+                    minLength={8}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -167,6 +169,8 @@ export default function AdminResetPasswordPage() {
                   <input
                     id="confirm"
                     type="password"
+                    autoComplete="new-password"
+                    minLength={8}
                     required
                     value={confirm}
                     onChange={(e) => setConfirm(e.target.value)}

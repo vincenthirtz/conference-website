@@ -18,12 +18,13 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<MeResponse>
 ) {
+  // Prevent caching of sensitive staff data
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+
   // 0) Vérifier que le client admin est dispo (service role non configuré)
   const adminClient = supabaseAdmin;
   if (!adminClient) {
-    console.error(
-      '[/api/admin/me] supabaseAdmin non configuré. Vérifie SUPABASE_SERVICE_ROLE_KEY.'
-    );
+    console.error('[/api/admin/me] supabaseAdmin non configuré.');
     return res.status(500).json({
       error:
         'Supabase configuration incomplete (missing service role). Add SUPABASE_SERVICE_ROLE_KEY.',

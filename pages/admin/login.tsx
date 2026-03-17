@@ -47,9 +47,7 @@ const AdminLoginPage = () => {
         if (res.status === 401 || res.status === 403) {
           await supabaseClient.auth.signOut();
           if (!cancelled) {
-            setError(
-              "Ton compte n'a pas d'accès staff. Contacte un admin si c'est une erreur."
-            );
+            setError('Email ou mot de passe incorrect.');
           }
         }
       } catch (err) {
@@ -100,19 +98,12 @@ const AdminLoginPage = () => {
           await supabaseClient.auth.signOut();
         }
 
-        throw new Error(
-          me?.error ||
-            (res.status === 401
-              ? 'Session expirée. Merci de te reconnecter.'
-              : res.status === 403
-                ? "Ton compte n'a pas d'accès staff."
-                : 'Impossible de vérifier ton rôle staff.')
-        );
+        throw new Error('Email ou mot de passe incorrect.');
       }
 
       if (!me?.role) {
         await supabaseClient.auth.signOut();
-        setError("Ton compte n'a pas d'accès staff.");
+        setError('Email ou mot de passe incorrect.');
         return;
       }
 
