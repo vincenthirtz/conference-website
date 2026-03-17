@@ -72,21 +72,7 @@ export default function AnnouncementsTicker() {
     [items, index]
   );
 
-  if (!current) {
-    return (
-      <div className="w-full px-4 mt-6">
-        <div className="rounded-2xl border border-white/10 bg-gradient-to-r from-[#0f172a] via-[#111827] to-[#0b1220] shadow-2xl px-5 py-3">
-          {loading ? (
-            <div className="h-4 w-32 bg-white/10 rounded animate-pulse" />
-          ) : (
-            <div className="text-sm text-gray-300">
-              {error || 'Aucune annonce pour le moment.'}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
+  if (!current) return null;
 
   return (
     <div className="w-full px-4 mt-6">
