@@ -4,6 +4,7 @@ import Footer from '@/components/Footer/footer';
 import BackToTopButton from '@/components/Buttons/BackToTopButton';
 import { CookieBanner } from '@/components/CookieBanner';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import FloatingSocials from '@/components/Socials/FloatingSocials';
 import type { AppProps } from 'next/app';
 import { useEffect, useState } from 'react';
 import DefaultSeo, { SeoProps } from '@/components/Seo/DefaultSeo';
@@ -29,6 +30,7 @@ function MyApp({ Component, pageProps }: AppPropsWithSeo) {
         <Navbar />
         <Component {...pageProps} />
         <Footer />
+        <FloatingSocials />
         <BackToTopButton />
         <CookieBanner />
       </div>
