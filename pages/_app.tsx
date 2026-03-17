@@ -13,7 +13,7 @@ type AppPropsWithSeo = AppProps & {
   Component: AppProps['Component'] & { seo?: SeoProps };
 };
 
-function MyApp({ Component, pageProps }: AppPropsWithSeo) {
+function MyApp({ Component, pageProps, router }: AppPropsWithSeo) {
   const [isClient, setIsClient] = useState(false);
   useEffect(() => {
     setIsClient(true);
@@ -22,6 +22,7 @@ function MyApp({ Component, pageProps }: AppPropsWithSeo) {
   if (!isClient) return <></>;
 
   const seo = (Component as any)?.seo as SeoProps | undefined;
+  const isAdmin = router.pathname.startsWith('/admin');
 
   return (
     <ErrorBoundary>
@@ -30,7 +31,7 @@ function MyApp({ Component, pageProps }: AppPropsWithSeo) {
         <Navbar />
         <Component {...pageProps} />
         <Footer />
-        <FloatingSocials />
+        {!isAdmin && <FloatingSocials />}
         <BackToTopButton />
         <CookieBanner />
       </div>
