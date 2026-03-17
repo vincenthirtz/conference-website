@@ -61,7 +61,7 @@ async function listComments(
     console.error('[/api/news/comments] list error:', error);
     return res
       .status(500)
-      .json({ error: error.message || 'Failed to fetch comments' });
+      .json({ error: 'Failed to fetch comments' });
   }
 
   return res.status(200).json({ items: data || [] });
@@ -75,7 +75,7 @@ async function createComment(
   if (!client) {
     return res
       .status(500)
-      .json({ error: 'Supabase service role missing for comments' });
+      .json({ error: 'Service unavailable.' });
   }
 
   // Rate limiting: 10 comments per 10 minutes
@@ -106,6 +106,14 @@ async function createComment(
       .json({ error: 'content must contain at least 3 characters' });
   }
 
+  if (trimmedContent.length > 2000) {
+    return res.status(400).json({ error: 'content must be at most 2000 characters' });
+  }
+
+  if (trimmedAuthor && trimmedAuthor.length > 50) {
+    return res.status(400).json({ error: 'author name must be at most 50 characters' });
+  }
+
   const { data, error } = await client
     .from('news_comments')
     .insert({
@@ -120,7 +128,7 @@ async function createComment(
     console.error('[/api/news/comments] create error:', error);
     return res
       .status(500)
-      .json({ error: error?.message || 'Failed to create comment' });
+      .json({ error: 'Failed to create comment' });
   }
 
   return res.status(201).json({ comment: data });

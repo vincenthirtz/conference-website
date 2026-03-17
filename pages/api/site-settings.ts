@@ -11,15 +11,16 @@ export default async function handler(
   }
 
   if (!supabaseAdmin) {
-    return res
-      .status(500)
-      .json({ error: 'Database service unavailable.' });
+    return res.status(503).json({ error: 'Service unavailable.' });
   }
 
   const { key } = req.query;
 
-  // If a specific key is requested
+  // If a specific key is requested (alphanumeric + underscores only)
   if (key && typeof key === 'string') {
+    if (!/^[a-zA-Z0-9_]{1,100}$/.test(key)) {
+      return res.status(400).json({ error: 'Invalid key format.' });
+    }
     const { data, error } = await supabaseAdmin
       .from('site_settings')
       .select('key, value')

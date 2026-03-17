@@ -9,7 +9,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import type { MatchStatus } from '@/types/admin';
-import { parsePagination } from '@/utils/apiHelpers';
+import { parsePagination, isValidUUID } from '@/utils/apiHelpers';
 
 /* -----------------------------------------------------------
  * Types
@@ -98,9 +98,9 @@ export default async function handler(
 
   const { tournamentId, minGames } = req.query;
 
-  if (!tournamentId || Array.isArray(tournamentId)) {
+  if (!tournamentId || Array.isArray(tournamentId) || !isValidUUID(tournamentId)) {
     return res.status(400).json({
-      error: "Query parameter 'tournamentId' is required",
+      error: "Query parameter 'tournamentId' is required and must be a valid UUID",
     });
   }
 
@@ -255,10 +255,7 @@ export default async function handler(
     return res.status(200).json(response);
   } catch (err: any) {
     console.error('[/api/maps/stats] internal error:', err);
-    return res.status(500).json({
-      error: 'Internal server error',
-      detail: err?.message,
-    });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }
 

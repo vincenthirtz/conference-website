@@ -6,6 +6,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import type { MatchStatus } from '@/types/admin';
+import { isValidUUID } from '@/utils/apiHelpers';
 
 /* -----------------------------------------------------------
  * Types
@@ -62,7 +63,7 @@ export default async function handler(
 ) {
   const { id } = req.query;
 
-  if (!id || Array.isArray(id)) {
+  if (!id || Array.isArray(id) || !isValidUUID(id)) {
     return res.status(400).json({ error: 'Invalid team id' });
   }
 
@@ -131,10 +132,7 @@ export default async function handler(
     return res.status(200).json(response);
   } catch (err: any) {
     console.error('[/api/team/[id]/maps] internal error:', err);
-    return res.status(500).json({
-      error: 'Internal server error',
-      detail: err?.message,
-    });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }
 

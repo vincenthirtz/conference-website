@@ -3,6 +3,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin, getServerClient } from '@/utils/supabase';
+import { applyRateLimit } from '@/utils/rateLimit';
 
 type PlayerResult = {
   id: string;
@@ -25,8 +26,11 @@ export default async function handler(
   }
 
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Supabase admin not configured' });
+    return res.status(503).json({ error: 'Service unavailable.' });
   }
+
+  // Rate limiting: 30 searches per minute
+  if (applyRateLimit(req, res, { max: 30, windowMs: 60 * 1000 }, 'search-players')) return;
 
   // Check if user is authenticated and is a captain
   const supabase = getServerClient(req, res);
@@ -52,6 +56,10 @@ export default async function handler(
 
   if (!query || query.length < 2) {
     return res.status(400).json({ error: 'Query must be at least 2 characters' });
+  }
+
+  if (query.length > 100) {
+    return res.status(400).json({ error: 'Query too long (max 100 characters)' });
   }
 
   try {
