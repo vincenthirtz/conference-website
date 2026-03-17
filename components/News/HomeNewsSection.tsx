@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { useEffect, useState, JSX } from 'react';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
-import Button from '@/components/Buttons/button';
 
 type NewsItem = {
   id: string;
@@ -25,12 +24,6 @@ const formatTagLabel = (tag?: string | null) => {
   const cleaned = tag.replace(/-/g, ' ').trim() || 'General';
   return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
 };
-
-const SITE_URL =
-  typeof process !== 'undefined'
-    ? process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '')
-    : '';
-const RSS_URL = SITE_URL ? `${SITE_URL}/api/news/rss` : '/api/news/rss';
 
 function HomeNewsSection(): JSX.Element {
   const [news, setNews] = useState<NewsItem[]>([]);
@@ -127,13 +120,6 @@ function HomeNewsSection(): JSX.Element {
       return (
         <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
           <Paragraph textColor="text-gray-200">{error}</Paragraph>
-          <div className="mt-4 flex justify-center">
-            <Link href={RSS_URL} target="_blank" rel="noreferrer noopener">
-              <Button type="button" className="px-6 h-[50px]">
-                Flux RSS
-              </Button>
-            </Link>
-          </div>
         </div>
       );
     }
@@ -223,13 +209,6 @@ function HomeNewsSection(): JSX.Element {
         >
           Les annonces officielles du tournoi, publiées par le staff.
         </Paragraph>
-        <div className="mt-4">
-          <Link href={RSS_URL} target="_blank" rel="noreferrer noopener">
-            <Button type="button" className="px-6 h-[48px]">
-              Flux RSS
-            </Button>
-          </Link>
-        </div>
       </div>
       <div className="flex flex-col gap-2 items-center">
         <div className="text-xs uppercase tracking-[0.18em] text-blue-200/80">
