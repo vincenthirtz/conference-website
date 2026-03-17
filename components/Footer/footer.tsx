@@ -461,6 +461,44 @@ function Footer(): JSX.Element {
             </svg>
             <span className="text-sm">TikTok</span>
           </a>
+          <a
+            href="https://www.instagram.com/ow_womenscup"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors"
+          >
+            <svg
+              className="w-5 h-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <rect x="2" y="2" width="20" height="20" rx="5" />
+              <circle cx="12" cy="12" r="5" />
+              <circle cx="17.5" cy="6.5" r="1.2" fill="currentColor" stroke="none" />
+            </svg>
+            <span className="text-sm">Instagram</span>
+          </a>
+          <a
+            href="https://www.twitch.tv/womens_cup"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors"
+          >
+            <svg
+              className="w-5 h-5"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path d="M3.5 2 2 5.5V20h5v2.5h3L12.5 20H17l4.5-4.5V2H3.5Zm16 12.5L16 18h-4.5L9 20.5V18H5V3.5h14.5v11ZM14 7v5h1.5V7H14Zm-4 0v5h1.5V7H10Z" />
+            </svg>
+            <span className="text-sm">Twitch</span>
+          </a>
           {socials.map((social: SocialWithIcon) => {
             const IconComponent = social.icon;
             return (
