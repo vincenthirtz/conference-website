@@ -92,7 +92,7 @@ async function handler(
       console.error('[admin/cast-members] create error', error);
       return res
         .status(500)
-        .json({ error: 'Failed to create the cast member.', detail: error.message });
+        .json({ error: 'Failed to create the cast member.' });
     }
 
     return res.status(201).json(data);

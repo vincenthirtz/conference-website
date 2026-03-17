@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
+import type { StaffContext } from '@/utils/staff';
 import { sendAccountDeletedEmail, sendWelcomeEmail } from '@/utils/email';
 import crypto from 'crypto';
 
@@ -35,10 +36,11 @@ export default withStaffRoute(handler, 'admin');
 
 async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<ListResponse | UpdateResponse | { error: string }>
+  res: NextApiResponse<ListResponse | UpdateResponse | { error: string }>,
+  ctx: StaffContext
 ) {
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Database service unavailable (missing service role).' });
+    return res.status(503).json({ error: 'Service unavailable.' });
   }
 
   if (req.method === 'GET') {
@@ -249,7 +251,7 @@ async function handler(
     if (targetStaff?.role) targetStaffRole = targetStaff.role;
 
     // Seul un owner peut modifier un owner ou un admin
-    const requesterRole = (req as any)?.context?.staff?.role || null;
+    const requesterRole = ctx.staff?.role ?? null;
     const targetIsProtected =
       targetRole === 'owner' ||
       targetRole === 'admin' ||
@@ -345,7 +347,7 @@ async function handler(
       .maybeSingle();
     if (targetStaff?.role) targetStaffRole = targetStaff.role;
 
-    const requesterRole = (req as any)?.context?.staff?.role || null;
+    const requesterRole = ctx.staff?.role ?? null;
     const targetIsProtected =
       targetRole === 'owner' ||
       targetRole === 'admin' ||
@@ -394,11 +396,18 @@ async function handler(
 }
 
 function generatePassword(length = 16) {
-  const buffer = crypto.randomBytes(length);
   const alphabet =
     'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz0123456789!@$%^*';
-  return Array.from(buffer)
-    .map((byte) => alphabet[byte % alphabet.length])
-    .join('')
-    .slice(0, length);
+  // Use rejection sampling to avoid modulo bias
+  const maxValid = 256 - (256 % alphabet.length);
+  const result: string[] = [];
+  while (result.length < length) {
+    const bytes = crypto.randomBytes(length - result.length);
+    for (const byte of bytes) {
+      if (byte < maxValid && result.length < length) {
+        result.push(alphabet[byte % alphabet.length]);
+      }
+    }
+  }
+  return result.join('');
 }

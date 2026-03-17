@@ -93,7 +93,7 @@ async function handler(
       }
       return res
         .status(500)
-        .json({ error: 'Failed to create the channel.', detail: error.message });
+        .json({ error: 'Failed to create the channel.' });
     }
 
     return res.status(201).json(data);

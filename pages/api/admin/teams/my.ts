@@ -41,9 +41,7 @@ export default async function handler(
   res: NextApiResponse<GetResponse | { error: string }>
 ) {
   if (!supabaseAdmin) {
-    return res
-      .status(500)
-      .json({ error: 'Database service unavailable (missing service role).' });
+    return res.status(503).json({ error: 'Service unavailable.' });
   }
 
   const authHeader = req.headers.authorization;

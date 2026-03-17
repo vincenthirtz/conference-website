@@ -81,7 +81,7 @@ async function handler(
       console.error('[admin/partners] update error', error);
       return res
         .status(500)
-        .json({ error: 'Failed to update the partner.', detail: error.message });
+        .json({ error: 'Failed to update the partner.' });
     }
 
     if (!data) {
@@ -118,7 +118,7 @@ async function handler(
       console.error('[admin/partners] delete error', error);
       return res
         .status(500)
-        .json({ error: 'Failed to delete the partner.', detail: error.message });
+        .json({ error: 'Failed to delete the partner.' });
     }
 
     if (ctx.staff?.id) {

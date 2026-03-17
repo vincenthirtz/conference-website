@@ -104,7 +104,7 @@ async function handler(
       console.error('[admin/news] create error', error);
       return res
         .status(500)
-        .json({ error: 'Failed to create the article.', detail: error.message });
+        .json({ error: 'Failed to create the article.' });
     }
 
     return res.status(201).json(data);

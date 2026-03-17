@@ -121,7 +121,7 @@ async function handleBulkSchedule(
         return res.status(500).json({
           error: `Partial failure at match ${entry.matchId}. All ${succeeded.length} previous updates have been rolled back.`,
           failedMatchId: entry.matchId,
-          detail: error.message,
+          
         });
       }
     } else {

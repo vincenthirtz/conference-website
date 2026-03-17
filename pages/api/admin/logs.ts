@@ -111,7 +111,7 @@ async function handler(
       console.error('admin logs GET error:', error);
       return res.status(500).json({
         error: 'Failed to fetch staff logs',
-        detail: error.message,
+        
       });
     }
 

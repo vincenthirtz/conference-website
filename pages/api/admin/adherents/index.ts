@@ -170,7 +170,7 @@ async function handler(
       console.error('[admin/adherents] create error', error);
       return res
         .status(500)
-        .json({ error: 'Failed to create the member.', detail: error.message });
+        .json({ error: 'Failed to create the member.' });
     }
 
     if (ctx.staff?.id) {

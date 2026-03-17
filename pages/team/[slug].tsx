@@ -8,6 +8,17 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import { supabaseAdmin } from '@/utils/supabase';
 
+function safeHref(url: string): string | undefined {
+  try {
+    const full = url.startsWith('http') ? url : `https://${url}`;
+    const parsed = new URL(full);
+    if (['http:', 'https:'].includes(parsed.protocol)) return full;
+    return undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 type Team = {
   id: string;
   name: string;
@@ -416,9 +427,9 @@ export default function TeamPage({
               {/* Social links */}
               {hasSocials && (
                 <div className="flex flex-wrap gap-3 mt-4">
-                  {team.twitter && (
+                  {team.twitter && safeHref(team.twitter.startsWith('http') ? team.twitter : `https://twitter.com/${team.twitter.replace('@', '')}`) && (
                     <a
-                      href={team.twitter.startsWith('http') ? team.twitter : `https://twitter.com/${team.twitter.replace('@', '')}`}
+                      href={safeHref(team.twitter.startsWith('http') ? team.twitter : `https://twitter.com/${team.twitter.replace('@', '')}`)}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:border-blue-400/50 hover:bg-blue-500/10 transition-colors text-xs"
@@ -429,9 +440,9 @@ export default function TeamPage({
                       Twitter
                     </a>
                   )}
-                  {team.discord && (
+                  {team.discord && safeHref(team.discord) && (
                     <a
-                      href={team.discord.startsWith('http') ? team.discord : `https://${team.discord}`}
+                      href={safeHref(team.discord)}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:border-indigo-400/50 hover:bg-indigo-500/10 transition-colors text-xs"
@@ -442,9 +453,9 @@ export default function TeamPage({
                       Discord
                     </a>
                   )}
-                  {team.website && (
+                  {team.website && safeHref(team.website) && (
                     <a
-                      href={team.website.startsWith('http') ? team.website : `https://${team.website}`}
+                      href={safeHref(team.website)}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:border-white/30 transition-colors text-xs"

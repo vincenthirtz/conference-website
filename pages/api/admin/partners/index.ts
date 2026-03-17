@@ -95,7 +95,7 @@ async function handler(
       console.error('[admin/partners] create error', error);
       return res
         .status(500)
-        .json({ error: 'Failed to create the partner.', detail: error.message });
+        .json({ error: 'Failed to create the partner.' });
     }
 
     if (ctx.staff?.id) {

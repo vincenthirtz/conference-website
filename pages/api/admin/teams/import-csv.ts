@@ -72,6 +72,13 @@ async function handler(
     });
   }
 
+  const MAX_ROWS = 200;
+  if (lines.length - 1 > MAX_ROWS) {
+    return res.status(400).json({
+      error: `Trop de lignes (${lines.length - 1}). Maximum ${MAX_ROWS} équipes par import.`,
+    });
+  }
+
   const result: ImportResult = { created: 0, skipped: 0, errors: [], teams: [] };
 
   for (let i = 1; i < lines.length; i++) {

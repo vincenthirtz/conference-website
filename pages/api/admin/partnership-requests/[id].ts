@@ -134,7 +134,7 @@ async function handler(
       console.error('[admin/partnership-requests] update error', error);
       return res
         .status(500)
-        .json({ error: 'Failed to update the request.', detail: error.message });
+        .json({ error: 'Failed to update the request.' });
     }
 
     if (!data) {
@@ -171,7 +171,7 @@ async function handler(
       console.error('[admin/partnership-requests] delete error', error);
       return res
         .status(500)
-        .json({ error: 'Failed to delete the request.', detail: error.message });
+        .json({ error: 'Failed to delete the request.' });
     }
 
     if (ctx.staff?.id) {

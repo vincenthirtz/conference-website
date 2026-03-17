@@ -87,7 +87,7 @@ async function handler(
       console.error('[admin/announcements] create error', error);
       return res
         .status(500)
-        .json({ error: "Failed to create the announcement.", detail: error.message });
+        .json({ error: "Failed to create the announcement." });
     }
 
     return res.status(201).json(data);
