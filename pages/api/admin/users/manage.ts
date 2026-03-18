@@ -4,6 +4,7 @@ import { withStaffRoute } from '@/utils/staff';
 import type { StaffContext } from '@/utils/staff';
 import { sendAccountDeletedEmail, sendWelcomeEmail } from '@/utils/email';
 import crypto from 'crypto';
+import { applyRateLimit } from '@/utils/rateLimit';
 
 type TeamMembership = {
   team_id: string;
@@ -39,6 +40,7 @@ async function handler(
   res: NextApiResponse<ListResponse | UpdateResponse | { error: string }>,
   ctx: StaffContext
 ) {
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-users-manage')) return;
   if (!supabaseAdmin) {
     return res.status(503).json({ error: 'Service unavailable.' });
   }

@@ -10,13 +10,14 @@ import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import type { VetoStep, VetoStepInput, VetoAction } from '@/types/veto';
 import { VETO_FLOWS } from '@/types/veto';
+import { isValidUUID } from '@/utils/apiHelpers';
 
 export default withStaffRoute(handler, 'manager');
 
 async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
   const { matchId } = req.query;
 
-  if (!matchId || Array.isArray(matchId)) {
+  if (!matchId || Array.isArray(matchId) || !isValidUUID(matchId)) {
     return res.status(400).json({ error: 'Invalid matchId' });
   }
 

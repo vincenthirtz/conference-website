@@ -9,6 +9,8 @@ import {
   listUsersEmailMap,
 } from '@/utils/find-or-create-user';
 import { sendTeamJoinEmail } from '@/utils/email';
+import { applyRateLimit } from '@/utils/rateLimit';
+import { isValidUUID } from '@/utils/apiHelpers';
 
 type TeamMemberRow = {
   id: string;
@@ -40,6 +42,7 @@ async function handler(
   req: NextApiRequest,
   res: NextApiResponse<MembersResponse>
 ) {
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-team-members')) return;
   if (!supabaseAdmin) {
     return res
       .status(500)
@@ -47,7 +50,7 @@ async function handler(
   }
 
   const { teamId } = req.query;
-  if (!teamId || Array.isArray(teamId)) {
+  if (!teamId || Array.isArray(teamId) || !isValidUUID(teamId)) {
     return res.status(400).json({ error: 'Invalid teamId' });
   }
 

@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
+import { applyRateLimit } from '@/utils/rateLimit';
 
 type AnnouncementPayload = {
   title?: string;
@@ -24,6 +25,7 @@ async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-announcements-id')) return;
   if (!supabaseAdmin) {
     return res
       .status(500)

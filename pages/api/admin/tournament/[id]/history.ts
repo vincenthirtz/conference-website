@@ -8,7 +8,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { StaffLog, formatStaffLog } from '@/utils/staffLogs';
-import { parsePagination } from '@/utils/apiHelpers';
+import { isValidUUID, parsePagination } from '@/utils/apiHelpers';
 
 type TournamentHistoryResponse = {
   tournamentId: string;
@@ -27,7 +27,7 @@ async function handler(
 ) {
   const { id } = req.query;
 
-  if (!id || Array.isArray(id)) {
+  if (!id || Array.isArray(id) || !isValidUUID(id)) {
     return res.status(400).json({ error: 'Invalid tournament id' });
   }
 

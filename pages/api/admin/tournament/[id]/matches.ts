@@ -8,7 +8,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import type { MatchStatus, BracketSide } from '@/types/admin';
-import { parsePagination } from '@/utils/apiHelpers';
+import { isValidUUID, parsePagination } from '@/utils/apiHelpers';
 
 export type { MatchStatus } from '@/types/admin';
 export type { BracketSide } from '@/types/admin';
@@ -69,7 +69,7 @@ export default withStaffRoute(handler, 'manager');
 async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
   const { id } = req.query;
 
-  if (!id || Array.isArray(id)) {
+  if (!id || Array.isArray(id) || !isValidUUID(id)) {
     return res.status(400).json({ error: 'Invalid tournament id' });
   }
 

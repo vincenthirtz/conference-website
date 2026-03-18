@@ -7,6 +7,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { computeStageStandings } from '@/utils/stages/standings';
 import type { StageStanding } from '@/utils/stages/standings';
+import { isValidUUID } from '@/utils/apiHelpers';
 
 type ApiResponse =
   | { stageId: string; stageType: string; standings: StageStanding[] }
@@ -23,7 +24,7 @@ async function handler(
   }
 
   const { stageId } = req.query;
-  if (!stageId || Array.isArray(stageId)) {
+  if (!stageId || Array.isArray(stageId) || !isValidUUID(stageId)) {
     return res.status(400).json({ error: 'Invalid stageId' });
   }
 

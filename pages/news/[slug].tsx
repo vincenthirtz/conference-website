@@ -279,7 +279,23 @@ function Comments({ newsId }: { newsId: string }) {
   const [content, setContent] = useState('');
   const [author, setAuthor] = useState('');
   const [honeypot, setHoneypot] = useState('');
-  const [captcha, setCaptcha] = useState('');
+  const [captchaToken, setCaptchaToken] = useState('');
+  const [captchaQuestion, setCaptchaQuestion] = useState('');
+  const [captchaAnswer, setCaptchaAnswer] = useState('');
+
+  const loadCaptcha = async () => {
+    try {
+      const res = await fetch('/api/captcha');
+      if (res.ok) {
+        const json = await res.json();
+        setCaptchaToken(json.token);
+        setCaptchaQuestion(json.question);
+        setCaptchaAnswer('');
+      }
+    } catch {
+      // silent — form still works, server will reject invalid captcha
+    }
+  };
 
   const loadComments = async () => {
     setLoading(true);
@@ -298,6 +314,7 @@ function Comments({ newsId }: { newsId: string }) {
 
   useEffect(() => {
     loadComments();
+    loadCaptcha();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [newsId]);
 
@@ -318,7 +335,8 @@ function Comments({ newsId }: { newsId: string }) {
           content: content.trim(),
           authorName: author.trim() || null,
           honeypot,
-          captcha,
+          captchaToken,
+          captchaAnswer: captchaAnswer.trim(),
         }),
       });
       if (!res.ok) {
@@ -327,9 +345,10 @@ function Comments({ newsId }: { newsId: string }) {
       }
       setContent('');
       setAuthor('');
-      await loadComments();
+      await Promise.all([loadComments(), loadCaptcha()]);
     } catch (err: unknown) {
       setError((err as Error)?.message || 'Erreur lors de la publication');
+      await loadCaptcha();
     } finally {
       setLoading(false);
     }
@@ -360,9 +379,9 @@ function Comments({ newsId }: { newsId: string }) {
             />
             <input
               type="text"
-              value={captcha}
-              onChange={(e) => setCaptcha(e.target.value)}
-              placeholder="Tapez OWC (anti-robot)"
+              value={captchaAnswer}
+              onChange={(e) => setCaptchaAnswer(e.target.value)}
+              placeholder={captchaQuestion ? `Combien font ${captchaQuestion} ?` : 'Chargement...'}
               className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/70 focus:border-purple-400/70 transition"
             />
             {/* Honeypot anti-bot */}

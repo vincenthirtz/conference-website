@@ -41,10 +41,23 @@ test.describe.serial('News comments', () => {
 
     await page.goto(`/news/${createdNewsSlug}`);
 
+    // Wait for the captcha challenge to load (placeholder contains "Combien font")
+    const captchaInput = page.getByPlaceholder(/Combien font/);
+    await expect(captchaInput).toBeVisible({ timeout: 10000 });
+
+    // Extract the math question from the placeholder and compute the answer
+    const placeholder = await captchaInput.getAttribute('placeholder');
+    const match = placeholder?.match(/Combien font (.+) \?/);
+    expect(match).toBeTruthy();
+    const expression = match![1]
+      .replace('×', '*')
+      .replace('−', '-');
+    const answer = String(eval(expression));
+
     // Saisir commentaire
     await page.getByPlaceholder('Partage ton avis...').fill(COMMENT_CONTENT);
     await page.getByPlaceholder('Nom (optionnel)').fill(AUTHOR_NAME);
-    await page.getByPlaceholder('Tapez OWC (anti-robot)').fill('OWC');
+    await captchaInput.fill(answer);
 
     // Publier
     await page.getByRole('button', { name: 'Publier' }).click();

@@ -1,6 +1,7 @@
 // pages/api/admin/me.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
+import { applyRateLimit } from '@/utils/rateLimit';
 
 type MeResponse =
   | {
@@ -18,6 +19,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<MeResponse>
 ) {
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-me')) return;
   // Prevent caching of sensitive staff data
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
 

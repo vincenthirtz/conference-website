@@ -9,7 +9,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { StaffLog, formatStaffLog } from '@/utils/staffLogs';
-import { parsePagination } from '@/utils/apiHelpers';
+import { parsePagination, isValidUUID } from '@/utils/apiHelpers';
 
 type TeamHistoryResponse = {
   teamId: string;
@@ -28,7 +28,7 @@ async function handler(
 ) {
   const { teamId } = req.query;
 
-  if (!teamId || Array.isArray(teamId)) {
+  if (!teamId || Array.isArray(teamId) || !isValidUUID(teamId)) {
     return res.status(400).json({ error: 'Invalid teamId' });
   }
 

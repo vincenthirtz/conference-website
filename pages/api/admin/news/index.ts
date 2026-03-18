@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import slugify from 'slugify';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, type StaffContext } from '@/utils/staff';
+import { applyRateLimit } from '@/utils/rateLimit';
 
 type NewsPayload = {
   title?: string;
@@ -30,6 +31,7 @@ async function handler(
   res: NextApiResponse,
   ctx: StaffContext
 ) {
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-news')) return;
   if (!supabaseAdmin) {
     return res
       .status(500)

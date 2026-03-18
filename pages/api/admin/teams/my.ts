@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
+import { applyRateLimit } from '@/utils/rateLimit';
 
 type MemberRow = {
   id: string;
@@ -40,6 +41,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<GetResponse | { error: string }>
 ) {
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-teams-my')) return;
   if (!supabaseAdmin) {
     return res.status(503).json({ error: 'Service unavailable.' });
   }

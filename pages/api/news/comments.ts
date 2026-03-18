@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin, getServerClient } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { verifyCaptcha } from '@/utils/captcha';
 
 type Comment = {
   id: string;
@@ -82,20 +83,23 @@ async function createComment(
   // Rate limiting: 10 comments per 10 minutes
   if (applyRateLimit(req, res, { max: 10, windowMs: 10 * 60 * 1000 }, 'comments')) return;
 
-  const { newsId, content, authorName, honeypot, captcha } = req.body || {};
+  const { newsId, content, authorName, honeypot, captchaToken, captchaAnswer } = req.body || {};
   const trimmedContent = (content || '').toString().trim();
   const trimmedNewsId = (newsId || '').toString().trim();
   const trimmedAuthor = authorName ? authorName.toString().trim() : null;
-  const captchaValue = (captcha || '').toString().trim().toLowerCase();
 
   // Simple anti-bot: reject if honeypot filled
   if (honeypot && `${honeypot}`.trim().length > 0) {
     return res.status(400).json({ error: 'Bot detected' });
   }
 
-  // Captcha simple sans token
-  if (captchaValue !== 'owc') {
-    return res.status(400).json({ error: 'Invalid captcha' });
+  // Verify CAPTCHA challenge-response
+  const captchaResult = verifyCaptcha(
+    (captchaToken || '').toString(),
+    (captchaAnswer || '').toString()
+  );
+  if (!captchaResult.valid) {
+    return res.status(400).json({ error: captchaResult.error || 'Invalid captcha' });
   }
 
   if (!trimmedNewsId) {

@@ -4,6 +4,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
+import { isValidUUID } from '@/utils/apiHelpers';
 
 export default withStaffRoute(handler, 'caster');
 
@@ -14,7 +15,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   const { stageId } = req.query;
 
-  if (!stageId || Array.isArray(stageId)) {
+  if (!stageId || Array.isArray(stageId) || !isValidUUID(stageId)) {
     return res.status(400).json({ error: 'Invalid stageId' });
   }
 

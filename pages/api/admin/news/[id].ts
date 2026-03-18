@@ -3,6 +3,7 @@ import slugify from 'slugify';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { isValidUUID } from '@/utils/apiHelpers';
+import { applyRateLimit } from '@/utils/rateLimit';
 
 type NewsPayload = {
   title?: string;
@@ -30,6 +31,7 @@ async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-news-id')) return;
   const { id } = req.query;
   if (!id || Array.isArray(id) || !isValidUUID(id)) {
     return res.status(400).json({ error: 'Missing or invalid ID.' });

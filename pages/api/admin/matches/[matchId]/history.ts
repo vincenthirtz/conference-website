@@ -7,6 +7,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { formatStaffLog, StaffLog } from '@/utils/staffLogs';
+import { isValidUUID } from '@/utils/apiHelpers';
 
 export default withStaffRoute(handler, 'manager'); // managers & + peuvent voir l'historique
 
@@ -24,7 +25,7 @@ async function handler(
 ) {
   const { matchId } = req.query;
 
-  if (!matchId || Array.isArray(matchId)) {
+  if (!matchId || Array.isArray(matchId) || !isValidUUID(matchId)) {
     return res.status(400).json({ error: 'Invalid matchId' });
   }
 

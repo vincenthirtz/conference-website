@@ -2,6 +2,8 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { withStaffRoute } from '@/utils/staff';
 import { supabaseAdmin } from '@/utils/supabase';
 import { logStaffAction } from '@/utils/staffLogs';
+import { applyRateLimit } from '@/utils/rateLimit';
+import { isValidUUID } from '@/utils/apiHelpers';
 
 /**
  * GET /api/admin/teams/[teamId]/tournaments
@@ -17,9 +19,10 @@ import { logStaffAction } from '@/utils/staffLogs';
  */
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-team-tournaments')) return;
   const { teamId } = req.query;
 
-  if (!teamId || typeof teamId !== 'string') {
+  if (!teamId || typeof teamId !== 'string' || !isValidUUID(teamId)) {
     return res.status(400).json({ error: 'teamId required' });
   }
 

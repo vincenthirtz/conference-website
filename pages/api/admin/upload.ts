@@ -27,15 +27,24 @@ const BUCKET = 'teams-images';
 const MAGIC_BYTES: Record<string, number[][]> = {
   'image/png': [[0x89, 0x50, 0x4e, 0x47]],
   'image/jpeg': [[0xff, 0xd8, 0xff]],
-  'image/webp': [[0x52, 0x49, 0x46, 0x46]], // RIFF header
+  'image/webp': [[0x52, 0x49, 0x46, 0x46]], // RIFF header (bytes 8-11 checked separately)
 };
+
+// "WEBP" at bytes 8-11 distinguishes WebP from other RIFF formats (WAV, AVI)
+const WEBP_MARKER = [0x57, 0x45, 0x42, 0x50]; // "WEBP"
 
 function validateMagicBytes(buffer: Buffer, mimeType: string): boolean {
   const signatures = MAGIC_BYTES[mimeType];
   if (!signatures) return false;
-  return signatures.some((sig) =>
+  const matchesHeader = signatures.some((sig) =>
     sig.every((byte, i) => buffer[i] === byte)
   );
+  if (!matchesHeader) return false;
+  // For WebP, also verify bytes 8-11 contain "WEBP"
+  if (mimeType === 'image/webp') {
+    return buffer.length >= 12 && WEBP_MARKER.every((byte, i) => buffer[8 + i] === byte);
+  }
+  return true;
 }
 
 export default withStaffRoute(handler, 'manager');

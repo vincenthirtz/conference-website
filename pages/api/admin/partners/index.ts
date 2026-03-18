@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, StaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { sanitizeUrl } from '@/utils/apiHelpers';
+import { applyRateLimit } from '@/utils/rateLimit';
 
 type PartnerPayload = {
   name?: string;
@@ -20,6 +21,7 @@ async function handler(
   res: NextApiResponse,
   ctx: StaffContext
 ) {
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-partners')) return;
   if (!supabaseAdmin) {
     return res
       .status(500)

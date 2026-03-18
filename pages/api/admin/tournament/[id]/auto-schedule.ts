@@ -35,6 +35,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
+import { isValidUUID } from '@/utils/apiHelpers';
 import {
   autoScheduleMatches,
   makeMultiDayWindows,
@@ -96,7 +97,7 @@ async function handler(
 ) {
   const { id } = req.query;
 
-  if (!id || Array.isArray(id)) {
+  if (!id || Array.isArray(id) || !isValidUUID(id)) {
     return res.status(400).json({ error: 'Invalid tournament id' });
   }
 

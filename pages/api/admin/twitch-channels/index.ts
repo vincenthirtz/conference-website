@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { sanitizeUrl } from '@/utils/apiHelpers';
+import { applyRateLimit } from '@/utils/rateLimit';
 
 type TwitchChannelPayload = {
   channel?: string;
@@ -17,6 +18,7 @@ async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-twitch')) return;
   if (!supabaseAdmin) {
     return res
       .status(500)

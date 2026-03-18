@@ -12,6 +12,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { computeStageStandings } from '@/utils/stages/standings';
+import { isValidUUID } from '@/utils/apiHelpers';
 
 type AdvancedTeam = { teamId: string; seed: number | null };
 
@@ -36,7 +37,7 @@ async function handler(
   }
 
   const { stageId } = req.query;
-  if (!stageId || Array.isArray(stageId)) {
+  if (!stageId || Array.isArray(stageId) || !isValidUUID(stageId)) {
     return res.status(400).json({ error: 'Invalid stageId' });
   }
 

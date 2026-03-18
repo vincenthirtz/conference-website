@@ -24,6 +24,7 @@ import {
   propagateBracketForMatch,
 } from '@/utils/bracket/propagate';
 import type { MatchStatus } from '@/types/admin';
+import { isValidUUID } from '@/utils/apiHelpers';
 
 type DbMatchRow = {
   id: string;
@@ -62,7 +63,7 @@ async function handler(
 ) {
   const { stageId } = req.query;
 
-  if (!stageId || Array.isArray(stageId)) {
+  if (!stageId || Array.isArray(stageId) || !isValidUUID(stageId)) {
     return res.status(400).json({ error: 'Invalid stageId' });
   }
 
