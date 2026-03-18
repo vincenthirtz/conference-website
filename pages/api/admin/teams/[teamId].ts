@@ -8,6 +8,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
+import { isValidUUID } from '@/utils/apiHelpers';
 
 export type TeamRow = {
   id: string;
@@ -33,7 +34,7 @@ export default withStaffRoute(handler, 'manager');
 async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
   const { teamId } = req.query;
 
-  if (!teamId || Array.isArray(teamId)) {
+  if (!teamId || Array.isArray(teamId) || !isValidUUID(teamId)) {
     return res.status(400).json({ error: 'Invalid teamId' });
   }
 

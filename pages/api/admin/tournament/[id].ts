@@ -7,6 +7,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
+import { isValidUUID } from '@/utils/apiHelpers';
 
 type TournamentDetail = {
   id: string;
@@ -39,8 +40,8 @@ async function handler(
 ) {
   const { id } = req.query;
 
-  if (!id || Array.isArray(id)) {
-    return res.status(400).json({ error: 'Missing tournament id' });
+  if (!id || Array.isArray(id) || !isValidUUID(id)) {
+    return res.status(400).json({ error: 'Missing or invalid tournament id' });
   }
 
   switch (req.method) {

@@ -71,6 +71,18 @@ function appendSetCookie(res: SupabaseServerRes, cookie: string) {
   res.setHeader('Set-Cookie', [existing.toString(), cookie]);
 }
 
+const isProduction = process.env.NODE_ENV === 'production';
+
+/** Enforce security flags on all auth cookies */
+function hardenCookieOptions(options: CookieOptions): CookieOptions {
+  return {
+    ...options,
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: options.sameSite ?? 'lax',
+  };
+}
+
 export function getServerClient(
   req: SupabaseServerReq,
   res: SupabaseServerRes
@@ -81,13 +93,13 @@ export function getServerClient(
         return req.cookies?.[name];
       },
       set(name: string, value: string, options: CookieOptions) {
-        appendSetCookie(res, serialize(name, value, options));
+        appendSetCookie(res, serialize(name, value, hardenCookieOptions(options)));
       },
       remove(name: string, options: CookieOptions) {
         appendSetCookie(
           res,
           serialize(name, '', {
-            ...options,
+            ...hardenCookieOptions(options),
             maxAge: 0,
           })
         );

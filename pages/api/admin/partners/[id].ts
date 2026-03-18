@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, StaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
+import { isValidUUID } from '@/utils/apiHelpers';
 
 type PartnerPayload = {
   name?: string;
@@ -27,7 +28,7 @@ async function handler(
   const admin = supabaseAdmin!;
 
   const { id } = req.query;
-  if (!id || typeof id !== 'string') {
+  if (!id || typeof id !== 'string' || !isValidUUID(id)) {
     return res.status(400).json({ error: 'Partner ID required.' });
   }
 

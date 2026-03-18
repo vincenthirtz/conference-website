@@ -8,6 +8,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
+import { isValidUUID } from '@/utils/apiHelpers';
 
 type ApiResponse =
   | { success: boolean }
@@ -23,7 +24,7 @@ async function handler(
 ) {
   const { id, teamId } = req.query;
 
-  if (!id || Array.isArray(id) || !teamId || Array.isArray(teamId)) {
+  if (!id || Array.isArray(id) || !teamId || Array.isArray(teamId) || !isValidUUID(id) || !isValidUUID(teamId)) {
     return res.status(400).json({ error: 'Invalid tournament or team ID' });
   }
 

@@ -9,6 +9,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { validateStageSettings } from '@/utils/stageSettings';
+import { isValidUUID } from '@/utils/apiHelpers';
 
 export type StageType =
   | 'group'
@@ -40,7 +41,7 @@ export default withStaffRoute(handler, 'manager');
 async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
   const { stageId } = req.query;
 
-  if (!stageId || Array.isArray(stageId)) {
+  if (!stageId || Array.isArray(stageId) || !isValidUUID(stageId)) {
     return res.status(400).json({ error: 'Invalid stageId' });
   }
 

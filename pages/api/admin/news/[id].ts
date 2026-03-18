@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import slugify from 'slugify';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
+import { isValidUUID } from '@/utils/apiHelpers';
 
 type NewsPayload = {
   title?: string;
@@ -30,8 +31,8 @@ async function handler(
   res: NextApiResponse
 ) {
   const { id } = req.query;
-  if (!id || Array.isArray(id)) {
-    return res.status(400).json({ error: 'Missing ID.' });
+  if (!id || Array.isArray(id) || !isValidUUID(id)) {
+    return res.status(400).json({ error: 'Missing or invalid ID.' });
   }
 
   if (!supabaseAdmin) {

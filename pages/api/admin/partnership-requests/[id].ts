@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, StaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
+import { isValidUUID } from '@/utils/apiHelpers';
 
 type UpdatePayload = {
   status?: 'new' | 'read' | 'contacted' | 'negotiating' | 'accepted' | 'declined' | 'archived';
@@ -21,7 +22,7 @@ async function handler(
   const admin = supabaseAdmin!;
 
   const { id } = req.query;
-  if (!id || typeof id !== 'string') {
+  if (!id || typeof id !== 'string' || !isValidUUID(id)) {
     return res.status(400).json({ error: 'Request ID required.' });
   }
 

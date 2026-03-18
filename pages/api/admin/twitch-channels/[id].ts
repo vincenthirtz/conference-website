@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
+import { isValidUUID } from '@/utils/apiHelpers';
 
 type TwitchChannelPayload = {
   channel?: string;
@@ -24,8 +25,8 @@ async function handler(
   const admin = supabaseAdmin!;
 
   const { id } = req.query;
-  if (!id || typeof id !== 'string') {
-    return res.status(400).json({ error: 'Missing ID.' });
+  if (!id || typeof id !== 'string' || !isValidUUID(id)) {
+    return res.status(400).json({ error: 'Missing or invalid ID.' });
   }
 
   if (req.method === 'GET') {
