@@ -106,7 +106,7 @@ async function handleBulkSchedule(
       .eq('stage_id', stageId);
 
     if (error) {
-      results.push({ matchId: entry.matchId, success: false, error: error.message });
+      results.push({ matchId: entry.matchId, success: false, error: 'Database update failed' });
 
       // Rollback all previously successful updates in this batch
       if (succeeded.length > 0) {
@@ -434,7 +434,7 @@ async function handleBulkUndo(
       .eq('stage_id', stageId);
 
     if (error) {
-      results.push({ matchId: snap.matchId, success: false, error: error.message });
+      results.push({ matchId: snap.matchId, success: false, error: 'Database update failed' });
     } else {
       results.push({ matchId: snap.matchId, success: true });
     }

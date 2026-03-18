@@ -153,6 +153,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     res.status(200).end(csv);
   } catch (err: any) {
     console.error('[export-results] error:', err);
-    return res.status(500).json({ error: err?.message || 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }

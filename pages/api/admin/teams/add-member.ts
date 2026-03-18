@@ -56,7 +56,7 @@ async function handler(
   try {
     battleTagValue = validateBattleTag(battleTag);
   } catch (err: any) {
-    return res.status(400).json({ error: err?.message || 'Invalid BattleTag' });
+    return res.status(400).json({ error: 'Invalid BattleTag' });
   }
 
   try {

@@ -23,12 +23,24 @@ function getStore(name: string): Map<string, number[]> {
   return store;
 }
 
+const IP_RE = /^[\d.a-fA-F:]+$/;
+
 export function getClientIp(req: NextApiRequest): string {
-  return (
-    (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+  // Prefer headers set by trusted reverse proxies (Netlify, Cloudflare)
+  const cfIp = req.headers['cf-connecting-ip'];
+  const realIp = req.headers['x-real-ip'];
+  const forwarded = req.headers['x-forwarded-for'];
+
+  // Pick the most trustworthy header available, then fall back to socket
+  const raw =
+    (typeof cfIp === 'string' ? cfIp : undefined) ||
+    (typeof realIp === 'string' ? realIp : undefined) ||
+    (typeof forwarded === 'string' ? forwarded.split(',')[0]?.trim() : undefined) ||
     req.socket.remoteAddress ||
-    'unknown'
-  );
+    'unknown';
+
+  // Basic format validation to reject obviously spoofed values
+  return IP_RE.test(raw) ? raw : 'unknown';
 }
 
 /**

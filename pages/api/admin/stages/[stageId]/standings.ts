@@ -119,6 +119,6 @@ async function handler(
     });
   } catch (err: any) {
     console.error('[/api/admin/stages/[stageId]/standings] error:', err);
-    return res.status(500).json({ error: err?.message || 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }

@@ -323,6 +323,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
     });
   } catch (err: any) {
     console.error('[/api/admin/tournament/[id]/dashboard] error:', err);
-    return res.status(500).json({ error: err?.message || 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }

@@ -316,7 +316,7 @@ async function handleSave(
       .eq('tournament_id', tournamentId);
 
     if (error) {
-      errors.push(`Match ${m.id}: ${error.message}`);
+      errors.push(`Match ${m.id}: update failed`);
     }
   }
 

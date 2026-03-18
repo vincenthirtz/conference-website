@@ -218,9 +218,7 @@ export async function requireStaffRoleFromRequest(
   }
 
   if (!ctx.role || !hasAtLeastRole(ctx.role, minRole)) {
-    throw new StaffUnauthorizedError(
-      `Rôle ${minRole} requis (actuel : ${ctx.role ?? 'aucun'})`
-    );
+    throw new StaffUnauthorizedError('Accès non autorisé');
   }
 
   return ctx;
@@ -229,6 +227,41 @@ export async function requireStaffRoleFromRequest(
 /* -----------------------------------------------------------
  * Helpers pratiques pour les API routes
  * ---------------------------------------------------------*/
+
+/**
+ * CSRF protection: for state-changing methods, verify the Origin or Referer
+ * header matches the host to block cross-site form submissions.
+ */
+function csrfCheck(req: NextApiRequest): boolean {
+  const method = (req.method || 'GET').toUpperCase();
+  if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return true;
+
+  // Requests with a Bearer token are not browser-initiated, skip CSRF check
+  const auth = req.headers.authorization;
+  if (typeof auth === 'string' && auth.startsWith('Bearer ')) return true;
+
+  const origin = req.headers.origin;
+  const referer = req.headers.referer;
+  const host = req.headers.host;
+  if (!host) return false;
+
+  if (origin) {
+    try {
+      return new URL(origin).host === host;
+    } catch {
+      return false;
+    }
+  }
+  if (referer) {
+    try {
+      return new URL(referer).host === host;
+    } catch {
+      return false;
+    }
+  }
+  // No origin or referer on a state-changing request → reject
+  return false;
+}
 
 export function withStaffRoute(
   handler: (
@@ -240,6 +273,10 @@ export function withStaffRoute(
 ) {
   return async (req: NextApiRequest, res: NextApiResponse) => {
     try {
+      if (!csrfCheck(req)) {
+        res.status(403).json({ error: 'Forbidden: origin mismatch' });
+        return;
+      }
       const ctx = await requireStaffRoleFromRequest(req, res, minRole);
       await handler(req, res, ctx);
     } catch (err: any) {
