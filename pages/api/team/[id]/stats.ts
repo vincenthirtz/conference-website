@@ -8,6 +8,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import type { MatchStatus } from '@/types/admin';
 import { isValidUUID } from '@/utils/apiHelpers';
+import { applyRateLimit } from '@/utils/rateLimit';
 
 /* -----------------------------------------------------------
  * Types
@@ -77,6 +78,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'team-stats')) return;
   const { id } = req.query;
 
   if (!id || Array.isArray(id) || !isValidUUID(id)) {

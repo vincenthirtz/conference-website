@@ -10,6 +10,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import type { MatchStatus } from '@/types/admin';
 import { parsePagination, isValidUUID } from '@/utils/apiHelpers';
+import { applyRateLimit } from '@/utils/rateLimit';
 
 /* -----------------------------------------------------------
  * Types
@@ -92,6 +93,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'map-stats')) return;
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

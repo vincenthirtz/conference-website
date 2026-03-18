@@ -5,6 +5,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { parsePagination } from '@/utils/apiHelpers';
+import { applyRateLimit } from '@/utils/rateLimit';
 
 export type PublicTournament = {
   id: string;
@@ -30,6 +31,8 @@ export default async function handler(
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'tournaments')) return;
 
   if (!supabaseAdmin) {
     return res.status(500).json({ error: 'Database not configured' });

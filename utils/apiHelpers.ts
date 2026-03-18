@@ -69,3 +69,22 @@ export function escapePostgrestValue(value: string): string {
   // Remove characters that PostgREST interprets as operators/delimiters
   return value.replace(/[,.*()\\]/g, '');
 }
+
+const SAFE_URL_SCHEMES = new Set(['http:', 'https:']);
+
+/**
+ * Validate that a string is a well-formed URL with http(s) scheme.
+ * Returns the trimmed URL if valid, or null if invalid/empty.
+ * Rejects javascript:, data:, and other dangerous schemes.
+ */
+export function sanitizeUrl(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  try {
+    const url = new URL(trimmed);
+    return SAFE_URL_SCHEMES.has(url.protocol) ? trimmed : null;
+  } catch {
+    return null;
+  }
+}

@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, StaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
+import { sanitizeUrl } from '@/utils/apiHelpers';
 
 type PartnerPayload = {
   name?: string;
@@ -78,8 +79,8 @@ async function handler(
       name: body.name,
       description: body.description,
       category: body.category,
-      logo_url: body.logoUrl ?? null,
-      website_url: body.websiteUrl ?? null,
+      logo_url: sanitizeUrl(body.logoUrl),
+      website_url: sanitizeUrl(body.websiteUrl),
       note: body.note ?? null,
       display_order: body.displayOrder ?? 0,
       is_active: body.isActive ?? true,

@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, StaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
-import { isValidUUID } from '@/utils/apiHelpers';
+import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 
 type PartnerPayload = {
   name?: string;
@@ -61,8 +61,8 @@ async function handler(
       }
       updates.category = body.category;
     }
-    if (body.logoUrl !== undefined) updates.logo_url = body.logoUrl || null;
-    if (body.websiteUrl !== undefined) updates.website_url = body.websiteUrl || null;
+    if (body.logoUrl !== undefined) updates.logo_url = sanitizeUrl(body.logoUrl);
+    if (body.websiteUrl !== undefined) updates.website_url = sanitizeUrl(body.websiteUrl);
     if (body.note !== undefined) updates.note = body.note || null;
     if (body.displayOrder !== undefined) updates.display_order = body.displayOrder;
     if (body.isActive !== undefined) updates.is_active = body.isActive;

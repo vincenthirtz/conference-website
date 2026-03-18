@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { applyRateLimit } from '@/utils/rateLimit';
 
 type CallbackResponse =
   | { ok: true; code: string; state?: string }
@@ -8,6 +9,7 @@ export default function handler(
   req: NextApiRequest,
   res: NextApiResponse<CallbackResponse>
 ) {
+  if (applyRateLimit(req, res, { max: 20, windowMs: 60_000 }, 'twitch-oauth')) return;
   if (req.method !== 'GET') {
     return res.status(405).json({ ok: false, error: 'Method not allowed' });
   }

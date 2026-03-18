@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
-import { isValidUUID } from '@/utils/apiHelpers';
+import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 
 type AnnouncementPayload = {
   title?: string;
@@ -61,7 +61,7 @@ async function handler(
       updatePayload.message = body.message.trim();
     if ('ctaLabel' in body)
       updatePayload.cta_label = body.ctaLabel?.trim() || null;
-    if ('ctaUrl' in body) updatePayload.cta_url = body.ctaUrl?.trim() || null;
+    if ('ctaUrl' in body) updatePayload.cta_url = sanitizeUrl(body.ctaUrl);
     if ('isActive' in body) updatePayload.is_active = !!body.isActive;
     if ('priority' in body)
       updatePayload.priority = Number.isFinite(body.priority)

@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
+import { sanitizeUrl } from '@/utils/apiHelpers';
 
 type CastMemberPayload = {
   name?: string;
@@ -74,8 +75,8 @@ async function handler(
       name: body.name.trim(),
       title: body.title?.trim() || null,
       description: body.description?.trim() || null,
-      image_url: body.imageUrl?.trim() || null,
-      twitch_url: body.twitchUrl?.trim() || null,
+      image_url: sanitizeUrl(body.imageUrl),
+      twitch_url: sanitizeUrl(body.twitchUrl),
       city: body.city?.trim() || null,
       is_active: body.isActive ?? true,
       is_promo: body.isPromo ?? false,

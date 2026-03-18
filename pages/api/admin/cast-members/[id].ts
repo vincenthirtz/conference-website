@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
-import { isValidUUID } from '@/utils/apiHelpers';
+import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 
 type CastMemberPayload = {
   name?: string;
@@ -58,9 +58,9 @@ async function handler(
     if ('description' in body)
       updatePayload.description = body.description?.trim() || null;
     if ('imageUrl' in body)
-      updatePayload.image_url = body.imageUrl?.trim() || null;
+      updatePayload.image_url = sanitizeUrl(body.imageUrl);
     if ('twitchUrl' in body)
-      updatePayload.twitch_url = body.twitchUrl?.trim() || null;
+      updatePayload.twitch_url = sanitizeUrl(body.twitchUrl);
     if ('city' in body)
       updatePayload.city = body.city?.trim() || null;
     if ('isActive' in body)

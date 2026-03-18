@@ -5,6 +5,7 @@ import {
   formatZodError,
 } from '@/utils/validation';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { sanitizeUrl } from '@/utils/apiHelpers';
 
 export default async function handler(
   req: NextApiRequest,
@@ -43,7 +44,7 @@ export default async function handler(
     contact_name: body.contactName,
     email: body.email,
     phone: body.phone?.trim() || null,
-    website: body.website?.trim() || null,
+    website: sanitizeUrl(body.website),
     category: body.category,
     message: body.message,
     budget_range: body.budgetRange?.trim() || null,

@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import crypto from 'crypto';
 import slugify from 'slugify';
 import { supabaseAdmin } from '@/utils/supabase';
+import { sanitizeUrl } from '@/utils/apiHelpers';
 
 type CreateTeamBody = {
   name?: string;
@@ -55,8 +56,8 @@ export default async function handler(
     logo_url: body.logo_url?.trim() || null,
     country: body.country?.trim() || null,
     description: body.description?.trim() || null,
-    discord: body.discord?.trim() || null,
-    website: body.website?.trim() || null,
+    discord: sanitizeUrl(body.discord),
+    website: sanitizeUrl(body.website),
     is_active: true,
   });
 

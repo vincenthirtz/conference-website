@@ -4,11 +4,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { isValidUUID } from '@/utils/apiHelpers';
+import { applyRateLimit } from '@/utils/rateLimit';
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'team-detail')) return;
   const { id } = req.query;
 
   if (req.method !== 'GET') {

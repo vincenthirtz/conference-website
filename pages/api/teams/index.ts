@@ -5,6 +5,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { parsePagination, sanitizeSearch, escapePostgrestValue } from '@/utils/apiHelpers';
+import { applyRateLimit } from '@/utils/rateLimit';
 
 export type PublicTeam = {
   id: string;
@@ -18,6 +19,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'teams')) return;
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });

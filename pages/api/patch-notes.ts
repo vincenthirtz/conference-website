@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { load } from 'cheerio';
 import { supabaseAdmin } from '@/utils/supabase';
+import { applyRateLimit } from '@/utils/rateLimit';
 
 const PATCH_NOTES_URL =
   'https://overwatch.blizzard.com/fr-fr/news/patch-notes/';
@@ -200,6 +201,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<PatchNotesResponse | { error: string }>
 ) {
+  if (applyRateLimit(req, res, { max: 20, windowMs: 60_000 }, 'patch-notes')) return;
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

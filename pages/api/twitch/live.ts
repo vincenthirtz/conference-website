@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { applyRateLimit } from '@/utils/rateLimit';
 
 type LiveStatus = {
   live: boolean;
@@ -53,6 +54,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<LiveResponse>
 ) {
+  if (applyRateLimit(req, res, { max: 30, windowMs: 60_000 }, 'twitch-live')) return;
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

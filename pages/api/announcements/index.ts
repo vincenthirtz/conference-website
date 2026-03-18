@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin, getServerClient } from '@/utils/supabase';
+import { applyRateLimit } from '@/utils/rateLimit';
 
 type AnnouncementRow = {
   id: string;
@@ -30,6 +31,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'announcements')) return;
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });

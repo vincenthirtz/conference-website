@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
-import { isValidUUID } from '@/utils/apiHelpers';
+import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 
 type TwitchChannelPayload = {
   channel?: string;
@@ -58,7 +58,7 @@ async function handler(
     if ('description' in body)
       updatePayload.description = body.description?.trim() || null;
     if ('backgroundUrl' in body)
-      updatePayload.background_url = body.backgroundUrl?.trim() || null;
+      updatePayload.background_url = sanitizeUrl(body.backgroundUrl);
     if ('isActive' in body) updatePayload.is_active = !!body.isActive;
     if ('sortOrder' in body && Number.isFinite(body.sortOrder))
       updatePayload.sort_order = Number(body.sortOrder);

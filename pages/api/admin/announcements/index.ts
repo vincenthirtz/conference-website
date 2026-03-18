@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
+import { sanitizeUrl } from '@/utils/apiHelpers';
 
 type AnnouncementPayload = {
   title?: string;
@@ -68,7 +69,7 @@ async function handler(
       title: body.title.trim(),
       message: body.message.trim(),
       cta_label: body.ctaLabel?.trim() || null,
-      cta_url: body.ctaUrl?.trim() || null,
+      cta_url: sanitizeUrl(body.ctaUrl),
       is_active: body.isActive ?? true,
       priority: Number.isFinite(body.priority)
         ? Number(body.priority)

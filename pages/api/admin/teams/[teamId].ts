@@ -8,7 +8,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
-import { isValidUUID } from '@/utils/apiHelpers';
+import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 
 export type TeamRow = {
   id: string;
@@ -167,12 +167,17 @@ async function handlePut(
     return res.status(400).json({ error: 'short_name cannot be empty' });
   }
 
-  // URLs basiques (logo_url, banner_url, website)
-  const urlFields = ['logo_url', 'banner_url', 'website'] as const;
+  // Sanitize URL fields (reject javascript:, data: etc.)
+  const urlFields = ['logo_url', 'banner_url', 'website', 'twitter', 'discord'] as const;
   for (const field of urlFields) {
-    if (field in body && body[field] !== null && body[field] !== '') {
-      if (typeof body[field] !== 'string') {
-        return res.status(400).json({ error: `${field} must be a string` });
+    if (field in updatePayload && updatePayload[field as keyof TeamRow] != null) {
+      const val = updatePayload[field as keyof TeamRow];
+      if (typeof val === 'string' && val !== '') {
+        const safe = sanitizeUrl(val);
+        if (!safe) {
+          return res.status(400).json({ error: `${field} must be a valid http(s) URL` });
+        }
+        (updatePayload as any)[field] = safe;
       }
     }
   }

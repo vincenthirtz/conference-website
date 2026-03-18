@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
+import { sanitizeUrl } from '@/utils/apiHelpers';
 
 type TwitchChannelPayload = {
   channel?: string;
@@ -73,7 +74,7 @@ async function handler(
       label: body.label.trim(),
       badge: body.badge?.trim() || null,
       description: body.description?.trim() || null,
-      background_url: body.backgroundUrl?.trim() || null,
+      background_url: sanitizeUrl(body.backgroundUrl),
       is_active: body.isActive ?? true,
       sort_order: body.sortOrder ?? nextOrder,
     };
