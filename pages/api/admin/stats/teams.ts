@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
-import { sanitizeSearch } from '@/utils/apiHelpers';
+import { sanitizeSearch, escapePostgrestValue } from '@/utils/apiHelpers';
 
 type TeamStatsRow = {
   team_id: string;
@@ -135,8 +135,9 @@ async function handler(
   }
 
   if (search) {
+    const safe = escapePostgrestValue(search);
     query = query.or(
-      `team_name.ilike.%${search}%,team_short_name.ilike.%${search}%`
+      `team_name.ilike.%${safe}%,team_short_name.ilike.%${safe}%`
     );
   }
 

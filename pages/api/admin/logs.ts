@@ -26,7 +26,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { StaffLog, formatStaffLog } from '@/utils/staffLogs';
-import { parsePagination, sanitizeSearch } from '@/utils/apiHelpers';
+import { parsePagination, sanitizeSearch, escapePostgrestValue } from '@/utils/apiHelpers';
 
 export type AdminLogsResponse = {
   logs: Array<ReturnType<typeof formatStaffLog>>;
@@ -97,7 +97,8 @@ async function handler(
     }
 
     if (search) {
-      const s = `%${search}%`;
+      const safe = escapePostgrestValue(search);
+      const s = `%${safe}%`;
       query = query.or(`action.ilike.${s},entity_type.ilike.${s}`);
     }
 

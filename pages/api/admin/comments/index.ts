@@ -3,7 +3,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
-import { parsePagination, sanitizeSearch } from '@/utils/apiHelpers';
+import { parsePagination, sanitizeSearch, escapePostgrestValue } from '@/utils/apiHelpers';
 
 type CommentRow = {
   id: string;
@@ -66,7 +66,8 @@ async function listComments(
     .range(offset, offset + limit - 1);
 
   if (search) {
-    const pattern = `%${search}%`;
+    const safe = escapePostgrestValue(search);
+    const pattern = `%${safe}%`;
     query = query.or(`content.ilike.${pattern},author_name.ilike.${pattern}`);
   }
   if (newsId) {
@@ -79,7 +80,7 @@ async function listComments(
     console.error('admin comments GET error:', error);
     return res
       .status(500)
-      .json({ error: error.message || 'Failed to fetch comments' });
+      .json({ error: 'Failed to fetch comments' });
   }
 
   return res.status(200).json({
@@ -126,7 +127,7 @@ async function updateComment(
     console.error('admin comments PATCH error:', error);
     return res
       .status(500)
-      .json({ error: error.message || 'Failed to update comment' });
+      .json({ error: 'Failed to update comment' });
   }
 
   return res.status(200).json({ comment: data as unknown as CommentRow });
@@ -150,7 +151,7 @@ async function deleteComment(
     console.error('admin comments DELETE error:', error);
     return res
       .status(500)
-      .json({ error: error.message || 'Failed to delete comment' });
+      .json({ error: 'Failed to delete comment' });
   }
 
   return res.status(200).json({ deleted: true });
