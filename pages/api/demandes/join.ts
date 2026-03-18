@@ -48,7 +48,7 @@ export default async function handler(
     // Recuperer les demandes de type "join" de l'utilisateur
     const { data: demandes, error: demandesErr } = await supabaseAdmin
       .from('demandes')
-      .select('*')
+      .select('*, team:teams!team_id(id, name, short_name, logo_url)')
       .eq('user_id', userId)
       .eq('type', 'join')
       .order('created_at', { ascending: false });
@@ -60,22 +60,7 @@ export default async function handler(
         .json({ error: 'Failed to load requests.' });
     }
 
-    // Enrichir avec les infos d'equipe si team_id present
-    const enrichedDemandes = await Promise.all(
-      (demandes || []).map(async (d) => {
-        if (d.team_id && supabaseAdmin) {
-          const { data: teamData } = await supabaseAdmin
-            .from('teams')
-            .select('id, name, short_name, logo_url')
-            .eq('id', d.team_id)
-            .maybeSingle();
-          return { ...d, team: teamData };
-        }
-        return { ...d, team: null };
-      })
-    );
-
-    return res.status(200).json({ demandes: enrichedDemandes });
+    return res.status(200).json({ demandes: demandes || [] });
   }
 
   if (req.method === 'POST') {

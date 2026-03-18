@@ -97,13 +97,21 @@ export function hasAtLeastRole(
 }
 
 /* -----------------------------------------------------------
- * Récupérer le staff d'un user
+ * Récupérer le staff d'un user (avec cache mémoire TTL 5 min)
  * ---------------------------------------------------------*/
+
+const STAFF_CACHE_TTL = 5 * 60 * 1_000; // 5 minutes
+const staffCache = new Map<string, { data: StaffMember | null; expiresAt: number }>();
 
 export async function getStaffByUserId(
   userId: string
 ): Promise<StaffMember | null> {
-  // 🔁 Utilise bien la table "staff" + colonne "auth_user_id"
+  const now = Date.now();
+  const cached = staffCache.get(userId);
+  if (cached && cached.expiresAt > now) {
+    return cached.data;
+  }
+
   const { data, error } = await supabaseAdmin
     .from('staff')
     .select('*')
@@ -115,7 +123,18 @@ export async function getStaffByUserId(
     return null;
   }
 
-  return (data as StaffMember) ?? null;
+  const result = (data as StaffMember) ?? null;
+  staffCache.set(userId, { data: result, expiresAt: now + STAFF_CACHE_TTL });
+  return result;
+}
+
+/** Invalidate the staff cache for a specific user (call after role changes). */
+export function invalidateStaffCache(userId?: string) {
+  if (userId) {
+    staffCache.delete(userId);
+  } else {
+    staffCache.clear();
+  }
 }
 
 export async function getStaffRole(userId: string): Promise<StaffRole | null> {

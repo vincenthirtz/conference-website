@@ -3,7 +3,21 @@ const nextConfig = {
   reactStrictMode: true,
   trailingSlash: false,
   images: {
-    unoptimized: true,
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.supabase.co',
+        pathname: '/storage/v1/object/public/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'overwatch.blizzard.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'static-cdn.jtvnw.net',
+      },
+    ],
   },
   /**
    * Netlify build (Turbopack) was failing to load ESM modules from supabase-js.
@@ -30,24 +44,7 @@ const nextConfig = {
             key: 'Strict-Transport-Security',
             value: 'max-age=63072000; includeSubDomains; preload',
           },
-          {
-            key: 'Content-Security-Policy',
-            value: [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-inline'",
-              "style-src 'self' 'unsafe-inline'",
-              `img-src 'self' data: blob: https:`,
-              `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.twitch.tv https://id.twitch.tv`,
-              `media-src 'self' https://*.supabase.co`,
-              "font-src 'self'",
-              "frame-src 'self' https://player.twitch.tv https://www.youtube.com",
-              "object-src 'none'",
-              "base-uri 'self'",
-              "form-action 'self'",
-              "frame-ancestors 'none'",
-              'upgrade-insecure-requests',
-            ].join('; '),
-          },
+          // CSP is now set dynamically with nonces in middleware.ts
         ],
       },
     ];

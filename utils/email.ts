@@ -35,6 +35,9 @@ export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult
   }
 
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5_000);
+
     const res = await fetch(RESEND_API_URL, {
       method: 'POST',
       headers: {
@@ -47,7 +50,10 @@ export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult
         subject: opts.subject,
         html: opts.html,
       }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeout);
 
     const data = await res.json().catch(() => null);
 
