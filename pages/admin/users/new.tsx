@@ -19,6 +19,7 @@ type CreateUserResponse = {
   userId: string;
   email: string;
   tempPassword?: string;
+  passwordSentByEmail?: boolean;
 };
 
 type TeamOption = {

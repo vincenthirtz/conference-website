@@ -62,5 +62,22 @@ export function applyRateLimit(
 
   timestamps.push(now);
   store.set(ip, timestamps);
+
+  // Prevent unbounded memory growth: evict stale entries when store grows too large
+  const MAX_STORE_SIZE = 10_000;
+  if (store.size > MAX_STORE_SIZE) {
+    for (const [key, ts] of store) {
+      // Remove entries with no recent timestamps
+      const fresh = ts.filter((t) => now - t < windowMs);
+      if (fresh.length === 0) {
+        store.delete(key);
+      } else {
+        store.set(key, fresh);
+      }
+      // Stop cleanup once we're back under limit
+      if (store.size <= MAX_STORE_SIZE * 0.8) break;
+    }
+  }
+
   return false;
 }

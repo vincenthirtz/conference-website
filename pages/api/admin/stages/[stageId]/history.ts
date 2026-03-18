@@ -154,7 +154,6 @@ async function handler(
     console.error('[/api/admin/stages/[stageId]/history] error:', err);
     return res.status(500).json({
       error: 'Internal server error',
-      detail: err?.message,
     });
   }
 }

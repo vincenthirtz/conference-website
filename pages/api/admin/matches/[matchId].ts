@@ -9,13 +9,14 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import { logStaffAction } from '@/utils/staffLogs';
+import { isValidUUID } from '@/utils/apiHelpers';
 
 export default withStaffRoute(handler, 'manager'); // rôle min : manager
 
 async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
   const { matchId } = req.query;
 
-  if (!matchId || Array.isArray(matchId)) {
+  if (!matchId || Array.isArray(matchId) || !isValidUUID(matchId)) {
     return res.status(400).json({ error: 'Invalid matchId' });
   }
 
@@ -35,7 +36,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
     console.error('[/api/admin/matches/[matchId]] error:', err);
     return res.status(500).json({
       error: 'Internal server error',
-      detail: err?.message,
     });
   }
 }

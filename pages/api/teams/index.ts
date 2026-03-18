@@ -4,7 +4,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { parsePagination, sanitizeSearch } from '@/utils/apiHelpers';
+import { parsePagination, sanitizeSearch, escapePostgrestValue } from '@/utils/apiHelpers';
 
 export type PublicTeam = {
   id: string;
@@ -39,7 +39,7 @@ export default async function handler(
 
     // Recherche par nom
     if (search) {
-      const s = `%${search}%`;
+      const s = `%${escapePostgrestValue(search)}%`;
       query = query.or(`name.ilike.${s},short_name.ilike.${s}`);
     }
 

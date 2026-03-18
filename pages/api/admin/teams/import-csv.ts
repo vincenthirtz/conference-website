@@ -91,8 +91,19 @@ async function handler(
       continue;
     }
 
-    const shortName = colMap.short_name >= 0 ? cols[colMap.short_name]?.trim() || null : null;
-    const country = colMap.country >= 0 ? cols[colMap.country]?.trim() || null : null;
+    // Enforce field length limits to prevent oversized DB inserts
+    const MAX_NAME = 100;
+    const MAX_SHORT_NAME = 20;
+    const MAX_COUNTRY = 10;
+    const MAX_BATTLE_TAG = 50;
+
+    if (name.length > MAX_NAME) {
+      result.errors.push({ row: rowNum, message: `Nom trop long (max ${MAX_NAME} car.)` });
+      continue;
+    }
+
+    const shortName = colMap.short_name >= 0 ? (cols[colMap.short_name]?.trim() || null)?.slice(0, MAX_SHORT_NAME) ?? null : null;
+    const country = colMap.country >= 0 ? (cols[colMap.country]?.trim() || null)?.slice(0, MAX_COUNTRY) ?? null : null;
     const playersRaw = colMap.players >= 0 ? cols[colMap.players]?.trim() || '' : '';
 
     // Check duplicate name
@@ -141,7 +152,8 @@ async function handler(
         .map((bt: string) => bt.trim())
         .filter((bt: string) => bt.length > 0);
 
-      for (const bt of battleTags) {
+      for (const rawBt of battleTags) {
+        const bt = rawBt.slice(0, MAX_BATTLE_TAG);
         const { error: memberErr } = await supabaseAdmin
           .from('team_members')
           .insert({

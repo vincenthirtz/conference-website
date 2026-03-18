@@ -164,7 +164,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     console.error('[/api/admin/tournament/[id]/stats] internal error:', err);
     return res.status(500).json({
       error: 'Internal server error',
-      detail: err?.message,
     });
   }
 }

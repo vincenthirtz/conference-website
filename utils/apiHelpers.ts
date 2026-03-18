@@ -59,3 +59,13 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 export function isValidUUID(value: string): boolean {
   return UUID_RE.test(value);
 }
+
+/**
+ * Escape a value for use inside PostgREST filter expressions (.or / .filter).
+ * PostgREST treats characters like , . ( ) as operators — they must be
+ * stripped or escaped so user input cannot alter the query structure.
+ */
+export function escapePostgrestValue(value: string): string {
+  // Remove characters that PostgREST interprets as operators/delimiters
+  return value.replace(/[,.*()\\]/g, '');
+}

@@ -251,7 +251,6 @@ async function handler(
     console.error('[/api/admin/stages/[stageId]/auto-byes] error:', err);
     return res.status(500).json({
       error: 'Internal server error',
-      detail: err?.message,
     });
   }
 }

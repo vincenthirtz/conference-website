@@ -43,7 +43,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
     }
   } catch (err: any) {
     console.error('[/api/admin/stages/[stageId]/groups] error:', err);
-    return res.status(500).json({ error: 'Internal server error', detail: err?.message });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }
 

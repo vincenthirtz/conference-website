@@ -300,7 +300,6 @@ async function handler(
     console.error('[/api/admin/tournament/[id]/auto-schedule] error:', err);
     return res.status(500).json({
       error: 'Internal server error',
-      detail: err?.message,
     });
   }
 }

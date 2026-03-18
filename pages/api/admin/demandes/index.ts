@@ -7,7 +7,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
-import { parsePagination, sanitizeSearch } from '@/utils/apiHelpers';
+import { parsePagination, sanitizeSearch, escapePostgrestValue, isValidUUID } from '@/utils/apiHelpers';
 
 export type DemandeType = 'join' | 'leave' | 'captain_request' | 'team_registration' | 'other';
 
@@ -81,7 +81,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
     console.error('[/api/admin/demandes] internal error:', err);
     return res.status(500).json({
       error: 'Internal server error',
-      detail: err?.message,
     });
   }
 }
@@ -224,7 +223,7 @@ async function handleGet(
   }
 
   if (search) {
-    const s = `%${search}%`;
+    const s = `%${escapePostgrestValue(search)}%`;
     query = query.or(
       `comment.ilike.${s},staff_note.ilike.${s},source.ilike.${s}`
     );
@@ -329,10 +328,35 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: any) {
     });
   }
 
-  if (!newStatus) {
+  const MAX_BATCH_SIZE = 50;
+  if (demandeIds.length > MAX_BATCH_SIZE) {
     return res.status(400).json({
-      error: "Missing 'newStatus'",
+      error: `Batch too large. Maximum ${MAX_BATCH_SIZE} demandes at once.`,
     });
+  }
+
+  // Validate every ID is a proper UUID
+  for (const id of demandeIds) {
+    if (typeof id !== 'string' || !isValidUUID(id)) {
+      return res.status(400).json({
+        error: `Invalid demande ID format: ${String(id).slice(0, 40)}`,
+      });
+    }
+  }
+
+  const VALID_STATUSES: DemandeStatus[] = ['pending', 'approved', 'rejected', 'cancelled'];
+  if (!newStatus || !VALID_STATUSES.includes(newStatus)) {
+    return res.status(400).json({
+      error: `Invalid newStatus. Allowed values: ${VALID_STATUSES.join(', ')}`,
+    });
+  }
+
+  if (staffComment !== undefined && staffComment !== null) {
+    if (typeof staffComment !== 'string' || staffComment.length > 2000) {
+      return res.status(400).json({
+        error: 'staffComment must be a string with max 2000 characters.',
+      });
+    }
   }
 
   const nowIso = new Date().toISOString();

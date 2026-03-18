@@ -149,7 +149,6 @@ async function handler(
     console.error('[/api/admin/teams/[teamId]/history] error:', err);
     return res.status(500).json({
       error: 'Internal server error',
-      detail: err?.message,
     });
   }
 }
