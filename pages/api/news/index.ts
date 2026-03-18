@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import slugify from 'slugify';
 import { supabaseAdmin, getServerClient } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { escapePostgrestValue } from '@/utils/apiHelpers';
+import { escapePostgrestValue, parsePagination } from '@/utils/apiHelpers';
 
 const normalizeTag = (value?: string | null) => {
   const cleaned = (value || '').toString().trim();
@@ -22,7 +22,7 @@ export default async function handler(
 
   const admin = supabaseAdmin ?? getServerClient(req, res);
 
-  const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 10));
+  const { limit, offset } = parsePagination(req, { limit: 10, maxLimit: 100 });
   const tagFilter = normalizeTag(req.query.tag?.toString());
 
   const nowISO = new Date().toISOString();
@@ -35,7 +35,7 @@ export default async function handler(
     .eq('status', 'published')
     .or(`published_at.lte.${escapePostgrestValue(nowISO)},published_at.is.null`)
     .order('published_at', { ascending: false, nullsFirst: false })
-    .limit(limit);
+    .range(offset, offset + limit - 1);
 
   if (tagFilter) {
     query = query.eq('tag', tagFilter);
