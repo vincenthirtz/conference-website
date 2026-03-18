@@ -41,9 +41,9 @@ function RegisterPage() {
             "Impossible de démarrer l'inscription via Discord pour le moment."
         );
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setErrorMsg(
-        err?.message ||
+        (err as Error)?.message ||
           'Une erreur est survenue avec Discord. Réessaie dans un instant.'
       );
       setOauthLoading(false);
@@ -91,8 +91,8 @@ function RegisterPage() {
       setPassword('');
       setConfirm('');
       setBattleTag('');
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }

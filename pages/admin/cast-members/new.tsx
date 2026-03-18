@@ -79,8 +79,8 @@ function AdminCastMemberNewPage({ staff }: Props) {
       }
 
       router.push('/admin/cast-members');
-    } catch (err: any) {
-      setError(err?.message || 'Erreur inattendue.');
+    } catch (err: unknown) {
+      setError((err as Error)?.message || 'Erreur inattendue.');
     } finally {
       setSaving(false);
     }

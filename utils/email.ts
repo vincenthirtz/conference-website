@@ -58,9 +58,9 @@ export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult
     }
 
     return { success: true, id: data?.id };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[email] fetch error:', err);
-    return { success: false, error: err?.message || 'Network error' };
+    return { success: false, error: (err as Error)?.message || 'Network error' };
   }
 }
 

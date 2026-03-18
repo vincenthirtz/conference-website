@@ -76,8 +76,8 @@ export default function LogoUpload({
         }
 
         onChange(json.url);
-      } catch (err: any) {
-        setError(err?.message ?? "Erreur lors de l'upload");
+      } catch (err: unknown) {
+        setError((err as Error)?.message ?? "Erreur lors de l'upload");
       } finally {
         setUploading(false);
       }

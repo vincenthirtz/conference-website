@@ -86,8 +86,8 @@ function StagesPage(_: StaffProps) {
         const tournamentJson = await tournamentRes.json();
         setTournamentName(tournamentJson.tournament?.name || tournamentId || 'Tournoi');
       }
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Erreur de chargement');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message || 'Erreur de chargement');
     } finally {
       setLoading(false);
     }
@@ -136,8 +136,8 @@ function StagesPage(_: StaffProps) {
       setStages(json.stages || []);
       setOrderChanged(false);
       setReorderMode(false);
-    } catch (err: any) {
-      setErrorMsg(err?.message || "Erreur lors de l'enregistrement");
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message || "Erreur lors de l'enregistrement");
     } finally {
       setReordering(false);
     }
@@ -176,8 +176,8 @@ function StagesPage(_: StaffProps) {
       setSuccessMsg(`Template « ${selectedTemplate.name} » ajouté`);
       setTimeout(() => setSuccessMsg(null), 3000);
       fetchStages();
-    } catch (err: any) {
-      setErrorMsg(err?.message || "Erreur lors de l'application du template");
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message || "Erreur lors de l'application du template");
     } finally {
       setApplyingTemplate(false);
     }

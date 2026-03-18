@@ -100,8 +100,8 @@ export default function AdminResetPasswordPage() {
       setSuccessMsg('Mot de passe mis à jour. Tu peux te reconnecter.');
       setPassword('');
       setConfirm('');
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }

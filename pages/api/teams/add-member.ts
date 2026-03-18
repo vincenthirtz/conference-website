@@ -75,8 +75,8 @@ export default async function handler(
   let battleTagValue: string;
   try {
     battleTagValue = validateBattleTag(battleTag);
-  } catch (err: any) {
-    return res.status(400).json({ error: err?.message || 'Invalid BattleTag' });
+  } catch (err: unknown) {
+    return res.status(400).json({ error: (err as Error)?.message || 'Invalid BattleTag' });
   }
 
   try {
@@ -97,10 +97,10 @@ export default async function handler(
         if (created) {
           console.log(`[add-member] auto-created user for ${email}`);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('[add-member] findOrCreateUser error:', err);
         return res.status(500).json({
-          error: err?.message || 'Failed to find or create user',
+          error: (err as Error)?.message || 'Failed to find or create user',
         });
       }
     }
@@ -170,10 +170,10 @@ export default async function handler(
       battle_tag: battleTagValue,
       info: 'Membre ajouté à l\'équipe',
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[/api/teams/add-member] error:', err);
     return res.status(500).json({
-      error: err?.message || 'Internal server error',
+      error: (err as Error)?.message || 'Internal server error',
     });
   }
 }

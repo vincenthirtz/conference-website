@@ -151,7 +151,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.status(200).end(csv);
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[export-results] error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }

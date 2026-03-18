@@ -334,8 +334,8 @@ function AdminTournamentPage({ staff }: StaffProps) {
       }
       const json: ApiResponse = await res.json();
       setTournament(json.tournament);
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
@@ -450,8 +450,8 @@ function AdminTournamentPage({ staff }: StaffProps) {
       if (json.tournament?.id) {
         router.push(`/admin/tournament/${json.tournament.id}`);
       }
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur lors du clonage');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur lors du clonage');
     } finally {
       setCloning(false);
       setShowCloneConfirm(false);
@@ -507,8 +507,8 @@ function AdminTournamentPage({ staff }: StaffProps) {
       setSuccessMsg(`Statut modifié : ${statusLabel(newStatus)}`);
       setTimeout(() => setSuccessMsg(null), 3000);
       fetchStatusGuards();
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setUpdatingStatus(false);
     }
@@ -540,8 +540,8 @@ function AdminTournamentPage({ staff }: StaffProps) {
       setSuccessMsg('Équipe ajoutée avec succès');
       setTimeout(() => setSuccessMsg(null), 3000);
       fetchTournamentTeams();
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setAddingTeam(false);
     }
@@ -568,8 +568,8 @@ function AdminTournamentPage({ staff }: StaffProps) {
       setSuccessMsg('Équipe retirée');
       setTimeout(() => setSuccessMsg(null), 3000);
       fetchTournamentTeams();
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setShowRemoveConfirm(false);
       setPendingRemoveTeamId(null);
@@ -645,8 +645,8 @@ function AdminTournamentPage({ staff }: StaffProps) {
       setSuccessMsg('Phase créée avec succès');
       setTimeout(() => setSuccessMsg(null), 3000);
       fetchStages();
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setCreatingStage(false);
     }

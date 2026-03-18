@@ -188,8 +188,8 @@ function AdminSwissStagePage({ staff }: StaffProps) {
       setTournament(json.tournament ?? null);
       setStandings(json.standings || []);
       setRounds(json.rounds || []);
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
@@ -228,8 +228,8 @@ function AdminSwissStagePage({ staff }: StaffProps) {
       setPreview(json.preview || []);
       setPreviewRound(json.roundNumber ?? null);
       setPreviewHasRematches(json.hasRematches ?? false);
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur lors de l'apercu");
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? "Erreur lors de l'apercu");
     } finally {
       setLoadingPreview(false);
     }
@@ -268,8 +268,8 @@ function AdminSwissStagePage({ staff }: StaffProps) {
       setPreview(null);
       setPreviewRound(null);
       fetchSwissData();
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur lors de la generation de la ronde');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur lors de la generation de la ronde');
     } finally {
       setLoadingGenerate(false);
     }

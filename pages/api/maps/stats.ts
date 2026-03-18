@@ -254,8 +254,9 @@ export default async function handler(
       teamTendencies,
     };
 
+    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=120');
     return res.status(200).json(response);
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[/api/maps/stats] internal error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }

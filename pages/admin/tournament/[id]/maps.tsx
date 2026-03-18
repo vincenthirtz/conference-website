@@ -107,8 +107,8 @@ function AdminTournamentMapsPage(_: StaffProps) {
       const json: ApiResponse = await res.json();
       setMaps(json.maps || []);
       setTournament(json.tournament ?? null);
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Erreur de chargement');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message || 'Erreur de chargement');
     } finally {
       setLoading(false);
     }
@@ -170,8 +170,8 @@ function AdminTournamentMapsPage(_: StaffProps) {
 
       // Recharger la liste
       await fetchMaps();
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Erreur lors de l\'ajout');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message || 'Erreur lors de l\'ajout');
     } finally {
       setAdding(false);
     }
@@ -197,8 +197,8 @@ function AdminTournamentMapsPage(_: StaffProps) {
 
       // Recharger la liste
       await fetchMaps();
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Erreur lors de la suppression');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message || 'Erreur lors de la suppression');
     } finally {
       setDeleting(null);
     }
@@ -221,8 +221,8 @@ function AdminTournamentMapsPage(_: StaffProps) {
       }
 
       await fetchMaps();
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Erreur lors de la suppression');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message || 'Erreur lors de la suppression');
     }
   }
 
@@ -291,8 +291,8 @@ function AdminTournamentMapsPage(_: StaffProps) {
       // Fermer le modal et recharger
       setEditingMap(null);
       await fetchMaps();
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Erreur lors de la mise à jour');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message || 'Erreur lors de la mise à jour');
     } finally {
       setUpdating(false);
     }
@@ -348,8 +348,8 @@ function AdminTournamentMapsPage(_: StaffProps) {
       }
 
       await fetchMaps();
-    } catch (err: any) {
-      setErrorMsg(err?.message || "Erreur lors de l'ajout groupé");
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message || "Erreur lors de l'ajout groupé");
     } finally {
       setAddingAll(false);
     }

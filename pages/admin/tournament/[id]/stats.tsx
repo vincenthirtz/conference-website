@@ -104,8 +104,8 @@ function AdminTournamentStatsPage({ staff }: StaffProps) {
 
       const json: TournamentStats = await res.json();
       setStats(json);
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }

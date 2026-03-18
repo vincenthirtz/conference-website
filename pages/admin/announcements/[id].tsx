@@ -117,8 +117,8 @@ function AdminAnnouncementEditPage({ staff }: Props) {
         priority: String(data.priority ?? 0),
         isActive: data.is_active ?? true,
       });
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Erreur inconnue.');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message || 'Erreur inconnue.');
     } finally {
       setLoading(false);
     }
@@ -188,9 +188,9 @@ function AdminAnnouncementEditPage({ staff }: Props) {
       }
 
       setSuccessMsg('Annonce mise à jour avec succès.');
-    } catch (err: any) {
+    } catch (err: unknown) {
       setErrorMsg(
-        err?.message ?? "Erreur inconnue lors de la mise à jour de l'annonce"
+        (err as Error)?.message ?? "Erreur inconnue lors de la mise à jour de l'annonce"
       );
     } finally {
       setSubmitting(false);
@@ -225,8 +225,8 @@ function AdminAnnouncementEditPage({ staff }: Props) {
       }
 
       router.push('/admin/announcements');
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Erreur lors de la suppression.');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message || 'Erreur lors de la suppression.');
       setSubmitting(false);
     }
   }

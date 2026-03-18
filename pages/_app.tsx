@@ -1,26 +1,32 @@
 import '@/styles/globals.css';
-import Navbar from '@/components/Navbar/navbar';
+import dynamic from 'next/dynamic';
 import Footer from '@/components/Footer/footer';
-import BackToTopButton from '@/components/Buttons/BackToTopButton';
-import { CookieBanner } from '@/components/CookieBanner';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import FloatingSocials from '@/components/Socials/FloatingSocials';
 import type { AppProps } from 'next/app';
-import { useEffect, useState } from 'react';
 import DefaultSeo, { SeoProps } from '@/components/Seo/DefaultSeo';
+
+const Navbar = dynamic(() => import('@/components/Navbar/navbar'), {
+  ssr: false,
+});
+const BackToTopButton = dynamic(
+  () => import('@/components/Buttons/BackToTopButton'),
+  { ssr: false }
+);
+const CookieBanner = dynamic(
+  () =>
+    import('@/components/CookieBanner').then((mod) => mod.CookieBanner),
+  { ssr: false }
+);
+const FloatingSocials = dynamic(
+  () => import('@/components/Socials/FloatingSocials'),
+  { ssr: false }
+);
 
 type AppPropsWithSeo = AppProps & {
   Component: AppProps['Component'] & { seo?: SeoProps };
 };
 
 function MyApp({ Component, pageProps, router }: AppPropsWithSeo) {
-  const [isClient, setIsClient] = useState(false);
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  if (!isClient) return <></>;
-
   const seo = (Component as any)?.seo as SeoProps | undefined;
   const isAdmin = router.pathname.startsWith('/admin');
   const effectiveSeo: SeoProps = isAdmin

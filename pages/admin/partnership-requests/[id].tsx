@@ -102,8 +102,8 @@ function AdminPartnershipRequestDetailPage({ staff }: Props) {
         setRequest(json);
         setStatus(json.status);
         setAdminNotes(json.admin_notes || '');
-      } catch (err: any) {
-        setError(err.message || 'Erreur de chargement.');
+      } catch (err: unknown) {
+        setError((err as Error).message || 'Erreur de chargement.');
       } finally {
         setLoading(false);
       }
@@ -141,8 +141,8 @@ function AdminPartnershipRequestDetailPage({ staff }: Props) {
 
       setRequest(json);
       setSuccess(true);
-    } catch (err: any) {
-      setError(err.message || 'Une erreur est survenue.');
+    } catch (err: unknown) {
+      setError((err as Error).message || 'Une erreur est survenue.');
     } finally {
       setSaving(false);
     }

@@ -211,8 +211,8 @@ export default function RequestCaptainPage() {
       }
 
       setSuccess(true);
-    } catch (err: any) {
-      setError(err.message || 'Une erreur est survenue.');
+    } catch (err: unknown) {
+      setError((err as Error).message || 'Une erreur est survenue.');
     } finally {
       setSubmitting(false);
     }

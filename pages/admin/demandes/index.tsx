@@ -316,8 +316,8 @@ function AdminDemandesPage() {
       const json: DemandesApiResponse = await res.json();
       setDemandes(json.demandes || []);
       setTotal(typeof json.total === 'number' ? json.total : null);
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
@@ -371,8 +371,8 @@ function AdminDemandesPage() {
       );
       setSelected(new Set());
       fetchDemandes();
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur');
     } finally {
       setBatchProcessing(false);
     }

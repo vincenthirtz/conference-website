@@ -110,8 +110,8 @@ function AdminMapDrawPage(_: StaffProps) {
       const enabledMaps = (json.maps || []).filter((m: TournamentMapRow) => m.enabled);
       setMaps(enabledMaps);
       setTournament(json.tournament ?? null);
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Erreur de chargement');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message || 'Erreur de chargement');
     } finally {
       setLoading(false);
     }

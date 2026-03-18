@@ -545,7 +545,7 @@ async function handler(
     };
 
     return res.status(200).json(response);
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error(
       '[/api/admin/stages/[stageId]/generate-swiss-round] error:',
       err

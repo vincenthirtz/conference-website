@@ -38,7 +38,25 @@
       "Bash(wc -l /Users/Alicia/Documents/Vincent/conference-website/pages/admin/tournament/[id]/matches.tsx)",
       "Bash(git add pages/admin/matches/[matchId]/edit.tsx pages/admin/stages/[stageId].tsx pages/admin/teams/[teamId]/edit.tsx pages/admin/teams/index.tsx pages/admin/tournament/[id]/edit.tsx pages/admin/tournament/[id]/matches.tsx pages/admin/tournament/[id]/stages.tsx pages/admin/tournaments/index.tsx pages/api/admin/matches/[matchId].ts pages/api/admin/stages/[stageId].ts pages/api/admin/teams/[teamId].ts pages/api/admin/tournament/[id].ts utils/bracket/propagate.ts utils/matches/applyScore.ts types/admin.ts utils/useUrlFilters.ts tsconfig.tsbuildinfo .claude/settings.local.json)",
       "Bash(npx next:*)",
-      "Bash(find /c/Users/hirtz/depot/conference-website -type f \\\\\\(-name *schema* -o -name *migration* -o -name *database* \\\\\\))"
+      "Bash(find /c/Users/hirtz/depot/conference-website -type f \\\\\\(-name *schema* -o -name *migration* -o -name *database* \\\\\\))",
+      "Bash(xxd pages/api/admin/teams/add-member.ts)",
+      "Bash(xxd)",
+      "Bash(git add:*)",
+      "Bash(magick --version)",
+      "Bash(convert --version)",
+      "Bash(node -e \"require\\(''sharp''\\)\")",
+      "Bash(git pull:*)",
+      "Bash(git stash:*)",
+      "Bash(git checkout:*)",
+      "Bash(for f:*)",
+      "Bash(do node:*)",
+      "Bash(done)",
+      "Bash(git status:*)",
+      "Bash(npm list:*)",
+      "Bash(git -C /c/Users/hirtz/depot/conference-website log --all --full-history --source -S \"SECRET\\\\|PASSWORD\\\\|KEY\" -- *.env*)",
+      "Bash(find /c/Users/hirtz/depot/conference-website/pages/admin -name \"*.tsx\" -type f -exec grep -l \"getServerSideProps\" {})",
+      "Bash(git rm:*)",
+      "Bash(xargs sed:*)"
     ]
   }
 }

@@ -119,11 +119,12 @@ export default async function handler(
       }
     });
 
+    res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=30');
     return res.status(200).json({ statuses: liveMap });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[/api/twitch/live] error:', err);
     return res
       .status(500)
-      .json({ error: err?.message || 'Failed to check live status' });
+      .json({ error: (err as Error)?.message || 'Failed to check live status' });
   }
 }

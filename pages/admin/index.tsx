@@ -80,9 +80,9 @@ function AdminProfilePage({ staff }: Props) {
           displayName: json.display_name || '',
           avatarUrl: json.avatar_url || '',
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('AdminProfilePage: profile fetch error', err);
-        setErrorMsg(err?.message || 'Erreur inattendue');
+        setErrorMsg((err as Error)?.message || 'Erreur inattendue');
       } finally {
         setLoading(false);
       }
@@ -113,9 +113,9 @@ function AdminProfilePage({ staff }: Props) {
         'Un email de confirmation a été envoyé à ta nouvelle adresse. Clique sur le lien pour confirmer le changement.'
       );
       setNewEmail('');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('AdminProfilePage: email change error', err);
-      setEmailErrorMsg(err?.message || 'Erreur lors du changement d\'email.');
+      setEmailErrorMsg((err as Error)?.message || 'Erreur lors du changement d\'email.');
     } finally {
       setEmailChanging(false);
     }
@@ -146,9 +146,9 @@ function AdminProfilePage({ staff }: Props) {
       setPasswordSuccessMsg('Ton mot de passe a été modifié avec succès.');
       setNewPassword('');
       setConfirmPassword('');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('AdminProfilePage: password change error', err);
-      setPasswordErrorMsg(err?.message || 'Erreur lors du changement de mot de passe.');
+      setPasswordErrorMsg((err as Error)?.message || 'Erreur lors du changement de mot de passe.');
     } finally {
       setPasswordChanging(false);
     }
@@ -193,9 +193,9 @@ function AdminProfilePage({ staff }: Props) {
         avatarUrl: json.avatar_url || '',
       });
       setSuccessMsg('Profil mis à jour.');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('AdminProfilePage: profile update error', err);
-      setErrorMsg(err?.message || 'Erreur inattendue');
+      setErrorMsg((err as Error)?.message || 'Erreur inattendue');
     } finally {
       setSaving(false);
     }

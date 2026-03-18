@@ -112,10 +112,10 @@ const AdminLoginPage = () => {
       } else {
         setError('Utilisateur non trouvé après la connexion.');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[staff login] error:', err);
       setError(
-        err?.message ||
+        (err as Error)?.message ||
           'Une erreur est survenue pendant la connexion. Réessaie dans un instant.'
       );
     } finally {
@@ -147,10 +147,10 @@ const AdminLoginPage = () => {
           oauthError.message || 'Connexion Discord impossible pour le moment.'
         );
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[staff login] discord error:', err);
       setError(
-        err?.message ||
+        (err as Error)?.message ||
           'Une erreur est survenue avec Discord. Réessaie dans un instant.'
       );
       setIsSubmitting(false);

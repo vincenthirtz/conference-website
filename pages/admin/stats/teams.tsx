@@ -151,8 +151,8 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
       const json: TeamStatsApiResponse = await res.json();
       setStats(json.stats || []);
       setTotal(typeof json.total === 'number' ? json.total : null);
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }

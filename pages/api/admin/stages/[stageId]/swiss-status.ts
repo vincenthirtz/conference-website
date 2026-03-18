@@ -164,7 +164,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       activeTeamCount: activeCount,
       totalTeamCount: allTeamIds.length,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[/api/admin/stages/[stageId]/swiss-status] error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }

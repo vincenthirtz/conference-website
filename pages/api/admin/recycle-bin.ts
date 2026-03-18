@@ -327,10 +327,10 @@ async function handleRestore(
     }
 
     return res.status(200).json({ restored: true, type, id });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[/api/admin/recycle-bin] restore error:', err);
     return res
       .status(500)
-      .json({ error: err?.message || 'Failed to restore item' });
+      .json({ error: (err as Error)?.message || 'Failed to restore item' });
   }
 }

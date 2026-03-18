@@ -56,11 +56,12 @@ export default async function handler(
       return res.status(500).json({ error: 'Failed to fetch teams' });
     }
 
+    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=120');
     return res.status(200).json({
       teams: (data || []) as PublicTeam[],
       total: typeof count === 'number' ? count : null,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[api/teams] internal error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }

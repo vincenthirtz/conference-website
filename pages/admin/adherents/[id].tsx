@@ -154,8 +154,8 @@ function AdminEditAdherentPage({ staff }: Props) {
       if (cotisation?.value) {
         setCotisationAmount(parseFloat(cotisation.value) || 0);
       }
-    } catch (err: any) {
-      setError(err.message || 'Erreur de chargement');
+    } catch (err: unknown) {
+      setError((err as Error).message || 'Erreur de chargement');
     } finally {
       setLoading(false);
     }
@@ -215,8 +215,8 @@ function AdminEditAdherentPage({ staff }: Props) {
       }
 
       router.push('/admin/adherents');
-    } catch (err: any) {
-      setError(err.message || 'Une erreur est survenue.');
+    } catch (err: unknown) {
+      setError((err as Error).message || 'Une erreur est survenue.');
     } finally {
       setSaving(false);
     }

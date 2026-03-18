@@ -39,8 +39,8 @@ export default function AdminForgotPasswordPage() {
       setSuccessMsg(
         'Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.'
       );
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setSending(false);
     }

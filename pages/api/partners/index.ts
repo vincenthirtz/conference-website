@@ -40,5 +40,6 @@ export default async function handler(
       .json({ error: 'Failed to load partners.' });
   }
 
+  res.setHeader('Cache-Control', 'public, s-maxage=900, stale-while-revalidate=300');
   return res.status(200).json({ items: data ?? [] });
 }

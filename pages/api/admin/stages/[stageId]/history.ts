@@ -150,7 +150,7 @@ async function handler(
       stageId: id,
       logs: formatted,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[/api/admin/stages/[stageId]/history] error:', err);
     return res.status(500).json({
       error: 'Internal server error',

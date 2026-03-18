@@ -97,7 +97,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       canAdvance,
       advancementRules: hasAutoAdvancement ? advancementRules : undefined,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[/api/admin/stages/[stageId]/completion-status] error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }

@@ -109,8 +109,8 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
 
       const json = await res.json();
       setItems(json.items || []);
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
@@ -150,8 +150,8 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
         `${typeLabel(item.type)} "${item.name}" restaure avec succes.`
       );
       fetchItems();
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur lors de la restauration');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur lors de la restauration');
     } finally {
       setRestoringId(null);
     }

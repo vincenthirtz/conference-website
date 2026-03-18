@@ -190,8 +190,8 @@ function AdminCreateUserPage({ staff }: StaffProps) {
       setBattleTag('');
       setSelectedTeamId('');
       setSetCaptain(false);
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }

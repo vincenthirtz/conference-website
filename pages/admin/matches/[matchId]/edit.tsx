@@ -214,9 +214,9 @@ function AdminMatchEditPage({ staff }: StaffProps) {
         team1_score: m.team1_score != null ? String(m.team1_score) : '',
         team2_score: m.team2_score != null ? String(m.team2_score) : '',
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       setErrorMsg(
-        err?.message ?? 'Erreur inattendue lors du chargement du match'
+        (err as Error)?.message ?? 'Erreur inattendue lors du chargement du match'
       );
     } finally {
       setLoading(false);
@@ -327,8 +327,8 @@ function AdminMatchEditPage({ staff }: StaffProps) {
       await fetchMatch();
 
       setSuccessMsg('Match mis à jour avec succès.');
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue lors de la mise à jour');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue lors de la mise à jour');
     } finally {
       setSaving(false);
     }
@@ -390,8 +390,8 @@ function AdminMatchEditPage({ staff }: StaffProps) {
       setForfeitTeamId(null);
       await fetchMatch();
       setSuccessMsg('Forfait enregistré avec succès.');
-    } catch (err: any) {
-      setForfeitError(err?.message ?? 'Erreur inattendue lors du forfait');
+    } catch (err: unknown) {
+      setForfeitError((err as Error)?.message ?? 'Erreur inattendue lors du forfait');
     } finally {
       setForfeitSaving(false);
     }

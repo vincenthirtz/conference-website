@@ -193,7 +193,7 @@ async function handler(
       seeded: updates,
       totalMatches: bracketMatches.length,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[/api/admin/stages/[stageId]/auto-seed] error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }

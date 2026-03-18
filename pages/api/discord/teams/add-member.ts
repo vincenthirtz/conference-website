@@ -159,10 +159,10 @@ export default async function handler(
         ? 'Member added and set as captain'
         : 'Member added to team',
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[/api/discord/teams/add-member] error:', err);
     return res.status(500).json({
-      error: err?.message || 'Internal server error',
+      error: (err as Error)?.message || 'Internal server error',
     });
   }
 }

@@ -114,8 +114,8 @@ function AdminEditTeamPage({ staff }: StaffProps) {
       setDiscord(t.discord || '');
       setWebsite(t.website || '');
       setIsActive(t.is_active !== false);
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
@@ -196,8 +196,8 @@ function AdminEditTeamPage({ staff }: StaffProps) {
       setSuccessMsg('Équipe mise à jour');
       setTeam(json.team);
       setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setSaving(false);
     }
@@ -221,8 +221,8 @@ function AdminEditTeamPage({ staff }: StaffProps) {
 
       setSelectedTournamentId('');
       await fetchTournaments();
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setTournamentsLoading(false);
     }
@@ -347,8 +347,8 @@ function AdminEditTeamPage({ staff }: StaffProps) {
       setSuccessMsg('Membre ajouté');
       setTimeout(() => setSuccessMsg(null), 3000);
       await fetchMembers();
-    } catch (err: any) {
-      setMemberError(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setMemberError((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setMemberSaving(false);
     }
@@ -382,8 +382,8 @@ function AdminEditTeamPage({ staff }: StaffProps) {
       setSuccessMsg('Membre modifié');
       setTimeout(() => setSuccessMsg(null), 3000);
       await fetchMembers();
-    } catch (err: any) {
-      setMemberError(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setMemberError((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setMemberSaving(false);
     }
@@ -430,8 +430,8 @@ function AdminEditTeamPage({ staff }: StaffProps) {
       setTeam(json.team);
       setSuccessMsg('Capitaine défini');
       setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     }
   }
 
@@ -457,8 +457,8 @@ function AdminEditTeamPage({ staff }: StaffProps) {
       setSuccessMsg('Échange effectué');
       setTimeout(() => setSuccessMsg(null), 3000);
       await fetchMembers();
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     }
   }
 

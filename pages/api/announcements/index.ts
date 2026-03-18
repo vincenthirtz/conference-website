@@ -74,5 +74,6 @@ export default async function handler(
       updatedAt: row.updated_at,
     })) ?? [];
 
+  res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=120');
   return res.status(200).json({ items });
 }

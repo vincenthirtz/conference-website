@@ -44,5 +44,6 @@ export default async function handler(
     sortOrder: item.sort_order,
   }));
 
+  res.setHeader('Cache-Control', 'public, s-maxage=900, stale-while-revalidate=300');
   return res.status(200).json({ items });
 }

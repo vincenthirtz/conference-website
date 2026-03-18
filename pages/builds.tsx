@@ -86,8 +86,8 @@ export default function BuildsPage() {
         }
         const data = (await res.json()) as Build[];
         setBuilds(data);
-      } catch (err: any) {
-        setError(err?.message || 'Impossible de charger les builds');
+      } catch (err: unknown) {
+        setError((err as Error)?.message || 'Impossible de charger les builds');
       } finally {
         setLoading(false);
       }

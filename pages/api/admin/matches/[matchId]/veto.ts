@@ -31,7 +31,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
       default:
         return res.status(405).json({ error: 'Method not allowed' });
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[/api/admin/matches/[matchId]/veto] error:', err);
     return res.status(500).json({
       error: 'Internal server error',

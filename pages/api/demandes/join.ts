@@ -5,6 +5,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
+import { applyRateLimit } from '@/utils/rateLimit';
 
 export type JoinRequestBody = {
   teamId: string;
@@ -15,6 +16,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  if (applyRateLimit(req, res, { max: 10, windowMs: 60_000 }, 'demandes-join')) return;
   if (!supabaseAdmin) {
     return res
       .status(500)

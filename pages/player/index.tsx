@@ -94,7 +94,7 @@ export default function PlayerDashboard() {
         );
 
         setDemandes(allDemandes);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('[player] load error:', err);
         setError('Erreur lors du chargement de ton profil.');
       } finally {

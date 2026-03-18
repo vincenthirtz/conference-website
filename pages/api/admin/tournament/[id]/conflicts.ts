@@ -210,7 +210,7 @@ async function handler(
       total: conflicts.length,
       checked_matches: matches.length,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[/api/admin/tournament/[id]/conflicts] error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }

@@ -113,9 +113,9 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
 
       clearDraft();
       router.push('/admin/announcements');
-    } catch (err: any) {
+    } catch (err: unknown) {
       setErrorMsg(
-        err?.message ?? "Erreur inconnue lors de la création de l'annonce"
+        (err as Error)?.message ?? "Erreur inconnue lors de la création de l'annonce"
       );
       setSubmitting(false);
     }

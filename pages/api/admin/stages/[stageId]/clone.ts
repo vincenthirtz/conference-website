@@ -209,7 +209,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
       stage: cloned,
       clonedMatchCount,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[/api/admin/stages/[stageId]/clone] error:', err);
     return res.status(500).json({
       error: 'Internal server error',

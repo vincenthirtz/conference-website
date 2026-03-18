@@ -91,8 +91,8 @@ function AdminBracketPage(_: StaffProps) {
           `/admin/tournament/${tournamentId}/bracket-builder`
         );
       }, 1000);
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inconnue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inconnue');
     } finally {
       setGenerating(false);
     }

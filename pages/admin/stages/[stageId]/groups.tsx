@@ -99,8 +99,8 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
           }
         }
       }
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
@@ -216,8 +216,8 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
 
       setSuccessMsg('Groupes sauvegardés avec succès');
       setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setSaving(false);
     }
@@ -247,8 +247,8 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
       setUnassigned(json.unassigned || []);
       setSuccessMsg(`Equipes distribuées en ${numGroups} poule(s)`);
       setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setDistributing(false);
     }

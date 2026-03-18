@@ -125,10 +125,10 @@ async function handler(
           if (created) {
             console.log(`[members POST] auto-created user for ${email}`);
           }
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.error('[members POST] findOrCreateUser error:', err);
           return res.status(500).json({
-            error: err?.message || 'Failed to find or create user',
+            error: (err as Error)?.message || 'Failed to find or create user',
           });
         }
       }
@@ -186,10 +186,10 @@ async function handler(
         member: member as TeamMemberRow,
         info: setCaptain ? 'Member added and set as captain' : 'Member added',
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[members POST] error:', err);
       return res.status(500).json({
-        error: err?.message || 'Internal server error',
+        error: (err as Error)?.message || 'Internal server error',
       });
     }
   }
@@ -246,10 +246,10 @@ async function handler(
           success: true,
           info: `Swapped ${memberA.battle_tag} and ${memberB.battle_tag}`,
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('[members PATCH swap] error:', err);
         return res.status(500).json({
-          error: err?.message || 'Internal server error',
+          error: (err as Error)?.message || 'Internal server error',
         });
       }
     }
@@ -303,10 +303,10 @@ async function handler(
         member: member as TeamMemberRow,
         info: 'Member updated',
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[members PATCH] error:', err);
       return res.status(500).json({
-        error: err?.message || 'Internal server error',
+        error: (err as Error)?.message || 'Internal server error',
       });
     }
   }
@@ -363,10 +363,10 @@ async function handler(
         success: true,
         info: 'Member removed from team',
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[members DELETE] error:', err);
       return res.status(500).json({
-        error: err?.message || 'Internal server error',
+        error: (err as Error)?.message || 'Internal server error',
       });
     }
   }

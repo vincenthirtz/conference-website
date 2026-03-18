@@ -69,8 +69,8 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
         throw new Error(json.error || "Impossible de charger l'équipe");
       }
       setTeam(json.team);
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
@@ -87,8 +87,8 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
         throw new Error(json.error || 'Impossible de charger les membres');
       }
       setMembers(json.members || []);
-    } catch (err: any) {
-      setMembersError(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setMembersError((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setMembersLoading(false);
     }

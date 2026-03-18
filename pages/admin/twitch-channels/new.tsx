@@ -75,8 +75,8 @@ function AdminTwitchChannelNewPage({ staff }: Props) {
       }
 
       router.push('/admin/twitch-channels');
-    } catch (err: any) {
-      setError(err?.message || 'Erreur inattendue.');
+    } catch (err: unknown) {
+      setError((err as Error)?.message || 'Erreur inattendue.');
     } finally {
       setSaving(false);
     }

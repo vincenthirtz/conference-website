@@ -279,13 +279,13 @@ export function withStaffRoute(
       }
       const ctx = await requireStaffRoleFromRequest(req, res, minRole);
       await handler(req, res, ctx);
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (
         err instanceof StaffUnauthenticatedError ||
         err instanceof StaffUnauthorizedError
       ) {
         // Expected auth errors - no need to log
-        res.status(err.statusCode || 401).json({ error: err.message });
+        res.status(err.statusCode || 401).json({ error: (err as Error).message });
         return;
       }
 
@@ -334,7 +334,7 @@ export function withStaffPage(
           },
         },
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Non connecté → redirection vers /admin/login
       if (err instanceof StaffUnauthenticatedError) {
         return {

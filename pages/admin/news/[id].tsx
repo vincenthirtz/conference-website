@@ -73,8 +73,8 @@ export default function AdminNewsEdit({ staff }: Props) {
             ? new Date(json.published_at).toISOString().slice(0, 16)
             : '',
         });
-      } catch (err: any) {
-        setError(err?.message || 'Erreur inattendue.');
+      } catch (err: unknown) {
+        setError((err as Error)?.message || 'Erreur inattendue.');
       } finally {
         setLoading(false);
       }
@@ -110,8 +110,8 @@ export default function AdminNewsEdit({ staff }: Props) {
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || 'Mise à jour impossible');
       router.push('/admin/news');
-    } catch (err: any) {
-      setError(err?.message || 'Erreur inattendue.');
+    } catch (err: unknown) {
+      setError((err as Error)?.message || 'Erreur inattendue.');
     } finally {
       setSaving(false);
     }

@@ -136,8 +136,8 @@ export default async function handler(
           captain: Boolean(body.set_captain),
           battle_tag: validateBattleTag(memberBattleTag),
         });
-      } catch (err: any) {
-        return res.status(400).json({ error: err?.message || 'Invalid BattleTag' });
+      } catch (err: unknown) {
+        return res.status(400).json({ error: (err as Error)?.message || 'Invalid BattleTag' });
       }
     } else if (memberEmail) {
       try {
@@ -154,9 +154,9 @@ export default async function handler(
           captain: Boolean(body.set_captain),
           battle_tag: validateBattleTag(memberBattleTag),
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         const message =
-          err?.message || 'User lookup failed for the provided email';
+          (err as Error)?.message || 'User lookup failed for the provided email';
         return res.status(500).json({ error: message });
       }
     }
@@ -177,8 +177,8 @@ export default async function handler(
             captain: Boolean(m.set_captain),
             battle_tag: validateBattleTag(m.battle_tag),
           });
-        } catch (err: any) {
-          return res.status(400).json({ error: err?.message || 'Invalid BattleTag' });
+        } catch (err: unknown) {
+          return res.status(400).json({ error: (err as Error)?.message || 'Invalid BattleTag' });
         }
         continue;
       }
@@ -199,9 +199,9 @@ export default async function handler(
           captain: Boolean(m.set_captain),
           battle_tag: validateBattleTag(m.battle_tag),
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         const message =
-          err?.message ||
+          (err as Error)?.message ||
           'User could not be found or created for one of the provided emails';
         return res.status(500).json({ error: message });
       }

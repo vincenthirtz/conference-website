@@ -206,11 +206,11 @@ async function handler(
         }
 
         updatedMatchIds.push(matchId);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('auto-byes: error processing match', matchId, err);
         failed.push({
           matchId,
-          reason: err?.message ?? 'unknown',
+          reason: (err as Error)?.message ?? 'unknown',
         });
       }
     }
@@ -247,7 +247,7 @@ async function handler(
     };
 
     return res.status(200).json(result);
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[/api/admin/stages/[stageId]/auto-byes] error:', err);
     return res.status(500).json({
       error: 'Internal server error',

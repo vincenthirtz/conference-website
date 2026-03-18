@@ -183,7 +183,7 @@ async function handler(
     });
 
     return res.status(200).json({ players });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[api/admin/users/search] error:', err);
     return res.status(500).json({ error: 'Search failed' });
   }

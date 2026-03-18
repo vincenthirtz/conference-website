@@ -185,7 +185,7 @@ async function handler(
       stages: createdStages,
       maps: copiedMapsCount,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[/api/admin/tournament/[id]/clone] error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }

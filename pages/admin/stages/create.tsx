@@ -112,9 +112,9 @@ function AdminStageCreatePage({ staff }: StaffProps) {
       }
       const json: TournamentsApiResponse = await res.json();
       setTournaments(json.tournaments || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setErrorMsg(
-        err?.message ?? 'Erreur inattendue lors du chargement des tournois'
+        (err as Error)?.message ?? 'Erreur inattendue lors du chargement des tournois'
       );
     } finally {
       setLoadingTournaments(false);
@@ -167,8 +167,8 @@ function AdminStageCreatePage({ staff }: StaffProps) {
     let settings: any | null = null;
     try {
       settings = parseSettings();
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur dans le JSON de configuration.');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur dans le JSON de configuration.');
       return;
     }
 
@@ -212,9 +212,9 @@ function AdminStageCreatePage({ staff }: StaffProps) {
       } else {
         router.push(`/admin/tournament/${form.tournamentId}`);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setErrorMsg(
-        err?.message ?? 'Erreur inconnue lors de la création de la phase'
+        (err as Error)?.message ?? 'Erreur inconnue lors de la création de la phase'
       );
       setSubmitting(false);
     }

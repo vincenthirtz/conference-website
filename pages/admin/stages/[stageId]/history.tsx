@@ -89,8 +89,8 @@ function AdminStageHistoryPage({ staff }: StaffProps) {
 
       const json: ApiResponse = await res.json();
       setLogs(json.logs || []);
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inconnue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inconnue');
     } finally {
       setLoading(false);
     }

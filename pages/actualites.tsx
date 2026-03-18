@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import type { GetStaticProps } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
+import { supabaseAdmin } from '@/utils/supabase';
 
 type PatchNote = {
   id: string;
@@ -25,56 +27,65 @@ type BlizzardNews = {
   summary: string;
 };
 
+type ActualitesProps = {
+  patchNotes: PatchNote[];
+  news: BlizzardNews[];
+};
+
 const PATCH_NOTES_SOURCE =
   'https://overwatch.blizzard.com/fr-fr/news/patch-notes/';
 const NEWS_SOURCE = 'https://overwatch.blizzard.com/fr-fr/news/';
 
-function ActualitesPage() {
-  const [patchNotes, setPatchNotes] = useState<PatchNote[]>([]);
-  const [news, setNews] = useState<BlizzardNews[]>([]);
-  const [loadingPatch, setLoadingPatch] = useState(true);
-  const [loadingNews, setLoadingNews] = useState(true);
+export const getStaticProps: GetStaticProps<ActualitesProps> = async () => {
+  let patchNotes: PatchNote[] = [];
+  let news: BlizzardNews[] = [];
+
+  if (supabaseAdmin) {
+    const [patchRes, newsRes] = await Promise.all([
+      supabaseAdmin
+        .from('patch_notes')
+        .select('id, title, date, link, summary, heroes')
+        .order('date_parsed', { ascending: false, nullsFirst: false })
+        .limit(4),
+      supabaseAdmin
+        .from('blizzard_news')
+        .select('id, title, date, link, image_url, category, summary')
+        .order('date_parsed', { ascending: false, nullsFirst: false })
+        .limit(12),
+    ]);
+
+    if (!patchRes.error && patchRes.data) {
+      patchNotes = patchRes.data.map((row) => ({
+        id: row.id,
+        title: row.title,
+        date: row.date,
+        link: row.link,
+        summary: row.summary || '',
+        heroes: (row.heroes as PatchNote['heroes']) || [],
+      }));
+    }
+
+    if (!newsRes.error && newsRes.data) {
+      news = newsRes.data.map((row) => ({
+        id: row.id,
+        title: row.title,
+        date: row.date,
+        link: row.link,
+        image_url: row.image_url,
+        category: row.category,
+        summary: row.summary || '',
+      }));
+    }
+  }
+
+  return {
+    props: { patchNotes, news },
+    revalidate: 900, // 15 minutes
+  };
+};
+
+function ActualitesPage({ patchNotes, news }: ActualitesProps) {
   const [activeTab, setActiveTab] = useState<'all' | 'patch' | 'news'>('all');
-
-  useEffect(() => {
-    // Charger les patch notes
-    fetch('/api/patch-notes')
-      .then((res) => res.json())
-      .then((data) => {
-        setPatchNotes(data.items || []);
-      })
-      .catch(console.error)
-      .finally(() => setLoadingPatch(false));
-
-    // Charger les news générales
-    fetch('/api/blizzard-news?limit=12')
-      .then((res) => res.json())
-      .then((data) => {
-        setNews(data.items || []);
-      })
-      .catch(console.error)
-      .finally(() => setLoadingNews(false));
-  }, []);
-
-  const isLoading = loadingPatch || loadingNews;
-
-  const renderSkeleton = (count: number) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {[...Array(count)].map((_, i) => (
-        <div
-          key={i}
-          className="animate-pulse rounded-2xl border border-white/10 bg-white/5 overflow-hidden"
-        >
-          <div className="h-40 bg-white/10" />
-          <div className="p-5 space-y-3">
-            <div className="h-3 w-20 rounded bg-white/10" />
-            <div className="h-5 w-3/4 rounded bg-white/10" />
-            <div className="h-4 w-full rounded bg-white/10" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
 
   const renderPatchNoteCard = (note: PatchNote) => {
     const groupedHeroes = note.heroes?.reduce<Record<string, typeof note.heroes>>(
@@ -194,7 +205,6 @@ function ActualitesPage() {
     </Link>
   );
 
-  // Combiner et trier par date (approximativement)
   const allItems = [
     ...patchNotes.map((p) => ({ type: 'patch' as const, data: p, date: p.date })),
     ...news.map((n) => ({ type: 'news' as const, data: n, date: n.date })),
@@ -244,12 +254,12 @@ function ActualitesPage() {
                 }`}
               >
                 {tab.label}
-                {tab.key === 'patch' && !loadingPatch && (
+                {tab.key === 'patch' && (
                   <span className="ml-2 text-xs text-orange-400">
                     ({patchNotes.length})
                   </span>
                 )}
-                {tab.key === 'news' && !loadingNews && (
+                {tab.key === 'news' && (
                   <span className="ml-2 text-xs text-blue-400">
                     ({news.length})
                   </span>
@@ -259,9 +269,7 @@ function ActualitesPage() {
           </div>
 
           {/* Content */}
-          {isLoading ? (
-            renderSkeleton(6)
-          ) : filteredItems.length === 0 ? (
+          {filteredItems.length === 0 ? (
             <div className="text-center py-20">
               <Paragraph textColor="text-neutral-400" className="text-lg">
                 Aucune actualité disponible pour le moment.

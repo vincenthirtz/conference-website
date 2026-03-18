@@ -337,8 +337,8 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
       setSelectedMatchIds(new Set());
       setBulkScheduleMode(false);
       setBulkScheduleInputs({});
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
@@ -381,8 +381,8 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
         `Auto-scheduler termine : ${json.scheduledMatchesCount ?? 0} matches planifies.`
       );
       fetchMatches();
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur lors de l'auto-scheduler");
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? "Erreur lors de l'auto-scheduler");
     } finally {
       setAutoSchedRunning(false);
     }
@@ -418,8 +418,8 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
       setQuickScoreId(null);
       fetchMatches();
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur lors du quick score');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur lors du quick score');
     } finally {
       setQsSaving(false);
     }
@@ -508,9 +508,9 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
       );
       setBulkScheduleMode(false);
       fetchMatches();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setErrorMsg(
-        err?.message ?? 'Erreur inattendue lors de la planification en masse'
+        (err as Error)?.message ?? 'Erreur inattendue lors de la planification en masse'
       );
     } finally {
       setBulkScheduleSaving(false);
@@ -560,9 +560,9 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
         `${count} match${count > 1 ? 'es' : ''} ${verb}${count > 1 ? 's' : ''}.`
       );
       fetchMatches();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setErrorMsg(
-        err?.message ?? 'Erreur inattendue lors de la suppression en masse'
+        (err as Error)?.message ?? 'Erreur inattendue lors de la suppression en masse'
       );
     } finally {
       setBulkDeleting(false);
@@ -614,8 +614,8 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
       setBulkEditMode(false);
       setBulkEditFields({});
       fetchMatches();
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur inattendue lors de l'édition en masse");
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? "Erreur inattendue lors de l'édition en masse");
     } finally {
       setBulkEditSaving(false);
     }
@@ -717,8 +717,8 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
       setCsvText('');
       setCsvPreview([]);
       fetchMatches();
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur lors de l'import CSV");
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? "Erreur lors de l'import CSV");
     } finally {
       setCsvImporting(false);
     }

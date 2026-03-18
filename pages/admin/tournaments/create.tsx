@@ -198,9 +198,9 @@ function AdminTournamentCreatePage({ staff }: Props) {
       } else {
         router.push('/admin/tournaments');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setErrorMsg(
-        err?.message ?? 'Erreur inconnue lors de la création du tournoi'
+        (err as Error)?.message ?? 'Erreur inconnue lors de la création du tournoi'
       );
       setSubmitting(false);
     }

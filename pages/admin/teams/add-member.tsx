@@ -107,8 +107,8 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
       setEmail('');
       setUserId('');
       setBattleTag('');
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setSubmitting(false);
     }

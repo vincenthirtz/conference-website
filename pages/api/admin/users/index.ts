@@ -73,7 +73,7 @@ async function handler(
       email: safeEmail,
       passwordSentByEmail,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[/api/admin/users] internal error:', err);
     return res
       .status(500)

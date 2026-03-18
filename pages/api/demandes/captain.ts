@@ -6,11 +6,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { captainRequestSchema, formatZodError } from '@/utils/validation';
+import { applyRateLimit } from '@/utils/rateLimit';
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  if (applyRateLimit(req, res, { max: 10, windowMs: 60_000 }, 'demandes-captain')) return;
   if (!supabaseAdmin) {
     return res
       .status(500)

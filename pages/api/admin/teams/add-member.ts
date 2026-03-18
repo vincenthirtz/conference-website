@@ -55,7 +55,7 @@ async function handler(
   let battleTagValue: string;
   try {
     battleTagValue = validateBattleTag(battleTag);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return res.status(400).json({ error: 'Invalid BattleTag' });
   }
 
@@ -176,10 +176,10 @@ async function handler(
         ? 'Member added and set as captain'
         : 'Member added to team',
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[/api/admin/teams/add-member] error:', err);
     return res.status(500).json({
-      error: err?.message || 'Internal server error',
+      error: (err as Error)?.message || 'Internal server error',
     });
   }
 }

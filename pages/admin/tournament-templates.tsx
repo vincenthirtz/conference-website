@@ -70,8 +70,8 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
       if (!res.ok) throw new Error('Erreur lors du chargement');
       const json = await res.json();
       setCustomTemplates(json.templates || []);
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message || 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
@@ -120,8 +120,8 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
       setNewStages([{ name: '', stage_type: 'bracket' }]);
       setShowCreate(false);
       fetchCustomTemplates();
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message || 'Erreur inattendue');
     } finally {
       setCreating(false);
     }
@@ -148,8 +148,8 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
 
       setSuccessMsg('Template supprime.');
       fetchCustomTemplates();
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message || 'Erreur inattendue');
     } finally {
       setDeletingId(null);
     }

@@ -41,7 +41,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
         .status(400)
         .json({ error: "action must be 'generate', 'generate_double_elim', 'save', or 'validate'" });
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[/api/admin/tournament/[id]/bracket] error:', err);
     return res
       .status(500)

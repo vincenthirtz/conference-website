@@ -92,11 +92,11 @@ async function handleGet(
     }
 
     return res.status(200).json({ tournament: data as TournamentDetail });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('admin GET tournament internal error:', err);
     return res
       .status(500)
-      .json({ error: err?.message || 'Internal server error' });
+      .json({ error: (err as Error)?.message || 'Internal server error' });
   }
 }
 
@@ -288,11 +288,11 @@ async function handlePatch(
       success: true,
       tournament: after as TournamentDetail,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('admin PATCH tournament internal error:', err);
     return res
       .status(500)
-      .json({ error: err?.message || 'Internal server error' });
+      .json({ error: (err as Error)?.message || 'Internal server error' });
   }
 }
 

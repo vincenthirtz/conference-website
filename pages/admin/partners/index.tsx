@@ -95,8 +95,8 @@ function AdminPartnersPage({ staff }: Props) {
         throw new Error(json?.error || 'Suppression impossible');
       }
       fetchData();
-    } catch (err: any) {
-      alert(err?.message || 'Erreur de suppression.');
+    } catch (err: unknown) {
+      alert((err as Error)?.message || 'Erreur de suppression.');
     }
   };
 
@@ -120,8 +120,8 @@ function AdminPartnersPage({ staff }: Props) {
         throw new Error(json?.error || 'Modification impossible');
       }
       fetchData();
-    } catch (err: any) {
-      alert(err?.message || 'Erreur de modification.');
+    } catch (err: unknown) {
+      alert((err as Error)?.message || 'Erreur de modification.');
     }
   };
 

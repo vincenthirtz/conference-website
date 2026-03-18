@@ -64,6 +64,7 @@ async function listComments(
       .json({ error: 'Failed to fetch comments' });
   }
 
+  res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=30');
   return res.status(200).json({ items: data || [] });
 }
 

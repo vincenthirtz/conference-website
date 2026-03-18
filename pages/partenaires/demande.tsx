@@ -92,8 +92,8 @@ function PartnershipRequestPage() {
       }
 
       setSuccess(true);
-    } catch (err: any) {
-      setError(err.message || "Une erreur est survenue lors de l'envoi.");
+    } catch (err: unknown) {
+      setError((err as Error).message || "Une erreur est survenue lors de l'envoi.");
     } finally {
       setSending(false);
     }

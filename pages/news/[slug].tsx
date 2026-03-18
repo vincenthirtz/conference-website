@@ -289,8 +289,8 @@ function Comments({ newsId }: { newsId: string }) {
       if (!res.ok) throw new Error('Impossible de récupérer les commentaires');
       const json = await res.json();
       setComments(json.items || []);
-    } catch (err: any) {
-      setError(err?.message || 'Erreur chargement commentaires');
+    } catch (err: unknown) {
+      setError((err as Error)?.message || 'Erreur chargement commentaires');
     } finally {
       setLoading(false);
     }
@@ -328,8 +328,8 @@ function Comments({ newsId }: { newsId: string }) {
       setContent('');
       setAuthor('');
       await loadComments();
-    } catch (err: any) {
-      setError(err?.message || 'Erreur lors de la publication');
+    } catch (err: unknown) {
+      setError((err as Error)?.message || 'Erreur lors de la publication');
     } finally {
       setLoading(false);
     }

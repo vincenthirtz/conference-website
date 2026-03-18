@@ -82,9 +82,9 @@ function HomeNewsSection(): JSX.Element {
             return Array.from(merged).sort();
           });
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (mounted) {
-          setError(err?.message || 'Erreur lors du chargement des news.');
+          setError((err as Error)?.message || 'Erreur lors du chargement des news.');
         }
       } finally {
         if (mounted) {

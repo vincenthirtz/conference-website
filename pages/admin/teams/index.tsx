@@ -90,8 +90,8 @@ function AdminTeamsListPage({ staff }: StaffProps) {
       const json: TeamsApiResponse = await res.json();
       setTeams(json.teams || []);
       setTotal(typeof json.total === 'number' ? json.total : null);
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
@@ -135,8 +135,8 @@ function AdminTeamsListPage({ staff }: StaffProps) {
       }
       setDeleteTarget(null);
       fetchTeams();
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setDeleting(false);
     }
@@ -202,8 +202,8 @@ function AdminTeamsListPage({ staff }: StaffProps) {
       setSelected(new Set());
       setBulkAction('');
       fetchTeams();
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur');
     } finally {
       setBulkProcessing(false);
     }
@@ -234,8 +234,8 @@ function AdminTeamsListPage({ staff }: StaffProps) {
       const json = await res.json();
       setCsvResult(json);
       if (json.created > 0) fetchTeams();
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur import');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur import');
     } finally {
       setCsvImporting(false);
     }

@@ -93,8 +93,8 @@ function AdminBracketBuilderPage(_: StaffProps) {
         const teamsJson = await teamsRes.json();
         setTournamentTeams(teamsJson.teams || []);
       }
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
@@ -446,8 +446,8 @@ ${day.matches.map((m) => `<tr>
       setInfoMsg('Planning enregistré.');
       setDirty(false);
       fetchData();
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inconnue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inconnue');
     } finally {
       setSaving(false);
     }

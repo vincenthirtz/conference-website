@@ -129,7 +129,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse, teamId: stri
       registered,
       available,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('GET /api/admin/teams/[teamId]/tournaments error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
@@ -295,7 +295,7 @@ async function handlePost(
       message: `Team registered to ${targetStageIds.length} stage(s)`,
       registrations: inserted,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('POST /api/admin/teams/[teamId]/tournaments error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
@@ -382,7 +382,7 @@ async function handleDelete(
       success: true,
       message: `Team unregistered (${count || 0} entry(ies) removed)`,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('DELETE /api/admin/teams/[teamId]/tournaments error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }

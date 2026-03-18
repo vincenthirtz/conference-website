@@ -141,8 +141,8 @@ function AdminSiteSettingsPage({ staff }: Props) {
 
       setSuccess(key);
       fetchData();
-    } catch (err: any) {
-      alert(err?.message || 'Erreur de sauvegarde.');
+    } catch (err: unknown) {
+      alert((err as Error)?.message || 'Erreur de sauvegarde.');
     } finally {
       setSaving(null);
     }

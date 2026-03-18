@@ -140,8 +140,8 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
       if (json.stage?.tournament_id) {
         fetchTournamentTeams(json.stage.tournament_id);
       }
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
@@ -204,8 +204,8 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
       setAddTeamId('');
       setAddSeed('');
       fetchStageTeams();
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur inattendue lors de l'ajout");
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? "Erreur inattendue lors de l'ajout");
     } finally {
       setAdding(false);
     }
@@ -232,8 +232,8 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
       await res.json();
       setInfoMsg('Équipe retirée de la phase.');
       fetchStageTeams();
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue lors du retrait');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue lors du retrait');
     } finally {
       setRemovingTeamId(null);
     }
@@ -273,9 +273,9 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
       await res.json();
       setInfoMsg('Seed mis à jour.');
       fetchStageTeams();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setErrorMsg(
-        err?.message ?? 'Erreur inattendue lors de la mise à jour du seed'
+        (err as Error)?.message ?? 'Erreur inattendue lors de la mise à jour du seed'
       );
     } finally {
       setUpdatingSeedId(null);
@@ -312,8 +312,8 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
       const successCount = json.results?.filter((r: any) => r.success).length ?? 0;
       setInfoMsg(`Seeds mis à jour pour ${successCount} équipe${successCount > 1 ? 's' : ''}.`);
       fetchStageTeams();
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue lors du bulk seed');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue lors du bulk seed');
     } finally {
       setBulkSeedSaving(false);
     }
@@ -375,8 +375,8 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
       setInfoMsg(`${count} équipe${count > 1 ? 's' : ''} retirée${count > 1 ? 's' : ''} de la phase.`);
       setSelectedTeamIds(new Set());
       fetchStageTeams();
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue lors du retrait en masse');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue lors du retrait en masse');
     } finally {
       setBulkRemoving(false);
     }

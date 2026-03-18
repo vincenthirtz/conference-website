@@ -71,8 +71,8 @@ function AdminCommentsPage({ staff }: Props) {
       }
       setComments(json.comments || []);
       setTotal(json.total ?? null);
-    } catch (err: any) {
-      setError(err?.message || 'Erreur chargement');
+    } catch (err: unknown) {
+      setError((err as Error)?.message || 'Erreur chargement');
     } finally {
       setLoading(false);
     }
@@ -99,8 +99,8 @@ function AdminCommentsPage({ staff }: Props) {
       setSuccessMsg('Commentaire supprimé');
       setTimeout(() => setSuccessMsg(null), 3000);
       fetchComments();
-    } catch (err: any) {
-      setError(err?.message || 'Erreur lors de la suppression');
+    } catch (err: unknown) {
+      setError((err as Error)?.message || 'Erreur lors de la suppression');
     } finally {
       setDeleting(false);
     }
@@ -128,8 +128,8 @@ function AdminCommentsPage({ staff }: Props) {
       setSuccessMsg('Commentaire mis à jour');
       setTimeout(() => setSuccessMsg(null), 3000);
       fetchComments();
-    } catch (err: any) {
-      setError(err?.message || 'Erreur lors de la mise à jour');
+    } catch (err: unknown) {
+      setError((err as Error)?.message || 'Erreur lors de la mise à jour');
     } finally {
       setSaving(null);
     }

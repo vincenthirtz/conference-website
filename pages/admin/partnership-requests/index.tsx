@@ -133,8 +133,8 @@ function AdminPartnershipRequestsPage({ staff }: Props) {
         throw new Error(json?.error || 'Suppression impossible');
       }
       fetchData();
-    } catch (err: any) {
-      alert(err?.message || 'Erreur de suppression.');
+    } catch (err: unknown) {
+      alert((err as Error)?.message || 'Erreur de suppression.');
     }
   };
 

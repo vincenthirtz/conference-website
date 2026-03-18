@@ -178,8 +178,8 @@ export default function PublicCreateTeamPage() {
       setDiscord('');
       setMembers([{ id: 'm-0', email: '', role: 'player', battleTag: '' }]);
       setCaptainIndex(null);
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }

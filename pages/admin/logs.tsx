@@ -157,8 +157,8 @@ function AdminLogsPage({ staff }: StaffProps) {
       const json: LogsApiResponse = await res.json();
       setLogs(json.logs || []);
       setTotal(typeof json.total === 'number' ? json.total : null);
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }

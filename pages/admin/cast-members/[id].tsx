@@ -67,8 +67,8 @@ function AdminCastMemberEditPage({ staff }: Props) {
         isPromo: data.is_promo ?? false,
         sortOrder: data.sort_order?.toString() || '',
       });
-    } catch (err: any) {
-      setError(err?.message || 'Erreur de chargement.');
+    } catch (err: unknown) {
+      setError((err as Error)?.message || 'Erreur de chargement.');
     } finally {
       setLoading(false);
     }
@@ -128,8 +128,8 @@ function AdminCastMemberEditPage({ staff }: Props) {
       }
 
       setSuccessMsg('Casteuse mise à jour avec succès.');
-    } catch (err: any) {
-      setError(err?.message || 'Erreur inattendue.');
+    } catch (err: unknown) {
+      setError((err as Error)?.message || 'Erreur inattendue.');
     } finally {
       setSaving(false);
     }

@@ -37,9 +37,9 @@ export default function ProfileCard({ user, displayName }: Props) {
         'Un email de confirmation a été envoyé à ta nouvelle adresse. Clique sur le lien pour confirmer le changement.'
       );
       setNewEmail('');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[player] email change error:', err);
-      setEmailError(err?.message || "Erreur lors du changement d'email.");
+      setEmailError((err as Error)?.message || "Erreur lors du changement d'email.");
     } finally {
       setEmailChanging(false);
     }
@@ -69,10 +69,10 @@ export default function ProfileCard({ user, displayName }: Props) {
       setPasswordSuccess('Ton mot de passe a été modifié avec succès.');
       setNewPassword('');
       setConfirmPassword('');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[player] password change error:', err);
       setPasswordError(
-        err?.message || 'Erreur lors du changement de mot de passe.'
+        (err as Error)?.message || 'Erreur lors du changement de mot de passe.'
       );
     } finally {
       setPasswordChanging(false);

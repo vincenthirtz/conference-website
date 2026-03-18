@@ -154,10 +154,10 @@ async function handler(
     }
 
     return res.status(200).json({ success: true, count, action });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[/api/admin/teams/bulk] error:', err);
     return res.status(500).json({
-      error: err?.message || 'Erreur interne',
+      error: (err as Error)?.message || 'Erreur interne',
     });
   }
 }

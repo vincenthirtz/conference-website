@@ -79,8 +79,8 @@ export default function AdminNewsCreate({ staff }: Props) {
       if (!res.ok) throw new Error(json?.error || 'Création impossible');
       clearDraft();
       router.push(`/admin/news/${json.id}`);
-    } catch (err: any) {
-      setError(err?.message || 'Erreur inattendue.');
+    } catch (err: unknown) {
+      setError((err as Error)?.message || 'Erreur inattendue.');
     } finally {
       setLoading(false);
     }

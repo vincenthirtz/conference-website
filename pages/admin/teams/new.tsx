@@ -112,8 +112,8 @@ function AdminNewTeamPage({ staff }: StaffProps) {
       if (json.team?.id) {
         router.push(`/admin/teams/${json.team.id}`);
       }
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setSubmitting(false);
     }

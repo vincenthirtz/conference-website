@@ -231,8 +231,8 @@ function AdminStagePage({ staff }: StaffProps) {
           console.error('fetch sibling stages error', e);
         }
       }
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
@@ -327,8 +327,8 @@ function AdminStagePage({ staff }: StaffProps) {
           console.error('fetch updated tournament error', e);
         }
       }
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inattendue');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setSaving(false);
     }
@@ -357,8 +357,8 @@ function AdminStagePage({ staff }: StaffProps) {
         `Auto-BYEs appliqués : ${json.updatedMatchIds?.length ?? 0} matchs mis à jour.`
       );
       setTimeout(() => setSuccessMsg(null), 5000);
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur lors de l'auto-BYE");
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? "Erreur lors de l'auto-BYE");
     } finally {
       setLoadingActions(false);
     }
@@ -395,8 +395,8 @@ function AdminStagePage({ staff }: StaffProps) {
       // Refresh Swiss and completion status
       fetchSwissStatus();
       fetchCompletionStatus();
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur lors de la génération Swiss');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur lors de la génération Swiss');
     } finally {
       setLoadingActions(false);
     }
@@ -525,8 +525,8 @@ function AdminStagePage({ staff }: StaffProps) {
       setSuccessMsg(msg);
       setTimeout(() => setSuccessMsg(null), 5000);
       setShowAdvanceModal(false);
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? "Erreur lors de l'avancement");
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? "Erreur lors de l'avancement");
     } finally {
       setAdvanceSubmitting(false);
     }
@@ -582,8 +582,8 @@ function AdminStagePage({ staff }: StaffProps) {
       );
       setTimeout(() => setSuccessMsg(null), 5000);
       setShowAutoSeedModal(false);
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur lors du seeding automatique');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur lors du seeding automatique');
     } finally {
       setAutoSeedSubmitting(false);
     }
@@ -618,8 +618,8 @@ function AdminStagePage({ staff }: StaffProps) {
       if (json.stage?.id) {
         router.push(`/admin/stages/${json.stage.id}`);
       }
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur lors du clonage');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur lors du clonage');
     } finally {
       setCloning(false);
     }
@@ -1196,8 +1196,8 @@ function AdminStagePage({ staff }: StaffProps) {
                             }
                             setSuccessMsg('Regles d\'avancement mises a jour.');
                             await fetchStage();
-                          } catch (err: any) {
-                            setErrorMsg(err?.message ?? 'Erreur inattendue');
+                          } catch (err: unknown) {
+                            setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
                           } finally {
                             setAdvancementSaving(false);
                           }

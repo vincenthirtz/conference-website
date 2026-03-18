@@ -172,8 +172,8 @@ function MyTeamPage({ staff }: StaffProps) {
           });
         }
       }
-    } catch (err: any) {
-      setError(err?.message || 'Erreur inattendue.');
+    } catch (err: unknown) {
+      setError((err as Error)?.message || 'Erreur inattendue.');
     } finally {
       setLoading(false);
     }
@@ -229,8 +229,8 @@ function MyTeamPage({ staff }: StaffProps) {
       } else {
         await load();
       }
-    } catch (err: any) {
-      alert(err?.message || 'Erreur lors de la sauvegarde.');
+    } catch (err: unknown) {
+      alert((err as Error)?.message || 'Erreur lors de la sauvegarde.');
     } finally {
       setSaving(false);
     }
@@ -327,8 +327,8 @@ function MyTeamPage({ staff }: StaffProps) {
       } else {
         await load();
       }
-    } catch (err: any) {
-      alert(err?.message || 'Erreur lors de l\'ajout');
+    } catch (err: unknown) {
+      alert((err as Error)?.message || 'Erreur lors de l\'ajout');
     } finally {
       setAddingMember(false);
     }

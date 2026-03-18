@@ -106,9 +106,9 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
       });
 
       setFormReady(true);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setErrorMsg(
-        err?.message ?? 'Erreur inattendue lors du chargement du tournoi'
+        (err as Error)?.message ?? 'Erreur inattendue lors du chargement du tournoi'
       );
     } finally {
       setLoading(false);
@@ -193,8 +193,8 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
       setSuccessMsg('Tournoi mis à jour avec succès.');
       // On peut éventuellement recharger les données
       fetchTournament();
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Erreur inconnue lors de la mise à jour');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inconnue lors de la mise à jour');
     } finally {
       setSaving(false);
     }

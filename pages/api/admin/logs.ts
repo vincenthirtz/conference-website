@@ -123,7 +123,7 @@ async function handler(
       logs: formatted,
       total: typeof count === 'number' ? count : null,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[/api/admin/logs] internal error:', err);
     return res.status(500).json({
       error: 'Internal server error',

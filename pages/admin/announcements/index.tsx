@@ -94,8 +94,8 @@ function AdminAnnouncementsPage({ staff }: Props) {
 
       setAnnouncements(json.items || []);
       setTotal(json.total ?? json.items?.length ?? 0);
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Erreur chargement');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message || 'Erreur chargement');
     } finally {
       setLoading(false);
     }
@@ -125,8 +125,8 @@ function AdminAnnouncementsPage({ staff }: Props) {
       }
       setDeleteTarget(null);
       fetchData();
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Erreur de suppression.');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message || 'Erreur de suppression.');
     } finally {
       setDeleting(false);
     }

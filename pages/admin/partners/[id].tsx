@@ -75,8 +75,8 @@ function AdminEditPartnerPage({ staff }: Props) {
           displayOrder: json.display_order || 0,
           isActive: json.is_active ?? true,
         });
-      } catch (err: any) {
-        setError(err.message || 'Erreur de chargement.');
+      } catch (err: unknown) {
+        setError((err as Error).message || 'Erreur de chargement.');
       } finally {
         setLoading(false);
       }
@@ -134,8 +134,8 @@ function AdminEditPartnerPage({ staff }: Props) {
       }
 
       setSuccess(true);
-    } catch (err: any) {
-      setError(err.message || 'Une erreur est survenue.');
+    } catch (err: unknown) {
+      setError((err as Error).message || 'Une erreur est survenue.');
     } finally {
       setSaving(false);
     }

@@ -142,8 +142,8 @@ export default function JoinTeamPage() {
       const team = teams.find((t) => t.id === selectedTeamId);
       setSuccessTeamName(team?.name || 'l\'equipe selectionnee');
       setSuccess(true);
-    } catch (err: any) {
-      setError(err.message || 'Une erreur est survenue.');
+    } catch (err: unknown) {
+      setError((err as Error).message || 'Une erreur est survenue.');
     } finally {
       setSubmitting(false);
     }

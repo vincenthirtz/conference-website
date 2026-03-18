@@ -271,7 +271,7 @@ async function handler(
       targetStageId,
       ...(sourceStageCompleted ? { sourceStageCompleted } : {}),
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[/api/admin/stages/[stageId]/advance] error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }

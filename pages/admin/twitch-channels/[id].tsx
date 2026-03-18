@@ -63,8 +63,8 @@ function AdminTwitchChannelEditPage({ staff }: Props) {
         isActive: data.is_active ?? true,
         sortOrder: data.sort_order?.toString() || '',
       });
-    } catch (err: any) {
-      setError(err?.message || 'Erreur de chargement.');
+    } catch (err: unknown) {
+      setError((err as Error)?.message || 'Erreur de chargement.');
     } finally {
       setLoading(false);
     }
@@ -122,8 +122,8 @@ function AdminTwitchChannelEditPage({ staff }: Props) {
       }
 
       setSuccessMsg('Chaîne mise à jour avec succès.');
-    } catch (err: any) {
-      setError(err?.message || 'Erreur inattendue.');
+    } catch (err: unknown) {
+      setError((err as Error)?.message || 'Erreur inattendue.');
     } finally {
       setSaving(false);
     }

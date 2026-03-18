@@ -160,8 +160,8 @@ function AdminVetoPage(_: StaffProps) {
           }));
         setMatches(allMatches);
       }
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Erreur de chargement');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message || 'Erreur de chargement');
     } finally {
       setLoading(false);
     }
@@ -177,8 +177,8 @@ function AdminVetoPage(_: StaffProps) {
       const state = await res.json();
       setVetoState(state as MatchVetoState);
       setErrorMsg(null);
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Erreur');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message || 'Erreur');
       setVetoState(null);
     }
   }
@@ -234,8 +234,8 @@ function AdminVetoPage(_: StaffProps) {
 
         // Refresh veto state
         await fetchVetoState(selectedMatchId);
-      } catch (err: any) {
-        setErrorMsg(err?.message || 'Erreur');
+      } catch (err: unknown) {
+        setErrorMsg((err as Error)?.message || 'Erreur');
       } finally {
         setSubmitting(false);
       }
@@ -264,8 +264,8 @@ function AdminVetoPage(_: StaffProps) {
 
       await fetchVetoState(selectedMatchId);
       setSuccessMsg('Veto réinitialisé.');
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Erreur');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message || 'Erreur');
     } finally {
       setSubmitting(false);
     }

@@ -194,8 +194,8 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       );
       setSuccessMsg('Rôle mis à jour');
       setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err: any) {
-      alert(err?.message || 'Erreur lors de la mise à jour du rôle.');
+    } catch (err: unknown) {
+      alert((err as Error)?.message || 'Erreur lors de la mise à jour du rôle.');
     } finally {
       setUpdating(null);
     }
@@ -267,8 +267,8 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       setEditingBattleTag(null);
       setSuccessMsg('BattleTag mis à jour');
       setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err: any) {
-      setBattleTagError(err?.message || 'Erreur inattendue');
+    } catch (err: unknown) {
+      setBattleTagError((err as Error)?.message || 'Erreur inattendue');
     } finally {
       setBattleTagSaving(false);
     }
@@ -319,8 +319,8 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       setEditingUser(null);
       setSuccessMsg('Utilisateur mis à jour');
       setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err: any) {
-      setEditError(err?.message || 'Erreur inattendue');
+    } catch (err: unknown) {
+      setEditError((err as Error)?.message || 'Erreur inattendue');
     } finally {
       setEditSaving(false);
     }
@@ -354,8 +354,8 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
 
       setSuccessMsg(`Identifiants envoyés à ${user.email}`);
       setTimeout(() => setSuccessMsg(null), 4000);
-    } catch (err: any) {
-      alert(err?.message || 'Erreur lors de l\'envoi.');
+    } catch (err: unknown) {
+      alert((err as Error)?.message || 'Erreur lors de l\'envoi.');
     } finally {
       setResendingUser(null);
     }
@@ -391,8 +391,8 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       setDeletingUser(null);
       setSuccessMsg('Utilisateur supprimé');
       setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err: any) {
-      alert(err?.message || 'Erreur lors de la suppression.');
+    } catch (err: unknown) {
+      alert((err as Error)?.message || 'Erreur lors de la suppression.');
     } finally {
       setDeleteLoading(false);
     }

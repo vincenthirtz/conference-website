@@ -100,8 +100,8 @@ function DashboardPage(_: StaffProps) {
         throw new Error(json.error || 'Impossible de charger le dashboard');
       }
       setData(await res.json());
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Erreur de chargement');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message || 'Erreur de chargement');
     } finally {
       setLoading(false);
     }

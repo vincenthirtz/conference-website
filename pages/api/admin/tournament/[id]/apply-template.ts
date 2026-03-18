@@ -146,7 +146,7 @@ async function handler(
     }
 
     return res.status(201).json({ stages: createdStages });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[/api/admin/tournament/[id]/apply-template] error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }

@@ -109,7 +109,7 @@ async function handler(
       matchId: id,
       logs: formatted,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[/api/admin/matches/[matchId]/history] error:', err);
     return res.status(500).json({
       error: 'Internal server error',
