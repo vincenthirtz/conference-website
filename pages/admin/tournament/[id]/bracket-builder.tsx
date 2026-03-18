@@ -348,7 +348,7 @@ ${day.matches.map((m) => `<tr>
     w.onload = () => {
       setTimeout(() => w.print(), 300);
     };
-  }, [matches, matchDays, bracketRounds, tournament, totalMatches, finishedCount]);
+  }, [matchDays, bracketRounds, tournament, totalMatches, finishedCount]);
 
   /* ---- Mutations ---- */
 

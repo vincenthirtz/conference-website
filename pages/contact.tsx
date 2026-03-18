@@ -67,7 +67,7 @@ function ContactPage() {
             Nous contacter
           </h1>
           <p className="mx-auto mt-4 max-w-3xl text-lg text-gray-200">
-            Choisis le canal le plus rapide pour joindre l'équipe OW
+            Choisis le canal le plus rapide pour joindre l&apos;équipe OW
             Women&apos;s Cup : email, Discord ou formulaire direct.
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-4">

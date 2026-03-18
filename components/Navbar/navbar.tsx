@@ -406,7 +406,7 @@ function Navbar(): JSX.Element {
   };
 
   return (
-    <div className="relative">
+    <nav aria-label="Navigation principale" className="relative">
       {!adminLoading && isStaff && (
         <AdminTopBar
           staffName={staffName}
@@ -670,7 +670,7 @@ function Navbar(): JSX.Element {
           )}
         </div>
       </div>
-    </div>
+    </nav>
   );
 }
 
@@ -692,6 +692,21 @@ function AdminTopBar({
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [openSubMenu, setOpenSubMenu] = useState<string | null>(null);
   const menuAreaRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!openMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        menuAreaRef.current &&
+        !menuAreaRef.current.contains(e.target as Node)
+      ) {
+        setOpenMenu(null);
+        setOpenSubMenu(null);
+      }
+    };
+    window.addEventListener('mousedown', handleClickOutside);
+    return () => window.removeEventListener('mousedown', handleClickOutside);
+  }, [openMenu]);
+
   const flatLinks =
     links.flatMap((item) => {
       if (item.children?.length) {
@@ -726,21 +741,6 @@ function AdminTopBar({
   const toggleSubMenu = (title: string) => {
     setOpenSubMenu((prev) => (prev === title ? null : title));
   };
-
-  useEffect(() => {
-    if (!openMenu) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        menuAreaRef.current &&
-        !menuAreaRef.current.contains(e.target as Node)
-      ) {
-        setOpenMenu(null);
-        setOpenSubMenu(null);
-      }
-    };
-    window.addEventListener('mousedown', handleClickOutside);
-    return () => window.removeEventListener('mousedown', handleClickOutside);
-  }, [openMenu]);
 
   return (
     <div

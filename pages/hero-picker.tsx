@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
@@ -121,21 +121,21 @@ export default function HeroPickerPage() {
     return { totals, bans, maxA: maxBan('A'), maxB: maxBan('B') };
   }, [votes]);
 
-  const pickFavorite = (hero: Hero) => {
+  const pickFavorite = useCallback((hero: Hero) => {
     if (phase === 'favorite') {
       setFavoriteHero(hero);
       setPendingFavorite(hero);
       setPhase('cooldown');
-      setCooldownEnds(Date.now() + 30_000);
+      setCooldownEnds(() => Date.now() + 30_000);
       setBanHero(null);
       setBanned([]);
     } else if (phase === 'ban') {
       setBanHero(hero);
       setBanned([hero.name]);
     }
-  };
+  }, [phase]);
 
-  const finalizeBanPhase = () => {
+  const finalizeBanPhase = useCallback(() => {
     if (phase !== 'ban') return;
     setBanEnds(null);
     if (pendingFavorite && banHero) {
@@ -146,7 +146,7 @@ export default function HeroPickerPage() {
       setBanned([banHero.name]);
     }
     setPhase('done');
-  };
+  }, [phase, pendingFavorite, banHero, voteTeam]);
 
   useEffect(() => {
     if (phase !== 'ban') {
@@ -169,7 +169,7 @@ export default function HeroPickerPage() {
       }
     }, 400);
     return () => clearInterval(interval);
-  }, [phase, banEnds, banHero, pendingFavorite]);
+  }, [phase, banEnds, finalizeBanPhase]);
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white pb-16">

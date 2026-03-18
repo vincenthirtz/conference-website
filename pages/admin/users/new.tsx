@@ -89,7 +89,8 @@ function AdminCreateUserPage({ staff }: StaffProps) {
     if (assignToTeam && teams.length === 0) {
       loadTeams();
     }
-  }, [assignToTeam]);
+     
+  }, [assignToTeam, teams.length]);
 
   async function loadTeams() {
     setLoadingTeams(true);

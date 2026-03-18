@@ -79,6 +79,37 @@ export default function DefaultSeo({
   const canonical = BASE_URL ? `${BASE_URL}${pathname}` : undefined;
   const ogImage = toAbsoluteUrl(image || DEFAULT_IMAGE);
 
+  // BreadcrumbList JSON-LD (all pages except homepage)
+  const breadcrumbSchema =
+    !isHomePage && BASE_URL
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            {
+              '@type': 'ListItem',
+              position: 1,
+              name: 'Accueil',
+              item: BASE_URL,
+            },
+            ...pathname
+              .split('/')
+              .filter(Boolean)
+              .map((segment, i, arr) => ({
+                '@type': 'ListItem' as const,
+                position: i + 2,
+                name:
+                  i === arr.length - 1 && title
+                    ? title
+                    : decodeURIComponent(segment)
+                        .replace(/-/g, ' ')
+                        .replace(/^\w/, (c) => c.toUpperCase()),
+                item: `${BASE_URL}/${arr.slice(0, i + 1).join('/')}`,
+              })),
+          ],
+        }
+      : null;
+
   return (
     <Head>
       <title>{metaTitle}</title>
@@ -144,6 +175,14 @@ export default function DefaultSeo({
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify(websiteSchema),
+          }}
+        />
+      )}
+      {breadcrumbSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(breadcrumbSchema),
           }}
         />
       )}

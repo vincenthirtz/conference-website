@@ -2,12 +2,12 @@
 // Page publique listant tous les tournois (passés, en cours, à venir)
 
 import { GetStaticProps } from 'next';
-import Head from 'next/head';
 import Link from 'next/link';
 import { useMemo } from 'react';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import { supabaseAdmin } from '@/utils/supabase';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 type Tournament = {
   id: string;
@@ -64,7 +64,7 @@ export const getStaticProps: GetStaticProps<TournamentsPageProps> = async () => 
   };
 };
 
-export default function TournamentsPage({ tournaments }: TournamentsPageProps) {
+function TournamentsPage({ tournaments }: TournamentsPageProps) {
   const now = useMemo(() => new Date(), []);
 
   // Classifier les tournois
@@ -115,14 +115,6 @@ export default function TournamentsPage({ tournaments }: TournamentsPageProps) {
 
   return (
     <>
-      <Head>
-        <title>Tournois | OW Women&apos;s Cup</title>
-        <meta
-          name="description"
-          content="Découvrez tous les tournois OW Women's Cup : passés, en cours et à venir. Brackets, résultats et équipes."
-        />
-      </Head>
-
       <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
         <main className="container mx-auto px-4 pt-24 pb-16 max-w-6xl">
           {/* Header */}
@@ -134,7 +126,7 @@ export default function TournamentsPage({ tournaments }: TournamentsPageProps) {
               <span>Overwatch</span>
             </div>
 
-            <Heading typeStyle="heading-lg" className="text-gradient mb-4">
+            <Heading typeStyle="heading-lg" level="h1" className="text-gradient mb-4">
               Tous les tournois
             </Heading>
 
@@ -353,6 +345,16 @@ function TournamentCard({ tournament, status }: TournamentCardProps) {
     </Link>
   );
 }
+
+const tournamentsSeo: SeoProps = {
+  title: 'Tournois',
+  description:
+    "Découvrez tous les tournois OW Women's Cup : passés, en cours et à venir. Brackets, résultats et équipes.",
+};
+
+TournamentsPage.seo = tournamentsSeo;
+
+export default TournamentsPage;
 
 function formatTournamentDates(
   start?: string | null,

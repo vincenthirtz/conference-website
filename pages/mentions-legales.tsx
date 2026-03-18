@@ -222,7 +222,7 @@ function MentionsLegalesPage() {
                   {contactEmail}
                 </a>
                 . Les données sont conservées le temps strictement nécessaire à
-                l'organisation des événements.
+                l&apos;organisation des événements.
               </p>
             </div>
           </div>

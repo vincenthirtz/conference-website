@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 // pages/admin/tournament/[id]/maps.tsx
 // Gestion (lecture/ajout/suppression) du pool de maps d'un tournoi
 
@@ -525,7 +526,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
                       </div>
                       <div>
                         <label className="block text-sm text-gray-300 mb-2">
-                          URL de l'image (optionnel)
+                          URL de l&apos;image (optionnel)
                         </label>
                         <input
                           type="text"
@@ -691,7 +692,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
                     {editImagePreview && (
                       <div>
                         <label className="block text-sm text-gray-300 mb-2">
-                          Aperçu de l'image
+                          Aperçu de l&apos;image
                         </label>
                         <div className="relative w-full h-48 rounded-lg overflow-hidden bg-gradient-to-b from-purple-900/20 to-transparent">
                           <img
@@ -706,7 +707,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
                     {/* Upload d'image */}
                     <div>
                       <label className="block text-sm text-gray-300 mb-2">
-                        Changer l'image
+                        Changer l&apos;image
                       </label>
                       <input
                         type="file"
@@ -722,7 +723,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
                     {/* URL alternative */}
                     <div>
                       <label className="block text-sm text-gray-300 mb-2">
-                        Ou entrer une URL d'image
+                        Ou entrer une URL d&apos;image
                       </label>
                       <input
                         type="text"

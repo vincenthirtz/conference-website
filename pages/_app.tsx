@@ -23,11 +23,14 @@ function MyApp({ Component, pageProps, router }: AppPropsWithSeo) {
 
   const seo = (Component as any)?.seo as SeoProps | undefined;
   const isAdmin = router.pathname.startsWith('/admin');
+  const effectiveSeo: SeoProps = isAdmin
+    ? { ...seo, noindex: true }
+    : { ...seo };
 
   return (
     <ErrorBoundary>
       <div>
-        <DefaultSeo {...seo} />
+        <DefaultSeo {...effectiveSeo} />
         <Navbar />
         <Component {...pageProps} />
         <Footer />

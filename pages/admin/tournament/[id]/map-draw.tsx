@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 // pages/admin/tournament/[id]/map-draw.tsx
 // Tirage de maps pour BO3/BO5 — 3 choix par match (même catégorie) — avec export PDF
 

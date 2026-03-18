@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';

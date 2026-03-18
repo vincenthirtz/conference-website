@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 type PatchNote = {
   id: string;
@@ -29,7 +29,7 @@ const PATCH_NOTES_SOURCE =
   'https://overwatch.blizzard.com/fr-fr/news/patch-notes/';
 const NEWS_SOURCE = 'https://overwatch.blizzard.com/fr-fr/news/';
 
-export default function ActualitesPage() {
+function ActualitesPage() {
   const [patchNotes, setPatchNotes] = useState<PatchNote[]>([]);
   const [news, setNews] = useState<BlizzardNews[]>([]);
   const [loadingPatch, setLoadingPatch] = useState(true);
@@ -209,14 +209,6 @@ export default function ActualitesPage() {
 
   return (
     <>
-      <Head>
-        <title>Actualités Overwatch | OW World Cup</title>
-        <meta
-          name="description"
-          content="Dernières actualités, patch notes et mises à jour d'Overwatch par Blizzard."
-        />
-      </Head>
-
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950">
         <div className="container mx-auto px-4 pt-28 pb-16">
           {/* Header */}
@@ -224,8 +216,8 @@ export default function ActualitesPage() {
             <div className="inline-block text-lg text-white font-semibold border-b-2 border-blue-400 mb-4">
               Actualités
             </div>
-            <Heading typeStyle="heading-lg" className="text-gradient">
-              Overwatch
+            <Heading typeStyle="heading-lg" level="h1" className="text-gradient">
+              Actualités Overwatch
             </Heading>
             <div className="max-w-2xl mx-auto mt-4">
               <Paragraph typeStyle="body-lg" textColor="text-neutral-300">
@@ -309,3 +301,13 @@ export default function ActualitesPage() {
     </>
   );
 }
+
+const actualitesSeo: SeoProps = {
+  title: 'Actualités Overwatch',
+  description:
+    "Dernières actualités, patch notes et mises à jour d'Overwatch par Blizzard.",
+};
+
+ActualitesPage.seo = actualitesSeo;
+
+export default ActualitesPage;

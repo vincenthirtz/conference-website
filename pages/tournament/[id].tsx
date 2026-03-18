@@ -270,6 +270,50 @@ export default function TournamentPage({
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <Head>
         <title>{tournament.name} | OW Women&apos;s Cup</title>
+        <meta
+          name="description"
+          content={`${tournament.name} – Tournoi ${tournament.game || 'Overwatch'} OW Women's Cup. Brackets, résultats, équipes et calendrier des matchs.`}
+        />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={`${tournament.name} | OW Women's Cup`} />
+        <meta
+          property="og:description"
+          content={`${tournament.name} – Tournoi ${tournament.game || 'Overwatch'} OW Women's Cup. Brackets, résultats et équipes.`}
+        />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`${tournament.name} | OW Women's Cup`} />
+        {tournament.start_date && (
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                '@context': 'https://schema.org',
+                '@type': 'SportsEvent',
+                name: tournament.name,
+                startDate: tournament.start_date,
+                ...(tournament.end_date && { endDate: tournament.end_date }),
+                eventStatus:
+                  tournament.status === 'completed'
+                    ? 'https://schema.org/EventScheduled'
+                    : tournament.status === 'running'
+                      ? 'https://schema.org/EventScheduled'
+                      : 'https://schema.org/EventScheduled',
+                eventAttendanceMode: 'https://schema.org/OnlineEventAttendanceMode',
+                location: {
+                  '@type': 'VirtualLocation',
+                  url: `https://owwomenscup.com/tournament/${tournament.slug || tournament.id}`,
+                },
+                organizer: {
+                  '@type': 'Organization',
+                  name: "OW Women's Cup",
+                  url: 'https://owwomenscup.com',
+                },
+                sport: tournament.game || 'Overwatch',
+                inLanguage: 'fr-FR',
+              }),
+            }}
+          />
+        )}
       </Head>
 
       <main className="container mx-auto px-4 pt-24 pb-16 max-w-6xl">
@@ -289,7 +333,7 @@ export default function TournamentPage({
                 <span className={statusColor}>{statusLabel}</span>
               </div>
 
-              <Heading typeStyle="heading-lg" className="text-gradient mb-1">
+              <Heading typeStyle="heading-lg" level="h1" className="text-gradient mb-1">
                 {tournament.name}
               </Heading>
 
