@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import slugify from 'slugify';
 import { supabaseAdmin, getServerClient } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { escapePostgrestValue, parsePagination } from '@/utils/apiHelpers';
+import { parsePagination } from '@/utils/apiHelpers';
 
 const normalizeTag = (value?: string | null) => {
   const cleaned = (value || '').toString().trim();
@@ -33,7 +33,7 @@ export default async function handler(
       'id, title, slug, tag, excerpt, content, image_url, published_at, created_at, updated_at, news_comments(count)'
     )
     .eq('status', 'published')
-    .or(`published_at.lte.${escapePostgrestValue(nowISO)},published_at.is.null`)
+    .or(`published_at.lte.${nowISO},published_at.is.null`)
     .order('published_at', { ascending: false, nullsFirst: false })
     .range(offset, offset + limit - 1);
 
