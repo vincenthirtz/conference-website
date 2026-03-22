@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { withStaffPage } from '@/utils/staff';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import MatchReadinessChecklist from '@/components/admin/MatchReadinessChecklist';
+import MatchTimeline from '@/components/admin/MatchTimeline';
 import type {
   StaffProps,
   Match,
@@ -19,9 +20,12 @@ import type {
 
 const STATUS_ORDER: Record<string, number> = {
   pending: 0,
+  postponed: 0,
   ongoing: 1,
-  finished: 2,
-  cancelled: 3,
+  disputed: 2,
+  finished: 3,
+  walkover: 3,
+  cancelled: 4,
 };
 
 type ApiResponse = {
@@ -69,6 +73,12 @@ function statusLabel(status: MatchStatus) {
       return 'Terminé';
     case 'cancelled':
       return 'Annulé';
+    case 'postponed':
+      return 'Reporté';
+    case 'disputed':
+      return 'Contesté';
+    case 'walkover':
+      return 'Walkover';
     default:
       return status;
   }
@@ -84,6 +94,12 @@ function statusColor(status: MatchStatus) {
       return 'bg-emerald-600/80 text-white';
     case 'cancelled':
       return 'bg-red-700/80 text-white';
+    case 'postponed':
+      return 'bg-blue-600/80 text-white';
+    case 'disputed':
+      return 'bg-orange-600/80 text-white';
+    case 'walkover':
+      return 'bg-purple-600/80 text-white';
     default:
       return 'bg-neutral-700 text-neutral-100';
   }
@@ -105,6 +121,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [conflictMsg, setConflictMsg] = useState<string | null>(null);
+  const [conflictServerTime, setConflictServerTime] = useState<string | null>(null);
 
   // Status regression confirmation
   const [showStatusConfirm, setShowStatusConfirm] = useState(false);
@@ -258,6 +275,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
             json.error ||
               'Ce match a été modifié par un autre utilisateur. Rechargez la page et réessayez.'
           );
+          setConflictServerTime(json.server_updated_at ?? null);
           await fetchMatch();
           return;
         }
@@ -299,6 +317,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
               json.error ||
                 'Ce match a été modifié par un autre utilisateur. Rechargez la page et réessayez.'
             );
+            setConflictServerTime(json.server_updated_at ?? null);
             await fetchMatch();
             return;
           }
@@ -361,23 +380,14 @@ function AdminMatchEditPage({ staff }: StaffProps) {
     setSuccessMsg(null);
 
     try {
-      const bestOf = match.best_of ?? 1;
-      const winsNeeded = Math.ceil(bestOf / 2);
-
-      const isForfeitTeam1 = forfeitTeamId === match.team1_id;
-      const team1Score = isForfeitTeam1 ? 0 : winsNeeded;
-      const team2Score = isForfeitTeam1 ? winsNeeded : 0;
-
+      // Scores auto-calculated server-side based on match format
       const res = await fetch(`/api/admin/matches/${matchId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           mode: 'score',
-          team1Score,
-          team2Score,
-          status: 'finished',
-          propagate: true,
           forfeit_team_id: forfeitTeamId,
+          propagate: true,
         }),
       });
 
@@ -462,12 +472,20 @@ function AdminMatchEditPage({ staff }: StaffProps) {
             <div>
               <p className="font-semibold text-amber-200 mb-1">Modification concurrente</p>
               <p className="text-amber-100/80">{conflictMsg}</p>
+              {conflictServerTime && (
+                <p className="text-amber-100/60 text-xs mt-1">
+                  Dernière modification serveur : {new Date(conflictServerTime).toLocaleString('fr-FR')}
+                </p>
+              )}
+              <p className="text-amber-100/60 text-xs mt-1">
+                Le formulaire a été rechargé avec les données à jour. Vérifiez les champs et réessayez.
+              </p>
               <button
                 type="button"
-                onClick={() => { setConflictMsg(null); fetchMatch(); }}
+                onClick={() => { setConflictMsg(null); setConflictServerTime(null); fetchMatch(); }}
                 className="mt-2 px-3 py-1 rounded bg-amber-700/50 hover:bg-amber-700/80 text-amber-100 text-xs font-medium transition-colors"
               >
-                Recharger le match
+                Fermer et recharger
               </button>
             </div>
           </div>
@@ -523,6 +541,9 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                         <option value="ongoing">En cours</option>
                         <option value="finished">Terminé</option>
                         <option value="cancelled">Annulé</option>
+                        <option value="postponed">Reporté</option>
+                        <option value="disputed">Contesté</option>
+                        <option value="walkover">Walkover</option>
                       </select>
                     </div>
 
@@ -966,7 +987,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                 </div>
               </section>
 
-              {match.status !== 'finished' && (
+              {match.status !== 'finished' && match.status !== 'walkover' && (
                 <MatchReadinessChecklist
                   match={match}
                   team1Name={team1?.name ?? null}
@@ -975,6 +996,11 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                   stageActive={stage?.is_active ?? null}
                 />
               )}
+
+              <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5">
+                <h2 className="text-lg font-semibold mb-3">Historique</h2>
+                <MatchTimeline matchId={match.id} />
+              </section>
             </aside>
           </div>
         )}
