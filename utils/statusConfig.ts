@@ -30,4 +30,19 @@ export const STATUS_CONFIG: Record<MatchStatus, StatusConfig> = {
     dot: 'bg-red-500',
     bg: 'bg-red-500/10 text-red-400 border-red-500/20',
   },
+  postponed: {
+    label: 'Reporté',
+    dot: 'bg-blue-400',
+    bg: 'bg-blue-400/10 text-blue-300 border-blue-400/20',
+  },
+  disputed: {
+    label: 'Contesté',
+    dot: 'bg-orange-400 animate-pulse',
+    bg: 'bg-orange-400/10 text-orange-300 border-orange-400/20',
+  },
+  walkover: {
+    label: 'Walkover',
+    dot: 'bg-purple-400',
+    bg: 'bg-purple-400/10 text-purple-300 border-purple-400/20',
+  },
 };

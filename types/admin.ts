@@ -120,7 +120,14 @@ export type StageMini = {
  * Match
  * ---------------------------------------------------------*/
 
-export type MatchStatus = 'pending' | 'ongoing' | 'finished' | 'cancelled';
+export type MatchStatus =
+  | 'pending'
+  | 'ongoing'
+  | 'finished'
+  | 'cancelled'
+  | 'postponed'
+  | 'disputed'
+  | 'walkover';
 
 export type BracketSide = 'wb' | 'lb' | 'final' | 'none';
 
@@ -147,6 +154,7 @@ export type Match = {
   team1_score: number | null;
   team2_score: number | null;
   winner_team_id: string | null;
+  forfeit_team_id: string | null;
   stream_url: string | null;
   lobby_code: string | null;
   notes: string | null;

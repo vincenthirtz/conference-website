@@ -170,7 +170,7 @@ async function handleBulkSchedule(
  *  { matchIds: string[], fields: { status?, best_of?, round_number?, notes?, stream_url?, lobby_code? } }
  * ---------------------------------------------------------*/
 
-const VALID_STATUSES = ['pending', 'ongoing', 'finished', 'cancelled'];
+const VALID_STATUSES = ['pending', 'ongoing', 'finished', 'cancelled', 'postponed', 'disputed', 'walkover'];
 const BULK_EDITABLE_FIELDS = ['status', 'best_of', 'round_number', 'notes', 'stream_url', 'lobby_code'] as const;
 
 async function handleBulkUpdate(

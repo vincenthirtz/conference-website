@@ -68,6 +68,7 @@ async function handleGet(
     team1_score,
     team2_score,
     winner_team_id,
+    forfeit_team_id,
     scheduled_at,
     completed_at,
     updated_at,
@@ -169,7 +170,7 @@ async function handlePut(
     }
   }
 
-  if (mode === 'score' || hasScorePayload(req.body)) {
+  if (mode === 'score' || hasScorePayload(req.body) || req.body.forfeit_team_id) {
     // --- Update score (avec helper applyMatchScore) ---
     const {
       team1Score,
@@ -180,31 +181,26 @@ async function handlePut(
       forfeit_team_id,
     } = req.body;
 
-    if (typeof team1Score !== 'number' || typeof team2Score !== 'number') {
-      return res.status(400).json({
-        error: 'Missing numeric team1Score / team2Score',
-      });
+    // Scores obligatoires sauf en mode forfait (auto-calculés par applyMatchScore)
+    if (!forfeit_team_id) {
+      if (typeof team1Score !== 'number' || typeof team2Score !== 'number') {
+        return res.status(400).json({
+          error: 'Missing numeric team1Score / team2Score',
+        });
+      }
+
+      if (!Number.isInteger(team1Score) || !Number.isInteger(team2Score) || team1Score < 0 || team2Score < 0) {
+        return res.status(400).json({
+          error: 'Scores must be integers >= 0',
+        });
+      }
     }
 
-    if (!Number.isInteger(team1Score) || !Number.isInteger(team2Score) || team1Score < 0 || team2Score < 0) {
-      return res.status(400).json({
-        error: 'Scores must be integers >= 0',
-      });
-    }
-
-    const VALID_MATCH_STATUSES = ['pending', 'ongoing', 'finished', 'cancelled'];
+    const VALID_MATCH_STATUSES = ['pending', 'ongoing', 'finished', 'cancelled', 'postponed', 'disputed', 'walkover'];
     if (status !== undefined && !VALID_MATCH_STATUSES.includes(status)) {
       return res.status(400).json({
         error: `Invalid status. Allowed values: ${VALID_MATCH_STATUSES.join(', ')}`,
       });
-    }
-
-    // If forfeit, update the notes field to record which team forfeited
-    if (typeof forfeit_team_id === 'string' && forfeit_team_id) {
-      await supabaseAdmin
-        .from('matches')
-        .update({ notes: `[FORFAIT] team_id=${forfeit_team_id}` })
-        .eq('id', matchId);
     }
 
     const result = await applyMatchScore({
@@ -212,8 +208,9 @@ async function handlePut(
       team1Score,
       team2Score,
       winnerTeamId: typeof winnerTeamId === 'string' ? winnerTeamId : undefined,
+      forfeitTeamId: typeof forfeit_team_id === 'string' ? forfeit_team_id : undefined,
       status,
-      markFinished: status === 'finished' || !status,
+      markFinished: status === 'finished' || (!status && !forfeit_team_id),
       staffId: ctx.staff?.id ?? null,
       propagateBracket: propagate !== false,
     });
@@ -264,7 +261,7 @@ async function handlePut(
   updatePayload.updated_at = new Date().toISOString();
 
   // Validation des champs meta
-  const VALID_MATCH_STATUSES_META = ['pending', 'ongoing', 'finished', 'cancelled'];
+  const VALID_MATCH_STATUSES_META = ['pending', 'ongoing', 'finished', 'cancelled', 'postponed', 'disputed', 'walkover'];
   if ('status' in updatePayload && !VALID_MATCH_STATUSES_META.includes(updatePayload.status)) {
     return res.status(400).json({
       error: `Invalid status. Allowed values: ${VALID_MATCH_STATUSES_META.join(', ')}`,

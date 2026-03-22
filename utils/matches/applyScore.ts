@@ -10,11 +10,15 @@ import {
 } from '../bracket/propagate';
 import type { PropagationSnapshot } from '../bracket/propagate';
 import { logStaffAction } from '../staffLogs';
+import { computeRequiredWins } from './computeRequiredWins';
 import type {
   ApplyMatchScoreInput,
   ApplyMatchScoreResult,
   MatchStatus,
 } from '../../types/matches';
+
+/** Statuses that trigger bracket propagation (match has a winner) */
+const PROPAGATION_STATUSES: MatchStatus[] = ['finished', 'walkover'];
 
 /* -----------------------------------------------------------
  * Fonction principale
@@ -24,7 +28,8 @@ import type {
  * Applique un score à un match :
  * - met à jour team1_score / team2_score
  * - calcule le winner_team_id (si non reçu en entrée)
- * - optionnellement marque le match comme "finished"
+ * - gère les forfeits (score automatique + winner basé sur l'équipe adverse)
+ * - optionnellement marque le match comme "finished" ou "walkover"
  * - met à jour completed_at si terminé
  * - reset puis propage la progression dans le bracket
  * - log l'action staff dans staff_logs
@@ -34,29 +39,16 @@ export async function applyMatchScore(
 ): Promise<ApplyMatchScoreResult> {
   const {
     matchId,
-    team1Score,
-    team2Score,
     status,
     winnerTeamId,
     markFinished = true,
     completedAt,
     staffId,
     propagateBracket = true,
+    forfeitTeamId,
   } = input;
 
-  // 0) Validation des scores
-  if (
-    typeof team1Score !== 'number' ||
-    typeof team2Score !== 'number' ||
-    !Number.isInteger(team1Score) ||
-    !Number.isInteger(team2Score) ||
-    team1Score < 0 ||
-    team2Score < 0
-  ) {
-    throw new Error(
-      'Scores invalides : team1Score et team2Score doivent être des entiers >= 0'
-    );
-  }
+  let { team1Score, team2Score } = input;
 
   // 1) Récupérer le match actuel
   const { data: match, error: fetchErr } = await supabaseAdmin
@@ -68,11 +60,13 @@ export async function applyMatchScore(
       stage_id,
       status,
       is_bye,
+      match_format,
       team1_id,
       team2_id,
       team1_score,
       team2_score,
       winner_team_id,
+      forfeit_team_id,
       completed_at,
       next_match_win_id,
       next_match_win_slot,
@@ -103,6 +97,48 @@ export async function applyMatchScore(
     }
   }
 
+  // 1c) Gestion du forfait : auto-calcul score + winner
+  let resolvedForfeitTeamId: string | null = forfeitTeamId ?? null;
+
+  if (resolvedForfeitTeamId) {
+    // Vérifier que l'équipe forfait fait partie du match
+    if (
+      resolvedForfeitTeamId !== match.team1_id &&
+      resolvedForfeitTeamId !== match.team2_id
+    ) {
+      throw new Error(
+        `L'équipe forfait (${resolvedForfeitTeamId}) ne fait pas partie de ce match`
+      );
+    }
+
+    // Si les scores ne sont pas fournis explicitement, les calculer automatiquement
+    if (team1Score === undefined && team2Score === undefined) {
+      const requiredWins = computeRequiredWins(match.match_format);
+      // L'équipe forfait obtient 0, l'adversaire obtient le nombre de wins requis
+      if (resolvedForfeitTeamId === match.team1_id) {
+        team1Score = 0;
+        team2Score = requiredWins;
+      } else {
+        team1Score = requiredWins;
+        team2Score = 0;
+      }
+    }
+  }
+
+  // 0) Validation des scores (après résolution forfait)
+  if (
+    typeof team1Score !== 'number' ||
+    typeof team2Score !== 'number' ||
+    !Number.isInteger(team1Score) ||
+    !Number.isInteger(team2Score) ||
+    team1Score < 0 ||
+    team2Score < 0
+  ) {
+    throw new Error(
+      'Scores invalides : team1Score et team2Score doivent être des entiers >= 0'
+    );
+  }
+
   const currentStatus: MatchStatus = match.status;
 
   // 2) Déterminer le status cible
@@ -110,25 +146,39 @@ export async function applyMatchScore(
 
   if (status) {
     newStatus = status;
+  } else if (resolvedForfeitTeamId) {
+    newStatus = 'walkover';
   } else if (markFinished) {
     newStatus = 'finished';
   }
 
   // 3) Calculer le vainqueur si besoin
-  let newWinnerTeamId: string | null =
-    typeof winnerTeamId !== 'undefined'
-      ? winnerTeamId
-      : computeWinnerFromScores(
-          match.team1_id,
-          match.team2_id,
-          team1Score,
-          team2Score,
-          match.is_bye
-        );
+  let newWinnerTeamId: string | null;
+
+  if (resolvedForfeitTeamId) {
+    // En cas de forfait, le vainqueur est l'adversaire
+    newWinnerTeamId =
+      typeof winnerTeamId !== 'undefined'
+        ? winnerTeamId
+        : resolvedForfeitTeamId === match.team1_id
+          ? match.team2_id
+          : match.team1_id;
+  } else {
+    newWinnerTeamId =
+      typeof winnerTeamId !== 'undefined'
+        ? winnerTeamId
+        : computeWinnerFromScores(
+            match.team1_id,
+            match.team2_id,
+            team1Score,
+            team2Score,
+            match.is_bye
+          );
+  }
 
   // 4) Déterminer completed_at
   let newCompletedAt: string | null = match.completed_at;
-  if (newStatus === 'finished') {
+  if (PROPAGATION_STATUSES.includes(newStatus)) {
     newCompletedAt = completedAt || new Date().toISOString();
   }
 
@@ -139,11 +189,15 @@ export async function applyMatchScore(
     winner_team_id: newWinnerTeamId,
   };
 
+  if (resolvedForfeitTeamId !== undefined) {
+    updatePayload.forfeit_team_id = resolvedForfeitTeamId;
+  }
+
   if (newStatus !== currentStatus) {
     updatePayload.status = newStatus;
   }
 
-  if (newStatus === 'finished') {
+  if (PROPAGATION_STATUSES.includes(newStatus)) {
     updatePayload.completed_at = newCompletedAt;
   }
 
@@ -152,9 +206,14 @@ export async function applyMatchScore(
     team1_score: match.team1_score,
     team2_score: match.team2_score,
     winner_team_id: match.winner_team_id,
+    forfeit_team_id: match.forfeit_team_id,
     status: match.status,
     completed_at: match.completed_at,
   };
+
+  // Statuses qui bloquent la propagation
+  const shouldPropagate =
+    propagateBracket && PROPAGATION_STATUSES.includes(newStatus);
 
   // 7) Snapshot des slots de propagation AVANT le reset,
   //    pour pouvoir restaurer l'état complet en cas d'échec.
@@ -206,7 +265,7 @@ export async function applyMatchScore(
   // 10) Propagation du vainqueur/perdant dans le bracket
   //     En cas d'échec, on rollback le match ET les slots de propagation
   //     pour éviter une incohérence bracket.
-  if (propagateBracket && newStatus === 'finished') {
+  if (shouldPropagate) {
     try {
       await propagateBracketForMatch(matchId);
     } catch (e) {
@@ -262,6 +321,9 @@ export async function applyMatchScore(
           new_team2_score: team2Score,
           prev_winner_team_id: match.winner_team_id,
           new_winner_team_id: newWinnerTeamId,
+          ...(resolvedForfeitTeamId
+            ? { forfeit_team_id: resolvedForfeitTeamId }
+            : {}),
         },
       });
     } catch (e) {

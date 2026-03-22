@@ -70,6 +70,12 @@ export interface AutoSchedulerConfig {
    * Ressource par défaut si resourceId est absent.
    */
   defaultResourceId?: SchedulerResourceId;
+
+  /**
+   * Pas de glissement (en minutes) quand le scheduler cherche un créneau libre.
+   * Par défaut : 5 minutes.
+   */
+  slideWindowMinutes?: number;
 }
 
 export interface ScheduledMatch {
@@ -86,19 +92,44 @@ export interface ScheduledMatch {
   format: MatchFormat;
 }
 
+export interface SchedulingConflict {
+  /** IDs des deux matchs en conflit */
+  matchId1: string;
+  matchId2: string;
+  /** ID de l'équipe impliquée dans les deux matchs */
+  teamId: string;
+  /** Plage de chevauchement */
+  overlapStart: string;
+  overlapEnd: string;
+}
+
 export interface AutoScheduleResult {
   scheduled: ScheduledMatch[];
   /** Matchs qui n'ont pas pu être placés (par manque de place dans les time windows) */
   unscheduledMatchIds: string[];
+  /** Conflits de double-booking détectés dans le planning final */
+  conflicts: SchedulingConflict[];
 }
 
 export interface ApplyMatchScoreInput {
   /** ID du match à mettre à jour */
   matchId: string;
 
-  /** Score global pour chaque équipe (maps / rounds gagnés, etc.) */
-  team1Score: number;
-  team2Score: number;
+  /**
+   * Score global pour chaque équipe (maps / rounds gagnés, etc.).
+   * Optionnel si forfeitTeamId est fourni (sera auto-calculé).
+   */
+  team1Score?: number;
+  team2Score?: number;
+
+  /**
+   * ID de l'équipe qui déclare forfait.
+   * Si fourni :
+   * - le winner est automatiquement l'adversaire
+   * - les scores sont auto-calculés (ex: bo3 → 2-0) sauf si fournis explicitement
+   * - le status passe à "walkover" par défaut
+   */
+  forfeitTeamId?: string | null;
 
   /**
    * Status à appliquer :
