@@ -140,6 +140,142 @@ export async function createCheckoutIntent(
   return { id: data.id, redirectUrl: data.redirectUrl };
 }
 
+// ─── Fetch organization data ──────────────────────────────────
+
+export type HelloAssoMembership = {
+  id: number;
+  order: {
+    id: number;
+    date: string;
+    formSlug: string;
+    formType: string;
+  };
+  payer: {
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  user: {
+    firstName: string;
+    lastName: string;
+  };
+  amount: number;
+  state: string;
+  name: string;
+};
+
+export type HelloAssoPaginatedResponse<T> = {
+  data: T[];
+  pagination: {
+    pageIndex: number;
+    pageSize: number;
+    totalCount: number;
+    totalPages: number;
+    continuationToken?: string;
+  };
+};
+
+/**
+ * Fetch memberships (adhésions) from a HelloAsso Membership form.
+ *
+ * @param formSlug - The slug of the Membership form on HelloAsso
+ * @param pageIndex - Page number (1-based)
+ * @param pageSize - Items per page (max 100)
+ */
+export async function fetchMemberships(
+  formSlug: string,
+  pageIndex = 1,
+  pageSize = 100
+): Promise<HelloAssoPaginatedResponse<HelloAssoMembership>> {
+  const token = await getAccessToken();
+  const { orgSlug } = getConfig();
+
+  const params = new URLSearchParams({
+    pageIndex: String(pageIndex),
+    pageSize: String(Math.min(pageSize, 100)),
+    withDetails: 'true',
+  });
+
+  const res = await fetch(
+    `${API_BASE}/v5/organizations/${encodeURIComponent(orgSlug)}/forms/Membership/${encodeURIComponent(formSlug)}/items?${params}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`HelloAsso memberships error ${res.status}: ${text}`);
+  }
+
+  return (await res.json()) as HelloAssoPaginatedResponse<HelloAssoMembership>;
+}
+
+/**
+ * Fetch all payments for the organization, optionally filtered by date range.
+ */
+export async function fetchPayments(opts?: {
+  from?: string;
+  to?: string;
+  pageIndex?: number;
+  pageSize?: number;
+}): Promise<HelloAssoPaginatedResponse<HelloAssoMembership>> {
+  const token = await getAccessToken();
+  const { orgSlug } = getConfig();
+
+  const params = new URLSearchParams({
+    pageIndex: String(opts?.pageIndex ?? 1),
+    pageSize: String(Math.min(opts?.pageSize ?? 100, 100)),
+  });
+  if (opts?.from) params.set('from', opts.from);
+  if (opts?.to) params.set('to', opts.to);
+
+  const res = await fetch(
+    `${API_BASE}/v5/organizations/${encodeURIComponent(orgSlug)}/payments?${params}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`HelloAsso payments error ${res.status}: ${text}`);
+  }
+
+  return (await res.json()) as HelloAssoPaginatedResponse<HelloAssoMembership>;
+}
+
+/**
+ * List all forms (Membership, Event, Donation, etc.) for the organization.
+ */
+export async function fetchForms(): Promise<
+  Array<{ formSlug: string; formType: string; title: string; state: string }>
+> {
+  const token = await getAccessToken();
+  const { orgSlug } = getConfig();
+
+  const res = await fetch(
+    `${API_BASE}/v5/organizations/${encodeURIComponent(orgSlug)}/forms?pageSize=100`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`HelloAsso forms error ${res.status}: ${text}`);
+  }
+
+  const json = (await res.json()) as HelloAssoPaginatedResponse<{
+    formSlug: string;
+    formType: string;
+    title: string;
+    state: string;
+  }>;
+
+  return json.data;
+}
+
 // ─── Webhook signature verification ───────────────────────────
 
 /**

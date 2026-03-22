@@ -158,3 +158,43 @@ test.describe('API /api/helloasso/webhook', () => {
     expect(res.status()).toBe(405);
   });
 });
+
+// ─── Admin API — HelloAsso memberships ─────────────────────────
+
+test.describe('API /api/admin/helloasso/memberships (protection)', () => {
+  test('GET sans auth renvoie 401', async ({ request }) => {
+    const res = await request.get('/api/admin/helloasso/memberships');
+    expect(res.status()).toBe(401);
+  });
+
+  test('GET avec token invalide renvoie 401', async ({ request }) => {
+    const res = await request.get('/api/admin/helloasso/memberships', {
+      headers: { Authorization: 'Bearer invalid_token' },
+    });
+    expect(res.status()).toBe(401);
+  });
+
+  test('POST sans auth est refusé', async ({ request }) => {
+    const res = await request.post('/api/admin/helloasso/memberships');
+    expect([401, 403, 405]).toContain(res.status());
+  });
+});
+
+test.describe('API /api/admin/helloasso/sync (protection)', () => {
+  test('POST sans auth est refusé', async ({ request }) => {
+    const res = await request.post('/api/admin/helloasso/sync');
+    expect([401, 403]).toContain(res.status());
+  });
+
+  test('POST avec token invalide est refusé', async ({ request }) => {
+    const res = await request.post('/api/admin/helloasso/sync', {
+      headers: { Authorization: 'Bearer invalid_token' },
+    });
+    expect([401, 403]).toContain(res.status());
+  });
+
+  test('GET sans auth est refusé', async ({ request }) => {
+    const res = await request.get('/api/admin/helloasso/sync');
+    expect([401, 403, 405]).toContain(res.status());
+  });
+});
