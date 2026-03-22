@@ -52,9 +52,9 @@ export default function PublicCreateTeamPage() {
   const [members, setMembers] = useState<MemberForm[]>([
     {
       id: 'm-0',
-      email: 'hirtzvincent+testjoueur@gmail.com',
+      email: '',
       role: 'player',
-      battleTag: 'TestJoueur#0001',
+      battleTag: '',
     },
   ]);
   const [captainIndex, setCaptainIndex] = useState<number | null>(0);

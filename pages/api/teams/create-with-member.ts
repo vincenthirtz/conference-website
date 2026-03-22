@@ -360,13 +360,16 @@ export default async function handler(
       // Verify tournament exists and is published
       const { data: tournament } = await supabaseAdmin
         .from('tournaments')
-        .select('id, name, status, max_teams')
+        .select('id, name, status, max_teams, min_players')
         .eq('id', tournamentId)
         .single();
 
       if (tournament && tournament.status === 'published') {
         // Check max_teams limit
         let canRegister = true;
+        if (tournament.min_players && insertedMembers.length < tournament.min_players) {
+          canRegister = false;
+        }
         if (tournament.max_teams) {
           const { data: existingTeams } = await supabaseAdmin
             .from('stage_teams')
