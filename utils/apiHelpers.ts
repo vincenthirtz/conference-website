@@ -70,6 +70,17 @@ export function escapePostgrestValue(value: string): string {
   return value.replace(/[,.*()\\]/g, '');
 }
 
+const ALLOWED_ROLES = new Set(['player', 'coach', 'substitute', 'manager']);
+
+/**
+ * Validate a member role against the allowed list.
+ * Returns the role if valid, or 'player' as default.
+ */
+export function validateRole(role: string | null | undefined): string {
+  const trimmed = (role || '').trim().toLowerCase();
+  return ALLOWED_ROLES.has(trimmed) ? trimmed : 'player';
+}
+
 const SAFE_URL_SCHEMES = new Set(['http:', 'https:']);
 
 /**

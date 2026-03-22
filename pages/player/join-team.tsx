@@ -14,6 +14,7 @@ type Team = {
   short_name: string | null;
   logo_url: string | null;
   country: string | null;
+  member_count?: number;
 };
 
 export default function JoinTeamPage() {
@@ -289,6 +290,12 @@ export default function JoinTeamPage() {
                               <>
                                 {team.short_name && <span>·</span>}
                                 <span>{team.country}</span>
+                              </>
+                            )}
+                            {typeof team.member_count === 'number' && (
+                              <>
+                                {(team.short_name || team.country) && <span>·</span>}
+                                <span>{team.member_count}/5 membres</span>
                               </>
                             )}
                           </div>

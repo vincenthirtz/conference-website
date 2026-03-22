@@ -10,7 +10,7 @@ import {
 } from '@/utils/find-or-create-user';
 import { sendTeamJoinEmail } from '@/utils/email';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { isValidUUID } from '@/utils/apiHelpers';
+import { isValidUUID, validateRole } from '@/utils/apiHelpers';
 
 type TeamMemberRow = {
   id: string;
@@ -121,7 +121,7 @@ async function handler(
           const emailMap = await listUsersEmailMap();
           const { userId, created } = await findOrCreateUserByEmail(
             email,
-            typeof role === 'string' && role.trim() ? role.trim() : 'player',
+            validateRole(role),
             emailMap
           );
           resolvedUserId = userId;
@@ -140,7 +140,7 @@ async function handler(
       const memberPayload = {
         team_id: teamId,
         user_id: resolvedUserId,
-        role: typeof role === 'string' && role.trim() ? role.trim() : 'player',
+        role: validateRole(role),
         battle_tag: battleTagValue,
         is_substitute: isSubstitute === true,
       };
@@ -260,7 +260,7 @@ async function handler(
     // Standard update
     const updatePayload: any = {};
     if (typeof role === 'string') {
-      updatePayload.role = role.trim() || 'player';
+      updatePayload.role = validateRole(role);
     }
     if (typeof battleTag === 'string') {
       if (battleTag.trim()) {

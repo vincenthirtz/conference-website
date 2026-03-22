@@ -7,6 +7,7 @@ import {
 } from '@/utils/find-or-create-user';
 import { sendTeamJoinEmail } from '@/utils/email';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { sanitizeUrl, validateRole } from '@/utils/apiHelpers';
 
 type Body = {
   name?: string;
@@ -68,8 +69,26 @@ export default async function handler(
   const body: Body = req.body || {};
   const name = (body.name || '').trim();
 
-  if (!name) {
-    return res.status(400).json({ error: "Field 'name' is required" });
+  if (!name || name.length < 2) {
+    return res.status(400).json({ error: 'Le nom doit faire au moins 2 caractères.' });
+  }
+  if (name.length > 100) {
+    return res.status(400).json({ error: 'Le nom ne peut pas dépasser 100 caractères.' });
+  }
+
+  const description = body.description?.toString().trim() || null;
+  if (description && description.length > 2000) {
+    return res.status(400).json({ error: 'La description ne peut pas dépasser 2000 caractères.' });
+  }
+
+  // Valider les URLs
+  const urlFields = { logo_url: body.logo_url, website: body.website, discord: body.discord };
+  for (const [field, val] of Object.entries(urlFields)) {
+    if (val && typeof val === 'string' && val.trim()) {
+      if (!sanitizeUrl(val)) {
+        return res.status(400).json({ error: `${field} doit être une URL http(s) valide.` });
+      }
+    }
   }
 
   const memberEmail = body.member_email?.trim().toLowerCase() || null;
@@ -123,7 +142,7 @@ export default async function handler(
 
   if (cleanedMembers.length === 0 && wantsMember) {
     // Fallback to single member fields
-    const resolvedRole = body.member_role?.trim() || 'player';
+    const resolvedRole = validateRole(body.member_role);
     const memberBattleTag = body.member_battle_tag?.trim() || '';
     if (!memberBattleTag) {
       return res.status(400).json({ error: 'BattleTag required for the member.' });
@@ -162,7 +181,7 @@ export default async function handler(
     }
   } else if (cleanedMembers.length > 0) {
     for (const m of cleanedMembers) {
-      const resolvedRole = m.role || 'player';
+      const resolvedRole = validateRole(m.role);
       if (!m.battle_tag) {
         return res
           .status(400)
@@ -212,9 +231,11 @@ export default async function handler(
     const base: Record<string, any> = {
       name,
       short_name: body.short_name?.toString().trim() || null,
-      logo_url: body.logo_url?.toString().trim() || null,
+      logo_url: sanitizeUrl(body.logo_url) || null,
       country: body.country?.toString().trim() || null,
-      description: body.description?.toString().trim() || null,
+      description: description || null,
+      discord: sanitizeUrl(body.discord) || null,
+      website: sanitizeUrl(body.website) || null,
     };
     return base;
   };
@@ -417,10 +438,12 @@ export default async function handler(
   }
 
   const infoParts: string[] = [];
-  if (insertedMembers.length) infoParts.push('Team created and members added');
-  else infoParts.push('Team created');
+  if (insertedMembers.length) infoParts.push('Équipe créée et membres ajoutés');
+  else infoParts.push('Équipe créée');
   if (tournamentRegistration) {
     infoParts.push(`inscrite au tournoi "${tournamentRegistration.tournament_name}"`);
+  } else if (tournamentId) {
+    infoParts.push('L\'inscription au tournoi n\'a pas pu être effectuée (nombre de joueurs insuffisant ou tournoi complet). Vous pourrez vous inscrire plus tard.');
   }
 
   return res.status(201).json({

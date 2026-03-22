@@ -247,6 +247,73 @@ test.describe('Team management API', () => {
     expect(body.team?.name).toBe(newName);
   });
 
+  // ─── DELETE /api/demandes/cancel ─────────────────────────
+
+  test('DELETE /api/demandes/cancel — 401 sans auth', async ({ request }) => {
+    const res = await request.delete('/api/demandes/cancel', {
+      data: { demandeId: '00000000-0000-0000-0000-000000000000' },
+    });
+    expect(res.status()).toBe(401);
+  });
+
+  test('DELETE /api/demandes/cancel — 400 sans demandeId', async ({ request }) => {
+    test.skip(!HAS_SUPABASE, 'Supabase manquant');
+    const res = await request.delete('/api/demandes/cancel', {
+      headers: { Authorization: `Bearer ${outsiderToken}` },
+      data: {},
+    });
+    expect(res.status()).toBe(400);
+  });
+
+  test('DELETE /api/demandes/cancel — 404 si demande inexistante', async ({ request }) => {
+    test.skip(!HAS_SUPABASE, 'Supabase manquant');
+    const res = await request.delete('/api/demandes/cancel', {
+      headers: { Authorization: `Bearer ${outsiderToken}` },
+      data: { demandeId: '00000000-0000-0000-0000-000000000000' },
+    });
+    expect(res.status()).toBe(404);
+  });
+
+  // ─── POST /api/teams/create-with-member validations ─────
+
+  test('POST /api/teams/create-with-member — 400 si nom trop court', async ({ request }) => {
+    const res = await request.post('/api/teams/create-with-member', {
+      data: { name: 'A' },
+    });
+    expect(res.status()).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain('2 caractères');
+  });
+
+  test('POST /api/teams/create-with-member — 400 si URL invalide', async ({ request }) => {
+    const res = await request.post('/api/teams/create-with-member', {
+      data: { name: 'ValidTeam', logo_url: 'javascript:alert(1)' },
+    });
+    expect(res.status()).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain('URL');
+  });
+
+  test('POST /api/teams/create-with-member — 400 si description trop longue', async ({ request }) => {
+    const res = await request.post('/api/teams/create-with-member', {
+      data: { name: 'ValidTeam', description: 'x'.repeat(2001) },
+    });
+    expect(res.status()).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain('2000');
+  });
+
+  // ─── GET /api/teams — member_count ──────────────────────
+
+  test('GET /api/teams renvoie member_count', async ({ request }) => {
+    const res = await request.get('/api/teams?limit=1');
+    expect(res.status()).toBe(200);
+    const body = await res.json();
+    if (body.teams?.length > 0) {
+      expect(typeof body.teams[0].member_count).toBe('number');
+    }
+  });
+
   // ─── Flux complet : transfert + leave ───────────────────
 
   test('Flux : transfert capitanat puis leave', async ({ request }) => {

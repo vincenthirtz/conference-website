@@ -9,6 +9,7 @@ import {
 } from '@/utils/find-or-create-user';
 import { sendTeamJoinEmail } from '@/utils/email';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { validateRole } from '@/utils/apiHelpers';
 
 type AddMemberResponse =
   | {
@@ -90,7 +91,7 @@ export default async function handler(
         const emailMap = await listUsersEmailMap();
         const { userId, created } = await findOrCreateUserByEmail(
           email,
-          typeof role === 'string' && role.trim() ? role.trim() : 'player',
+          validateRole(role),
           emailMap
         );
         resolvedUserId = userId;
@@ -109,7 +110,7 @@ export default async function handler(
     const memberPayload = {
       team_id: captainTeam.id,
       user_id: resolvedUserId,
-      role: typeof role === 'string' && role.trim() ? role.trim() : 'player',
+      role: validateRole(role),
       battle_tag: battleTagValue,
     };
 

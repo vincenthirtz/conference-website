@@ -13,6 +13,7 @@ export type PublicTeam = {
   short_name: string | null;
   logo_url: string | null;
   country: string | null;
+  member_count: number;
 };
 
 export default async function handler(
@@ -35,7 +36,7 @@ export default async function handler(
 
     let query = supabaseAdmin
       .from('teams')
-      .select('id, name, short_name, logo_url, country', {
+      .select('id, name, short_name, logo_url, country, team_members(count)', {
         count: 'exact',
       });
 
@@ -56,9 +57,19 @@ export default async function handler(
       return res.status(500).json({ error: 'Failed to fetch teams' });
     }
 
+    // Aplatir le count des membres
+    const teams = (data || []).map((t: any) => ({
+      id: t.id,
+      name: t.name,
+      short_name: t.short_name,
+      logo_url: t.logo_url,
+      country: t.country,
+      member_count: t.team_members?.[0]?.count ?? 0,
+    }));
+
     res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=120');
     return res.status(200).json({
-      teams: (data || []) as PublicTeam[],
+      teams,
       total: typeof count === 'number' ? count : null,
     });
   } catch (err: unknown) {
