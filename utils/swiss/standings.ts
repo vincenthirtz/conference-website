@@ -34,6 +34,7 @@ export function computeSwissStandings(
     draws: number;
     losses: number;
     hadBye: boolean;
+    byeCount: number;
     opponents: Set<string>;
   };
 
@@ -49,6 +50,7 @@ export function computeSwissStandings(
       draws: 0,
       losses: 0,
       hadBye: false,
+      byeCount: 0,
       opponents: new Set(),
     });
   }
@@ -66,6 +68,7 @@ export function computeSwissStandings(
         draws: 0,
         losses: 0,
         hadBye: false,
+        byeCount: 0,
         opponents: new Set(),
       };
       map.set(id, agg);
@@ -74,6 +77,13 @@ export function computeSwissStandings(
   }
 
   // 2) Parcourir les résultats et accumuler les scores + adversaires
+  // Head-to-head map: "idA::idB" → score différentiel pour A (positif = A a gagné)
+  const headToHead = new Map<string, number>();
+
+  function h2hKey(a: string, b: string): string {
+    return `${a}::${b}`;
+  }
+
   for (const m of results) {
     const p1 = ensureAgg(m.player1Id);
 
@@ -81,6 +91,7 @@ export function computeSwissStandings(
       // Bye : le joueur1 prend les points, mais pas d'adversaire
       p1.score += m.player1Score;
       p1.hadBye = true;
+      p1.byeCount += 1;
       // On peut considérer un bye comme "victoire" si on veut
       if (m.player1Score > 0) p1.wins += 1;
       continue;
@@ -103,6 +114,11 @@ export function computeSwissStandings(
       p1.draws += 1;
       p2.draws += 1;
     }
+
+    // Head-to-head : accumuler le différentiel de score (gère les multi-rencontres)
+    const diff = m.player1Score - m.player2Score;
+    headToHead.set(h2hKey(p1.id, p2.id), (headToHead.get(h2hKey(p1.id, p2.id)) ?? 0) + diff);
+    headToHead.set(h2hKey(p2.id, p1.id), (headToHead.get(h2hKey(p2.id, p1.id)) ?? 0) - diff);
 
     // Adversaires pour tie-breakers
     p1.opponents.add(p2.id);
@@ -148,6 +164,7 @@ export function computeSwissStandings(
       draws: agg.draws,
       losses: agg.losses,
       hadBye: agg.hadBye,
+      byeCount: agg.byeCount,
       buchholz,
       medianBuchholz,
       opponents: Array.from(agg.opponents),
@@ -158,6 +175,8 @@ export function computeSwissStandings(
   // - score DESC
   // - buchholz DESC
   // - medianBuchholz DESC
+  // - head-to-head (confrontation directe, si les deux joueurs se sont affrontés)
+  // - byeCount ASC (moins de byes = mieux classé, pénalisant)
   // - seed ASC (si présent)
   // - id pour stabilité
   standings.sort((a, b) => {
@@ -165,6 +184,15 @@ export function computeSwissStandings(
     if (b.buchholz !== a.buchholz) return b.buchholz - a.buchholz;
     if (b.medianBuchholz !== a.medianBuchholz)
       return b.medianBuchholz - a.medianBuchholz;
+
+    // Head-to-head : si A et B se sont rencontrés, le gagnant direct passe devant
+    const h2hDiff = headToHead.get(h2hKey(a.id, b.id));
+    if (h2hDiff !== undefined && h2hDiff !== 0) {
+      return h2hDiff > 0 ? -1 : 1; // positif = A a gagné → A devant
+    }
+
+    // Bye count : moins de byes = meilleur (pénalise les byes)
+    if (a.byeCount !== b.byeCount) return a.byeCount - b.byeCount;
 
     const sa = a.seed ?? Number.MAX_SAFE_INTEGER;
     const sb = b.seed ?? Number.MAX_SAFE_INTEGER;

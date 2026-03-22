@@ -443,12 +443,20 @@ async function resolveTiebreaker(match: MatchRow): Promise<TiebreakerResult> {
 
   if (policy === 'map_diff') {
     const winner = await resolveByMapDiff(match);
-    return { policy, winnerTeamId: winner };
+    if (winner) {
+      return { policy, winnerTeamId: winner };
+    }
+    // Différentiel identique → fallback vers match supplémentaire
+    return { policy: 'extra_round', winnerTeamId: null };
   }
 
   if (policy === 'seed') {
     const winner = await resolveBySeed(match);
-    return { policy, winnerTeamId: winner };
+    if (winner) {
+      return { policy, winnerTeamId: winner };
+    }
+    // Seeds égaux → fallback vers match supplémentaire
+    return { policy: 'extra_round', winnerTeamId: null };
   }
 
   return { policy: 'manual', winnerTeamId: null };

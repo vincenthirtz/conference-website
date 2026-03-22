@@ -117,17 +117,41 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     const allTeamIds = (stageTeams || []).map((st: any) => st.team_id);
 
-    // Identify eliminated teams
+    // Identify eliminated teams (with guard to keep >= 2 active)
     type EliminatedInfo = { teamId: string; reason: string; wins: number; losses: number };
     const eliminated: EliminatedInfo[] = [];
+    const eliminatedSet = new Set<string>();
 
+    // Phase 1 : win_threshold (qualifiées)
     for (const teamId of allTeamIds) {
       const wins = winsMap.get(teamId) ?? 0;
-      const losses = lossesMap.get(teamId) ?? 0;
       if (winThreshold !== null && wins >= winThreshold) {
+        const losses = lossesMap.get(teamId) ?? 0;
         eliminated.push({ teamId, reason: 'win_threshold', wins, losses });
-      } else if (lossThreshold !== null && losses >= lossThreshold) {
-        eliminated.push({ teamId, reason: 'loss_threshold', wins, losses });
+        eliminatedSet.add(teamId);
+      }
+    }
+
+    // Phase 2 : loss_threshold avec garde-fou >= 2 actifs
+    if (lossThreshold !== null) {
+      const lossCandidates: { teamId: string; wins: number; losses: number }[] = [];
+      for (const teamId of allTeamIds) {
+        if (eliminatedSet.has(teamId)) continue;
+        const losses = lossesMap.get(teamId) ?? 0;
+        if (losses >= lossThreshold) {
+          lossCandidates.push({ teamId, wins: winsMap.get(teamId) ?? 0, losses });
+        }
+      }
+
+      const activeBeforeLossElim = allTeamIds.length - eliminatedSet.size;
+      const maxEliminations = Math.max(0, activeBeforeLossElim - 2);
+
+      // Éliminer par nombre de défaites décroissant, dans la limite du garde-fou
+      lossCandidates.sort((a, b) => b.losses - a.losses);
+      const toElim = lossCandidates.slice(0, Math.min(lossCandidates.length, maxEliminations));
+      for (const c of toElim) {
+        eliminated.push({ teamId: c.teamId, reason: 'loss_threshold', wins: c.wins, losses: c.losses });
+        eliminatedSet.add(c.teamId);
       }
     }
 

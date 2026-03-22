@@ -41,6 +41,9 @@ export interface SwissStanding {
   /** True si ce joueur a reçu au moins un bye */
   hadBye: boolean;
 
+  /** Nombre de byes reçus (pénalisant pour le départage) */
+  byeCount: number;
+
   /** Buchholz = somme des scores finaux des adversaires (hors bye) */
   buchholz: number;
 

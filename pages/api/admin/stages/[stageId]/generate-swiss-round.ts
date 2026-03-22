@@ -331,18 +331,52 @@ async function handler(
     const eliminatedTeams: EliminatedTeam[] = [];
     const eliminatedIds = new Set<string>();
 
+    // Phase 1 : éliminer les équipes ayant atteint le win_threshold (qualifiées)
     for (const p of participantsRows) {
       const tid = p.team_id;
       const wins = winsMap.get(tid) ?? 0;
-      const losses = lossesMap.get(tid) ?? 0;
 
       if (winThreshold !== null && wins >= winThreshold) {
+        const losses = lossesMap.get(tid) ?? 0;
         eliminatedTeams.push({ teamId: tid, reason: 'win_threshold', wins, losses });
         eliminatedIds.add(tid);
-      } else if (lossThreshold !== null && losses >= lossThreshold) {
-        eliminatedTeams.push({ teamId: tid, reason: 'loss_threshold', wins, losses });
-        eliminatedIds.add(tid);
       }
+    }
+
+    // Phase 2 : éliminer par loss_threshold, mais garder au moins 2 équipes actives
+    // pour éviter de terminer le tournoi prématurément
+    if (lossThreshold !== null) {
+      // Collecter les candidats à l'élimination par défaites
+      const lossCandidates: { teamId: string; wins: number; losses: number }[] = [];
+      for (const p of participantsRows) {
+        const tid = p.team_id;
+        if (eliminatedIds.has(tid)) continue; // déjà éliminé par win_threshold
+        const losses = lossesMap.get(tid) ?? 0;
+        if (losses >= lossThreshold) {
+          lossCandidates.push({ teamId: tid, wins: winsMap.get(tid) ?? 0, losses });
+        }
+      }
+
+      const activeBeforeLossElim = participantsRows.length - eliminatedIds.size;
+      // Nombre max qu'on peut éliminer tout en gardant >= 2 actifs
+      const maxEliminations = Math.max(0, activeBeforeLossElim - 2);
+
+      if (lossCandidates.length <= maxEliminations) {
+        // On peut tous les éliminer sans problème
+        for (const c of lossCandidates) {
+          eliminatedTeams.push({ teamId: c.teamId, reason: 'loss_threshold', wins: c.wins, losses: c.losses });
+          eliminatedIds.add(c.teamId);
+        }
+      } else if (maxEliminations > 0) {
+        // Éliminer partiellement : ceux avec le plus de défaites d'abord
+        lossCandidates.sort((a, b) => b.losses - a.losses);
+        for (let i = 0; i < maxEliminations; i++) {
+          const c = lossCandidates[i];
+          eliminatedTeams.push({ teamId: c.teamId, reason: 'loss_threshold', wins: c.wins, losses: c.losses });
+          eliminatedIds.add(c.teamId);
+        }
+      }
+      // sinon maxEliminations === 0 : on n'élimine personne pour garder >= 2 actifs
     }
 
     // Filtrer les participants actifs (non éliminés)
