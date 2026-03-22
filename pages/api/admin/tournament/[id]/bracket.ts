@@ -223,8 +223,9 @@ async function handleGenerate(
     }
   }
 
-  // Batch update linkages
+  // Batch update linkages — rollback all matches if any link fails
   if (updates.length > 0) {
+    const linkErrors: string[] = [];
     for (const u of updates) {
       const { error: linkError } = await supabaseAdmin
         .from('matches')
@@ -235,8 +236,21 @@ async function handleGenerate(
         .eq('id', u.id);
 
       if (linkError) {
-        console.error('bracket linkage update error:', linkError);
+        linkErrors.push(`Match ${u.id}: ${linkError.message}`);
       }
+    }
+
+    if (linkErrors.length > 0) {
+      console.error('bracket linkage errors, rolling back:', linkErrors);
+      const matchIds = rows.map((r) => r.id);
+      await supabaseAdmin
+        .from('matches')
+        .delete()
+        .in('id', matchIds);
+      return res.status(500).json({
+        error: 'Failed to link bracket matches, all matches rolled back',
+        detail: linkErrors,
+      });
     }
   }
 
@@ -816,7 +830,8 @@ async function handleGenerateDoubleElim(
     }
   }
 
-  // Apply all linkage updates
+  // Apply all linkage updates — rollback all matches if any link fails
+  const linkErrors: string[] = [];
   for (const u of updates) {
     const { error: linkError } = await supabaseAdmin
       .from('matches')
@@ -824,8 +839,21 @@ async function handleGenerateDoubleElim(
       .eq('id', u.id);
 
     if (linkError) {
-      console.error('double elim linkage update error:', linkError);
+      linkErrors.push(`Match ${u.id}: ${linkError.message}`);
     }
+  }
+
+  if (linkErrors.length > 0) {
+    console.error('double elim linkage errors, rolling back:', linkErrors);
+    const matchIds = rows.map((r) => r.id);
+    await supabaseAdmin
+      .from('matches')
+      .delete()
+      .in('id', matchIds);
+    return res.status(500).json({
+      error: 'Failed to link double elimination bracket, all matches rolled back',
+      detail: linkErrors,
+    });
   }
 
   // Log

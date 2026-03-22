@@ -29,6 +29,7 @@ type CreateTournamentBody = {
   format_type?: string | null;
   max_teams?: number | null;
   min_players?: number | null;
+  max_players?: number | null;
   is_public?: boolean;
   is_featured?: boolean;
   logo_url?: string | null;
@@ -75,6 +76,7 @@ function AdminTournamentCreatePage({ staff }: Props) {
     format_type: string;
     max_teams: string;
     min_players: string;
+    max_players: string;
     is_public: boolean;
     is_featured: boolean;
     logo_url: string;
@@ -89,6 +91,7 @@ function AdminTournamentCreatePage({ staff }: Props) {
     format_type: '',
     max_teams: '',
     min_players: '',
+    max_players: '',
     is_public: false,
     is_featured: false,
     logo_url: '',
@@ -149,6 +152,7 @@ function AdminTournamentCreatePage({ staff }: Props) {
       format_type: form.format_type || null,
       max_teams: form.max_teams ? Number(form.max_teams) : null,
       min_players: form.min_players ? Number(form.min_players) : null,
+      max_players: form.max_players ? Number(form.max_players) : null,
       is_public: form.is_public,
       is_featured: form.is_featured,
       logo_url: form.logo_url.trim() || null,
@@ -484,6 +488,19 @@ function AdminTournamentCreatePage({ staff }: Props) {
                         value={form.min_players}
                         onChange={(e) => updateField('min_players', e.target.value)}
                         placeholder="5"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-neutral-300 mb-1">
+                        Nombre max. de joueurs par equipe
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        value={form.max_players}
+                        onChange={(e) => updateField('max_players', e.target.value)}
+                        placeholder="10"
                       />
                     </div>
                   </div>

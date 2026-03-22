@@ -38,6 +38,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
     format_type: string;
     max_teams: string;
     min_players: string;
+    max_players: string;
     is_public: boolean;
     is_featured: boolean;
     logo_url: string;
@@ -53,6 +54,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
     format_type: '',
     max_teams: '',
     min_players: '',
+    max_players: '',
     is_public: false,
     is_featured: false,
     logo_url: '',
@@ -99,6 +101,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
         format_type: t.format_type || '',
         max_teams: t.max_teams ? String(t.max_teams) : '',
         min_players: t.min_players ? String(t.min_players) : '',
+        max_players: t.max_players ? String(t.max_players) : '',
         is_public: t.is_public,
         is_featured: t.is_featured,
         logo_url: t.logo_url || '',
@@ -166,6 +169,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
       format_type: form.format_type || null,
       max_teams: form.max_teams ? Number(form.max_teams) : null,
       min_players: form.min_players ? Number(form.min_players) : null,
+      max_players: form.max_players ? Number(form.max_players) : null,
       is_public: form.is_public,
       is_featured: form.is_featured,
       logo_url: form.logo_url.trim() || null,
@@ -494,6 +498,22 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                         />
                         <p className="text-xs text-neutral-500 mt-1">
                           Nombre minimum de membres requis pour inscrire une équipe
+                        </p>
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm mb-1 text-neutral-300">
+                          Joueuses max. par équipe
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={form.max_players}
+                          onChange={(e) => updateField('max_players', e.target.value)}
+                          placeholder="10"
+                        />
+                        <p className="text-xs text-neutral-500 mt-1">
+                          Nombre maximum de membres autorisé par équipe
                         </p>
                       </div>
                     </div>

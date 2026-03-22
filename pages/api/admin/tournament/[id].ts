@@ -118,6 +118,7 @@ async function handlePatch(
       format_type,
       max_teams,
       min_players,
+      max_players,
       is_public,
       is_featured,
       banner_url,
@@ -148,6 +149,13 @@ async function handlePatch(
     if (min_players !== undefined && min_players !== null) {
       if (typeof min_players !== 'number' || !Number.isInteger(min_players) || min_players < 1) {
         return res.status(400).json({ error: 'min_players must be an integer >= 1' });
+      }
+    }
+
+    // max_players doit être un entier > 0
+    if (max_players !== undefined && max_players !== null) {
+      if (typeof max_players !== 'number' || !Number.isInteger(max_players) || max_players < 1) {
+        return res.status(400).json({ error: 'max_players must be an integer >= 1' });
       }
     }
 
@@ -226,6 +234,7 @@ async function handlePatch(
     if (format_type !== undefined) updatePayload.format_type = format_type;
     if (max_teams !== undefined) updatePayload.max_teams = max_teams;
     if (min_players !== undefined) updatePayload.min_players = min_players;
+    if (max_players !== undefined) updatePayload.max_players = max_players;
     // Map is_public (frontend) to visibility (database)
     if (is_public !== undefined) updatePayload.visibility = is_public ? 'public' : 'private';
     if (is_featured !== undefined) updatePayload.is_featured = is_featured;

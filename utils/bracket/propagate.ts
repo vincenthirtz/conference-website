@@ -99,24 +99,34 @@ export async function propagateBracketForMatch(
     );
   }
 
-  // Propage le vainqueur
-  if (match.next_match_win_id && match.next_match_win_slot) {
-    updatedWinMatchId = await applyTeamToNextMatchSlot(
-      match.tournament_id,
-      match.next_match_win_id,
-      match.next_match_win_slot,
-      winnerTeamId
-    );
-  }
+  // Snapshot des slots avant propagation pour rollback atomique
+  const snapshot = await snapshotPropagationSlots(matchId);
 
-  // Propage le perdant (loser bracket / match de classement)
-  if (match.next_match_lose_id && match.next_match_lose_slot) {
-    updatedLoseMatchId = await applyTeamToNextMatchSlot(
-      match.tournament_id,
-      match.next_match_lose_id,
-      match.next_match_lose_slot,
-      loserTeamId
-    );
+  try {
+    // Propage le vainqueur
+    if (match.next_match_win_id && match.next_match_win_slot) {
+      updatedWinMatchId = await applyTeamToNextMatchSlot(
+        match.tournament_id,
+        match.next_match_win_id,
+        match.next_match_win_slot,
+        winnerTeamId
+      );
+    }
+
+    // Propage le perdant (loser bracket / match de classement)
+    if (match.next_match_lose_id && match.next_match_lose_slot) {
+      updatedLoseMatchId = await applyTeamToNextMatchSlot(
+        match.tournament_id,
+        match.next_match_lose_id,
+        match.next_match_lose_slot,
+        loserTeamId
+      );
+    }
+  } catch (err) {
+    // Rollback : restaurer les slots à leur état d'avant propagation
+    console.error(`Propagation failed for match ${matchId}, rolling back:`, err);
+    await restorePropagationSlots(snapshot);
+    throw err;
   }
 
   return {

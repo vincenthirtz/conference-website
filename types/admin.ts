@@ -48,6 +48,7 @@ export type Tournament = {
   format_type: FormatType | string | null;
   max_teams: number | null;
   min_players: number | null;
+  max_players: number | null;
   is_public: boolean;
   is_featured: boolean;
   logo_url: string | null;

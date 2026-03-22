@@ -83,6 +83,7 @@ async function handler(
         format_type: source.format_type,
         max_teams: source.max_teams,
         min_players: source.min_players,
+        max_players: source.max_players,
         visibility: source.visibility,
         is_featured: false,
         logo_url: source.logo_url,

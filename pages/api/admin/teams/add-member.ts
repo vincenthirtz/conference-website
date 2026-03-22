@@ -103,6 +103,29 @@ async function handler(
       resolvedUserId = found.id;
     }
 
+    // Check max_players limit across all tournaments the team is registered in
+    const [{ count: currentMemberCount }, { data: teamTournaments }] = await Promise.all([
+      supabaseAdmin
+        .from('team_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('team_id', teamId),
+      supabaseAdmin
+        .from('tournament_teams')
+        .select('tournament_id, tournaments!inner(max_players)')
+        .eq('team_id', teamId),
+    ]);
+
+    if (teamTournaments && teamTournaments.length > 0) {
+      for (const tt of teamTournaments) {
+        const maxPlayers = (tt as any).tournaments?.max_players;
+        if (maxPlayers && (currentMemberCount ?? 0) >= maxPlayers) {
+          return res.status(400).json({
+            error: `Team has reached the ${maxPlayers} player(s) limit set by a tournament.`,
+          });
+        }
+      }
+    }
+
     // Insérer dans team_members
     const memberPayload = {
       team_id: teamId,
