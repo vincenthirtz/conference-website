@@ -103,7 +103,6 @@ async function handleGet(id: string, res: NextApiResponse) {
     display_name: m.profiles?.display_name || m.battle_tag || null,
     role: m.role,
     battle_tag: m.battle_tag,
-    captain: data.captain_id === m.user_id,
     is_captain: data.captain_id === m.user_id,
   }));
 
@@ -256,6 +255,31 @@ async function handleDelete(
   }
 
   if (hard) {
+    // Cascade delete : supprimer les dépendances avant l'équipe
+    const { error: demandesErr } = await supabaseAdmin
+      .from('demandes')
+      .delete()
+      .eq('team_id', id);
+    if (demandesErr) {
+      console.error('admin hard delete team — demandes cleanup error:', demandesErr);
+    }
+
+    const { error: stageTeamsErr } = await supabaseAdmin
+      .from('stage_teams')
+      .delete()
+      .eq('team_id', id);
+    if (stageTeamsErr) {
+      console.error('admin hard delete team — stage_teams cleanup error:', stageTeamsErr);
+    }
+
+    const { error: membersErr } = await supabaseAdmin
+      .from('team_members')
+      .delete()
+      .eq('team_id', id);
+    if (membersErr) {
+      console.error('admin hard delete team — team_members cleanup error:', membersErr);
+    }
+
     const { error } = await supabaseAdmin.from('teams').delete().eq('id', id);
 
     if (error) {
@@ -275,6 +299,7 @@ async function handleDelete(
           tournament_id: null,
           payload: {
             hard_delete: true,
+            cascade: { demandes: true, stage_teams: true, team_members: true },
           },
         });
       } catch (e) {
