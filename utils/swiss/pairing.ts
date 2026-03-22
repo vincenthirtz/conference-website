@@ -57,6 +57,9 @@ export function generateSwissPairings(
 
   // 6) Si échec et fallback autorisé → on ignore la contrainte de rematch
   if (!success && allowRematchesFallback) {
+    console.warn(
+      `[Swiss pairing] Backtracking exhausted for ${ids.length} participants — falling back to greedy pairing (rematches possible).`
+    );
     pairingIds.length = 0;
     greedyPairingsAllowRematch(ids, pairingIds);
   } else if (!success && !allowRematchesFallback) {
@@ -154,11 +157,16 @@ function pickByeIfNeeded(pool: SwissParticipant[]): SwissPairing | null {
 
 /**
  * Limite maximale d'itérations pour le backtracking.
- * Empêche les boucles quasi-infinies avec un grand nombre de participants.
- * 100 000 itérations suffisent largement pour ~30 équipes ; au-delà,
- * on tombe sur le fallback greedy (avec rematches possibles).
+ * Calculée dynamiquement en fonction du nombre de participants :
+ * - ≤ 16 participants : 100K (rapide, toujours suffisant)
+ * - 17–32 participants : 500K
+ * - 33+ participants : 1M
  */
-const BACKTRACK_MAX_ITERATIONS = 100_000;
+function getBacktrackLimit(participantCount: number): number {
+  if (participantCount <= 16) return 100_000;
+  if (participantCount <= 32) return 500_000;
+  return 1_000_000;
+}
 
 /**
  * Essaie de générer des pairings sans rematch via backtracking.
@@ -173,7 +181,8 @@ function backtrackPairings(
   alreadyPlayed: Record<string, Record<string, boolean>>,
   outPairs: { p1: string; p2: string }[]
 ): boolean {
-  const counter = { value: 0 };
+  const limit = getBacktrackLimit(ids.length);
+  const counter = { value: 0, limit };
   return _backtrack(ids, alreadyPlayed, outPairs, counter);
 }
 
@@ -181,14 +190,14 @@ function _backtrack(
   ids: string[],
   alreadyPlayed: Record<string, Record<string, boolean>>,
   outPairs: { p1: string; p2: string }[],
-  counter: { value: number }
+  counter: { value: number; limit: number }
 ): boolean {
   if (ids.length === 0) {
     return true;
   }
 
   counter.value++;
-  if (counter.value > BACKTRACK_MAX_ITERATIONS) {
+  if (counter.value > counter.limit) {
     return false; // budget épuisé → fallback greedy
   }
 

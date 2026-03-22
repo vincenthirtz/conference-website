@@ -11,6 +11,7 @@ import {
 import type { PropagationSnapshot } from '../bracket/propagate';
 import { logStaffAction } from '../staffLogs';
 import { computeRequiredWins } from './computeRequiredWins';
+import { invalidateStandingsCache } from '../stages/standingsCache';
 import type {
   ApplyMatchScoreInput,
   ApplyMatchScoreResult,
@@ -260,6 +261,11 @@ export async function applyMatchScore(
     }
 
     throw new Error('Erreur lors de la mise à jour du match');
+  }
+
+  // 9b) Invalider le cache standings si le match appartient à un stage
+  if (match.stage_id) {
+    invalidateStandingsCache(match.stage_id);
   }
 
   // 10) Propagation du vainqueur/perdant dans le bracket

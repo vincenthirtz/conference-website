@@ -6,6 +6,10 @@
 import { supabaseAdmin } from '../supabase';
 import { computeSwissStandings } from '../swiss/standings';
 import { defaultSwissScoreConfig } from '../swiss/utils';
+import {
+  getCachedStandings,
+  setCachedStandings,
+} from './standingsCache';
 import type { SwissMatchResult, SwissScoreConfig } from '../../types/swiss';
 
 export type StageStanding = {
@@ -92,8 +96,15 @@ export async function computeStageStandings(
   const finishedMatches = matches.filter((m) => m.status === 'finished');
 
   switch (stageType) {
-    case 'swiss':
-      return computeSwissStageStandings(stageTeams, finishedMatches);
+    case 'swiss': {
+      // Check cache first — Buchholz computation can be expensive for 30+ teams
+      const cached = getCachedStandings(stageId);
+      if (cached) return cached;
+
+      const result = computeSwissStageStandings(stageTeams, finishedMatches);
+      setCachedStandings(stageId, result);
+      return result;
+    }
     case 'group':
     case 'round_robin':
       return computeGroupStandings(stageTeams, finishedMatches);
