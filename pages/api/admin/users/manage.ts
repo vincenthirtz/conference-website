@@ -67,10 +67,20 @@ async function handler(
         ?.map((u) => ({
           id: u.id,
           email: u.email ?? null,
-          role: (u.user_metadata as any)?.role ?? null,
+          role: ((u.user_metadata as any)?.role as string | null)?.toLowerCase() ?? null,
           display_name: (u.user_metadata as any)?.display_name ?? null,
           created_at: u.created_at ?? null,
         })) ?? [];
+
+    // Auto-fix roles with wrong casing in user_metadata
+    for (const item of items) {
+      const raw = (data?.users?.find((u) => u.id === item.id)?.user_metadata as any)?.role;
+      if (typeof raw === 'string' && raw !== raw.toLowerCase()) {
+        await supabaseAdmin.auth.admin.updateUserById(item.id, {
+          user_metadata: { role: raw.toLowerCase() },
+        });
+      }
+    }
 
     const userIds = items.map((u) => u.id);
     const teamMembershipsMap = new Map<string, TeamMembership[]>();
@@ -128,7 +138,8 @@ async function handler(
   }
 
   if (req.method === 'PATCH') {
-    const { userId, role, teamId, battleTag } = req.body || {};
+    const { userId, role: rawRole, teamId, battleTag } = req.body || {};
+    const role = typeof rawRole === 'string' ? rawRole.toLowerCase() : rawRole;
 
     // Resend credentials: reset password and send welcome email
     if (userId && req.body.action === 'resend_credentials') {

@@ -48,7 +48,7 @@ async function handler(
       email_confirm: true,
       user_metadata: {
         display_name: typeof display_name === 'string' ? display_name : null,
-        role: typeof role === 'string' ? role : 'player',
+        role: typeof role === 'string' ? role.toLowerCase() : 'player',
       },
     });
 

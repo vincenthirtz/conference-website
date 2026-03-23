@@ -36,7 +36,7 @@ export const getServerSideProps = withStaffPage('admin');
 const ROLES = ['member', 'player', 'caster', 'manager', 'admin', 'owner'];
 
 function roleLabel(role: string | null) {
-  switch (role) {
+  switch (role?.toLowerCase()) {
     case 'owner':
       return 'Owner';
     case 'admin':
@@ -55,7 +55,7 @@ function roleLabel(role: string | null) {
 }
 
 function roleColor(role: string | null) {
-  switch (role) {
+  switch (role?.toLowerCase()) {
     case 'owner':
       return 'bg-purple-600 text-white';
     case 'admin':
