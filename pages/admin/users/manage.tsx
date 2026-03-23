@@ -352,7 +352,11 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
         throw new Error(json.error || 'Envoi impossible.');
       }
 
-      setSuccessMsg(`Identifiants envoyés à ${user.email}`);
+      if (json.warning) {
+        alert(json.warning);
+      }
+
+      setSuccessMsg(json.warning ? `⚠ MDP réinitialisé (email échoué)` : `Identifiants envoyés à ${user.email}`);
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err: unknown) {
       alert((err as Error)?.message || 'Erreur lors de l\'envoi.');

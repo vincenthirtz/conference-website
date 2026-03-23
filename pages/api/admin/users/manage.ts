@@ -31,6 +31,7 @@ type UpdateResponse = {
   success: boolean;
   user?: UserLite;
   error?: string;
+  warning?: string;
 };
 
 export default withStaffRoute(handler, 'admin');
@@ -162,7 +163,14 @@ async function handler(
 
       const email = target.user.email;
       if (email) {
-        await sendWelcomeEmail(email, newPassword);
+        const emailResult = await sendWelcomeEmail(email, newPassword);
+        if (!emailResult.success) {
+          console.error('[admin/users/manage] email failed:', emailResult.error);
+          return res.status(200).json({
+            success: true,
+            warning: `Mot de passe réinitialisé mais l'email n'a pas pu être envoyé : ${emailResult.error}`,
+          });
+        }
       }
 
       return res.status(200).json({ success: true });
