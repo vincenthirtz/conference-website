@@ -1,12 +1,13 @@
 // utils/email.ts
-// Lightweight email utility using Resend API (no package needed).
-// Free tier: 100 emails/day — https://resend.com
+// Lightweight email utility using Brevo (ex-Sendinblue) transactional API.
+// Free tier: 300 emails/day — https://brevo.com
 //
 // Required env vars:
-//   RESEND_API_KEY   – API key from resend.com dashboard
-//   EMAIL_FROM       – Sender address (e.g. "Tournoi <noreply@yourdomain.com>")
+//   BREVO_API_KEY    – API key from app.brevo.com > SMTP & API > API Keys
+//   EMAIL_FROM       – Sender address (e.g. "noreply@yourdomain.com")
+//   EMAIL_FROM_NAME  – Sender display name (e.g. "Tournoi") — optional
 
-const RESEND_API_URL = 'https://api.resend.com/emails';
+const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
 
 type SendEmailOptions = {
   to: string;
@@ -21,34 +22,36 @@ type SendEmailResult = {
 };
 
 /**
- * Send an email via Resend API.
+ * Send an email via Brevo transactional API.
  * Fails silently (logs error, returns { success: false }) so it never blocks
  * the main flow (user creation, team join, etc.).
  */
 export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult> {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.EMAIL_FROM || 'Tournoi <onboarding@resend.dev>';
+  const apiKey = process.env.BREVO_API_KEY;
+  const fromEmail = process.env.EMAIL_FROM || 'noreply@example.com';
+  const fromName = process.env.EMAIL_FROM_NAME || 'Tournoi';
 
   if (!apiKey) {
-    console.warn('[email] RESEND_API_KEY not set — skipping email');
-    return { success: false, error: 'RESEND_API_KEY not configured' };
+    console.warn('[email] BREVO_API_KEY not set — skipping email');
+    return { success: false, error: 'BREVO_API_KEY not configured' };
   }
 
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5_000);
 
-    const res = await fetch(RESEND_API_URL, {
+    const res = await fetch(BREVO_API_URL, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        'api-key': apiKey,
         'Content-Type': 'application/json',
+        Accept: 'application/json',
       },
       body: JSON.stringify({
-        from,
-        to: [opts.to],
+        sender: { name: fromName, email: fromEmail },
+        to: [{ email: opts.to }],
         subject: opts.subject,
-        html: opts.html,
+        htmlContent: opts.html,
       }),
       signal: controller.signal,
     });
@@ -59,11 +62,11 @@ export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult
 
     if (!res.ok) {
       const msg = data?.message || `HTTP ${res.status}`;
-      console.error('[email] Resend error:', msg);
+      console.error('[email] Brevo error:', msg);
       return { success: false, error: msg };
     }
 
-    return { success: true, id: data?.id };
+    return { success: true, id: data?.messageId };
   } catch (err: unknown) {
     console.error('[email] fetch error:', err);
     return { success: false, error: (err as Error)?.message || 'Network error' };

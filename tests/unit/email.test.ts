@@ -5,7 +5,7 @@ import { sendEmail, sendWelcomeEmail, sendTeamJoinEmail, sendAccountDeletedEmail
 const origEnv = { ...process.env };
 
 beforeEach(() => {
-  process.env.RESEND_API_KEY = 'test-key';
+  process.env.BREVO_API_KEY = 'test-key';
   process.env.EMAIL_FROM = 'Test <test@example.com>';
 });
 
@@ -15,21 +15,21 @@ afterEach(() => {
 });
 
 describe('sendEmail', () => {
-  it('returns error when RESEND_API_KEY is not set', async () => {
-    delete process.env.RESEND_API_KEY;
+  it('returns error when BREVO_API_KEY is not set', async () => {
+    delete process.env.BREVO_API_KEY;
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     const result = await sendEmail({ to: 'a@b.com', subject: 'Hi', html: '<p>hi</p>' });
 
     expect(result.success).toBe(false);
-    expect(result.error).toContain('RESEND_API_KEY');
+    expect(result.error).toContain('BREVO_API_KEY');
     expect(warnSpy).toHaveBeenCalled();
   });
 
   it('sends email and returns success', async () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ id: 'email-123' }),
+      json: () => Promise.resolve({ messageId: 'email-123' }),
     });
     vi.stubGlobal('fetch', mockFetch);
 
@@ -40,9 +40,9 @@ describe('sendEmail', () => {
     expect(mockFetch).toHaveBeenCalledOnce();
 
     const [url, opts] = mockFetch.mock.calls[0];
-    expect(url).toContain('resend.com');
+    expect(url).toContain('brevo.com');
     expect(opts.method).toBe('POST');
-    expect(JSON.parse(opts.body).to).toEqual(['user@test.com']);
+    expect(JSON.parse(opts.body).to).toEqual([{ email: 'user@test.com' }]);
   });
 
   it('returns error on non-ok response', async () => {
@@ -88,7 +88,7 @@ describe('sendWelcomeEmail', () => {
   it('calls sendEmail with escaped content', async () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ id: 'w1' }),
+      json: () => Promise.resolve({ messageId: 'w1' }),
     });
     vi.stubGlobal('fetch', mockFetch);
 
@@ -98,8 +98,8 @@ describe('sendWelcomeEmail', () => {
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
     expect(body.subject).toContain('Bienvenue');
     // escapeHtml should have escaped < in password
-    expect(body.html).toContain('&lt;');
-    expect(body.html).not.toContain('<word');
+    expect(body.htmlContent).toContain('&lt;');
+    expect(body.htmlContent).not.toContain('<word');
   });
 });
 
@@ -107,7 +107,7 @@ describe('sendTeamJoinEmail', () => {
   it('calls sendEmail with team name and role escaped', async () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ id: 't1' }),
+      json: () => Promise.resolve({ messageId: 't1' }),
     });
     vi.stubGlobal('fetch', mockFetch);
 
@@ -115,8 +115,8 @@ describe('sendTeamJoinEmail', () => {
 
     expect(result.success).toBe(true);
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
-    expect(body.html).toContain('&lt;Script&gt;');
-    expect(body.html).not.toContain('<Script>');
+    expect(body.htmlContent).toContain('&lt;Script&gt;');
+    expect(body.htmlContent).not.toContain('<Script>');
     expect(body.subject).toContain('Team <Script>');
   });
 });
@@ -125,7 +125,7 @@ describe('sendAccountDeletedEmail', () => {
   it('sends deletion notification', async () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ id: 'd1' }),
+      json: () => Promise.resolve({ messageId: 'd1' }),
     });
     vi.stubGlobal('fetch', mockFetch);
 
@@ -134,6 +134,6 @@ describe('sendAccountDeletedEmail', () => {
     expect(result.success).toBe(true);
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
     expect(body.subject).toContain('supprimé');
-    expect(body.to).toEqual(['gone@test.com']);
+    expect(body.to).toEqual([{ email: 'gone@test.com' }]);
   });
 });
