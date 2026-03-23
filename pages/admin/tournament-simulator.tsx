@@ -19,6 +19,9 @@ import {
   simulateFullTournament,
   runMonteCarlo,
   computeCompetitiveness,
+  computeWinProbability,
+  swissPairByRecord,
+  computeHeadToHead,
 } from '@/utils/simulator';
 import type {
   SimTeam,
@@ -29,6 +32,7 @@ import type {
   EscalationConfig,
   CompetitivenessMetrics,
   MonteCarloResult,
+  H2HRecord,
 } from '@/utils/simulator';
 
 export const getServerSideProps = withStaffPage('manager');
@@ -109,6 +113,8 @@ function generateTeams(count: number, playersPerTeam: number): SimTeam[] {
     short_name: shuffled[i % shuffled.length].split(' ').map(w => w[0]).join('').slice(0, 3).toUpperCase(),
     logo_url: null,
     seed: i + 1,
+    // Higher seeds get higher default strength (seed 1 ≈ 75, last seed ≈ 35)
+    strength: Math.round(75 - ((i / Math.max(count - 1, 1)) * 40)),
     players: Array.from({ length: playersPerTeam }, () => {
       const first = FAKE_PLAYER_FIRST[Math.floor(Math.random() * FAKE_PLAYER_FIRST.length)];
       const last = FAKE_PLAYER_LAST[Math.floor(Math.random() * FAKE_PLAYER_LAST.length)];
@@ -332,9 +338,23 @@ function generateSwiss(
   let schedIdx = 0;
 
   for (let r = 0; r < rounds; r++) {
-    const shuffled = [...teams].sort(() => Math.random() - 0.5);
-    const matchesInRound = Math.floor(shuffled.length / 2);
-    for (let m = 0; m < matchesInRound; m++) {
+    // Round 1: random pairing. Later rounds: pair by record (W-L)
+    let pairings: { t1: SimTeam; t2: SimTeam }[];
+    if (r === 0) {
+      const shuffled = [...teams].sort(() => Math.random() - 0.5);
+      pairings = [];
+      for (let m = 0; m < Math.floor(shuffled.length / 2); m++) {
+        pairings.push({ t1: shuffled[m * 2], t2: shuffled[m * 2 + 1] });
+      }
+    } else {
+      // Simulate previous rounds to get records for pairing
+      const simulated = matches.map(m => m.status === 'pending' ? simulateMatch(m) : m);
+      const swissPairs = swissPairByRecord(teams, simulated);
+      pairings = swissPairs.map(p => ({ t1: teams[p.team1Idx], t2: teams[p.team2Idx] }));
+    }
+
+    for (let m = 0; m < pairings.length; m++) {
+      const { t1, t2 } = pairings[m];
       matches.push({
         id: fakeId(),
         round_number: r + 1,
@@ -343,10 +363,10 @@ function generateSwiss(
         status: 'pending',
         match_format: `bo${bestOf}`,
         best_of: bestOf,
-        team1: shuffled[m * 2],
-        team2: shuffled[m * 2 + 1],
-        team1_id: shuffled[m * 2].id,
-        team2_id: shuffled[m * 2 + 1].id,
+        team1: t1,
+        team2: t2,
+        team1_id: t1.id,
+        team2_id: t2.id,
         team1_score: null,
         team2_score: null,
         winner_team_id: null,
@@ -452,6 +472,7 @@ function SimMatchCard({
   const t2Name = match.team2?.short_name ?? match.team2?.name ?? 'TBD';
   const w1 = match.winner_team_id === match.team1_id && !!match.winner_team_id;
   const w2 = match.winner_team_id === match.team2_id && !!match.winner_team_id;
+  const winProb = match.team1 && match.team2 ? computeWinProbability(match.team1, match.team2) : null;
 
   return (
     <div className={`rounded-xl border overflow-hidden bg-[#12121a] transition-all duration-300 ${
@@ -488,6 +509,20 @@ function SimMatchCard({
       <SimTeamRow name={t1Name} score={match.team1_score} isWinner={w1} seed={match.team1?.seed ?? null} />
       <div className="h-px bg-white/[0.04]" />
       <SimTeamRow name={t2Name} score={match.team2_score} isWinner={w2} seed={match.team2?.seed ?? null} />
+
+      {/* Win probability bar */}
+      {winProb !== null && match.status === 'pending' && (
+        <div className="px-2.5 py-1 border-t border-white/[0.05]">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[8px] tabular-nums text-sky-300 font-semibold w-8 text-right">{Math.round(winProb * 100)}%</span>
+            <div className="flex-1 h-1.5 rounded-full overflow-hidden bg-neutral-800 flex">
+              <div className="h-full bg-sky-500/60 rounded-l-full transition-all" style={{ width: `${winProb * 100}%` }} />
+              <div className="h-full bg-rose-500/60 rounded-r-full transition-all" style={{ width: `${(1 - winProb) * 100}%` }} />
+            </div>
+            <span className="text-[8px] tabular-nums text-rose-300 font-semibold w-8">{Math.round((1 - winProb) * 100)}%</span>
+          </div>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex border-t border-white/[0.05]">
@@ -943,6 +978,11 @@ function TournamentSimulatorPage() {
   const [activeOccurrence, setActiveOccurrence] = useState(0);
   const [mapPool, setMapPool] = useState<string[]>([]);
   const [generated, setGenerated] = useState(false);
+
+  // Undo / Redo
+  const MAX_UNDO = 30;
+  const [undoStack, setUndoStack] = useState<OccurrenceData[][]>([]);
+  const [redoStack, setRedoStack] = useState<OccurrenceData[][]>([]);
   const [activeTab, setActiveTab] = useState<'bracket' | 'teams' | 'maps' | 'stats' | 'timeline' | 'compare' | 'monte-carlo' | 'history'>('bracket');
   const [configCollapsed, setConfigCollapsed] = useState(false);
 
@@ -950,11 +990,34 @@ function TournamentSimulatorPage() {
   const stages = useMemo(() => occurrences[activeOccurrence]?.stages ?? [], [occurrences, activeOccurrence]);
   const teams = useMemo(() => occurrences[activeOccurrence]?.teams ?? [], [occurrences, activeOccurrence]);
 
+  /** Push current occurrences to undo stack before mutating */
+  const pushUndo = useCallback(() => {
+    setUndoStack(prev => [...prev.slice(-(MAX_UNDO - 1)), occurrences]);
+    setRedoStack([]);
+  }, [occurrences, MAX_UNDO]);
+
   const setStages = useCallback((updater: (prev: SimStage[]) => SimStage[]) => {
+    pushUndo();
     setOccurrences(prev => prev.map((occ, i) =>
       i === activeOccurrence ? { ...occ, stages: updater(occ.stages) } : occ
     ));
-  }, [activeOccurrence]);
+  }, [activeOccurrence, pushUndo]);
+
+  const handleUndo = useCallback(() => {
+    if (undoStack.length === 0) return;
+    setRedoStack(prev => [...prev, occurrences]);
+    const restored = undoStack[undoStack.length - 1];
+    setUndoStack(prev => prev.slice(0, -1));
+    setOccurrences(restored);
+  }, [undoStack, occurrences]);
+
+  const handleRedo = useCallback(() => {
+    if (redoStack.length === 0) return;
+    setUndoStack(prev => [...prev, occurrences]);
+    const restored = redoStack[redoStack.length - 1];
+    setRedoStack(prev => prev.slice(0, -1));
+    setOccurrences(restored);
+  }, [redoStack, occurrences]);
 
   const validTeamCounts = config.formatType === 'single_elim' || config.formatType === 'double_elim'
     ? [4, 8, 16, 32]
@@ -1228,6 +1291,24 @@ function TournamentSimulatorPage() {
     }));
   }, [activeOccurrence]);
 
+  /** Update a team's strength rating */
+  const handleUpdateTeamStrength = useCallback((teamId: string, strength: number) => {
+    setOccurrences(prev => prev.map((occ, occIdx) => {
+      if (occIdx !== activeOccurrence) return occ;
+      const newTeams = occ.teams.map(t => t.id === teamId ? { ...t, strength } : t);
+      // Also update team references inside matches
+      const newStages = occ.stages.map(stage => ({
+        ...stage,
+        matches: stage.matches.map(m => ({
+          ...m,
+          team1: m.team1?.id === teamId ? { ...m.team1, strength } : m.team1,
+          team2: m.team2?.id === teamId ? { ...m.team2, strength } : m.team2,
+        })),
+      }));
+      return { ...occ, teams: newTeams, stages: newStages };
+    }));
+  }, [activeOccurrence]);
+
   /** Animated simulation: reveal results one match at a time */
   const handleSimulateAnimated = useCallback(() => {
     if (animatingRef.current) {
@@ -1395,6 +1476,7 @@ function TournamentSimulatorPage() {
         short_name: t.short_name ?? t.name.split(' ').map(w => w[0]).join('').slice(0, 3).toUpperCase(),
         logo_url: null,
         seed: i + 1,
+        strength: Math.round(75 - ((i / Math.max(config.teamCount - 1, 1)) * 40)),
         players: [], // Real players would need another API call
       }));
 
@@ -1705,6 +1787,30 @@ function TournamentSimulatorPage() {
                   className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-sm font-semibold shadow transition-colors"
                 >
                   Reset tout
+                </button>
+                <button
+                  onClick={handleUndo}
+                  disabled={undoStack.length === 0}
+                  className={`px-3 py-2 rounded-lg text-sm font-semibold shadow transition-colors ${
+                    undoStack.length > 0
+                      ? 'bg-neutral-700 hover:bg-neutral-600 text-white'
+                      : 'bg-neutral-800 text-neutral-600 cursor-not-allowed'
+                  }`}
+                  title={`Annuler (${undoStack.length})`}
+                >
+                  &#x21A9;
+                </button>
+                <button
+                  onClick={handleRedo}
+                  disabled={redoStack.length === 0}
+                  className={`px-3 py-2 rounded-lg text-sm font-semibold shadow transition-colors ${
+                    redoStack.length > 0
+                      ? 'bg-neutral-700 hover:bg-neutral-600 text-white'
+                      : 'bg-neutral-800 text-neutral-600 cursor-not-allowed'
+                  }`}
+                  title={`Refaire (${redoStack.length})`}
+                >
+                  &#x21AA;
                 </button>
                 <div className="w-px bg-white/10 mx-1 print:hidden" />
                 <button
@@ -2386,6 +2492,25 @@ function TournamentSimulatorPage() {
                             </div>
                           )}
                         </div>
+                        {/* Strength slider */}
+                        <div className="flex items-center gap-2 pt-1 border-t border-white/[0.05]">
+                          <span className="text-[10px] text-neutral-500 font-semibold w-10">Force</span>
+                          <input
+                            type="range"
+                            min={1}
+                            max={100}
+                            value={team.strength}
+                            onChange={e => handleUpdateTeamStrength(team.id, parseInt(e.target.value))}
+                            onClick={e => e.stopPropagation()}
+                            onMouseDown={e => e.stopPropagation()}
+                            className="flex-1 accent-purple-500 h-1.5"
+                            draggable={false}
+                          />
+                          <span className={`text-xs font-bold tabular-nums w-8 text-right ${
+                            team.strength >= 70 ? 'text-emerald-400' :
+                            team.strength >= 45 ? 'text-amber-400' : 'text-red-400'
+                          }`}>{team.strength}</span>
+                        </div>
                         <div className="space-y-1">
                           {team.players.map((p, i) => (
                             <div key={i} className="flex items-center justify-between text-xs">
@@ -2587,6 +2712,71 @@ function TournamentSimulatorPage() {
                       })()}
                     </div>
                   </div>
+
+                  {/* Head-to-head matrix */}
+                  {stats.finished > 0 && (() => {
+                    const allMatches = stages.flatMap(s => s.matches);
+                    const h2hRecords = computeHeadToHead(allMatches);
+                    if (h2hRecords.length === 0) return null;
+
+                    // Build a lookup map: "id1-id2" → record
+                    const h2hMap = new Map<string, H2HRecord>();
+                    for (const rec of h2hRecords) {
+                      h2hMap.set(`${rec.team1Id}-${rec.team2Id}`, rec);
+                    }
+
+                    // Sort teams by wins
+                    const sortedTeams = [...teams].sort((a, b) => (stats.wins.get(b.id) ?? 0) - (stats.wins.get(a.id) ?? 0));
+
+                    return (
+                      <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
+                        <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">Confrontations directes</h3>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="border-b border-white/10">
+                                <th className="text-left py-2 pr-2 text-neutral-500 font-semibold sticky left-0 bg-[#0a0a12] z-10">vs</th>
+                                {sortedTeams.map(t => (
+                                  <th key={t.id} className="text-center py-2 px-1 text-neutral-500 font-semibold min-w-[50px]">
+                                    <span title={t.name}>{t.short_name}</span>
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {sortedTeams.map(t1 => (
+                                <tr key={t1.id} className="border-b border-white/[0.03]">
+                                  <td className="py-1.5 pr-2 font-medium text-neutral-300 sticky left-0 bg-[#0a0a12] z-10">{t1.short_name}</td>
+                                  {sortedTeams.map(t2 => {
+                                    if (t1.id === t2.id) {
+                                      return <td key={t2.id} className="text-center py-1.5 px-1 text-neutral-800">—</td>;
+                                    }
+                                    const key = [t1.id, t2.id].sort().join('-');
+                                    const rec = h2hMap.get(key);
+                                    if (!rec) {
+                                      return <td key={t2.id} className="text-center py-1.5 px-1 text-neutral-700">-</td>;
+                                    }
+                                    const isFirst = t1.id === rec.team1Id;
+                                    const w = isFirst ? rec.team1Wins : rec.team2Wins;
+                                    const l = isFirst ? rec.team2Wins : rec.team1Wins;
+                                    return (
+                                      <td key={t2.id} className="text-center py-1.5 px-1">
+                                        <span className={`tabular-nums font-semibold ${
+                                          w > l ? 'text-emerald-400' : w < l ? 'text-red-400' : 'text-neutral-400'
+                                        }`}>
+                                          {w}-{l}
+                                        </span>
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 

@@ -13,6 +13,7 @@ export type SimTeam = {
   short_name: string;
   logo_url: null;
   seed: number;
+  strength: number; // 1-100, affects win probability
   players: { name: string; battleTag: string }[];
 };
 
@@ -166,16 +167,29 @@ export function getBestOfForRound(
 }
 
 /* ------------------------------------------------------------------ */
+/*  Win probability                                                     */
+/* ------------------------------------------------------------------ */
+
+/** Compute win probability for team1 based on strength ratings.
+ *  Returns a value between 0.05 and 0.95. */
+export function computeWinProbability(team1: SimTeam | null, team2: SimTeam | null): number {
+  if (!team1 || !team2) return 0.5;
+  const s1 = team1.strength ?? 50;
+  const s2 = team2.strength ?? 50;
+  // Logistic model: diff of 20 strength ≈ 75% win rate
+  const diff = s1 - s2;
+  const raw = 1 / (1 + Math.exp(-diff / 15));
+  return Math.max(0.05, Math.min(0.95, raw));
+}
+
+/* ------------------------------------------------------------------ */
 /*  Match simulation                                                    */
 /* ------------------------------------------------------------------ */
 
 export function simulateMatch(match: SimMatch): SimMatch {
   if (match.status !== 'pending' || !match.team1 || !match.team2) return match;
 
-  const s1Seed = match.team1.seed;
-  const s2Seed = match.team2.seed;
-  const seedDiff = s2Seed - s1Seed;
-  const t1WinProb = 0.5 + seedDiff * 0.02;
+  const t1WinProb = computeWinProbability(match.team1, match.team2);
 
   const winsNeeded = Math.ceil(match.best_of / 2);
   let s1 = 0, s2 = 0;
@@ -422,4 +436,114 @@ export function computeCompetitiveness(allMatches: SimMatch[], teams: SimTeam[])
     avgTeamJourney: Math.round(avgTeamJourney * 10) / 10,
     dominanceScore: Math.round(dominanceScore * 100),
   };
+}
+
+/* ------------------------------------------------------------------ */
+/*  Swiss pairing by record                                             */
+/* ------------------------------------------------------------------ */
+
+export type SwissPairing = { team1Idx: number; team2Idx: number };
+
+/** Pair teams by similar W-L record for a Swiss round.
+ *  Teams are sorted by (wins desc, map diff desc), then paired sequentially.
+ *  Already-played matchups are avoided when possible. */
+export function swissPairByRecord(
+  teams: SimTeam[],
+  previousMatches: SimMatch[],
+): SwissPairing[] {
+  // Build record
+  const wins = new Map<string, number>();
+  const mapDiff = new Map<string, number>();
+  const playedPairs = new Set<string>();
+
+  for (const m of previousMatches) {
+    if (m.status !== 'finished') continue;
+    if (m.winner_team_id) wins.set(m.winner_team_id, (wins.get(m.winner_team_id) ?? 0) + 1);
+    if (m.team1_id && m.team2_id) {
+      const pairKey = [m.team1_id, m.team2_id].sort().join('-');
+      playedPairs.add(pairKey);
+      if (m.team1_score != null && m.team2_score != null) {
+        mapDiff.set(m.team1_id, (mapDiff.get(m.team1_id) ?? 0) + m.team1_score - m.team2_score);
+        mapDiff.set(m.team2_id, (mapDiff.get(m.team2_id) ?? 0) + m.team2_score - m.team1_score);
+      }
+    }
+  }
+
+  // Sort teams by record
+  const indices = teams.map((_, i) => i);
+  indices.sort((a, b) => {
+    const wA = wins.get(teams[a].id) ?? 0;
+    const wB = wins.get(teams[b].id) ?? 0;
+    if (wB !== wA) return wB - wA;
+    const dA = mapDiff.get(teams[a].id) ?? 0;
+    const dB = mapDiff.get(teams[b].id) ?? 0;
+    return dB - dA;
+  });
+
+  // Greedy pairing: pick pairs sequentially, avoiding rematches when possible
+  const paired = new Set<number>();
+  const pairings: SwissPairing[] = [];
+
+  for (let i = 0; i < indices.length; i++) {
+    if (paired.has(indices[i])) continue;
+    let bestJ = -1;
+    // First pass: find unpaired opponent we haven't played
+    for (let j = i + 1; j < indices.length; j++) {
+      if (paired.has(indices[j])) continue;
+      const pairKey = [teams[indices[i]].id, teams[indices[j]].id].sort().join('-');
+      if (!playedPairs.has(pairKey)) { bestJ = j; break; }
+    }
+    // Fallback: take next unpaired
+    if (bestJ === -1) {
+      for (let j = i + 1; j < indices.length; j++) {
+        if (!paired.has(indices[j])) { bestJ = j; break; }
+      }
+    }
+    if (bestJ === -1) continue; // odd team out
+    paired.add(indices[i]);
+    paired.add(indices[bestJ]);
+    pairings.push({ team1Idx: indices[i], team2Idx: indices[bestJ] });
+  }
+
+  return pairings;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Head-to-head records                                                */
+/* ------------------------------------------------------------------ */
+
+export type H2HRecord = {
+  team1Id: string;
+  team2Id: string;
+  team1Wins: number;
+  team2Wins: number;
+  mapScore1: number;
+  mapScore2: number;
+};
+
+/** Compute head-to-head records between all teams. */
+export function computeHeadToHead(matches: SimMatch[]): H2HRecord[] {
+  const records = new Map<string, H2HRecord>();
+
+  for (const m of matches) {
+    if (m.status !== 'finished' || !m.team1_id || !m.team2_id || !m.winner_team_id) continue;
+    const key = [m.team1_id, m.team2_id].sort().join('-');
+    const [first, second] = [m.team1_id, m.team2_id].sort();
+
+    if (!records.has(key)) {
+      records.set(key, { team1Id: first, team2Id: second, team1Wins: 0, team2Wins: 0, mapScore1: 0, mapScore2: 0 });
+    }
+    const rec = records.get(key)!;
+
+    const isT1First = m.team1_id === first;
+    if (m.winner_team_id === first) rec.team1Wins++;
+    else rec.team2Wins++;
+
+    if (m.team1_score != null && m.team2_score != null) {
+      rec.mapScore1 += isT1First ? m.team1_score : m.team2_score;
+      rec.mapScore2 += isT1First ? m.team2_score : m.team1_score;
+    }
+  }
+
+  return Array.from(records.values());
 }

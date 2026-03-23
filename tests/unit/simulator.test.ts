@@ -28,6 +28,7 @@ function makeTeam(id: string, seed: number, name?: string): SimTeam {
     short_name: `T${seed}`,
     logo_url: null,
     seed,
+    strength: Math.round(75 - ((seed - 1) / 7) * 40),
     players: [],
   };
 }
