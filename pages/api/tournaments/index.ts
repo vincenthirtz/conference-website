@@ -85,9 +85,29 @@ export default async function handler(
       return res.status(500).json({ error: 'Failed to fetch tournaments' });
     }
 
+    // Enrich with team_count from tournament_teams
+    const tournamentIds = (data || []).map((t) => t.id);
+    let teamCountMap: Record<string, number> = {};
+    if (tournamentIds.length > 0) {
+      const { data: teamCounts } = await supabaseAdmin
+        .from('tournament_teams')
+        .select('tournament_id')
+        .in('tournament_id', tournamentIds);
+      if (teamCounts) {
+        for (const row of teamCounts) {
+          teamCountMap[row.tournament_id] = (teamCountMap[row.tournament_id] || 0) + 1;
+        }
+      }
+    }
+
+    const enriched = (data || []).map((t) => ({
+      ...t,
+      team_count: teamCountMap[t.id] || 0,
+    }));
+
     res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=120');
     return res.status(200).json({
-      tournaments: (data || []) as PublicTournament[],
+      tournaments: enriched,
       total: typeof count === 'number' ? count : null,
     });
   } catch (err: unknown) {

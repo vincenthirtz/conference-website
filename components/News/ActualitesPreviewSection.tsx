@@ -31,6 +31,7 @@ function pickTwoRandom(): [string, string] {
 function ActualitesPreviewSection(): JSX.Element {
   const [heroes, setHeroes] = useState<[string, string] | null>(null);
   const [mixteTournamentId, setMixteTournamentId] = useState<string | null>(null);
+  const [teamCount, setTeamCount] = useState<number | null>(null);
 
   useEffect(() => {
     setHeroes(pickTwoRandom());
@@ -38,9 +39,17 @@ function ActualitesPreviewSection(): JSX.Element {
     fetch('/api/site-settings?key=mixte_tournament_id')
       .then((r) => r.json())
       .then((data) => {
-        // Only accept valid UUIDs to avoid displaying unrelated values (e.g. YouTube IDs)
-        if (data.value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.value)) {
+        const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (data.value && UUID_RE.test(data.value)) {
           setMixteTournamentId(data.value);
+          // Fetch team count for this tournament
+          fetch('/api/tournaments')
+            .then((r) => r.json())
+            .then((json) => {
+              const t = json.tournaments?.find((t: any) => t.id === data.value);
+              if (t) setTeamCount(t.team_count ?? 0);
+            })
+            .catch(() => {});
         }
       })
       .catch(() => {});
@@ -124,7 +133,7 @@ function ActualitesPreviewSection(): JSX.Element {
             </Paragraph>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4 w-full max-w-xl">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4 w-full max-w-2xl">
             <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
               <div className="text-2xl font-bold text-white">Mixte</div>
               <div className="text-xs text-neutral-400 mt-1">Format ouvert</div>
@@ -132,6 +141,14 @@ function ActualitesPreviewSection(): JSX.Element {
             <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
               <div className="text-2xl font-bold text-white">3 Avril</div>
               <div className="text-xs text-neutral-400 mt-1">Save the date</div>
+            </div>
+            <div className="rounded-xl border border-blue-400/30 bg-blue-500/10 p-4 text-center">
+              <div className="text-2xl font-bold text-white">
+                {teamCount !== null ? teamCount : '–'}
+              </div>
+              <div className="text-xs text-blue-300/80 mt-1">
+                {teamCount !== null && teamCount > 1 ? 'Équipes inscrites' : 'Équipe inscrite'}
+              </div>
             </div>
             <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
               <div className="text-2xl font-bold text-white">Saison 2026</div>
