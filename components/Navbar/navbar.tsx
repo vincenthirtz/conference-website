@@ -30,10 +30,32 @@ function Navbar(): JSX.Element {
   const subMenuRefs = useRef<(HTMLAnchorElement | null)[]>([]);
 
   // Admin / staff state (source de vérité pour tout le menu)
-  const [adminLoading, setAdminLoading] = useState(true);
-  const [isStaff, setIsStaff] = useState(false);
-  const [staffName, setStaffName] = useState<string | null>(null);
-  const [staffRole, setStaffRole] = useState<StaffRole | null>(null);
+  // Hydrate from sessionStorage to avoid flash on navigation
+  const [adminLoading, setAdminLoading] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return !sessionStorage.getItem('staff_cache');
+  });
+  const [isStaff, setIsStaff] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      const cached = sessionStorage.getItem('staff_cache');
+      return cached ? JSON.parse(cached).isStaff === true : false;
+    } catch { return false; }
+  });
+  const [staffName, setStaffName] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const cached = sessionStorage.getItem('staff_cache');
+      return cached ? JSON.parse(cached).staffName ?? null : null;
+    } catch { return null; }
+  });
+  const [staffRole, setStaffRole] = useState<StaffRole | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const cached = sessionStorage.getItem('staff_cache');
+      return cached ? (JSON.parse(cached).staffRole as StaffRole) ?? null : null;
+    } catch { return null; }
+  });
   const [adminMenuOpen, setAdminMenuOpen] = useState(false);
 
   //TODO: Refactor Navbar Code
@@ -107,7 +129,8 @@ function Navbar(): JSX.Element {
   // 🔐 Vérifier si un staff est connecté (source de vérité)
   // ----------------------------------------------------
   const checkStaff = useCallback(async (accessToken?: string | null) => {
-    setAdminLoading(true);
+    // Only show loading if we have no cached state
+    if (!sessionStorage.getItem('staff_cache')) setAdminLoading(true);
     try {
       let token = accessToken ?? null;
 
@@ -122,6 +145,7 @@ function Navbar(): JSX.Element {
         setIsStaff(false);
         setStaffName(null);
         setStaffRole(null);
+        try { sessionStorage.removeItem('staff_cache'); } catch {}
         return;
       }
 
@@ -137,17 +161,22 @@ function Navbar(): JSX.Element {
         setIsStaff(false);
         setStaffName(null);
         setStaffRole(null);
+        try { sessionStorage.removeItem('staff_cache'); } catch {}
         return;
       }
 
+      const name = me.display_name || me.email || 'Staff';
+      const role = me.role as StaffRole;
       setIsStaff(true);
-      setStaffRole(me.role as StaffRole);
-      setStaffName(me.display_name || me.email || 'Staff');
+      setStaffRole(role);
+      setStaffName(name);
+      try { sessionStorage.setItem('staff_cache', JSON.stringify({ isStaff: true, staffName: name, staffRole: role })); } catch {}
     } catch (e) {
       console.error('Navbar staff check error:', e);
       setIsStaff(false);
       setStaffName(null);
       setStaffRole(null);
+      try { sessionStorage.removeItem('staff_cache'); } catch {}
     } finally {
       setAdminLoading(false);
     }
