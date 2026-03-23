@@ -789,7 +789,7 @@ function AdminTeamsListPage({ staff }: StaffProps) {
             </div>
 
             <p className="text-sm text-neutral-400 mb-4">
-              Format attendu : <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">name,short_name,country,players</code>
+              Format attendu : <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">name,short_name,country,joueurs</code>
               <br />
               Les joueurs sont separes par <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">;</code> (battle_tags).
               La premiere ligne est l&apos;en-tete.
@@ -815,7 +815,7 @@ function AdminTeamsListPage({ staff }: StaffProps) {
               </label>
               <textarea
                 className="w-full h-40 px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
-                placeholder={`name,short_name,country,players\nTeam Alpha,TA,FR,Player1#1234;Player2#5678\nTeam Beta,TB,BE,Player3#9999`}
+                placeholder={`name,short_name,country,joueurs\nTeam Alpha,TA,FR,Player1#1234;Player2#5678\nTeam Beta,TB,BE,Player3#9999`}
                 value={csvText}
                 onChange={(e) => setCsvText(e.target.value)}
               />

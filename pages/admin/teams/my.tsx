@@ -397,7 +397,7 @@ function MyTeamPage({ staff }: StaffProps) {
                   )}
                 </div>
                 <div className="text-xs text-neutral-400">
-                  {m.role || 'player'}
+                  {m.role || 'joueur'}
                 </div>
               </div>
             </div>

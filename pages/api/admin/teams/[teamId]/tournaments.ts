@@ -183,7 +183,7 @@ async function handlePost(
 
       if ((playerCount || 0) < tournament.min_players) {
         return res.status(400).json({
-          error: `Team must have at least ${tournament.min_players} player(s) to register. Current: ${playerCount || 0} member(s).`
+          error: `L'équipe doit avoir au moins ${tournament.min_players} joueur(s) pour s'inscrire. Actuellement : ${playerCount || 0} membre(s).`
         });
       }
     }

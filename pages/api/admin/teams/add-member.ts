@@ -120,7 +120,7 @@ async function handler(
         const maxPlayers = (tt as any).tournaments?.max_players;
         if (maxPlayers && (currentMemberCount ?? 0) >= maxPlayers) {
           return res.status(400).json({
-            error: `Team has reached the ${maxPlayers} player(s) limit set by a tournament.`,
+            error: `L'équipe a atteint la limite de ${maxPlayers} joueur(s) imposée par un tournoi.`,
           });
         }
       }

@@ -240,7 +240,7 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
                       value={role}
                       onChange={(e) => setRole(e.target.value)}
                       className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                      placeholder="player / coach / sub"
+                      placeholder="joueur / coach / sub"
                     />
                   </div>
 
@@ -380,7 +380,7 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
                 <div className="text-xs text-neutral-400 space-y-2">
                   <div className="flex items-start gap-2">
                     <span className="text-neutral-500">•</span>
-                    <p>L&apos;API ajoute a team_members (role par defaut: player).</p>
+                    <p>L&apos;API ajoute a team_members (role par defaut: joueur).</p>
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="text-neutral-500">•</span>
