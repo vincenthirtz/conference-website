@@ -191,14 +191,14 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     archived: 'Archivé',
   };
 
-  const guards: { status: string; label: string; allowed: boolean; reason?: string }[] = [];
+  const guards: { status: string; label: string; allowed: boolean; reason: string | null }[] = [];
   for (const s of ['draft', 'published', 'running', 'completed', 'archived']) {
     if (s === currentStatus) {
       guards.push({ status: s, label: STATUS_LABELS_MAP[s], allowed: false, reason: 'Statut actuel' });
       continue;
     }
     let allowed = true;
-    let reason: string | undefined;
+    let reason: string | null = null;
     if (s === 'published' && stagesCount === 0) {
       allowed = false;
       reason = 'Le tournoi doit avoir au moins 1 phase';
