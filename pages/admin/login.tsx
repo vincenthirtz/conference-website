@@ -76,18 +76,15 @@ const AdminLoginPage = () => {
         return;
       }
 
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-
-      if (!session?.access_token) {
+      const token = data.session?.access_token;
+      if (!token) {
         setError('Impossible de récupérer la session.');
         return;
       }
 
       const res = await fetch('/api/admin/me', {
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 

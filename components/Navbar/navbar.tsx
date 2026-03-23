@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import Dropdown from '../illustration/dropdown';
 import { useState, useEffect, useRef, useCallback, JSX } from 'react';
 import linksConfig from '@/config/links.json';
@@ -20,6 +21,7 @@ const NAV_HEIGHT = 75;
 const ADMIN_BAR_HEIGHT = 44;
 
 function Navbar(): JSX.Element {
+  const router = useRouter();
   const isTablet = useMediaQuery({ maxWidth: '1118px' });
   const [drop, setDrop] = useState<boolean>(false);
   const [show, setShow] = useState<string | null>(null);
@@ -425,13 +427,14 @@ function Navbar(): JSX.Element {
   const headerHeight = NAV_HEIGHT + headerOffset;
 
   const handleLogout = () => {
-    // Ferme tous les menus et envoie vers la page de logout
+    // Ferme tous les menus et nettoie l'état immédiatement
     setAdminMenuOpen(false);
     setDrop(false);
     setIsStaff(false);
     setStaffRole(null);
     setStaffName(null);
-    window.location.href = '/admin/logout';
+    try { sessionStorage.removeItem('staff_cache'); } catch {}
+    router.push('/admin/logout');
   };
 
   return (

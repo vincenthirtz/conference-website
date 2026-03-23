@@ -8,26 +8,18 @@ export default function AdminLogoutPage() {
 
   useEffect(() => {
     const run = async () => {
-      try {
-        // 1) Nettoyage côté serveur (cookies SSR)
-        await fetch('/api/admin/logout', {
+      // Nettoyage du cache staff navbar
+      try { sessionStorage.removeItem('staff_cache'); } catch {}
+
+      // Nettoyage serveur (cookies) et client (localStorage) en parallèle
+      await Promise.allSettled([
+        fetch('/api/admin/logout', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-      } catch (e) {
-        console.error('AdminLogoutPage: API logout error', e);
-      }
+          headers: { 'Content-Type': 'application/json' },
+        }),
+        supabaseClient.auth.signOut(),
+      ]);
 
-      try {
-        // 2) Nettoyage côté client (localStorage / mémoire)
-        await supabaseClient.auth.signOut();
-      } catch (e) {
-        console.error('AdminLogoutPage: client signOut error', e);
-      }
-
-      // 3) Redirection vers la page de connexion staff
       router.replace('/admin/login');
     };
 
