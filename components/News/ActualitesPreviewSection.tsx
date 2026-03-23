@@ -31,6 +31,7 @@ function ActualitesPreviewSection(): JSX.Element {
   const [heroes, setHeroes] = useState<[string, string] | null>(null);
   const [mixteTournamentId, setMixteTournamentId] = useState<string | null>(null);
   const [teamCount, setTeamCount] = useState<number | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
 
   useEffect(() => {
     setHeroes(pickTwoRandom());
@@ -209,6 +210,49 @@ function ActualitesPreviewSection(): JSX.Element {
                 Voir le programme
               </button>
             </Link>
+            <button
+              type="button"
+              onClick={async () => {
+                const url = mixteTournamentId
+                  ? `${window.location.origin}/tournament/${mixteTournamentId}`
+                  : `${window.location.origin}/tournament/tournoi-mixte`;
+                const shareData = {
+                  title: 'Tournoi Mixte – OW Women\'s Cup 2026',
+                  text: 'Rejoins le Tournoi Mixte OW Women\'s Cup ! Inscris ton équipe et montre ton niveau.',
+                  url,
+                };
+                try {
+                  if (navigator.share) {
+                    await navigator.share(shareData);
+                  } else {
+                    await navigator.clipboard.writeText(url);
+                    setShareCopied(true);
+                    setTimeout(() => setShareCopied(false), 2000);
+                  }
+                } catch {}
+              }}
+              className="group flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-white/[0.06] backdrop-blur border border-white/15 hover:border-emerald-400/40 hover:bg-emerald-500/10 text-white font-semibold text-base transition-all duration-300 hover:scale-105"
+            >
+              {shareCopied ? (
+                <>
+                  <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <span className="text-emerald-300">Lien copié !</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5 transition-transform duration-300 group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="18" cy="5" r="3" />
+                    <circle cx="6" cy="12" r="3" />
+                    <circle cx="18" cy="19" r="3" />
+                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+                  </svg>
+                  Partager
+                </>
+              )}
+            </button>
           </div>
         </div>
       </div>
