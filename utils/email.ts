@@ -73,6 +73,60 @@ export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult
   }
 }
 
+// ─── Email layout ─────────────────────────────────────────────
+
+const SITE_URL = 'https://owwomenscup.fr';
+const LOGO_URL = `${SITE_URL}/img/logos/2025-logo.png`;
+const DISCORD_URL = 'https://discord.gg/gERSsjC3Vd';
+
+function emailLayout(body: string): string {
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#130d22;font-family:'Work Sans',Helvetica,Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#130d22;">
+    <tr><td align="center" style="padding:32px 16px;">
+      <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;">
+        <!-- Logo -->
+        <tr><td align="center" style="padding:0 0 24px;">
+          <a href="${SITE_URL}" target="_blank">
+            <img src="${LOGO_URL}" alt="OW Women's Cup" width="180" style="display:block;border:0;height:auto;" />
+          </a>
+        </td></tr>
+        <!-- Card -->
+        <tr><td style="background-color:#1b1130;border-radius:16px;border:1px solid rgba(255,255,255,0.1);padding:40px 32px;">
+          ${body}
+        </td></tr>
+        <!-- Footer -->
+        <tr><td align="center" style="padding:24px 0 0;">
+          <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+            <td style="padding:0 8px;"><a href="${SITE_URL}" style="color:#9081B0;font-size:12px;text-decoration:none;">Site web</a></td>
+            <td style="color:#453763;font-size:12px;">|</td>
+            <td style="padding:0 8px;"><a href="${DISCORD_URL}" style="color:#9081B0;font-size:12px;text-decoration:none;">Discord</a></td>
+          </tr></table>
+          <p style="margin:12px 0 0;font-size:11px;color:#675788;line-height:1.4;">
+            OW Women's Cup &mdash; Cet email a &eacute;t&eacute; envoy&eacute; automatiquement.
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+function gradientBar(): string {
+  return '<div style="height:3px;border-radius:2px;background:linear-gradient(90deg,#2dccfd,#ad20e2);margin:0 0 28px;"></div>';
+}
+
+function ctaButton(href: string, label: string): string {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px auto 0;">
+    <tr><td align="center" style="background:linear-gradient(225deg,#2dccfd 9%,#ad20e2 88%);border-radius:8px;">
+      <a href="${href}" target="_blank" style="display:inline-block;padding:12px 28px;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;letter-spacing:0.02em;">${label}</a>
+    </td></tr>
+  </table>`;
+}
+
 // ─── Email templates ───────────────────────────────────────────
 
 /**
@@ -82,30 +136,31 @@ export function sendWelcomeEmail(to: string, password: string): Promise<SendEmai
   return sendEmail({
     to,
     subject: 'Bienvenue — Votre compte a été créé',
-    html: `
-      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #222;">
-        <h2 style="color: #6d28d9;">Bienvenue !</h2>
-        <p>Un compte a été créé pour vous sur notre plateforme de tournoi.</p>
-        <p>Voici vos identifiants :</p>
-        <table style="border-collapse: collapse; margin: 16px 0;">
-          <tr>
-            <td style="padding: 6px 12px; font-weight: bold;">Email</td>
-            <td style="padding: 6px 12px;">${escapeHtml(to)}</td>
-          </tr>
-          <tr>
-            <td style="padding: 6px 12px; font-weight: bold;">Mot de passe</td>
-            <td style="padding: 6px 12px; font-family: monospace; background: #f3f4f6; border-radius: 4px;">${escapeHtml(password)}</td>
-          </tr>
-        </table>
-        <p style="color: #b91c1c; font-size: 14px;">
-          Nous vous recommandons de changer votre mot de passe dès votre première connexion.
-        </p>
-        <p style="margin-top: 24px; font-size: 13px; color: #888;">
-          Cet email a été envoyé automatiquement. Si vous n'êtes pas à l'origine de cette inscription,
-          vous pouvez ignorer ce message.
-        </p>
-      </div>
-    `,
+    html: emailLayout(`
+      ${gradientBar()}
+      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Bienvenue !</h1>
+      <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
+        Un compte a &eacute;t&eacute; cr&eacute;&eacute; pour vous sur la plateforme OW Women's Cup.
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:rgba(255,255,255,0.05);border-radius:10px;border:1px solid rgba(255,255,255,0.08);margin:0 0 24px;">
+        <tr>
+          <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
+            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Email</span><br/>
+            <span style="font-size:15px;color:#ffffff;font-weight:500;">${escapeHtml(to)}</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:14px 20px;">
+            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Mot de passe</span><br/>
+            <code style="font-size:15px;color:#2dccfd;font-family:'Fira Code',monospace;font-weight:500;">${escapeHtml(password)}</code>
+          </td>
+        </tr>
+      </table>
+      <p style="margin:0 0 20px;font-size:13px;color:#e74694;line-height:1.5;background:rgba(231,70,148,0.08);border:1px solid rgba(231,70,148,0.15);border-radius:8px;padding:10px 14px;">
+        Nous vous recommandons de changer votre mot de passe d&egrave;s votre premi&egrave;re connexion.
+      </p>
+      ${ctaButton(SITE_URL + '/login', 'Se connecter')}
+    `),
   });
 }
 
@@ -120,20 +175,28 @@ export function sendTeamJoinEmail(
   return sendEmail({
     to,
     subject: `Vous avez rejoint l'équipe ${teamName}`,
-    html: `
-      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #222;">
-        <h2 style="color: #6d28d9;">Bienvenue dans ${escapeHtml(teamName)} !</h2>
-        <p>Vous avez été ajouté(e) à l'équipe <strong>${escapeHtml(teamName)}</strong> en tant que <strong>${escapeHtml(role)}</strong>.</p>
-        <p>Connectez-vous pour voir votre équipe et les prochains matchs.</p>
-        <p style="margin-top: 16px;">
-          <strong>Important :</strong> rejoignez le Discord du tournoi pour rester inform&eacute;(e) des matchs et annonces :
-          <a href="https://discord.gg/gERSsjC3Vd" style="color: #7c3aed; text-decoration: underline;">https://discord.gg/gERSsjC3Vd</a>
-        </p>
-        <p style="margin-top: 24px; font-size: 13px; color: #888;">
-          Si vous pensez que c'est une erreur, contactez l'organisateur du tournoi.
-        </p>
-      </div>
-    `,
+    html: emailLayout(`
+      ${gradientBar()}
+      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Bienvenue dans ${escapeHtml(teamName)} !</h1>
+      <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
+        Vous avez &eacute;t&eacute; ajout&eacute;(e) &agrave; l'&eacute;quipe
+        <strong style="color:#ffffff;">${escapeHtml(teamName)}</strong>
+        en tant que <strong style="color:#2dccfd;">${escapeHtml(role)}</strong>.
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:rgba(255,255,255,0.05);border-radius:10px;border:1px solid rgba(255,255,255,0.08);margin:0 0 24px;">
+        <tr><td style="padding:16px 20px;">
+          <p style="margin:0 0 12px;font-size:14px;color:#E8E2F4;line-height:1.5;">
+            Connectez-vous pour voir votre &eacute;quipe et les prochains matchs.
+          </p>
+          <p style="margin:0;font-size:14px;color:#E8E2F4;line-height:1.5;">
+            <strong style="color:#ff9c29;">Important&nbsp;:</strong> rejoignez le
+            <a href="${DISCORD_URL}" style="color:#5865F2;text-decoration:underline;font-weight:600;">Discord du tournoi</a>
+            pour rester inform&eacute;(e) des matchs et annonces.
+          </p>
+        </td></tr>
+      </table>
+      ${ctaButton(SITE_URL + '/login', 'Voir mon équipe')}
+    `),
   });
 }
 
@@ -144,16 +207,39 @@ export function sendAccountDeletedEmail(to: string): Promise<SendEmailResult> {
   return sendEmail({
     to,
     subject: 'Votre compte a été supprimé',
-    html: `
-      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #222;">
-        <h2 style="color: #6d28d9;">Compte supprimé</h2>
-        <p>Votre compte a été supprimé de notre plateforme de tournoi.</p>
-        <p>Toutes vos données ont été retirées. Si vous étiez membre d'une équipe, vous en avez été retiré(e).</p>
-        <p style="margin-top: 24px; font-size: 13px; color: #888;">
-          Si vous pensez que c'est une erreur, contactez l'organisateur du tournoi.
-        </p>
-      </div>
-    `,
+    html: emailLayout(`
+      ${gradientBar()}
+      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Compte supprim&eacute;</h1>
+      <p style="margin:0 0 16px;font-size:15px;color:#C6BED9;line-height:1.6;">
+        Votre compte a &eacute;t&eacute; supprim&eacute; de la plateforme OW Women's Cup.
+      </p>
+      <p style="margin:0 0 20px;font-size:15px;color:#C6BED9;line-height:1.6;">
+        Toutes vos donn&eacute;es ont &eacute;t&eacute; retir&eacute;es. Si vous &eacute;tiez membre d'une &eacute;quipe, vous en avez &eacute;t&eacute; retir&eacute;(e).
+      </p>
+      <p style="margin:0;font-size:13px;color:#675788;line-height:1.5;">
+        Si vous pensez que c'est une erreur, contactez l'organisateur du tournoi.
+      </p>
+    `),
+  });
+}
+
+/**
+ * Test email for verifying Brevo configuration.
+ */
+export function sendTestEmail(to: string): Promise<SendEmailResult> {
+  return sendEmail({
+    to,
+    subject: '[Test] Email de test — OW Women\'s Cup',
+    html: emailLayout(`
+      ${gradientBar()}
+      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Test email</h1>
+      <p style="margin:0 0 16px;font-size:15px;color:#C6BED9;line-height:1.6;">
+        Si vous recevez cet email, la configuration Brevo fonctionne correctement.
+      </p>
+      <p style="margin:0;font-size:13px;color:#675788;">
+        Envoy&eacute; le ${new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}
+      </p>
+    `),
   });
 }
 
