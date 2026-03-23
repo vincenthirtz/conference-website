@@ -60,19 +60,24 @@ const SOCIALS: SocialLink[] = [
 
 function FloatingSocials(): JSX.Element {
   return (
-    <div className="fixed left-4 top-1/2 -translate-y-1/2 z-40 hidden lg:flex flex-col gap-3">
-      {SOCIALS.map((social) => (
-        <a
-          key={social.name}
-          href={social.href}
-          target="_blank"
-          rel="noreferrer"
-          title={social.name}
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-blue-400/50 transition-all [&>svg]:w-5 [&>svg]:h-5"
-        >
-          {social.icon}
-        </a>
-      ))}
+    <div className="fixed left-5 top-1/2 -translate-y-1/2 z-40 hidden lg:flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1.5 rounded-2xl bg-white/[0.03] backdrop-blur-md border border-white/[0.08] p-2 shadow-xl shadow-black/20">
+        {SOCIALS.map((social) => (
+          <a
+            key={social.name}
+            href={social.href}
+            target="_blank"
+            rel="noreferrer"
+            title={social.name}
+            className="group relative w-10 h-10 flex items-center justify-center rounded-xl text-gray-500 hover:text-white hover:bg-white/10 transition-all duration-200 [&>svg]:w-[18px] [&>svg]:h-[18px] [&>svg]:transition-transform [&>svg]:duration-200 hover:[&>svg]:scale-110"
+          >
+            {social.icon}
+            <span className="pointer-events-none absolute left-full ml-3 px-2.5 py-1 rounded-lg bg-white/10 backdrop-blur-md border border-white/10 text-xs font-medium text-white whitespace-nowrap opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200">
+              {social.name}
+            </span>
+          </a>
+        ))}
+      </div>
     </div>
   );
 }
