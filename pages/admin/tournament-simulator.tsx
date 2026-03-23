@@ -11,6 +11,124 @@ import type { MatchStatus, FormatType, StageType } from '@/types/admin';
 export const getServerSideProps = withStaffPage('manager');
 
 /* ------------------------------------------------------------------ */
+/*  Scheduling helpers                                                  */
+/* ------------------------------------------------------------------ */
+
+type ScheduleConfig = {
+  startDate: string;           // ISO date-time string
+  matchDurationMin: number;    // minutes per match
+  breakBetweenMatchesMin: number; // break between consecutive matches
+  breakBetweenRoundsMin: number;  // additional break between rounds
+  dayStartHour: number;        // e.g. 9 (09:00)
+  dayEndHour: number;          // e.g. 22 (22:00)
+  matchesPerDay: number;       // max matches per day (0 = unlimited)
+};
+
+type OccurrenceConfig = {
+  enabled: boolean;
+  count: number;               // number of occurrences
+  frequency: 'weekly' | 'biweekly' | 'monthly';
+};
+
+const FREQUENCY_LABELS: Record<OccurrenceConfig['frequency'], string> = {
+  weekly: 'Hebdomadaire',
+  biweekly: 'Bi-mensuel',
+  monthly: 'Mensuel',
+};
+
+const FREQUENCY_DAYS: Record<OccurrenceConfig['frequency'], number> = {
+  weekly: 7,
+  biweekly: 14,
+  monthly: 30,
+};
+
+/** Compute real scheduled_at for each match, respecting day hours and breaks */
+function computeSchedule(
+  matchCount: number,
+  roundNumbers: number[],
+  schedule: ScheduleConfig,
+): (string | null)[] {
+  if (!schedule.startDate) return Array(matchCount).fill(null);
+
+  const results: (string | null)[] = [];
+  let cursor = new Date(schedule.startDate);
+
+  // Snap to day start if before
+  if (cursor.getHours() < schedule.dayStartHour) {
+    cursor.setHours(schedule.dayStartHour, 0, 0, 0);
+  }
+
+  let lastRound = roundNumbers[0] ?? 1;
+  let matchesToday = 0;
+
+  for (let i = 0; i < matchCount; i++) {
+    const currentRound = roundNumbers[i] ?? 1;
+
+    // Add round break if round changed
+    if (currentRound !== lastRound) {
+      cursor = new Date(cursor.getTime() + schedule.breakBetweenRoundsMin * 60000);
+      lastRound = currentRound;
+      matchesToday = 0; // reset daily count on new round
+    }
+
+    // Check daily limits
+    if (schedule.matchesPerDay > 0 && matchesToday >= schedule.matchesPerDay) {
+      // Move to next day
+      cursor.setDate(cursor.getDate() + 1);
+      cursor.setHours(schedule.dayStartHour, 0, 0, 0);
+      matchesToday = 0;
+    }
+
+    // Check if past day end
+    if (cursor.getHours() >= schedule.dayEndHour) {
+      cursor.setDate(cursor.getDate() + 1);
+      cursor.setHours(schedule.dayStartHour, 0, 0, 0);
+      matchesToday = 0;
+    }
+
+    results.push(cursor.toISOString());
+    matchesToday++;
+
+    // Advance cursor for next match
+    cursor = new Date(cursor.getTime() + (schedule.matchDurationMin + schedule.breakBetweenMatchesMin) * 60000);
+  }
+
+  return results;
+}
+
+/** Format a date for display */
+function formatMatchDate(iso: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const day = d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+  const time = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  return `${day} ${time}`;
+}
+
+/** Get best-of for a given round with escalation */
+function getBestOfForRound(
+  roundNumber: number,
+  totalRounds: number,
+  escalation: EscalationConfig,
+  baseBestOf: number,
+): number {
+  if (!escalation.enabled) return baseBestOf;
+  // Finals
+  if (roundNumber === totalRounds) return escalation.finalsBo;
+  // Semis
+  if (roundNumber === totalRounds - 1 && totalRounds >= 3) return escalation.semiFinalsBo;
+  // Early rounds
+  return escalation.earlyRoundsBo;
+}
+
+type EscalationConfig = {
+  enabled: boolean;
+  earlyRoundsBo: number;
+  semiFinalsBo: number;
+  finalsBo: number;
+};
+
+/* ------------------------------------------------------------------ */
 /*  Fake data generators                                               */
 /* ------------------------------------------------------------------ */
 
@@ -56,7 +174,7 @@ type SimTeam = {
   players: { name: string; battleTag: string }[];
 };
 
-type SimMap = { name: string; mode: string };
+type SimMap = { name: string; mode: string; winner_team_id?: string | null };
 
 type SimMatch = {
   id: string;
@@ -114,32 +232,61 @@ function pickMaps(count: number, pool: string[]): SimMap[] {
   }));
 }
 
+/** Standard tournament seeding order for bracket of given size.
+ *  Returns pairs like [0,7,3,4,1,6,2,5] for size=8
+ *  so that seed 1 plays seed 8, seed 4 plays seed 5, etc. */
+function bracketSeedOrder(size: number): number[] {
+  if (size <= 1) return [0];
+  if (size === 2) return [0, 1];
+  const half = bracketSeedOrder(size / 2);
+  const result: number[] = [];
+  for (const s of half) {
+    result.push(s, size - 1 - s);
+  }
+  return result;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Bracket generators                                                 */
 /* ------------------------------------------------------------------ */
 
-function generateSingleElim(teams: SimTeam[], bestOf: number, mapPool: string[], startDate: string | null): SimStage {
+function generateSingleElim(
+  teams: SimTeam[], bestOf: number, mapPool: string[],
+  schedule: ScheduleConfig, escalation: EscalationConfig,
+): SimStage {
   const size = teams.length;
-  const rounds = Math.log2(size);
+  const totalRounds = Math.log2(size);
   const matches: SimMatch[] = [];
   let matchIndex = 0;
 
-  for (let r = 0; r < rounds; r++) {
+  // Collect all round numbers for scheduling
+  const roundNumbers: number[] = [];
+
+  for (let r = 0; r < totalRounds; r++) {
+    const matchesInRound = size / Math.pow(2, r + 1);
+    for (let m = 0; m < matchesInRound; m++) {
+      roundNumbers.push(r + 1);
+    }
+  }
+
+  const scheduledDates = computeSchedule(roundNumbers.length, roundNumbers, schedule);
+
+  let schedIdx = 0;
+  for (let r = 0; r < totalRounds; r++) {
     const matchesInRound = size / Math.pow(2, r + 1);
     let roundName: string;
-    if (r + 1 === rounds) roundName = 'Finale';
-    else if (r + 1 === rounds - 1) roundName = 'Demi-finales';
-    else if (r + 1 === rounds - 2 && rounds >= 3) roundName = 'Quarts de finale';
+    if (r + 1 === totalRounds) roundName = 'Finale';
+    else if (r + 1 === totalRounds - 1) roundName = 'Demi-finales';
+    else if (r + 1 === totalRounds - 2 && totalRounds >= 3) roundName = 'Quarts de finale';
     else roundName = `Round ${r + 1}`;
+
+    const roundBo = getBestOfForRound(r + 1, totalRounds, escalation, bestOf);
 
     for (let m = 0; m < matchesInRound; m++) {
       const isFirstRound = r === 0;
-      const t1 = isFirstRound ? teams[m * 2] : null;
-      const t2 = isFirstRound ? teams[m * 2 + 1] : null;
-
-      const scheduled = startDate
-        ? new Date(new Date(startDate).getTime() + (r * 120 + m * 30) * 60000).toISOString()
-        : null;
+      const seedIdx = bracketSeedOrder(size);
+      const t1 = isFirstRound ? teams[seedIdx[m * 2]] : null;
+      const t2 = isFirstRound ? teams[seedIdx[m * 2 + 1]] : null;
 
       matches.push({
         id: fakeId(),
@@ -147,8 +294,8 @@ function generateSingleElim(teams: SimTeam[], bestOf: number, mapPool: string[],
         round_name: roundName,
         position_in_round: m + 1,
         status: 'pending',
-        match_format: `bo${bestOf}`,
-        best_of: bestOf,
+        match_format: `bo${roundBo}`,
+        best_of: roundBo,
         team1: t1 ?? null,
         team2: t2 ?? null,
         team1_id: t1?.id ?? null,
@@ -156,21 +303,22 @@ function generateSingleElim(teams: SimTeam[], bestOf: number, mapPool: string[],
         team1_score: null,
         team2_score: null,
         winner_team_id: null,
-        scheduled_at: scheduled,
-        maps: pickMaps(bestOf, mapPool),
+        scheduled_at: scheduledDates[schedIdx] ?? null,
+        maps: pickMaps(roundBo, mapPool),
         bracket_side: 'wb',
-        next_match_win_idx: r + 1 < rounds ? matchIndex + matchesInRound - m + Math.floor(m / 2) : null,
-        next_match_win_slot: r + 1 < rounds ? ((m % 2 === 0 ? 1 : 2) as 1 | 2) : null,
+        next_match_win_idx: null,
+        next_match_win_slot: null,
         next_match_lose_idx: null,
         next_match_lose_slot: null,
       });
       matchIndex++;
+      schedIdx++;
     }
   }
 
   // Fix next_match pointers
   let offset = 0;
-  for (let r = 0; r < rounds - 1; r++) {
+  for (let r = 0; r < totalRounds - 1; r++) {
     const countInRound = size / Math.pow(2, r + 1);
     const nextOffset = offset + countInRound;
     for (let m = 0; m < countInRound; m++) {
@@ -188,9 +336,12 @@ function generateSingleElim(teams: SimTeam[], bestOf: number, mapPool: string[],
   };
 }
 
-function generateDoubleElim(teams: SimTeam[], bestOf: number, mapPool: string[], startDate: string | null, grandFinalReset: boolean): SimStage {
+function generateDoubleElim(
+  teams: SimTeam[], bestOf: number, mapPool: string[],
+  schedule: ScheduleConfig, escalation: EscalationConfig, grandFinalReset: boolean,
+): SimStage {
   // WB matches
-  const single = generateSingleElim(teams, bestOf, mapPool, startDate);
+  const single = generateSingleElim(teams, bestOf, mapPool, schedule, escalation);
   const wbMatches = single.matches.map(m => ({ ...m, bracket_side: 'wb' as const }));
 
   // LB matches
@@ -273,8 +424,22 @@ function generateDoubleElim(teams: SimTeam[], bestOf: number, mapPool: string[],
   };
 }
 
-function generateSwiss(teams: SimTeam[], rounds: number, bestOf: number, mapPool: string[]): SimStage {
+function generateSwiss(
+  teams: SimTeam[], rounds: number, bestOf: number, mapPool: string[],
+  schedule: ScheduleConfig,
+): SimStage {
   const matches: SimMatch[] = [];
+  const roundNumbers: number[] = [];
+  // Pre-compute match count for scheduling
+  for (let r = 0; r < rounds; r++) {
+    const matchesInRound = Math.floor(teams.length / 2);
+    for (let m = 0; m < matchesInRound; m++) {
+      roundNumbers.push(r + 1);
+    }
+  }
+  const scheduledDates = computeSchedule(roundNumbers.length, roundNumbers, schedule);
+  let schedIdx = 0;
+
   for (let r = 0; r < rounds; r++) {
     const shuffled = [...teams].sort(() => Math.random() - 0.5);
     const matchesInRound = Math.floor(shuffled.length / 2);
@@ -294,46 +459,59 @@ function generateSwiss(teams: SimTeam[], rounds: number, bestOf: number, mapPool
         team1_score: null,
         team2_score: null,
         winner_team_id: null,
-        scheduled_at: null,
+        scheduled_at: scheduledDates[schedIdx] ?? null,
         maps: pickMaps(bestOf, mapPool),
         bracket_side: 'none',
         next_match_win_idx: null, next_match_win_slot: null,
         next_match_lose_idx: null, next_match_lose_slot: null,
       });
+      schedIdx++;
     }
   }
   return { id: fakeId(), name: 'Swiss System', stage_type: 'swiss', matches };
 }
 
-function generateRoundRobin(teams: SimTeam[], bestOf: number, mapPool: string[]): SimStage {
-  const matches: SimMatch[] = [];
+function generateRoundRobin(
+  teams: SimTeam[], bestOf: number, mapPool: string[],
+  schedule: ScheduleConfig,
+): SimStage {
+  // Pre-build matches to get round numbers for scheduling
+  const rawMatches: { i: number; j: number; round: number }[] = [];
   let round = 1;
+  let count = 0;
   for (let i = 0; i < teams.length; i++) {
     for (let j = i + 1; j < teams.length; j++) {
-      matches.push({
-        id: fakeId(),
-        round_number: round,
-        round_name: `Journée ${round}`,
-        position_in_round: matches.length + 1,
-        status: 'pending',
-        match_format: `bo${bestOf}`,
-        best_of: bestOf,
-        team1: teams[i],
-        team2: teams[j],
-        team1_id: teams[i].id,
-        team2_id: teams[j].id,
-        team1_score: null,
-        team2_score: null,
-        winner_team_id: null,
-        scheduled_at: null,
-        maps: pickMaps(bestOf, mapPool),
-        bracket_side: 'none',
-        next_match_win_idx: null, next_match_win_slot: null,
-        next_match_lose_idx: null, next_match_lose_slot: null,
-      });
-      if ((matches.length) % Math.floor(teams.length / 2) === 0) round++;
+      rawMatches.push({ i, j, round });
+      count++;
+      if (count % Math.floor(teams.length / 2) === 0) round++;
     }
   }
+
+  const roundNumbers = rawMatches.map(m => m.round);
+  const scheduledDates = computeSchedule(rawMatches.length, roundNumbers, schedule);
+
+  const matches: SimMatch[] = rawMatches.map((raw, idx) => ({
+    id: fakeId(),
+    round_number: raw.round,
+    round_name: `Journée ${raw.round}`,
+    position_in_round: idx + 1,
+    status: 'pending' as MatchStatus,
+    match_format: `bo${bestOf}`,
+    best_of: bestOf,
+    team1: teams[raw.i],
+    team2: teams[raw.j],
+    team1_id: teams[raw.i].id,
+    team2_id: teams[raw.j].id,
+    team1_score: null,
+    team2_score: null,
+    winner_team_id: null,
+    scheduled_at: scheduledDates[idx] ?? null,
+    maps: pickMaps(bestOf, mapPool),
+    bracket_side: 'none' as const,
+    next_match_win_idx: null, next_match_win_slot: null,
+    next_match_lose_idx: null, next_match_lose_slot: null,
+  }));
+
   return { id: fakeId(), name: 'Round Robin', stage_type: 'round_robin', matches };
 }
 
@@ -343,11 +521,28 @@ function generateRoundRobin(teams: SimTeam[], bestOf: number, mapPool: string[])
 
 function simulateMatch(match: SimMatch): SimMatch {
   if (match.status !== 'pending' || !match.team1 || !match.team2) return match;
+
+  // Seed-based win probability: lower seed = higher chance
+  // Seed 1 vs seed 8: ~65% for seed 1. Equal seeds: 50/50.
+  const s1Seed = match.team1.seed;
+  const s2Seed = match.team2.seed;
+  const seedDiff = s2Seed - s1Seed; // positive means team1 has better seed
+  const t1WinProb = 0.5 + seedDiff * 0.02; // +-2% per seed difference
+
   const winsNeeded = Math.ceil(match.best_of / 2);
   let s1 = 0, s2 = 0;
+  const mapResults = [...match.maps];
+  let mapIdx = 0;
+
   while (s1 < winsNeeded && s2 < winsNeeded) {
-    if (Math.random() > 0.5) s1++; else s2++;
+    const t1Wins = Math.random() < t1WinProb;
+    if (t1Wins) s1++; else s2++;
+    if (mapIdx < mapResults.length) {
+      mapResults[mapIdx] = { ...mapResults[mapIdx], winner_team_id: t1Wins ? match.team1.id : match.team2.id };
+      mapIdx++;
+    }
   }
+
   const winner = s1 > s2 ? match.team1 : match.team2;
   return {
     ...match,
@@ -355,6 +550,7 @@ function simulateMatch(match: SimMatch): SimMatch {
     team2_score: s2,
     winner_team_id: winner.id,
     status: 'finished',
+    maps: mapResults,
   };
 }
 
@@ -409,6 +605,11 @@ function SimMatchCard({
       <div className="flex items-center justify-between px-2.5 py-1 border-b border-white/[0.05]" style={{ height: 26 }}>
         <div className="flex items-center gap-1.5">
           <span className="text-[9px] font-bold text-neutral-600 font-mono">#{match.position_in_round}</span>
+          {match.scheduled_at && (
+            <span className="text-[9px] text-purple-300/70 font-mono" title={match.scheduled_at}>
+              {formatMatchDate(match.scheduled_at)}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-1.5">
           {match.match_format && (
@@ -453,15 +654,30 @@ function SimMatchCard({
         )}
       </div>
 
-      {/* Maps */}
+      {/* Maps with per-map results */}
       {match.maps.length > 0 && (
         <div className="border-t border-white/[0.05] px-2.5 py-1.5">
           <div className="flex flex-wrap gap-1">
-            {match.maps.map((map, i) => (
-              <span key={i} className="text-[8px] px-1.5 py-0.5 rounded bg-white/5 text-neutral-500">
-                {map.name}
-              </span>
-            ))}
+            {match.maps.map((map, i) => {
+              const mapWon = map.winner_team_id;
+              const t1Won = mapWon === match.team1_id;
+              const t2Won = mapWon === match.team2_id;
+              return (
+                <span
+                  key={i}
+                  className={`text-[8px] px-1.5 py-0.5 rounded border ${
+                    t1Won
+                      ? 'bg-sky-500/10 text-sky-300 border-sky-500/20'
+                      : t2Won
+                        ? 'bg-rose-500/10 text-rose-300 border-rose-500/20'
+                        : 'bg-white/5 text-neutral-500 border-transparent'
+                  }`}
+                  title={mapWon ? `Gagnee par ${t1Won ? t1Name : t2Name}` : map.mode}
+                >
+                  {map.name}
+                </span>
+              );
+            })}
           </div>
         </div>
       )}
@@ -682,8 +898,13 @@ type SimConfig = {
   mapPoolSize: number;
   swissRounds: number;
   grandFinalReset: boolean;
-  startDate: string;
   stageCount: number;
+  // Scheduling
+  schedule: ScheduleConfig;
+  // Escalation
+  escalation: EscalationConfig;
+  // Occurrences
+  occurrence: OccurrenceConfig;
 };
 
 const FORMAT_LABELS: Record<FormatType, string> = {
@@ -692,6 +913,14 @@ const FORMAT_LABELS: Record<FormatType, string> = {
   swiss: 'Swiss System',
   round_robin: 'Round Robin',
   showmatch: 'Showmatch',
+};
+
+type OccurrenceData = {
+  index: number;
+  label: string;
+  startDate: string;
+  stages: SimStage[];
+  teams: SimTeam[];
 };
 
 function TournamentSimulatorPage() {
@@ -703,55 +932,80 @@ function TournamentSimulatorPage() {
     mapPoolSize: 7,
     swissRounds: 5,
     grandFinalReset: false,
-    startDate: '',
     stageCount: 1,
+    schedule: {
+      startDate: '',
+      matchDurationMin: 30,
+      breakBetweenMatchesMin: 10,
+      breakBetweenRoundsMin: 30,
+      dayStartHour: 10,
+      dayEndHour: 22,
+      matchesPerDay: 0,
+    },
+    escalation: {
+      enabled: false,
+      earlyRoundsBo: 1,
+      semiFinalsBo: 3,
+      finalsBo: 5,
+    },
+    occurrence: {
+      enabled: false,
+      count: 4,
+      frequency: 'weekly',
+    },
   });
 
-  const [stages, setStages] = useState<SimStage[]>([]);
-  const [teams, setTeams] = useState<SimTeam[]>([]);
+  const [occurrences, setOccurrences] = useState<OccurrenceData[]>([]);
+  const [activeOccurrence, setActiveOccurrence] = useState(0);
   const [mapPool, setMapPool] = useState<string[]>([]);
   const [generated, setGenerated] = useState(false);
-  const [activeTab, setActiveTab] = useState<'bracket' | 'teams' | 'maps' | 'stats'>('bracket');
+  const [activeTab, setActiveTab] = useState<'bracket' | 'teams' | 'maps' | 'stats' | 'timeline'>('bracket');
+  const [configCollapsed, setConfigCollapsed] = useState(false);
+
+  // Convenience accessors for current occurrence
+  const stages = useMemo(() => occurrences[activeOccurrence]?.stages ?? [], [occurrences, activeOccurrence]);
+  const teams = useMemo(() => occurrences[activeOccurrence]?.teams ?? [], [occurrences, activeOccurrence]);
+
+  const setStages = useCallback((updater: (prev: SimStage[]) => SimStage[]) => {
+    setOccurrences(prev => prev.map((occ, i) =>
+      i === activeOccurrence ? { ...occ, stages: updater(occ.stages) } : occ
+    ));
+  }, [activeOccurrence]);
 
   const validTeamCounts = config.formatType === 'single_elim' || config.formatType === 'double_elim'
     ? [4, 8, 16, 32]
     : [4, 6, 8, 10, 12, 16];
 
-  const handleGenerate = useCallback(() => {
-    _idCounter = 0;
-    const pool = FAKE_MAPS.slice(0, config.mapPoolSize);
+  const generateOneOccurrence = useCallback((pool: string[], occSchedule: ScheduleConfig): { stages: SimStage[]; teams: SimTeam[] } => {
     const newTeams = generateTeams(config.teamCount, config.playersPerTeam);
     const newStages: SimStage[] = [];
 
-    const startDate = config.startDate || null;
-
     if (config.stageCount >= 2 && config.formatType !== 'showmatch') {
-      // Multi-stage: groups → bracket
-      const groupStage = generateRoundRobin(newTeams, config.bestOf, pool);
+      const groupStage = generateRoundRobin(newTeams, config.bestOf, pool, occSchedule);
       groupStage.name = 'Phase de groupes';
       groupStage.stage_type = 'group';
       newStages.push(groupStage);
 
       const topTeams = newTeams.slice(0, Math.min(newTeams.length, 8));
-      const bracketStage = generateSingleElim(topTeams, config.bestOf, pool, startDate);
+      const bracketStage = generateSingleElim(topTeams, config.bestOf, pool, occSchedule, config.escalation);
       bracketStage.name = 'Phase finale';
       newStages.push(bracketStage);
     } else {
       switch (config.formatType) {
         case 'single_elim':
-          newStages.push(generateSingleElim(newTeams, config.bestOf, pool, startDate));
+          newStages.push(generateSingleElim(newTeams, config.bestOf, pool, occSchedule, config.escalation));
           break;
         case 'double_elim':
-          newStages.push(generateDoubleElim(newTeams, config.bestOf, pool, startDate, config.grandFinalReset));
+          newStages.push(generateDoubleElim(newTeams, config.bestOf, pool, occSchedule, config.escalation, config.grandFinalReset));
           break;
         case 'swiss':
-          newStages.push(generateSwiss(newTeams, config.swissRounds, config.bestOf, pool));
+          newStages.push(generateSwiss(newTeams, config.swissRounds, config.bestOf, pool, occSchedule));
           break;
         case 'round_robin':
-          newStages.push(generateRoundRobin(newTeams, config.bestOf, pool));
+          newStages.push(generateRoundRobin(newTeams, config.bestOf, pool, occSchedule));
           break;
         case 'showmatch': {
-          const showmatch = generateSingleElim(newTeams.slice(0, 2), config.bestOf, pool, startDate);
+          const showmatch = generateSingleElim(newTeams.slice(0, 2), config.bestOf, pool, occSchedule, config.escalation);
           showmatch.name = 'Showmatch';
           showmatch.stage_type = 'showmatch';
           newStages.push(showmatch);
@@ -759,13 +1013,47 @@ function TournamentSimulatorPage() {
         }
       }
     }
+    return { stages: newStages, teams: newTeams };
+  }, [config]);
 
-    setTeams(newTeams);
+  const handleGenerate = useCallback(() => {
+    _idCounter = 0;
+    const pool = FAKE_MAPS.slice(0, config.mapPoolSize);
+
+    const occCount = config.occurrence.enabled ? config.occurrence.count : 1;
+    const newOccurrences: OccurrenceData[] = [];
+
+    for (let i = 0; i < occCount; i++) {
+      // Compute start date for this occurrence
+      let occStartDate = config.schedule.startDate;
+      if (occStartDate && i > 0) {
+        const base = new Date(occStartDate);
+        base.setDate(base.getDate() + i * FREQUENCY_DAYS[config.occurrence.frequency]);
+        occStartDate = base.toISOString().slice(0, 16); // datetime-local format
+      }
+
+      const occSchedule: ScheduleConfig = { ...config.schedule, startDate: occStartDate };
+      const { stages: newStages, teams: newTeams } = generateOneOccurrence(pool, occSchedule);
+
+      const label = config.occurrence.enabled
+        ? `Occurrence ${i + 1}${occStartDate ? ` — ${formatMatchDate(new Date(occStartDate).toISOString())}` : ''}`
+        : 'Tournoi';
+
+      newOccurrences.push({
+        index: i,
+        label,
+        startDate: occStartDate,
+        stages: newStages,
+        teams: newTeams,
+      });
+    }
+
     setMapPool(pool);
-    setStages(newStages);
+    setOccurrences(newOccurrences);
+    setActiveOccurrence(0);
     setGenerated(true);
     setActiveTab('bracket');
-  }, [config]);
+  }, [config, generateOneOccurrence]);
 
   const handleSimulateMatch = useCallback((stageIdx: number, matchId: string) => {
     setStages(prev => {
@@ -781,7 +1069,7 @@ function TournamentSimulatorPage() {
       next[stageIdx] = stage;
       return next;
     });
-  }, []);
+  }, [setStages]);
 
   const handleResetMatch = useCallback((stageIdx: number, matchId: string) => {
     setStages(prev => {
@@ -799,7 +1087,7 @@ function TournamentSimulatorPage() {
       next[stageIdx] = stage;
       return next;
     });
-  }, []);
+  }, [setStages]);
 
   const handleSimulateAll = useCallback(() => {
     setStages(prev => prev.map(stage => {
@@ -820,7 +1108,28 @@ function TournamentSimulatorPage() {
       }
       return { ...stage, matches };
     }));
-  }, []);
+  }, [setStages]);
+
+  /** Simulate only the next incomplete round across all stages */
+  const handleSimulateNextRound = useCallback(() => {
+    setStages(prev => prev.map(stage => {
+      let matches = [...stage.matches];
+      const pendingRounds = [...new Set(
+        matches.filter(m => m.status === 'pending' && m.team1 && m.team2).map(m => m.round_number)
+      )].sort((a, b) => a - b);
+      if (pendingRounds.length === 0) return stage;
+      const nextRound = pendingRounds[0];
+      for (let i = 0; i < matches.length; i++) {
+        if (matches[i].round_number === nextRound && matches[i].status === 'pending') {
+          matches[i] = simulateMatch(matches[i]);
+        }
+      }
+      if (stage.stage_type === 'bracket') {
+        matches = propagateSingleElim(matches);
+      }
+      return { ...stage, matches };
+    }));
+  }, [setStages]);
 
   const handleResetAll = useCallback(() => {
     handleGenerate();
@@ -833,14 +1142,26 @@ function TournamentSimulatorPage() {
     const finished = allMatches.filter(m => m.status === 'finished').length;
     const pending = allMatches.filter(m => m.status === 'pending').length;
 
-    // Win counts
+    // Win counts + score differential
     const wins = new Map<string, number>();
     const losses = new Map<string, number>();
+    const mapWins = new Map<string, number>(); // maps won (individual)
+    const mapLosses = new Map<string, number>();
     for (const m of allMatches) {
       if (m.status !== 'finished' || !m.winner_team_id) continue;
       wins.set(m.winner_team_id, (wins.get(m.winner_team_id) ?? 0) + 1);
       const loserId = m.team1_id === m.winner_team_id ? m.team2_id : m.team1_id;
       if (loserId) losses.set(loserId, (losses.get(loserId) ?? 0) + 1);
+
+      // Per-team map score tracking
+      if (m.team1_id && m.team1_score != null && m.team2_score != null) {
+        mapWins.set(m.team1_id, (mapWins.get(m.team1_id) ?? 0) + m.team1_score);
+        mapLosses.set(m.team1_id, (mapLosses.get(m.team1_id) ?? 0) + m.team2_score);
+      }
+      if (m.team2_id && m.team1_score != null && m.team2_score != null) {
+        mapWins.set(m.team2_id, (mapWins.get(m.team2_id) ?? 0) + m.team2_score);
+        mapLosses.set(m.team2_id, (mapLosses.get(m.team2_id) ?? 0) + m.team1_score);
+      }
     }
 
     // Map usage
@@ -851,7 +1172,27 @@ function TournamentSimulatorPage() {
       }
     }
 
-    return { total, finished, pending, wins, losses, mapCount };
+    // Next playable round
+    const playableMatches = allMatches.filter(m => m.status === 'pending' && m.team1 && m.team2);
+    const nextRound = playableMatches.length > 0
+      ? Math.min(...playableMatches.map(m => m.round_number))
+      : null;
+    const nextRoundName = playableMatches.find(m => m.round_number === nextRound)?.round_name ?? null;
+
+    // Estimated duration
+    const scheduledDates = allMatches.map(m => m.scheduled_at).filter(Boolean) as string[];
+    let estimatedDuration: string | null = null;
+    if (scheduledDates.length >= 2) {
+      const sorted = scheduledDates.sort();
+      const first = new Date(sorted[0]);
+      const last = new Date(sorted[sorted.length - 1]);
+      const diffMs = last.getTime() - first.getTime();
+      const hours = Math.round(diffMs / (1000 * 60 * 60));
+      if (hours < 24) estimatedDuration = `${hours}h`;
+      else estimatedDuration = `${Math.ceil(hours / 24)}j ${hours % 24}h`;
+    }
+
+    return { total, finished, pending, wins, losses, mapWins, mapLosses, mapCount, nextRound, nextRoundName, estimatedDuration };
   }, [stages]);
 
   return (
@@ -874,6 +1215,13 @@ function TournamentSimulatorPage() {
             {generated && (
               <div className="flex gap-2">
                 <button
+                  onClick={handleSimulateNextRound}
+                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-semibold shadow transition-colors"
+                  title="Simule uniquement le prochain round jouable"
+                >
+                  Round suivant
+                </button>
+                <button
                   onClick={handleSimulateAll}
                   className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-semibold shadow transition-colors"
                 >
@@ -891,8 +1239,38 @@ function TournamentSimulatorPage() {
 
           {/* Configuration panel */}
           <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6 mb-8 space-y-6">
-            <h2 className="text-lg font-semibold">Configuration</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Configuration</h2>
+              <div className="flex items-center gap-3">
+                {/* Presets */}
+                <div className="flex gap-1">
+                  {([
+                    { label: 'Rapide', cfg: { formatType: 'single_elim' as FormatType, teamCount: 4, bestOf: 1, stageCount: 1 } },
+                    { label: 'Standard', cfg: { formatType: 'single_elim' as FormatType, teamCount: 8, bestOf: 3, stageCount: 1 } },
+                    { label: 'LAN', cfg: { formatType: 'double_elim' as FormatType, teamCount: 8, bestOf: 3, stageCount: 1, grandFinalReset: true, escalation: { enabled: true, earlyRoundsBo: 1, semiFinalsBo: 3, finalsBo: 5 } } },
+                    { label: 'Ligue', cfg: { formatType: 'swiss' as FormatType, teamCount: 16, bestOf: 3, swissRounds: 5, stageCount: 1 } },
+                  ]).map(preset => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => setConfig(c => ({ ...c, ...preset.cfg }))}
+                      className="px-2.5 py-1 rounded text-[10px] font-semibold bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-300 transition-colors"
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setConfigCollapsed(c => !c)}
+                  className="text-neutral-400 hover:text-white transition-colors text-sm"
+                >
+                  {configCollapsed ? 'Afficher' : 'Reduire'}
+                </button>
+              </div>
+            </div>
 
+            {!configCollapsed && (<div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {/* Format */}
               <div>
@@ -1059,50 +1437,234 @@ function TournamentSimulatorPage() {
                 </div>
               )}
 
-              {/* Start date */}
-              <div>
-                <label className="block text-sm font-medium text-neutral-200 mb-2">Date de debut</label>
-                <input
-                  type="datetime-local"
-                  value={config.startDate}
-                  onChange={e => setConfig(c => ({ ...c, startDate: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
+            </div>
+
+            {/* Scheduling section */}
+            <div className="border-t border-white/10 pt-6">
+              <h3 className="text-sm font-semibold text-neutral-300 uppercase tracking-wider mb-4">Planning</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-200 mb-2">Date de debut</label>
+                  <input
+                    type="datetime-local"
+                    value={config.schedule.startDate}
+                    onChange={e => setConfig(c => ({ ...c, schedule: { ...c.schedule, startDate: e.target.value } }))}
+                    className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-200 mb-2">Duree d&apos;un match (min)</label>
+                  <input
+                    type="number" min={5} max={180} step={5}
+                    value={config.schedule.matchDurationMin}
+                    onChange={e => setConfig(c => ({ ...c, schedule: { ...c.schedule, matchDurationMin: parseInt(e.target.value) || 30 } }))}
+                    className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-200 mb-2">Pause entre matchs (min)</label>
+                  <input
+                    type="number" min={0} max={120} step={5}
+                    value={config.schedule.breakBetweenMatchesMin}
+                    onChange={e => setConfig(c => ({ ...c, schedule: { ...c.schedule, breakBetweenMatchesMin: parseInt(e.target.value) || 0 } }))}
+                    className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-200 mb-2">Pause entre rounds (min)</label>
+                  <input
+                    type="number" min={0} max={240} step={5}
+                    value={config.schedule.breakBetweenRoundsMin}
+                    onChange={e => setConfig(c => ({ ...c, schedule: { ...c.schedule, breakBetweenRoundsMin: parseInt(e.target.value) || 0 } }))}
+                    className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-200 mb-2">Heure de debut de journee</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number" min={0} max={23}
+                      value={config.schedule.dayStartHour}
+                      onChange={e => setConfig(c => ({ ...c, schedule: { ...c.schedule, dayStartHour: parseInt(e.target.value) || 0 } }))}
+                      className="w-20 px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                    <span className="text-neutral-500 text-sm">h</span>
+                    <span className="text-neutral-600 text-xs">a</span>
+                    <input
+                      type="number" min={1} max={24}
+                      value={config.schedule.dayEndHour}
+                      onChange={e => setConfig(c => ({ ...c, schedule: { ...c.schedule, dayEndHour: parseInt(e.target.value) || 24 } }))}
+                      className="w-20 px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                    <span className="text-neutral-500 text-sm">h</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-200 mb-2">Matchs par jour (0 = illimite)</label>
+                  <input
+                    type="number" min={0} max={50}
+                    value={config.schedule.matchesPerDay}
+                    onChange={e => setConfig(c => ({ ...c, schedule: { ...c.schedule, matchesPerDay: parseInt(e.target.value) || 0 } }))}
+                    className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
               </div>
             </div>
+
+            {/* Escalation section */}
+            <div className="border-t border-white/10 pt-6">
+              <div className="flex items-center gap-3 mb-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={config.escalation.enabled}
+                    onChange={e => setConfig(c => ({ ...c, escalation: { ...c.escalation, enabled: e.target.checked } }))}
+                    className="rounded border-neutral-500 bg-neutral-700"
+                  />
+                  <span className="text-sm font-semibold text-neutral-300 uppercase tracking-wider">Format progressif (escalade)</span>
+                </label>
+              </div>
+              {config.escalation.enabled && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {([
+                    { label: 'Premiers rounds', key: 'earlyRoundsBo' as const },
+                    { label: 'Demi-finales', key: 'semiFinalsBo' as const },
+                    { label: 'Finale', key: 'finalsBo' as const },
+                  ]).map(({ label, key }) => (
+                    <div key={key}>
+                      <label className="block text-sm font-medium text-neutral-200 mb-2">{label}</label>
+                      <div className="flex gap-2">
+                        {[1, 3, 5, 7].map(bo => (
+                          <button
+                            key={bo}
+                            type="button"
+                            onClick={() => setConfig(c => ({ ...c, escalation: { ...c.escalation, [key]: bo } }))}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                              config.escalation[key] === bo
+                                ? 'bg-purple-600 border-purple-500 text-white'
+                                : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
+                            }`}
+                          >
+                            BO{bo}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Occurrences section */}
+            <div className="border-t border-white/10 pt-6">
+              <div className="flex items-center gap-3 mb-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={config.occurrence.enabled}
+                    onChange={e => setConfig(c => ({ ...c, occurrence: { ...c.occurrence, enabled: e.target.checked } }))}
+                    className="rounded border-neutral-500 bg-neutral-700"
+                  />
+                  <span className="text-sm font-semibold text-neutral-300 uppercase tracking-wider">Tournoi recurrent</span>
+                </label>
+              </div>
+              {config.occurrence.enabled && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-200 mb-2">Frequence</label>
+                    <div className="flex gap-2">
+                      {(Object.keys(FREQUENCY_LABELS) as OccurrenceConfig['frequency'][]).map(f => (
+                        <button
+                          key={f}
+                          type="button"
+                          onClick={() => setConfig(c => ({ ...c, occurrence: { ...c.occurrence, frequency: f } }))}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                            config.occurrence.frequency === f
+                              ? 'bg-purple-600 border-purple-500 text-white'
+                              : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
+                          }`}
+                        >
+                          {FREQUENCY_LABELS[f]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-200 mb-2">Nombre d&apos;occurrences</label>
+                    <input
+                      type="number" min={2} max={52}
+                      value={config.occurrence.count}
+                      onChange={e => setConfig(c => ({ ...c, occurrence: { ...c.occurrence, count: Math.max(2, parseInt(e.target.value) || 2) } }))}
+                      className="w-32 px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            </div>)}
 
             <button
               onClick={handleGenerate}
               className="px-6 py-3 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-semibold shadow transition-colors"
             >
-              Generer le tournoi
+              Generer le tournoi{config.occurrence.enabled ? ` (${config.occurrence.count} occurrences)` : ''}
             </button>
           </div>
 
           {/* Generated content */}
           {generated && (
             <>
+              {/* Occurrence selector */}
+              {occurrences.length > 1 && (
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-neutral-300 mb-2 uppercase tracking-wider">Occurrence</label>
+                  <div className="flex flex-wrap gap-2">
+                    {occurrences.map((occ, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setActiveOccurrence(i)}
+                        className={`px-3 py-2 rounded-lg text-xs font-semibold border transition-colors ${
+                          activeOccurrence === i
+                            ? 'bg-purple-600 border-purple-500 text-white'
+                            : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
+                        }`}
+                      >
+                        {occ.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Summary */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
                 <SummaryCard label="Equipes" value={teams.length} />
                 <SummaryCard label="Matchs" value={stats.total} />
                 <SummaryCard label="Termines" value={stats.finished} color="text-emerald-400" />
                 <SummaryCard label="En attente" value={stats.pending} color="text-amber-400" />
+                {stats.estimatedDuration && (
+                  <SummaryCard label="Duree estimee" value={stats.estimatedDuration} color="text-sky-400" />
+                )}
+                {stats.nextRoundName && (
+                  <SummaryCard label="Prochain round" value={stats.nextRoundName} color="text-blue-400" />
+                )}
               </div>
 
               {/* Tabs */}
               <div className="flex gap-1 mb-6 border-b border-white/10 pb-px">
-                {(['bracket', 'teams', 'maps', 'stats'] as const).map(tab => (
+                {(['bracket', 'teams', 'maps', 'stats', ...(occurrences.length > 1 ? ['timeline' as const] : [])] as const).map(tab => (
                   <button
                     key={tab}
-                    onClick={() => setActiveTab(tab)}
+                    onClick={() => setActiveTab(tab as typeof activeTab)}
                     className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors ${
                       activeTab === tab
                         ? 'bg-white/10 text-white border-b-2 border-purple-500'
                         : 'text-neutral-400 hover:text-white hover:bg-white/5'
                     }`}
                   >
-                    {tab === 'bracket' ? 'Bracket / Matchs' : tab === 'teams' ? 'Equipes' : tab === 'maps' ? 'Maps' : 'Statistiques'}
+                    {tab === 'bracket' ? 'Bracket / Matchs' : tab === 'teams' ? 'Equipes' : tab === 'maps' ? 'Maps' : tab === 'timeline' ? 'Timeline' : 'Statistiques'}
                   </button>
                 ))}
               </div>
@@ -1227,46 +1789,60 @@ function TournamentSimulatorPage() {
 
               {activeTab === 'stats' && (
                 <div className="space-y-6">
-                  {/* Standings */}
+                  {/* Standings with score diff */}
                   <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
                     <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">Classement</h3>
                     <div className="space-y-1">
-                      <div className="grid grid-cols-[auto_1fr_60px_60px_60px] gap-2 text-[10px] uppercase tracking-wider text-neutral-600 font-bold px-3 pb-2">
+                      <div className="grid grid-cols-[auto_1fr_50px_50px_50px_70px_50px] gap-2 text-[10px] uppercase tracking-wider text-neutral-600 font-bold px-3 pb-2">
                         <span className="w-6">#</span>
                         <span>Equipe</span>
                         <span className="text-center">V</span>
                         <span className="text-center">D</span>
                         <span className="text-center">%</span>
+                        <span className="text-center">Maps</span>
+                        <span className="text-center">Diff</span>
                       </div>
                       {teams
                         .map(t => ({
                           team: t,
                           wins: stats.wins.get(t.id) ?? 0,
                           losses: stats.losses.get(t.id) ?? 0,
+                          mapsWon: stats.mapWins.get(t.id) ?? 0,
+                          mapsLost: stats.mapLosses.get(t.id) ?? 0,
                         }))
-                        .sort((a, b) => b.wins - a.wins || a.losses - b.losses)
+                        .sort((a, b) => b.wins - a.wins || a.losses - b.losses || (b.mapsWon - b.mapsLost) - (a.mapsWon - a.mapsLost))
                         .map((row, i) => {
                           const total = row.wins + row.losses;
                           const pct = total > 0 ? Math.round((row.wins / total) * 100) : 0;
+                          const diff = row.mapsWon - row.mapsLost;
                           return (
                             <div
                               key={row.team.id}
-                              className={`grid grid-cols-[auto_1fr_60px_60px_60px] gap-2 items-center px-3 py-2 rounded-lg text-sm ${
+                              className={`grid grid-cols-[auto_1fr_50px_50px_50px_70px_50px] gap-2 items-center px-3 py-2 rounded-lg text-sm ${
                                 i < 3 ? 'bg-emerald-500/5 border border-emerald-500/10' : i % 2 === 0 ? 'bg-white/[0.01]' : ''
                               }`}
                             >
                               <span className="w-6 text-xs font-bold text-neutral-500">{i + 1}</span>
-                              <span className="font-medium truncate">{row.team.name}</span>
+                              <div className="flex items-center gap-2 truncate">
+                                <span className="font-medium truncate">{row.team.name}</span>
+                                <span className="text-[9px] text-neutral-600">#{row.team.seed}</span>
+                              </div>
                               <span className="text-center font-bold text-emerald-400">{row.wins}</span>
                               <span className="text-center font-bold text-red-400">{row.losses}</span>
                               <span className="text-center text-neutral-400">{pct}%</span>
+                              <span className="text-center text-[11px] text-neutral-500">{row.mapsWon}-{row.mapsLost}</span>
+                              <span className={`text-center font-bold text-xs ${
+                                diff > 0 ? 'text-emerald-400' : diff < 0 ? 'text-red-400' : 'text-neutral-500'
+                              }`}>
+                                {diff > 0 ? '+' : ''}{diff}
+                              </span>
                             </div>
                           );
                         })}
                     </div>
                   </div>
 
-                  {/* Match format distribution */}
+                  {/* Progression */}
                   <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
                     <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">Progression du tournoi</h3>
                     <div className="flex items-center gap-4">
@@ -1280,9 +1856,173 @@ function TournamentSimulatorPage() {
                         {stats.total > 0 ? Math.round((stats.finished / stats.total) * 100) : 0}%
                       </span>
                     </div>
-                    <p className="text-xs text-neutral-500 mt-2">
-                      {stats.finished} / {stats.total} matchs termines
-                    </p>
+                    <div className="flex items-center justify-between mt-2">
+                      <p className="text-xs text-neutral-500">
+                        {stats.finished} / {stats.total} matchs termines
+                      </p>
+                      {stats.nextRoundName && (
+                        <p className="text-xs text-blue-400">
+                          Prochain : {stats.nextRoundName}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Round-by-round breakdown */}
+                  <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
+                    <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">Detail par round</h3>
+                    <div className="space-y-2">
+                      {(() => {
+                        const allMatches = stages.flatMap(s => s.matches);
+                        const roundMap = new Map<string, { total: number; finished: number; name: string }>();
+                        for (const m of allMatches) {
+                          const key = `${m.bracket_side}-${m.round_number}`;
+                          const existing = roundMap.get(key) ?? { total: 0, finished: 0, name: m.round_name };
+                          existing.total++;
+                          if (m.status === 'finished') existing.finished++;
+                          roundMap.set(key, existing);
+                        }
+                        return Array.from(roundMap.entries()).map(([key, data]) => {
+                          const pct = data.total > 0 ? Math.round((data.finished / data.total) * 100) : 0;
+                          return (
+                            <div key={key} className="flex items-center gap-3">
+                              <span className="text-xs text-neutral-400 w-32 truncate">{data.name}</span>
+                              <div className="flex-1 h-2 bg-neutral-800 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all ${
+                                    pct === 100 ? 'bg-emerald-500' : pct > 0 ? 'bg-blue-500' : 'bg-neutral-700'
+                                  }`}
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                              <span className="text-[10px] text-neutral-500 tabular-nums w-16 text-right">
+                                {data.finished}/{data.total}
+                              </span>
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'timeline' && occurrences.length > 1 && (
+                <div className="space-y-6">
+                  <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
+                    <h3 className="text-sm font-semibold mb-6 uppercase tracking-wider text-neutral-400">
+                      Calendrier des occurrences
+                    </h3>
+                    <div className="relative">
+                      {/* Vertical line */}
+                      <div className="absolute left-4 top-0 bottom-0 w-px bg-purple-500/20" />
+
+                      <div className="space-y-6">
+                        {occurrences.map((occ, i) => {
+                          const allMatches = occ.stages.flatMap(s => s.matches);
+                          const finished = allMatches.filter(m => m.status === 'finished').length;
+                          const total = allMatches.length;
+                          const firstDate = allMatches.find(m => m.scheduled_at)?.scheduled_at;
+                          const lastDate = [...allMatches].reverse().find(m => m.scheduled_at)?.scheduled_at;
+                          const pct = total > 0 ? Math.round((finished / total) * 100) : 0;
+
+                          return (
+                            <div key={i} className="flex gap-4 items-start">
+                              {/* Dot on the line */}
+                              <div className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 border-2 text-xs font-bold ${
+                                activeOccurrence === i
+                                  ? 'bg-purple-600 border-purple-400 text-white'
+                                  : pct === 100
+                                    ? 'bg-emerald-600/30 border-emerald-500/50 text-emerald-300'
+                                    : 'bg-neutral-800 border-neutral-600 text-neutral-400'
+                              }`}>
+                                {i + 1}
+                              </div>
+
+                              {/* Card */}
+                              <button
+                                type="button"
+                                onClick={() => { setActiveOccurrence(i); setActiveTab('bracket'); }}
+                                className={`flex-1 rounded-xl border p-4 text-left transition-all ${
+                                  activeOccurrence === i
+                                    ? 'border-purple-500/30 bg-purple-500/5'
+                                    : 'border-white/10 bg-white/[0.02] hover:bg-white/[0.04]'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-sm font-semibold">{occ.label}</span>
+                                  <span className={`text-xs font-bold tabular-nums ${
+                                    pct === 100 ? 'text-emerald-400' : pct > 0 ? 'text-amber-400' : 'text-neutral-500'
+                                  }`}>
+                                    {pct}%
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-4 text-xs text-neutral-400">
+                                  {firstDate && (
+                                    <span>Debut: {formatMatchDate(firstDate)}</span>
+                                  )}
+                                  {lastDate && lastDate !== firstDate && (
+                                    <span>Fin: {formatMatchDate(lastDate)}</span>
+                                  )}
+                                  <span>{total} matchs</span>
+                                  <span>{occ.teams.length} equipes</span>
+                                </div>
+                                {/* Progress bar */}
+                                <div className="mt-2 h-1.5 bg-neutral-800 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-gradient-to-r from-purple-500 to-emerald-400 rounded-full transition-all"
+                                    style={{ width: `${pct}%` }}
+                                  />
+                                </div>
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Summary across all occurrences */}
+                  <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
+                    <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
+                      Resume global
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">Total matchs</div>
+                        <div className="text-2xl font-bold mt-1">
+                          {occurrences.reduce((sum, occ) => sum + occ.stages.flatMap(s => s.matches).length, 0)}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">Termines</div>
+                        <div className="text-2xl font-bold mt-1 text-emerald-400">
+                          {occurrences.reduce((sum, occ) => sum + occ.stages.flatMap(s => s.matches).filter(m => m.status === 'finished').length, 0)}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">Duree totale</div>
+                        <div className="text-2xl font-bold mt-1 text-purple-400">
+                          {(() => {
+                            const allDates = occurrences.flatMap(occ =>
+                              occ.stages.flatMap(s => s.matches).map(m => m.scheduled_at).filter(Boolean) as string[]
+                            );
+                            if (allDates.length < 2) return '—';
+                            const sorted = allDates.sort();
+                            const first = new Date(sorted[0]);
+                            const last = new Date(sorted[sorted.length - 1]);
+                            const days = Math.ceil((last.getTime() - first.getTime()) / (1000 * 60 * 60 * 24));
+                            return `${days}j`;
+                          })()}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">Equipes uniques</div>
+                        <div className="text-2xl font-bold mt-1 text-sky-400">
+                          {new Set(occurrences.flatMap(occ => occ.teams.map(t => t.name))).size}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1294,7 +2034,7 @@ function TournamentSimulatorPage() {
   );
 }
 
-function SummaryCard({ label, value, color }: { label: string; value: number; color?: string }) {
+function SummaryCard({ label, value, color }: { label: string; value: number | string; color?: string }) {
   return (
     <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
       <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">{label}</div>
