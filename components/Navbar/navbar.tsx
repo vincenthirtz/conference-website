@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Dropdown from '../illustration/dropdown';
 import { useState, useEffect, useRef, useCallback, JSX } from 'react';
-import links from '@/config/links.json';
+import linksConfig from '@/config/links.json';
 import NavDrop from './navDrop';
 import Hamburger from '../illustration/hamburger';
 import { useMediaQuery } from 'react-responsive';
@@ -493,7 +493,7 @@ function Navbar(): JSX.Element {
             <div className="flex items-center">
               {/* Liens publics existants - masqués quand staff connecté */}
               {!isStaff &&
-                links
+                linksConfig
                   .filter(
                     (link) =>
                       ![
@@ -762,6 +762,18 @@ function AdminTopBar({
     (item) => !item.children?.length && item.ref
   );
 
+  // Public links for "Site" dropdown
+  const publicLinks: { title: string; ref: string }[] = [];
+  for (const link of (linksConfig as LinkItem[])) {
+    if (link.subMenu) {
+      for (const sub of link.subMenu) {
+        if (sub.ref) publicLinks.push({ title: `${link.title} – ${sub.title}`, ref: sub.ref });
+      }
+    } else if (link.ref) {
+      publicLinks.push({ title: link.title, ref: link.ref });
+    }
+  }
+
   const toggleMenu = (title: string) => {
     setOpenMenu((prev) => (prev === title ? null : title));
     setOpenSubMenu(null);
@@ -807,6 +819,44 @@ function AdminTopBar({
           ref={menuAreaRef}
           className="flex items-center gap-1 whitespace-nowrap flex-1 relative overflow-visible"
         >
+          {/* Site public dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => toggleMenu('__site__')}
+              className={`px-3 py-1.5 rounded-lg text-[12px] font-medium flex items-center gap-1.5 transition-colors ${
+                openMenu === '__site__'
+                  ? 'text-white bg-neutral-800'
+                  : 'text-neutral-300 hover:text-white hover:bg-neutral-800'
+              }`}
+              aria-expanded={openMenu === '__site__'}
+              aria-haspopup="true"
+            >
+              Site
+              <svg
+                className={`w-3 h-3 transition-transform ${openMenu === '__site__' ? 'rotate-180' : 'rotate-0'}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {openMenu === '__site__' && (
+              <div className="absolute left-0 top-[calc(100%+8px)] min-w-[220px] rounded-xl bg-neutral-900 border border-neutral-800 shadow-2xl overflow-hidden z-[130]">
+                {publicLinks.map((pl) => (
+                  <Link
+                    key={pl.ref}
+                    href={pl.ref}
+                    className="block px-4 py-2.5 text-[13px] text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors"
+                    onClick={() => { setOpenMenu(null); setOpenSubMenu(null); }}
+                  >
+                    {pl.title}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="w-px h-5 bg-neutral-800" />
           {singleLinks.map((link) => (
             <Link
               key={link.ref}
