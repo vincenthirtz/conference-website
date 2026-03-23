@@ -20,18 +20,19 @@ describe('OVERWATCH_MAPS config', () => {
   });
 
   it('tous les types sont valides', () => {
-    const validTypes = ['control', 'escort', 'hybrid', 'push'];
+    const validTypes = ['control', 'escort', 'hybrid', 'push', 'flashpoint'];
     for (const map of OVERWATCH_MAPS) {
       expect(validTypes).toContain(map.type);
     }
   });
 
-  it('contient les 4 types de maps', () => {
+  it('contient les 5 types de maps', () => {
     const types = new Set(OVERWATCH_MAPS.map((m) => m.type));
     expect(types.has('control')).toBe(true);
     expect(types.has('escort')).toBe(true);
     expect(types.has('hybrid')).toBe(true);
     expect(types.has('push')).toBe(true);
+    expect(types.has('flashpoint')).toBe(true);
   });
 
   it('les URLs d\'images utilisent le CDN attendu', () => {

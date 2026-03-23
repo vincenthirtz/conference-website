@@ -1,28 +1,41 @@
 // pages/admin/tournament-simulator.tsx
 // Simulateur visuel de tournoi avec données fictives pour tester les configurations
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
 import { STATUS_CONFIG } from '@/utils/statusConfig';
 import type { MatchStatus, FormatType, StageType } from '@/types/admin';
+import type { MatchForGraph } from '@/types/bracket';
+import { buildBracketGraph } from '@/utils/bracket/buildGraph';
+import { computeBracketLayout } from '@/utils/bracket/computePaths';
+import {
+  computeSchedule,
+  bracketSeedOrder,
+  getBestOfForRound,
+  simulateMatch,
+  propagateBracket,
+  simulateFullTournament,
+  runMonteCarlo,
+  computeCompetitiveness,
+} from '@/utils/simulator';
+import type {
+  SimTeam,
+  SimMap,
+  SimMatch,
+  SimStage,
+  ScheduleConfig,
+  EscalationConfig,
+  CompetitivenessMetrics,
+  MonteCarloResult,
+} from '@/utils/simulator';
 
 export const getServerSideProps = withStaffPage('manager');
 
 /* ------------------------------------------------------------------ */
 /*  Scheduling helpers                                                  */
 /* ------------------------------------------------------------------ */
-
-type ScheduleConfig = {
-  startDate: string;           // ISO date-time string
-  matchDurationMin: number;    // minutes per match
-  breakBetweenMatchesMin: number; // break between consecutive matches
-  breakBetweenRoundsMin: number;  // additional break between rounds
-  dayStartHour: number;        // e.g. 9 (09:00)
-  dayEndHour: number;          // e.g. 22 (22:00)
-  matchesPerDay: number;       // max matches per day (0 = unlimited)
-};
 
 type OccurrenceConfig = {
   enabled: boolean;
@@ -42,60 +55,6 @@ const FREQUENCY_DAYS: Record<OccurrenceConfig['frequency'], number> = {
   monthly: 30,
 };
 
-/** Compute real scheduled_at for each match, respecting day hours and breaks */
-function computeSchedule(
-  matchCount: number,
-  roundNumbers: number[],
-  schedule: ScheduleConfig,
-): (string | null)[] {
-  if (!schedule.startDate) return Array(matchCount).fill(null);
-
-  const results: (string | null)[] = [];
-  let cursor = new Date(schedule.startDate);
-
-  // Snap to day start if before
-  if (cursor.getHours() < schedule.dayStartHour) {
-    cursor.setHours(schedule.dayStartHour, 0, 0, 0);
-  }
-
-  let lastRound = roundNumbers[0] ?? 1;
-  let matchesToday = 0;
-
-  for (let i = 0; i < matchCount; i++) {
-    const currentRound = roundNumbers[i] ?? 1;
-
-    // Add round break if round changed
-    if (currentRound !== lastRound) {
-      cursor = new Date(cursor.getTime() + schedule.breakBetweenRoundsMin * 60000);
-      lastRound = currentRound;
-      matchesToday = 0; // reset daily count on new round
-    }
-
-    // Check daily limits
-    if (schedule.matchesPerDay > 0 && matchesToday >= schedule.matchesPerDay) {
-      // Move to next day
-      cursor.setDate(cursor.getDate() + 1);
-      cursor.setHours(schedule.dayStartHour, 0, 0, 0);
-      matchesToday = 0;
-    }
-
-    // Check if past day end
-    if (cursor.getHours() >= schedule.dayEndHour) {
-      cursor.setDate(cursor.getDate() + 1);
-      cursor.setHours(schedule.dayStartHour, 0, 0, 0);
-      matchesToday = 0;
-    }
-
-    results.push(cursor.toISOString());
-    matchesToday++;
-
-    // Advance cursor for next match
-    cursor = new Date(cursor.getTime() + (schedule.matchDurationMin + schedule.breakBetweenMatchesMin) * 60000);
-  }
-
-  return results;
-}
-
 /** Format a date for display */
 function formatMatchDate(iso: string | null): string {
   if (!iso) return '';
@@ -104,29 +63,6 @@ function formatMatchDate(iso: string | null): string {
   const time = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   return `${day} ${time}`;
 }
-
-/** Get best-of for a given round with escalation */
-function getBestOfForRound(
-  roundNumber: number,
-  totalRounds: number,
-  escalation: EscalationConfig,
-  baseBestOf: number,
-): number {
-  if (!escalation.enabled) return baseBestOf;
-  // Finals
-  if (roundNumber === totalRounds) return escalation.finalsBo;
-  // Semis
-  if (roundNumber === totalRounds - 1 && totalRounds >= 3) return escalation.semiFinalsBo;
-  // Early rounds
-  return escalation.earlyRoundsBo;
-}
-
-type EscalationConfig = {
-  enabled: boolean;
-  earlyRoundsBo: number;
-  semiFinalsBo: number;
-  finalsBo: number;
-};
 
 /* ------------------------------------------------------------------ */
 /*  Fake data generators                                               */
@@ -165,48 +101,6 @@ const FAKE_MAPS = [
 let _idCounter = 0;
 function fakeId() { return `sim-${++_idCounter}-${Math.random().toString(36).slice(2, 8)}`; }
 
-type SimTeam = {
-  id: string;
-  name: string;
-  short_name: string;
-  logo_url: null;
-  seed: number;
-  players: { name: string; battleTag: string }[];
-};
-
-type SimMap = { name: string; mode: string; winner_team_id?: string | null };
-
-type SimMatch = {
-  id: string;
-  round_number: number;
-  round_name: string;
-  position_in_round: number;
-  status: MatchStatus;
-  match_format: string;
-  best_of: number;
-  team1: SimTeam | null;
-  team2: SimTeam | null;
-  team1_id: string | null;
-  team2_id: string | null;
-  team1_score: number | null;
-  team2_score: number | null;
-  winner_team_id: string | null;
-  scheduled_at: string | null;
-  maps: SimMap[];
-  bracket_side: 'wb' | 'lb' | 'final' | 'none';
-  next_match_win_idx: number | null;
-  next_match_win_slot: 1 | 2 | null;
-  next_match_lose_idx: number | null;
-  next_match_lose_slot: 1 | 2 | null;
-};
-
-type SimStage = {
-  id: string;
-  name: string;
-  stage_type: StageType;
-  matches: SimMatch[];
-};
-
 function generateTeams(count: number, playersPerTeam: number): SimTeam[] {
   const shuffled = [...FAKE_TEAM_NAMES].sort(() => Math.random() - 0.5);
   return Array.from({ length: count }, (_, i) => ({
@@ -230,20 +124,6 @@ function pickMaps(count: number, pool: string[]): SimMap[] {
     name,
     mode: modes[Math.floor(Math.random() * modes.length)],
   }));
-}
-
-/** Standard tournament seeding order for bracket of given size.
- *  Returns pairs like [0,7,3,4,1,6,2,5] for size=8
- *  so that seed 1 plays seed 8, seed 4 plays seed 5, etc. */
-function bracketSeedOrder(size: number): number[] {
-  if (size <= 1) return [0];
-  if (size === 2) return [0, 1];
-  const half = bracketSeedOrder(size / 2);
-  const result: number[] = [];
-  for (const s of half) {
-    result.push(s, size - 1 - s);
-  }
-  return result;
 }
 
 /* ------------------------------------------------------------------ */
@@ -310,20 +190,26 @@ function generateSingleElim(
         next_match_win_slot: null,
         next_match_lose_idx: null,
         next_match_lose_slot: null,
+        next_match_win_id: null,
+        next_match_lose_id: null,
+        locked: false,
       });
       matchIndex++;
       schedIdx++;
     }
   }
 
-  // Fix next_match pointers
+  // Fix next_match pointers (index + id)
   let offset = 0;
   for (let r = 0; r < totalRounds - 1; r++) {
     const countInRound = size / Math.pow(2, r + 1);
     const nextOffset = offset + countInRound;
     for (let m = 0; m < countInRound; m++) {
-      matches[offset + m].next_match_win_idx = nextOffset + Math.floor(m / 2);
-      matches[offset + m].next_match_win_slot = (m % 2 === 0 ? 1 : 2) as 1 | 2;
+      const nextIdx = nextOffset + Math.floor(m / 2);
+      const nextSlot = (m % 2 === 0 ? 1 : 2) as 1 | 2;
+      matches[offset + m].next_match_win_idx = nextIdx;
+      matches[offset + m].next_match_win_slot = nextSlot;
+      matches[offset + m].next_match_win_id = matches[nextIdx].id;
     }
     offset = nextOffset;
   }
@@ -381,6 +267,9 @@ function generateDoubleElim(
         next_match_win_slot: null,
         next_match_lose_idx: null,
         next_match_lose_slot: null,
+        next_match_win_id: null,
+        next_match_lose_id: null,
+        locked: false,
       });
     }
   }
@@ -403,6 +292,8 @@ function generateDoubleElim(
     bracket_side: 'final',
     next_match_win_idx: null, next_match_win_slot: null,
     next_match_lose_idx: null, next_match_lose_slot: null,
+    next_match_win_id: null, next_match_lose_id: null,
+    locked: false,
   };
 
   const allMatches = [...wbMatches, ...lbMatches, gfMatch];
@@ -464,6 +355,8 @@ function generateSwiss(
         bracket_side: 'none',
         next_match_win_idx: null, next_match_win_slot: null,
         next_match_lose_idx: null, next_match_lose_slot: null,
+        next_match_win_id: null, next_match_lose_id: null,
+        locked: false,
       });
       schedIdx++;
     }
@@ -490,7 +383,7 @@ function generateRoundRobin(
   const roundNumbers = rawMatches.map(m => m.round);
   const scheduledDates = computeSchedule(rawMatches.length, roundNumbers, schedule);
 
-  const matches: SimMatch[] = rawMatches.map((raw, idx) => ({
+  const matches: SimMatch[] = rawMatches.map((raw, idx): SimMatch => ({
     id: fakeId(),
     round_number: raw.round,
     round_name: `Journée ${raw.round}`,
@@ -510,69 +403,28 @@ function generateRoundRobin(
     bracket_side: 'none' as const,
     next_match_win_idx: null, next_match_win_slot: null,
     next_match_lose_idx: null, next_match_lose_slot: null,
+    next_match_win_id: null, next_match_lose_id: null,
+    locked: false,
   }));
 
   return { id: fakeId(), name: 'Round Robin', stage_type: 'round_robin', matches };
 }
 
 /* ------------------------------------------------------------------ */
-/*  Simulation: auto-play matches with random scores                   */
+/*  Simulation history                                                  */
 /* ------------------------------------------------------------------ */
 
-function simulateMatch(match: SimMatch): SimMatch {
-  if (match.status !== 'pending' || !match.team1 || !match.team2) return match;
+type SimHistoryEntry = {
+  id: number;
+  timestamp: number;
+  formatType: FormatType;
+  teamCount: number;
+  bestOf: number;
+  standings: { name: string; seed: number; wins: number; losses: number }[];
+  competitiveness: CompetitivenessMetrics;
+};
 
-  // Seed-based win probability: lower seed = higher chance
-  // Seed 1 vs seed 8: ~65% for seed 1. Equal seeds: 50/50.
-  const s1Seed = match.team1.seed;
-  const s2Seed = match.team2.seed;
-  const seedDiff = s2Seed - s1Seed; // positive means team1 has better seed
-  const t1WinProb = 0.5 + seedDiff * 0.02; // +-2% per seed difference
-
-  const winsNeeded = Math.ceil(match.best_of / 2);
-  let s1 = 0, s2 = 0;
-  const mapResults = [...match.maps];
-  let mapIdx = 0;
-
-  while (s1 < winsNeeded && s2 < winsNeeded) {
-    const t1Wins = Math.random() < t1WinProb;
-    if (t1Wins) s1++; else s2++;
-    if (mapIdx < mapResults.length) {
-      mapResults[mapIdx] = { ...mapResults[mapIdx], winner_team_id: t1Wins ? match.team1.id : match.team2.id };
-      mapIdx++;
-    }
-  }
-
-  const winner = s1 > s2 ? match.team1 : match.team2;
-  return {
-    ...match,
-    team1_score: s1,
-    team2_score: s2,
-    winner_team_id: winner.id,
-    status: 'finished',
-    maps: mapResults,
-  };
-}
-
-function propagateSingleElim(matches: SimMatch[]): SimMatch[] {
-  const updated = [...matches];
-  for (let i = 0; i < updated.length; i++) {
-    const m = updated[i];
-    if (m.status === 'finished' && m.winner_team_id && m.next_match_win_idx != null) {
-      const nextIdx = m.next_match_win_idx;
-      const nextSlot = m.next_match_win_slot;
-      if (nextIdx < updated.length) {
-        const winner = m.team1?.id === m.winner_team_id ? m.team1 : m.team2;
-        if (nextSlot === 1) {
-          updated[nextIdx] = { ...updated[nextIdx], team1: winner, team1_id: winner?.id ?? null };
-        } else {
-          updated[nextIdx] = { ...updated[nextIdx], team2: winner, team2_id: winner?.id ?? null };
-        }
-      }
-    }
-  }
-  return updated;
-}
+const MAX_HISTORY = 20;
 
 /* ------------------------------------------------------------------ */
 /*  UI Components                                                      */
@@ -588,10 +440,12 @@ function SimMatchCard({
   match,
   onSimulate,
   onReset,
+  onToggleLock,
 }: {
   match: SimMatch;
   onSimulate: () => void;
   onReset: () => void;
+  onToggleLock?: () => void;
 }) {
   const statusCfg = STATUS_CONFIG[match.status];
   const t1Name = match.team1?.short_name ?? match.team1?.name ?? 'TBD';
@@ -600,7 +454,13 @@ function SimMatchCard({
   const w2 = match.winner_team_id === match.team2_id && !!match.winner_team_id;
 
   return (
-    <div className="rounded-xl border overflow-hidden bg-[#12121a] border-white/[0.06] hover:border-purple-500/20 transition-all">
+    <div className={`rounded-xl border overflow-hidden bg-[#12121a] transition-all duration-300 ${
+      match.locked
+        ? 'border-amber-500/30 ring-1 ring-amber-500/10'
+        : match.status === 'finished'
+          ? 'border-emerald-500/20 shadow-[0_0_12px_-3px_rgba(16,185,129,0.15)]'
+          : 'border-white/[0.06] hover:border-purple-500/20'
+    }`}>
       {/* Header */}
       <div className="flex items-center justify-between px-2.5 py-1 border-b border-white/[0.05]" style={{ height: 26 }}>
         <div className="flex items-center gap-1.5">
@@ -631,7 +491,7 @@ function SimMatchCard({
 
       {/* Actions */}
       <div className="flex border-t border-white/[0.05]">
-        {match.status === 'pending' && match.team1 && match.team2 && (
+        {match.status === 'pending' && match.team1 && match.team2 && !match.locked && (
           <button
             onClick={onSimulate}
             className="flex-1 text-[10px] py-1.5 text-emerald-400 hover:bg-emerald-500/10 transition-colors font-semibold"
@@ -639,7 +499,7 @@ function SimMatchCard({
             Simuler
           </button>
         )}
-        {match.status === 'finished' && (
+        {match.status === 'finished' && !match.locked && (
           <button
             onClick={onReset}
             className="flex-1 text-[10px] py-1.5 text-amber-400 hover:bg-amber-500/10 transition-colors font-semibold"
@@ -647,10 +507,28 @@ function SimMatchCard({
             Reset
           </button>
         )}
-        {match.status === 'pending' && (!match.team1 || !match.team2) && (
+        {match.status === 'pending' && (!match.team1 || !match.team2) && !match.locked && (
           <span className="flex-1 text-[10px] py-1.5 text-neutral-600 text-center italic">
             En attente
           </span>
+        )}
+        {match.locked && (
+          <span className="flex-1 text-[10px] py-1.5 text-amber-400 text-center font-semibold">
+            Verrouille
+          </span>
+        )}
+        {onToggleLock && (match.status === 'finished' || (match.status === 'pending' && match.team1 && match.team2)) && (
+          <button
+            onClick={onToggleLock}
+            className={`px-2.5 text-[10px] py-1.5 transition-colors font-semibold border-l border-white/[0.05] ${
+              match.locked
+                ? 'text-amber-400 hover:bg-amber-500/10'
+                : 'text-neutral-500 hover:bg-white/5 hover:text-neutral-300'
+            }`}
+            title={match.locked ? 'Deverrouiller ce match' : 'Verrouiller ce resultat (What-if)'}
+          >
+            {match.locked ? '\u{1F512}' : '\u{1F513}'}
+          </button>
         )}
       </div>
 
@@ -750,12 +628,14 @@ function EliminationView({
   rounds,
   onSimulate,
   onReset,
+  onToggleLock,
   label,
   accentColor,
 }: {
   rounds: RoundGroup[];
   onSimulate: (matchId: string) => void;
   onReset: (matchId: string) => void;
+  onToggleLock?: (matchId: string) => void;
   label?: string;
   accentColor?: string;
 }) {
@@ -782,7 +662,7 @@ function EliminationView({
                 </div>
                 <div className="flex flex-col gap-2">
                   {round.matches.map(m => (
-                    <SimMatchCard key={m.id} match={m} onSimulate={() => onSimulate(m.id)} onReset={() => onReset(m.id)} />
+                    <SimMatchCard key={m.id} match={m} onSimulate={() => onSimulate(m.id)} onReset={() => onReset(m.id)} onToggleLock={onToggleLock ? () => onToggleLock(m.id) : undefined} />
                   ))}
                 </div>
               </div>
@@ -872,7 +752,7 @@ function EliminationView({
                   <div className="relative" style={{ height: totalH }}>
                     {round.matches.map((m, mIdx) => (
                       <div key={m.id} className="absolute left-0 right-0" style={{ top: ys[mIdx] }}>
-                        <SimMatchCard match={m} onSimulate={() => onSimulate(m.id)} onReset={() => onReset(m.id)} />
+                        <SimMatchCard match={m} onSimulate={() => onSimulate(m.id)} onReset={() => onReset(m.id)} onToggleLock={onToggleLock ? () => onToggleLock(m.id) : undefined} />
                       </div>
                     ))}
                   </div>
@@ -907,6 +787,90 @@ type SimConfig = {
   occurrence: OccurrenceConfig;
 };
 
+/* ------------------------------------------------------------------ */
+/*  Export / Import config                                              */
+/* ------------------------------------------------------------------ */
+
+function exportConfigAsJSON(config: SimConfig) {
+  const json = JSON.stringify(config, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `tournament-config-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importConfigFromFile(file: File): Promise<SimConfig> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result as string);
+        // Validate required fields
+        if (!parsed.formatType || !parsed.schedule || typeof parsed.teamCount !== 'number') {
+          reject(new Error('Fichier de configuration invalide'));
+          return;
+        }
+        resolve(parsed as SimConfig);
+      } catch {
+        reject(new Error('JSON invalide'));
+      }
+    };
+    reader.onerror = () => reject(new Error('Erreur de lecture du fichier'));
+    reader.readAsText(file);
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/*  Results sharing helpers                                             */
+/* ------------------------------------------------------------------ */
+
+function generateResultsSummary(
+  stages: SimStage[],
+  teams: SimTeam[],
+  config: SimConfig,
+): string {
+  const allMatches = stages.flatMap(s => s.matches);
+  const finished = allMatches.filter(m => m.status === 'finished').length;
+
+  const wins = new Map<string, number>();
+  const losses = new Map<string, number>();
+  for (const m of allMatches) {
+    if (m.status !== 'finished' || !m.winner_team_id) continue;
+    wins.set(m.winner_team_id, (wins.get(m.winner_team_id) ?? 0) + 1);
+    const loserId = m.team1_id === m.winner_team_id ? m.team2_id : m.team1_id;
+    if (loserId) losses.set(loserId, (losses.get(loserId) ?? 0) + 1);
+  }
+
+  const standings = teams
+    .map(t => ({ name: t.name, seed: t.seed, w: wins.get(t.id) ?? 0, l: losses.get(t.id) ?? 0 }))
+    .sort((a, b) => b.w - a.w || a.l - b.l);
+
+  let text = `=== SIMULATEUR DE TOURNOI ===\n`;
+  text += `Format: ${FORMAT_LABELS[config.formatType]} | ${teams.length} equipes | BO${config.bestOf}\n`;
+  text += `Matchs: ${finished}/${allMatches.length} termines\n\n`;
+  text += `--- CLASSEMENT ---\n`;
+  standings.forEach((s, i) => {
+    text += `${String(i + 1).padStart(2)}. ${s.name.padEnd(20)} ${s.w}V ${s.l}D (seed #${s.seed})\n`;
+  });
+
+  text += `\n--- RESULTATS ---\n`;
+  for (const stage of stages) {
+    text += `\n[${stage.name}]\n`;
+    for (const m of stage.matches) {
+      if (m.status !== 'finished') continue;
+      const t1 = m.team1?.short_name ?? 'TBD';
+      const t2 = m.team2?.short_name ?? 'TBD';
+      const winner = m.winner_team_id === m.team1_id ? t1 : t2;
+      text += `  ${m.round_name} #${m.position_in_round}: ${t1} ${m.team1_score}-${m.team2_score} ${t2} (${winner})\n`;
+    }
+  }
+
+  return text;
+}
+
 const FORMAT_LABELS: Record<FormatType, string> = {
   single_elim: 'Single Elimination',
   double_elim: 'Double Elimination',
@@ -924,6 +888,26 @@ type OccurrenceData = {
 };
 
 function TournamentSimulatorPage() {
+  const importFileRef = useRef<HTMLInputElement>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [copySuccess, setCopySuccess] = useState(false);
+  const [animating, setAnimating] = useState(false);
+  const animatingRef = useRef(false);
+  const [dragSeedIdx, setDragSeedIdx] = useState<number | null>(null);
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareConfig, setCompareConfig] = useState<Partial<SimConfig> | null>(null);
+  const [compareData, setCompareData] = useState<{ stages: SimStage[]; teams: SimTeam[] } | null>(null);
+  const [monteCarloResult, setMonteCarloResult] = useState<MonteCarloResult | null>(null);
+  const [monteCarloRunning, setMonteCarloRunning] = useState(false);
+  const [monteCarloIterations, setMonteCarloIterations] = useState(500);
+  const [simHistory, setSimHistory] = useState<SimHistoryEntry[]>([]);
+  const historyIdRef = useRef(0);
+  const [loadingRealTeams, setLoadingRealTeams] = useState(false);
+  const [realTeamsError, setRealTeamsError] = useState<string | null>(null);
+  const [creatingTournament, setCreatingTournament] = useState(false);
+  const [createTournamentResult, setCreateTournamentResult] = useState<{ id: string; name: string } | null>(null);
+  const [createTournamentError, setCreateTournamentError] = useState<string | null>(null);
+
   const [config, setConfig] = useState<SimConfig>({
     formatType: 'single_elim',
     teamCount: 8,
@@ -959,7 +943,7 @@ function TournamentSimulatorPage() {
   const [activeOccurrence, setActiveOccurrence] = useState(0);
   const [mapPool, setMapPool] = useState<string[]>([]);
   const [generated, setGenerated] = useState(false);
-  const [activeTab, setActiveTab] = useState<'bracket' | 'teams' | 'maps' | 'stats' | 'timeline'>('bracket');
+  const [activeTab, setActiveTab] = useState<'bracket' | 'teams' | 'maps' | 'stats' | 'timeline' | 'compare' | 'monte-carlo' | 'history'>('bracket');
   const [configCollapsed, setConfigCollapsed] = useState(false);
 
   // Convenience accessors for current occurrence
@@ -1060,11 +1044,10 @@ function TournamentSimulatorPage() {
       const next = [...prev];
       const stage = { ...next[stageIdx], matches: [...next[stageIdx].matches] };
       const mIdx = stage.matches.findIndex(m => m.id === matchId);
-      if (mIdx === -1) return prev;
+      if (mIdx === -1 || stage.matches[mIdx].locked) return prev;
       stage.matches[mIdx] = simulateMatch(stage.matches[mIdx]);
-      // Propagate for elimination brackets
       if (stage.stage_type === 'bracket') {
-        stage.matches = propagateSingleElim(stage.matches);
+        stage.matches = propagateBracket(stage.matches);
       }
       next[stageIdx] = stage;
       return next;
@@ -1076,7 +1059,7 @@ function TournamentSimulatorPage() {
       const next = [...prev];
       const stage = { ...next[stageIdx], matches: [...next[stageIdx].matches] };
       const mIdx = stage.matches.findIndex(m => m.id === matchId);
-      if (mIdx === -1) return prev;
+      if (mIdx === -1 || stage.matches[mIdx].locked) return prev;
       stage.matches[mIdx] = {
         ...stage.matches[mIdx],
         status: 'pending',
@@ -1092,40 +1075,39 @@ function TournamentSimulatorPage() {
   const handleSimulateAll = useCallback(() => {
     setStages(prev => prev.map(stage => {
       let matches = [...stage.matches];
-      // For elimination, simulate round by round with propagation
       if (stage.stage_type === 'bracket') {
         const roundNums = [...new Set(matches.map(m => m.round_number))].sort((a, b) => a - b);
         for (const rn of roundNums) {
           for (let i = 0; i < matches.length; i++) {
-            if (matches[i].round_number === rn && matches[i].status === 'pending') {
+            if (matches[i].round_number === rn && matches[i].status === 'pending' && !matches[i].locked) {
               matches[i] = simulateMatch(matches[i]);
             }
           }
-          matches = propagateSingleElim(matches);
+          matches = propagateBracket(matches);
         }
       } else {
-        matches = matches.map(m => m.status === 'pending' ? simulateMatch(m) : m);
+        matches = matches.map(m => m.status === 'pending' && !m.locked ? simulateMatch(m) : m);
       }
       return { ...stage, matches };
     }));
   }, [setStages]);
 
-  /** Simulate only the next incomplete round across all stages */
+  /** Simulate only the next incomplete round across all stages (skips locked) */
   const handleSimulateNextRound = useCallback(() => {
     setStages(prev => prev.map(stage => {
       let matches = [...stage.matches];
       const pendingRounds = [...new Set(
-        matches.filter(m => m.status === 'pending' && m.team1 && m.team2).map(m => m.round_number)
+        matches.filter(m => m.status === 'pending' && !m.locked && m.team1 && m.team2).map(m => m.round_number)
       )].sort((a, b) => a - b);
       if (pendingRounds.length === 0) return stage;
       const nextRound = pendingRounds[0];
       for (let i = 0; i < matches.length; i++) {
-        if (matches[i].round_number === nextRound && matches[i].status === 'pending') {
+        if (matches[i].round_number === nextRound && matches[i].status === 'pending' && !matches[i].locked) {
           matches[i] = simulateMatch(matches[i]);
         }
       }
       if (stage.stage_type === 'bracket') {
-        matches = propagateSingleElim(matches);
+        matches = propagateBracket(matches);
       }
       return { ...stage, matches };
     }));
@@ -1134,6 +1116,476 @@ function TournamentSimulatorPage() {
   const handleResetAll = useCallback(() => {
     handleGenerate();
   }, [handleGenerate]);
+
+  /** Toggle lock on a match (What-if mode) */
+  const handleToggleLock = useCallback((stageIdx: number, matchId: string) => {
+    setStages(prev => {
+      const next = [...prev];
+      const stage = { ...next[stageIdx], matches: [...next[stageIdx].matches] };
+      const mIdx = stage.matches.findIndex(m => m.id === matchId);
+      if (mIdx === -1) return prev;
+      stage.matches[mIdx] = { ...stage.matches[mIdx], locked: !stage.matches[mIdx].locked };
+      next[stageIdx] = stage;
+      return next;
+    });
+  }, [setStages]);
+
+  /** Import config from file */
+  const handleImportConfig = useCallback(async (file: File) => {
+    try {
+      setImportError(null);
+      const imported = await importConfigFromFile(file);
+      setConfig(imported);
+      setGenerated(false);
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : 'Erreur inconnue');
+    }
+  }, []);
+
+  /** Copy results summary to clipboard */
+  const handleCopyResults = useCallback(async () => {
+    const text = generateResultsSummary(stages, teams, config);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch {
+      // Fallback
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    }
+  }, [stages, teams, config]);
+
+  /** Print bracket/results as PDF */
+  const handlePrint = useCallback(() => {
+    window.print();
+  }, []);
+
+  /** Reorder teams via drag & drop — swaps seeds and regenerates bracket */
+  const handleReorderTeams = useCallback((fromIdx: number, toIdx: number) => {
+    if (fromIdx === toIdx) return;
+    setOccurrences(prev => prev.map((occ, occIdx) => {
+      if (occIdx !== activeOccurrence) return occ;
+      const newTeams = [...occ.teams];
+      // Swap
+      const temp = newTeams[fromIdx];
+      newTeams[fromIdx] = newTeams[toIdx];
+      newTeams[toIdx] = temp;
+      // Re-assign seeds based on position
+      const reseeded = newTeams.map((t, i) => ({ ...t, seed: i + 1 }));
+      // Re-assign teams in first-round bracket matches
+      const newStages = occ.stages.map(stage => {
+        if (stage.stage_type !== 'bracket' && stage.stage_type !== 'showmatch') {
+          // For non-bracket stages, just update team references
+          const matches = stage.matches.map(m => {
+            const t1 = reseeded.find(t => t.id === m.team1_id);
+            const t2 = reseeded.find(t => t.id === m.team2_id);
+            return { ...m, team1: t1 ?? m.team1, team2: t2 ?? m.team2 };
+          });
+          return { ...stage, matches };
+        }
+        // For brackets, re-seed the first round
+        const seedOrder = bracketSeedOrder(reseeded.length);
+        let firstRoundIdx = 0;
+        const matches = stage.matches.map(m => {
+          // First round matches have teams assigned
+          if (m.round_number === 1 && m.bracket_side === 'wb') {
+            const t1 = reseeded[seedOrder[firstRoundIdx * 2]] ?? null;
+            const t2 = reseeded[seedOrder[firstRoundIdx * 2 + 1]] ?? null;
+            firstRoundIdx++;
+            return {
+              ...m,
+              team1: t1, team1_id: t1?.id ?? null,
+              team2: t2, team2_id: t2?.id ?? null,
+              // Reset results since seeding changed
+              status: 'pending' as MatchStatus,
+              team1_score: null, team2_score: null,
+              winner_team_id: null, locked: false,
+            };
+          }
+          // Later rounds: clear propagated teams
+          if (m.bracket_side === 'wb' || m.bracket_side === 'lb' || m.bracket_side === 'final') {
+            return {
+              ...m,
+              team1: null, team1_id: null,
+              team2: null, team2_id: null,
+              status: 'pending' as MatchStatus,
+              team1_score: null, team2_score: null,
+              winner_team_id: null, locked: false,
+            };
+          }
+          return m;
+        });
+        return { ...stage, matches };
+      });
+      return { ...occ, teams: reseeded, stages: newStages };
+    }));
+  }, [activeOccurrence]);
+
+  /** Animated simulation: reveal results one match at a time */
+  const handleSimulateAnimated = useCallback(() => {
+    if (animatingRef.current) {
+      // Stop animation
+      animatingRef.current = false;
+      setAnimating(false);
+      return;
+    }
+    animatingRef.current = true;
+    setAnimating(true);
+
+    const runNext = () => {
+      if (!animatingRef.current) return;
+
+      setStages(prev => {
+        // Find next playable match across all stages
+        for (let sIdx = 0; sIdx < prev.length; sIdx++) {
+          const stage = prev[sIdx];
+          const roundNums = [...new Set(
+            stage.matches.filter(m => m.status === 'pending' && !m.locked && m.team1 && m.team2).map(m => m.round_number)
+          )].sort((a, b) => a - b);
+
+          if (roundNums.length === 0) continue;
+          const nextRound = roundNums[0];
+          const mIdx = stage.matches.findIndex(
+            m => m.round_number === nextRound && m.status === 'pending' && !m.locked && m.team1 && m.team2
+          );
+          if (mIdx === -1) continue;
+
+          const next = [...prev];
+          const updatedStage = { ...next[sIdx], matches: [...next[sIdx].matches] };
+          updatedStage.matches[mIdx] = simulateMatch(updatedStage.matches[mIdx]);
+          if (updatedStage.stage_type === 'bracket') {
+            updatedStage.matches = propagateBracket(updatedStage.matches);
+          }
+          next[sIdx] = updatedStage;
+
+          // Schedule next match
+          setTimeout(runNext, 400);
+          return next;
+        }
+
+        // No more matches to simulate
+        animatingRef.current = false;
+        setAnimating(false);
+        return prev;
+      });
+    };
+
+    // Start first match immediately
+    runNext();
+  }, [setStages]);
+
+  /** Generate comparison data with a different format */
+  const handleCompare = useCallback((altConfig: Partial<SimConfig>) => {
+    const pool = FAKE_MAPS.slice(0, config.mapPoolSize);
+    const mergedConfig = { ...config, ...altConfig };
+    const currentTeams = occurrences[activeOccurrence]?.teams;
+    if (!currentTeams) return;
+
+    // Reuse same teams but adjust count if needed
+    let compareTeams = [...currentTeams];
+    if (mergedConfig.teamCount !== currentTeams.length) {
+      if (mergedConfig.teamCount < currentTeams.length) {
+        compareTeams = currentTeams.slice(0, mergedConfig.teamCount);
+      } else {
+        const extra = generateTeams(mergedConfig.teamCount - currentTeams.length, config.playersPerTeam);
+        compareTeams = [...currentTeams, ...extra.map((t, i) => ({ ...t, seed: currentTeams.length + i + 1 }))];
+      }
+    }
+
+    const newStages: SimStage[] = [];
+    const occSchedule = config.schedule;
+
+    switch (mergedConfig.formatType) {
+      case 'single_elim':
+        newStages.push(generateSingleElim(compareTeams, mergedConfig.bestOf, pool, occSchedule, mergedConfig.escalation));
+        break;
+      case 'double_elim':
+        newStages.push(generateDoubleElim(compareTeams, mergedConfig.bestOf, pool, occSchedule, mergedConfig.escalation, mergedConfig.grandFinalReset));
+        break;
+      case 'swiss':
+        newStages.push(generateSwiss(compareTeams, mergedConfig.swissRounds, mergedConfig.bestOf, pool, occSchedule));
+        break;
+      case 'round_robin':
+        newStages.push(generateRoundRobin(compareTeams, mergedConfig.bestOf, pool, occSchedule));
+        break;
+      case 'showmatch': {
+        const s = generateSingleElim(compareTeams.slice(0, 2), mergedConfig.bestOf, pool, occSchedule, mergedConfig.escalation);
+        s.name = 'Showmatch';
+        s.stage_type = 'showmatch';
+        newStages.push(s);
+        break;
+      }
+    }
+
+    setCompareConfig(altConfig);
+    setCompareData({ stages: newStages, teams: compareTeams });
+  }, [config, occurrences, activeOccurrence]);
+
+  /** Run Monte Carlo simulation */
+  const handleMonteCarlo = useCallback(() => {
+    if (!generated || teams.length === 0) return;
+    setMonteCarloRunning(true);
+    // Use setTimeout to let the UI update before the heavy computation
+    setTimeout(() => {
+      const result = runMonteCarlo(stages, teams, monteCarloIterations);
+      setMonteCarloResult(result);
+      setMonteCarloRunning(false);
+    }, 50);
+  }, [generated, stages, teams, monteCarloIterations]);
+
+  /** Save current simulation to history */
+  const saveToHistory = useCallback(() => {
+    const allMatches = stages.flatMap(s => s.matches);
+    const finished = allMatches.filter(m => m.status === 'finished');
+    if (finished.length === 0) return;
+
+    const wins = new Map<string, number>();
+    const losses = new Map<string, number>();
+    for (const m of finished) {
+      if (!m.winner_team_id) continue;
+      wins.set(m.winner_team_id, (wins.get(m.winner_team_id) ?? 0) + 1);
+      const loserId = m.team1_id === m.winner_team_id ? m.team2_id : m.team1_id;
+      if (loserId) losses.set(loserId, (losses.get(loserId) ?? 0) + 1);
+    }
+
+    const standings = teams
+      .map(t => ({ name: t.name, seed: t.seed, wins: wins.get(t.id) ?? 0, losses: losses.get(t.id) ?? 0 }))
+      .sort((a, b) => b.wins - a.wins || a.losses - b.losses);
+
+    const competitiveness = computeCompetitiveness(allMatches, teams);
+
+    const entry: SimHistoryEntry = {
+      id: ++historyIdRef.current,
+      timestamp: Date.now(),
+      formatType: config.formatType,
+      teamCount: teams.length,
+      bestOf: config.bestOf,
+      standings,
+      competitiveness,
+    };
+
+    setSimHistory(prev => [entry, ...prev].slice(0, MAX_HISTORY));
+  }, [stages, teams, config]);
+
+  /** Fetch real teams from Supabase and replace generated teams */
+  const handleLoadRealTeams = useCallback(async () => {
+    setLoadingRealTeams(true);
+    setRealTeamsError(null);
+    try {
+      const res = await fetch(`/api/admin/teams?limit=${config.teamCount}&isActive=true`);
+      if (!res.ok) throw new Error(`Erreur ${res.status}`);
+      const data = await res.json();
+      const apiTeams: { id: string; name: string; short_name: string | null; logo_url: string | null }[] = data.teams ?? [];
+
+      if (apiTeams.length === 0) {
+        throw new Error('Aucune equipe active trouvee');
+      }
+
+      // Convert to SimTeam format
+      const realTeams: SimTeam[] = apiTeams.slice(0, config.teamCount).map((t, i) => ({
+        id: t.id,
+        name: t.name,
+        short_name: t.short_name ?? t.name.split(' ').map(w => w[0]).join('').slice(0, 3).toUpperCase(),
+        logo_url: null,
+        seed: i + 1,
+        players: [], // Real players would need another API call
+      }));
+
+      // If not enough real teams, pad with generated ones
+      if (realTeams.length < config.teamCount) {
+        const extra = generateTeams(config.teamCount - realTeams.length, config.playersPerTeam);
+        for (let i = 0; i < extra.length; i++) {
+          extra[i].seed = realTeams.length + i + 1;
+        }
+        realTeams.push(...extra);
+      }
+
+      // Regenerate bracket with real teams
+      const pool = FAKE_MAPS.slice(0, config.mapPoolSize);
+      const newStages: SimStage[] = [];
+      const occSchedule = config.schedule;
+
+      if (config.stageCount >= 2 && config.formatType !== 'showmatch') {
+        const groupStage = generateRoundRobin(realTeams, config.bestOf, pool, occSchedule);
+        groupStage.name = 'Phase de groupes';
+        groupStage.stage_type = 'group';
+        newStages.push(groupStage);
+        const topTeams = realTeams.slice(0, Math.min(realTeams.length, 8));
+        const bracketStage = generateSingleElim(topTeams, config.bestOf, pool, occSchedule, config.escalation);
+        bracketStage.name = 'Phase finale';
+        newStages.push(bracketStage);
+      } else {
+        switch (config.formatType) {
+          case 'single_elim':
+            newStages.push(generateSingleElim(realTeams, config.bestOf, pool, occSchedule, config.escalation));
+            break;
+          case 'double_elim':
+            newStages.push(generateDoubleElim(realTeams, config.bestOf, pool, occSchedule, config.escalation, config.grandFinalReset));
+            break;
+          case 'swiss':
+            newStages.push(generateSwiss(realTeams, config.swissRounds, config.bestOf, pool, occSchedule));
+            break;
+          case 'round_robin':
+            newStages.push(generateRoundRobin(realTeams, config.bestOf, pool, occSchedule));
+            break;
+          case 'showmatch': {
+            const s = generateSingleElim(realTeams.slice(0, 2), config.bestOf, pool, occSchedule, config.escalation);
+            s.name = 'Showmatch';
+            s.stage_type = 'showmatch';
+            newStages.push(s);
+            break;
+          }
+        }
+      }
+
+      setMapPool(pool);
+      setOccurrences([{
+        index: 0,
+        label: 'Tournoi (equipes reelles)',
+        startDate: config.schedule.startDate,
+        stages: newStages,
+        teams: realTeams,
+      }]);
+      setActiveOccurrence(0);
+      setGenerated(true);
+      setActiveTab('bracket');
+    } catch (err) {
+      setRealTeamsError(err instanceof Error ? err.message : 'Erreur inconnue');
+    } finally {
+      setLoadingRealTeams(false);
+    }
+  }, [config]);
+
+  /** Create a real tournament from the current simulation */
+  const handleCreateTournament = useCallback(async () => {
+    if (!generated || teams.length === 0) return;
+    setCreatingTournament(true);
+    setCreateTournamentError(null);
+    setCreateTournamentResult(null);
+
+    try {
+      const tournamentName = `Tournoi Sim ${new Date().toLocaleDateString('fr-FR')}`;
+
+      // Step 1: Create tournament
+      const tRes = await fetch('/api/admin/tournaments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: tournamentName,
+          format_type: config.formatType,
+          max_teams: teams.length,
+          min_players: config.playersPerTeam,
+          max_players: config.playersPerTeam,
+          status: 'draft',
+          start_date: config.schedule.startDate || null,
+          is_public: false,
+        }),
+      });
+      if (!tRes.ok) {
+        const errData = await tRes.json().catch(() => ({}));
+        throw new Error(errData.error ?? `Erreur creation tournoi: ${tRes.status}`);
+      }
+      const tournament = await tRes.json();
+      const tournamentId = tournament.id;
+
+      // Step 2: Register teams (only real teams with valid UUIDs)
+      const realTeamIds = teams.filter(t => !t.id.startsWith('sim-'));
+      for (const t of realTeamIds) {
+        await fetch(`/api/admin/tournament/${tournamentId}/teams`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ team_id: t.id, seed: t.seed }),
+        });
+      }
+
+      // Step 3: Create stages
+      for (let sIdx = 0; sIdx < stages.length; sIdx++) {
+        const simStage = stages[sIdx];
+        const stageRes = await fetch(`/api/admin/tournament/${tournamentId}/stages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: simStage.name,
+            stage_type: simStage.stage_type,
+            order_index: sIdx,
+            is_active: sIdx === 0,
+            is_public: false,
+          }),
+        });
+        if (!stageRes.ok) continue;
+        const createdStage = await stageRes.json();
+        const stageId = createdStage.id;
+
+        // Step 4: Create matches for this stage (only use real team IDs)
+        const matchPayloads = simStage.matches.map(m => ({
+          stage_id: stageId,
+          status: 'pending',
+          match_format: m.match_format,
+          best_of: m.best_of,
+          round_name: m.round_name,
+          round_number: m.round_number,
+          bracket_side: m.bracket_side === 'none' ? null : m.bracket_side,
+          scheduled_at: m.scheduled_at,
+          // Only set team IDs if they are real (not sim- prefixed)
+          team1_id: m.team1_id && !m.team1_id.startsWith('sim-') ? m.team1_id : null,
+          team2_id: m.team2_id && !m.team2_id.startsWith('sim-') ? m.team2_id : null,
+        }));
+
+        if (matchPayloads.length > 0) {
+          await fetch(`/api/admin/tournament/${tournamentId}/matches`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ matches: matchPayloads }),
+          });
+        }
+      }
+
+      setCreateTournamentResult({ id: tournamentId, name: tournamentName });
+    } catch (err) {
+      setCreateTournamentError(err instanceof Error ? err.message : 'Erreur inconnue');
+    } finally {
+      setCreatingTournament(false);
+    }
+  }, [generated, teams, stages, config]);
+
+  /** Build bracket graph from SimMatches using production utils.
+   *  Used for graph validation and layout computation. */
+  const bracketGraphs = useMemo(() => {
+    if (!generated) return new Map<string, ReturnType<typeof computeBracketLayout>>();
+    const layouts = new Map<string, ReturnType<typeof computeBracketLayout>>();
+
+    for (const stage of stages) {
+      if (stage.stage_type !== 'bracket' && stage.stage_type !== 'showmatch') continue;
+
+      // Convert SimMatch[] to MatchForGraph[]
+      const matchesForGraph: MatchForGraph[] = stage.matches.map(m => ({
+        id: m.id,
+        tournament_id: stage.id,
+        bracket_side: m.bracket_side,
+        round_number: m.round_number,
+        group_key: null,
+        next_match_win_id: m.next_match_win_id,
+        next_match_lose_id: m.next_match_lose_id,
+      }));
+
+      const graph = buildBracketGraph(matchesForGraph);
+      const layout = computeBracketLayout(graph);
+      layouts.set(stage.id, layout);
+    }
+
+    return layouts;
+  }, [stages, generated]);
+
+  // Expose graph validation info for debugging
+  const _bracketGraphs = bracketGraphs; // prevent unused warning in dev
+  void _bracketGraphs;
 
   // Stats computation
   const stats = useMemo(() => {
@@ -1192,13 +1644,23 @@ function TournamentSimulatorPage() {
       else estimatedDuration = `${Math.ceil(hours / 24)}j ${hours % 24}h`;
     }
 
-    return { total, finished, pending, wins, losses, mapWins, mapLosses, mapCount, nextRound, nextRoundName, estimatedDuration };
-  }, [stages]);
+    const competitiveness = computeCompetitiveness(allMatches, teams);
+
+    return { total, finished, pending, wins, losses, mapWins, mapLosses, mapCount, nextRound, nextRoundName, estimatedDuration, competitiveness };
+  }, [stages, teams]);
 
   return (
     <>
       <Head>
         <title>Admin · Simulateur de Tournoi</title>
+        <style>{`
+          @media print {
+            body { background: white !important; color: black !important; }
+            .print\\:hidden { display: none !important; }
+            .min-h-screen { min-height: auto !important; background: white !important; }
+            * { color-adjust: exact; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          }
+        `}</style>
       </Head>
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white pt-24">
         <div className="max-w-[1600px] mx-auto px-6 py-10">
@@ -1213,13 +1675,24 @@ function TournamentSimulatorPage() {
               <p className="text-sm text-neutral-400 mt-1">Testez les configurations avec des données fictives</p>
             </div>
             {generated && (
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={handleSimulateNextRound}
                   className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-semibold shadow transition-colors"
                   title="Simule uniquement le prochain round jouable"
                 >
                   Round suivant
+                </button>
+                <button
+                  onClick={handleSimulateAnimated}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold shadow transition-colors ${
+                    animating
+                      ? 'bg-red-600 hover:bg-red-700 animate-pulse'
+                      : 'bg-emerald-600 hover:bg-emerald-700'
+                  }`}
+                  title={animating ? 'Arreter l\'animation' : 'Simuler match par match avec animation'}
+                >
+                  {animating ? 'Stop' : 'Simuler anime'}
                 </button>
                 <button
                   onClick={handleSimulateAll}
@@ -1233,15 +1706,88 @@ function TournamentSimulatorPage() {
                 >
                   Reset tout
                 </button>
+                <div className="w-px bg-white/10 mx-1 print:hidden" />
+                <button
+                  onClick={saveToHistory}
+                  className="px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-sm font-semibold shadow transition-colors print:hidden"
+                  title="Sauvegarder cette simulation dans l'historique"
+                >
+                  Sauvegarder
+                </button>
+                <button
+                  onClick={handleCreateTournament}
+                  disabled={creatingTournament}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold shadow transition-colors print:hidden ${
+                    creatingTournament
+                      ? 'bg-neutral-700 text-neutral-400 cursor-wait'
+                      : 'bg-sky-600 hover:bg-sky-700 text-white'
+                  }`}
+                  title="Creer un vrai tournoi en base a partir de cette simulation"
+                >
+                  {creatingTournament ? 'Creation...' : 'Creer le tournoi'}
+                </button>
+                <button
+                  onClick={handleCopyResults}
+                  className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-semibold shadow transition-colors print:hidden"
+                  title="Copier le resume des resultats"
+                >
+                  {copySuccess ? 'Copie !' : 'Copier resultats'}
+                </button>
+                <button
+                  onClick={handlePrint}
+                  className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-semibold shadow transition-colors print:hidden"
+                  title="Imprimer / Exporter en PDF"
+                >
+                  PDF
+                </button>
               </div>
             )}
           </div>
+
+          {/* Tournament creation feedback */}
+          {createTournamentResult && (
+            <div className="mb-4 p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-emerald-300">
+                  Tournoi &quot;{createTournamentResult.name}&quot; cree avec succes !
+                </p>
+                <p className="text-xs text-neutral-400 mt-1">Le tournoi est en statut brouillon. Configurez-le dans l&apos;admin.</p>
+              </div>
+              <div className="flex gap-2">
+                <Link
+                  href={`/admin/tournament/${createTournamentResult.id}`}
+                  className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-semibold shadow transition-colors text-white"
+                >
+                  Voir le tournoi
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setCreateTournamentResult(null)}
+                  className="px-3 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm text-neutral-400 transition-colors"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          )}
+          {createTournamentError && (
+            <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-between">
+              <p className="text-sm text-red-400">{createTournamentError}</p>
+              <button
+                type="button"
+                onClick={() => setCreateTournamentError(null)}
+                className="px-3 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm text-neutral-400 transition-colors"
+              >
+                Fermer
+              </button>
+            </div>
+          )}
 
           {/* Configuration panel */}
           <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6 mb-8 space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">Configuration</h2>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 {/* Presets */}
                 <div className="flex gap-1">
                   {([
@@ -1260,6 +1806,39 @@ function TournamentSimulatorPage() {
                     </button>
                   ))}
                 </div>
+                {/* Export / Import */}
+                <div className="flex gap-1 print:hidden">
+                  <button
+                    type="button"
+                    onClick={() => exportConfigAsJSON(config)}
+                    className="px-2.5 py-1 rounded text-[10px] font-semibold bg-sky-900/50 hover:bg-sky-800/50 border border-sky-700/40 text-sky-300 transition-colors"
+                    title="Telecharger la configuration en JSON"
+                  >
+                    Exporter
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => importFileRef.current?.click()}
+                    className="px-2.5 py-1 rounded text-[10px] font-semibold bg-sky-900/50 hover:bg-sky-800/50 border border-sky-700/40 text-sky-300 transition-colors"
+                    title="Charger une configuration depuis un fichier JSON"
+                  >
+                    Importer
+                  </button>
+                  <input
+                    ref={importFileRef}
+                    type="file"
+                    accept=".json"
+                    className="hidden"
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (file) handleImportConfig(file);
+                      e.target.value = '';
+                    }}
+                  />
+                </div>
+                {importError && (
+                  <span className="text-[10px] text-red-400">{importError}</span>
+                )}
                 <button
                   type="button"
                   onClick={() => setConfigCollapsed(c => !c)}
@@ -1604,12 +2183,29 @@ function TournamentSimulatorPage() {
 
             </div>)}
 
-            <button
-              onClick={handleGenerate}
-              className="px-6 py-3 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-semibold shadow transition-colors"
-            >
-              Generer le tournoi{config.occurrence.enabled ? ` (${config.occurrence.count} occurrences)` : ''}
-            </button>
+            <div className="flex items-center gap-3 flex-wrap">
+              <button
+                onClick={handleGenerate}
+                className="px-6 py-3 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-semibold shadow transition-colors"
+              >
+                Generer le tournoi{config.occurrence.enabled ? ` (${config.occurrence.count} occurrences)` : ''}
+              </button>
+              <button
+                onClick={handleLoadRealTeams}
+                disabled={loadingRealTeams}
+                className={`px-6 py-3 rounded-lg text-sm font-semibold shadow transition-colors ${
+                  loadingRealTeams
+                    ? 'bg-neutral-700 text-neutral-400 cursor-wait'
+                    : 'bg-sky-600 hover:bg-sky-700 text-white'
+                }`}
+                title="Charger les equipes reelles depuis la base de donnees"
+              >
+                {loadingRealTeams ? 'Chargement...' : 'Charger les equipes'}
+              </button>
+              {realTeamsError && (
+                <span className="text-xs text-red-400">{realTeamsError}</span>
+              )}
+            </div>
           </div>
 
           {/* Generated content */}
@@ -1653,20 +2249,27 @@ function TournamentSimulatorPage() {
               </div>
 
               {/* Tabs */}
-              <div className="flex gap-1 mb-6 border-b border-white/10 pb-px">
-                {(['bracket', 'teams', 'maps', 'stats', ...(occurrences.length > 1 ? ['timeline' as const] : [])] as const).map(tab => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab as typeof activeTab)}
-                    className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors ${
-                      activeTab === tab
-                        ? 'bg-white/10 text-white border-b-2 border-purple-500'
-                        : 'text-neutral-400 hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    {tab === 'bracket' ? 'Bracket / Matchs' : tab === 'teams' ? 'Equipes' : tab === 'maps' ? 'Maps' : tab === 'timeline' ? 'Timeline' : 'Statistiques'}
-                  </button>
-                ))}
+              <div className="flex gap-1 mb-6 border-b border-white/10 pb-px overflow-x-auto">
+                {(['bracket', 'teams', 'maps', 'stats', 'monte-carlo', 'history', 'compare', ...(occurrences.length > 1 ? ['timeline' as const] : [])] as const).map(tab => {
+                  const TAB_LABELS: Record<string, string> = {
+                    bracket: 'Bracket / Matchs', teams: 'Equipes', maps: 'Maps', stats: 'Statistiques',
+                    'monte-carlo': 'Monte Carlo', history: `Historique${simHistory.length > 0 ? ` (${simHistory.length})` : ''}`,
+                    compare: 'Comparaison', timeline: 'Timeline',
+                  };
+                  return (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveTab(tab as typeof activeTab)}
+                      className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap ${
+                        activeTab === tab
+                          ? 'bg-white/10 text-white border-b-2 border-purple-500'
+                          : 'text-neutral-400 hover:text-white hover:bg-white/5'
+                      }`}
+                    >
+                      {TAB_LABELS[tab] ?? tab}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Tab content */}
@@ -1689,6 +2292,7 @@ function TournamentSimulatorPage() {
                             rounds={groupByRound(stage.matches, 'wb')}
                             onSimulate={id => handleSimulateMatch(stageIdx, id)}
                             onReset={id => handleResetMatch(stageIdx, id)}
+                            onToggleLock={id => handleToggleLock(stageIdx, id)}
                             label={stage.matches.some(m => m.bracket_side === 'lb') ? 'Winners Bracket' : undefined}
                           />
                           {/* LB */}
@@ -1698,6 +2302,7 @@ function TournamentSimulatorPage() {
                                 rounds={groupByRound(stage.matches, 'lb')}
                                 onSimulate={id => handleSimulateMatch(stageIdx, id)}
                                 onReset={id => handleResetMatch(stageIdx, id)}
+                                onToggleLock={id => handleToggleLock(stageIdx, id)}
                                 label="Losers Bracket"
                                 accentColor="text-red-300"
                               />
@@ -1710,6 +2315,7 @@ function TournamentSimulatorPage() {
                                 rounds={groupByRound(stage.matches, 'final')}
                                 onSimulate={id => handleSimulateMatch(stageIdx, id)}
                                 onReset={id => handleResetMatch(stageIdx, id)}
+                                onToggleLock={id => handleToggleLock(stageIdx, id)}
                                 label="Grande Finale"
                                 accentColor="text-amber-300"
                               />
@@ -1723,6 +2329,7 @@ function TournamentSimulatorPage() {
                           rounds={groupByRound(stage.matches)}
                           onSimulate={id => handleSimulateMatch(stageIdx, id)}
                           onReset={id => handleResetMatch(stageIdx, id)}
+                          onToggleLock={id => handleToggleLock(stageIdx, id)}
                         />
                       )}
                     </div>
@@ -1731,34 +2338,65 @@ function TournamentSimulatorPage() {
               )}
 
               {activeTab === 'teams' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {teams.map(team => (
-                    <div key={team.id} className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-sm font-bold text-purple-300">
-                          {team.short_name}
-                        </div>
-                        <div>
-                          <div className="text-sm font-semibold">{team.name}</div>
-                          <div className="text-[10px] text-neutral-500">Seed #{team.seed}</div>
-                        </div>
-                        {stats.wins.has(team.id) && (
-                          <div className="ml-auto text-right">
-                            <div className="text-xs font-bold text-emerald-400">{stats.wins.get(team.id)}W</div>
-                            <div className="text-xs font-bold text-red-400">{stats.losses.get(team.id) ?? 0}L</div>
+                <div>
+                  <p className="text-xs text-neutral-500 mb-4">Glissez-deposez les equipes pour modifier le seeding. Le bracket sera regenere.</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {teams.map((team, teamIdx) => (
+                      <div
+                        key={team.id}
+                        draggable
+                        onDragStart={() => setDragSeedIdx(teamIdx)}
+                        onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+                        onDrop={e => {
+                          e.preventDefault();
+                          if (dragSeedIdx !== null && dragSeedIdx !== teamIdx) {
+                            handleReorderTeams(dragSeedIdx, teamIdx);
+                          }
+                          setDragSeedIdx(null);
+                        }}
+                        onDragEnd={() => setDragSeedIdx(null)}
+                        className={`rounded-xl border p-4 space-y-3 cursor-grab active:cursor-grabbing transition-all ${
+                          dragSeedIdx === teamIdx
+                            ? 'border-purple-500/50 bg-purple-500/10 opacity-50 scale-95'
+                            : dragSeedIdx !== null
+                              ? 'border-purple-500/20 bg-white/[0.02] hover:border-purple-500/40 hover:bg-purple-500/5'
+                              : 'border-white/10 bg-white/[0.02]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          {/* Drag handle */}
+                          <div className="flex flex-col gap-0.5 text-neutral-600 flex-shrink-0 cursor-grab" title="Glisser pour reordonner">
+                            <div className="flex gap-0.5"><span className="w-1 h-1 rounded-full bg-current" /><span className="w-1 h-1 rounded-full bg-current" /></div>
+                            <div className="flex gap-0.5"><span className="w-1 h-1 rounded-full bg-current" /><span className="w-1 h-1 rounded-full bg-current" /></div>
+                            <div className="flex gap-0.5"><span className="w-1 h-1 rounded-full bg-current" /><span className="w-1 h-1 rounded-full bg-current" /></div>
                           </div>
-                        )}
-                      </div>
-                      <div className="space-y-1">
-                        {team.players.map((p, i) => (
-                          <div key={i} className="flex items-center justify-between text-xs">
-                            <span className="text-neutral-300">{p.name}</span>
-                            <span className="text-neutral-600 font-mono text-[10px]">{p.battleTag}</span>
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold border ${
+                            SEED_COLORS[team.seed] ?? 'bg-purple-500/20 text-purple-300 border-purple-500/30'
+                          }`}>
+                            {team.short_name}
                           </div>
-                        ))}
+                          <div>
+                            <div className="text-sm font-semibold">{team.name}</div>
+                            <div className="text-[10px] text-neutral-500">Seed #{team.seed}</div>
+                          </div>
+                          {stats.wins.has(team.id) && (
+                            <div className="ml-auto text-right">
+                              <div className="text-xs font-bold text-emerald-400">{stats.wins.get(team.id)}W</div>
+                              <div className="text-xs font-bold text-red-400">{stats.losses.get(team.id) ?? 0}L</div>
+                            </div>
+                          )}
+                        </div>
+                        <div className="space-y-1">
+                          {team.players.map((p, i) => (
+                            <div key={i} className="flex items-center justify-between text-xs">
+                              <span className="text-neutral-300">{p.name}</span>
+                              <span className="text-neutral-600 font-mono text-[10px]">{p.battleTag}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -1868,6 +2506,51 @@ function TournamentSimulatorPage() {
                     </div>
                   </div>
 
+                  {/* Competitiveness metrics */}
+                  {stats.finished > 0 && (
+                    <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
+                      <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">Competitivite</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="space-y-1">
+                          <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">Matchs serres</div>
+                          <div className="text-xl font-bold text-amber-400">{stats.competitiveness.closeMatches}</div>
+                          <div className="text-[10px] text-neutral-500">{stats.competitiveness.closeMatchPct}% des matchs</div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">Upsets</div>
+                          <div className="text-xl font-bold text-rose-400">{stats.competitiveness.upsets}</div>
+                          <div className="text-[10px] text-neutral-500">{stats.competitiveness.upsetPct}% des matchs</div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">Maps / match</div>
+                          <div className="text-xl font-bold text-sky-400">{stats.competitiveness.avgMapsPerMatch}</div>
+                          <div className="text-[10px] text-neutral-500">moyenne</div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">Plus longue serie</div>
+                          <div className="text-xl font-bold text-emerald-400">{stats.competitiveness.maxWinStreak}</div>
+                          <div className="text-[10px] text-neutral-500">victoires consecutives</div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">Parcours moyen</div>
+                          <div className="text-xl font-bold text-purple-400">{stats.competitiveness.avgTeamJourney}</div>
+                          <div className="text-[10px] text-neutral-500">matchs / equipe</div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">Dominance</div>
+                          <div className="flex items-center gap-2">
+                            <div className="text-xl font-bold text-neutral-300">{stats.competitiveness.dominanceScore}%</div>
+                          </div>
+                          <div className="text-[10px] text-neutral-500">
+                            {stats.competitiveness.dominanceScore < 30 ? 'Tres equilibre' :
+                             stats.competitiveness.dominanceScore < 50 ? 'Equilibre' :
+                             stats.competitiveness.dominanceScore < 70 ? 'Un favori' : 'Domination'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Round-by-round breakdown */}
                   <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
                     <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">Detail par round</h3>
@@ -1904,6 +2587,319 @@ function TournamentSimulatorPage() {
                       })()}
                     </div>
                   </div>
+                </div>
+              )}
+
+              {activeTab === 'monte-carlo' && (
+                <div className="space-y-6">
+                  <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
+                    <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
+                      Simulation Monte Carlo
+                    </h3>
+                    <p className="text-xs text-neutral-500 mb-4">
+                      Lance N simulations completes du tournoi pour calculer les probabilites de victoire
+                      et la distribution des placements de chaque equipe.
+                      {stages.flatMap(s => s.matches).some(m => m.locked) && (
+                        <span className="text-amber-400 ml-1">Les matchs verrouilles sont preserves.</span>
+                      )}
+                    </p>
+                    <div className="flex items-center gap-4 mb-6">
+                      <div>
+                        <label className="block text-[10px] uppercase tracking-wider text-neutral-500 font-semibold mb-1">Iterations</label>
+                        <div className="flex gap-2">
+                          {[100, 500, 1000, 5000].map(n => (
+                            <button
+                              key={n}
+                              type="button"
+                              onClick={() => setMonteCarloIterations(n)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                                monteCarloIterations === n
+                                  ? 'bg-purple-600 border-purple-500 text-white'
+                                  : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
+                              }`}
+                            >
+                              {n >= 1000 ? `${n / 1000}k` : n}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleMonteCarlo}
+                        disabled={monteCarloRunning}
+                        className={`px-6 py-3 rounded-lg text-sm font-semibold shadow transition-colors ${
+                          monteCarloRunning
+                            ? 'bg-neutral-700 text-neutral-400 cursor-wait animate-pulse'
+                            : 'bg-purple-600 hover:bg-purple-700 text-white'
+                        }`}
+                      >
+                        {monteCarloRunning ? 'Calcul en cours...' : `Lancer ${monteCarloIterations} simulations`}
+                      </button>
+                    </div>
+
+                    {monteCarloResult && (
+                      <div className="space-y-6">
+                        <p className="text-xs text-neutral-500">{monteCarloResult.iterations} iterations completees</p>
+
+                        {/* Win probability ranking */}
+                        <div>
+                          <h4 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-3">Probabilite de victoire</h4>
+                          <div className="space-y-2">
+                            {teams
+                              .map(t => ({ team: t, prob: monteCarloResult.winProbability.get(t.id) ?? 0, wins: monteCarloResult.winCounts.get(t.id) ?? 0 }))
+                              .sort((a, b) => b.prob - a.prob)
+                              .map((row, i) => (
+                                <div key={row.team.id} className="flex items-center gap-3">
+                                  <span className="w-6 text-xs font-bold text-neutral-500">{i + 1}</span>
+                                  <span className={`inline-flex items-center justify-center w-5 h-5 rounded text-[9px] font-extrabold border ${
+                                    SEED_COLORS[row.team.seed] ?? 'bg-neutral-500/20 text-neutral-400 border-neutral-500/30'
+                                  }`}>{row.team.seed}</span>
+                                  <span className="text-sm font-medium w-40 truncate">{row.team.name}</span>
+                                  <div className="flex-1 h-3 bg-neutral-800 rounded-full overflow-hidden">
+                                    <div
+                                      className="h-full rounded-full transition-all bg-gradient-to-r from-purple-600 to-emerald-500"
+                                      style={{ width: `${row.prob * 100}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-sm font-bold tabular-nums w-16 text-right text-white">
+                                    {(row.prob * 100).toFixed(1)}%
+                                  </span>
+                                  <span className="text-[10px] text-neutral-500 tabular-nums w-16 text-right">
+                                    {row.wins}/{monteCarloResult.iterations}
+                                  </span>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+
+                        {/* Placement distribution for top 4 */}
+                        <div>
+                          <h4 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-3">Distribution des placements (Top 8)</h4>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr className="border-b border-white/10">
+                                  <th className="text-left py-2 pr-4 text-neutral-500 font-semibold">Equipe</th>
+                                  {Array.from({ length: Math.min(teams.length, 8) }, (_, i) => (
+                                    <th key={i} className="text-center py-2 px-2 text-neutral-500 font-semibold">
+                                      {i === 0 ? '1er' : i === 1 ? '2e' : `${i + 1}e`}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {teams
+                                  .map(t => ({ team: t, dist: monteCarloResult.placementDist.get(t.id) ?? [] }))
+                                  .sort((a, b) => (b.dist[0] ?? 0) - (a.dist[0] ?? 0))
+                                  .slice(0, 8)
+                                  .map(row => (
+                                    <tr key={row.team.id} className="border-b border-white/[0.03]">
+                                      <td className="py-2 pr-4 font-medium">{row.team.short_name}</td>
+                                      {Array.from({ length: Math.min(teams.length, 8) }, (_, i) => {
+                                        const count = row.dist[i] ?? 0;
+                                        const pct = monteCarloResult.iterations > 0 ? Math.round((count / monteCarloResult.iterations) * 100) : 0;
+                                        return (
+                                          <td key={i} className="text-center py-2 px-2">
+                                            <span className={`tabular-nums ${
+                                              pct > 30 ? 'text-emerald-400 font-bold' :
+                                              pct > 15 ? 'text-sky-400' :
+                                              pct > 5 ? 'text-neutral-300' : 'text-neutral-600'
+                                            }`}>
+                                              {pct > 0 ? `${pct}%` : '-'}
+                                            </span>
+                                          </td>
+                                        );
+                                      })}
+                                    </tr>
+                                  ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'history' && (
+                <div className="space-y-6">
+                  <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-sm font-semibold uppercase tracking-wider text-neutral-400">
+                        Historique des simulations
+                      </h3>
+                      {simHistory.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setSimHistory([])}
+                          className="text-[10px] text-neutral-500 hover:text-red-400 transition-colors"
+                        >
+                          Vider l&apos;historique
+                        </button>
+                      )}
+                    </div>
+                    {simHistory.length === 0 ? (
+                      <p className="text-sm text-neutral-500">
+                        Aucune simulation sauvegardee. Lancez une simulation puis cliquez sur &quot;Sauvegarder&quot; pour l&apos;ajouter ici.
+                      </p>
+                    ) : (
+                      <div className="space-y-4">
+                        {simHistory.map((entry, idx) => (
+                          <div key={entry.id} className="rounded-lg border border-white/10 bg-white/[0.01] p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-3">
+                                <span className="text-xs font-bold text-neutral-500">#{simHistory.length - idx}</span>
+                                <span className="text-xs text-neutral-400">
+                                  {new Date(entry.timestamp).toLocaleString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                </span>
+                                <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                                  {FORMAT_LABELS[entry.formatType]}
+                                </span>
+                                <span className="text-[10px] text-neutral-500">{entry.teamCount} equipes · BO{entry.bestOf}</span>
+                              </div>
+                              <div className="flex gap-4 text-[10px]">
+                                <span className="text-amber-400" title="Matchs serres">{entry.competitiveness.closeMatchPct}% serres</span>
+                                <span className="text-rose-400" title="Upsets">{entry.competitiveness.upsets} upsets</span>
+                              </div>
+                            </div>
+                            {/* Top 5 standings */}
+                            <div className="flex gap-4 flex-wrap">
+                              {entry.standings.slice(0, 5).map((s, i) => (
+                                <div key={i} className="flex items-center gap-1.5">
+                                  <span className={`text-xs font-bold ${
+                                    i === 0 ? 'text-amber-400' : i === 1 ? 'text-neutral-300' : i === 2 ? 'text-orange-400' : 'text-neutral-500'
+                                  }`}>
+                                    {i + 1}.
+                                  </span>
+                                  <span className="text-xs text-neutral-300">{s.name}</span>
+                                  <span className="text-[10px] text-neutral-600">{s.wins}V-{s.losses}D</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'compare' && (
+                <div className="space-y-6">
+                  {/* Config selector for comparison */}
+                  <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
+                    <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
+                      Comparer avec un autre format
+                    </h3>
+                    <p className="text-xs text-neutral-500 mb-4">
+                      Selectionnez un format alternatif pour comparer cote a cote avec la configuration actuelle ({FORMAT_LABELS[config.formatType]}).
+                      Les memes equipes seront utilisees.
+                    </p>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {(Object.keys(FORMAT_LABELS) as FormatType[])
+                        .filter(f => f !== config.formatType && f !== 'showmatch')
+                        .map(f => {
+                          const tc = (f === 'single_elim' || f === 'double_elim')
+                            ? [4, 8, 16, 32].includes(config.teamCount) ? config.teamCount : 8
+                            : config.teamCount;
+                          return (
+                            <button
+                              key={f}
+                              type="button"
+                              onClick={() => handleCompare({
+                                formatType: f,
+                                teamCount: tc,
+                                ...(f === 'double_elim' ? { grandFinalReset: true } : {}),
+                              })}
+                              className={`px-4 py-2 rounded-lg text-xs font-semibold border transition-colors ${
+                                compareConfig?.formatType === f
+                                  ? 'bg-purple-600 border-purple-500 text-white'
+                                  : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
+                              }`}
+                            >
+                              vs {FORMAT_LABELS[f]}
+                            </button>
+                          );
+                        })}
+                    </div>
+                    {compareConfig && (
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleCompare(compareConfig)}
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-neutral-800 border border-neutral-700 text-neutral-300 hover:bg-neutral-700 transition-colors"
+                        >
+                          Regenerer
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setCompareData(null); setCompareConfig(null); }}
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-neutral-800 border border-neutral-700 text-neutral-300 hover:bg-neutral-700 transition-colors"
+                        >
+                          Effacer
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Side-by-side display */}
+                  {compareData && (
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                      {/* Current config */}
+                      <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-4">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                            Actuel
+                          </span>
+                          <span className="text-sm font-semibold">{FORMAT_LABELS[config.formatType]}</span>
+                          <span className="text-xs text-neutral-500">{teams.length} equipes · BO{config.bestOf}</span>
+                        </div>
+                        <div className="text-xs text-neutral-400 space-y-1">
+                          <div>Matchs: {stages.flatMap(s => s.matches).length}</div>
+                          <div>Rounds: {new Set(stages.flatMap(s => s.matches).map(m => `${m.bracket_side}-${m.round_number}`)).size}</div>
+                        </div>
+                        <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+                          {stages.map((stage, stageIdx) => (
+                            <div key={stage.id} className="mb-4">
+                              <p className="text-xs font-semibold text-purple-300 mb-2">{stage.name}</p>
+                              <EliminationView
+                                rounds={groupByRound(stage.matches, stage.stage_type === 'bracket' ? 'wb' : undefined)}
+                                onSimulate={id => handleSimulateMatch(stageIdx, id)}
+                                onReset={id => handleResetMatch(stageIdx, id)}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Compare config */}
+                      <div className="rounded-xl border border-sky-500/20 bg-sky-500/[0.02] p-4 space-y-4">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-sky-500/10 text-sky-300 border border-sky-500/20">
+                            Comparaison
+                          </span>
+                          <span className="text-sm font-semibold">{FORMAT_LABELS[compareConfig?.formatType ?? config.formatType]}</span>
+                          <span className="text-xs text-neutral-500">{compareData.teams.length} equipes · BO{config.bestOf}</span>
+                        </div>
+                        <div className="text-xs text-neutral-400 space-y-1">
+                          <div>Matchs: {compareData.stages.flatMap(s => s.matches).length}</div>
+                          <div>Rounds: {new Set(compareData.stages.flatMap(s => s.matches).map(m => `${m.bracket_side}-${m.round_number}`)).size}</div>
+                        </div>
+                        <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+                          {compareData.stages.map(stage => (
+                            <div key={stage.id} className="mb-4">
+                              <p className="text-xs font-semibold text-sky-300 mb-2">{stage.name}</p>
+                              <EliminationView
+                                rounds={groupByRound(stage.matches, stage.stage_type === 'bracket' ? 'wb' : undefined)}
+                                onSimulate={() => {}}
+                                onReset={() => {}}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
