@@ -102,10 +102,12 @@ export const getServerSideProps: GetServerSideProps<
   // 1) Tournoi (accept both uuid id and slug)
   let tournament: Tournament | null = null;
 
+  const tournamentColumns = 'id, name, short_name, slug, game, status, format, max_teams, start_date, end_date, rules_url, visibility, created_at, updated_at';
+
   if (isUuid) {
     const { data, error } = await supabaseAdmin
       .from('tournaments')
-      .select('*')
+      .select(tournamentColumns)
       .eq('id', asString)
       .single();
     if (!error && data) {
@@ -116,7 +118,7 @@ export const getServerSideProps: GetServerSideProps<
   if (!tournament) {
     const { data } = await supabaseAdmin
       .from('tournaments')
-      .select('*')
+      .select(tournamentColumns)
       .eq('slug', asString)
       .single();
     if (data) {
@@ -135,77 +137,67 @@ export const getServerSideProps: GetServerSideProps<
 
   const tournamentId = tournament.id;
 
-  // 2) Stages
-  const { data: stages, error: sErr } = await supabaseAdmin
-    .from('tournament_stages')
-    .select('*')
-    .eq('tournament_id', tournamentId)
-    .order('created_at', { ascending: true });
+  // Run all independent queries in parallel
+  const [stagesResult, matchesResult, teamsResult] = await Promise.all([
+    // 2) Stages
+    supabaseAdmin
+      .from('tournament_stages')
+      .select('id, tournament_id, name, stage_type, default_match_format, swiss_rounds, bracket_format, visible')
+      .eq('tournament_id', tournamentId)
+      .order('created_at', { ascending: true }),
 
-  if (sErr) {
-    console.error('tournament stages error:', sErr);
-  }
-
-  // 3) Matches (limités)
-  const { data: matchesData, error: mErr } = await supabaseAdmin
-    .from('matches')
-    .select(
-      `
-      id,
-      scheduled_at,
-      status,
-      is_bye,
-      round_name,
-      round_number,
-      match_format,
-      team1_score,
-      team2_score,
-      team1:team1_id ( id, name, short_name, logo_url ),
-      team2:team2_id ( id, name, short_name, logo_url ),
-      stage:tournament_stages ( id, name, stage_type )
-    `
-    )
-    .eq('tournament_id', tournamentId)
-    .neq('status', 'cancelled')
-    .order('scheduled_at', { ascending: true })
-    .limit(40);
-
-  if (mErr) {
-    console.error('tournament matches error:', mErr);
-  }
-
-  const matches = (matchesData || []) as any as SimpleMatch[];
-
-  // 4) Teams (à partir des stage_teams)
-  let teams: SimpleTeam[] = [];
-
-  if (stages && stages.length > 0) {
-    const stageIds = stages.map((s: any) => s.id);
-    const { data: stageTeams, error: stErr } = await supabaseAdmin
-      .from('stage_teams')
+    // 3) Matches (limités)
+    supabaseAdmin
+      .from('matches')
       .select(
         `
-        team:teams ( id, name, short_name, logo_url )
+        id,
+        scheduled_at,
+        completed_at,
+        status,
+        is_bye,
+        round_name,
+        round_number,
+        match_format,
+        team1_score,
+        team2_score,
+        team1:team1_id ( id, name, short_name, logo_url ),
+        team2:team2_id ( id, name, short_name, logo_url ),
+        stage:tournament_stages ( id, name, stage_type )
       `
       )
-      .in('stage_id', stageIds);
+      .eq('tournament_id', tournamentId)
+      .neq('status', 'cancelled')
+      .order('scheduled_at', { ascending: true })
+      .limit(40),
 
-    if (stErr) {
-      console.error('tournament stage teams error:', stErr);
-    } else {
-      const map = new Map<string, SimpleTeam>();
-      (stageTeams || []).forEach((row: any) => {
-        if (!row.team) return;
-        map.set(row.team.id, row.team);
-      });
-      teams = Array.from(map.values());
-    }
-  }
+    // 4) Teams (via tournament_teams — simpler join, no stage dependency)
+    supabaseAdmin
+      .from('tournament_teams')
+      .select('team:teams ( id, name, short_name, logo_url )')
+      .eq('tournament_id', tournamentId),
+  ]);
+
+  if (stagesResult.error) console.error('tournament stages error:', stagesResult.error);
+  if (matchesResult.error) console.error('tournament matches error:', matchesResult.error);
+  if (teamsResult.error) console.error('tournament teams error:', teamsResult.error);
+
+  const stages = (stagesResult.data || []) as any;
+  const matches = (matchesResult.data || []) as any as SimpleMatch[];
+
+  const teamMap = new Map<string, SimpleTeam>();
+  (teamsResult.data || []).forEach((row: any) => {
+    if (row.team) teamMap.set(row.team.id, row.team);
+  });
+  const teams = Array.from(teamMap.values());
+
+  // Cache SSR response for 60s, serve stale for 120s while revalidating
+  ctx.res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
 
   return {
     props: {
       tournament,
-      stages: (stages || []) as any,
+      stages,
       teams,
       matches,
     },
