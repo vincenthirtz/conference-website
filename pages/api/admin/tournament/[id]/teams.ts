@@ -230,6 +230,23 @@ async function handlePost(
     }
   }
 
+  // Auto news: team registered to tournament
+  try {
+    const newsSlug = `tournament-${tournamentId}-team-${team_id}-${Date.now().toString(36)}`;
+    await supabaseAdmin.from('news').insert({
+      title: `${team.name} rejoint le tournoi ${tournament.name}`,
+      slug: newsSlug,
+      tag: 'tournaments',
+      excerpt: `${team.name} s'est inscrite au tournoi ${tournament.name}.`,
+      content: `L'équipe ${team.name} est désormais inscrite au tournoi ${tournament.name}. Bonne chance !`,
+      image_url: (data as any)?.team?.logo_url ?? null,
+      status: 'published',
+      published_at: new Date().toISOString(),
+    });
+  } catch (newsErr) {
+    console.error('[admin/tournament/teams] create news error:', newsErr);
+  }
+
   return res.status(201).json({
     team: data as unknown as TournamentTeam,
   });

@@ -424,6 +424,30 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: any) {
 
           if (regErr) {
             console.error('auto-register team_registration error:', regErr);
+          } else {
+            // Auto news: team approved for tournament
+            try {
+              const teamName = (d.payload as any)?.team_name || 'Équipe';
+              const tournamentName = (d.payload as any)?.tournament_name || 'tournoi';
+              const { data: teamData } = await supabaseAdmin
+                .from('teams')
+                .select('logo_url')
+                .eq('id', d.team_id)
+                .maybeSingle();
+              const newsSlug = `tournament-${d.tournament_id}-team-${d.team_id}-${Date.now().toString(36)}`;
+              await supabaseAdmin.from('news').insert({
+                title: `${teamName} rejoint le tournoi ${tournamentName}`,
+                slug: newsSlug,
+                tag: 'tournaments',
+                excerpt: `${teamName} s'est inscrite au tournoi ${tournamentName}.`,
+                content: `L'équipe ${teamName} est désormais inscrite au tournoi ${tournamentName}. Bonne chance !`,
+                image_url: teamData?.logo_url ?? null,
+                status: 'published',
+                published_at: new Date().toISOString(),
+              });
+            } catch (newsErr) {
+              console.error('[admin/demandes] create news error:', newsErr);
+            }
           }
         }
       }

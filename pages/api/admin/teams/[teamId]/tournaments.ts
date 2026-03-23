@@ -293,6 +293,28 @@ async function handlePost(
       });
     }
 
+    // Auto news: team registered to tournament
+    try {
+      const newsSlug = `tournament-${tournamentId}-team-${teamId}-${Date.now().toString(36)}`;
+      const { data: teamData } = await supabaseAdmin
+        .from('teams')
+        .select('logo_url')
+        .eq('id', teamId)
+        .maybeSingle();
+      await supabaseAdmin.from('news').insert({
+        title: `${teamName} rejoint le tournoi ${tournament.name}`,
+        slug: newsSlug,
+        tag: 'tournaments',
+        excerpt: `${teamName} s'est inscrite au tournoi ${tournament.name}.`,
+        content: `L'équipe ${teamName} est désormais inscrite au tournoi ${tournament.name}. Bonne chance !`,
+        image_url: teamData?.logo_url ?? null,
+        status: 'published',
+        published_at: new Date().toISOString(),
+      });
+    } catch (newsErr) {
+      console.error('[admin/teams/tournaments] create news error:', newsErr);
+    }
+
     return res.status(201).json({
       success: true,
       message: `Team registered to ${targetStageIds.length} stage(s)`,
