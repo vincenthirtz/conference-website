@@ -5,7 +5,14 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
-import { withStaffPage } from '@/utils/staff';
+import type { GetServerSideProps } from 'next';
+import {
+  requireStaffRoleFromRequest,
+  StaffUnauthenticatedError,
+  StaffUnauthorizedError,
+} from '@/utils/staff';
+import { supabaseAdmin } from '@/utils/supabase';
+import { isValidUUID } from '@/utils/apiHelpers';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import type { MatchStatus } from '@/types/admin';
 
@@ -87,7 +94,169 @@ type MatchesApiResponse = {
   pagination: { total: number; limit: number; offset: number };
 };
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps: GetServerSideProps = async (ctx) => {
+  const { req, res } = ctx;
+
+  // --- Auth (same as withStaffPage) ---
+  let staff: { id: string | null; role: string; display_name: string | null };
+  try {
+    const staffCtx = await requireStaffRoleFromRequest(req as any, res as any, 'manager');
+    staff = {
+      id: staffCtx.staff?.id ?? null,
+      role: staffCtx.role ?? 'manager',
+      display_name: staffCtx.staff?.display_name ?? null,
+    };
+  } catch (err: unknown) {
+    if (err instanceof StaffUnauthenticatedError) {
+      return { redirect: { destination: '/admin/login', permanent: false } };
+    }
+    if (err instanceof StaffUnauthorizedError) {
+      return { redirect: { destination: '/403', permanent: false } };
+    }
+    return { redirect: { destination: '/500', permanent: false } };
+  }
+
+  // --- Validate id ---
+  const id = typeof ctx.params?.id === 'string' ? ctx.params.id : '';
+  if (!id || !isValidUUID(id)) {
+    return { notFound: true };
+  }
+
+  if (!supabaseAdmin) {
+    return { props: { staff, initialData: null } };
+  }
+
+  // --- Fetch all data in parallel ---
+  const [tournamentRes, stagesRes, teamsRes, matchesRes, guardsCountsRes] =
+    await Promise.all([
+      supabaseAdmin
+        .from('tournaments')
+        .select(
+          'id, name, slug, game, status, start_date, end_date, timezone, format_type, max_teams, is_public, is_featured, logo_url, banner_url, created_at, updated_at'
+        )
+        .eq('id', id)
+        .maybeSingle(),
+      supabaseAdmin
+        .from('tournament_stages')
+        .select('id, name, stage_type, order_index, is_active, is_public, start_date, end_date')
+        .eq('tournament_id', id)
+        .order('order_index', { ascending: true, nullsFirst: false }),
+      supabaseAdmin
+        .from('tournament_teams')
+        .select('id, tournament_id, team_id, seed, status, created_at, team:teams ( id, name, logo_url )')
+        .eq('tournament_id', id)
+        .order('seed', { ascending: true, nullsFirst: false }),
+      supabaseAdmin
+        .from('matches')
+        .select(
+          'id, stage_id, round_number, status, scheduled_at, team1_id, team2_id, team1_score, team2_score, winner_team_id'
+        )
+        .eq('tournament_id', id)
+        .order('scheduled_at', { ascending: false, nullsFirst: true })
+        .limit(3),
+      // Status guards: 3 counts in one Promise.all
+      Promise.all([
+        supabaseAdmin
+          .from('tournament_stages')
+          .select('id', { count: 'exact', head: true })
+          .eq('tournament_id', id),
+        supabaseAdmin
+          .from('tournament_teams')
+          .select('id', { count: 'exact', head: true })
+          .eq('tournament_id', id),
+        supabaseAdmin
+          .from('matches')
+          .select('id', { count: 'exact', head: true })
+          .eq('tournament_id', id)
+          .neq('status', 'cancelled'),
+      ]),
+    ]);
+
+  const tournament = tournamentRes.data;
+  if (!tournament) {
+    return { notFound: true };
+  }
+
+  // Build status guards
+  const [stagesCountRes, teamsCountRes, matchesCountRes] = guardsCountsRes;
+  const stagesCount = stagesCountRes.count ?? 0;
+  const teamsCount = teamsCountRes.count ?? 0;
+  const currentStatus = tournament.status ?? 'draft';
+
+  const STATUS_LABELS_MAP: Record<string, string> = {
+    draft: 'Brouillon',
+    published: 'Publié',
+    running: 'En cours',
+    completed: 'Terminé',
+    archived: 'Archivé',
+  };
+
+  const guards: { status: string; label: string; allowed: boolean; reason?: string }[] = [];
+  for (const s of ['draft', 'published', 'running', 'completed', 'archived']) {
+    if (s === currentStatus) {
+      guards.push({ status: s, label: STATUS_LABELS_MAP[s], allowed: false, reason: 'Statut actuel' });
+      continue;
+    }
+    let allowed = true;
+    let reason: string | undefined;
+    if (s === 'published' && stagesCount === 0) {
+      allowed = false;
+      reason = 'Le tournoi doit avoir au moins 1 phase';
+    } else if (s === 'running') {
+      if (stagesCount === 0) { allowed = false; reason = 'Le tournoi doit avoir au moins 1 phase'; }
+      else if (teamsCount === 0) { allowed = false; reason = 'Le tournoi doit avoir au moins 1 équipe'; }
+    } else if (s === 'completed' && currentStatus !== 'running') {
+      allowed = false;
+      reason = 'Le tournoi doit être en cours';
+    }
+    guards.push({ status: s, label: STATUS_LABELS_MAP[s], allowed, reason });
+  }
+
+  // Resolve team names for recent matches
+  const recentMatches = matchesRes.data || [];
+  const teamIdsSet = new Set<string>();
+  for (const m of recentMatches) {
+    if (m.team1_id) teamIdsSet.add(m.team1_id);
+    if (m.team2_id) teamIdsSet.add(m.team2_id);
+  }
+
+  let teamNameMap: Record<string, { id: string; name: string; logo_url: string | null }> = {};
+  if (teamIdsSet.size > 0) {
+    const { data: teamsData } = await supabaseAdmin
+      .from('teams')
+      .select('id, name, logo_url')
+      .in('id', Array.from(teamIdsSet));
+    for (const t of teamsData || []) {
+      teamNameMap[t.id] = t;
+    }
+  }
+
+  const enrichedMatches = recentMatches.map((m: any) => ({
+    id: m.id,
+    stage_id: m.stage_id,
+    round_number: m.round_number,
+    status: m.status,
+    scheduled_at: m.scheduled_at,
+    team1: m.team1_id ? teamNameMap[m.team1_id] ?? null : null,
+    team2: m.team2_id ? teamNameMap[m.team2_id] ?? null : null,
+    team1_score: m.team1_score,
+    team2_score: m.team2_score,
+    winner_team_id: m.winner_team_id,
+  }));
+
+  return {
+    props: {
+      staff,
+      initialData: {
+        tournament,
+        stages: stagesRes.data || [],
+        teams: teamsRes.data || [],
+        recentMatches: enrichedMatches,
+        statusGuards: guards,
+      },
+    },
+  };
+};
 
 function formatDate(d: string | null) {
   if (!d) return '—';
@@ -244,22 +413,30 @@ function matchStatusColor(status: MatchStatus) {
   }
 }
 
-function AdminTournamentPage({ staff }: StaffProps) {
+type InitialData = {
+  tournament: Tournament;
+  stages: Stage[];
+  teams: TournamentTeam[];
+  recentMatches: RecentMatch[];
+  statusGuards: { status: string; label: string; allowed: boolean; reason?: string }[];
+};
+
+function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData: InitialData | null }) {
   const router = useRouter();
   const { id } = router.query;
 
-  const [loading, setLoading] = useState(true);
-  const [tournament, setTournament] = useState<Tournament | null>(null);
+  const [loading, setLoading] = useState(!initialData);
+  const [tournament, setTournament] = useState<Tournament | null>(initialData?.tournament ?? null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   // Stages
-  const [stages, setStages] = useState<Stage[]>([]);
+  const [stages, setStages] = useState<Stage[]>(initialData?.stages ?? []);
   const [loadingStages, setLoadingStages] = useState(false);
 
   // Teams
-  const [tournamentTeams, setTournamentTeams] = useState<TournamentTeam[]>([]);
+  const [tournamentTeams, setTournamentTeams] = useState<TournamentTeam[]>(initialData?.teams ?? []);
   const [loadingTeams, setLoadingTeams] = useState(false);
   const [allTeams, setAllTeams] = useState<Team[]>([]);
   const [showAddTeamModal, setShowAddTeamModal] = useState(false);
@@ -297,12 +474,12 @@ function AdminTournamentPage({ staff }: StaffProps) {
   } | null>(null);
 
   // Recent matches
-  const [recentMatches, setRecentMatches] = useState<RecentMatch[]>([]);
+  const [recentMatches, setRecentMatches] = useState<RecentMatch[]>(initialData?.recentMatches ?? []);
   const [loadingMatches, setLoadingMatches] = useState(false);
 
   // Status guards
   type StatusGuard = { status: string; label: string; allowed: boolean; reason?: string };
-  const [statusGuards, setStatusGuards] = useState<StatusGuard[]>([]);
+  const [statusGuards, setStatusGuards] = useState<StatusGuard[]>(initialData?.statusGuards ?? []);
 
   // Conflict detection
   type Conflict = {
@@ -460,12 +637,14 @@ function AdminTournamentPage({ staff }: StaffProps) {
 
   useEffect(() => {
     if (!id) return;
+    // Skip initial fetch when SSR data is already available
+    if (initialData && tournament) return;
     fetchTournament();
     fetchStages();
     fetchTournamentTeams();
     fetchRecentMatches();
     fetchStatusGuards();
-  }, [id, fetchTournament, fetchStages, fetchTournamentTeams, fetchRecentMatches, fetchStatusGuards]);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function updateStatus(newStatus: string) {
     if (!id || !tournament) return;
