@@ -10,7 +10,9 @@ import {
 const PASSWORD = 'TestPassw0rd!';
 const PLAYER_EMAIL = 'hirtzvincent+datarights@gmail.com';
 const PLAYER_EXPORT_EMAIL = 'hirtzvincent+dataexport@gmail.com';
-const STAFF_EMAIL = 'hirtzvincent+staffnodelete@gmail.com';
+const OWNER_EMAIL = 'hirtzvincent+ownernodelete@gmail.com';
+const STAFF_EXPORT_EMAIL = 'hirtzvincent+staffexport@gmail.com';
+const STAFF_DELETE_EMAIL = 'hirtzvincent+staffdelete@gmail.com';
 
 const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:3000';
 
@@ -106,29 +108,95 @@ test.describe('Player data rights (GDPR)', () => {
     });
   });
 
-  // ─── Staff cannot self-delete ───
+  // ─── Owner cannot self-delete ───
 
-  test.describe('Staff self-deletion blocked', () => {
+  test.describe('Owner self-deletion blocked', () => {
     test.beforeAll(async () => {
-      await deleteTestStaff(STAFF_EMAIL);
-      await createTestStaff(STAFF_EMAIL, PASSWORD, 'manager');
+      await deleteTestStaff(OWNER_EMAIL);
+      await createTestStaff(OWNER_EMAIL, PASSWORD, 'owner');
     });
 
     test.afterAll(async () => {
-      await deleteTestStaff(STAFF_EMAIL);
+      await deleteTestStaff(OWNER_EMAIL);
     });
 
-    test('staff member cannot delete own account', async ({ request }) => {
+    test('owner cannot delete own account', async ({ request }) => {
       test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
-      const token = await getToken(STAFF_EMAIL, PASSWORD);
+      const token = await getToken(OWNER_EMAIL, PASSWORD);
       const resp = await request.delete(`${BASE_URL}/api/player/delete-account`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       expect(resp.status()).toBe(403);
       const body = await resp.json();
-      expect(body.error).toContain('staff');
+      expect(body.error).toContain('owner');
+    });
+  });
+
+  // ─── Staff data export ───
+
+  test.describe('Staff data export', () => {
+    test.beforeAll(async () => {
+      await deleteTestStaff(STAFF_EXPORT_EMAIL);
+      await createTestStaff(STAFF_EXPORT_EMAIL, PASSWORD, 'caster');
+    });
+
+    test.afterAll(async () => {
+      await deleteTestStaff(STAFF_EXPORT_EMAIL);
+    });
+
+    test('staff member can export their data', async ({ request }) => {
+      test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
+
+      const token = await getToken(STAFF_EXPORT_EMAIL, PASSWORD);
+      const resp = await request.get(`${BASE_URL}/api/player/data-export`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      expect(resp.status()).toBe(200);
+
+      const body = await resp.json();
+      expect(body.account.email).toBe(STAFF_EXPORT_EMAIL);
+      expect(body.staff).toBeDefined();
+      expect(body.staff.role).toBe('caster');
+    });
+  });
+
+  // ─── Staff self-deletion (non-owner) ───
+
+  test.describe('Staff self-deletion', () => {
+    test.beforeAll(async () => {
+      await deleteTestStaff(STAFF_DELETE_EMAIL);
+      await createTestStaff(STAFF_DELETE_EMAIL, PASSWORD, 'manager');
+    });
+
+    test.afterAll(async () => {
+      await deleteTestStaff(STAFF_DELETE_EMAIL);
+    });
+
+    test('non-owner staff can delete own account', async ({ request }) => {
+      test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
+
+      const token = await getToken(STAFF_DELETE_EMAIL, PASSWORD);
+      const resp = await request.delete(`${BASE_URL}/api/player/delete-account`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      expect(resp.status()).toBe(200);
+      const body = await resp.json();
+      expect(body.success).toBe(true);
+
+      // Verify user no longer exists
+      const { data } = await supabaseTestClient!.auth.admin.listUsers({
+        page: 1,
+        perPage: 100,
+      });
+      const users = (data as any)?.users as { email?: string }[] | undefined;
+      const found = users?.find(
+        (u) => u.email?.toLowerCase() === STAFF_DELETE_EMAIL.toLowerCase()
+      );
+      expect(found).toBeUndefined();
     });
   });
 

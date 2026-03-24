@@ -42,18 +42,26 @@ export default async function handler(
   const user = userData.user;
   const userId = user.id;
 
-  // Staff members (admin, owner, etc.) cannot self-delete — they must be removed by an owner
+  // Owners cannot self-delete — too critical, must be removed by another owner
   const { data: staffEntry } = await supabaseAdmin
     .from('staff')
     .select('role')
     .eq('auth_user_id', userId)
     .maybeSingle();
 
-  if (staffEntry?.role) {
+  if (staffEntry?.role === 'owner') {
     return res.status(403).json({
       error:
-        'Les comptes staff ne peuvent pas être supprimés de cette façon. Contacte un owner.',
+        'Les comptes owner ne peuvent pas être auto-supprimés. Contacte un autre owner.',
     });
+  }
+
+  // Remove staff entry if exists (caster, manager, admin)
+  if (staffEntry) {
+    await supabaseAdmin
+      .from('staff')
+      .delete()
+      .eq('auth_user_id', userId);
   }
 
   // Remove team memberships

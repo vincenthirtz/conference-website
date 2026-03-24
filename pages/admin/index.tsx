@@ -1,6 +1,7 @@
 import Head from 'next/head';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
 import { supabaseClient } from '@/utils/supabase';
 import { withStaffPage } from '@/utils/staff';
 
@@ -49,6 +50,14 @@ function AdminProfilePage({ staff }: Props) {
   const [passwordChanging, setPasswordChanging] = useState(false);
   const [passwordSuccessMsg, setPasswordSuccessMsg] = useState<string | null>(null);
   const [passwordErrorMsg, setPasswordErrorMsg] = useState<string | null>(null);
+
+  // Data management state
+  const [exporting, setExporting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [dataError, setDataError] = useState<string | null>(null);
+
+  const router = useRouter();
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -198,6 +207,70 @@ function AdminProfilePage({ staff }: Props) {
       setErrorMsg((err as Error)?.message || 'Erreur inattendue');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const getToken = async () => {
+    const { data } = await supabaseClient.auth.getSession();
+    return data.session?.access_token;
+  };
+
+  const handleExportData = async () => {
+    setExporting(true);
+    setDataError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error('Session expirée.');
+
+      const resp = await fetch('/api/player/data-export', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => null);
+        throw new Error(body?.error || 'Erreur lors de l\u2019export.');
+      }
+
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'mes-donnees.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err: unknown) {
+      console.error('AdminProfilePage: export error', err);
+      setDataError((err as Error)?.message || 'Erreur lors de l\u2019export.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    setDataError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error('Session expirée.');
+
+      const resp = await fetch('/api/player/delete-account', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => null);
+        throw new Error(body?.error || 'Erreur lors de la suppression.');
+      }
+
+      await supabaseClient.auth.signOut();
+      router.replace('/');
+    } catch (err: unknown) {
+      console.error('AdminProfilePage: delete account error', err);
+      setDataError((err as Error)?.message || 'Erreur lors de la suppression.');
+    } finally {
+      setDeleting(false);
+      setDeleteConfirm(false);
     }
   };
 
@@ -588,6 +661,99 @@ function AdminProfilePage({ staff }: Props) {
                 </form>
                 <p className="text-xs text-neutral-500 mt-3">
                   Minimum 8 caractères.
+                </p>
+              </section>
+
+              {/* Mes données — export & suppression */}
+              <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <svg
+                    className="w-5 h-5 text-neutral-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                    />
+                  </svg>
+                  Mes données
+                </h2>
+
+                {dataError && (
+                  <div className="mb-4 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
+                    <svg
+                      className="w-5 h-5 text-red-400 flex-shrink-0"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    {dataError}
+                  </div>
+                )}
+
+                <button
+                  onClick={handleExportData}
+                  disabled={exporting}
+                  className="w-full px-4 py-2.5 rounded-xl bg-neutral-700 border border-neutral-600 hover:bg-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors flex items-center justify-center gap-2 mb-3"
+                >
+                  {exporting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Export en cours…
+                    </>
+                  ) : (
+                    'Télécharger mes données'
+                  )}
+                </button>
+                <p className="text-xs text-neutral-500 mb-5">
+                  Récupère toutes tes informations personnelles au format JSON
+                  (droit d&apos;accès RGPD).
+                </p>
+
+                {!deleteConfirm ? (
+                  <button
+                    onClick={() => setDeleteConfirm(true)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-sm font-medium transition-colors"
+                  >
+                    Supprimer mon compte
+                  </button>
+                ) : (
+                  <div className="rounded-xl border border-red-500/40 bg-red-900/30 p-4 space-y-3">
+                    <p className="text-sm text-red-200">
+                      Cette action est <strong>irréversible</strong>. Toutes tes
+                      données, ton rôle staff et tes appartenances seront
+                      définitivement supprimés.
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleDeleteAccount}
+                        disabled={deleting}
+                        className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
+                      >
+                        {deleting ? 'Suppression…' : 'Confirmer la suppression'}
+                      </button>
+                      <button
+                        onClick={() => setDeleteConfirm(false)}
+                        disabled={deleting}
+                        className="px-4 py-2.5 rounded-xl border border-neutral-600 bg-neutral-700 hover:bg-neutral-600 text-sm transition-colors"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                )}
+                <p className="text-xs text-neutral-500 mt-3">
+                  Droit à l&apos;oubli RGPD — ton compte et toutes tes données
+                  seront supprimés définitivement.
                 </p>
               </section>
 
