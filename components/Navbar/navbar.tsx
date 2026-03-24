@@ -367,6 +367,7 @@ function Navbar(): JSX.Element {
       minRole: 'manager',
       children: [
         { title: 'Logs staff', ref: '/admin/logs', minRole: 'manager' },
+        { title: 'Logs emails', ref: '/admin/email-logs', minRole: 'admin' },
         {
           title: 'Stats équipes',
           ref: '/admin/stats/teams',
