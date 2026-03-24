@@ -13,6 +13,7 @@ type SendEmailOptions = {
   to: string;
   subject: string;
   html: string;
+  tags?: string[];
 };
 
 type SendEmailResult = {
@@ -52,6 +53,7 @@ export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult
         to: [{ email: opts.to }],
         subject: opts.subject,
         htmlContent: opts.html,
+        ...(opts.tags?.length ? { tags: opts.tags } : {}),
       }),
       signal: controller.signal,
     });
@@ -62,10 +64,11 @@ export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult
 
     if (!res.ok) {
       const msg = data?.message || `HTTP ${res.status}`;
-      console.error('[email] Brevo error:', msg);
+      console.error('[email] Brevo error:', msg, JSON.stringify(data));
       return { success: false, error: msg };
     }
 
+    console.log('[email] sent to=%s subject=%s messageId=%s', opts.to, opts.subject, data?.messageId);
     return { success: true, id: data?.messageId };
   } catch (err: unknown) {
     console.error('[email] fetch error:', err);
@@ -136,6 +139,7 @@ export function sendWelcomeEmail(to: string, password: string): Promise<SendEmai
   return sendEmail({
     to,
     subject: 'Bienvenue — Votre compte a été créé',
+    tags: ['welcome'],
     html: emailLayout(`
       ${gradientBar()}
       <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Bienvenue !</h1>
@@ -175,6 +179,7 @@ export function sendTeamJoinEmail(
   return sendEmail({
     to,
     subject: `Vous avez rejoint l'équipe ${teamName}`,
+    tags: ['team-join'],
     html: emailLayout(`
       ${gradientBar()}
       <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Bienvenue dans ${escapeHtml(teamName)} !</h1>
@@ -207,6 +212,7 @@ export function sendAccountDeletedEmail(to: string): Promise<SendEmailResult> {
   return sendEmail({
     to,
     subject: 'Votre compte a été supprimé',
+    tags: ['account-deleted'],
     html: emailLayout(`
       ${gradientBar()}
       <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Compte supprim&eacute;</h1>
@@ -230,6 +236,7 @@ export function sendTestEmail(to: string): Promise<SendEmailResult> {
   return sendEmail({
     to,
     subject: '[Test] Email de test — OW Women\'s Cup',
+    tags: ['test'],
     html: emailLayout(`
       ${gradientBar()}
       <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Test email</h1>
