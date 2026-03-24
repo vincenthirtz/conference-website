@@ -24,7 +24,7 @@ export default function AutoSaveIndicator({
 
   return (
     <span className="text-xs text-neutral-500">
-      Brouillon sauvegarde a {time}
+      Brouillon sauvegardé à {time}
     </span>
   );
 }

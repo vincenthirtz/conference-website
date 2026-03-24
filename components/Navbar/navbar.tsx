@@ -440,6 +440,12 @@ function Navbar(): JSX.Element {
 
   return (
     <nav aria-label="Navigation principale" className="relative">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[200] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-purple-600 focus:text-white focus:text-sm focus:font-medium focus:outline-none focus:ring-2 focus:ring-white"
+      >
+        Aller au contenu principal
+      </a>
       {!adminLoading && isStaff && (
         <AdminTopBar
           staffName={staffName}
@@ -484,11 +490,11 @@ function Navbar(): JSX.Element {
           {isTablet ? (
             <div data-test="nav-Hamberger" className="z-[99]">
               {drop ? (
-                <button>
+                <button aria-label="Fermer le menu" aria-expanded="true">
                   <Cancel />
                 </button>
               ) : (
-                <button>
+                <button aria-label="Ouvrir le menu" aria-expanded="false">
                   <Hamburger ref={svg} />
                 </button>
               )}
@@ -577,6 +583,7 @@ function Navbar(): JSX.Element {
                             <Link
                               href={link.ref ?? '#'}
                               className="whitespace-nowrap"
+                              aria-current={router.pathname === link.ref ? 'page' : undefined}
                             >
                               {link.title}
                             </Link>

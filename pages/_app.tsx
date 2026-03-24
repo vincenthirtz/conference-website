@@ -42,7 +42,9 @@ function MyApp({ Component, pageProps, router }: AppPropsWithSeo) {
         <div>
           <DefaultSeo {...effectiveSeo} />
           <Navbar />
-          <Component {...pageProps} />
+          <main id="main-content">
+            <Component {...pageProps} />
+          </main>
           <Footer />
           {!isAdmin && <FloatingSocials />}
           <BackToTopButton />

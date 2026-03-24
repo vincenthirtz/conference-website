@@ -181,7 +181,13 @@ const AdminLoginPage = () => {
             </Paragraph>
           </div>
 
-          {/* Carte de login */}
+          {isCheckingSession ? (
+            <div className="flex flex-col items-center justify-center py-20">
+              <div className="w-8 h-8 border-2 border-neutral-600 border-t-purple-400 rounded-full animate-spin mb-4" />
+              <p className="text-sm text-gray-400">Vérification de la session...</p>
+            </div>
+          ) : (
+          <>
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-2xl shadow-black/40 p-6 pt-10">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -330,6 +336,8 @@ const AdminLoginPage = () => {
               ← Retour au site public
             </Link>
           </div>
+          </>
+          )}
         </div>
       </main>
     </div>
