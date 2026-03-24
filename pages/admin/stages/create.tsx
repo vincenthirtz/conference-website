@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useToast } from '@/components/Toast';
 
 type StaffShape = {
   id: string;
@@ -56,11 +57,11 @@ export const getServerSideProps = withStaffPage('manager');
 
 function AdminStageCreatePage({ staff }: StaffProps) {
   const router = useRouter();
+  const { addToast } = useToast();
 
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loadingTournaments, setLoadingTournaments] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [dateError, setDateError] = useState<string | null>(null);
 
@@ -143,7 +144,6 @@ function AdminStageCreatePage({ staff }: StaffProps) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErrorMsg(null);
-    setSuccessMsg(null);
 
     if (!form.tournamentId) {
       setErrorMsg('Merci de sélectionner un tournoi.');
@@ -206,7 +206,7 @@ function AdminStageCreatePage({ staff }: StaffProps) {
       const json: CreateStageResponse = await res.json();
       const created = json.stage;
 
-      setSuccessMsg('Phase créée avec succès.');
+      addToast('Phase créée avec succès.', 'success');
       if (created?.id) {
         router.push(`/admin/stages/${created.id}`);
       } else {
@@ -248,12 +248,6 @@ function AdminStageCreatePage({ staff }: StaffProps) {
           {errorMsg && (
             <div className="mb-4 rounded bg-red-900/60 border border-red-600 px-4 py-3 text-sm">
               {errorMsg}
-            </div>
-          )}
-
-          {successMsg && (
-            <div className="mb-4 rounded bg-emerald-900/60 border border-emerald-600 px-4 py-3 text-sm">
-              {successMsg}
             </div>
           )}
 

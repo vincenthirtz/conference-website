@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import { withStaffPage } from '@/utils/staff';
 import { supabaseClient } from '@/utils/supabase';
+import { useToast } from '@/components/Toast';
 
 type SiteSetting = {
   key: string;
@@ -57,11 +58,11 @@ const KNOWN_SETTINGS = [
 ];
 
 function AdminSiteSettingsPage({ staff }: Props) {
+  const { addToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
   const [settings, setSettings] = useState<Record<string, SiteSetting>>({});
   const [values, setValues] = useState<Record<string, string>>({});
-  const [success, setSuccess] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -110,7 +111,6 @@ function AdminSiteSettingsPage({ staff }: Props) {
 
   const saveSetting = async (key: string) => {
     setSaving(key);
-    setSuccess(null);
 
     try {
       const {
@@ -139,7 +139,7 @@ function AdminSiteSettingsPage({ staff }: Props) {
         throw new Error(json?.error || 'Erreur de sauvegarde');
       }
 
-      setSuccess(key);
+      addToast('Paramètre sauvegardé avec succès', 'success');
       fetchData();
     } catch (err: unknown) {
       alert((err as Error)?.message || 'Erreur de sauvegarde.');
@@ -217,12 +217,6 @@ function AdminSiteSettingsPage({ staff }: Props) {
                           {saving === known.key ? 'Sauvegarde...' : 'Sauvegarder'}
                         </button>
                       </div>
-
-                      {success === known.key && (
-                        <p className="text-green-400 text-sm">
-                          Paramètre sauvegardé avec succès
-                        </p>
-                      )}
 
                       {setting?.updated_at && (
                         <p className="text-xs text-neutral-500">

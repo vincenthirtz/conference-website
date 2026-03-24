@@ -6,6 +6,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useToast } from '@/components/Toast';
 
 type StaffProps = {
   staff: {
@@ -34,7 +35,7 @@ function AdminBracketPage(_: StaffProps) {
   const [grandFinalReset, setGrandFinalReset] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const { addToast } = useToast();
 
   // Vérifier s'il y a déjà des matchs bracket
   useEffect(() => {
@@ -58,7 +59,6 @@ function AdminBracketPage(_: StaffProps) {
 
     setGenerating(true);
     setErrorMsg(null);
-    setSuccessMsg(null);
 
     try {
       const res = await fetch(
@@ -83,8 +83,9 @@ function AdminBracketPage(_: StaffProps) {
       }
 
       const json = await res.json();
-      setSuccessMsg(
-        `Bracket créé avec ${json.match_count} matchs. Redirection...`
+      addToast(
+        `Bracket créé avec ${json.match_count} matchs. Redirection...`,
+        'success'
       );
       setTimeout(() => {
         router.push(
@@ -182,12 +183,6 @@ function AdminBracketPage(_: StaffProps) {
                   {errorMsg}
                 </div>
               )}
-              {successMsg && (
-                <div className="rounded bg-emerald-900/60 border border-emerald-600 px-4 py-3 text-sm">
-                  {successMsg}
-                </div>
-              )}
-
               <form onSubmit={handleGenerate} className="space-y-5">
                 {/* Type de bracket */}
                 <div>

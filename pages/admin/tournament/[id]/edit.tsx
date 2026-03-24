@@ -5,6 +5,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
+import { useToast } from '@/components/Toast';
 import type { StaffProps, Tournament } from '@/types/admin';
 import { TOURNAMENT_TIMEZONES } from '@/utils/timezone';
 
@@ -21,7 +22,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const { addToast } = useToast();
 
   const [formReady, setFormReady] = useState(false);
 
@@ -78,7 +79,6 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
     if (!id) return;
     setLoading(true);
     setErrorMsg(null);
-    setSuccessMsg(null);
 
     try {
       const res = await fetch(`/api/admin/tournament/${id}`);
@@ -138,7 +138,6 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
     if (!id) return;
 
     setErrorMsg(null);
-    setSuccessMsg(null);
     setDateError(null);
 
     if (!form.name.trim()) {
@@ -194,7 +193,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
 
       await res.json(); // contient { tournament: ... } mais on n'en a pas strictement besoin ici
 
-      setSuccessMsg('Tournoi mis à jour avec succès.');
+      addToast('Tournoi mis à jour avec succès.', 'success');
       // On peut éventuellement recharger les données
       fetchTournament();
     } catch (err: unknown) {
@@ -262,23 +261,6 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                 />
               </svg>
               {errorMsg}
-            </div>
-          )}
-
-          {successMsg && (
-            <div className="mb-6 rounded-xl bg-emerald-900/40 border border-emerald-500/50 px-4 py-3 text-sm flex items-center gap-2">
-              <svg
-                className="w-5 h-5 text-emerald-400 flex-shrink-0"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              {successMsg}
             </div>
           )}
 

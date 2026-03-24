@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import type {
   StaffProps,
@@ -120,7 +121,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
   // auto-scheduler
   const [autoSchedRunning, setAutoSchedRunning] = useState(false);
-  const [autoSchedMsg, setAutoSchedMsg] = useState<string | null>(null);
+  const { addToast } = useToast();
 
   // inline quick-score
   const [quickScoreId, setQuickScoreId] = useState<string | null>(null);
@@ -163,8 +164,6 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
     Array<{ team1: string; team2: string; round?: string; scheduled_at?: string; best_of?: string }>
   >([]);
 
-  // Info messages
-  const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
   // View mode: list or calendar
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
@@ -359,7 +358,6 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
   async function handleAutoSchedule() {
     if (!id) return;
     setAutoSchedRunning(true);
-    setAutoSchedMsg(null);
     setErrorMsg(null);
 
     try {
@@ -377,8 +375,9 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
       }
 
       const json = await res.json();
-      setAutoSchedMsg(
-        `Auto-scheduler termine : ${json.scheduledMatchesCount ?? 0} matches planifies.`
+      addToast(
+        `Auto-scheduler termine : ${json.scheduledMatchesCount ?? 0} matches planifies.`,
+        'success'
       );
       fetchMatches();
     } catch (err: unknown) {
@@ -486,7 +485,6 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
     setBulkScheduleSaving(true);
     setErrorMsg(null);
-    setInfoMsg(null);
 
     try {
       const res = await fetch(`/api/admin/stages/${stageFilter}/bulk-matches`, {
@@ -503,8 +501,9 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
       }
 
       const json = await res.json();
-      setInfoMsg(
-        `${json.successCount ?? 0} match${(json.successCount ?? 0) > 1 ? 'es' : ''} planifié${(json.successCount ?? 0) > 1 ? 's' : ''}.`
+      addToast(
+        `${json.successCount ?? 0} match${(json.successCount ?? 0) > 1 ? 'es' : ''} planifié${(json.successCount ?? 0) > 1 ? 's' : ''}.`,
+        'info'
       );
       setBulkScheduleMode(false);
       fetchMatches();
@@ -538,7 +537,6 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
     setBulkDeleting(true);
     setErrorMsg(null);
-    setInfoMsg(null);
 
     try {
       const res = await fetch(`/api/admin/stages/${stageFilter}/bulk-matches`, {
@@ -556,8 +554,9 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
       }
 
       const verb = hard ? 'supprimé' : 'annulé';
-      setInfoMsg(
-        `${count} match${count > 1 ? 'es' : ''} ${verb}${count > 1 ? 's' : ''}.`
+      addToast(
+        `${count} match${count > 1 ? 'es' : ''} ${verb}${count > 1 ? 's' : ''}.`,
+        'info'
       );
       fetchMatches();
     } catch (err: unknown) {
@@ -590,7 +589,6 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
     setBulkEditSaving(true);
     setErrorMsg(null);
-    setInfoMsg(null);
 
     try {
       const res = await fetch(`/api/admin/stages/${stageFilter}/bulk-matches`, {
@@ -608,8 +606,9 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
       }
 
       const json = await res.json();
-      setInfoMsg(
-        `${json.count ?? selectedMatchIds.size} match(es) mis à jour.`
+      addToast(
+        `${json.count ?? selectedMatchIds.size} match(es) mis à jour.`,
+        'info'
       );
       setBulkEditMode(false);
       setBulkEditFields({});
@@ -654,7 +653,6 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
     setCsvImporting(true);
     setErrorMsg(null);
-    setInfoMsg(null);
 
     try {
       // Resolve team names to IDs
@@ -712,7 +710,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
       }
 
       const json = await res.json();
-      setInfoMsg(`${json.matches?.length ?? 0} match(es) importé(s) depuis le CSV.`);
+      addToast(`${json.matches?.length ?? 0} match(es) importé(s) depuis le CSV.`, 'info');
       setCsvImportMode(false);
       setCsvText('');
       setCsvPreview([]);
@@ -844,23 +842,6 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
               {errorMsg}
             </div>
           )}
-          {(autoSchedMsg || infoMsg) && (
-            <div className="mb-6 rounded-xl bg-emerald-900/40 border border-emerald-500/50 px-4 py-3 text-sm flex items-center gap-2">
-              <svg
-                className="w-5 h-5 text-emerald-400 flex-shrink-0"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              {autoSchedMsg || infoMsg}
-            </div>
-          )}
-
           {/* Filters */}
           <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6">
             <form

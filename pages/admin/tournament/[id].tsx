@@ -14,6 +14,7 @@ import {
 import { supabaseAdmin } from '@/utils/supabase';
 import { isValidUUID } from '@/utils/apiHelpers';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
+import { useToast } from '@/components/Toast';
 import type { MatchStatus } from '@/types/admin';
 
 type StaffShape = {
@@ -429,7 +430,7 @@ function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData:
   const [tournament, setTournament] = useState<Tournament | null>(initialData?.tournament ?? null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const { addToast } = useToast();
 
   // Stages
   const [stages, setStages] = useState<Stage[]>(initialData?.stages ?? []);
@@ -667,7 +668,6 @@ function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData:
 
     setUpdatingStatus(true);
     setErrorMsg(null);
-    setSuccessMsg(null);
 
     try {
       const res = await fetch(`/api/admin/tournament/${id}`, {
@@ -683,8 +683,7 @@ function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData:
       }
 
       setTournament(json.tournament);
-      setSuccessMsg(`Statut modifié : ${statusLabel(newStatus)}`);
-      setTimeout(() => setSuccessMsg(null), 3000);
+      addToast(`Statut modifié : ${statusLabel(newStatus)}`, 'success');
       fetchStatusGuards();
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
@@ -716,8 +715,7 @@ function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData:
       setShowAddTeamModal(false);
       setSelectedTeamId('');
       setTeamSeed('');
-      setSuccessMsg('Équipe ajoutée avec succès');
-      setTimeout(() => setSuccessMsg(null), 3000);
+      addToast('Équipe ajoutée avec succès', 'success');
       fetchTournamentTeams();
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
@@ -744,8 +742,7 @@ function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData:
         throw new Error(json.error || "Impossible de retirer l'équipe");
       }
 
-      setSuccessMsg('Équipe retirée');
-      setTimeout(() => setSuccessMsg(null), 3000);
+      addToast('Équipe retirée', 'success');
       fetchTournamentTeams();
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
@@ -787,13 +784,13 @@ function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData:
     setBulkSearchFilter('');
 
     if (failCount === 0) {
-      setSuccessMsg(`${teamIds.length} équipe(s) ajoutée(s) avec succès`);
+      addToast(`${teamIds.length} équipe(s) ajoutée(s) avec succès`, 'success');
     } else {
-      setSuccessMsg(
-        `${teamIds.length - failCount}/${teamIds.length} équipe(s) ajoutée(s) (${failCount} erreur(s))`
+      addToast(
+        `${teamIds.length - failCount}/${teamIds.length} équipe(s) ajoutée(s) (${failCount} erreur(s))`,
+        'success'
       );
     }
-    setTimeout(() => setSuccessMsg(null), 4000);
     fetchTournamentTeams();
   }
 
@@ -821,8 +818,7 @@ function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData:
       setShowNewStageModal(false);
       setNewStageName('');
       setNewStageType('bracket');
-      setSuccessMsg('Phase créée avec succès');
-      setTimeout(() => setSuccessMsg(null), 3000);
+      addToast('Phase créée avec succès', 'success');
       fetchStages();
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
@@ -955,23 +951,6 @@ function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData:
                 />
               </svg>
               {errorMsg}
-            </div>
-          )}
-
-          {successMsg && (
-            <div className="mb-6 rounded-xl bg-emerald-900/40 border border-emerald-500/50 px-4 py-3 text-sm flex items-center gap-2">
-              <svg
-                className="w-5 h-5 text-emerald-400 flex-shrink-0"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              {successMsg}
             </div>
           )}
 

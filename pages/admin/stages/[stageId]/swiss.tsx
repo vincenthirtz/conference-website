@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useToast } from '@/components/Toast';
 import type { MatchStatus } from '@/types/admin';
 
 type StaffShape = {
@@ -135,10 +136,10 @@ function statusColor(status: MatchStatus) {
 function AdminSwissStagePage({ staff }: StaffProps) {
   const router = useRouter();
   const { stageId } = router.query;
+  const { addToast } = useToast();
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
   const [stage, setStage] = useState<StageMini | null>(null);
   const [tournament, setTournament] = useState<TournamentMini | null>(null);
@@ -170,7 +171,6 @@ function AdminSwissStagePage({ staff }: StaffProps) {
     if (!stageId) return;
     setLoading(true);
     setErrorMsg(null);
-    setInfoMsg(null);
 
     try {
       // Endpoint Swiss global (standings + rounds)
@@ -204,7 +204,6 @@ function AdminSwissStagePage({ staff }: StaffProps) {
     if (!stageId) return;
     setLoadingPreview(true);
     setErrorMsg(null);
-    setInfoMsg(null);
     setPreview(null);
 
     try {
@@ -239,7 +238,6 @@ function AdminSwissStagePage({ staff }: StaffProps) {
     if (!stageId) return;
     setLoadingGenerate(true);
     setErrorMsg(null);
-    setInfoMsg(null);
 
     try {
       const res = await fetch(
@@ -262,8 +260,9 @@ function AdminSwissStagePage({ staff }: StaffProps) {
       const roundNumber = json.roundNumber ?? '?';
       const createdCount = json.createdMatches?.length ?? 0;
 
-      setInfoMsg(
-        `Ronde Swiss #${roundNumber} generee : ${createdCount} matchs crees.`
+      addToast(
+        `Ronde Swiss #${roundNumber} generee : ${createdCount} matchs crees.`,
+        'info'
       );
       setPreview(null);
       setPreviewRound(null);
@@ -343,12 +342,6 @@ function AdminSwissStagePage({ staff }: StaffProps) {
             {errorMsg}
           </div>
         )}
-        {infoMsg && (
-          <div className="mb-4 rounded bg-emerald-900/60 border border-emerald-600 px-4 py-3 text-sm">
-            {infoMsg}
-          </div>
-        )}
-
         {/* Toolbar */}
         <div className="flex flex-wrap gap-3 items-center mb-6">
           <button

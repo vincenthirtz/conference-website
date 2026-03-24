@@ -3,6 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useToast } from '@/components/Toast';
 
 type StaffShape = {
   id: string;
@@ -36,6 +37,7 @@ export const getServerSideProps = withStaffPage('manager');
 
 function AdminAddTeamMemberPage({ staff }: StaffProps) {
   const router = useRouter();
+  const { addToast } = useToast();
 
   const [teams, setTeams] = useState<TeamOption[]>([]);
   const [loadingTeams, setLoadingTeams] = useState(false);
@@ -48,7 +50,6 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
 
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [success, setSuccess] = useState<AddMemberResponse | null>(null);
 
   useEffect(() => {
     loadTeams();
@@ -72,7 +73,6 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
     e.preventDefault();
     setSubmitting(true);
     setErrorMsg(null);
-    setSuccess(null);
 
     try {
       if (!teamId) throw new Error('Choisis une equipe');
@@ -103,7 +103,7 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
         throw new Error(json.error || 'Impossible d\'ajouter le membre');
       }
 
-      setSuccess(json);
+      addToast(json.info || 'Membre ajoute', 'success');
       setEmail('');
       setUserId('');
       setBattleTag('');
@@ -317,62 +317,9 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
             <aside className="space-y-6">
               <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4">
                 <h2 className="text-lg font-semibold">Resultat</h2>
-                {success ? (
-                  <div className="rounded-xl bg-emerald-900/40 border border-emerald-500/50 px-4 py-4 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <svg
-                        className="w-5 h-5 text-emerald-400 flex-shrink-0"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      <p className="text-sm font-semibold text-white">
-                        {success.info || 'Membre ajoute'}
-                      </p>
-                    </div>
-                    <div className="space-y-2 text-xs">
-                      {success.teamMemberId && (
-                        <div className="flex justify-between gap-2 py-1.5 border-b border-emerald-700/30">
-                          <span className="text-emerald-200">team_member.id</span>
-                          <span className="font-mono text-white break-all text-right max-w-[140px]">
-                            {success.teamMemberId}
-                          </span>
-                        </div>
-                      )}
-                      <div className="flex justify-between gap-2 py-1.5 border-b border-emerald-700/30">
-                        <span className="text-emerald-200">user_id</span>
-                        <span className="font-mono text-white break-all text-right max-w-[140px]">
-                          {success.userId}
-                        </span>
-                      </div>
-                      <div className="flex justify-between gap-2 py-1.5 border-b border-emerald-700/30">
-                        <span className="text-emerald-200">team_id</span>
-                        <span className="font-mono text-white break-all text-right max-w-[140px]">
-                          {success.teamId}
-                        </span>
-                      </div>
-                      <div className="flex justify-between gap-2 py-1.5 border-b border-emerald-700/30">
-                        <span className="text-emerald-200">role</span>
-                        <span className="text-white">{success.role}</span>
-                      </div>
-                      <div className="flex justify-between gap-2 py-1.5">
-                        <span className="text-emerald-200">capitaine</span>
-                        <span className={success.captainSet ? 'text-emerald-300' : 'text-neutral-400'}>
-                          {success.captainSet ? 'oui' : 'non'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-sm text-neutral-400">
-                    Apres validation, l&apos;ID membre, l&apos;user_id et le statut capitaine seront affiches ici.
-                  </p>
-                )}
+                <p className="text-sm text-neutral-400">
+                  Apres validation, un toast de confirmation s&apos;affichera.
+                </p>
               </section>
 
               <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-3">

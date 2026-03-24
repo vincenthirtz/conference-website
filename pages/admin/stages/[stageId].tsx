@@ -5,6 +5,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useToast } from '@/components/Toast';
 import type { StaffProps, Stage, StageType, Tournament } from '@/types/admin';
 import AdvancementRulesEditor from '@/components/admin/AdvancementRulesEditor';
 import type { AdvancementRules } from '@/components/admin/AdvancementRulesEditor';
@@ -116,7 +117,7 @@ function AdminStagePage({ staff }: StaffProps) {
   const [loading, setLoading] = useState(true);
   const [loadingActions, setLoadingActions] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const { addToast } = useToast();
 
   // Advance modal state
   const [showAdvanceModal, setShowAdvanceModal] = useState(false);
@@ -312,8 +313,7 @@ function AdminStagePage({ staff }: StaffProps) {
       const json = await res.json();
       setStage(json.stage);
       setIsEditing(false);
-      setSuccessMsg('Phase mise à jour avec succès');
-      setTimeout(() => setSuccessMsg(null), 3000);
+      addToast('Phase mise à jour avec succès', 'success');
 
       // Recharger le tournoi parent si changé
       if (json.stage.tournament_id !== stage.tournament_id) {
@@ -337,7 +337,6 @@ function AdminStagePage({ staff }: StaffProps) {
   async function handleAutoByes() {
     if (!stageId) return;
     setLoadingActions(true);
-    setSuccessMsg(null);
     setErrorMsg(null);
 
     try {
@@ -353,10 +352,10 @@ function AdminStagePage({ staff }: StaffProps) {
       }
 
       const json = await res.json();
-      setSuccessMsg(
-        `Auto-BYEs appliqués : ${json.updatedMatchIds?.length ?? 0} matchs mis à jour.`
+      addToast(
+        `Auto-BYEs appliqués : ${json.updatedMatchIds?.length ?? 0} matchs mis à jour.`,
+        'success'
       );
-      setTimeout(() => setSuccessMsg(null), 5000);
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? "Erreur lors de l'auto-BYE");
     } finally {
@@ -367,7 +366,6 @@ function AdminStagePage({ staff }: StaffProps) {
   async function handleGenerateSwissRound() {
     if (!stageId || stage?.stage_type !== 'swiss') return;
     setLoadingActions(true);
-    setSuccessMsg(null);
     setErrorMsg(null);
 
     try {
@@ -388,10 +386,10 @@ function AdminStagePage({ staff }: StaffProps) {
       }
 
       const json = await res.json();
-      setSuccessMsg(
-        `Nouvelle ronde Swiss #${json.roundNumber} générée : ${json.createdMatches?.length ?? 0} matchs.`
+      addToast(
+        `Nouvelle ronde Swiss #${json.roundNumber} générée : ${json.createdMatches?.length ?? 0} matchs.`,
+        'success'
       );
-      setTimeout(() => setSuccessMsg(null), 5000);
       // Refresh Swiss and completion status
       fetchSwissStatus();
       fetchCompletionStatus();
@@ -522,8 +520,7 @@ function AdminStagePage({ staff }: StaffProps) {
         msg += ` ${skippedCount} deja presente(s) dans le stage cible.`;
       }
 
-      setSuccessMsg(msg);
-      setTimeout(() => setSuccessMsg(null), 5000);
+      addToast(msg, 'success');
       setShowAdvanceModal(false);
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? "Erreur lors de l'avancement");
@@ -577,10 +574,10 @@ function AdminStagePage({ staff }: StaffProps) {
       }
 
       const json = await res.json();
-      setSuccessMsg(
-        `Seeding automatique applique : ${json.seeded?.length ?? 0} equipes placees dans ${json.totalMatches} matchs.`
+      addToast(
+        `Seeding automatique applique : ${json.seeded?.length ?? 0} equipes placees dans ${json.totalMatches} matchs.`,
+        'success'
       );
-      setTimeout(() => setSuccessMsg(null), 5000);
       setShowAutoSeedModal(false);
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? 'Erreur lors du seeding automatique');
@@ -593,7 +590,6 @@ function AdminStagePage({ staff }: StaffProps) {
     if (!stageId || !stage) return;
     setCloning(true);
     setErrorMsg(null);
-    setSuccessMsg(null);
 
     try {
       const res = await fetch(`/api/admin/stages/${stageId}/clone`, {
@@ -611,8 +607,7 @@ function AdminStagePage({ staff }: StaffProps) {
       const matchMsg = includeMatches
         ? ` avec ${json.clonedMatchCount ?? 0} match(es)`
         : '';
-      setSuccessMsg(`Phase clonee${matchMsg}. Nouvelle phase : ${json.stage?.name ?? 'copie'}`);
-      setTimeout(() => setSuccessMsg(null), 5000);
+      addToast(`Phase clonee${matchMsg}. Nouvelle phase : ${json.stage?.name ?? 'copie'}`, 'success');
 
       // Navigate to the cloned stage
       if (json.stage?.id) {
@@ -738,15 +733,6 @@ function AdminStagePage({ staff }: StaffProps) {
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
               </svg>
               {errorMsg}
-            </div>
-          )}
-
-          {successMsg && (
-            <div className="mb-6 rounded-xl bg-emerald-900/40 border border-emerald-500/50 px-4 py-3 text-sm flex items-center gap-2">
-              <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              {successMsg}
             </div>
           )}
 
@@ -1176,7 +1162,6 @@ function AdminStagePage({ staff }: StaffProps) {
                           if (!stageId) return;
                           setAdvancementSaving(true);
                           setErrorMsg(null);
-                          setSuccessMsg(null);
                           try {
                             const currentSettings = stage.settings ?? {};
                             const newSettings = { ...currentSettings };
@@ -1194,7 +1179,7 @@ function AdminStagePage({ staff }: StaffProps) {
                               const json = await res.json().catch(() => ({}));
                               throw new Error(json.error || 'Erreur lors de la sauvegarde');
                             }
-                            setSuccessMsg('Regles d\'avancement mises a jour.');
+                            addToast('Regles d\'avancement mises a jour.', 'success');
                             await fetchStage();
                           } catch (err: unknown) {
                             setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useToast } from '@/components/Toast';
 import {
   TOURNAMENT_TEMPLATES,
   type TournamentTemplate,
@@ -46,11 +47,11 @@ export const getServerSideProps = withStaffPage('manager');
 
 function AdminTournamentTemplatesPage({ staff }: StaffProps) {
   const router = useRouter();
+  const { addToast } = useToast();
 
   const [customTemplates, setCustomTemplates] = useState<TournamentTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   // Create form
   const [showCreate, setShowCreate] = useState(false);
@@ -84,7 +85,6 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setErrorMsg(null);
-    setSuccessMsg(null);
 
     if (!newName.trim()) {
       setErrorMsg('Le nom est obligatoire.');
@@ -114,7 +114,7 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
         throw new Error(json.error || 'Erreur lors de la creation');
       }
 
-      setSuccessMsg('Template cree avec succes.');
+      addToast('Template cree avec succes.', 'success');
       setNewName('');
       setNewDesc('');
       setNewStages([{ name: '', stage_type: 'bracket' }]);
@@ -132,7 +132,6 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
 
     setDeletingId(templateId);
     setErrorMsg(null);
-    setSuccessMsg(null);
 
     try {
       const res = await fetch('/api/admin/tournament-templates', {
@@ -146,7 +145,7 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
         throw new Error(json.error || 'Erreur lors de la suppression');
       }
 
-      setSuccessMsg('Template supprime.');
+      addToast('Template supprime.', 'success');
       fetchCustomTemplates();
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message || 'Erreur inattendue');
@@ -322,23 +321,6 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
               {errorMsg}
             </div>
           )}
-          {successMsg && (
-            <div className="mb-6 rounded-xl bg-emerald-900/40 border border-emerald-500/50 px-4 py-3 text-sm flex items-center gap-2">
-              <svg
-                className="w-5 h-5 text-emerald-400 flex-shrink-0"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              {successMsg}
-            </div>
-          )}
-
           {/* Create form */}
           {showCreate && (
             <section className="mb-8 bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4">

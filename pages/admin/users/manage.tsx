@@ -3,6 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
 import { supabaseClient } from '@/utils/supabase';
+import { useToast } from '@/components/Toast';
 
 type StaffShape = {
   id: string;
@@ -97,7 +98,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
   const [offset, setOffset] = useState(0);
 
   const [updating, setUpdating] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const { addToast } = useToast();
 
   // Battle tag edit modal
   const [editingBattleTag, setEditingBattleTag] = useState<{
@@ -192,8 +193,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       setUsers((prev) =>
         prev.map((u) => (u.id === userId ? { ...u, role } : u))
       );
-      setSuccessMsg('Rôle mis à jour');
-      setTimeout(() => setSuccessMsg(null), 3000);
+      addToast('Rôle mis à jour', 'success');
     } catch (err: unknown) {
       alert((err as Error)?.message || 'Erreur lors de la mise à jour du rôle.');
     } finally {
@@ -265,8 +265,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       );
 
       setEditingBattleTag(null);
-      setSuccessMsg('BattleTag mis à jour');
-      setTimeout(() => setSuccessMsg(null), 3000);
+      addToast('BattleTag mis à jour', 'success');
     } catch (err: unknown) {
       setBattleTagError((err as Error)?.message || 'Erreur inattendue');
     } finally {
@@ -317,8 +316,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
         )
       );
       setEditingUser(null);
-      setSuccessMsg('Utilisateur mis à jour');
-      setTimeout(() => setSuccessMsg(null), 3000);
+      addToast('Utilisateur mis à jour', 'success');
     } catch (err: unknown) {
       setEditError((err as Error)?.message || 'Erreur inattendue');
     } finally {
@@ -356,8 +354,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
         alert(json.warning);
       }
 
-      setSuccessMsg(json.warning ? `⚠ ${json.warning}` : `Identifiants envoyés à ${user.email}`);
-      setTimeout(() => setSuccessMsg(null), 8000);
+      addToast(json.warning ? `⚠ ${json.warning}` : `Identifiants envoyés à ${user.email}`, 'success');
     } catch (err: unknown) {
       alert((err as Error)?.message || 'Erreur lors de l\'envoi.');
     } finally {
@@ -393,8 +390,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       setUsers((prev) => prev.filter((u) => u.id !== deletingUser!.id));
       setTotal((prev) => (prev !== null ? prev - 1 : prev));
       setDeletingUser(null);
-      setSuccessMsg('Utilisateur supprimé');
-      setTimeout(() => setSuccessMsg(null), 3000);
+      addToast('Utilisateur supprimé', 'success');
     } catch (err: unknown) {
       alert((err as Error)?.message || 'Erreur lors de la suppression.');
     } finally {
@@ -445,24 +441,6 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
               </Link>
             </div>
           </div>
-
-          {/* Success Message */}
-          {successMsg && (
-            <div className="mb-6 rounded-xl bg-emerald-900/40 border border-emerald-500/50 px-4 py-3 text-sm flex items-center gap-2">
-              <svg
-                className="w-5 h-5 text-emerald-400 flex-shrink-0"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              {successMsg}
-            </div>
-          )}
 
           {/* Filters */}
           <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6">

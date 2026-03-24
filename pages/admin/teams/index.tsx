@@ -3,6 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import { withStaffPage } from '@/utils/staff';
+import { useToast } from '@/components/Toast';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import type { StaffProps, TeamRow } from '@/types/admin';
 
@@ -30,6 +31,7 @@ const FILTER_KEYS = ['search', 'isActive', 'tournamentId', 'offset'] as const;
 const LIMIT = 25;
 
 function AdminTeamsListPage({ staff }: StaffProps) {
+  const { addToast } = useToast();
   const { filters, setFilter, setFilters } = useUrlFilters(FILTER_KEYS);
 
   const search = filters.search ?? '';
@@ -50,7 +52,6 @@ function AdminTeamsListPage({ staff }: StaffProps) {
   // Bulk selection
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkProcessing, setBulkProcessing] = useState(false);
-  const [bulkMsg, setBulkMsg] = useState<string | null>(null);
   const [bulkAction, setBulkAction] = useState<string>('');
   const [assignTournamentId, setAssignTournamentId] = useState('');
 
@@ -169,7 +170,6 @@ function AdminTeamsListPage({ staff }: StaffProps) {
     if (selected.size === 0 || !bulkAction) return;
     setBulkProcessing(true);
     setErrorMsg(null);
-    setBulkMsg(null);
 
     try {
       const body: any = {
@@ -198,7 +198,7 @@ function AdminTeamsListPage({ staff }: StaffProps) {
         deactivate: 'desactivee(s)',
         assign: 'assignee(s)',
       };
-      setBulkMsg(`${json.count} equipe(s) ${labels[bulkAction] || bulkAction}.`);
+      addToast(`${json.count} equipe(s) ${labels[bulkAction] || bulkAction}.`, 'success');
       setSelected(new Set());
       setBulkAction('');
       fetchTeams();
@@ -408,19 +408,9 @@ function AdminTeamsListPage({ staff }: StaffProps) {
             </form>
           </section>
 
-          {/* Bulk success message */}
-          {bulkMsg && (
-            <div className="mb-6 rounded-xl bg-emerald-900/40 border border-emerald-500/50 px-4 py-3 text-sm flex items-center gap-2">
-              <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              {bulkMsg}
-            </div>
-          )}
-
           {/* Bulk action bar */}
           {selected.size > 0 && (
-            <div className="mb-4 flex items-center gap-3 bg-blue-900/30 border border-blue-500/30 rounded-xl px-4 py-3 flex-wrap">
+            <div className="mb-4 flex flex-col sm:flex-row sm:items-center gap-3 bg-blue-900/30 border border-blue-500/30 rounded-xl px-4 py-3 flex-wrap">
               <span className="text-sm font-medium">
                 {selected.size} equipe{selected.size > 1 ? 's' : ''} selectionnee{selected.size > 1 ? 's' : ''}
               </span>
@@ -507,86 +497,88 @@ function AdminTeamsListPage({ staff }: StaffProps) {
                 {teams.map((team) => (
                   <div
                     key={team.id}
-                    className={`flex items-center gap-4 p-4 hover:bg-neutral-700/30 transition-colors group ${
+                    className={`flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 hover:bg-neutral-700/30 transition-colors group ${
                       selected.has(team.id) ? 'bg-blue-900/10' : ''
                     }`}
                   >
-                    {/* Checkbox */}
-                    <input
-                      type="checkbox"
-                      checked={selected.has(team.id)}
-                      onChange={() => toggleSelect(team.id)}
-                      className="w-4 h-4 rounded border-neutral-600 bg-neutral-900 flex-shrink-0"
-                    />
+                    <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                      {/* Checkbox */}
+                      <input
+                        type="checkbox"
+                        checked={selected.has(team.id)}
+                        onChange={() => toggleSelect(team.id)}
+                        className="w-4 h-4 rounded border-neutral-600 bg-neutral-900 flex-shrink-0"
+                      />
 
-                    {/* Logo */}
-                    <div className="flex-shrink-0">
-                      {team.logo_url ? (
-                        <Image
-                          src={team.logo_url}
-                          alt={team.name}
-                          width={48}
-                          height={48}
-                          className="w-12 h-12 rounded-xl object-cover border border-neutral-700"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-xl bg-neutral-700/50 flex items-center justify-center border border-neutral-700">
-                          <svg
-                            className="w-6 h-6 text-neutral-500"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                            />
-                          </svg>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-white truncate">
-                          {team.name}
-                        </h3>
-                        {team.short_name && (
-                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-700 text-neutral-300">
-                            {team.short_name}
-                          </span>
+                      {/* Logo */}
+                      <div className="flex-shrink-0">
+                        {team.logo_url ? (
+                          <Image
+                            src={team.logo_url}
+                            alt={team.name}
+                            width={48}
+                            height={48}
+                            className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl object-cover border border-neutral-700"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-neutral-700/50 flex items-center justify-center border border-neutral-700">
+                            <svg
+                              className="w-5 h-5 sm:w-6 sm:h-6 text-neutral-500"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                              />
+                            </svg>
+                          </div>
                         )}
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                            team.is_active
-                              ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/30'
-                              : 'bg-neutral-600/20 text-neutral-400 border border-neutral-500/30'
-                          }`}
-                        >
-                          {team.is_active ? 'Active' : 'Inactive'}
-                        </span>
                       </div>
-                      <div className="flex items-center gap-3 text-sm text-neutral-400">
-                        {team.slug && (
-                          <span className="font-mono text-xs bg-neutral-800 px-2 py-0.5 rounded">
-                            /{team.slug}
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <h3 className="font-semibold text-white truncate">
+                            {team.name}
+                          </h3>
+                          {team.short_name && (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-700 text-neutral-300">
+                              {team.short_name}
+                            </span>
+                          )}
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                              team.is_active
+                                ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/30'
+                                : 'bg-neutral-600/20 text-neutral-400 border border-neutral-500/30'
+                            }`}
+                          >
+                            {team.is_active ? 'Active' : 'Inactive'}
                           </span>
-                        )}
-                        {team.country && (
-                          <>
-                            <span>{team.country}</span>
-                            <span>•</span>
-                          </>
-                        )}
-                        <span>Créée le {formatDate(team.created_at)}</span>
+                        </div>
+                        <div className="flex items-center gap-2 sm:gap-3 text-sm text-neutral-400 flex-wrap">
+                          {team.slug && (
+                            <span className="font-mono text-xs bg-neutral-800 px-2 py-0.5 rounded">
+                              /{team.slug}
+                            </span>
+                          )}
+                          {team.country && (
+                            <>
+                              <span>{team.country}</span>
+                              <span className="hidden sm:inline">•</span>
+                            </>
+                          )}
+                          <span>Créée le {formatDate(team.created_at)}</span>
+                        </div>
                       </div>
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex items-center gap-2 flex-shrink-0 pl-7 sm:pl-0">
                       <Link
                         href={`/admin/teams/${team.id}/edit`}
                         className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors flex items-center gap-1.5"

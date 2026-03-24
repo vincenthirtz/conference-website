@@ -26,6 +26,7 @@ export default function ProfileCard({ user, displayName }: Props) {
 
   // Data management state
   const [exporting, setExporting] = useState(false);
+  const [exportConfirm, setExportConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [dataError, setDataError] = useState<string | null>(null);
@@ -270,13 +271,41 @@ export default function ProfileCard({ user, displayName }: Props) {
           </div>
         )}
 
-        <button
-          onClick={handleExportData}
-          disabled={exporting}
-          className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 hover:border-purple-500/50 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed text-sm transition mb-3"
-        >
-          {exporting ? 'Export en cours...' : 'Télécharger mes données'}
-        </button>
+        {!exportConfirm ? (
+          <button
+            onClick={() => setExportConfirm(true)}
+            disabled={exporting}
+            className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 hover:border-purple-500/50 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed text-sm transition mb-3"
+          >
+            {exporting ? 'Export en cours...' : 'Télécharger mes données'}
+          </button>
+        ) : (
+          <div className="rounded-lg border border-purple-500/40 bg-purple-500/10 p-3 space-y-3 mb-3">
+            <p className="text-xs text-purple-200">
+              Un fichier <strong>mes-donnees.json</strong> contenant toutes tes
+              informations personnelles (compte, équipes, demandes) sera
+              téléchargé.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setExportConfirm(false);
+                  handleExportData();
+                }}
+                disabled={exporting}
+                className="flex-1 px-3 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition"
+              >
+                {exporting ? 'Export en cours...' : 'Confirmer le téléchargement'}
+              </button>
+              <button
+                onClick={() => setExportConfirm(false)}
+                className="px-3 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-sm transition"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        )}
 
         <p className="text-xs text-gray-500 mb-4">
           Récupère toutes tes informations personnelles au format JSON (droit

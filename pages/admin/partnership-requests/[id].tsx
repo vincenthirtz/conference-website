@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { supabaseClient } from '@/utils/supabase';
+import { useToast } from '@/components/Toast';
 
 type Props = {
   staff: {
@@ -68,12 +69,12 @@ function formatDate(d: string | null) {
 function AdminPartnershipRequestDetailPage({ staff }: Props) {
   const router = useRouter();
   const { id } = router.query;
+  const { addToast } = useToast();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [request, setRequest] = useState<RequestData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
 
   const [status, setStatus] = useState('');
   const [adminNotes, setAdminNotes] = useState('');
@@ -114,7 +115,6 @@ function AdminPartnershipRequestDetailPage({ staff }: Props) {
 
   const handleUpdate = async () => {
     setError(null);
-    setSuccess(false);
     setSaving(true);
 
     try {
@@ -140,7 +140,7 @@ function AdminPartnershipRequestDetailPage({ staff }: Props) {
       }
 
       setRequest(json);
-      setSuccess(true);
+      addToast('Mis à jour avec succès.', 'success');
     } catch (err: unknown) {
       setError((err as Error).message || 'Une erreur est survenue.');
     } finally {
@@ -371,12 +371,6 @@ function AdminPartnershipRequestDetailPage({ staff }: Props) {
                     {error}
                   </div>
                 )}
-                {success && (
-                  <div className="mb-4 rounded-xl bg-emerald-900/40 border border-emerald-500/50 px-4 py-3 text-sm">
-                    Mis à jour avec succès.
-                  </div>
-                )}
-
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-neutral-300 mb-2">
@@ -386,7 +380,6 @@ function AdminPartnershipRequestDetailPage({ staff }: Props) {
                       value={status}
                       onChange={(e) => {
                         setStatus(e.target.value);
-                        setSuccess(false);
                       }}
                       className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
                     >
@@ -406,7 +399,6 @@ function AdminPartnershipRequestDetailPage({ staff }: Props) {
                       value={adminNotes}
                       onChange={(e) => {
                         setAdminNotes(e.target.value);
-                        setSuccess(false);
                       }}
                       rows={4}
                       className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white resize-none text-sm"

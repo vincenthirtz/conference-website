@@ -6,6 +6,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useToast } from '@/components/Toast';
 import {
   TOURNAMENT_TEMPLATES,
   type TournamentTemplate,
@@ -59,7 +60,7 @@ function StagesPage(_: StaffProps) {
   const [customTemplates, setCustomTemplates] = useState<TournamentTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<TournamentTemplate | null>(null);
   const [applyingTemplate, setApplyingTemplate] = useState(false);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const { addToast } = useToast();
 
   useEffect(() => {
     if (!tournamentId) return;
@@ -173,8 +174,7 @@ function StagesPage(_: StaffProps) {
       }
       setShowTemplateModal(false);
       setSelectedTemplate(null);
-      setSuccessMsg(`Template « ${selectedTemplate.name} » ajouté`);
-      setTimeout(() => setSuccessMsg(null), 3000);
+      addToast(`Template « ${selectedTemplate.name} » ajouté`, 'success');
       fetchStages();
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message || "Erreur lors de l'application du template");
@@ -267,15 +267,6 @@ function StagesPage(_: StaffProps) {
               </button>
             </div>
           </div>
-
-          {successMsg && (
-            <div className="mb-4 p-3 rounded-lg bg-emerald-900/40 border border-emerald-500/40 text-emerald-200 text-sm flex items-center gap-2">
-              <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              {successMsg}
-            </div>
-          )}
 
           {loading && (
             <div className="p-4 rounded-lg bg-white/5 border border-white/10">

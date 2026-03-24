@@ -6,6 +6,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useToast } from '@/components/Toast';
 import { formatDateHeader } from '@/utils/dateFormatters';
 import { STATUS_CONFIG } from '@/utils/statusConfig';
 import AlertBanner from '@/components/admin/AlertBanner';
@@ -55,7 +56,7 @@ function AdminBracketBuilderPage(_: StaffProps) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [infoMsg, setInfoMsg] = useState<string | null>(null);
+  const { addToast } = useToast();
   const [tournament, setTournament] = useState<ApiResponse['tournament']>(null);
   const [matches, setMatches] = useState<ScheduleMatch[]>([]);
   const [dirty, setDirty] = useState(false);
@@ -74,7 +75,6 @@ function AdminBracketBuilderPage(_: StaffProps) {
     if (!id) return;
     setLoading(true);
     setErrorMsg(null);
-    setInfoMsg(null);
     setDirty(false);
     try {
       const [matchRes, teamsRes] = await Promise.all([
@@ -423,7 +423,6 @@ ${day.matches.map((m) => `<tr>
     if (!id) return;
     setSaving(true);
     setErrorMsg(null);
-    setInfoMsg(null);
     try {
       const res = await fetch(`/api/admin/tournament/${id}/bracket`, {
         method: 'POST',
@@ -443,7 +442,7 @@ ${day.matches.map((m) => `<tr>
         throw new Error(json.error || 'Erreur lors de l\u2019enregistrement');
       }
       await res.json();
-      setInfoMsg('Planning enregistré.');
+      addToast('Planning enregistré.', 'success');
       setDirty(false);
       fetchData();
     } catch (err: unknown) {
@@ -596,7 +595,6 @@ ${day.matches.map((m) => `<tr>
         {/* ---- Messages ---- */}
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <AlertBanner message={errorMsg} variant="error" className="mt-4" />
-          <AlertBanner message={infoMsg} variant="success" className="mt-4" />
         </div>
 
         {/* ---- Content ---- */}

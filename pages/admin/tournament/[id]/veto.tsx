@@ -6,6 +6,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useToast } from '@/components/Toast';
 import type { VetoFlowStep, VetoStep, MatchVetoState } from '@/types/veto';
 
 type StaffShape = { id: string; role: string; display_name: string | null };
@@ -95,7 +96,7 @@ function AdminVetoPage(_: StaffProps) {
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const { addToast } = useToast();
   const [maps, setMaps] = useState<TournamentMapRow[]>([]);
   const [tournamentName, setTournamentName] = useState<string>('Tournoi');
 
@@ -189,7 +190,6 @@ function AdminVetoPage(_: StaffProps) {
 
       setSubmitting(true);
       setErrorMsg(null);
-      setSuccessMsg(null);
 
       const currentFlowStep = vetoState.flow[vetoState.currentStepIndex];
       if (!currentFlowStep) {
@@ -225,10 +225,11 @@ function AdminVetoPage(_: StaffProps) {
         const result = await res.json();
 
         if (result.isComplete) {
-          setSuccessMsg(
+          addToast(
             result.gamesCreated
               ? 'Veto terminé ! Les games ont été créées automatiquement.'
-              : 'Veto terminé !'
+              : 'Veto terminé !',
+            'success'
           );
         }
 
@@ -240,7 +241,7 @@ function AdminVetoPage(_: StaffProps) {
         setSubmitting(false);
       }
     },
-    [vetoState, selectedMatchId]
+    [vetoState, selectedMatchId, addToast]
   );
 
   const handleReset = useCallback(async () => {
@@ -250,7 +251,6 @@ function AdminVetoPage(_: StaffProps) {
 
     setSubmitting(true);
     setErrorMsg(null);
-    setSuccessMsg(null);
 
     try {
       const res = await fetch(`/api/admin/matches/${selectedMatchId}/veto`, {
@@ -263,13 +263,13 @@ function AdminVetoPage(_: StaffProps) {
       }
 
       await fetchVetoState(selectedMatchId);
-      setSuccessMsg('Veto réinitialisé.');
+      addToast('Veto réinitialisé.', 'success');
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message || 'Erreur');
     } finally {
       setSubmitting(false);
     }
-  }, [selectedMatchId]);
+  }, [selectedMatchId, addToast]);
 
   // Compute used maps in current veto
   const usedMapNames = new Set(
@@ -321,12 +321,6 @@ function AdminVetoPage(_: StaffProps) {
               {errorMsg}
             </div>
           )}
-          {successMsg && (
-            <div className="mb-4 p-4 rounded-lg bg-emerald-900/60 border border-emerald-500/40 text-emerald-100">
-              {successMsg}
-            </div>
-          )}
-
           {loading && (
             <div className="p-4 rounded-lg bg-white/5 border border-white/10">
               Chargement…

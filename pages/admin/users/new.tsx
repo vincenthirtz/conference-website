@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import Button from '@/components/Buttons/button';
+import { useToast } from '@/components/Toast';
 
 type StaffShape = {
   id: string;
@@ -62,6 +63,7 @@ export const getServerSideProps = withStaffPage('admin');
 
 function AdminCreateUserPage({ staff }: StaffProps) {
   const router = useRouter();
+  const { addToast } = useToast();
 
   // User fields
   const [email, setEmail] = useState('');
@@ -174,6 +176,7 @@ function AdminCreateUserPage({ staff }: StaffProps) {
         if (!teamRes.ok || teamJson.error) {
           // User created but team assignment failed
           setSuccess({ user: userJson });
+          addToast('Compte créé avec succès', 'success');
           setErrorMsg(
             `Utilisateur créé mais erreur lors de l'ajout à l'équipe: ${teamJson.error}`
           );
@@ -184,6 +187,7 @@ function AdminCreateUserPage({ staff }: StaffProps) {
       }
 
       setSuccess({ user: userJson, teamAssignment });
+      addToast('Compte créé avec succès', 'success');
       setEmail('');
       setPassword('');
       setDisplayName('');

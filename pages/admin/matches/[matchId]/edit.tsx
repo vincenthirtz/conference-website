@@ -9,6 +9,7 @@ import { withStaffPage } from '@/utils/staff';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import MatchReadinessChecklist from '@/components/admin/MatchReadinessChecklist';
 import MatchTimeline from '@/components/admin/MatchTimeline';
+import { useToast } from '@/components/Toast';
 import type {
   StaffProps,
   Match,
@@ -108,6 +109,7 @@ function statusColor(status: MatchStatus) {
 function AdminMatchEditPage({ staff }: StaffProps) {
   const router = useRouter();
   const { matchId } = router.query;
+  const { addToast } = useToast();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -119,7 +121,6 @@ function AdminMatchEditPage({ staff }: StaffProps) {
   const [team2, setTeam2] = useState<TeamMini | null>(null);
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [conflictMsg, setConflictMsg] = useState<string | null>(null);
   const [conflictServerTime, setConflictServerTime] = useState<string | null>(null);
 
@@ -183,7 +184,6 @@ function AdminMatchEditPage({ staff }: StaffProps) {
     if (!matchId) return;
     setLoading(true);
     setErrorMsg(null);
-    setSuccessMsg(null);
 
     try {
       const res = await fetch(`/api/admin/matches/${matchId}?includeGames=1`);
@@ -245,7 +245,6 @@ function AdminMatchEditPage({ staff }: StaffProps) {
 
     setSaving(true);
     setErrorMsg(null);
-    setSuccessMsg(null);
     setConflictMsg(null);
 
     try {
@@ -345,7 +344,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
       // Refresh match data
       await fetchMatch();
 
-      setSuccessMsg('Match mis à jour avec succès.');
+      addToast('Match mis à jour avec succès.', 'success');
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? 'Erreur inattendue lors de la mise à jour');
     } finally {
@@ -377,7 +376,6 @@ function AdminMatchEditPage({ staff }: StaffProps) {
     setForfeitSaving(true);
     setForfeitError(null);
     setErrorMsg(null);
-    setSuccessMsg(null);
 
     try {
       // Scores auto-calculated server-side based on match format
@@ -399,7 +397,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
       setShowForfeitDialog(false);
       setForfeitTeamId(null);
       await fetchMatch();
-      setSuccessMsg('Forfait enregistré avec succès.');
+      addToast('Forfait enregistré avec succès.', 'success');
     } catch (err: unknown) {
       setForfeitError((err as Error)?.message ?? 'Erreur inattendue lors du forfait');
     } finally {
@@ -493,11 +491,6 @@ function AdminMatchEditPage({ staff }: StaffProps) {
         {errorMsg && (
           <div className="mb-4 rounded bg-red-900/60 border border-red-600 px-4 py-3 text-sm">
             {errorMsg}
-          </div>
-        )}
-        {successMsg && (
-          <div className="mb-4 rounded bg-emerald-900/60 border border-emerald-600 px-4 py-3 text-sm">
-            {successMsg}
           </div>
         )}
         {warningMsgs.length > 0 && (

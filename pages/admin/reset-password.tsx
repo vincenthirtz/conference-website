@@ -3,15 +3,16 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
 import { supabaseClient } from '@/utils/supabase';
+import { useToast } from '@/components/Toast';
 
 export default function AdminResetPasswordPage() {
   const router = useRouter();
+  const { addToast } = useToast();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -69,7 +70,6 @@ export default function AdminResetPasswordPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErrorMsg(null);
-    setSuccessMsg(null);
 
     if (!sessionReady) {
       setErrorMsg('Session de récupération non prête, réessaie dans un instant.');
@@ -97,7 +97,7 @@ export default function AdminResetPasswordPage() {
         );
       }
 
-      setSuccessMsg('Mot de passe mis à jour. Tu peux te reconnecter.');
+      addToast('Mot de passe mis à jour. Tu peux te reconnecter.', 'success');
       setPassword('');
       setConfirm('');
     } catch (err: unknown) {
@@ -184,12 +184,6 @@ export default function AdminResetPasswordPage() {
                     {errorMsg}
                   </div>
                 )}
-                {successMsg && (
-                  <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-100">
-                    {successMsg}
-                  </div>
-                )}
-
                 <div className="pt-2 flex items-center gap-3">
                   <button
                     type="submit"

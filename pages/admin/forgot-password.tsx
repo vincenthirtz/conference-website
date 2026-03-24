@@ -2,17 +2,17 @@ import { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { supabaseClient } from '@/utils/supabase';
+import { useToast } from '@/components/Toast';
 
 export default function AdminForgotPasswordPage() {
+  const { addToast } = useToast();
   const [email, setEmail] = useState('');
   const [sending, setSending] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErrorMsg(null);
-    setSuccessMsg(null);
     setSending(true);
 
     try {
@@ -36,8 +36,9 @@ export default function AdminForgotPasswordPage() {
         );
       }
 
-      setSuccessMsg(
-        'Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.'
+      addToast(
+        'Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.',
+        'success'
       );
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
@@ -97,12 +98,6 @@ export default function AdminForgotPasswordPage() {
                   {errorMsg}
                 </div>
               )}
-              {successMsg && (
-                <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-100">
-                  {successMsg}
-                </div>
-              )}
-
               <div className="pt-2 flex items-center gap-3">
                 <button
                   type="submit"

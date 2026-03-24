@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useToast } from '@/components/Toast';
 
 type StaffShape = {
   id: string;
@@ -85,11 +86,11 @@ function formatDate(iso: string | null) {
 
 function AdminRecycleBinPage({ staff }: StaffProps) {
   const router = useRouter();
+  const { addToast } = useToast();
 
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<DeletedItem[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [infoMsg, setInfoMsg] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<string>('');
   const [restoringId, setRestoringId] = useState<string | null>(null);
 
@@ -132,7 +133,6 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
 
     setRestoringId(item.id);
     setErrorMsg(null);
-    setInfoMsg(null);
 
     try {
       const res = await fetch('/api/admin/recycle-bin', {
@@ -146,8 +146,9 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
         throw new Error(json.error || 'Erreur lors de la restauration');
       }
 
-      setInfoMsg(
-        `${typeLabel(item.type)} "${item.name}" restaure avec succes.`
+      addToast(
+        `${typeLabel(item.type)} "${item.name}" restaure avec succes.`,
+        'info'
       );
       fetchItems();
     } catch (err: unknown) {
@@ -214,23 +215,6 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
               {errorMsg}
             </div>
           )}
-          {infoMsg && (
-            <div className="mb-6 rounded-xl bg-emerald-900/40 border border-emerald-500/50 px-4 py-3 text-sm flex items-center gap-2">
-              <svg
-                className="w-5 h-5 text-emerald-400 flex-shrink-0"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              {infoMsg}
-            </div>
-          )}
-
           {/* Filter */}
           <div className="flex gap-3 mb-6">
             <select

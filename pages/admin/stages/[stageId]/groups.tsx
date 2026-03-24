@@ -8,6 +8,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useToast } from '@/components/Toast';
 import type { StaffProps } from '@/types/admin';
 
 type TeamInfo = {
@@ -48,10 +49,10 @@ function GroupLabel({ groupKey }: { groupKey: string }) {
 function AdminStageGroupsPage({ staff }: StaffProps) {
   const router = useRouter();
   const { stageId } = router.query;
+  const { addToast } = useToast();
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const [stageName, setStageName] = useState('');
@@ -189,7 +190,6 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
     if (!stageId) return;
     setSaving(true);
     setErrorMsg(null);
-    setSuccessMsg(null);
 
     try {
       const assignments: Array<{ teamId: string; groupKey: string | null }> = [];
@@ -214,8 +214,7 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
         throw new Error(json.error || 'Erreur lors de la sauvegarde');
       }
 
-      setSuccessMsg('Groupes sauvegardés avec succès');
-      setTimeout(() => setSuccessMsg(null), 3000);
+      addToast('Groupes sauvegardés avec succès', 'success');
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
@@ -228,7 +227,6 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
     if (!stageId) return;
     setDistributing(true);
     setErrorMsg(null);
-    setSuccessMsg(null);
 
     try {
       const res = await fetch(`/api/admin/stages/${stageId}/groups`, {
@@ -245,8 +243,7 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
       const json = await res.json();
       setGroups(json.groups);
       setUnassigned(json.unassigned || []);
-      setSuccessMsg(`Equipes distribuées en ${numGroups} poule(s)`);
-      setTimeout(() => setSuccessMsg(null), 3000);
+      addToast(`Equipes distribuées en ${numGroups} poule(s)`, 'success');
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
@@ -332,15 +329,6 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
               {errorMsg}
             </div>
           )}
-          {successMsg && (
-            <div className="mb-6 rounded-xl bg-emerald-900/40 border border-emerald-500/50 px-4 py-3 text-sm flex items-center gap-2">
-              <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              {successMsg}
-            </div>
-          )}
-
           {loading && (
             <div className="flex items-center justify-center py-20">
               <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />

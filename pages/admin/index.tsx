@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabaseClient } from '@/utils/supabase';
 import { withStaffPage } from '@/utils/staff';
+import { useToast } from '@/components/Toast';
 
 type StaffShape = {
   id: string;
@@ -32,7 +33,6 @@ function AdminProfilePage({ staff }: Props) {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [form, setForm] = useState({
     displayName: '',
     avatarUrl: '',
@@ -41,14 +41,12 @@ function AdminProfilePage({ staff }: Props) {
   // Email change state
   const [newEmail, setNewEmail] = useState('');
   const [emailChanging, setEmailChanging] = useState(false);
-  const [emailSuccessMsg, setEmailSuccessMsg] = useState<string | null>(null);
   const [emailErrorMsg, setEmailErrorMsg] = useState<string | null>(null);
 
   // Password change state
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordChanging, setPasswordChanging] = useState(false);
-  const [passwordSuccessMsg, setPasswordSuccessMsg] = useState<string | null>(null);
   const [passwordErrorMsg, setPasswordErrorMsg] = useState<string | null>(null);
 
   // Data management state
@@ -57,6 +55,7 @@ function AdminProfilePage({ staff }: Props) {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [dataError, setDataError] = useState<string | null>(null);
 
+  const { addToast } = useToast();
   const router = useRouter();
 
   useEffect(() => {
@@ -109,7 +108,6 @@ function AdminProfilePage({ staff }: Props) {
 
     setEmailChanging(true);
     setEmailErrorMsg(null);
-    setEmailSuccessMsg(null);
 
     try {
       const { error } = await supabaseClient.auth.updateUser({ email: newEmail });
@@ -118,8 +116,9 @@ function AdminProfilePage({ staff }: Props) {
         throw error;
       }
 
-      setEmailSuccessMsg(
-        'Un email de confirmation a été envoyé à ta nouvelle adresse. Clique sur le lien pour confirmer le changement.'
+      addToast(
+        'Un email de confirmation a été envoyé à ta nouvelle adresse. Clique sur le lien pour confirmer le changement.',
+        'success'
       );
       setNewEmail('');
     } catch (err: unknown) {
@@ -143,7 +142,6 @@ function AdminProfilePage({ staff }: Props) {
 
     setPasswordChanging(true);
     setPasswordErrorMsg(null);
-    setPasswordSuccessMsg(null);
 
     try {
       const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
@@ -152,7 +150,7 @@ function AdminProfilePage({ staff }: Props) {
         throw error;
       }
 
-      setPasswordSuccessMsg('Ton mot de passe a été modifié avec succès.');
+      addToast('Ton mot de passe a été modifié avec succès.', 'success');
       setNewPassword('');
       setConfirmPassword('');
     } catch (err: unknown) {
@@ -167,7 +165,6 @@ function AdminProfilePage({ staff }: Props) {
     e.preventDefault();
     setSaving(true);
     setErrorMsg(null);
-    setSuccessMsg(null);
 
     try {
       const {
@@ -201,7 +198,7 @@ function AdminProfilePage({ staff }: Props) {
         displayName: json.display_name || '',
         avatarUrl: json.avatar_url || '',
       });
-      setSuccessMsg('Profil mis à jour.');
+      addToast('Profil mis à jour.', 'success');
     } catch (err: unknown) {
       console.error('AdminProfilePage: profile update error', err);
       setErrorMsg((err as Error)?.message || 'Erreur inattendue');
@@ -318,22 +315,6 @@ function AdminProfilePage({ staff }: Props) {
                 />
               </svg>
               {errorMsg}
-            </div>
-          )}
-          {successMsg && (
-            <div className="mb-6 rounded-xl bg-emerald-900/40 border border-emerald-500/50 px-4 py-3 text-sm flex items-center gap-2">
-              <svg
-                className="w-5 h-5 text-emerald-400 flex-shrink-0"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              {successMsg}
             </div>
           )}
 
@@ -496,22 +477,6 @@ function AdminProfilePage({ staff }: Props) {
                   Changer mon email
                 </h2>
 
-                {emailSuccessMsg && (
-                  <div className="mb-4 rounded-xl bg-emerald-900/40 border border-emerald-500/50 px-4 py-3 text-sm flex items-center gap-2">
-                    <svg
-                      className="w-5 h-5 text-emerald-400 flex-shrink-0"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    {emailSuccessMsg}
-                  </div>
-                )}
                 {emailErrorMsg && (
                   <div className="mb-4 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
                     <svg
@@ -582,22 +547,6 @@ function AdminProfilePage({ staff }: Props) {
                   Changer mon mot de passe
                 </h2>
 
-                {passwordSuccessMsg && (
-                  <div className="mb-4 rounded-xl bg-emerald-900/40 border border-emerald-500/50 px-4 py-3 text-sm flex items-center gap-2">
-                    <svg
-                      className="w-5 h-5 text-emerald-400 flex-shrink-0"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    {passwordSuccessMsg}
-                  </div>
-                )}
                 {passwordErrorMsg && (
                   <div className="mb-4 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
                     <svg

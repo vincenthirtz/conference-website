@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useToast } from '@/components/Toast';
 
 type StaffShape = {
   id: string;
@@ -69,11 +70,11 @@ export const getServerSideProps = withStaffPage('manager');
 function AdminStageTeamsPage({ staff }: StaffProps) {
   const router = useRouter();
   const { stageId } = router.query;
+  const { addToast } = useToast();
 
   const [loading, setLoading] = useState(true);
   const [loadingTeams, setLoadingTeams] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
   const [stage, setStage] = useState<StageTeamsApiResponse['stage'] | null>(
     null
@@ -113,7 +114,6 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
     if (!stageId) return;
     setLoading(true);
     setErrorMsg(null);
-    setInfoMsg(null);
 
     try {
       const res = await fetch(`/api/admin/stages/${stageId}/teams`);
@@ -178,7 +178,6 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
 
     setAdding(true);
     setErrorMsg(null);
-    setInfoMsg(null);
 
     const seed = addSeed.trim() !== '' ? Number(addSeed) : null;
 
@@ -200,7 +199,7 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
       }
 
       await res.json();
-      setInfoMsg('Équipe ajoutée à la phase.');
+      addToast('Équipe ajoutée à la phase.', 'info');
       setAddTeamId('');
       setAddSeed('');
       fetchStageTeams();
@@ -215,7 +214,6 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
     if (!stageId) return;
     setRemovingTeamId(teamId);
     setErrorMsg(null);
-    setInfoMsg(null);
 
     try {
       const res = await fetch(`/api/admin/stages/${stageId}/teams`, {
@@ -230,7 +228,7 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
         throw new Error(json.error || "Erreur lors du retrait de l'équipe");
       }
       await res.json();
-      setInfoMsg('Équipe retirée de la phase.');
+      addToast('Équipe retirée de la phase.', 'info');
       fetchStageTeams();
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? 'Erreur inattendue lors du retrait');
@@ -253,7 +251,6 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
 
     setUpdatingSeedId(teamId);
     setErrorMsg(null);
-    setInfoMsg(null);
 
     try {
       const res = await fetch(`/api/admin/stages/${stageId}/teams`, {
@@ -271,7 +268,7 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
         throw new Error(json.error || 'Erreur lors de la mise à jour du seed');
       }
       await res.json();
-      setInfoMsg('Seed mis à jour.');
+      addToast('Seed mis à jour.', 'info');
       fetchStageTeams();
     } catch (err: unknown) {
       setErrorMsg(
@@ -296,7 +293,6 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
 
     setBulkSeedSaving(true);
     setErrorMsg(null);
-    setInfoMsg(null);
 
     try {
       const res = await fetch(`/api/admin/stages/${stageId}/teams`, {
@@ -310,7 +306,7 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
       }
       const json = await res.json();
       const successCount = json.results?.filter((r: any) => r.success).length ?? 0;
-      setInfoMsg(`Seeds mis à jour pour ${successCount} équipe${successCount > 1 ? 's' : ''}.`);
+      addToast(`Seeds mis à jour pour ${successCount} équipe${successCount > 1 ? 's' : ''}.`, 'info');
       fetchStageTeams();
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? 'Erreur inattendue lors du bulk seed');
@@ -359,7 +355,6 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
 
     setBulkRemoving(true);
     setErrorMsg(null);
-    setInfoMsg(null);
 
     try {
       const res = await fetch(`/api/admin/stages/${stageId}/teams`, {
@@ -372,7 +367,7 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
         throw new Error(json.error || 'Erreur lors du retrait en masse');
       }
       await res.json();
-      setInfoMsg(`${count} équipe${count > 1 ? 's' : ''} retirée${count > 1 ? 's' : ''} de la phase.`);
+      addToast(`${count} équipe${count > 1 ? 's' : ''} retirée${count > 1 ? 's' : ''} de la phase.`, 'info');
       setSelectedTeamIds(new Set());
       fetchStageTeams();
     } catch (err: unknown) {
@@ -417,12 +412,6 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
             {errorMsg}
           </div>
         )}
-        {infoMsg && (
-          <div className="mb-4 rounded bg-emerald-900/60 border border-emerald-600 px-4 py-3 text-sm">
-            {infoMsg}
-          </div>
-        )}
-
         {loading && (
           <div className="text-neutral-300">
             Chargement des équipes de la phase…

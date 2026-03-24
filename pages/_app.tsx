@@ -4,9 +4,12 @@ import Footer from '@/components/Footer/footer';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import type { AppProps } from 'next/app';
 import DefaultSeo, { SeoProps } from '@/components/Seo/DefaultSeo';
+import { ToastProvider } from '@/components/Toast';
+import { ToastContainer } from '@/components/Toast';
 
 const Navbar = dynamic(() => import('@/components/Navbar/navbar'), {
   ssr: false,
+  loading: () => <div style={{ height: 75 }} />,
 });
 const BackToTopButton = dynamic(
   () => import('@/components/Buttons/BackToTopButton'),
@@ -35,15 +38,18 @@ function MyApp({ Component, pageProps, router }: AppPropsWithSeo) {
 
   return (
     <ErrorBoundary>
-      <div>
-        <DefaultSeo {...effectiveSeo} />
-        <Navbar />
-        <Component {...pageProps} />
-        <Footer />
-        {!isAdmin && <FloatingSocials />}
-        <BackToTopButton />
-        <CookieBanner />
-      </div>
+      <ToastProvider>
+        <div>
+          <DefaultSeo {...effectiveSeo} />
+          <Navbar />
+          <Component {...pageProps} />
+          <Footer />
+          {!isAdmin && <FloatingSocials />}
+          <BackToTopButton />
+          <CookieBanner />
+          <ToastContainer />
+        </div>
+      </ToastProvider>
     </ErrorBoundary>
   );
 }

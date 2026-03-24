@@ -5,6 +5,7 @@ import { useState, useCallback, useMemo, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
+import { useToast } from '@/components/Toast';
 import { STATUS_CONFIG } from '@/utils/statusConfig';
 import type { MatchStatus, FormatType, StageType } from '@/types/admin';
 import type { MatchForGraph } from '@/types/bracket';
@@ -923,9 +924,9 @@ type OccurrenceData = {
 };
 
 function TournamentSimulatorPage() {
+  const { addToast } = useToast();
   const importFileRef = useRef<HTMLInputElement>(null);
   const [importError, setImportError] = useState<string | null>(null);
-  const [copySuccess, setCopySuccess] = useState(false);
   const [animating, setAnimating] = useState(false);
   const animatingRef = useRef(false);
   const [dragSeedIdx, setDragSeedIdx] = useState<number | null>(null);
@@ -1210,8 +1211,7 @@ function TournamentSimulatorPage() {
     const text = generateResultsSummary(stages, teams, config);
     try {
       await navigator.clipboard.writeText(text);
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
+      addToast('Copié !', 'success');
     } catch {
       // Fallback
       const ta = document.createElement('textarea');
@@ -1220,10 +1220,9 @@ function TournamentSimulatorPage() {
       ta.select();
       document.execCommand('copy');
       document.body.removeChild(ta);
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
+      addToast('Copié !', 'success');
     }
-  }, [stages, teams, config]);
+  }, [stages, teams, config, addToast]);
 
   /** Print bracket/results as PDF */
   const handlePrint = useCallback(() => {
@@ -1837,7 +1836,7 @@ function TournamentSimulatorPage() {
                   className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-semibold shadow transition-colors print:hidden"
                   title="Copier le resume des resultats"
                 >
-                  {copySuccess ? 'Copie !' : 'Copier resultats'}
+                  Copier resultats
                 </button>
                 <button
                   onClick={handlePrint}

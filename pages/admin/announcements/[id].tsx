@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { supabaseClient } from '@/utils/supabase';
 import Button from '@/components/Buttons/button';
+import { useToast } from '@/components/Toast';
 
 type Props = {
   staff: {
@@ -53,6 +54,7 @@ export const getServerSideProps = withStaffPage('admin');
 
 function AdminAnnouncementEditPage({ staff }: Props) {
   const router = useRouter();
+  const { addToast } = useToast();
   const { id } = router.query;
 
   const [loading, setLoading] = useState(true);
@@ -70,7 +72,6 @@ function AdminAnnouncementEditPage({ staff }: Props) {
 
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const fetchAnnouncement = useCallback(async () => {
     if (!id || typeof id !== 'string') return;
@@ -133,13 +134,11 @@ function AdminAnnouncementEditPage({ staff }: Props) {
     value: FormState[K]
   ) {
     setForm((prev) => ({ ...prev, [key]: value }));
-    setSuccessMsg(null);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErrorMsg(null);
-    setSuccessMsg(null);
 
     if (!form.title.trim()) {
       setErrorMsg("Le titre de l'annonce est obligatoire.");
@@ -187,7 +186,7 @@ function AdminAnnouncementEditPage({ staff }: Props) {
         throw new Error(json.error || "Erreur lors de la mise à jour de l'annonce");
       }
 
-      setSuccessMsg('Annonce mise à jour avec succès.');
+      addToast('Annonce mise à jour avec succès.', 'success');
     } catch (err: unknown) {
       setErrorMsg(
         (err as Error)?.message ?? "Erreur inconnue lors de la mise à jour de l'annonce"
@@ -357,23 +356,6 @@ function AdminAnnouncementEditPage({ staff }: Props) {
                 />
               </svg>
               {errorMsg}
-            </div>
-          )}
-
-          {successMsg && (
-            <div className="mb-4 rounded-xl bg-emerald-900/40 border border-emerald-500/50 px-4 py-3 text-sm flex items-center gap-2">
-              <svg
-                className="w-5 h-5 text-emerald-400 flex-shrink-0"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              {successMsg}
             </div>
           )}
 

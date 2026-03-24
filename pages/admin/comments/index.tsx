@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
+import { useToast } from '@/components/Toast';
 
 type CommentRow = {
   id: string;
@@ -45,7 +46,7 @@ function AdminCommentsPage({ staff }: Props) {
   const [total, setTotal] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const { addToast } = useToast();
   const [search, setSearch] = useState('');
   const [limit] = useState(30);
   const [offset, setOffset] = useState(0);
@@ -96,8 +97,7 @@ function AdminCommentsPage({ staff }: Props) {
         throw new Error(json?.error || 'Suppression impossible');
       }
       setDeleteTarget(null);
-      setSuccessMsg('Commentaire supprimé');
-      setTimeout(() => setSuccessMsg(null), 3000);
+      addToast('Commentaire supprimé', 'success');
       fetchComments();
     } catch (err: unknown) {
       setError((err as Error)?.message || 'Erreur lors de la suppression');
@@ -125,8 +125,7 @@ function AdminCommentsPage({ staff }: Props) {
         delete next[c.id];
         return next;
       });
-      setSuccessMsg('Commentaire mis à jour');
-      setTimeout(() => setSuccessMsg(null), 3000);
+      addToast('Commentaire mis à jour', 'success');
       fetchComments();
     } catch (err: unknown) {
       setError((err as Error)?.message || 'Erreur lors de la mise à jour');
@@ -180,23 +179,6 @@ function AdminCommentsPage({ staff }: Props) {
                 />
               </svg>
               {error}
-            </div>
-          )}
-
-          {successMsg && (
-            <div className="mb-6 rounded-xl bg-emerald-900/40 border border-emerald-500/50 px-4 py-3 text-sm flex items-center gap-2">
-              <svg
-                className="w-5 h-5 text-emerald-400 flex-shrink-0"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              {successMsg}
             </div>
           )}
 

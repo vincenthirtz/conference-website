@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { supabaseClient } from '@/utils/supabase';
 import { withStaffPage } from '@/utils/staff';
+import { useToast } from '@/components/Toast';
 
 type StaffShape = {
   id: string;
@@ -165,6 +166,7 @@ function statusColor(status: DemandeStatus) {
 }
 
 function AdminDemandesPage() {
+  const { addToast } = useToast();
   const router = useRouter();
 
   // Guard auth cote client
@@ -195,7 +197,6 @@ function AdminDemandesPage() {
   // Batch selection
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [batchProcessing, setBatchProcessing] = useState(false);
-  const [batchMsg, setBatchMsg] = useState<string | null>(null);
 
   // 1) Guard staff : check session + /api/admin/me
   useEffect(() => {
@@ -344,7 +345,6 @@ function AdminDemandesPage() {
     if (selected.size === 0) return;
     setBatchProcessing(true);
     setErrorMsg(null);
-    setBatchMsg(null);
 
     try {
       const res = await fetch('/api/admin/demandes', {
@@ -366,8 +366,9 @@ function AdminDemandesPage() {
       }
 
       const json = await res.json();
-      setBatchMsg(
-        `${json.updatedCount} demande(s) ${newStatus === 'approved' ? 'approuvee(s)' : 'refusee(s)'}.`
+      addToast(
+        `${json.updatedCount} demande(s) ${newStatus === 'approved' ? 'approuvee(s)' : 'refusee(s)'}.`,
+        'success'
       );
       setSelected(new Set());
       fetchDemandes();
@@ -652,16 +653,6 @@ function AdminDemandesPage() {
               </button>
             </form>
           </section>
-
-          {/* Batch success message */}
-          {batchMsg && (
-            <div className="mb-6 rounded-xl bg-emerald-900/40 border border-emerald-500/50 px-4 py-3 text-sm flex items-center gap-2">
-              <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              {batchMsg}
-            </div>
-          )}
 
           {/* Batch action bar */}
           {selected.size > 0 && (

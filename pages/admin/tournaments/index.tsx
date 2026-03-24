@@ -318,78 +318,80 @@ function AdminTournamentsPage({ staff }: StaffProps) {
                   <Link
                     key={t.id}
                     href={`/admin/tournament/${t.id}`}
-                    className="flex items-center gap-4 p-4 hover:bg-neutral-700/30 transition-colors group"
+                    className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 hover:bg-neutral-700/30 transition-colors group"
                   >
-                    {/* Logo */}
-                    <div className="flex-shrink-0">
-                      {t.logo_url ? (
-                        <Image
-                          src={t.logo_url}
-                          alt={t.name}
-                          width={48}
-                          height={48}
-                          className="w-12 h-12 rounded-xl object-cover border border-neutral-700"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-xl bg-neutral-700/50 flex items-center justify-center border border-neutral-700">
-                          <svg
-                            className="w-6 h-6 text-neutral-500"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                            />
-                          </svg>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-white group-hover:text-blue-400 transition-colors truncate">
-                          {t.name}
-                        </h3>
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(
-                            t.status
-                          )}`}
-                        >
-                          {statusLabel(t.status)}
-                        </span>
-                        {t.is_public && (
-                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
-                            Public
-                          </span>
-                        )}
-                        {t.is_featured && (
-                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-600/20 text-amber-300 border border-amber-500/30">
-                            Featured
-                          </span>
+                    <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                      {/* Logo */}
+                      <div className="flex-shrink-0">
+                        {t.logo_url ? (
+                          <Image
+                            src={t.logo_url}
+                            alt={t.name}
+                            width={48}
+                            height={48}
+                            className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl object-cover border border-neutral-700"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-neutral-700/50 flex items-center justify-center border border-neutral-700">
+                            <svg
+                              className="w-5 h-5 sm:w-6 sm:h-6 text-neutral-500"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                              />
+                            </svg>
+                          </div>
                         )}
                       </div>
-                      <div className="flex items-center gap-3 text-sm text-neutral-400">
-                        {t.slug && (
-                          <span className="font-mono text-xs bg-neutral-800 px-2 py-0.5 rounded">
-                            /{t.slug}
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <h3 className="font-semibold text-white group-hover:text-blue-400 transition-colors truncate">
+                            {t.name}
+                          </h3>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(
+                              t.status
+                            )}`}
+                          >
+                            {statusLabel(t.status)}
                           </span>
-                        )}
-                        {t.game && <span>{t.game}</span>}
-                        <span>•</span>
-                        <span>{formatLabel(t.format_type)}</span>
-                        <span>•</span>
-                        <span>{formatDate(t.start_date)}</span>
+                          {t.is_public && (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
+                              Public
+                            </span>
+                          )}
+                          {t.is_featured && (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-600/20 text-amber-300 border border-amber-500/30">
+                              Featured
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 sm:gap-3 text-sm text-neutral-400 flex-wrap">
+                          {t.slug && (
+                            <span className="font-mono text-xs bg-neutral-800 px-2 py-0.5 rounded">
+                              /{t.slug}
+                            </span>
+                          )}
+                          {t.game && <span>{t.game}</span>}
+                          <span className="hidden sm:inline">•</span>
+                          <span>{formatLabel(t.format_type)}</span>
+                          <span className="hidden sm:inline">•</span>
+                          <span>{formatDate(t.start_date)}</span>
+                        </div>
                       </div>
                     </div>
 
                     {/* Arrow */}
                     <svg
-                      className="w-5 h-5 text-neutral-500 group-hover:text-white transition-colors flex-shrink-0"
+                      className="w-5 h-5 text-neutral-500 group-hover:text-white transition-colors flex-shrink-0 hidden sm:block"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
