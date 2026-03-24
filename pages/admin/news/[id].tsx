@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import slugify from 'slugify';
 import { supabaseClient } from '@/utils/supabase';
 import { withStaffPage } from '@/utils/staff';
+import Breadcrumb from '@/components/admin/Breadcrumb';
 import LogoUpload from '@/components/admin/LogoUpload';
 
 type Props = {
@@ -123,6 +124,10 @@ export default function AdminNewsEdit({ staff }: Props) {
         <title>Admin – Éditer une news</title>
       </Head>
       <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
+        <Breadcrumb items={[
+          { label: 'News', href: '/admin/news' },
+          { label: 'Modifier' },
+        ]} />
         <header className="flex items-center justify-between flex-wrap gap-4 mb-6">
           <div>
             <p className="text-sm text-neutral-400">Espace staff</p>

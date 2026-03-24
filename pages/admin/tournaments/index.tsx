@@ -88,6 +88,7 @@ function AdminTournamentsPage({ staff }: StaffProps) {
   const offset = Number(filters.offset) || 0;
 
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [total, setTotal] = useState<number | null>(null);
 
@@ -96,23 +97,30 @@ function AdminTournamentsPage({ staff }: StaffProps) {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
+    setErrorMsg(null);
 
-    const params = new URLSearchParams();
-    params.set('limit', String(LIMIT));
-    params.set('offset', String(offset));
-    params.set('includeTotal', '1');
+    try {
+      const params = new URLSearchParams();
+      params.set('limit', String(LIMIT));
+      params.set('offset', String(offset));
+      params.set('includeTotal', '1');
 
-    if (search.trim()) params.set('search', search);
-    if (status) params.set('status', status);
-    if (dateFrom) params.set('dateFrom', new Date(dateFrom).toISOString());
-    if (dateTo) params.set('dateTo', new Date(dateTo + 'T23:59:59').toISOString());
+      if (search.trim()) params.set('search', search);
+      if (status) params.set('status', status);
+      if (dateFrom) params.set('dateFrom', new Date(dateFrom).toISOString());
+      if (dateTo) params.set('dateTo', new Date(dateTo + 'T23:59:59').toISOString());
 
-    const res = await fetch(`/api/admin/tournaments?${params.toString()}`);
-    const json: ApiResponse = await res.json();
+      const res = await fetch(`/api/admin/tournaments?${params.toString()}`);
+      if (!res.ok) throw new Error(`Erreur ${res.status}`);
+      const json: ApiResponse = await res.json();
 
-    setTournaments(json.tournaments || []);
-    setTotal(json.total);
-    setLoading(false);
+      setTournaments(json.tournaments || []);
+      setTotal(json.total);
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Erreur lors du chargement');
+    } finally {
+      setLoading(false);
+    }
   }, [offset, search, status, dateFrom, dateTo]);
 
   useEffect(() => {
@@ -288,6 +296,23 @@ function AdminTournamentsPage({ staff }: StaffProps) {
               </button>
             </form>
           </section>
+
+          {/* Error Message */}
+          {errorMsg && (
+            <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
+              <svg className="w-5 h-5 text-red-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <span className="flex-1">{errorMsg}</span>
+              <button
+                type="button"
+                onClick={() => fetchData()}
+                className="flex-shrink-0 px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-medium transition-colors"
+              >
+                Réessayer
+              </button>
+            </div>
+          )}
 
           {/* Tournaments Grid/List */}
           <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">

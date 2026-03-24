@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
+import Breadcrumb from '@/components/admin/Breadcrumb';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import type {
   StaffProps,
@@ -734,6 +735,11 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
         <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12">
           {/* Header */}
           <div className="mb-8">
+            <Breadcrumb items={[
+              { label: 'Tournois', href: '/admin/tournaments' },
+              { label: tournament?.name || 'Tournoi', href: `/admin/tournament/${id}` },
+              { label: 'Matchs' },
+            ]} />
             <button
               type="button"
               onClick={() => router.push(backUrl)}

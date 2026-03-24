@@ -6,6 +6,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Image from 'next/image';
 import { withStaffPage } from '@/utils/staff';
+import Breadcrumb from '@/components/admin/Breadcrumb';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import MatchReadinessChecklist from '@/components/admin/MatchReadinessChecklist';
 import MatchTimeline from '@/components/admin/MatchTimeline';
@@ -417,6 +418,10 @@ function AdminMatchEditPage({ staff }: StaffProps) {
       </Head>
 
       <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
+        <Breadcrumb items={[
+          { label: 'Matchs', href: '/admin/matches' },
+          { label: 'Modifier match' },
+        ]} />
         {/* Header */}
         <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
           <div>

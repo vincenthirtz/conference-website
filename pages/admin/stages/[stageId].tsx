@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
+import Breadcrumb from '@/components/admin/Breadcrumb';
 import type { StaffProps, Stage, StageType, Tournament } from '@/types/admin';
 import AdvancementRulesEditor from '@/components/admin/AdvancementRulesEditor';
 import type { AdvancementRules } from '@/components/admin/AdvancementRulesEditor';
@@ -643,6 +644,10 @@ function AdminStagePage({ staff }: StaffProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
           {/* Header */}
           <div className="mb-8">
+            <Breadcrumb items={[
+              { label: 'Phases', href: tournament ? `/admin/tournament/${tournament.id}/stages` : '/admin/tournaments' },
+              { label: stage?.name || 'Phase' },
+            ]} />
             <button
               type="button"
               onClick={() => router.push(tournamentDashboardUrl)}

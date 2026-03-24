@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
+import Breadcrumb from '@/components/admin/Breadcrumb';
 
 type StaffProps = {
   staff: {
@@ -125,6 +126,11 @@ function AdminBracketPage(_: StaffProps) {
       </Head>
       <div className="min-h-screen bg-neutral-950 text-white pt-24">
         <div className="max-w-3xl mx-auto px-6 py-10 space-y-6">
+          <Breadcrumb items={[
+            { label: 'Tournois', href: '/admin/tournaments' },
+            { label: `Tournoi ${tournamentId?.slice(0, 8) ?? '—'}`, href: `/admin/tournament/${tournamentId}` },
+            { label: 'Bracket' },
+          ]} />
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
               <button

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useCookieConsent, CookiePreferences } from '@/hooks/useCookieConsent';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 interface CookieCategoryInfo {
   key: keyof CookiePreferences;
@@ -48,6 +49,7 @@ export default function CookieBanner() {
 
   const [showDetails, setShowDetails] = useState(false);
   const [customPreferences, setCustomPreferences] = useState<CookiePreferences>(preferences);
+  const trapRef = useFocusTrap<HTMLDivElement>();
 
   // Ne pas afficher si pas encore chargé ou si déjà consenti
   if (!isLoaded || hasConsented) {
@@ -67,7 +69,7 @@ export default function CookieBanner() {
   };
 
   return (
-    <div className="cookie-banner" role="dialog" aria-labelledby="cookie-banner-title" aria-describedby="cookie-banner-description">
+    <div ref={trapRef} className="cookie-banner" role="dialog" aria-modal="true" aria-labelledby="cookie-banner-title" aria-describedby="cookie-banner-description">
       <div className="cookie-banner-content">
         <div className="cookie-banner-header">
           <h2 id="cookie-banner-title" className="cookie-banner-title">

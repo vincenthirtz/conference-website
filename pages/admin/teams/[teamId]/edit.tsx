@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
+import Breadcrumb from '@/components/admin/Breadcrumb';
 import LogoUpload from '@/components/admin/LogoUpload';
 import type { StaffProps, TeamRow, TeamMemberRow } from '@/types/admin';
 
@@ -483,6 +484,11 @@ function AdminEditTeamPage({ staff }: StaffProps) {
         >
           {/* Header */}
           <div className="mb-8">
+            <Breadcrumb items={[
+              { label: 'Équipes', href: '/admin/teams' },
+              { label: team?.name || 'Équipe', href: `/admin/teams/${teamId}` },
+              { label: 'Modifier' },
+            ]} />
             <button
               type="button"
               onClick={() => router.push('/admin/teams')}

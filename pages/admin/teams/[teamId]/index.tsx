@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Button from '@/components/Buttons/button';
 import { withStaffPage } from '@/utils/staff';
+import Breadcrumb from '@/components/admin/Breadcrumb';
 
 type StaffShape = {
   id: string;
@@ -103,6 +104,10 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
       </Head>
 
       <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
+        <Breadcrumb items={[
+          { label: 'Équipes', href: '/admin/teams' },
+          { label: team?.name || 'Équipe' },
+        ]} />
         <header className="flex items-center justify-between flex-wrap gap-4 mb-6">
           <div>
             <button

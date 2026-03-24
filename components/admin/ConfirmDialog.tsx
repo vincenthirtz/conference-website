@@ -1,4 +1,5 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 type ConfirmDialogVariant = 'danger' | 'warning' | 'info';
 
@@ -90,16 +91,26 @@ export default function ConfirmDialog({
   onConfirm,
 }: ConfirmDialogProps) {
   const styles = VARIANT_STYLES[variant];
+  const trapRef = useFocusTrap<HTMLDivElement>();
+
+  // Close on Escape
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape' && !loading) onCancel();
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [loading, onCancel]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title">
+      <div ref={trapRef} className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
         <div className="flex items-center gap-3 mb-4">
           <div className={`w-10 h-10 rounded-full ${styles.iconBg} flex items-center justify-center ${styles.iconColor}`}>
             {VARIANT_ICONS[variant]}
           </div>
           <div>
-            <h3 className="text-lg font-semibold">{title}</h3>
+            <h3 id="confirm-dialog-title" className="text-lg font-semibold">{title}</h3>
             {subtitle && <p className="text-sm text-neutral-400">{subtitle}</p>}
           </div>
         </div>

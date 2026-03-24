@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
+import Breadcrumb from '@/components/admin/Breadcrumb';
 import {
   TOURNAMENT_TEMPLATES,
   type TournamentTemplate,
@@ -207,6 +208,11 @@ function StagesPage(_: StaffProps) {
       </Head>
       <div className="min-h-screen bg-neutral-950 text-white pt-24">
         <div className="max-w-6xl mx-auto px-6 py-10">
+          <Breadcrumb items={[
+            { label: 'Tournois', href: '/admin/tournaments' },
+            { label: tournamentName, href: `/admin/tournament/${tournamentId}` },
+            { label: 'Phases' },
+          ]} />
           <div className="flex items-center justify-between gap-4 mb-6">
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-purple-200/80">

@@ -14,6 +14,7 @@ import {
 import { supabaseAdmin } from '@/utils/supabase';
 import { isValidUUID } from '@/utils/apiHelpers';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
+import Breadcrumb from '@/components/admin/Breadcrumb';
 import { useToast } from '@/components/Toast';
 import type { MatchStatus } from '@/types/admin';
 
@@ -864,6 +865,10 @@ function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData:
         >
           {/* Header */}
           <div className="mb-8">
+            <Breadcrumb items={[
+              { label: 'Tournois', href: '/admin/tournaments' },
+              { label: tournament?.name || 'Tournoi' },
+            ]} />
             <button
               type="button"
               onClick={() => router.push('/admin/tournaments')}

@@ -311,7 +311,14 @@ function AdminTeamsListPage({ staff }: StaffProps) {
                   clipRule="evenodd"
                 />
               </svg>
-              {errorMsg}
+              <span className="flex-1">{errorMsg}</span>
+              <button
+                type="button"
+                onClick={() => fetchTeams()}
+                className="flex-shrink-0 px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-medium transition-colors"
+              >
+                Réessayer
+              </button>
             </div>
           )}
 
@@ -727,7 +734,14 @@ function AdminTeamsListPage({ staff }: StaffProps) {
                     clipRule="evenodd"
                   />
                 </svg>
-                {errorMsg}
+                <span className="flex-1">{errorMsg}</span>
+                <button
+                  type="button"
+                  onClick={() => fetchTeams()}
+                  className="flex-shrink-0 px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-medium transition-colors"
+                >
+                  Réessayer
+                </button>
               </div>
             )}
 

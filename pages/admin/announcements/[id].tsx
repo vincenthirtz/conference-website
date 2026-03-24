@@ -5,6 +5,7 @@ import { withStaffPage } from '@/utils/staff';
 import { supabaseClient } from '@/utils/supabase';
 import Button from '@/components/Buttons/button';
 import { useToast } from '@/components/Toast';
+import Breadcrumb from '@/components/admin/Breadcrumb';
 
 type Props = {
   staff: {
@@ -288,6 +289,10 @@ function AdminAnnouncementEditPage({ staff }: Props) {
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white p-6 pt-20">
+        <Breadcrumb items={[
+          { label: 'Annonces', href: '/admin/announcements' },
+          { label: 'Modifier' },
+        ]} />
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>

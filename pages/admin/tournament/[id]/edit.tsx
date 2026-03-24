@@ -6,6 +6,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
+import Breadcrumb from '@/components/admin/Breadcrumb';
 import type { StaffProps, Tournament } from '@/types/admin';
 import { TOURNAMENT_TIMEZONES } from '@/utils/timezone';
 
@@ -213,6 +214,11 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
         <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12">
           {/* Header */}
           <div className="mb-8">
+            <Breadcrumb items={[
+              { label: 'Tournois', href: '/admin/tournaments' },
+              { label: form.name || 'Tournoi', href: `/admin/tournament/${id}` },
+              { label: 'Modifier' },
+            ]} />
             <button
               type="button"
               onClick={() => router.push(`/admin/tournament/${id}`)}
