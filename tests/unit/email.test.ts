@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { sendEmail, sendWelcomeEmail, sendTeamJoinEmail, sendAccountDeletedEmail } from '../../utils/email';
+import { sendEmail, sendWelcomeEmail, sendTeamJoinEmail, sendAccountDeletedEmail, sendTestEmail } from '../../utils/email';
 
 // Save originals
 const origEnv = { ...process.env };
@@ -135,5 +135,153 @@ describe('sendAccountDeletedEmail', () => {
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
     expect(body.subject).toContain('supprimé');
     expect(body.to).toEqual([{ email: 'gone@test.com' }]);
+  });
+});
+
+describe('sendTestEmail', () => {
+  it('sends test email with correct subject', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ messageId: 'test1' }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const result = await sendTestEmail('admin@test.com');
+
+    expect(result.success).toBe(true);
+    expect(result.id).toBe('test1');
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body.subject).toContain('[Test]');
+    expect(body.to).toEqual([{ email: 'admin@test.com' }]);
+  });
+});
+
+describe('Brevo API integration', () => {
+  it('sends correct headers (api-key, not Bearer)', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ messageId: 'h1' }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    await sendEmail({ to: 'a@b.com', subject: 'Hi', html: '<p>hi</p>' });
+
+    const opts = mockFetch.mock.calls[0][1];
+    expect(opts.headers['api-key']).toBe('test-key');
+    expect(opts.headers['Content-Type']).toBe('application/json');
+    expect(opts.headers['Accept']).toBe('application/json');
+    expect(opts.headers['Authorization']).toBeUndefined();
+  });
+
+  it('sends sender as object with name and email', async () => {
+    process.env.EMAIL_FROM = 'noreply@owwomenscup.fr';
+    process.env.EMAIL_FROM_NAME = 'OWWC';
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ messageId: 's1' }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    await sendEmail({ to: 'a@b.com', subject: 'Hi', html: '<p>hi</p>' });
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body.sender).toEqual({ name: 'OWWC', email: 'noreply@owwomenscup.fr' });
+  });
+
+  it('uses htmlContent key instead of html', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ messageId: 'c1' }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    await sendEmail({ to: 'a@b.com', subject: 'Hi', html: '<p>content</p>' });
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body.htmlContent).toBe('<p>content</p>');
+    expect(body.html).toBeUndefined();
+  });
+
+  it('uses default sender when env vars are missing', async () => {
+    delete process.env.EMAIL_FROM;
+    delete process.env.EMAIL_FROM_NAME;
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ messageId: 'df1' }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    await sendEmail({ to: 'a@b.com', subject: 'Hi', html: '' });
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body.sender.name).toBe('Tournoi');
+    expect(body.sender.email).toBe('noreply@example.com');
+  });
+
+  it('formats to as array of {email} objects', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ messageId: 'f1' }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    await sendEmail({ to: 'user@example.com', subject: 'Hi', html: '' });
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body.to).toEqual([{ email: 'user@example.com' }]);
+    expect(Array.isArray(body.to)).toBe(true);
+  });
+});
+
+describe('email templates use branded layout', () => {
+  function mockBrevo() {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ messageId: 'layout1' }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+    return mockFetch;
+  }
+
+  it('welcome email includes logo, gradient, and CTA', async () => {
+    const mockFetch = mockBrevo();
+    await sendWelcomeEmail('u@t.com', 'pass123');
+    const html = JSON.parse(mockFetch.mock.calls[0][1].body).htmlContent;
+
+    expect(html).toContain('2025-logo.png');
+    expect(html).toContain('linear-gradient');
+    expect(html).toContain('Se connecter');
+    expect(html).toContain('owwomenscup.fr');
+    expect(html).toContain('#1b1130');
+  });
+
+  it('team join email includes Discord link and CTA', async () => {
+    const mockFetch = mockBrevo();
+    await sendTeamJoinEmail('u@t.com', 'Les Heroines', 'captain');
+    const html = JSON.parse(mockFetch.mock.calls[0][1].body).htmlContent;
+
+    expect(html).toContain('discord.gg');
+    expect(html).toContain('Les Heroines');
+    expect(html).toContain('captain');
+    expect(html).toContain('Voir mon');
+  });
+
+  it('account deleted email includes branding but no CTA', async () => {
+    const mockFetch = mockBrevo();
+    await sendAccountDeletedEmail('u@t.com');
+    const html = JSON.parse(mockFetch.mock.calls[0][1].body).htmlContent;
+
+    expect(html).toContain('2025-logo.png');
+    expect(html).toContain('supprim');
+    expect(html).not.toContain('Se connecter');
+  });
+
+  it('test email includes branding', async () => {
+    const mockFetch = mockBrevo();
+    await sendTestEmail('u@t.com');
+    const html = JSON.parse(mockFetch.mock.calls[0][1].body).htmlContent;
+
+    expect(html).toContain('2025-logo.png');
+    expect(html).toContain('Brevo fonctionne');
   });
 });
