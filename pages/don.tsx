@@ -285,18 +285,18 @@ function DonationPage() {
                 </p>
               </div>
             )}
-            <div className={`grid gap-8 md:grid-cols-3${COMING_SOON ? ' select-none' : ''}`}>
+            <div
+              className={`grid gap-8 md:grid-cols-3${COMING_SOON ? ' select-none' : ''}`}
+            >
               <div className="md:col-span-1">
                 <p className="text-sm uppercase tracking-[0.14em] text-gray-200">
                   Faire un don en ligne
                 </p>
-                <h3 className="mt-2 text-2xl font-bold">
-                  Paiement sécurisé
-                </h3>
+                <h3 className="mt-2 text-2xl font-bold">Paiement sécurisé</h3>
                 <p className="mt-3 text-sm text-gray-100">
                   Réglez par carte bancaire via HelloAsso, la plateforme de
-                  référence des associations françaises. Aucune commission n&apos;est
-                  prélevée sur votre don.
+                  référence des associations françaises. Aucune commission
+                  n&apos;est prélevée sur votre don.
                 </p>
               </div>
 
@@ -427,9 +427,7 @@ function DonationPage() {
             <p className="text-sm uppercase tracking-[0.14em] text-gray-300">
               Autres moyens
             </p>
-            <h3 className="mt-2 text-2xl font-bold">
-              Virement ou mécénat
-            </h3>
+            <h3 className="mt-2 text-2xl font-bold">Virement ou mécénat</h3>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
                 <p className="text-lg font-semibold text-white">Virement</p>
@@ -448,9 +446,7 @@ function DonationPage() {
               </div>
 
               <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
-                <p className="text-lg font-semibold text-white">
-                  Entreprises
-                </p>
+                <p className="text-lg font-semibold text-white">Entreprises</p>
                 <p className="mt-2 text-sm text-gray-200">
                   Vous souhaitez soutenir ou sponsoriser ? Parlons visibilité,
                   ateliers et mécénat.
@@ -497,7 +493,7 @@ function DonationPage() {
 const donationSeo: SeoProps = {
   title: 'Faire un don',
   description:
-    "Soutenez l'association OW Women's Cup : financez les déplacements des équipes, la production et les actions inclusives autour de l'esport féminin.",
+    "Soutenez l'association Women's Cup : financez les déplacements des équipes, la production et les actions inclusives autour de l'esport féminin.",
 };
 
 DonationPage.seo = donationSeo;
