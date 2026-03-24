@@ -303,7 +303,6 @@ function DonationPage() {
               <form
                 onSubmit={handleDonate}
                 className="md:col-span-2 space-y-5"
-                aria-disabled={COMING_SOON}
               >
                 {/* Amount selection */}
                 <div>

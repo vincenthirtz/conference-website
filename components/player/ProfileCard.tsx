@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useRouter } from 'next/router';
 import type { User } from '@supabase/supabase-js';
 import { supabaseClient } from '@/utils/supabase';
 
@@ -8,6 +9,8 @@ type Props = {
 };
 
 export default function ProfileCard({ user, displayName }: Props) {
+  const router = useRouter();
+
   // Email change state
   const [newEmail, setNewEmail] = useState('');
   const [emailChanging, setEmailChanging] = useState(false);
@@ -20,6 +23,12 @@ export default function ProfileCard({ user, displayName }: Props) {
   const [passwordChanging, setPasswordChanging] = useState(false);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  // Data management state
+  const [exporting, setExporting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [dataError, setDataError] = useState<string | null>(null);
 
   const handleEmailChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,6 +85,70 @@ export default function ProfileCard({ user, displayName }: Props) {
       );
     } finally {
       setPasswordChanging(false);
+    }
+  };
+
+  const getToken = async () => {
+    const { data } = await supabaseClient.auth.getSession();
+    return data.session?.access_token;
+  };
+
+  const handleExportData = async () => {
+    setExporting(true);
+    setDataError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error('Session expirée.');
+
+      const resp = await fetch('/api/player/data-export', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => null);
+        throw new Error(body?.error || 'Erreur lors de l\u2019export.');
+      }
+
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'mes-donnees.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err: unknown) {
+      console.error('[player] export error:', err);
+      setDataError((err as Error)?.message || 'Erreur lors de l\u2019export.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    setDataError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error('Session expirée.');
+
+      const resp = await fetch('/api/player/delete-account', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => null);
+        throw new Error(body?.error || 'Erreur lors de la suppression.');
+      }
+
+      await supabaseClient.auth.signOut();
+      router.replace('/');
+    } catch (err: unknown) {
+      console.error('[player] delete account error:', err);
+      setDataError((err as Error)?.message || 'Erreur lors de la suppression.');
+    } finally {
+      setDeleting(false);
+      setDeleteConfirm(false);
     }
   };
 
@@ -185,6 +258,68 @@ export default function ProfileCard({ user, displayName }: Props) {
           </button>
         </form>
         <p className="text-xs text-gray-500 mt-2">Minimum 8 caractères.</p>
+      </div>
+
+      {/* Mes données — export & suppression */}
+      <div className="mt-6 pt-4 border-t border-white/10">
+        <h3 className="text-sm font-medium mb-3">Mes données</h3>
+
+        {dataError && (
+          <div className="mb-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+            {dataError}
+          </div>
+        )}
+
+        <button
+          onClick={handleExportData}
+          disabled={exporting}
+          className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 hover:border-purple-500/50 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed text-sm transition mb-3"
+        >
+          {exporting ? 'Export en cours...' : 'Télécharger mes données'}
+        </button>
+
+        <p className="text-xs text-gray-500 mb-4">
+          Récupère toutes tes informations personnelles au format JSON (droit
+          d&apos;accès RGPD).
+        </p>
+
+        {!deleteConfirm ? (
+          <button
+            onClick={() => setDeleteConfirm(true)}
+            className="w-full px-3 py-2 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-sm transition"
+          >
+            Supprimer mon compte
+          </button>
+        ) : (
+          <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 space-y-3">
+            <p className="text-xs text-red-200">
+              Cette action est <strong>irréversible</strong>. Toutes tes
+              données, ton appartenance à une équipe et tes demandes seront
+              définitivement supprimées.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleting}
+                className="flex-1 px-3 py-2 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition"
+              >
+                {deleting ? 'Suppression...' : 'Confirmer la suppression'}
+              </button>
+              <button
+                onClick={() => setDeleteConfirm(false)}
+                disabled={deleting}
+                className="px-3 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-sm transition"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        )}
+
+        <p className="text-xs text-gray-500 mt-2">
+          Droit à l&apos;oubli RGPD — ton compte et toutes tes données seront
+          supprimés définitivement.
+        </p>
       </div>
     </div>
   );
