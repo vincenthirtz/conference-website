@@ -358,7 +358,7 @@ function AboutPage() {
                     {item.icon}
                   </div>
                   <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                    \u00c9tape {item.step}
+                    &Eacute;tape {item.step}
                   </span>
                 </div>
                 <h3 className="text-lg font-semibold">{item.title}</h3>
