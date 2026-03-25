@@ -462,7 +462,7 @@ function Footer(): JSX.Element {
             <span className="text-sm">TikTok</span>
           </a>
           <a
-            href="https://www.instagram.com/ow_womenscup"
+            href="https://www.instagram.com/womenscup_asso"
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors"
