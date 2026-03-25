@@ -1,7 +1,7 @@
-// pages/api/teams/join-requests.ts
-// API pour le capitaine : gerer les demandes de joueurs voulant rejoindre son equipe
-// - GET  : lister les demandes pending pour son equipe
-// - POST : approuver ou rejeter une demande (ajoute le membre si approved)
+// pages/api/teams/transfer-requests.ts
+// API pour le capitaine : gerer les demandes de transfert de joueurs venant d'autres equipes
+// - GET  : lister les demandes de transfert pending pour son equipe
+// - POST : approuver ou rejeter une demande (retire de l'ancienne equipe et ajoute a la nouvelle)
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
@@ -12,7 +12,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (applyRateLimit(req, res, { max: 20, windowMs: 60_000 }, 'join-requests')) return;
+  if (applyRateLimit(req, res, { max: 20, windowMs: 60_000 }, 'transfer-requests')) return;
   if (!supabaseAdmin) {
     return res.status(503).json({ error: 'Service unavailable.' });
   }
@@ -72,20 +72,19 @@ async function handleGet(
     .from('demandes')
     .select('*')
     .eq('team_id', teamId)
-    .eq('type', 'join')
+    .eq('type', 'transfer')
     .order('created_at', { ascending: false });
 
   if (statusFilter && ['pending', 'approved', 'rejected', 'cancelled'].includes(statusFilter)) {
     query = query.eq('status', statusFilter);
   } else {
-    // Default: show pending
     query = query.eq('status', 'pending');
   }
 
   const { data: demandes, error: demandesErr } = await query;
 
   if (demandesErr) {
-    console.error('[join-requests] GET error:', demandesErr);
+    console.error('[transfer-requests] GET error:', demandesErr);
     return res.status(500).json({ error: 'Echec du chargement des demandes.' });
   }
 
@@ -146,7 +145,7 @@ async function handlePost(
     .select('*')
     .eq('id', demandeId)
     .eq('team_id', captainTeam.id)
-    .eq('type', 'join')
+    .eq('type', 'transfer')
     .eq('status', 'pending')
     .maybeSingle();
 
@@ -156,13 +155,25 @@ async function handlePost(
 
   const newStatus = action === 'approve' ? 'approved' : 'rejected';
 
-  // If approving, add the player to team_members
   if (action === 'approve') {
-    // Determine role from payload
     const desiredRole = validateRole((demande.payload as any)?.desired_role);
-    const battleTag = (demande.payload as any)?.user_battle_tag || null;
+    let battleTag = (demande.payload as any)?.user_battle_tag || null;
+    const fromTeamId = (demande.payload as any)?.from_team_id;
 
-    // Check max_players limit (coaches are excluded from this limit)
+    // If no battle_tag in payload, retrieve from current team membership
+    if (!battleTag && fromTeamId) {
+      const { data: currentMember } = await supabaseAdmin!
+        .from('team_members')
+        .select('battle_tag')
+        .eq('user_id', demande.user_id)
+        .eq('team_id', fromTeamId)
+        .maybeSingle();
+      if (currentMember?.battle_tag) {
+        battleTag = currentMember.battle_tag;
+      }
+    }
+
+    // Check max_players limit (coaches are excluded)
     if (desiredRole !== 'coach') {
       const [{ count: currentNonCoachCount }, { data: teamTournaments }] = await Promise.all([
         supabaseAdmin!
@@ -188,6 +199,21 @@ async function handlePost(
       }
     }
 
+    // Remove player from old team
+    if (fromTeamId) {
+      const { error: removeErr } = await supabaseAdmin!
+        .from('team_members')
+        .delete()
+        .eq('user_id', demande.user_id)
+        .eq('team_id', fromTeamId);
+
+      if (removeErr) {
+        console.error('[transfer-requests] remove from old team error:', removeErr);
+        return res.status(500).json({ error: 'Echec du retrait de l\'ancienne equipe.' });
+      }
+    }
+
+    // Add player to new team
     const { error: insertErr } = await supabaseAdmin!
       .from('team_members')
       .insert({
@@ -195,9 +221,11 @@ async function handlePost(
         user_id: demande.user_id,
         role: desiredRole,
         battle_tag: battleTag,
+        is_substitute: desiredRole === 'substitute',
       });
 
     if (insertErr) {
+      console.error('[transfer-requests] insert new member error:', insertErr);
       const msg =
         insertErr.message?.includes('duplicate') || insertErr.message?.includes('unique')
           ? 'Ce joueur est deja dans une equipe.'
@@ -208,19 +236,20 @@ async function handlePost(
     // Auto news
     try {
       const playerName = battleTag?.split('#')[0] || (demande.payload as any)?.user_display_name || 'Joueur';
-      const newsSlug = `team-${captainTeam.id}-join-${Date.now().toString(36)}`;
+      const fromTeamName = (demande.payload as any)?.from_team_name || 'une equipe';
+      const newsSlug = `team-${captainTeam.id}-transfer-${Date.now().toString(36)}`;
       await supabaseAdmin!.from('news').insert({
-        title: `${playerName} rejoint ${captainTeam.name}`,
+        title: `${playerName} transfere vers ${captainTeam.name}`,
         slug: newsSlug,
         tag: 'teams',
-        excerpt: `${playerName} rejoint ${captainTeam.name} en tant que ${desiredRole}.`,
-        content: `${playerName} a rejoint ${captainTeam.name} en tant que ${desiredRole}. Bienvenue !`,
+        excerpt: `${playerName} quitte ${fromTeamName} et rejoint ${captainTeam.name} en tant que ${desiredRole}.`,
+        content: `${playerName} a ete transfere de ${fromTeamName} vers ${captainTeam.name} en tant que ${desiredRole}. Bienvenue !`,
         image_url: captainTeam.logo_url ?? null,
         status: 'published',
         published_at: new Date().toISOString(),
       });
     } catch (newsErr) {
-      console.error('[join-requests] create news error:', newsErr);
+      console.error('[transfer-requests] create news error:', newsErr);
     }
   }
 
@@ -235,7 +264,7 @@ async function handlePost(
     .eq('id', demandeId);
 
   if (updateErr) {
-    console.error('[join-requests] update error:', updateErr);
+    console.error('[transfer-requests] update error:', updateErr);
     return res.status(500).json({ error: 'Echec de la mise a jour de la demande.' });
   }
 
@@ -244,7 +273,7 @@ async function handlePost(
     demandeId,
     newStatus,
     message: action === 'approve'
-      ? 'Joueur accepte et ajoute a l\'equipe.'
-      : 'Demande rejetee.',
+      ? 'Transfert accepte, joueur ajoute a l\'equipe.'
+      : 'Demande de transfert rejetee.',
   });
 }

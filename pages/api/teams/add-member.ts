@@ -106,25 +106,29 @@ export default async function handler(
       }
     }
 
-    // Check max_players limit across all tournaments the team is registered in
-    const [{ count: currentMemberCount }, { data: teamTournaments }] = await Promise.all([
-      supabaseAdmin
-        .from('team_members')
-        .select('*', { count: 'exact', head: true })
-        .eq('team_id', captainTeam.id),
-      supabaseAdmin
-        .from('tournament_teams')
-        .select('tournament_id, tournaments!inner(max_players)')
-        .eq('team_id', captainTeam.id),
-    ]);
+    // Check max_players limit across all tournaments (coaches are excluded)
+    const validatedRole = validateRole(role);
+    if (validatedRole !== 'coach') {
+      const [{ count: currentNonCoachCount }, { data: teamTournaments }] = await Promise.all([
+        supabaseAdmin
+          .from('team_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('team_id', captainTeam.id)
+          .neq('role', 'coach'),
+        supabaseAdmin
+          .from('tournament_teams')
+          .select('tournament_id, tournaments!inner(max_players)')
+          .eq('team_id', captainTeam.id),
+      ]);
 
-    if (teamTournaments && teamTournaments.length > 0) {
-      for (const tt of teamTournaments) {
-        const maxPlayers = (tt as any).tournaments?.max_players;
-        if (maxPlayers && (currentMemberCount ?? 0) >= maxPlayers) {
-          return res.status(400).json({
-            error: `L'équipe a atteint la limite de ${maxPlayers} joueur(s) imposée par un tournoi.`,
-          });
+      if (teamTournaments && teamTournaments.length > 0) {
+        for (const tt of teamTournaments) {
+          const maxPlayers = (tt as any).tournaments?.max_players;
+          if (maxPlayers && (currentNonCoachCount ?? 0) >= maxPlayers) {
+            return res.status(400).json({
+              error: `L'équipe a atteint la limite de ${maxPlayers} joueur(s) imposée par un tournoi.`,
+            });
+          }
         }
       }
     }
