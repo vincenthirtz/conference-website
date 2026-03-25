@@ -137,6 +137,7 @@ function AdminLogsPage({ staff }: StaffProps) {
       const params = new URLSearchParams();
       params.set('limit', String(limit));
       params.set('offset', String(offset));
+      params.set('includeTotal', '1');
       if (entityType.trim()) params.set('entityType', entityType.trim());
       if (action.trim()) params.set('action', action.trim());
       if (staffId.trim()) params.set('staffId', staffId.trim());

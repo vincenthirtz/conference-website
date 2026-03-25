@@ -129,67 +129,103 @@ function Navbar(): JSX.Element {
 
   // ----------------------------------------------------
   // 🔐 Vérifier si un staff est connecté (source de vérité)
+  // Cache TTL + dedup : évite les appels redondants à /api/admin/me
+  // lors de navigations rapides entre pages admin.
   // ----------------------------------------------------
-  const checkStaff = useCallback(async (accessToken?: string | null) => {
-    // Only show loading if we have no cached state
-    if (!sessionStorage.getItem('staff_cache')) setAdminLoading(true);
-    try {
-      let token = accessToken ?? null;
+  const STAFF_CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+  const inflight = useRef<Promise<void> | null>(null);
 
-      if (!token) {
-        const {
-          data: { session },
-        } = await supabaseClient.auth.getSession();
-        token = session?.access_token ?? null;
-      }
-
-      if (!token) {
-        setIsStaff(false);
-        setStaffName(null);
-        setStaffRole(null);
-        try { sessionStorage.removeItem('staff_cache'); } catch {}
-        return;
-      }
-
-      const res = await fetch('/api/admin/me', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const me = await res.json().catch(() => null);
-
-      if (!res.ok || me?.error || !me?.role) {
-        setIsStaff(false);
-        setStaffName(null);
-        setStaffRole(null);
-        try { sessionStorage.removeItem('staff_cache'); } catch {}
-        return;
-      }
-
-      const name = me.display_name || me.email || 'Staff';
-      const role = me.role as StaffRole;
-      setIsStaff(true);
-      setStaffRole(role);
-      setStaffName(name);
-      try { sessionStorage.setItem('staff_cache', JSON.stringify({ isStaff: true, staffName: name, staffRole: role })); } catch {}
-    } catch (e) {
-      console.error('Navbar staff check error:', e);
-      setIsStaff(false);
-      setStaffName(null);
-      setStaffRole(null);
-      try { sessionStorage.removeItem('staff_cache'); } catch {}
-    } finally {
-      setAdminLoading(false);
+  const checkStaff = useCallback(async (accessToken?: string | null, forceRefresh = false) => {
+    // Si le cache est frais et qu'on ne force pas le refresh, on skip le fetch
+    if (!forceRefresh) {
+      try {
+        const raw = sessionStorage.getItem('staff_cache');
+        if (raw) {
+          const cached = JSON.parse(raw);
+          if (cached.ts && Date.now() - cached.ts < STAFF_CACHE_TTL) {
+            setIsStaff(cached.isStaff === true);
+            setStaffName(cached.staffName ?? null);
+            setStaffRole(cached.staffRole ?? null);
+            setAdminLoading(false);
+            return;
+          }
+        }
+      } catch {}
     }
+
+    // Deduplicate concurrent calls: if a fetch is already in-flight, wait for it
+    if (inflight.current) {
+      await inflight.current;
+      return;
+    }
+
+    const run = async () => {
+      if (!sessionStorage.getItem('staff_cache')) setAdminLoading(true);
+      try {
+        let token = accessToken ?? null;
+
+        if (!token) {
+          const {
+            data: { session },
+          } = await supabaseClient.auth.getSession();
+          token = session?.access_token ?? null;
+        }
+
+        if (!token) {
+          setIsStaff(false);
+          setStaffName(null);
+          setStaffRole(null);
+          try { sessionStorage.removeItem('staff_cache'); } catch {}
+          return;
+        }
+
+        const res = await fetch('/api/admin/me', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const me = await res.json().catch(() => null);
+
+        if (!res.ok || me?.error || !me?.role) {
+          setIsStaff(false);
+          setStaffName(null);
+          setStaffRole(null);
+          try { sessionStorage.removeItem('staff_cache'); } catch {}
+          return;
+        }
+
+        const name = me.display_name || me.email || 'Staff';
+        const role = me.role as StaffRole;
+        setIsStaff(true);
+        setStaffRole(role);
+        setStaffName(name);
+        try { sessionStorage.setItem('staff_cache', JSON.stringify({ isStaff: true, staffName: name, staffRole: role, ts: Date.now() })); } catch {}
+      } catch (e) {
+        console.error('Navbar staff check error:', e);
+        setIsStaff(false);
+        setStaffName(null);
+        setStaffRole(null);
+        try { sessionStorage.removeItem('staff_cache'); } catch {}
+      } finally {
+        setAdminLoading(false);
+      }
+    };
+
+    inflight.current = run();
+    await inflight.current;
+    inflight.current = null;
   }, []);
 
   useEffect(() => {
     checkStaff();
 
     const { data: authListener } = supabaseClient.auth.onAuthStateChange(
-      (_event, session) => {
-        checkStaff(session?.access_token ?? null);
+      (event, session) => {
+        // Only force refresh on real auth changes (login/logout/token refresh),
+        // not on INITIAL_SESSION which is redundant with the mount checkStaff().
+        const forceRefresh = event !== 'INITIAL_SESSION';
+        checkStaff(session?.access_token ?? null, forceRefresh);
       }
     );
 
