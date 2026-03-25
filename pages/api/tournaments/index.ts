@@ -39,7 +39,7 @@ export default async function handler(
   }
 
   try {
-    const { status } = req.query;
+    const { status, id } = req.query;
 
     const { limit: limitNum, offset: offsetNum } = parsePagination(req, { limit: 50 });
 
@@ -61,14 +61,20 @@ export default async function handler(
 
     let query = supabaseAdmin
       .from('tournaments')
-      .select(selectColumns, { count: 'exact' })
-      // Exclure les drafts et archived - seulement les tournois visibles
-      .in('status', ['published', 'running', 'completed']);
+      .select(selectColumns, { count: 'exact' });
 
-    // Filtrer par status spécifique si demandé
-    if (status && !Array.isArray(status)) {
-      if (['published', 'running', 'completed'].includes(status)) {
-        query = query.eq('status', status);
+    // When fetching a specific tournament by ID, skip status filter
+    if (id && typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id)) {
+      query = query.eq('id', id);
+    } else {
+      // Exclure les drafts et archived - seulement les tournois visibles
+      query = query.in('status', ['published', 'running', 'completed']);
+
+      // Filtrer par status spécifique si demandé
+      if (status && !Array.isArray(status)) {
+        if (['published', 'running', 'completed'].includes(status)) {
+          query = query.eq('status', status);
+        }
       }
     }
 

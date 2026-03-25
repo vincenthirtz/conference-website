@@ -42,11 +42,11 @@ function ActualitesPreviewSection(): JSX.Element {
         const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         if (data.value && UUID_RE.test(data.value)) {
           setMixteTournamentId(data.value);
-          // Fetch team count for this tournament
-          fetch('/api/tournaments')
+          // Fetch team count for this specific tournament
+          fetch(`/api/tournaments?id=${data.value}`)
             .then((r) => r.json())
             .then((json) => {
-              const t = json.tournaments?.find((t: any) => t.id === data.value);
+              const t = json.tournaments?.[0];
               if (t) setTeamCount(t.team_count ?? 0);
             })
             .catch(() => {});
