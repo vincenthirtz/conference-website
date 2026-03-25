@@ -81,6 +81,29 @@ function MyTeamPage({ staff }: StaffProps) {
     description: '',
   });
 
+  // Joinable toggle
+  const [isJoinable, setIsJoinable] = useState(false);
+  const [togglingJoinable, setTogglingJoinable] = useState(false);
+
+  // Join requests
+  type JoinRequest = {
+    id: string;
+    user_id: string;
+    status: string;
+    comment: string | null;
+    payload: any;
+    created_at: string;
+    user: {
+      id: string;
+      email: string | null;
+      display_name: string | null;
+      battle_tag: string | null;
+    } | null;
+  };
+  const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
+  const [joinRequestsLoading, setJoinRequestsLoading] = useState(false);
+  const [processingRequestId, setProcessingRequestId] = useState<string | null>(null);
+
   // Search and add member state
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -333,6 +356,113 @@ function MyTeamPage({ staff }: StaffProps) {
       setAddingMember(false);
     }
   };
+
+  // Load join requests for the team
+  const loadJoinRequests = useCallback(async () => {
+    setJoinRequestsLoading(true);
+    try {
+      const {
+        data: { session },
+      } = await supabaseClient.auth.getSession();
+      if (!session) return;
+
+      const res = await fetch('/api/teams/join-requests?status=pending', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const json = await res.json();
+      if (res.ok) {
+        setJoinRequests(json.demandes || []);
+      }
+    } catch (err) {
+      console.error('Failed to load join requests', err);
+    } finally {
+      setJoinRequestsLoading(false);
+    }
+  }, []);
+
+  // Toggle joinable status
+  const handleToggleJoinable = async () => {
+    setTogglingJoinable(true);
+    try {
+      const {
+        data: { session },
+      } = await supabaseClient.auth.getSession();
+      if (!session) return;
+
+      const res = await fetch('/api/teams/toggle-joinable', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ joinable: !isJoinable }),
+      });
+      const json = await res.json();
+      if (res.ok) {
+        setIsJoinable(json.is_joinable);
+      } else {
+        alert(json?.error || 'Erreur');
+      }
+    } catch (err) {
+      console.error('Toggle joinable error:', err);
+    } finally {
+      setTogglingJoinable(false);
+    }
+  };
+
+  // Handle approve/reject join request
+  const handleJoinRequestAction = async (demandeId: string, action: 'approve' | 'reject') => {
+    setProcessingRequestId(demandeId);
+    try {
+      const {
+        data: { session },
+      } = await supabaseClient.auth.getSession();
+      if (!session) return;
+
+      const res = await fetch('/api/teams/join-requests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ demandeId, action }),
+      });
+      const json = await res.json();
+      if (res.ok) {
+        // Remove from list and reload members
+        setJoinRequests((prev) => prev.filter((r) => r.id !== demandeId));
+        if (action === 'approve') {
+          if (isStaffAdmin && selectedTeamId) {
+            await load(selectedTeamId);
+          } else {
+            await load();
+          }
+        }
+      } else {
+        alert(json?.error || 'Erreur');
+      }
+    } catch (err) {
+      console.error('Join request action error:', err);
+    } finally {
+      setProcessingRequestId(null);
+    }
+  };
+
+  // Load join requests when team data changes
+  const teamId = data?.team?.id;
+  const isCaptain = data?.isCaptain;
+  useEffect(() => {
+    if (teamId && (isCaptain || isStaffAdmin)) {
+      loadJoinRequests();
+    }
+  }, [teamId, isCaptain, isStaffAdmin, loadJoinRequests]);
+
+  // Sync isJoinable state from team data
+  useEffect(() => {
+    if (data?.team) {
+      setIsJoinable((data.team as any).is_joinable ?? false);
+    }
+  }, [data?.team]);
 
   const canEdit = isStaffAdmin || data?.isCaptain;
 
@@ -708,6 +838,33 @@ function MyTeamPage({ staff }: StaffProps) {
                 </div>
 
                 {canEdit && (
+                  <div className="flex items-center justify-between rounded-xl bg-neutral-900/50 border border-neutral-600 px-4 py-3">
+                    <div>
+                      <p className="text-sm text-neutral-200 font-medium">Recrutement ouvert</p>
+                      <p className="text-xs text-neutral-500">
+                        {isJoinable
+                          ? 'Les joueurs peuvent demander à rejoindre ton equipe'
+                          : 'Personne ne peut envoyer de demande'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleToggleJoinable}
+                      disabled={togglingJoinable}
+                      className={`relative w-12 h-7 rounded-full transition-colors ${
+                        isJoinable ? 'bg-emerald-600' : 'bg-neutral-600'
+                      } ${togglingJoinable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <span
+                        className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform ${
+                          isJoinable ? 'translate-x-5' : ''
+                        }`}
+                      />
+                    </button>
+                  </div>
+                )}
+
+                {canEdit && (
                   <div className="pt-2">
                     <button
                       type="button"
@@ -778,6 +935,112 @@ function MyTeamPage({ staff }: StaffProps) {
 
                 {renderMembers()}
               </section>
+
+              {/* Join Requests */}
+              {canEdit && (joinRequests.length > 0 || joinRequestsLoading) && (
+                <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-5 lg:col-span-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-semibold">Demandes de joueurs</h2>
+                      <p className="text-xs text-neutral-500">
+                        {joinRequests.length} demande{joinRequests.length > 1 ? 's' : ''} en attente
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={loadJoinRequests}
+                      disabled={joinRequestsLoading}
+                      className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-xs transition-colors"
+                    >
+                      {joinRequestsLoading ? 'Chargement...' : 'Rafraichir'}
+                    </button>
+                  </div>
+
+                  {joinRequestsLoading && joinRequests.length === 0 ? (
+                    <div className="flex items-center gap-2 text-neutral-400 text-sm py-4">
+                      <div className="w-4 h-4 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+                      Chargement des demandes...
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {joinRequests.map((jr) => {
+                        const isProcessing = processingRequestId === jr.id;
+                        const displayName = jr.user?.display_name || jr.payload?.user_display_name || 'Joueur inconnu';
+                        const battleTag = jr.user?.battle_tag || jr.payload?.user_battle_tag || null;
+                        const desiredRole = jr.payload?.desired_role || 'player';
+                        const roleLabel = desiredRole === 'substitute' ? 'Remplacant' : 'Joueur';
+
+                        return (
+                          <div
+                            key={jr.id}
+                            className="p-4 rounded-xl bg-neutral-900/50 border border-neutral-700/50"
+                          >
+                            <div className="flex items-start justify-between gap-4 flex-wrap">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-semibold text-white">{displayName}</span>
+                                  <span className="text-[10px] uppercase tracking-wide bg-blue-500/20 text-blue-300 rounded-lg px-2 py-0.5 border border-blue-500/30 font-semibold">
+                                    {roleLabel}
+                                  </span>
+                                </div>
+                                {battleTag && (
+                                  <p className="text-xs text-blue-400 mt-0.5">{battleTag}</p>
+                                )}
+                                {jr.user?.email && (
+                                  <p className="text-xs text-neutral-500 mt-0.5">{jr.user.email}</p>
+                                )}
+                                {jr.comment && (
+                                  <p className="text-sm text-neutral-300 mt-2 bg-neutral-800/50 rounded-lg px-3 py-2 border border-neutral-700/30">
+                                    &laquo; {jr.comment} &raquo;
+                                  </p>
+                                )}
+                                <p className="text-[11px] text-neutral-500 mt-1">
+                                  {new Date(jr.created_at).toLocaleDateString('fr-FR', {
+                                    day: 'numeric',
+                                    month: 'long',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </p>
+                              </div>
+
+                              <div className="flex gap-2 flex-shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => handleJoinRequestAction(jr.id, 'approve')}
+                                  disabled={isProcessing}
+                                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                                >
+                                  {isProcessing ? (
+                                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                  ) : (
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  )}
+                                  Accepter
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleJoinRequestAction(jr.id, 'reject')}
+                                  disabled={isProcessing}
+                                  className="px-4 py-2 rounded-xl bg-red-600/80 hover:bg-red-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                  Refuser
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </section>
+              )}
             </div>
           )}
         </div>

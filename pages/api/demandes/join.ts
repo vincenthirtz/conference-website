@@ -10,6 +10,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 export type JoinRequestBody = {
   teamId: string;
   message?: string;
+  desiredRole?: 'player' | 'substitute';
 };
 
 export default async function handler(
@@ -79,15 +80,20 @@ export default async function handler(
     }
     const message = rawMessage?.slice(0, 1000) || null;
 
-    // Verifier que l'equipe existe
+    // Verifier que l'equipe existe et est rejoignable
     const { data: teamData, error: teamErr } = await supabaseAdmin
       .from('teams')
-      .select('id, name')
+      .select('id, name, is_joinable')
       .eq('id', teamId)
+      .eq('is_active', true)
       .maybeSingle();
 
     if (teamErr || !teamData) {
       return res.status(400).json({ error: "L'equipe selectionnee n'existe pas." });
+    }
+
+    if (!teamData.is_joinable) {
+      return res.status(400).json({ error: "Cette equipe n'accepte pas les demandes pour le moment." });
     }
 
     // Verifier si l'utilisateur est deja membre d'une equipe
@@ -134,6 +140,10 @@ export default async function handler(
       });
     }
 
+    // Valider le role souhaite
+    const rawRole = body.desiredRole?.trim().toLowerCase();
+    const desiredRole = rawRole === 'substitute' ? 'substitute' : 'player';
+
     // Construire le payload
     const payload: Record<string, any> = {
       user_email: user.email,
@@ -143,6 +153,7 @@ export default async function handler(
         null,
       user_battle_tag: user.user_metadata?.battle_tag || null,
       team_name: teamData.name,
+      desired_role: desiredRole,
     };
 
     // Creer la demande

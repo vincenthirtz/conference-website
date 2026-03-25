@@ -454,6 +454,62 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: any) {
     }
   }
 
+  // 3b) Side-effects: when approving join demandes, add player to team
+  if (newStatus === 'approved' && afterList) {
+    for (const d of afterList as DemandeRow[]) {
+      if (d.type === 'join' && d.team_id && d.user_id) {
+        // Check if not already a member
+        const { data: existingMember } = await supabaseAdmin
+          .from('team_members')
+          .select('id')
+          .eq('team_id', d.team_id)
+          .eq('user_id', d.user_id)
+          .maybeSingle();
+
+        if (!existingMember) {
+          const desiredRole = (d.payload as any)?.desired_role || 'player';
+          const battleTag = (d.payload as any)?.user_battle_tag || null;
+
+          const { error: memberErr } = await supabaseAdmin
+            .from('team_members')
+            .insert({
+              team_id: d.team_id,
+              user_id: d.user_id,
+              role: desiredRole,
+              battle_tag: battleTag,
+            });
+
+          if (memberErr) {
+            console.error('auto-add join member error:', memberErr);
+          } else {
+            try {
+              const playerName = battleTag?.split('#')[0] || (d.payload as any)?.user_display_name || 'Joueur';
+              const teamName = (d.payload as any)?.team_name || 'Équipe';
+              const { data: teamData } = await supabaseAdmin
+                .from('teams')
+                .select('logo_url')
+                .eq('id', d.team_id)
+                .maybeSingle();
+              const newsSlug = `team-${d.team_id}-join-${Date.now().toString(36)}`;
+              await supabaseAdmin.from('news').insert({
+                title: `${playerName} rejoint ${teamName}`,
+                slug: newsSlug,
+                tag: 'teams',
+                excerpt: `${playerName} rejoint ${teamName} en tant que ${desiredRole}.`,
+                content: `${playerName} a rejoint ${teamName} en tant que ${desiredRole}. Bienvenue !`,
+                image_url: teamData?.logo_url ?? null,
+                status: 'published',
+                published_at: new Date().toISOString(),
+              });
+            } catch (newsErr) {
+              console.error('[admin/demandes] join news error:', newsErr);
+            }
+          }
+        }
+      }
+    }
+  }
+
   // 4) Log staff (batch)
   if (staffId) {
     try {

@@ -72,7 +72,7 @@ export default async function handler(
     const { data: membership, error: membershipErr } = await supabaseAdmin
       .from('team_members')
       .select(
-        'team_id, teams!inner(id, name, short_name, logo_url, bio, country, description, captain_id)'
+        'team_id, teams!inner(id, name, short_name, logo_url, bio, country, description, captain_id, is_joinable)'
       )
       .eq('user_id', userId)
       .limit(1)
@@ -97,7 +97,7 @@ export default async function handler(
     const teamRaw = (membership as any).teams as any;
     const captainId = teamRaw.captain_id as string | null;
     const isCaptain = captainId === userId;
-    const team: TeamRow = {
+    const team: TeamRow & { is_joinable?: boolean } = {
       id: teamRaw.id,
       name: teamRaw.name,
       short_name: teamRaw.short_name,
@@ -105,6 +105,7 @@ export default async function handler(
       bio: teamRaw.bio,
       country: teamRaw.country,
       description: teamRaw.description,
+      is_joinable: teamRaw.is_joinable ?? false,
     };
 
     const { data: membersRaw, error: membersErr } = await supabaseAdmin

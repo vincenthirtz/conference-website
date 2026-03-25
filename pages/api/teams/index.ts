@@ -14,6 +14,7 @@ export type PublicTeam = {
   logo_url: string | null;
   country: string | null;
   member_count: number;
+  is_joinable: boolean;
 };
 
 export default async function handler(
@@ -34,11 +35,18 @@ export default async function handler(
     const { limit: limitNum, offset: offsetNum } = parsePagination(req, { limit: 100 });
     const search = sanitizeSearch(req.query.search);
 
+    const joinable = req.query.joinable;
+
     let query = supabaseAdmin
       .from('teams')
-      .select('id, name, short_name, logo_url, country, team_members(count)', {
+      .select('id, name, short_name, logo_url, country, is_joinable, team_members(count)', {
         count: 'exact',
       });
+
+    // Filter by joinable status
+    if (joinable === '1' || joinable === 'true') {
+      query = query.eq('is_joinable', true);
+    }
 
     // Recherche par nom
     if (search) {
@@ -65,6 +73,7 @@ export default async function handler(
       logo_url: t.logo_url,
       country: t.country,
       member_count: t.team_members?.[0]?.count ?? 0,
+      is_joinable: t.is_joinable ?? false,
     }));
 
     res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=120');

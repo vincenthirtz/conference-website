@@ -15,6 +15,7 @@ type Team = {
   logo_url: string | null;
   country: string | null;
   member_count?: number;
+  is_joinable?: boolean;
 };
 
 export default function JoinTeamPage() {
@@ -28,6 +29,9 @@ export default function JoinTeamPage() {
   const [teamsLoading, setTeamsLoading] = useState(false);
   const [selectedTeamId, setSelectedTeamId] = useState('');
   const [teamSearch, setTeamSearch] = useState('');
+
+  // Role souhaite
+  const [desiredRole, setDesiredRole] = useState<'player' | 'substitute'>('player');
 
   // Message et etats
   const [message, setMessage] = useState('');
@@ -89,6 +93,7 @@ export default function JoinTeamPage() {
         params.set('search', search.trim());
       }
       params.set('limit', '50');
+      params.set('joinable', '1');
       const res = await fetch(`/api/teams?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
@@ -131,6 +136,7 @@ export default function JoinTeamPage() {
         body: JSON.stringify({
           teamId: selectedTeamId,
           message: message.trim() || undefined,
+          desiredRole,
         }),
       });
 
@@ -248,7 +254,7 @@ export default function JoinTeamPage() {
 
                   {!teamsLoading && teams.length === 0 && (
                     <div className="text-sm text-gray-500 text-center py-4">
-                      Aucune equipe trouvee
+                      Aucune equipe ouverte au recrutement pour le moment
                     </div>
                   )}
 
@@ -315,6 +321,37 @@ export default function JoinTeamPage() {
                         )}
                       </button>
                     ))}
+                </div>
+              </div>
+
+              {/* Role souhaite */}
+              <div>
+                <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
+                  Role souhaite
+                </label>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setDesiredRole('player')}
+                    className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium transition border ${
+                      desiredRole === 'player'
+                        ? 'bg-purple-600/30 border-purple-400/50 text-white'
+                        : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
+                    }`}
+                  >
+                    Joueur
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDesiredRole('substitute')}
+                    className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium transition border ${
+                      desiredRole === 'substitute'
+                        ? 'bg-purple-600/30 border-purple-400/50 text-white'
+                        : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
+                    }`}
+                  >
+                    Remplacant (sub)
+                  </button>
                 </div>
               </div>
 
