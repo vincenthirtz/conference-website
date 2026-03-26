@@ -38,7 +38,7 @@ type Tournament = {
   end_date: string | null;
   format_type: string | null;
   max_teams: number | null;
-  is_public: boolean;
+  visibility: string | null;
   is_featured: boolean;
   logo_url: string | null;
   banner_url: string | null;
@@ -134,7 +134,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
       supabaseAdmin
         .from('tournaments')
         .select(
-          'id, name, slug, game, status, start_date, end_date, timezone, format_type, max_teams, is_public, is_featured, logo_url, banner_url, created_at, updated_at'
+          'id, name, slug, game, status, start_date, end_date, timezone, format_type, max_teams, visibility, is_featured, logo_url, banner_url, created_at, updated_at'
         )
         .eq('id', id)
         .maybeSingle(),
@@ -174,6 +174,9 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
       ]),
     ]);
 
+  if (tournamentRes.error) {
+    console.error('SSR tournament fetch error:', tournamentRes.error);
+  }
   const tournament = tournamentRes.data;
   if (!tournament) {
     return { notFound: true };
@@ -926,7 +929,7 @@ function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData:
                   >
                     {statusLabel(tournament.status)}
                   </span>
-                  {tournament.is_public && (
+                  {tournament.visibility === 'public' && (
                     <span className="px-3 py-1.5 rounded-full text-sm font-semibold bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
                       Public
                     </span>
