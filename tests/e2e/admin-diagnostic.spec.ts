@@ -123,6 +123,40 @@ async function assertNoStuckLoading(page: Page) {
   }
 }
 
+/**
+ * Nettoie toutes les donnees de test creees par ce fichier :
+ * staff_logs, staff, auth users correspondant au pattern e2e-diag-admin-*@test.local
+ */
+async function cleanupTestData() {
+  if (!supabaseTestClient) return;
+
+  const { data } = await supabaseTestClient.auth.admin.listUsers({
+    page: 1,
+    perPage: 100,
+  });
+
+  const users = (data as any)?.users as { id: string; email?: string }[] | undefined;
+  const testUsers = users?.filter(
+    (u) => u.email && /^e2e-diag-admin-\d+@test\.local$/.test(u.email)
+  ) ?? [];
+
+  for (const user of testUsers) {
+    // Recuperer l'id staff pour nettoyer les logs
+    const { data: staffRow } = await supabaseTestClient
+      .from('staff')
+      .select('id')
+      .eq('auth_user_id', user.id)
+      .maybeSingle();
+
+    if (staffRow) {
+      await supabaseTestClient.from('staff_logs').delete().eq('staff_id', staffRow.id);
+      await supabaseTestClient.from('staff').delete().eq('id', staffRow.id);
+    }
+
+    await supabaseTestClient.auth.admin.deleteUser(user.id);
+  }
+}
+
 /** Helper pour les appels API authentifies */
 async function apiGet(request: import('@playwright/test').APIRequestContext, endpoint: string) {
   return request.get(`${BASE_URL}${endpoint}`, {
@@ -140,6 +174,9 @@ test.describe.serial('Diagnostic admin', () => {
 
   test.beforeAll(async () => {
     if (!supabaseTestClient) return;
+
+    // Nettoyage preventif : supprimer les restes d'un run precedent qui aurait crashe
+    await cleanupTestData();
 
     await createTestStaff(STAFF_EMAIL, STAFF_PASSWORD, 'admin');
 
@@ -169,7 +206,7 @@ test.describe.serial('Diagnostic admin', () => {
 
   test.afterAll(async () => {
     if (!supabaseTestClient) return;
-    await deleteTestStaff(STAFF_EMAIL);
+    await cleanupTestData();
   });
 
   /* =========================================================

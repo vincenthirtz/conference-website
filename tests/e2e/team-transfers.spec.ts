@@ -28,6 +28,42 @@ const adminClient =
     ? createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } })
     : null;
 
+/**
+ * Nettoie toutes les donnees de test creees par ce fichier :
+ * demandes, news, team_members, teams, auth users correspondant aux patterns E2E-TR-*
+ */
+async function cleanupAllTestData() {
+  if (!adminClient) return;
+
+  // Supprimer les demandes liees aux equipes de test
+  const { data: testTeams } = await adminClient
+    .from('teams')
+    .select('id')
+    .ilike('name', 'E2E-TR-%');
+
+  if (testTeams && testTeams.length > 0) {
+    const teamIds = testTeams.map((t) => t.id);
+    await adminClient.from('demandes').delete().in('team_id', teamIds);
+  }
+
+  // Supprimer les news de transfert generees par les tests
+  await adminClient.from('news').delete().ilike('slug', 'team-%-transfer-%');
+
+  // Supprimer les equipes (team_members + teams)
+  await deleteTeamsByName(['E2E-TR-%']);
+
+  // Supprimer tous les auth users de test (pattern test-tr-*@test.local)
+  const { data } = await adminClient.auth.admin.listUsers({ page: 1, perPage: 100 });
+  const users = (data as any)?.users as { id: string; email?: string }[] | undefined;
+  const testUsers = users?.filter(
+    (u) => u.email && /^test-tr-\w+-\d+@test\.local$/.test(u.email)
+  ) ?? [];
+
+  for (const user of testUsers) {
+    await adminClient.auth.admin.deleteUser(user.id);
+  }
+}
+
 test.describe('Team transfers, role management & coach system', () => {
   let captainAToken: string;
   let captainBToken: string;
@@ -42,7 +78,10 @@ test.describe('Team transfers, role management & coach system', () => {
   test.beforeAll(async () => {
     test.skip(!HAS_SUPABASE, 'Supabase service role manquant');
 
-    // Cleanup
+    // Nettoyage preventif : supprimer les restes d'un run precedent qui aurait crashe
+    await cleanupAllTestData();
+
+    // Cleanup du run courant
     await deleteTeamsByName([`${PREFIX}%`]);
     for (const email of [CAPTAIN_A_EMAIL, CAPTAIN_B_EMAIL, PLAYER_EMAIL, COACH_EMAIL]) {
       await deleteTestUser(email);
@@ -101,14 +140,7 @@ test.describe('Team transfers, role management & coach system', () => {
 
   test.afterAll(async () => {
     if (!HAS_SUPABASE || !adminClient) return;
-    for (const id of [teamAId, teamBId]) {
-      if (id) await adminClient.from('demandes').delete().eq('team_id', id);
-    }
-    await adminClient.from('news').delete().ilike('slug', `team-%-transfer-%`);
-    await deleteTeamsByName([`${PREFIX}%`]);
-    for (const email of [CAPTAIN_A_EMAIL, CAPTAIN_B_EMAIL, PLAYER_EMAIL, COACH_EMAIL]) {
-      await deleteTestUser(email);
-    }
+    await cleanupAllTestData();
   });
 
   // ─── POST /api/demandes/transfer — validation ─────────
