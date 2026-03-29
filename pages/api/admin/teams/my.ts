@@ -17,9 +17,8 @@ type TeamRow = {
   name: string;
   short_name: string | null;
   logo_url: string | null;
-  bio: string | null;
-  country?: string | null;
-  description?: string | null;
+  country: string | null;
+  description: string | null;
 };
 
 type GetResponse = {
@@ -32,7 +31,6 @@ type UpdateBody = {
   teamId: string;
   name?: string;
   short_name?: string | null;
-  bio?: string | null;
   logo_url?: string | null;
   country?: string | null;
   description?: string | null;
@@ -72,7 +70,7 @@ export default async function handler(
     const { data: membership, error: membershipErr } = await supabaseAdmin
       .from('team_members')
       .select(
-        'team_id, teams!inner(id, name, short_name, logo_url, bio, country, description, captain_id, is_joinable)'
+        'team_id, teams!inner(id, name, short_name, logo_url, country, description, captain_id, is_joinable)'
       )
       .eq('user_id', userId)
       .limit(1)
@@ -102,7 +100,6 @@ export default async function handler(
       name: teamRaw.name,
       short_name: teamRaw.short_name,
       logo_url: teamRaw.logo_url,
-      bio: teamRaw.bio,
       country: teamRaw.country,
       description: teamRaw.description,
       is_joinable: teamRaw.is_joinable ?? false,
@@ -183,7 +180,6 @@ export default async function handler(
     if (typeof body.name === 'string') updatePayload.name = body.name.trim();
     if ('short_name' in body)
       updatePayload.short_name = body.short_name?.trim() || null;
-    if ('bio' in body) updatePayload.bio = body.bio || null;
     if ('logo_url' in body)
       updatePayload.logo_url = body.logo_url ? sanitizeUrl(body.logo_url) : null;
     if ('country' in body) updatePayload.country = body.country || null;
