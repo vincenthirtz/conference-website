@@ -6,8 +6,9 @@ import { sanitizeUrl } from '@/utils/apiHelpers';
 type MemberRow = {
   id: string;
   user_id: string | null;
-  display_name: string | null;
   role: string | null;
+  battle_tag: string | null;
+  is_substitute: boolean;
   captain?: boolean | null;
   is_captain?: boolean | null;
 };
@@ -107,7 +108,7 @@ export default async function handler(
 
     const { data: membersRaw, error: membersErr } = await supabaseAdmin
       .from('team_members')
-      .select('id, user_id, display_name, role, battle_tag')
+      .select('id, user_id, role, battle_tag, is_substitute')
       .eq('team_id', teamId)
       .order('created_at', { ascending: true });
 
