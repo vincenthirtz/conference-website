@@ -59,7 +59,7 @@ export default function RequestCaptainPage() {
         } = await supabaseClient.auth.getSession();
 
         if (!session?.user) {
-          router.replace('/register');
+          router.replace('/admin/login');
           return;
         }
 

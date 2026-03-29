@@ -34,6 +34,7 @@ const AdminLoginPage = () => {
           return;
         }
 
+        // Vérifier si l'utilisateur est staff
         const res = await fetch('/api/admin/me', {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -44,7 +45,13 @@ const AdminLoginPage = () => {
           return;
         }
 
-        if (res.status === 401 || res.status === 403) {
+        // Pas staff mais session valide → joueur, rediriger vers le panel joueur
+        if (res.status === 403) {
+          router.replace('/player');
+          return;
+        }
+
+        if (res.status === 401) {
           await supabaseClient.auth.signOut();
           if (!cancelled) {
             setError('Email ou mot de passe incorrect.');
@@ -90,23 +97,24 @@ const AdminLoginPage = () => {
 
       const me = await res.json().catch(() => null);
 
-      if (!res.ok || me?.error) {
-        if (res.status === 401 || res.status === 403) {
-          await supabaseClient.auth.signOut();
-        }
-
-        throw new Error('Email ou mot de passe incorrect.');
-      }
-
-      if (!me?.role) {
-        await supabaseClient.auth.signOut();
-        setError('Email ou mot de passe incorrect.');
+      if (res.ok && me?.role) {
+        // Staff → panel admin
+        await router.push('/admin');
         return;
       }
 
-      if (data?.user) {
-        await router.push('/admin');
-      } else {
+      if (res.status === 403) {
+        // Pas staff mais authentifié → joueur, rediriger vers le panel joueur
+        await router.push('/player');
+        return;
+      }
+
+      if (res.status === 401) {
+        await supabaseClient.auth.signOut();
+        throw new Error('Email ou mot de passe incorrect.');
+      }
+
+      if (!data?.user) {
         setError('Utilisateur non trouvé après la connexion.');
       }
     } catch (err: unknown) {
@@ -176,8 +184,8 @@ const AdminLoginPage = () => {
               className="mt-2 text-center max-w-sm"
               textColor="text-gray-300"
             >
-              Accès réservé aux organisateur·rices, admins et bénévoles de la OW
-              Women&apos;s Cup.
+              Connecte-toi pour accéder à ton espace joueur ou au panel
+              d&apos;administration.
             </Paragraph>
           </div>
 
@@ -312,14 +320,10 @@ const AdminLoginPage = () => {
                 textColor="text-gray-400"
                 className="text-center"
               >
-                Besoin d&apos;un accès staff ?{' '}
-                <span className="text-gray-200">
-                  Contacte l&apos;équipe à {contactEmail}.
-                </span>
-                {'  '}
+                Pas encore de compte ?{' '}
                 <Link
                   href="/register"
-                  className="text-purple-300 hover:text-purple-200 underline ml-1"
+                  className="text-purple-300 hover:text-purple-200 underline"
                 >
                   Créer mon compte
                 </Link>
