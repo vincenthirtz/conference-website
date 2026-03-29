@@ -6,10 +6,21 @@ import { supabaseClient } from '@/utils/supabase';
 type Props = {
   user: User;
   displayName: string;
+  onProfileUpdate?: () => void;
 };
 
-export default function ProfileCard({ user, displayName }: Props) {
+export default function ProfileCard({ user, displayName, onProfileUpdate }: Props) {
   const router = useRouter();
+
+  // Profile edit state
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [editDisplayName, setEditDisplayName] = useState(displayName);
+  const [editBattleTag, setEditBattleTag] = useState(
+    user.user_metadata?.battle_tag || ''
+  );
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
   // Email change state
   const [newEmail, setNewEmail] = useState('');
@@ -30,6 +41,40 @@ export default function ProfileCard({ user, displayName }: Props) {
   const [deleting, setDeleting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [dataError, setDataError] = useState<string | null>(null);
+
+  const handleProfileSave = async () => {
+    setProfileSaving(true);
+    setProfileError(null);
+    setProfileSuccess(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error('Session expiree.');
+
+      const resp = await fetch('/api/player/update-profile', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          display_name: editDisplayName,
+          battle_tag: editBattleTag,
+        }),
+      });
+
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Erreur');
+
+      await supabaseClient.auth.refreshSession();
+      setProfileSuccess('Profil mis a jour.');
+      setEditingProfile(false);
+      onProfileUpdate?.();
+    } catch (err: unknown) {
+      setProfileError((err as Error)?.message || 'Erreur');
+    } finally {
+      setProfileSaving(false);
+    }
+  };
 
   const handleEmailChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,29 +200,99 @@ export default function ProfileCard({ user, displayName }: Props) {
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
-      <h2 className="text-lg font-semibold mb-4">Mon profil</h2>
-      <div className="space-y-3 text-sm">
-        <div className="flex justify-between">
-          <span className="text-gray-400">Email</span>
-          <span>{user.email}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-gray-400">Nom affiché</span>
-          <span>{displayName}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-gray-400">Rôle</span>
-          <span className="capitalize">
-            {user.user_metadata?.role || 'player'}
-          </span>
-        </div>
-        {user.user_metadata?.battle_tag && (
-          <div className="flex justify-between">
-            <span className="text-gray-400">BattleTag</span>
-            <span className="font-mono">{user.user_metadata.battle_tag}</span>
-          </div>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold">Mon profil</h2>
+        {!editingProfile && (
+          <button
+            onClick={() => {
+              setEditDisplayName(displayName);
+              setEditBattleTag(user.user_metadata?.battle_tag || '');
+              setEditingProfile(true);
+              setProfileSuccess(null);
+              setProfileError(null);
+            }}
+            className="text-xs text-purple-300 hover:text-purple-200"
+          >
+            Modifier
+          </button>
         )}
       </div>
+
+      {profileSuccess && (
+        <div className="mb-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
+          {profileSuccess}
+        </div>
+      )}
+      {profileError && (
+        <div className="mb-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+          {profileError}
+        </div>
+      )}
+
+      {editingProfile ? (
+        <div className="space-y-3 text-sm">
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Nom affiche</label>
+            <input
+              type="text"
+              value={editDisplayName}
+              onChange={(e) => setEditDisplayName(e.target.value)}
+              maxLength={50}
+              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-500"
+              placeholder="Ton pseudo"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">BattleTag</label>
+            <input
+              type="text"
+              value={editBattleTag}
+              onChange={(e) => setEditBattleTag(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm font-mono placeholder:text-gray-500"
+              placeholder="Pseudo#1234"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleProfileSave}
+              disabled={profileSaving}
+              className="flex-1 px-3 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-sm font-medium transition"
+            >
+              {profileSaving ? 'Enregistrement...' : 'Enregistrer'}
+            </button>
+            <button
+              onClick={() => setEditingProfile(false)}
+              disabled={profileSaving}
+              className="px-3 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-sm transition"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3 text-sm">
+          <div className="flex justify-between">
+            <span className="text-gray-400">Email</span>
+            <span>{user.email}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-400">Nom affiche</span>
+            <span>{displayName}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-400">Role</span>
+            <span className="capitalize">
+              {user.user_metadata?.role || 'player'}
+            </span>
+          </div>
+          {user.user_metadata?.battle_tag && (
+            <div className="flex justify-between">
+              <span className="text-gray-400">BattleTag</span>
+              <span className="font-mono">{user.user_metadata.battle_tag}</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Changer d'email */}
       <div className="mt-6 pt-4 border-t border-white/10">

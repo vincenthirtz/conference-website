@@ -36,6 +36,7 @@ export default async function handler(
     const search = sanitizeSearch(req.query.search);
 
     const joinable = req.query.joinable;
+    const country = typeof req.query.country === 'string' ? req.query.country.trim() : '';
 
     let query = supabaseAdmin
       .from('teams')
@@ -46,6 +47,11 @@ export default async function handler(
     // Filter by joinable status
     if (joinable === '1' || joinable === 'true') {
       query = query.eq('is_joinable', true);
+    }
+
+    // Filter by country
+    if (country) {
+      query = query.eq('country', country);
     }
 
     // Recherche par nom

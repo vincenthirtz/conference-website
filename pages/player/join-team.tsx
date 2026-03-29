@@ -30,6 +30,11 @@ export default function JoinTeamPage() {
   const [selectedTeamId, setSelectedTeamId] = useState('');
   const [teamSearch, setTeamSearch] = useState('');
 
+  // Filtres
+  const [filterCountry, setFilterCountry] = useState('');
+  const [filterHasSlots, setFilterHasSlots] = useState(false);
+  const [availableCountries, setAvailableCountries] = useState<string[]>([]);
+
   // Role souhaite
   const [desiredRole, setDesiredRole] = useState<'player' | 'substitute'>('player');
 
@@ -85,7 +90,11 @@ export default function JoinTeamPage() {
     checkAuth();
   }, [router]);
 
-  const loadTeams = async (search?: string) => {
+  const loadTeams = async (
+    search?: string,
+    country?: string,
+    hasSlots?: boolean
+  ) => {
     setTeamsLoading(true);
     try {
       const params = new URLSearchParams();
@@ -94,10 +103,23 @@ export default function JoinTeamPage() {
       }
       params.set('limit', '50');
       params.set('joinable', '1');
+      if (country) params.set('country', country);
       const res = await fetch(`/api/teams?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
-        setTeams(data.teams || []);
+        let result: Team[] = data.teams || [];
+        if (hasSlots) {
+          result = result.filter(
+            (t) => typeof t.member_count !== 'number' || t.member_count < 5
+          );
+        }
+        // Collecter les pays disponibles
+        const countries = new Set<string>();
+        for (const t of data.teams || []) {
+          if (t.country) countries.add(t.country);
+        }
+        setAvailableCountries(Array.from(countries).sort());
+        setTeams(result);
       }
     } catch (err) {
       console.error('[join-team] load teams error:', err);
@@ -106,13 +128,34 @@ export default function JoinTeamPage() {
     }
   };
 
+  const reloadTeams = (
+    search?: string,
+    country?: string,
+    hasSlots?: boolean
+  ) => {
+    loadTeams(
+      search ?? teamSearch,
+      country ?? filterCountry,
+      hasSlots ?? filterHasSlots
+    );
+  };
+
   const handleTeamSearchChange = (value: string) => {
     setTeamSearch(value);
-    // Debounce la recherche
     const timeout = setTimeout(() => {
-      loadTeams(value);
+      reloadTeams(value);
     }, 300);
     return () => clearTimeout(timeout);
+  };
+
+  const handleCountryChange = (value: string) => {
+    setFilterCountry(value);
+    reloadTeams(undefined, value);
+  };
+
+  const handleHasSlotsChange = (checked: boolean) => {
+    setFilterHasSlots(checked);
+    reloadTeams(undefined, undefined, checked);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -244,6 +287,32 @@ export default function JoinTeamPage() {
                   className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 mb-3"
                   placeholder="Rechercher par nom..."
                 />
+
+                <div className="flex flex-wrap items-center gap-3 mb-3">
+                  {availableCountries.length > 0 && (
+                    <select
+                      value={filterCountry}
+                      onChange={(e) => handleCountryChange(e.target.value)}
+                      className="rounded-lg bg-black/60 border border-white/10 px-3 py-1.5 text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-purple-400"
+                    >
+                      <option value="">Tous les pays</option>
+                      {availableCountries.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  <label className="inline-flex items-center gap-2 text-xs text-gray-400 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={filterHasSlots}
+                      onChange={(e) => handleHasSlotsChange(e.target.checked)}
+                      className="rounded border-white/20 bg-black/60 text-purple-500 focus:ring-purple-400"
+                    />
+                    Places disponibles uniquement
+                  </label>
+                </div>
 
                 <div className="max-h-72 overflow-y-auto space-y-2 rounded-xl border border-white/10 bg-black/40 p-2">
                   {teamsLoading && (

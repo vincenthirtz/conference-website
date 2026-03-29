@@ -1,7 +1,7 @@
 // pages/player/index.tsx
-// Dashboard joueur - page principale pour les utilisateurs connectés
+// Dashboard joueur - page principale pour les utilisateurs connectes
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -23,9 +23,14 @@ type Demande = {
   type: 'captain_request' | 'join' | 'leave' | 'other';
   status: 'pending' | 'approved' | 'rejected' | 'cancelled';
   created_at: string;
+  updated_at?: string;
+  processed_at?: string;
+  comment?: string | null;
+  staff_note?: string | null;
   payload?: {
     team_name?: string;
     existing_team_name?: string;
+    message?: string;
   };
   team?: {
     id: string;
@@ -42,8 +47,55 @@ export default function PlayerDashboard() {
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  const getToken = useCallback(async () => {
+    const { data } = await supabaseClient.auth.getSession();
+    return data.session?.access_token ?? null;
+  }, []);
+
+  const loadData = useCallback(async () => {
+    const token = await getToken();
+    if (!token) return;
+
+    const [teamRes, captainRes, joinRes] = await Promise.all([
+      fetch('/api/admin/teams/my', {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+      fetch('/api/demandes/captain', {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+      fetch('/api/demandes/join', {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    ]);
+
+    if (teamRes.ok) {
+      const data = await teamRes.json();
+      setTeam(data.team || null);
+      setIsCaptain(data.isCaptain || false);
+    }
+
+    const allDemandes: Demande[] = [];
+
+    if (captainRes.ok) {
+      const data = await captainRes.json();
+      allDemandes.push(...(data.demandes || []));
+    }
+
+    if (joinRes.ok) {
+      const data = await joinRes.json();
+      allDemandes.push(...(data.demandes || []));
+    }
+
+    allDemandes.sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+
+    setDemandes(allDemandes);
+  }, [getToken]);
+
   useEffect(() => {
-    const loadData = async () => {
+    const init = async () => {
       try {
         const {
           data: { session },
@@ -55,45 +107,7 @@ export default function PlayerDashboard() {
         }
 
         setUser(session.user);
-        const token = session.access_token;
-
-        const teamRes = await fetch('/api/admin/teams/my', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (teamRes.ok) {
-          const teamData = await teamRes.json();
-          setTeam(teamData.team || null);
-          setIsCaptain(teamData.isCaptain || false);
-        }
-
-        const [captainRes, joinRes] = await Promise.all([
-          fetch('/api/demandes/captain', {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          fetch('/api/demandes/join', {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-        ]);
-
-        const allDemandes: Demande[] = [];
-
-        if (captainRes.ok) {
-          const captainData = await captainRes.json();
-          allDemandes.push(...(captainData.demandes || []));
-        }
-
-        if (joinRes.ok) {
-          const joinData = await joinRes.json();
-          allDemandes.push(...(joinData.demandes || []));
-        }
-
-        allDemandes.sort(
-          (a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
-
-        setDemandes(allDemandes);
+        await loadData();
       } catch (err: unknown) {
         console.error('[player] load error:', err);
         setError('Erreur lors du chargement de ton profil.');
@@ -102,12 +116,53 @@ export default function PlayerDashboard() {
       }
     };
 
-    loadData();
-  }, [router]);
+    init();
+  }, [router, loadData]);
 
   const handleLogout = async () => {
     await supabaseClient.auth.signOut();
     router.replace('/');
+  };
+
+  const handleCancelDemande = async (demandeId: string) => {
+    const token = await getToken();
+    if (!token) throw new Error('Session expiree.');
+
+    const res = await fetch('/api/demandes/cancel', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ demandeId }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Echec de l\'annulation.');
+
+    await loadData();
+  };
+
+  const handleLeaveTeam = async () => {
+    const token = await getToken();
+    if (!token) throw new Error('Session expiree.');
+
+    const res = await fetch('/api/teams/leave', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Echec.');
+
+    setTeam(null);
+    setIsCaptain(false);
+    await loadData();
+  };
+
+  const handleProfileUpdate = async () => {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session?.user) setUser(session.user);
   };
 
   const pendingCaptainRequest = demandes.find(
@@ -151,14 +206,14 @@ export default function PlayerDashboard() {
                 Bienvenue, {displayName}
               </h1>
               <p className="text-gray-400 text-sm mt-1">
-                Gère ton profil joueur et ton équipe depuis cet espace.
+                Gere ton profil joueur et ton equipe depuis cet espace.
               </p>
             </div>
             <button
               onClick={handleLogout}
               className="px-4 py-2 text-sm rounded-xl border border-white/15 bg-black/50 hover:border-red-400/50 hover:text-red-300 transition"
             >
-              Déconnexion
+              Deconnexion
             </button>
           </div>
 
@@ -169,21 +224,29 @@ export default function PlayerDashboard() {
           )}
 
           <div className="grid gap-6 md:grid-cols-2">
-            <ProfileCard user={user} displayName={displayName} />
+            <ProfileCard
+              user={user}
+              displayName={displayName}
+              onProfileUpdate={handleProfileUpdate}
+            />
             <TeamCard
               team={team}
               isCaptain={isCaptain}
               pendingCaptainRequest={pendingCaptainRequest}
               pendingJoinRequest={pendingJoinRequest}
+              onLeaveTeam={handleLeaveTeam}
             />
           </div>
 
-          <DemandesHistory demandes={demandes} />
+          <DemandesHistory
+            demandes={demandes}
+            onCancel={handleCancelDemande}
+          />
 
           {/* Liens utiles */}
           <div className="mt-8 flex flex-wrap gap-4 text-sm">
             <Link href="/" className="text-gray-400 hover:text-white">
-              ← Retour au site
+              &larr; Retour au site
             </Link>
             <Link
               href="/tournaments"
