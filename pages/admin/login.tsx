@@ -41,7 +41,7 @@ const AdminLoginPage = () => {
         const me = await res.json().catch(() => null);
 
         if (res.ok && me?.role) {
-          router.replace('/admin');
+          router.replace(me.role === 'captain' ? '/player' : '/admin');
           return;
         }
 
@@ -98,8 +98,8 @@ const AdminLoginPage = () => {
       const me = await res.json().catch(() => null);
 
       if (res.ok && me?.role) {
-        // Staff → panel admin
-        await router.push('/admin');
+        // Captain → panel joueur, Staff → panel admin
+        await router.push(me.role === 'captain' ? '/player' : '/admin');
         return;
       }
 

@@ -158,7 +158,26 @@ export default async function handler(
   }
 
   if (staffError || !staff) {
-    console.error('[/api/admin/me] staff error:', staffError);
+    // Pas staff → vérifier si capitaine d'une équipe
+    const { data: captainTeam } = await adminClient
+      .from('teams')
+      .select('id, name')
+      .eq('captain_id', user.id)
+      .limit(1)
+      .maybeSingle();
+
+    if (captainTeam) {
+      return res.status(200).json({
+        id: captainTeam.id,
+        auth_user_id: user.id,
+        email: user.email ?? '',
+        display_name: user.user_metadata?.display_name ?? null,
+        avatar_url: null,
+        role: 'captain',
+        created_at: user.created_at,
+      } as unknown as MeResponse);
+    }
+
     return res.status(403).json({ error: 'Not a staff member' });
   }
 
