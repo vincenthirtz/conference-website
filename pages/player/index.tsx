@@ -38,6 +38,19 @@ type Demande = {
   } | null;
 };
 
+type PendingScrim = {
+  id: string;
+  comment: string | null;
+  created_at: string;
+  payload: {
+    from_team_name?: string;
+    preferred_date?: string;
+  };
+  user: {
+    display_name: string | null;
+  } | null;
+};
+
 export default function PlayerDashboard() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -45,6 +58,8 @@ export default function PlayerDashboard() {
   const [team, setTeam] = useState<TeamInfo>(null);
   const [isCaptain, setIsCaptain] = useState(false);
   const [demandes, setDemandes] = useState<Demande[]>([]);
+  const [pendingScrims, setPendingScrims] = useState<PendingScrim[]>([]);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const getToken = useCallback(async () => {
@@ -68,10 +83,13 @@ export default function PlayerDashboard() {
       }),
     ]);
 
+    let isCaptainNow = false;
+
     if (teamRes.ok) {
       const data = await teamRes.json();
       setTeam(data.team || null);
-      setIsCaptain(data.isCaptain || false);
+      isCaptainNow = data.isCaptain || false;
+      setIsCaptain(isCaptainNow);
     }
 
     const allDemandes: Demande[] = [];
@@ -92,6 +110,32 @@ export default function PlayerDashboard() {
     );
 
     setDemandes(allDemandes);
+
+    // Captain-only: load pending scrims and unread messages
+    if (isCaptainNow) {
+      const [scrimRes, msgRes] = await Promise.all([
+        fetch('/api/teams/scrim-requests', {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch('/api/player/messages', {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+
+      if (scrimRes.ok) {
+        const data = await scrimRes.json();
+        setPendingScrims(data.demandes || []);
+      }
+
+      if (msgRes.ok) {
+        const data = await msgRes.json();
+        const total = (data.conversations || []).reduce(
+          (sum: number, c: { unreadCount: number }) => sum + c.unreadCount,
+          0
+        );
+        setUnreadMessages(total);
+      }
+    }
   }, [getToken]);
 
   useEffect(() => {
@@ -237,6 +281,156 @@ export default function PlayerDashboard() {
               onLeaveTeam={handleLeaveTeam}
             />
           </div>
+
+          {/* Actions rapides */}
+          {team && (
+            <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
+              <h2 className="text-lg font-semibold mb-4">Actions rapides</h2>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {!isCaptain && (
+                  <Link
+                    href="/player/requests?tab=transfer"
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition"
+                  >
+                    <svg className="w-5 h-5 text-purple-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M16 3h5v5" /><line x1="21" y1="3" x2="14" y2="10" /><path d="M8 21H3v-5" /><line x1="3" y1="21" x2="10" y2="14" />
+                    </svg>
+                    <div>
+                      <div className="text-sm font-medium text-white">Demander un transfert</div>
+                      <div className="text-xs text-gray-500">Vers une autre equipe</div>
+                    </div>
+                  </Link>
+                )}
+
+                {isCaptain && (
+                  <Link
+                    href="/player/requests?tab=transfer"
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition"
+                  >
+                    <svg className="w-5 h-5 text-purple-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M16 3h5v5" /><line x1="21" y1="3" x2="14" y2="10" /><path d="M8 21H3v-5" /><line x1="3" y1="21" x2="10" y2="14" />
+                    </svg>
+                    <div>
+                      <div className="text-sm font-medium text-white">Proposer un transfert</div>
+                      <div className="text-xs text-gray-500">Transferer un joueur</div>
+                    </div>
+                  </Link>
+                )}
+
+                {isCaptain && (
+                  <Link
+                    href="/player/requests?tab=scrim"
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl border border-blue-400/20 bg-blue-500/10 hover:bg-blue-500/20 transition"
+                  >
+                    <svg className="w-5 h-5 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10" /><polygon points="10 8 16 12 10 16 10 8" />
+                    </svg>
+                    <div>
+                      <div className="text-sm font-medium text-white">Proposer un scrim</div>
+                      <div className="text-xs text-gray-500">Match amical</div>
+                    </div>
+                  </Link>
+                )}
+
+                {isCaptain && (
+                  <Link
+                    href="/player/messages"
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl border border-emerald-400/20 bg-emerald-500/10 hover:bg-emerald-500/20 transition"
+                  >
+                    <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                    </svg>
+                    <div>
+                      <div className="text-sm font-medium text-white">
+                        Messagerie
+                        {unreadMessages > 0 && (
+                          <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-emerald-500 text-[10px] font-bold text-white">
+                            {unreadMessages}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-500">Discuter entre capitaines</div>
+                    </div>
+                  </Link>
+                )}
+
+                {isCaptain && (
+                  <Link
+                    href="/player/manage-team"
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition"
+                  >
+                    <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" />
+                    </svg>
+                    <div>
+                      <div className="text-sm font-medium text-white">Gerer l&apos;equipe</div>
+                      <div className="text-xs text-gray-500">Roster et demandes</div>
+                    </div>
+                  </Link>
+                )}
+
+                <Link
+                  href={`/team/${team.id}`}
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition"
+                >
+                  <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4" /><polyline points="10 17 15 12 10 7" /><line x1="15" y1="12" x2="3" y2="12" />
+                  </svg>
+                  <div>
+                    <div className="text-sm font-medium text-white">Page equipe</div>
+                    <div className="text-xs text-gray-500">Profil public</div>
+                  </div>
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* Scrims en attente (capitaine) */}
+          {isCaptain && pendingScrims.length > 0 && (
+            <div className="mt-6 rounded-2xl border border-blue-400/20 bg-blue-500/5 backdrop-blur-xl p-6">
+              <h2 className="text-lg font-semibold mb-4">
+                Demandes de scrim en attente
+                <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-blue-500 text-[10px] font-bold text-white">
+                  {pendingScrims.length}
+                </span>
+              </h2>
+              <div className="space-y-3">
+                {pendingScrims.map((scrim) => (
+                  <div
+                    key={scrim.id}
+                    className="flex items-center justify-between gap-4 p-4 rounded-xl border border-white/10 bg-black/30"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-white">
+                        {scrim.payload?.from_team_name || 'Equipe inconnue'}
+                      </div>
+                      {scrim.comment && (
+                        <p className="text-xs text-gray-400 mt-1 truncate">{scrim.comment}</p>
+                      )}
+                      <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                        {scrim.payload?.preferred_date && (
+                          <span>
+                            Date : {new Date(scrim.payload.preferred_date).toLocaleDateString('fr-FR', {
+                              day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                            })}
+                          </span>
+                        )}
+                        <span>
+                          Recu le {new Date(scrim.created_at).toLocaleDateString('fr-FR')}
+                        </span>
+                      </div>
+                    </div>
+                    <Link
+                      href="/player/manage-team"
+                      className="flex-shrink-0 px-3 py-2 rounded-lg bg-blue-500/20 border border-blue-400/30 text-xs font-medium text-blue-200 hover:bg-blue-500/30 transition"
+                    >
+                      Repondre
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <DemandesHistory
             demandes={demandes}

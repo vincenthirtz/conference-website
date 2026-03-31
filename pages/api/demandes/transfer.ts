@@ -11,6 +11,8 @@ export type TransferRequestBody = {
   teamId: string;
   desiredRole?: 'player' | 'substitute' | 'coach';
   message?: string;
+  /** Optional: captain can propose transferring one of their players */
+  targetPlayerId?: string;
 };
 
 export default async function handler(
@@ -78,6 +80,171 @@ export default async function handler(
       return res.status(400).json({ error: 'Message trop long (max 1000 caracteres).' });
     }
     const message = rawMessage?.slice(0, 1000) || null;
+
+    // ─── Captain-proposed transfer: propose le transfert d'un joueur ───
+    if (body.targetPlayerId?.trim()) {
+      const targetPlayerId = body.targetPlayerId.trim();
+
+      // Verifier que le demandeur est capitaine
+      const { data: captainMembership, error: captMemErr } = await supabaseAdmin
+        .from('team_members')
+        .select('id, team_id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (captMemErr) {
+        console.error('[demandes/transfer] captain check error:', captMemErr);
+        return res.status(500).json({ error: 'Verification error.' });
+      }
+
+      if (!captainMembership) {
+        return res.status(400).json({ error: "Tu n'es membre d'aucune equipe." });
+      }
+
+      const { data: captTeam } = await supabaseAdmin
+        .from('teams')
+        .select('id, captain_id, name')
+        .eq('id', captainMembership.team_id)
+        .maybeSingle();
+
+      if (captTeam?.captain_id !== userId) {
+        return res.status(403).json({
+          error: 'Seul le capitaine peut proposer le transfert d\'un joueur.',
+        });
+      }
+
+      // Verifier que le joueur cible est dans l'equipe du capitaine
+      const { data: playerMembership, error: playerMemErr } = await supabaseAdmin
+        .from('team_members')
+        .select('id, team_id, role, battle_tag')
+        .eq('user_id', targetPlayerId)
+        .eq('team_id', captTeam.id)
+        .maybeSingle();
+
+      if (playerMemErr) {
+        console.error('[demandes/transfer] player check error:', playerMemErr);
+        return res.status(500).json({ error: 'Verification error.' });
+      }
+
+      if (!playerMembership) {
+        return res.status(400).json({
+          error: "Ce joueur n'est pas dans ton equipe.",
+        });
+      }
+
+      // Ne peut pas se proposer soi-meme via ce mode
+      if (targetPlayerId === userId) {
+        return res.status(400).json({
+          error: 'Utilise le mode transfert classique pour toi-meme.',
+        });
+      }
+
+      // Ne peut pas transferer vers sa propre equipe
+      if (captTeam.id === teamId) {
+        return res.status(400).json({
+          error: 'Le joueur est deja dans cette equipe.',
+        });
+      }
+
+      // Verifier que l'equipe cible existe et est active
+      const { data: targetTeam, error: tErr } = await supabaseAdmin
+        .from('teams')
+        .select('id, name, is_joinable')
+        .eq('id', teamId)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (tErr || !targetTeam) {
+        return res.status(400).json({ error: "L'equipe cible n'existe pas." });
+      }
+
+      if (!targetTeam.is_joinable) {
+        return res.status(400).json({ error: "Cette equipe n'accepte pas les demandes pour le moment." });
+      }
+
+      // Verifier pas de demande pending existante pour ce joueur
+      const { data: existingDemande, error: existErr } = await supabaseAdmin
+        .from('demandes')
+        .select('id')
+        .eq('user_id', targetPlayerId)
+        .in('type', ['join', 'transfer'])
+        .eq('status', 'pending')
+        .maybeSingle();
+
+      if (existErr) {
+        console.error('[demandes/transfer] check existing error:', existErr);
+        return res.status(500).json({ error: 'Verification error.' });
+      }
+
+      if (existingDemande) {
+        return res.status(400).json({
+          error: 'Ce joueur a deja une demande en attente.',
+          existingDemandeId: existingDemande.id,
+        });
+      }
+
+      // Recuperer les infos du joueur cible
+      const { data: playerData } = await supabaseAdmin.auth.admin.getUserById(targetPlayerId);
+      const playerUser = playerData?.user;
+
+      const rawRole = body.desiredRole?.trim().toLowerCase();
+      const desiredRole =
+        rawRole === 'substitute' ? 'substitute' :
+        rawRole === 'coach' ? 'coach' :
+        'player';
+
+      const payload: Record<string, unknown> = {
+        user_email: playerUser?.email || null,
+        user_display_name:
+          playerUser?.user_metadata?.display_name ||
+          playerUser?.user_metadata?.full_name ||
+          null,
+        user_battle_tag: playerMembership.battle_tag || playerUser?.user_metadata?.battle_tag || null,
+        team_name: targetTeam.name,
+        desired_role: desiredRole,
+        from_team_id: captTeam.id,
+        from_team_name: captTeam.name,
+        proposed_by_captain: true,
+        proposed_by_user_id: userId,
+        proposed_by_display_name:
+          user.user_metadata?.display_name ||
+          user.user_metadata?.full_name ||
+          user.email,
+      };
+
+      const { data: newDemande, error: insertErr } = await supabaseAdmin
+        .from('demandes')
+        .insert({
+          user_id: targetPlayerId,
+          team_id: teamId,
+          type: 'transfer',
+          status: 'pending',
+          comment: message,
+          source: 'website',
+          payload,
+        })
+        .select('*')
+        .single();
+
+      if (insertErr) {
+        console.error('[demandes/transfer] captain insert error:', insertErr);
+        return res.status(500).json({ error: 'Failed to create request.' });
+      }
+
+      const playerName =
+        playerUser?.user_metadata?.display_name ||
+        playerUser?.user_metadata?.full_name ||
+        playerUser?.email?.split('@')[0] ||
+        'le joueur';
+
+      return res.status(201).json({
+        success: true,
+        demande: newDemande,
+        message: `La proposition de transfert de ${playerName} vers "${targetTeam.name}" a ete envoyee.`,
+      });
+    }
+
+    // ─── Self-transfer: le joueur demande son propre transfert ─────────
 
     // Verifier que le joueur est bien dans une equipe actuellement
     const { data: currentMembership, error: memberErr } = await supabaseAdmin

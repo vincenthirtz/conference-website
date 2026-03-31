@@ -40,6 +40,9 @@ export default function PlayerRequestsPage() {
 
   // Transfert
   const [desiredRole, setDesiredRole] = useState<'player' | 'substitute' | 'coach'>('player');
+  const [transferMode, setTransferMode] = useState<'self' | 'propose'>('self');
+  const [teamMembers, setTeamMembers] = useState<{ user_id: string; role: string; battle_tag: string | null; display_name?: string }[]>([]);
+  const [selectedPlayerId, setSelectedPlayerId] = useState('');
 
   // Scrim
   const [preferredDate, setPreferredDate] = useState('');
@@ -76,6 +79,21 @@ export default function PlayerRequestsPage() {
             setHasTeam(true);
             setMyTeamId(data.team.id);
             setIsCaptain(data.isCaptain || false);
+
+            // Charger les membres de l'equipe pour le mode "proposer un transfert"
+            if (data.isCaptain) {
+              const membersRes = await fetch('/api/admin/teams/my', {
+                headers: { Authorization: `Bearer ${session.access_token}` },
+              });
+              if (membersRes.ok) {
+                const membersData = await membersRes.json();
+                setTeamMembers(
+                  (membersData.members || []).filter(
+                    (m: { user_id: string }) => m.user_id !== session.user.id
+                  )
+                );
+              }
+            }
           }
         }
 
@@ -122,6 +140,8 @@ export default function PlayerRequestsPage() {
   const handleTabChange = (newTab: Tab) => {
     setTab(newTab);
     setSelectedTeamId('');
+    setSelectedPlayerId('');
+    setTransferMode('self');
     setMessage('');
     setError(null);
     setSuccess(null);
@@ -136,29 +156,49 @@ export default function PlayerRequestsPage() {
       return;
     }
 
+    if (transferMode === 'propose' && !selectedPlayerId) {
+      setError('Selectionne un joueur a transferer.');
+      return;
+    }
+
     setSubmitting(true);
     try {
+      const bodyData: Record<string, unknown> = {
+        teamId: selectedTeamId,
+        message: message.trim() || undefined,
+        desiredRole,
+      };
+
+      if (transferMode === 'propose') {
+        bodyData.targetPlayerId = selectedPlayerId;
+      }
+
       const res = await fetch('/api/demandes/transfer', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          teamId: selectedTeamId,
-          message: message.trim() || undefined,
-          desiredRole,
-        }),
+        body: JSON.stringify(bodyData),
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Impossible de creer la demande.');
 
       const team = teams.find((t) => t.id === selectedTeamId);
-      setSuccess(
-        `Ta demande de transfert vers "${team?.name || 'l\'equipe'}" a ete envoyee. Le capitaine de l'equipe cible la validera.`
-      );
+      if (transferMode === 'propose') {
+        const player = teamMembers.find((m) => m.user_id === selectedPlayerId);
+        const playerName = player?.display_name || player?.battle_tag || 'le joueur';
+        setSuccess(
+          `La proposition de transfert de ${playerName} vers "${team?.name || 'l\'equipe'}" a ete envoyee.`
+        );
+      } else {
+        setSuccess(
+          `Ta demande de transfert vers "${team?.name || 'l\'equipe'}" a ete envoyee. Le capitaine de l'equipe cible la validera.`
+        );
+      }
       setSelectedTeamId('');
+      setSelectedPlayerId('');
       setMessage('');
     } catch (err: unknown) {
       setError((err as Error).message || 'Une erreur est survenue.');
@@ -322,68 +362,210 @@ export default function PlayerRequestsPage() {
                       </Link>
                     </p>
                   </div>
-                ) : isCaptain ? (
-                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 text-sm text-amber-200">
-                    <p className="font-semibold mb-1">Capitaine</p>
-                    <p>
-                      En tant que capitaine, tu dois d&apos;abord transferer le role de capitaine
-                      avant de pouvoir demander un transfert.
-                    </p>
-                  </div>
                 ) : (
-                  <form onSubmit={handleSubmitTransfer} className="space-y-6">
-                    <div>
-                      <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
-                        Equipe cible
-                      </label>
-                      <input
-                        type="text"
-                        value={teamSearch}
-                        onChange={(e) => handleTeamSearchChange(e.target.value)}
-                        className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 mb-3"
-                        placeholder="Rechercher une equipe..."
-                      />
-                      <TeamList
-                        teams={displayTeams}
-                        loading={teamsLoading}
-                        selectedId={selectedTeamId}
-                        onSelect={setSelectedTeamId}
-                        emptyMessage="Aucune equipe ouverte au recrutement"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
-                        Role souhaite
-                      </label>
-                      <div className="flex gap-3">
-                        {(['player', 'substitute', 'coach'] as const).map((role) => (
-                          <button
-                            key={role}
-                            type="button"
-                            onClick={() => setDesiredRole(role)}
-                            className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium transition border ${
-                              desiredRole === role
-                                ? 'bg-purple-600/30 border-purple-400/50 text-white'
-                                : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
-                            }`}
-                          >
-                            {role === 'player' ? 'Joueur' : role === 'substitute' ? 'Remplacant' : 'Coach'}
-                          </button>
-                        ))}
+                  <>
+                    {/* Mode toggle pour les capitaines */}
+                    {isCaptain && (
+                      <div className="flex gap-2 mb-6">
+                        <button
+                          type="button"
+                          onClick={() => { setTransferMode('propose'); setSelectedTeamId(''); setSelectedPlayerId(''); setError(null); }}
+                          className={`flex-1 px-4 py-3 rounded-xl text-sm font-semibold transition border ${
+                            transferMode === 'propose'
+                              ? 'bg-purple-600/30 border-purple-400/50 text-white'
+                              : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
+                          }`}
+                        >
+                          Proposer un transfert
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setTransferMode('self'); setSelectedTeamId(''); setSelectedPlayerId(''); setError(null); }}
+                          className={`flex-1 px-4 py-3 rounded-xl text-sm font-semibold transition border ${
+                            transferMode === 'self'
+                              ? 'bg-purple-600/30 border-purple-400/50 text-white'
+                              : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
+                          }`}
+                        >
+                          Mon transfert
+                        </button>
                       </div>
-                    </div>
+                    )}
 
-                    <MessageField value={message} onChange={setMessage} label="Message au capitaine (optionnel)" />
+                    {/* Capitaine : mode "mon transfert" bloque */}
+                    {isCaptain && transferMode === 'self' && (
+                      <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 text-sm text-amber-200">
+                        <p className="font-semibold mb-1">Capitaine</p>
+                        <p>
+                          En tant que capitaine, tu dois d&apos;abord transferer le role de capitaine
+                          avant de pouvoir demander ton propre transfert.
+                        </p>
+                      </div>
+                    )}
 
-                    {error && <ErrorBanner message={error} />}
+                    {/* Mode "proposer un transfert" (capitaine uniquement) */}
+                    {isCaptain && transferMode === 'propose' && (
+                      <form onSubmit={handleSubmitTransfer} className="space-y-6">
+                        <div>
+                          <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
+                            Joueur a transferer
+                          </label>
+                          <div className="max-h-48 overflow-y-auto space-y-2 rounded-xl border border-white/10 bg-black/40 p-2">
+                            {teamMembers.length === 0 && (
+                              <div className="text-sm text-gray-500 text-center py-4">
+                                Aucun joueur dans ton equipe
+                              </div>
+                            )}
+                            {teamMembers.map((m) => (
+                              <button
+                                key={m.user_id}
+                                type="button"
+                                onClick={() => setSelectedPlayerId(m.user_id)}
+                                className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition ${
+                                  selectedPlayerId === m.user_id
+                                    ? 'bg-purple-600/30 border border-purple-400/50'
+                                    : 'bg-white/5 border border-transparent hover:bg-white/10'
+                                }`}
+                              >
+                                <div className="w-8 h-8 rounded-full bg-black/60 border border-white/10 flex items-center justify-center flex-shrink-0">
+                                  <span className="text-xs text-gray-400">
+                                    {(m.display_name || m.battle_tag || '?').slice(0, 2).toUpperCase()}
+                                  </span>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-white text-sm truncate">
+                                    {m.display_name || m.battle_tag || 'Joueur'}
+                                  </div>
+                                  <div className="text-xs text-gray-400">
+                                    {m.role === 'substitute' ? 'Remplacant' : m.role === 'coach' ? 'Coach' : 'Joueur'}
+                                    {m.battle_tag && ` \u00b7 ${m.battle_tag}`}
+                                  </div>
+                                </div>
+                                {selectedPlayerId === m.user_id && (
+                                  <svg className="w-5 h-5 text-purple-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
 
-                    <SubmitButton
-                      disabled={submitting || !selectedTeamId}
-                      loading={submitting}
-                      label="Envoyer la demande de transfert"
-                    />
-                  </form>
+                        <div>
+                          <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
+                            Equipe cible
+                          </label>
+                          <input
+                            type="text"
+                            value={teamSearch}
+                            onChange={(e) => handleTeamSearchChange(e.target.value)}
+                            className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 mb-3"
+                            placeholder="Rechercher une equipe..."
+                          />
+                          <TeamList
+                            teams={displayTeams}
+                            loading={teamsLoading}
+                            selectedId={selectedTeamId}
+                            onSelect={setSelectedTeamId}
+                            emptyMessage="Aucune equipe ouverte au recrutement"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
+                            Role souhaite
+                          </label>
+                          <div className="flex gap-3">
+                            {(['player', 'substitute', 'coach'] as const).map((role) => (
+                              <button
+                                key={role}
+                                type="button"
+                                onClick={() => setDesiredRole(role)}
+                                className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium transition border ${
+                                  desiredRole === role
+                                    ? 'bg-purple-600/30 border-purple-400/50 text-white'
+                                    : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
+                                }`}
+                              >
+                                {role === 'player' ? 'Joueur' : role === 'substitute' ? 'Remplacant' : 'Coach'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <MessageField value={message} onChange={setMessage} label="Message au capitaine cible (optionnel)" />
+
+                        {error && <ErrorBanner message={error} />}
+
+                        <SubmitButton
+                          disabled={submitting || !selectedTeamId || !selectedPlayerId}
+                          loading={submitting}
+                          label="Proposer le transfert"
+                        />
+                      </form>
+                    )}
+
+                    {/* Mode "mon transfert" (joueur non-capitaine) */}
+                    {!isCaptain && (
+                      <form onSubmit={handleSubmitTransfer} className="space-y-6">
+                        <div>
+                          <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
+                            Equipe cible
+                          </label>
+                          <input
+                            type="text"
+                            value={teamSearch}
+                            onChange={(e) => handleTeamSearchChange(e.target.value)}
+                            className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 mb-3"
+                            placeholder="Rechercher une equipe..."
+                          />
+                          <TeamList
+                            teams={displayTeams}
+                            loading={teamsLoading}
+                            selectedId={selectedTeamId}
+                            onSelect={setSelectedTeamId}
+                            emptyMessage="Aucune equipe ouverte au recrutement"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
+                            Role souhaite
+                          </label>
+                          <div className="flex gap-3">
+                            {(['player', 'substitute', 'coach'] as const).map((role) => (
+                              <button
+                                key={role}
+                                type="button"
+                                onClick={() => setDesiredRole(role)}
+                                className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium transition border ${
+                                  desiredRole === role
+                                    ? 'bg-purple-600/30 border-purple-400/50 text-white'
+                                    : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
+                                }`}
+                              >
+                                {role === 'player' ? 'Joueur' : role === 'substitute' ? 'Remplacant' : 'Coach'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <MessageField value={message} onChange={setMessage} label="Message au capitaine (optionnel)" />
+
+                        {error && <ErrorBanner message={error} />}
+
+                        <SubmitButton
+                          disabled={submitting || !selectedTeamId}
+                          loading={submitting}
+                          label="Envoyer la demande de transfert"
+                        />
+                      </form>
+                    )}
+                  </>
                 )}
               </>
             )}
