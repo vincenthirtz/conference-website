@@ -103,6 +103,33 @@ export default function TeamCard({
               Voir la page equipe
             </Link>
 
+            {!isCaptain && (
+              <Link
+                href="/player/requests?tab=transfer"
+                className="block w-full text-center px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm text-gray-300 transition"
+              >
+                Demander un transfert
+              </Link>
+            )}
+
+            {isCaptain && (
+              <Link
+                href="/player/requests?tab=scrim"
+                className="block w-full text-center px-4 py-2 rounded-xl border border-blue-400/20 bg-blue-500/10 hover:bg-blue-500/20 text-sm text-blue-200 transition"
+              >
+                Proposer un scrim
+              </Link>
+            )}
+
+            {isCaptain && (
+              <Link
+                href="/player/messages"
+                className="block w-full text-center px-4 py-2 rounded-xl border border-emerald-400/20 bg-emerald-500/10 hover:bg-emerald-500/20 text-sm text-emerald-200 transition"
+              >
+                Messagerie capitaine
+              </Link>
+            )}
+
             {/* Quitter l'equipe (non-capitaine) */}
             {!isCaptain && onLeaveTeam && (
               <>
