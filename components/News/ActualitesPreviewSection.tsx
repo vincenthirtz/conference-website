@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
@@ -29,9 +28,7 @@ function pickTwoRandom(): [string, string] {
 
 function ActualitesPreviewSection(): JSX.Element {
   const [heroes, setHeroes] = useState<[string, string] | null>(null);
-  const [mixteTournamentId, setMixteTournamentId] = useState<string | null>(null);
   const [teamCount, setTeamCount] = useState<number | null>(null);
-  const [shareCopied, setShareCopied] = useState(false);
 
   useEffect(() => {
     setHeroes(pickTwoRandom());
@@ -41,8 +38,6 @@ function ActualitesPreviewSection(): JSX.Element {
       .then((data) => {
         const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         if (data.value && UUID_RE.test(data.value)) {
-          setMixteTournamentId(data.value);
-          // Fetch team count for this specific tournament
           fetch(`/api/tournaments?id=${data.value}`)
             .then((r) => r.json())
             .then((json) => {
@@ -110,9 +105,8 @@ function ActualitesPreviewSection(): JSX.Element {
         )}
 
         <div className="relative flex flex-col items-center text-center gap-6">
-          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/20 text-blue-300 text-sm font-semibold uppercase tracking-wider">
-            <span className="h-2 w-2 rounded-full bg-blue-400 animate-pulse" />
-            3 Avril 2026
+          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-500/20 text-red-300 text-sm font-semibold uppercase tracking-wider">
+            Annulé
           </span>
 
           <Heading
@@ -182,76 +176,31 @@ function ActualitesPreviewSection(): JSX.Element {
           </div>
 
           <div className="flex flex-wrap gap-4 mt-6 justify-center">
-            <Link href={mixteTournamentId ? `/team/create?tournament=${mixteTournamentId}` : '/team/create'}>
-              <button
-                type="button"
-                className="group flex items-center gap-3 px-8 py-3.5 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-400 hover:to-purple-500 text-white font-semibold text-base shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-300 hover:scale-105"
-              >
-                <svg className="w-5 h-5 transition-transform duration-300 group-hover:-translate-y-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                  <circle cx="9" cy="7" r="4" />
-                  <line x1="19" y1="8" x2="19" y2="14" />
-                  <line x1="22" y1="11" x2="16" y2="11" />
-                </svg>
-                Inscrire mon équipe
-              </button>
-            </Link>
-            <Link href={mixteTournamentId ? `/tournament/${mixteTournamentId}` : '/tournament/tournoi-mixte'}>
-              <button
-                type="button"
-                className="group flex items-center gap-3 px-8 py-3.5 rounded-xl bg-white/[0.06] backdrop-blur border border-white/15 hover:border-white/30 hover:bg-white/10 text-white font-semibold text-base transition-all duration-300 hover:scale-105"
-              >
-                <svg className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                  <line x1="16" y1="2" x2="16" y2="6" />
-                  <line x1="8" y1="2" x2="8" y2="6" />
-                  <line x1="3" y1="10" x2="21" y2="10" />
-                </svg>
-                Voir le programme
-              </button>
-            </Link>
             <button
               type="button"
-              onClick={async () => {
-                const url = mixteTournamentId
-                  ? `${window.location.origin}/tournament/${mixteTournamentId}`
-                  : `${window.location.origin}/tournament/tournoi-mixte`;
-                const shareData = {
-                  title: 'Tournoi Mixte – OW Women\'s Cup 2026',
-                  text: 'Rejoins le Tournoi Mixte OW Women\'s Cup ! Inscris ton équipe et montre ton niveau.',
-                  url,
-                };
-                try {
-                  if (navigator.share) {
-                    await navigator.share(shareData);
-                  } else {
-                    await navigator.clipboard.writeText(url);
-                    setShareCopied(true);
-                    setTimeout(() => setShareCopied(false), 2000);
-                  }
-                } catch {}
-              }}
-              className="group flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-white/[0.06] backdrop-blur border border-white/15 hover:border-emerald-400/40 hover:bg-emerald-500/10 text-white font-semibold text-base transition-all duration-300 hover:scale-105"
+              disabled
+              className="flex items-center gap-3 px-8 py-3.5 rounded-xl bg-neutral-700/50 text-neutral-400 font-semibold text-base cursor-not-allowed opacity-60"
             >
-              {shareCopied ? (
-                <>
-                  <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  <span className="text-emerald-300">Lien copié !</span>
-                </>
-              ) : (
-                <>
-                  <svg className="w-5 h-5 transition-transform duration-300 group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="18" cy="5" r="3" />
-                    <circle cx="6" cy="12" r="3" />
-                    <circle cx="18" cy="19" r="3" />
-                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
-                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-                  </svg>
-                  Partager
-                </>
-              )}
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <line x1="19" y1="8" x2="19" y2="14" />
+                <line x1="22" y1="11" x2="16" y2="11" />
+              </svg>
+              Inscrire mon équipe
+            </button>
+            <button
+              type="button"
+              disabled
+              className="flex items-center gap-3 px-8 py-3.5 rounded-xl bg-neutral-700/50 text-neutral-400 font-semibold text-base cursor-not-allowed opacity-60"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
+              Voir le programme
             </button>
           </div>
         </div>
