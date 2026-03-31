@@ -250,6 +250,48 @@ export function sendTestEmail(to: string): Promise<SendEmailResult> {
   });
 }
 
+/**
+ * Notification sent to team captains when a tournament is open or approaching.
+ */
+export function sendTournamentNotificationEmail(
+  to: string,
+  tournamentName: string,
+  startDate: string | null,
+  tournamentSlug: string | null
+): Promise<SendEmailResult> {
+  const dateStr = startDate
+    ? new Date(startDate).toLocaleDateString('fr-FR', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
+    : null;
+
+  const tournamentUrl = tournamentSlug
+    ? `${SITE_URL}/tournaments/${tournamentSlug}`
+    : `${SITE_URL}/tournaments`;
+
+  return sendEmail({
+    to,
+    subject: `Tournoi ouvert : ${tournamentName}`,
+    tags: ['tournament-notification'],
+    html: emailLayout(`
+      ${gradientBar()}
+      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Nouveau tournoi !</h1>
+      <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
+        Le tournoi <strong style="color:#ffffff;">${escapeHtml(tournamentName)}</strong>
+        est maintenant ouvert aux inscriptions${dateStr ? ` et d&eacute;butera le <strong style="color:#2dccfd;">${escapeHtml(dateStr)}</strong>` : ''}.
+      </p>
+      <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
+        En tant que capitaine d'&eacute;quipe, vous pouvez inscrire votre &eacute;quipe
+        d&egrave;s maintenant. Les places sont limit&eacute;es !
+      </p>
+      ${ctaButton(tournamentUrl, 'Voir le tournoi')}
+    `),
+  });
+}
+
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, '&amp;')
