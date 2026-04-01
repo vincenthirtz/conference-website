@@ -45,7 +45,7 @@ const tiers = [
   },
   {
     label: 'Mécène',
-    amount: '250 €+',
+    amount: '150 €',
     impact:
       'Permet de lancer un live (matériel + encadrement) dans une salle ou de sécuriser une captation entière.',
   },
@@ -311,10 +311,7 @@ function DonationPage() {
                 </div>
               </div>
 
-              <form
-                onSubmit={handleDonate}
-                className="md:col-span-2 space-y-5"
-              >
+              <form onSubmit={handleDonate} className="md:col-span-2 space-y-5">
                 {/* Amount selection */}
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-200">
