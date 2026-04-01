@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import type { JSX } from 'react';
 
 type SocialLink = {
@@ -78,6 +79,20 @@ function FloatingSocials(): JSX.Element {
           </a>
         ))}
       </div>
+      <a
+        href="/don"
+        title="Faire un don"
+        className="mt-1.5 flex flex-col items-center gap-1 rounded-2xl bg-white/[0.03] backdrop-blur-md border border-white/[0.08] p-2 shadow-xl shadow-black/20 hover:bg-white/10 transition-all duration-200"
+      >
+        <Image
+          src="/images/qr.png"
+          alt="QR code pour faire un don"
+          width={40}
+          height={40}
+          className="rounded"
+        />
+        <span className="text-[9px] font-medium text-gray-400">Don</span>
+      </a>
     </div>
   );
 }

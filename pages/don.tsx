@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useState } from 'react';
@@ -121,7 +122,6 @@ function DonationPage() {
           <div className="absolute -left-32 -top-32 h-[420px] w-[420px] rounded-full bg-purple-600/30 blur-3xl" />
           <div className="absolute right-10 top-10 h-[360px] w-[360px] rounded-full bg-pink-500/20 blur-3xl" />
         </div>
-
         <div className="relative mx-auto max-w-5xl px-6 pt-32 pb-14 text-center">
           <p className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-200">
             Soutenir l&apos;association
@@ -297,6 +297,18 @@ function DonationPage() {
                   référence des associations françaises. Aucune commission
                   n&apos;est prélevée sur votre don.
                 </p>
+                <div className="mt-5 flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <Image
+                    src="/images/qr.png"
+                    alt="QR code pour faire un don"
+                    width={128}
+                    height={128}
+                    className="rounded-lg"
+                  />
+                  <p className="text-xs font-medium text-gray-300">
+                    Ou scannez ce QR code
+                  </p>
+                </div>
               </div>
 
               <form
