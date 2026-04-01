@@ -94,8 +94,8 @@ function FloatingSocials(): JSX.Element {
           <Image
             src="/images/qr.png"
             alt="QR code pour faire un don"
-            width={256}
-            height={256}
+            width={128}
+            height={128}
             className="rounded-lg"
           />
           <p className="mt-1.5 text-center text-xs font-medium text-gray-300">Scanner pour donner</p>
