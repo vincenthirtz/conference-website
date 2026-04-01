@@ -79,7 +79,7 @@ function FloatingSocials(): JSX.Element {
           </a>
         ))}
       </div>
-      <div className="group relative mt-1.5 flex flex-col items-center gap-1 rounded-2xl bg-white/[0.03] backdrop-blur-md border border-white/[0.08] p-2 shadow-xl shadow-black/20 hover:bg-white/10 transition-all duration-200 cursor-pointer">
+      <div className="group relative mt-1.5 flex flex-col items-center gap-1 rounded-2xl bg-white/[0.03] backdrop-blur-md border border-white/[0.08] p-2 shadow-xl shadow-black/20 hover:bg-white/10 transition-all duration-200 cursor-pointer overflow-visible">
         <a href="/don" title="Faire un don">
           <Image
             src="/images/qr.png"
