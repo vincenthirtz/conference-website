@@ -50,7 +50,7 @@ const tiers = [
   },
 ];
 
-const presetAmounts = [2500, 5000, 10000, 25000] as const;
+const presetAmounts = [2000, 5000, 10000, 15000] as const;
 
 const COMING_SOON = false;
 
