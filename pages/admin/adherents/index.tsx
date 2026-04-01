@@ -74,6 +74,8 @@ function AdminAdherentsPage({ staff }: Props) {
   const [yearFilter, setYearFilter] = useState<string | null>(null);
   const [roleFilter, setRoleFilter] = useState<string | null>(null);
   const [cotisationAmount, setCotisationAmount] = useState<number>(0);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
 
   const currentYear = new Date().getFullYear();
 
@@ -187,6 +189,37 @@ function AdminAdherentsPage({ staff }: Props) {
     }
   };
 
+  const syncHelloAsso = async () => {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const {
+        data: { session },
+      } = await supabaseClient.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('Session staff manquante.');
+
+      const res = await fetch(
+        '/api/admin/helloasso/sync?formSlug=adhesion-2026-2027-women-s-cup',
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Erreur de synchronisation');
+
+      setSyncResult(
+        `Sync OK : ${json.created} créé(s), ${json.updated} mis à jour, ${json.skipped} déjà sync.`
+      );
+      fetchData();
+    } catch (err: unknown) {
+      setSyncResult(`Erreur : ${(err as Error)?.message}`);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   return (
     <>
       <Head>
@@ -212,27 +245,62 @@ function AdminAdherentsPage({ staff }: Props) {
                 </p>
               </div>
 
-              <Link
-                href="/admin/adherents/new"
-                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors flex items-center gap-2"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={syncHelloAsso}
+                  disabled={syncing}
+                  className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-sm font-medium transition-colors flex items-center gap-2"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 4v16m8-8H4"
-                  />
-                </svg>
-                Nouvel adhérent
-              </Link>
+                  <svg
+                    className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
+                  {syncing ? 'Sync...' : 'Sync HelloAsso'}
+                </button>
+                <Link
+                  href="/admin/adherents/new"
+                  className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors flex items-center gap-2"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
+                  Nouvel adhérent
+                </Link>
+              </div>
             </div>
           </div>
+
+          {/* Sync result */}
+          {syncResult && (
+            <div
+              className={`mb-6 rounded-xl border p-4 text-sm ${
+                syncResult.startsWith('Erreur')
+                  ? 'border-red-500/30 bg-red-600/10 text-red-300'
+                  : 'border-emerald-500/30 bg-emerald-600/10 text-emerald-300'
+              }`}
+            >
+              {syncResult}
+            </div>
+          )}
 
           {/* Stats Cards */}
           {stats && (

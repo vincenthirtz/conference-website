@@ -60,7 +60,7 @@ function DonationPage() {
   const { value: contactEmail } = useSiteSetting('contact_email');
 
   // Online donation form state
-  const [selectedAmount, setSelectedAmount] = useState<number>(2500);
+  const [selectedAmount, setSelectedAmount] = useState<number>(100);
   const [customAmount, setCustomAmount] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
