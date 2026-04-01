@@ -90,15 +90,15 @@ function FloatingSocials(): JSX.Element {
           />
         </a>
         <span className="text-[9px] font-medium text-gray-400">Don</span>
-        <div className="pointer-events-none absolute left-full ml-3 bottom-0 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 group-hover:pointer-events-auto transition-all duration-200 rounded-2xl bg-neutral-900/95 backdrop-blur-md border border-white/10 p-3 shadow-2xl">
+        <div className="pointer-events-none absolute left-full ml-3 bottom-0 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 group-hover:pointer-events-auto transition-all duration-200 rounded-2xl bg-neutral-900/95 backdrop-blur-md border border-white/10 p-4 shadow-2xl">
           <Image
             src="/images/qr.png"
             alt="QR code pour faire un don"
-            width={128}
-            height={128}
+            width={200}
+            height={200}
             className="rounded-lg"
           />
-          <p className="mt-1.5 text-center text-xs font-medium text-gray-300">Scanner pour donner</p>
+          <p className="mt-2 text-center text-sm font-medium text-gray-300">Scanner pour donner</p>
         </div>
       </div>
     </div>
