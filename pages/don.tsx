@@ -27,7 +27,7 @@ const uses = [
 const tiers = [
   {
     label: 'Coup de pouce',
-    amount: '25 €',
+    amount: '20 €',
     impact:
       'Aide à payer le site web (nom de domaine, serveur) ou des frais bancaires.',
   },
