@@ -52,8 +52,7 @@ const tiers = [
 
 const presetAmounts = [2500, 5000, 10000, 25000] as const;
 
-// Set to false once HelloAsso credentials are configured and the integration is live
-const COMING_SOON = true;
+const COMING_SOON = false;
 
 function DonationPage() {
   const router = useRouter();
