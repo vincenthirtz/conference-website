@@ -3,7 +3,6 @@ import Header from '@/components/Header/header';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import HomeNewsSection from '@/components/News/HomeNewsSection';
 import AnnouncementsTicker from '@/components/Ads/AnnouncementsTicker';
-import ActualitesPreviewSection from '@/components/News/ActualitesPreviewSection';
 import PressSection from '@/components/Press/PressSection';
 
 function Home() {
@@ -16,7 +15,6 @@ function Home() {
       />
       <Header />
 
-      <ActualitesPreviewSection />
       {/* <Popup /> */}
       <HomeNewsSection />
       <PressSection />
