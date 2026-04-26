@@ -38,9 +38,14 @@ type MemberForm = {
   battleTag: string;
 };
 
+const WOMEN_TOURNAMENT_ID_2026 = 'e8fa740c-d92b-49d8-a654-05a37d0eea3b';
+
 export default function PublicCreateTeamPage() {
   const router = useRouter();
-  const tournamentIdParam = typeof router.query.tournament === 'string' ? router.query.tournament : null;
+  const tournamentIdParam =
+    typeof router.query.tournament === 'string'
+      ? router.query.tournament
+      : WOMEN_TOURNAMENT_ID_2026;
 
   const [name, setName] = useState('');
   const [shortName, setShortName] = useState('');

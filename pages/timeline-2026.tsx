@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
+
+const WOMEN_TOURNAMENT_ID_2026 = 'e8fa740c-d92b-49d8-a654-05a37d0eea3b';
 
 type TimelineItem = {
   id: string;
@@ -53,17 +54,6 @@ const timeline: TimelineItem[] = [
 ];
 
 function Timeline2026Page() {
-  const [mixteTournamentId, setMixteTournamentId] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch('/api/site-settings?key=mixte_tournament_id')
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.value) setMixteTournamentId(data.value);
-      })
-      .catch(() => {});
-  }, []);
-
   const now = new Date();
   const currentIdx = timeline.findIndex((item) => {
     const [monthLabel, yearLabel] = item.period.split(' ');
@@ -168,7 +158,7 @@ function Timeline2026Page() {
                     {item.id === 'mix-tournament' && (
                       <div className="mt-4">
                         <Link
-                          href={mixteTournamentId ? `/team/create?tournament=${mixteTournamentId}` : '/team/create'}
+                          href={`/team/create?tournament=${WOMEN_TOURNAMENT_ID_2026}`}
                           className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-500 text-black hover:bg-emerald-400 transition"
                         >
                           Inscrire mon équipe ↗
