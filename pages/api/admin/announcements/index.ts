@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { sanitizeUrl } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { notifyAnnouncement } from '@/utils/discord';
 
 type AnnouncementPayload = {
   title?: string;
@@ -91,6 +92,18 @@ async function handler(
       return res
         .status(500)
         .json({ error: "Failed to create the announcement." });
+    }
+
+    if (data?.is_active) {
+      void notifyAnnouncement({
+        tournamentId: null,
+        title: data.title,
+        message: data.message,
+        ctaLabel: data.cta_label ?? null,
+        ctaUrl: data.cta_url ?? null,
+      }).catch((e) =>
+        console.error('[discord] notifyAnnouncement error:', e)
+      );
     }
 
     return res.status(201).json(data);

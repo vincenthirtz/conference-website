@@ -11,6 +11,7 @@ import { logStaffAction } from '@/utils/staffLogs';
 import type { VetoStep, VetoStepInput, VetoAction } from '@/types/veto';
 import { VETO_FLOWS } from '@/types/veto';
 import { isValidUUID } from '@/utils/apiHelpers';
+import { notifyVetoStep } from '@/utils/discord';
 
 export default withStaffRoute(handler, 'manager');
 
@@ -247,10 +248,71 @@ async function handlePost(
     });
   }
 
+  // Discord notification: veto step (fire-and-forget)
+  void sendVetoStepDiscord({
+    matchId,
+    tournamentId: match.tournament_id ?? null,
+    team1Id: match.team1_id ?? null,
+    team2Id: match.team2_id ?? null,
+    stepNumber: currentStep,
+    totalSteps: flow.length,
+    action: body.action,
+    mapName: body.map_name,
+    byTeamId: body.team_id ?? null,
+    isComplete: isNowComplete,
+  }).catch((e) => console.error('[discord] notifyVetoStep error:', e));
+
   return res.status(201).json({
     step: data as VetoStep,
     isComplete: isNowComplete,
     gamesCreated,
+  });
+}
+
+/* -----------------------------------------------------------
+ * Discord helper: build & send the veto step notification
+ * ---------------------------------------------------------*/
+
+async function sendVetoStepDiscord(params: {
+  matchId: string;
+  tournamentId: string | null;
+  team1Id: string | null;
+  team2Id: string | null;
+  stepNumber: number;
+  totalSteps: number;
+  action: VetoAction;
+  mapName: string;
+  byTeamId: string | null;
+  isComplete: boolean;
+}): Promise<void> {
+  const ids = [params.team1Id, params.team2Id, params.byTeamId].filter(
+    (id): id is string => !!id
+  );
+  if (ids.length === 0) return;
+
+  const { data: teams } = await supabaseAdmin
+    .from('teams')
+    .select('id, name')
+    .in('id', ids);
+
+  const byId = new Map<string, string>();
+  for (const t of teams || []) byId.set(t.id, t.name);
+
+  const team1Name = params.team1Id ? (byId.get(params.team1Id) ?? 'Équipe 1') : 'Équipe 1';
+  const team2Name = params.team2Id ? (byId.get(params.team2Id) ?? 'Équipe 2') : 'Équipe 2';
+  const byTeamName = params.byTeamId ? (byId.get(params.byTeamId) ?? null) : null;
+
+  await notifyVetoStep({
+    tournamentId: params.tournamentId,
+    matchId: params.matchId,
+    team1Name,
+    team2Name,
+    stepNumber: params.stepNumber,
+    totalSteps: params.totalSteps,
+    action: params.action,
+    mapName: params.mapName,
+    byTeamName,
+    isComplete: params.isComplete,
   });
 }
 

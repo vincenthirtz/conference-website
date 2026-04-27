@@ -12,6 +12,8 @@ import type { PropagationSnapshot } from '../bracket/propagate';
 import { logStaffAction } from '../staffLogs';
 import { computeRequiredWins } from './computeRequiredWins';
 import { invalidateStandingsCache } from '../stages/standingsCache';
+import { notifyMatchResult, notifyBracketUpdate } from '../discord';
+import type { PropagationResult } from '../../types/bracket';
 import type {
   ApplyMatchScoreInput,
   ApplyMatchScoreResult,
@@ -271,9 +273,10 @@ export async function applyMatchScore(
   // 10) Propagation du vainqueur/perdant dans le bracket
   //     En cas d'échec, on rollback le match ET les slots de propagation
   //     pour éviter une incohérence bracket.
+  let propagationResult: PropagationResult | null = null;
   if (shouldPropagate) {
     try {
-      await propagateBracketForMatch(matchId);
+      propagationResult = await propagateBracketForMatch(matchId);
     } catch (e) {
       console.error('applyMatchScore: propagateBracketForMatch error — rollback', e);
 
@@ -337,12 +340,139 @@ export async function applyMatchScore(
     }
   }
 
+  // 12) Discord notifications (fire-and-forget)
+  if (PROPAGATION_STATUSES.includes(newStatus)) {
+    void sendMatchResultDiscord({
+      matchId,
+      tournamentId: match.tournament_id ?? null,
+      team1Id: match.team1_id ?? null,
+      team2Id: match.team2_id ?? null,
+      team1Score: team1Score,
+      team2Score: team2Score,
+      winnerTeamId: newWinnerTeamId,
+      isForfeit: !!resolvedForfeitTeamId,
+      propagationResult,
+    }).catch((e) => console.error('[discord] match result/bracket error:', e));
+  }
+
   return {
     matchId,
     updated: true,
     match: updated,
     winnerTeamId: newWinnerTeamId,
   };
+}
+
+/* -----------------------------------------------------------
+ * Discord notifications: match result + bracket update
+ * ---------------------------------------------------------*/
+
+async function sendMatchResultDiscord(params: {
+  matchId: string;
+  tournamentId: string | null;
+  team1Id: string | null;
+  team2Id: string | null;
+  team1Score: number;
+  team2Score: number;
+  winnerTeamId: string | null;
+  isForfeit: boolean;
+  propagationResult: PropagationResult | null;
+}): Promise<void> {
+  const teamIds = [params.team1Id, params.team2Id].filter(
+    (id): id is string => !!id
+  );
+  if (teamIds.length === 0) return;
+
+  const { data: teams } = await supabaseAdmin
+    .from('teams')
+    .select('id, name, logo_url')
+    .in('id', teamIds);
+
+  const byId = new Map<string, { name: string; logo_url: string | null }>();
+  for (const t of teams || []) {
+    byId.set(t.id, { name: t.name, logo_url: t.logo_url ?? null });
+  }
+
+  const team1 = params.team1Id ? byId.get(params.team1Id) : null;
+  const team2 = params.team2Id ? byId.get(params.team2Id) : null;
+
+  if (!team1 || !team2) return;
+
+  const { data: match } = await supabaseAdmin
+    .from('matches')
+    .select('round_name, tournament:tournament_id(name)')
+    .eq('id', params.matchId)
+    .maybeSingle();
+
+  const tournamentRel = match?.tournament as
+    | { name: string }
+    | { name: string }[]
+    | null
+    | undefined;
+  const tournamentName = Array.isArray(tournamentRel)
+    ? (tournamentRel[0]?.name ?? null)
+    : (tournamentRel?.name ?? null);
+
+  // Match result notification
+  await notifyMatchResult({
+    tournamentId: params.tournamentId,
+    tournamentName,
+    matchId: params.matchId,
+    roundName: match?.round_name ?? null,
+    team1: { name: team1.name, logoUrl: team1.logo_url },
+    team2: { name: team2.name, logoUrl: team2.logo_url },
+    team1Score: params.team1Score,
+    team2Score: params.team2Score,
+    winnerTeamId: params.winnerTeamId,
+    team1Id: params.team1Id,
+    team2Id: params.team2Id,
+    isForfeit: params.isForfeit,
+  });
+
+  // Bracket update notification (only if propagation actually moved a team)
+  const propag = params.propagationResult;
+  if (!propag || !propag.winnerTeamId || !propag.updatedWinMatchId) return;
+
+  const winnerName = byId.get(propag.winnerTeamId)?.name;
+  if (!winnerName) return;
+
+  // Look up next match to figure out the next opponent (if any)
+  const { data: nextMatch } = await supabaseAdmin
+    .from('matches')
+    .select('round_name, team1_id, team2_id')
+    .eq('id', propag.updatedWinMatchId)
+    .maybeSingle();
+
+  let nextOpponentName: string | null = null;
+  if (nextMatch) {
+    const opponentId =
+      nextMatch.team1_id && nextMatch.team1_id !== propag.winnerTeamId
+        ? nextMatch.team1_id
+        : nextMatch.team2_id && nextMatch.team2_id !== propag.winnerTeamId
+          ? nextMatch.team2_id
+          : null;
+    if (opponentId) {
+      const { data: opponent } = await supabaseAdmin
+        .from('teams')
+        .select('name')
+        .eq('id', opponentId)
+        .maybeSingle();
+      nextOpponentName = opponent?.name ?? null;
+    }
+  }
+
+  const loserName = propag.loserTeamId
+    ? (byId.get(propag.loserTeamId)?.name ?? null)
+    : null;
+
+  await notifyBracketUpdate({
+    tournamentId: params.tournamentId,
+    tournamentName,
+    winnerName,
+    loserName,
+    nextRoundName: nextMatch?.round_name ?? null,
+    nextOpponentName,
+  });
 }
 
 /* -----------------------------------------------------------

@@ -185,6 +185,7 @@ export type TeamRow = {
   description: string | null;
   twitter: string | null;
   discord: string | null;
+  discord_role_id: string | null;
   website: string | null;
   is_active: boolean;
   captain_id: string | null;

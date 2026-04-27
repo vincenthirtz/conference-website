@@ -21,6 +21,7 @@ export type TeamRow = {
   description: string | null;
   twitter: string | null;
   discord: string | null;
+  discord_role_id: string | null;
   website: string | null;
   is_active: boolean;
   captain_id: string | null;
@@ -135,6 +136,7 @@ async function handlePut(
     'description',
     'twitter',
     'discord',
+    'discord_role_id',
     'website',
     'is_active',
     'captain_id',
@@ -164,6 +166,17 @@ async function handlePut(
   // short_name non vide si fourni
   if ('short_name' in body && body.short_name !== null && (typeof body.short_name !== 'string' || body.short_name.trim().length === 0)) {
     return res.status(400).json({ error: 'short_name cannot be empty' });
+  }
+
+  // discord_role_id: numeric string (Discord snowflake ID) or null
+  if ('discord_role_id' in updatePayload && updatePayload.discord_role_id != null) {
+    const v = updatePayload.discord_role_id;
+    if (typeof v !== 'string' || !/^\d{17,20}$/.test(v.trim())) {
+      return res.status(400).json({
+        error: 'discord_role_id doit être un ID Discord (17 à 20 chiffres) ou null',
+      });
+    }
+    updatePayload.discord_role_id = v.trim();
   }
 
   // Sanitize URL fields (reject javascript:, data: etc.)

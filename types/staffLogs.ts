@@ -30,6 +30,8 @@ export type StaffLogAction =
   | 'bulk_schedule'
   | 'bulk_update'
   | 'map_veto'
+  | 'update_discord_webhook'
+  | 'delete_discord_webhook'
   | 'other';
 
 export type StaffLog = {

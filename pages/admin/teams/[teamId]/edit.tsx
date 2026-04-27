@@ -57,6 +57,7 @@ function AdminEditTeamPage({ staff }: StaffProps) {
   const [description, setDescription] = useState('');
   const [twitter, setTwitter] = useState('');
   const [discord, setDiscord] = useState('');
+  const [discordRoleId, setDiscordRoleId] = useState('');
   const [website, setWebsite] = useState('');
   const [isActive, setIsActive] = useState(true);
 
@@ -114,6 +115,7 @@ function AdminEditTeamPage({ staff }: StaffProps) {
       setDescription(t.description || '');
       setTwitter(t.twitter || '');
       setDiscord(t.discord || '');
+      setDiscordRoleId(t.discord_role_id || '');
       setWebsite(t.website || '');
       setIsActive(t.is_active !== false);
     } catch (err: unknown) {
@@ -179,6 +181,7 @@ function AdminEditTeamPage({ staff }: StaffProps) {
         description: description || null,
         twitter: twitter || null,
         discord: discord || null,
+        discord_role_id: discordRoleId.trim() || null,
         website: website || null,
         is_active: isActive,
       };
@@ -668,6 +671,21 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                           className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                           placeholder="discord.gg/..."
                         />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-neutral-400 mb-1">
+                          ID rôle Discord
+                        </label>
+                        <input
+                          type="text"
+                          value={discordRoleId}
+                          onChange={(e) => setDiscordRoleId(e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
+                          placeholder="1234567890123456789"
+                        />
+                        <p className="text-xs text-neutral-500 mt-1">
+                          Pingé automatiquement lors des annonces de match (J-15min, résultats).
+                        </p>
                       </div>
                       <div>
                         <label className="block text-sm text-neutral-400 mb-1">Site web</label>

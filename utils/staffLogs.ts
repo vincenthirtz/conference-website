@@ -174,6 +174,8 @@ export function formatStaffLog(log: StaffLog) {
     bulk_schedule: 'Planification en masse',
     bulk_update: 'Modification en masse',
     map_veto: 'Veto de maps',
+    update_discord_webhook: 'Webhook Discord modifié',
+    delete_discord_webhook: 'Webhook Discord supprimé',
     other: 'Action staff',
   };
 

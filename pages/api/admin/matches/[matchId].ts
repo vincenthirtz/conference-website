@@ -10,6 +10,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
+import { notifyMatchStarting } from '@/utils/discord';
 
 export default withStaffRoute(handler, 'manager'); // rôle min : manager
 
@@ -355,9 +356,76 @@ async function handlePut(
     });
   }
 
+  // Discord notification: match passed to "ongoing" -> ping teams
+  if (
+    'status' in updatePayload &&
+    updatePayload.status === 'ongoing' &&
+    before.status !== 'ongoing'
+  ) {
+    void notifyMatchStartingForMatch(matchId).catch((e) =>
+      console.error('[discord] notifyMatchStarting error:', e)
+    );
+  }
+
   return res.status(200).json({
     match: updated,
     ...(warnings.length > 0 ? { warnings } : {}),
+  });
+}
+
+/* -----------------------------------------------------------
+ * Discord helper: build & send the "match starting" notification
+ * ---------------------------------------------------------*/
+
+async function notifyMatchStartingForMatch(matchId: string): Promise<void> {
+  if (!supabaseAdmin) return;
+
+  const { data: m } = await supabaseAdmin
+    .from('matches')
+    .select(
+      `
+      id,
+      tournament_id,
+      round_name,
+      match_format,
+      lobby_code,
+      stream_url,
+      scheduled_at,
+      team1:team1_id(id, name, logo_url, discord_role_id),
+      team2:team2_id(id, name, logo_url, discord_role_id),
+      tournament:tournament_id(id, name)
+      `
+    )
+    .eq('id', matchId)
+    .maybeSingle();
+
+  if (!m || !m.team1 || !m.team2) return;
+
+  const t1 = Array.isArray(m.team1) ? m.team1[0] : m.team1;
+  const t2 = Array.isArray(m.team2) ? m.team2[0] : m.team2;
+  const tn = Array.isArray(m.tournament) ? m.tournament[0] : m.tournament;
+
+  if (!t1 || !t2) return;
+
+  await notifyMatchStarting({
+    tournamentId: m.tournament_id ?? null,
+    tournamentName: tn?.name ?? null,
+    matchId: m.id,
+    roundName: m.round_name ?? null,
+    matchFormat: m.match_format ?? null,
+    lobbyCode: m.lobby_code ?? null,
+    streamUrl: m.stream_url ?? null,
+    scheduledAt: m.scheduled_at ?? null,
+    team1: {
+      name: t1.name,
+      logoUrl: t1.logo_url ?? null,
+      discordRoleId: t1.discord_role_id ?? null,
+    },
+    team2: {
+      name: t2.name,
+      logoUrl: t2.logo_url ?? null,
+      discordRoleId: t2.discord_role_id ?? null,
+    },
   });
 }
 
