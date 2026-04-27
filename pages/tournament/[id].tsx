@@ -172,8 +172,7 @@ export const getServerSideProps: GetServerSideProps<
       )
       .eq('tournament_id', tournamentId)
       .neq('status', 'cancelled')
-      .order('scheduled_at', { ascending: true })
-      .limit(40),
+      .order('scheduled_at', { ascending: true }),
 
     // 4) Teams (via tournament_teams — simpler join, no stage dependency)
     supabaseAdmin
