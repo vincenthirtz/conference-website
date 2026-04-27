@@ -15,7 +15,12 @@ type StaffShape = {
   display_name: string | null;
 };
 
-type DemandeType = 'join_team' | 'leave_team' | 'captain_request' | 'team_registration';
+type DemandeType =
+  | 'join_team'
+  | 'leave_team'
+  | 'captain_request'
+  | 'team_registration'
+  | 'scrim';
 
 type DemandeStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
@@ -69,6 +74,10 @@ type Demande = {
       battle_tag?: string;
       display_name?: string;
     }>;
+    from_team_id?: string;
+    from_team_name?: string;
+    target_team_name?: string;
+    preferred_date?: string | null;
   } | null;
   handled_at?: string | null;
   handled_by?: StaffMini | null;
@@ -115,6 +124,8 @@ function typeLabel(type: DemandeType) {
       return 'Capitaine';
     case 'team_registration':
       return 'Inscription';
+    case 'scrim':
+      return 'Scrim';
     default:
       return type;
   }
@@ -130,6 +141,8 @@ function typeColor(type: DemandeType) {
       return 'bg-purple-600/20 text-purple-300 border border-purple-500/30';
     case 'team_registration':
       return 'bg-blue-600/20 text-blue-300 border border-blue-500/30';
+    case 'scrim':
+      return 'bg-cyan-600/20 text-cyan-300 border border-cyan-500/30';
     default:
       return 'bg-neutral-700 text-neutral-100';
   }
@@ -545,6 +558,7 @@ function AdminDemandesPage() {
                   <option value="join_team">Rejoindre une equipe</option>
                   <option value="leave_team">Quitter une equipe</option>
                   <option value="team_registration">Inscription tournoi</option>
+                  <option value="scrim">Scrim</option>
                 </select>
               </div>
 
@@ -801,7 +815,37 @@ function AdminDemandesPage() {
                         </span>
                       </div>
                       <div className="flex items-center gap-3 text-sm text-neutral-400 flex-wrap">
-                        {d.team && (
+                        {d.type === 'scrim' && d.payload?.from_team_name && (
+                          <>
+                            <span className="flex items-center gap-1.5">
+                              <span className="text-cyan-300">
+                                {d.payload.from_team_name}
+                              </span>
+                              <span className="text-neutral-500">→</span>
+                              <span>
+                                {d.team?.name ||
+                                  d.payload.target_team_name ||
+                                  'Equipe cible'}
+                              </span>
+                            </span>
+                            {d.payload.preferred_date && (
+                              <>
+                                <span>•</span>
+                                <span className="text-cyan-300/80 text-xs">
+                                  {new Date(
+                                    d.payload.preferred_date
+                                  ).toLocaleDateString('fr-FR', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    year: 'numeric',
+                                  })}
+                                </span>
+                              </>
+                            )}
+                            <span>•</span>
+                          </>
+                        )}
+                        {d.team && d.type !== 'scrim' && (
                           <>
                             <span className="flex items-center gap-1">
                               {d.team.logo_url && (

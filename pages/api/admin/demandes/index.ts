@@ -9,7 +9,13 @@ import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { parsePagination, sanitizeSearch, escapePostgrestValue, isValidUUID } from '@/utils/apiHelpers';
 
-export type DemandeType = 'join' | 'leave' | 'captain_request' | 'team_registration' | 'other';
+export type DemandeType =
+  | 'join'
+  | 'leave'
+  | 'captain_request'
+  | 'team_registration'
+  | 'scrim'
+  | 'other';
 
 export type DemandeStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
@@ -450,6 +456,61 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: any) {
             }
           }
         }
+      }
+    }
+  }
+
+  // 3a-bis) Side-effects: when approving a scrim demande, create a notification
+  // demande for the target team (mirrors the captain-driven flow in
+  // pages/api/teams/scrim-requests.ts).
+  if (newStatus === 'approved' && afterList) {
+    for (const d of afterList as DemandeRow[]) {
+      if (d.type !== 'scrim') continue;
+
+      const payload = (d.payload as Record<string, any> | null) || {};
+      const fromTeamName = payload.from_team_name || 'Équipe inconnue';
+      const fromTeamId = payload.from_team_id || null;
+      const preferredDate = payload.preferred_date || null;
+
+      let targetTeamName: string | null = payload.target_team_name || null;
+      if (!targetTeamName && d.team_id) {
+        const { data: targetTeam } = await supabaseAdmin
+          .from('teams')
+          .select('name')
+          .eq('id', d.team_id)
+          .maybeSingle();
+        targetTeamName = targetTeam?.name ?? null;
+      }
+      const targetLabel = targetTeamName || 'Équipe cible';
+
+      const dateSuffix = preferredDate
+        ? ` (date souhaitée : ${new Date(preferredDate).toLocaleDateString('fr-FR')})`
+        : '';
+      const commentSuffix = d.comment ? ` — "${d.comment}"` : '';
+
+      const { error: notifErr } = await supabaseAdmin.from('demandes').insert({
+        user_id: null,
+        team_id: d.team_id,
+        type: 'other',
+        status: 'pending',
+        source: 'website',
+        comment:
+          `Scrim accepté : ${fromTeamName} vs ${targetLabel}` +
+          dateSuffix +
+          commentSuffix,
+        payload: {
+          notification_type: 'scrim_accepted',
+          from_team_id: fromTeamId,
+          from_team_name: fromTeamName,
+          target_team_id: d.team_id,
+          target_team_name: targetLabel,
+          preferred_date: preferredDate,
+          original_demande_id: d.id,
+        },
+      });
+
+      if (notifErr) {
+        console.error('admin scrim accept notification error:', notifErr);
       }
     }
   }
