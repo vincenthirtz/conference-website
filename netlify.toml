@@ -9,6 +9,11 @@
 [functions]
   directory = "netlify/functions"
 
+# Scheduled function: process per-match check-in flow every 5 minutes.
+# (emails 1h before, Discord reminders at T-30/T-15, auto-forfeit at T-0)
+[functions."checkin-cron"]
+  schedule = "*/5 * * * *"
+
 [[headers]]
   for = "/*"
   [headers.values]

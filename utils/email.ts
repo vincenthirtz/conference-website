@@ -292,6 +292,75 @@ export function sendTournamentNotificationEmail(
   });
 }
 
+/**
+ * Match check-in email sent to the captain ~1h before kickoff.
+ * Contains the unique check-in URL and a deadline.
+ */
+export function sendMatchCheckinEmail(opts: {
+  to: string;
+  teamName: string;
+  opponentName: string;
+  scheduledAt: string;
+  checkinUrl: string;
+  tournamentName: string;
+}): Promise<SendEmailResult> {
+  const dateStr = (() => {
+    try {
+      return new Date(opts.scheduledAt).toLocaleString('fr-FR', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'Europe/Paris',
+      });
+    } catch {
+      return opts.scheduledAt;
+    }
+  })();
+
+  return sendEmail({
+    to: opts.to,
+    subject: `Check-in : ${opts.teamName} vs ${opts.opponentName}`,
+    tags: ['match-checkin'],
+    html: emailLayout(`
+      ${gradientBar()}
+      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Check-in requis</h1>
+      <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
+        Votre prochain match d&eacute;bute dans environ <strong style="color:#2dccfd;">1 heure</strong>.
+        Confirmez votre pr&eacute;sence pour &eacute;viter le forfait automatique.
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:rgba(255,255,255,0.05);border-radius:10px;border:1px solid rgba(255,255,255,0.08);margin:0 0 24px;">
+        <tr>
+          <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
+            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Tournoi</span><br/>
+            <span style="font-size:15px;color:#ffffff;font-weight:500;">${escapeHtml(opts.tournamentName)}</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
+            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Match</span><br/>
+            <span style="font-size:15px;color:#ffffff;font-weight:500;">${escapeHtml(opts.teamName)} vs ${escapeHtml(opts.opponentName)}</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:14px 20px;">
+            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">D&eacute;but pr&eacute;vu</span><br/>
+            <span style="font-size:15px;color:#2dccfd;font-weight:500;">${escapeHtml(dateStr)}</span>
+          </td>
+        </tr>
+      </table>
+      <p style="margin:0 0 8px;font-size:13px;color:#e74694;line-height:1.5;background:rgba(231,70,148,0.08);border:1px solid rgba(231,70,148,0.15);border-radius:8px;padding:10px 14px;">
+        Sans check-in avant le d&eacute;but du match, votre &eacute;quipe sera d&eacute;clar&eacute;e forfait automatiquement.
+      </p>
+      ${ctaButton(opts.checkinUrl, 'Confirmer ma présence')}
+      <p style="margin:24px 0 0;font-size:12px;color:#675788;line-height:1.5;text-align:center;">
+        Lien direct&nbsp;: <a href="${opts.checkinUrl}" style="color:#9081B0;">${escapeHtml(opts.checkinUrl)}</a>
+      </p>
+    `),
+  });
+}
+
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, '&amp;')

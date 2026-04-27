@@ -13,7 +13,8 @@ type ChannelType =
   | 'match_results'
   | 'bracket_updates'
   | 'general_announcements'
-  | 'veto_live';
+  | 'veto_live'
+  | 'checkin_reminders';
 
 type WebhookRow = {
   id: string;
@@ -53,6 +54,10 @@ const CHANNEL_LABELS: Record<ChannelType, { label: string; description: string }
     label: 'Veto en direct',
     description: 'Un message par étape : ban, pick, decider — au fil de l\'eau.',
   },
+  checkin_reminders: {
+    label: 'Rappels check-in',
+    description: 'Rappels T-30min / T-15min avant chaque match + annonce de forfait auto à T-0.',
+  },
 };
 
 export const getServerSideProps = withStaffPage('admin');
@@ -76,6 +81,7 @@ function DiscordConfigPage(_: StaffProps) {
     bracket_updates: { webhookUrl: '', roleMention: '', isActive: true },
     general_announcements: { webhookUrl: '', roleMention: '', isActive: true },
     veto_live: { webhookUrl: '', roleMention: '', isActive: true },
+    checkin_reminders: { webhookUrl: '', roleMention: '', isActive: true },
   });
 
   const [saving, setSaving] = useState<Record<ChannelType, boolean>>({
@@ -84,6 +90,7 @@ function DiscordConfigPage(_: StaffProps) {
     bracket_updates: false,
     general_announcements: false,
     veto_live: false,
+    checkin_reminders: false,
   });
 
   const fetchData = useCallback(async () => {

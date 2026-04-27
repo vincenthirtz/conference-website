@@ -12,7 +12,8 @@ export type DiscordChannelType =
   | 'match_results'
   | 'bracket_updates'
   | 'general_announcements'
-  | 'veto_live';
+  | 'veto_live'
+  | 'checkin_reminders';
 
 type DiscordEmbedField = {
   name: string;
@@ -50,6 +51,8 @@ const COLORS = {
   announcement: 0xf59e0b, // amber-500
   veto: 0xa855f7, // purple-500
   scrim: 0x06b6d4, // cyan-500
+  checkinReminder: 0xef4444, // red-500
+  checkinForfeit: 0x991b1b, // red-800
 };
 
 /* -----------------------------------------------------------
@@ -514,6 +517,97 @@ export type VetoStepNotification = {
   byTeamName?: string | null;
   isComplete: boolean;
 };
+
+export type CheckinReminderNotification = {
+  tournamentId: string | null;
+  matchId: string;
+  teamName: string;
+  teamRoleId: string | null | undefined;
+  opponentName: string;
+  scheduledAt: string;
+  minutesBeforeKickoff: number; // 30 or 15
+  checkinUrl: string;
+};
+
+export async function notifyCheckinReminder(
+  data: CheckinReminderNotification
+): Promise<void> {
+  const cfg = await resolveWebhook(data.tournamentId, 'checkin_reminders');
+  if (!cfg) return;
+
+  const teamPing = teamRolePing(data.teamRoleId, data.teamName);
+  const channelPing = formatRoleMention(cfg.roleMention);
+
+  const fields: DiscordEmbedField[] = [
+    { name: 'Adversaire', value: data.opponentName, inline: true },
+  ];
+  const dateLabel = formatDateFr(data.scheduledAt);
+  if (dateLabel) {
+    fields.push({ name: 'Début', value: dateLabel, inline: true });
+  }
+  fields.push({
+    name: 'Lien check-in',
+    value: data.checkinUrl,
+    inline: false,
+  });
+
+  const contentParts = [teamPing];
+  if (channelPing) contentParts.unshift(channelPing);
+
+  const minutes = data.minutesBeforeKickoff;
+  const isUrgent = minutes <= 15;
+
+  await postToDiscordWebhook(cfg.url, {
+    username: "OW Women's Cup",
+    content: contentParts.join(' '),
+    embeds: [
+      {
+        title: isUrgent
+          ? `⚠️ Check-in : il reste ${minutes} minutes`
+          : `⏰ Rappel check-in (${minutes} min)`,
+        description: `**${data.teamName}** doit confirmer sa présence pour le match contre **${data.opponentName}**.`,
+        color: COLORS.checkinReminder,
+        fields,
+        timestamp: new Date().toISOString(),
+        footer: { text: `Match ${data.matchId.slice(0, 8)}` },
+      },
+    ],
+    allowed_mentions: buildAllowedMentions(cfg.roleMention, [data.teamRoleId]),
+  });
+}
+
+export type CheckinForfeitNotification = {
+  tournamentId: string | null;
+  matchId: string;
+  forfeitedTeamName: string;
+  forfeitedTeamRoleId: string | null | undefined;
+  opponentName: string;
+};
+
+export async function notifyCheckinForfeit(
+  data: CheckinForfeitNotification
+): Promise<void> {
+  const cfg = await resolveWebhook(data.tournamentId, 'checkin_reminders');
+  if (!cfg) return;
+
+  const teamPing = teamRolePing(data.forfeitedTeamRoleId, data.forfeitedTeamName);
+  const channelPing = formatRoleMention(cfg.roleMention);
+
+  await postToDiscordWebhook(cfg.url, {
+    username: "OW Women's Cup",
+    content: [channelPing, teamPing].filter(Boolean).join(' '),
+    embeds: [
+      {
+        title: '🚷 Forfait automatique (no check-in)',
+        description: `**${data.forfeitedTeamName}** n'a pas confirmé sa présence à temps. Le match est attribué à **${data.opponentName}**.`,
+        color: COLORS.checkinForfeit,
+        timestamp: new Date().toISOString(),
+        footer: { text: `Match ${data.matchId.slice(0, 8)}` },
+      },
+    ],
+    allowed_mentions: buildAllowedMentions(cfg.roleMention, [data.forfeitedTeamRoleId]),
+  });
+}
 
 export async function notifyVetoStep(
   data: VetoStepNotification

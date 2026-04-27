@@ -16,6 +16,7 @@ const VALID_CHANNEL_TYPES = [
   'bracket_updates',
   'general_announcements',
   'veto_live',
+  'checkin_reminders',
 ] as const;
 
 type ChannelType = (typeof VALID_CHANNEL_TYPES)[number];

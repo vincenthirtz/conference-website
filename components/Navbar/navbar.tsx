@@ -252,6 +252,16 @@ function Navbar(): JSX.Element {
           ref: '/admin/tournaments/create',
           minRole: 'manager',
         },
+        {
+          title: 'Webhooks Discord (par tournoi)',
+          ref: '/admin/tournaments',
+          minRole: 'admin',
+        },
+        {
+          title: 'Check-in matchs (par tournoi)',
+          ref: '/admin/tournaments',
+          minRole: 'manager',
+        },
       ],
     },
     {
