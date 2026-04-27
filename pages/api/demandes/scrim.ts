@@ -6,6 +6,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { notifyScrimRequest } from '@/utils/discord';
 
 export type ScrimRequestBody = {
   teamId: string;
@@ -190,6 +191,17 @@ export default async function handler(
         .status(500)
         .json({ error: 'Failed to create request.' });
     }
+
+    // Fire-and-forget Discord notification (errors are logged inside).
+    notifyScrimRequest({
+      fromTeamName: myTeam.name,
+      targetTeamName: targetTeam.name,
+      preferredDate,
+      message,
+      requesterDisplayName:
+        (payload.user_display_name as string | null) ||
+        (user.email as string | null),
+    });
 
     return res.status(201).json({
       success: true,
