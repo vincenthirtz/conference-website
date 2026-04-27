@@ -54,6 +54,44 @@ select option {
   }
 }
 
+/* Fun esport CTA — animated gradient + pulsing glow */
+.esport-cta {
+  background: linear-gradient(
+    90deg,
+    #ff006e,
+    #ff4d00,
+    #ff8a00,
+    #e74694,
+    #ff006e
+  );
+  background-size: 300% 100%;
+  animation: esportGradient 6s ease infinite;
+  box-shadow:
+    0 0 20px rgba(255, 0, 110, 0.45),
+    0 0 40px rgba(231, 70, 148, 0.3),
+    0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.esport-cta:hover {
+  box-shadow:
+    0 0 28px rgba(255, 0, 110, 0.7),
+    0 0 60px rgba(231, 70, 148, 0.45),
+    0 10px 28px rgba(0, 0, 0, 0.4);
+  animation-duration: 2.5s;
+}
+
+@keyframes esportGradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
 /* .container{
   max-width: 1400px;
 } */
