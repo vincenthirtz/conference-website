@@ -1,15 +1,23 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { supabaseAdmin } from '@/utils/supabase';
 import { useToast } from '@/components/Toast';
 import { useUrlFilters } from '@/utils/useUrlFilters';
-import type { StaffProps, TeamRow } from '@/types/admin';
+import type { TeamRow } from '@/types/admin';
 
-type TeamsApiResponse = {
+type AdminTeamsProps = {
+  staff: {
+    id: string | null;
+    role: string | null;
+    display_name: string | null;
+  };
   teams: TeamRow[];
   total: number | null;
+  errorMsg: string | null;
 };
 
 function formatDate(d: string | null) {
@@ -25,29 +33,54 @@ function formatDate(d: string | null) {
   }
 }
 
-export const getServerSideProps = withStaffPage('manager');
-
 const FILTER_KEYS = ['search', 'isActive', 'tournamentId', 'offset'] as const;
 const LIMIT = 25;
 
-function AdminTeamsListPage({ staff }: StaffProps) {
+function AdminTeamsListPage({
+  teams,
+  total,
+  errorMsg: ssrError,
+}: AdminTeamsProps) {
   const { addToast } = useToast();
+  const router = useRouter();
   const { filters, setFilter, setFilters } = useUrlFilters(FILTER_KEYS);
 
   const search = filters.search ?? '';
   const activeFilter = filters.isActive ?? '';
   const tournamentFilter = filters.tournamentId ?? '';
   const offset = Number(filters.offset) || 0;
+  const loading = false;
 
-  const [teams, setTeams] = useState<TeamRow[]>([]);
-  const [total, setTotal] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(ssrError);
   const [deleteTarget, setDeleteTarget] = useState<TeamRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Tournament dropdown is loaded lazily on first focus (saves 200-row query
+  // on every page load when filters aren't used).
   const [tournamentOptions, setTournamentOptions] = useState<
     { id: string; name: string }[]
   >([]);
+  const [tournamentsLoaded, setTournamentsLoaded] = useState(false);
+
+  const loadTournaments = useCallback(async () => {
+    if (tournamentsLoaded) return;
+    try {
+      const res = await fetch('/api/admin/tournaments?limit=200');
+      if (res.ok) {
+        const json = await res.json();
+        setTournamentOptions(
+          (json.tournaments || []).map((t: any) => ({
+            id: t.id,
+            name: t.name,
+          }))
+        );
+      }
+    } catch {
+      // ignore
+    } finally {
+      setTournamentsLoaded(true);
+    }
+  }, [tournamentsLoaded]);
 
   // Bulk selection
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -69,58 +102,9 @@ function AdminTeamsListPage({ staff }: StaffProps) {
   // Local search input (synced to URL on submit)
   const [searchInput, setSearchInput] = useState(search);
 
-  const fetchTeams = useCallback(async () => {
-    setLoading(true);
-    setErrorMsg(null);
-
-    try {
-      const params = new URLSearchParams();
-      params.set('limit', String(LIMIT));
-      params.set('offset', String(offset));
-      params.set('includeTotal', '1');
-      if (search.trim()) params.set('search', search.trim());
-      if (activeFilter) params.set('isActive', activeFilter);
-      if (tournamentFilter) params.set('tournamentId', tournamentFilter);
-
-      const res = await fetch(`/api/admin/teams?${params.toString()}`);
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Impossible de charger les équipes');
-      }
-
-      const json: TeamsApiResponse = await res.json();
-      setTeams(json.teams || []);
-      setTotal(typeof json.total === 'number' ? json.total : null);
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
-    } finally {
-      setLoading(false);
-    }
-  }, [offset, search, activeFilter, tournamentFilter]);
-
-  useEffect(() => {
-    fetchTeams();
-  }, [fetchTeams]);
-
-  useEffect(() => {
-    async function loadTournaments() {
-      try {
-        const res = await fetch('/api/admin/tournaments?limit=200');
-        if (res.ok) {
-          const json = await res.json();
-          setTournamentOptions(
-            (json.tournaments || []).map((t: any) => ({
-              id: t.id,
-              name: t.name,
-            }))
-          );
-        }
-      } catch {
-        // ignore
-      }
-    }
-    loadTournaments();
-  }, []);
+  const fetchTeams = useCallback(() => {
+    router.replace(router.asPath, undefined, { scroll: false });
+  }, [router]);
 
   async function handleDelete(team: TeamRow) {
     if (!team?.id) return;
@@ -380,6 +364,7 @@ function AdminTeamsListPage({ staff }: StaffProps) {
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={tournamentFilter}
+                  onFocus={loadTournaments}
                   onChange={(e) => {
                     setFilters({ tournamentId: e.target.value || null, offset: null });
                   }}
@@ -437,6 +422,7 @@ function AdminTeamsListPage({ staff }: StaffProps) {
                 <select
                   className="px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 text-sm"
                   value={assignTournamentId}
+                  onFocus={loadTournaments}
                   onChange={(e) => setAssignTournamentId(e.target.value)}
                 >
                   <option value="">Choisir un tournoi...</option>
@@ -835,6 +821,7 @@ function AdminTeamsListPage({ staff }: StaffProps) {
               <select
                 className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 text-sm"
                 value={csvTournamentId}
+                onFocus={loadTournaments}
                 onChange={(e) => setCsvTournamentId(e.target.value)}
               >
                 <option value="">Aucun</option>
@@ -896,5 +883,55 @@ function AdminTeamsListPage({ staff }: StaffProps) {
     </>
   );
 }
+
+export const getServerSideProps = withStaffPage('manager', async (ctx) => {
+  const { query } = ctx;
+  const search = typeof query.search === 'string' ? query.search.trim() : '';
+  const isActive = typeof query.isActive === 'string' ? query.isActive : '';
+  const tournamentId =
+    typeof query.tournamentId === 'string' ? query.tournamentId : '';
+  const offset = Math.max(0, Number(query.offset) || 0);
+
+  if (!supabaseAdmin) {
+    return { teams: [], total: null, errorMsg: 'Service indisponible' };
+  }
+
+  let q = supabaseAdmin
+    .from('teams')
+    .select('*', { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range(offset, offset + LIMIT - 1);
+
+  if (isActive === 'true') q = q.eq('is_active', true);
+  if (isActive === 'false') q = q.eq('is_active', false);
+  if (search) {
+    const s = `%${search}%`;
+    q = q.or(`name.ilike.${s},slug.ilike.${s},short_name.ilike.${s}`);
+  }
+  if (tournamentId) {
+    const { data: regs } = await supabaseAdmin
+      .from('tournament_teams')
+      .select('team_id')
+      .eq('tournament_id', tournamentId);
+    const teamIds = (regs || []).map((r) => r.team_id).filter(Boolean);
+    if (teamIds.length === 0) {
+      return { teams: [], total: 0, errorMsg: null };
+    }
+    q = q.in('id', teamIds);
+  }
+
+  const { data, error, count } = await q;
+
+  if (error) {
+    console.error('admin teams SSR error:', error);
+    return { teams: [], total: null, errorMsg: 'Erreur lors du chargement' };
+  }
+
+  return {
+    teams: (data || []) as TeamRow[],
+    total: typeof count === 'number' ? count : null,
+    errorMsg: null,
+  };
+});
 
 export default AdminTeamsListPage;

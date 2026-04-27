@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { supabaseAdmin } from '@/utils/supabase';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
-import { useDebounce } from '@/hooks/useDebounce';
+import { useUrlFilters } from '@/utils/useUrlFilters';
 
 type NewsRow = {
   id: string;
@@ -15,18 +17,19 @@ type NewsRow = {
   created_at: string;
 };
 
-type ApiResponse = {
-  items: NewsRow[];
-  total?: number;
-};
-
 type Props = {
   staff: {
     id: string;
     role: string;
     display_name: string;
   };
+  news: NewsRow[];
+  total: number;
+  errorMsg: string | null;
 };
+
+const N_FILTER_KEYS = ['search', 'status', 'offset'] as const;
+const LIMIT = 20;
 
 function statusLabel(status: 'draft' | 'published') {
   return status === 'published' ? 'Publié' : 'Brouillon';
@@ -51,58 +54,28 @@ function formatDate(d: string | null) {
   }
 }
 
-function AdminNewsPage({ staff }: Props) {
-  const [loading, setLoading] = useState(false);
-  const [news, setNews] = useState<NewsRow[]>([]);
-  const [total, setTotal] = useState<number | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+function AdminNewsPage({ news, total, errorMsg: ssrError }: Props) {
+  const router = useRouter();
+  const { filters, setFilter, setFilters } = useUrlFilters(N_FILTER_KEYS);
+
+  const search = filters.search ?? '';
+  const statusFilter = filters.status ?? null;
+  const offset = Number(filters.offset) || 0;
+  const limit = LIMIT;
+
+  const [searchInput, setSearchInput] = useState(search);
+  const [errorMsg, setErrorMsg] = useState<string | null>(ssrError);
   const [deleteTarget, setDeleteTarget] = useState<NewsRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const loading = false;
 
-  // filters
-  const [search, setSearch] = useState('');
-  const debouncedSearch = useDebounce(search, 300);
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
-
-  const [limit] = useState(20);
-  const [offset, setOffset] = useState(0);
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    setErrorMsg(null);
-
-    try {
-      const params = new URLSearchParams();
-      params.set('limit', String(limit));
-      params.set('offset', String(offset));
-
-      if (debouncedSearch.trim()) params.set('search', debouncedSearch);
-      if (statusFilter) params.set('status', statusFilter);
-
-      const res = await fetch(`/api/admin/news?${params.toString()}`);
-      const json: ApiResponse = await res.json();
-
-      if (!res.ok) {
-        throw new Error((json as any)?.error || 'Erreur chargement');
-      }
-
-      setNews(json.items || []);
-      setTotal(json.total ?? json.items?.length ?? 0);
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || 'Erreur chargement');
-    } finally {
-      setLoading(false);
-    }
-  }, [limit, offset, debouncedSearch, statusFilter]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const fetchData = useCallback(() => {
+    router.replace(router.asPath, undefined, { scroll: false });
+  }, [router]);
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setOffset(0);
-    fetchData();
+    setFilters({ search: searchInput.trim() || null, offset: null });
   }
 
   const handleDelete = async (item: NewsRow) => {
@@ -142,9 +115,7 @@ function AdminNewsPage({ staff }: Props) {
                   Gestion des news
                 </h1>
                 <p className="text-neutral-400 text-sm mt-1">
-                  {total !== null
-                    ? `${total} article${total > 1 ? 's' : ''}`
-                    : 'Chargement...'}
+                  {total} article{total > 1 ? 's' : ''}
                 </p>
               </div>
 
@@ -223,8 +194,8 @@ function AdminNewsPage({ staff }: Props) {
                     type="text"
                     placeholder="Titre ou slug..."
                     className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
                   />
                 </div>
               </div>
@@ -236,7 +207,9 @@ function AdminNewsPage({ staff }: Props) {
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={statusFilter || ''}
-                  onChange={(e) => setStatusFilter(e.target.value || null)}
+                  onChange={(e) =>
+                    setFilters({ status: e.target.value || null, offset: null })
+                  }
                 >
                   <option value="">Tous les statuts</option>
                   <option value="draft">Brouillon</option>
@@ -377,7 +350,12 @@ function AdminNewsPage({ staff }: Props) {
             <button
               type="button"
               disabled={offset === 0}
-              onClick={() => setOffset(Math.max(0, offset - limit))}
+              onClick={() =>
+                setFilter(
+                  'offset',
+                  String(Math.max(0, offset - limit)) || null
+                )
+              }
               className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <svg
@@ -403,8 +381,8 @@ function AdminNewsPage({ staff }: Props) {
 
             <button
               type="button"
-              disabled={total !== null && offset + limit >= total}
-              onClick={() => setOffset(offset + limit)}
+              disabled={offset + limit >= total}
+              onClick={() => setFilter('offset', String(offset + limit))}
               className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               Suivant
@@ -445,6 +423,44 @@ function AdminNewsPage({ staff }: Props) {
   );
 }
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage('admin', async (ctx) => {
+  const { query } = ctx;
+  const search = typeof query.search === 'string' ? query.search.trim() : '';
+  const status = typeof query.status === 'string' ? query.status : null;
+  const offset = Math.max(0, Number(query.offset) || 0);
+
+  if (!supabaseAdmin) {
+    return { news: [], total: 0, errorMsg: 'Service indisponible' };
+  }
+
+  let q = supabaseAdmin
+    .from('news')
+    .select('id, title, slug, tag, status, published_at, created_at', {
+      count: 'exact',
+    })
+    .order('created_at', { ascending: false })
+    .range(offset, offset + LIMIT - 1);
+
+  if (status === 'draft' || status === 'published') {
+    q = q.eq('status', status);
+  }
+  if (search) {
+    const s = `%${search}%`;
+    q = q.or(`title.ilike.${s},slug.ilike.${s}`);
+  }
+
+  const { data, error, count } = await q;
+
+  if (error) {
+    console.error('admin news SSR error:', error);
+    return { news: [], total: 0, errorMsg: 'Erreur lors du chargement' };
+  }
+
+  return {
+    news: (data || []) as NewsRow[],
+    total: typeof count === 'number' ? count : (data?.length ?? 0),
+    errorMsg: null,
+  };
+});
 
 export default AdminNewsPage;

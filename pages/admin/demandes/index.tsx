@@ -1,19 +1,14 @@
 // pages/admin/demandes/index.tsx
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
-import { supabaseClient } from '@/utils/supabase';
+import { supabaseAdmin, supabaseClient } from '@/utils/supabase';
 import { withStaffPage } from '@/utils/staff';
+import { useUrlFilters } from '@/utils/useUrlFilters';
 import { useToast } from '@/components/Toast';
-
-type StaffShape = {
-  id: string;
-  role: string;
-  display_name: string | null;
-};
 
 type DemandeType =
   | 'join_team'
@@ -92,12 +87,99 @@ type DemandesApiResponse = {
   total: number | null;
 };
 
-type TournamentsApiResponse = {
+type Props = {
+  staff: {
+    id: string | null;
+    role: string | null;
+    display_name: string | null;
+  };
+  initialDemandes: Demande[];
+  initialTotal: number | null;
   tournaments: TournamentMini[];
-  total: number | null;
+  initialError: string | null;
 };
 
-export const getServerSideProps = withStaffPage('manager');
+const D_FILTER_KEYS = [
+  'type',
+  'status',
+  'tournamentId',
+  'search',
+  'from',
+  'to',
+  'offset',
+] as const;
+const LIMIT = 50;
+
+export const getServerSideProps = withStaffPage('manager', async (ctx) => {
+  const { query } = ctx;
+  const type = typeof query.type === 'string' ? query.type : '';
+  const statusRaw = typeof query.status === 'string' ? query.status : 'pending';
+  const tournamentId =
+    typeof query.tournamentId === 'string' ? query.tournamentId : '';
+  const search = typeof query.search === 'string' ? query.search.trim() : '';
+  const from = typeof query.from === 'string' ? query.from : '';
+  const to = typeof query.to === 'string' ? query.to : '';
+  const offset = Math.max(0, Number(query.offset) || 0);
+
+  if (!supabaseAdmin) {
+    return {
+      initialDemandes: [],
+      initialTotal: null,
+      tournaments: [],
+      initialError: 'Service indisponible',
+    };
+  }
+
+  const baseColumns = `
+    id, user_id, team_id, tournament_id, type, status,
+    comment, payload, created_at, updated_at,
+    team:teams!demandes_team_id_fkey(id, name, short_name, logo_url),
+    tournament:tournaments!demandes_tournament_id_fkey(id, name, slug)
+  `;
+
+  let q = supabaseAdmin
+    .from('demandes')
+    .select(baseColumns, { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range(offset, offset + LIMIT - 1);
+
+  if (statusRaw) q = q.eq('status', statusRaw);
+  if (type) q = q.eq('type', type);
+  if (tournamentId) q = q.eq('tournament_id', tournamentId);
+  if (from) q = q.gte('created_at', from);
+  if (to) q = q.lte('created_at', to);
+  if (search) {
+    const s = `%${search}%`;
+    q = q.or(`comment.ilike.${s},staff_note.ilike.${s}`);
+  }
+
+  const [demandesRes, tournamentsRes] = await Promise.all([
+    q,
+    supabaseAdmin
+      .from('tournaments')
+      .select('id, name, slug')
+      .order('created_at', { ascending: false })
+      .limit(200),
+  ]);
+
+  if (demandesRes.error) {
+    console.error('admin demandes SSR error:', demandesRes.error);
+    return {
+      initialDemandes: [],
+      initialTotal: null,
+      tournaments: (tournamentsRes.data || []) as TournamentMini[],
+      initialError: 'Erreur lors du chargement',
+    };
+  }
+
+  return {
+    initialDemandes: (demandesRes.data || []) as unknown as Demande[],
+    initialTotal:
+      typeof demandesRes.count === 'number' ? demandesRes.count : null,
+    tournaments: (tournamentsRes.data || []) as TournamentMini[],
+    initialError: null,
+  };
+});
 
 function formatDateTime(iso: string | null) {
   if (!iso) return '—';
@@ -178,163 +260,46 @@ function statusColor(status: DemandeStatus) {
   }
 }
 
-function AdminDemandesPage() {
+function AdminDemandesPage({
+  initialDemandes,
+  initialTotal,
+  tournaments,
+  initialError,
+}: Props) {
   const { addToast } = useToast();
   const router = useRouter();
+  const { filters, setFilter, setFilters } = useUrlFilters(D_FILTER_KEYS);
 
-  // Guard auth cote client
-  const [guardLoading, setGuardLoading] = useState(true);
-  const [staff, setStaff] = useState<StaffShape | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const typeFilter = filters.type ?? '';
+  const statusFilter = filters.status ?? 'pending';
+  const tournamentFilter = filters.tournamentId ?? '';
+  const search = filters.search ?? '';
+  const dateFrom = filters.from ?? '';
+  const dateTo = filters.to ?? '';
+  const offset = Math.max(0, Number(filters.offset) || 0);
+  const limit = LIMIT;
+  const loadingTournaments = false;
 
-  // Donnees page
-  const [loading, setLoading] = useState(true);
-  const [demandes, setDemandes] = useState<Demande[]>([]);
-  const [total, setTotal] = useState<number | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  const [tournaments, setTournaments] = useState<TournamentMini[]>([]);
-  const [loadingTournaments, setLoadingTournaments] = useState(false);
-
-  // Filtres
-  const [typeFilter, setTypeFilter] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<string>('pending');
-  const [tournamentFilter, setTournamentFilter] = useState<string>('');
-  const [search, setSearch] = useState<string>('');
-  const [dateFrom, setDateFrom] = useState<string>('');
-  const [dateTo, setDateTo] = useState<string>('');
-
-  const [limit] = useState(50);
-  const [offset, setOffset] = useState(0);
+  const demandes = initialDemandes;
+  const total = initialTotal;
+  const [errorMsg, setErrorMsg] = useState<string | null>(initialError);
+  const [searchInput, setSearchInput] = useState(search);
+  const loading = false;
 
   // Batch selection
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [batchProcessing, setBatchProcessing] = useState(false);
 
-  // 1) Guard staff : check session + /api/admin/me
-  useEffect(() => {
-    const run = async () => {
-      try {
-        const {
-          data: { session },
-        } = await supabaseClient.auth.getSession();
-
-        if (!session?.access_token) {
-          router.push('/admin/login');
-          return;
-        }
-
-        const accessToken = session.access_token;
-        setToken(accessToken);
-
-        const res = await fetch('/api/admin/me', {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
-
-        if (!res.ok) {
-          router.push('/admin/login');
-          return;
-        }
-
-        const me = await res.json();
-
-        if (!me.role) {
-          router.push('/admin/login');
-          return;
-        }
-
-        setStaff({
-          id: (me.id as string) ?? '',
-          role: me.role ?? 'caster',
-          display_name: me.display_name ?? null,
-        });
-      } catch (e) {
-        console.error('staff guard error', e);
-        router.push('/admin/login');
-        return;
-      } finally {
-        setGuardLoading(false);
-      }
-    };
-
-    run();
-  }, [router]);
-
-  // 2) Charger les tournois une fois l'auth OK
-  useEffect(() => {
-    if (!token) return;
-    fetchTournaments();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
-
-  // 3) Charger les demandes quand filtres changent (et auth OK)
-  useEffect(() => {
-    if (!token) return;
-    fetchDemandes();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [offset, statusFilter, typeFilter, tournamentFilter, token]);
-
-  async function fetchTournaments() {
-    try {
-      setLoadingTournaments(true);
-      const res = await fetch('/api/admin/tournaments?limit=200', {
-        headers: token
-          ? {
-              Authorization: `Bearer ${token}`,
-            }
-          : {},
-      });
-      if (!res.ok) return;
-      const json: TournamentsApiResponse = await res.json();
-      setTournaments(json.tournaments || []);
-    } catch (e) {
-      console.error('Failed to load tournaments for filter', e);
-    } finally {
-      setLoadingTournaments(false);
-    }
+  async function fetchDemandes() {
+    // Trigger a refresh by re-running getServerSideProps
+    await router.replace(router.asPath, undefined, { scroll: false });
   }
 
-  async function fetchDemandes() {
-    setLoading(true);
-    setErrorMsg(null);
-
-    try {
-      const params = new URLSearchParams();
-      params.set('limit', String(limit));
-      params.set('offset', String(offset));
-      params.set('includeUser', '1');
-      params.set('includeTeam', '1');
-      params.set('includeTournament', '1');
-      params.set('includeTotal', '1');
-      if (statusFilter) params.set('status', statusFilter);
-      if (typeFilter) params.set('type', typeFilter);
-      if (tournamentFilter) params.set('tournamentId', tournamentFilter);
-      if (search.trim()) params.set('search', search.trim());
-      if (dateFrom) params.set('from', dateFrom);
-      if (dateTo) params.set('to', dateTo);
-
-      const res = await fetch('/api/admin/demandes?' + params.toString(), {
-        headers: token
-          ? {
-              Authorization: `Bearer ${token}`,
-            }
-          : {},
-      });
-
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Impossible de charger les demandes');
-      }
-      const json: DemandesApiResponse = await res.json();
-      setDemandes(json.demandes || []);
-      setTotal(typeof json.total === 'number' ? json.total : null);
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
-    } finally {
-      setLoading(false);
-    }
+  async function getToken(): Promise<string | null> {
+    const {
+      data: { session },
+    } = await supabaseClient.auth.getSession();
+    return session?.access_token ?? null;
   }
 
   function toggleSelect(id: string) {
@@ -360,6 +325,7 @@ function AdminDemandesPage() {
     setErrorMsg(null);
 
     try {
+      const token = await getToken();
       const res = await fetch('/api/admin/demandes', {
         method: 'POST',
         headers: {
@@ -394,11 +360,10 @@ function AdminDemandesPage() {
 
   function handleFilterSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setOffset(0);
-    fetchDemandes();
+    setFilters({ search: searchInput.trim() || null, offset: null });
   }
 
-  function handleExportCsv() {
+  async function handleExportCsv() {
     const params = new URLSearchParams();
     params.set('limit', '10000');
     params.set('offset', '0');
@@ -411,40 +376,24 @@ function AdminDemandesPage() {
     if (dateTo) params.set('dateTo', dateTo);
 
     const url = '/api/admin/demandes?' + params.toString();
+    const token = await getToken();
 
     if (token) {
-      fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-        .then((res) => res.blob())
-        .then((blob) => {
-          const a = document.createElement('a');
-          a.href = URL.createObjectURL(blob);
-          a.download = 'demandes.csv';
-          a.click();
-        })
-        .catch((e) => {
-          console.error('CSV export error', e);
+      try {
+        const res = await fetch(url, {
+          headers: { Authorization: `Bearer ${token}` },
         });
+        const blob = await res.blob();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'demandes.csv';
+        a.click();
+      } catch (e) {
+        console.error('CSV export error', e);
+      }
     } else {
       window.location.href = url;
     }
-  }
-
-  // Etat de garde : pendant le check auth, on affiche un ecran simple
-  if (guardLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  // Si pas de staff (et pas en train de loader) -> on ne rend rien (redir deja faite)
-  if (!staff) {
-    return null;
   }
 
   return (
@@ -551,7 +500,9 @@ function AdminDemandesPage() {
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value)}
+                  onChange={(e) =>
+                    setFilters({ type: e.target.value || null, offset: null })
+                  }
                 >
                   <option value="">Tous les types</option>
                   <option value="captain_request">Devenir capitaine</option>
@@ -569,7 +520,9 @@ function AdminDemandesPage() {
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
+                  onChange={(e) =>
+                    setFilters({ status: e.target.value || null, offset: null })
+                  }
                 >
                   <option value="">Tous les statuts</option>
                   <option value="pending">En attente</option>
@@ -586,7 +539,12 @@ function AdminDemandesPage() {
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   value={tournamentFilter}
-                  onChange={(e) => setTournamentFilter(e.target.value)}
+                  onChange={(e) =>
+                    setFilters({
+                      tournamentId: e.target.value || null,
+                      offset: null,
+                    })
+                  }
                   disabled={loadingTournaments}
                 >
                   <option value="">
@@ -623,8 +581,8 @@ function AdminDemandesPage() {
                     type="text"
                     placeholder="Joueur, equipe..."
                     className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
                   />
                 </div>
               </div>
@@ -637,7 +595,9 @@ function AdminDemandesPage() {
                   type="date"
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
+                  onChange={(e) =>
+                    setFilters({ from: e.target.value || null, offset: null })
+                  }
                 />
               </div>
 
@@ -649,7 +609,9 @@ function AdminDemandesPage() {
                   type="date"
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
+                  onChange={(e) =>
+                    setFilters({ to: e.target.value || null, offset: null })
+                  }
                 />
               </div>
 
@@ -931,7 +893,12 @@ function AdminDemandesPage() {
             <button
               type="button"
               disabled={offset === 0}
-              onClick={() => setOffset(Math.max(0, offset - limit))}
+              onClick={() =>
+                setFilter(
+                  'offset',
+                  String(Math.max(0, offset - limit)) || null
+                )
+              }
               className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <svg
@@ -958,7 +925,7 @@ function AdminDemandesPage() {
             <button
               type="button"
               disabled={total !== null && offset + limit >= total}
-              onClick={() => setOffset(offset + limit)}
+              onClick={() => setFilter('offset', String(offset + limit))}
               className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               Suivant

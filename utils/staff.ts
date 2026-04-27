@@ -146,14 +146,54 @@ export async function getStaffRole(userId: string): Promise<StaffRole | null> {
  * Contexte staff côté serveur (SSR / API routes)
  * ---------------------------------------------------------*/
 
+// Token → userId cache (60s). Évite un roundtrip réseau supabase.auth.getUser
+// par appel d'API admin lors d'une même navigation utilisateur.
+const TOKEN_CACHE_TTL = 60 * 1_000;
+const tokenUserCache = new Map<string, { user: User | null; expiresAt: number }>();
+
+async function resolveUserFromToken(token: string): Promise<User | null> {
+  const now = Date.now();
+  const cached = tokenUserCache.get(token);
+  if (cached && cached.expiresAt > now) {
+    return cached.user;
+  }
+
+  try {
+    const {
+      data: { user },
+      error,
+    } = await supabaseAdmin.auth.getUser(token);
+    if (error) {
+      console.error('resolveUserFromToken error:', error);
+      tokenUserCache.set(token, { user: null, expiresAt: now + TOKEN_CACHE_TTL });
+      return null;
+    }
+    tokenUserCache.set(token, { user, expiresAt: now + TOKEN_CACHE_TTL });
+    return user;
+  } catch (err) {
+    console.error('resolveUserFromToken exception:', err);
+    return null;
+  }
+}
+
+// Symbole privé pour mémoïser le contexte sur l'objet req durant la vie de la requête.
+const STAFF_CTX_KEY = Symbol.for('ow.staffContext');
+
 /**
  * - API routes : on lit le header Authorization: Bearer <token>
  * - Pages SSR : on tombe en fallback sur getServerClient (cookies Supabase si tu les ajoutes un jour)
+ *
+ * Memoize le résultat sur `req` pour éviter de refaire le travail si appelé
+ * plusieurs fois durant le même cycle de requête (ex: middleware + handler).
  */
 export async function getStaffContextFromRequest(
   req: NextApiRequest,
   res: NextApiResponse
 ): Promise<StaffContext> {
+  const reqWithCache = req as unknown as Record<symbol, unknown>;
+  const memoized = reqWithCache[STAFF_CTX_KEY] as StaffContext | undefined;
+  if (memoized) return memoized;
+
   let user: User | null = null;
 
   // 1) Essayer d'abord avec le token Bearer (cas API / fetch côté client)
@@ -164,16 +204,7 @@ export async function getStaffContextFromRequest(
       : undefined;
 
   if (token) {
-    const {
-      data: { user: tokenUser },
-      error: tokenError,
-    } = await supabaseAdmin.auth.getUser(token);
-
-    if (tokenError) {
-      console.error('getStaffContextFromRequest token error:', tokenError);
-    } else {
-      user = tokenUser;
-    }
+    user = await resolveUserFromToken(token);
   }
 
   // 2) Si pas de token ou pas d'user via token → fallback cookies / SSR
@@ -202,21 +233,21 @@ export async function getStaffContextFromRequest(
 
   // 3) Pas d'utilisateur → pas de contexte staff
   if (!user) {
-    return {
-      user: null,
-      staff: null,
-      role: null,
-    };
+    const empty: StaffContext = { user: null, staff: null, role: null };
+    reqWithCache[STAFF_CTX_KEY] = empty;
+    return empty;
   }
 
   // 4) Récupérer le staff correspondant
   const staff = await getStaffByUserId(user.id);
 
-  return {
+  const ctx: StaffContext = {
     user,
     staff,
     role: staff?.role ?? null,
   };
+  reqWithCache[STAFF_CTX_KEY] = ctx;
+  return ctx;
 }
 
 /**
@@ -331,8 +362,14 @@ export function isManagerOrAbove(role: StaffRole | null | undefined) {
   return hasAtLeastRole(role, 'manager');
 }
 
-export function withStaffPage(
-  minRole: StaffRole = 'admin'
+type StaffPageLoader<P> = (
+  ctx: GetServerSidePropsContext,
+  staffCtx: StaffContext
+) => Promise<P> | P;
+
+export function withStaffPage<P extends Record<string, unknown> = Record<string, unknown>>(
+  minRole: StaffRole = 'admin',
+  loader?: StaffPageLoader<P>
 ): GetServerSideProps {
   return async function (ctx: GetServerSidePropsContext) {
     const { req, res } = ctx;
@@ -344,15 +381,20 @@ export function withStaffPage(
         minRole
       );
 
-      return {
-        props: {
-          staff: {
-            id: staffCtx.staff?.id ?? null,
-            role: staffCtx.role,
-            display_name: staffCtx.staff?.display_name ?? null,
-          },
+      const baseProps = {
+        staff: {
+          id: staffCtx.staff?.id ?? null,
+          role: staffCtx.role,
+          display_name: staffCtx.staff?.display_name ?? null,
         },
       };
+
+      if (!loader) {
+        return { props: baseProps };
+      }
+
+      const loaded = await loader(ctx, staffCtx);
+      return { props: { ...baseProps, ...loaded } };
     } catch (err: unknown) {
       // Non connecté → redirection vers /admin/login
       if (err instanceof StaffUnauthenticatedError) {

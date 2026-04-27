@@ -1,14 +1,17 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { supabaseAdmin } from '@/utils/supabase';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import type { StaffProps, Tournament } from '@/types/admin';
 
-type ApiResponse = {
+type AdminTournamentsProps = StaffProps & {
   tournaments: Tournament[];
   total: number | null;
+  errorMsg: string | null;
 };
 
 function statusLabel(status: string | null) {
@@ -78,7 +81,12 @@ function formatDate(d: string | null) {
 const T_FILTER_KEYS = ['search', 'status', 'dateFrom', 'dateTo', 'offset'] as const;
 const LIMIT = 20;
 
-function AdminTournamentsPage({ staff }: StaffProps) {
+function AdminTournamentsPage({
+  tournaments,
+  total,
+  errorMsg,
+}: AdminTournamentsProps) {
+  const router = useRouter();
   const { filters, setFilter, setFilters } = useUrlFilters(T_FILTER_KEYS);
 
   const search = filters.search ?? '';
@@ -87,45 +95,14 @@ function AdminTournamentsPage({ staff }: StaffProps) {
   const dateTo = filters.dateTo ?? '';
   const offset = Number(filters.offset) || 0;
 
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [total, setTotal] = useState<number | null>(null);
+  const loading = false;
 
   // Local search input (synced to URL on submit)
   const [searchInput, setSearchInput] = useState(search);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    setErrorMsg(null);
-
-    try {
-      const params = new URLSearchParams();
-      params.set('limit', String(LIMIT));
-      params.set('offset', String(offset));
-      params.set('includeTotal', '1');
-
-      if (search.trim()) params.set('search', search);
-      if (status) params.set('status', status);
-      if (dateFrom) params.set('dateFrom', new Date(dateFrom).toISOString());
-      if (dateTo) params.set('dateTo', new Date(dateTo + 'T23:59:59').toISOString());
-
-      const res = await fetch(`/api/admin/tournaments?${params.toString()}`);
-      if (!res.ok) throw new Error(`Erreur ${res.status}`);
-      const json: ApiResponse = await res.json();
-
-      setTournaments(json.tournaments || []);
-      setTotal(json.total);
-    } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : 'Erreur lors du chargement');
-    } finally {
-      setLoading(false);
-    }
-  }, [offset, search, status, dateFrom, dateTo]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const fetchData = useCallback(() => {
+    router.replace(router.asPath, undefined, { scroll: false });
+  }, [router]);
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -491,6 +468,58 @@ function AdminTournamentsPage({ staff }: StaffProps) {
   );
 }
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage('manager', async (ctx) => {
+  const { query } = ctx;
+  const search = typeof query.search === 'string' ? query.search.trim() : '';
+  const status = typeof query.status === 'string' ? query.status : null;
+  const dateFromRaw = typeof query.dateFrom === 'string' ? query.dateFrom : '';
+  const dateToRaw = typeof query.dateTo === 'string' ? query.dateTo : '';
+  const offset = Math.max(0, Number(query.offset) || 0);
+
+  if (!supabaseAdmin) {
+    return { tournaments: [], total: null, errorMsg: 'Service indisponible' };
+  }
+
+  const selectColumns = `
+    id, name, slug, game, status,
+    start_date, end_date, max_teams,
+    created_at, updated_at
+  `;
+
+  let q = supabaseAdmin
+    .from('tournaments')
+    .select(selectColumns, { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range(offset, offset + LIMIT - 1);
+
+  if (status) q = q.eq('status', status);
+  if (search) {
+    const s = `%${search}%`;
+    q = q.or(`name.ilike.${s},slug.ilike.${s}`);
+  }
+  if (dateFromRaw) {
+    try {
+      q = q.gte('start_date', new Date(dateFromRaw).toISOString());
+    } catch {}
+  }
+  if (dateToRaw) {
+    try {
+      q = q.lte('start_date', new Date(`${dateToRaw}T23:59:59`).toISOString());
+    } catch {}
+  }
+
+  const { data, error, count } = await q;
+
+  if (error) {
+    console.error('admin tournaments SSR error:', error);
+    return { tournaments: [], total: null, errorMsg: 'Erreur lors du chargement' };
+  }
+
+  return {
+    tournaments: (data || []) as Tournament[],
+    total: typeof count === 'number' ? count : null,
+    errorMsg: null,
+  };
+});
 
 export default AdminTournamentsPage;

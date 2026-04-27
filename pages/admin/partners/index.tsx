@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { supabaseClient } from '@/utils/supabase';
+import { supabaseAdmin, supabaseClient } from '@/utils/supabase';
+import { useUrlFilters } from '@/utils/useUrlFilters';
 
 type PartnerRow = {
   id: string;
@@ -24,7 +26,10 @@ type Props = {
     role: string;
     display_name: string;
   };
+  partners: PartnerRow[];
 };
+
+const P_FILTER_KEYS = ['category', 'active'] as const;
 
 const categoryLabels: Record<string, string> = {
   super: 'Super partenaire',
@@ -38,45 +43,17 @@ const categoryColors: Record<string, string> = {
   cultural: 'bg-emerald-600 text-white',
 };
 
-function AdminPartnersPage({ staff }: Props) {
-  const [loading, setLoading] = useState(false);
-  const [partners, setPartners] = useState<PartnerRow[]>([]);
-  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<string | null>(null);
+function AdminPartnersPage({ partners }: Props) {
+  const router = useRouter();
+  const { filters, setFilters } = useUrlFilters(P_FILTER_KEYS);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  const categoryFilter = filters.category ?? null;
+  const activeFilter = filters.active ?? null;
+  const loading = false;
 
-    try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
-      const params = new URLSearchParams();
-      if (categoryFilter) params.set('category', categoryFilter);
-      if (activeFilter) params.set('active', activeFilter);
-
-      const res = await fetch(`/api/admin/partners?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const json = await res.json();
-
-      setPartners(json.items || []);
-    } catch (err) {
-      console.error('Error fetching partners', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [categoryFilter, activeFilter]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const fetchData = useCallback(() => {
+    router.replace(router.asPath, undefined, { scroll: false });
+  }, [router]);
 
   const onDelete = async (id: string) => {
     if (!confirm('Supprimer ce partenaire ?')) return;
@@ -177,7 +154,9 @@ function AdminPartnersPage({ staff }: Props) {
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={categoryFilter || ''}
-                  onChange={(e) => setCategoryFilter(e.target.value || null)}
+                  onChange={(e) =>
+                    setFilters({ category: e.target.value || null })
+                  }
                 >
                   <option value="">Toutes les catégories</option>
                   <option value="super">Super partenaire</option>
@@ -193,7 +172,9 @@ function AdminPartnersPage({ staff }: Props) {
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={activeFilter || ''}
-                  onChange={(e) => setActiveFilter(e.target.value || null)}
+                  onChange={(e) =>
+                    setFilters({ active: e.target.value || null })
+                  }
                 >
                   <option value="">Tous les statuts</option>
                   <option value="true">Actifs</option>
@@ -344,6 +325,35 @@ function AdminPartnersPage({ staff }: Props) {
   );
 }
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage('admin', async (ctx) => {
+  const { query } = ctx;
+  const category = typeof query.category === 'string' ? query.category : null;
+  const active = typeof query.active === 'string' ? query.active : null;
+
+  if (!supabaseAdmin) {
+    return { partners: [] };
+  }
+
+  let q = supabaseAdmin
+    .from('partners')
+    .select('*')
+    .order('display_order', { ascending: true })
+    .order('created_at', { ascending: true });
+
+  if (category && ['super', 'major', 'cultural'].includes(category)) {
+    q = q.eq('category', category);
+  }
+  if (active === 'true') q = q.eq('is_active', true);
+  if (active === 'false') q = q.eq('is_active', false);
+
+  const { data, error } = await q;
+
+  if (error) {
+    console.error('admin partners SSR error:', error);
+    return { partners: [] };
+  }
+
+  return { partners: (data || []) as PartnerRow[] };
+});
 
 export default AdminPartnersPage;
