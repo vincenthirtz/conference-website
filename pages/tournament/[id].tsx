@@ -22,6 +22,10 @@ type Tournament = {
   start_date?: string | null;
   end_date?: string | null;
   rules_url?: string | null;
+  description_info?: string | null;
+  schedule_details?: string | null;
+  schedule_rules?: string | null;
+  format_details?: string | null;
   visibility?: string | null;
   created_at: string;
   updated_at: string;
@@ -102,7 +106,7 @@ export const getServerSideProps: GetServerSideProps<
   // 1) Tournoi (accept both uuid id and slug)
   let tournament: Tournament | null = null;
 
-  const tournamentColumns = 'id, name, short_name, slug, game, status, format, max_teams, start_date, end_date, rules_url, visibility, created_at, updated_at';
+  const tournamentColumns = 'id, name, short_name, slug, game, status, format, max_teams, start_date, end_date, rules_url, description_info, schedule_details, schedule_rules, format_details, visibility, created_at, updated_at';
 
   if (isUuid) {
     const { data, error } = await supabaseAdmin
@@ -454,6 +458,24 @@ export default function TournamentPage({
             </div>
           </div>
         </section>
+
+        {/* INFOS TOURNOI */}
+        {(tournament.description_info || tournament.schedule_details || tournament.schedule_rules || tournament.format_details) && (
+          <section className="mb-14 grid grid-cols-1 md:grid-cols-2 gap-6">
+            {tournament.description_info && (
+              <InfoCard title="Infos" content={tournament.description_info} accent="purple" />
+            )}
+            {tournament.schedule_details && (
+              <InfoCard title="Calendrier" content={tournament.schedule_details} accent="blue" />
+            )}
+            {tournament.schedule_rules && (
+              <InfoCard title="Règles des horaires" content={tournament.schedule_rules} accent="emerald" />
+            )}
+            {tournament.format_details && (
+              <InfoCard title="Format du tournoi" content={tournament.format_details} accent="pink" />
+            )}
+          </section>
+        )}
 
         {/* STAGES + MATCHES */}
         <section className="mb-14 grid grid-cols-1 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1.7fr)] gap-6">
@@ -841,6 +863,28 @@ function getStatusChipColor(status: string): string {
     default:
       return `${base} bg-white/10 text-white border border-white/20`;
   }
+}
+
+function InfoCard({
+  title,
+  content,
+  accent = 'purple',
+}: {
+  title: string;
+  content: string;
+  accent?: string;
+}) {
+  const style = ACCENT_STYLES[accent] || ACCENT_STYLES.purple;
+  return (
+    <div className={`bg-white/[0.03] backdrop-blur-sm border ${style.border} rounded-2xl p-5`}>
+      <p className="text-[10px] uppercase tracking-widest text-gray-500 font-medium mb-3">
+        {title}
+      </p>
+      <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-line">
+        {content}
+      </p>
+    </div>
+  );
 }
 
 function initials(name: string): string {

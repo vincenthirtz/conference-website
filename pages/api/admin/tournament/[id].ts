@@ -19,6 +19,10 @@ type TournamentDetail = {
   end_date: string | null;
   timezone: string | null;
   max_teams: number | null;
+  description_info: string | null;
+  schedule_details: string | null;
+  schedule_rules: string | null;
+  format_details: string | null;
   created_at: string;
   updated_at: string | null;
 };
@@ -75,6 +79,10 @@ async function handleGet(
         end_date,
         timezone,
         max_teams,
+        description_info,
+        schedule_details,
+        schedule_rules,
+        format_details,
         created_at,
         updated_at
       `
@@ -122,6 +130,10 @@ async function handlePatch(
       is_public,
       is_featured,
       banner_url,
+      description_info,
+      schedule_details,
+      schedule_rules,
+      format_details,
     } = req.body;
 
     // --- Validation des champs ---
@@ -239,6 +251,10 @@ async function handlePatch(
     if (is_public !== undefined) updatePayload.visibility = is_public ? 'public' : 'private';
     if (is_featured !== undefined) updatePayload.is_featured = is_featured;
     if (banner_url !== undefined) updatePayload.banner_url = banner_url;
+    if (description_info !== undefined) updatePayload.description_info = description_info;
+    if (schedule_details !== undefined) updatePayload.schedule_details = schedule_details;
+    if (schedule_rules !== undefined) updatePayload.schedule_rules = schedule_rules;
+    if (format_details !== undefined) updatePayload.format_details = format_details;
 
     // Si rien à mettre à jour
     if (Object.keys(updatePayload).length === 0) {
@@ -261,6 +277,10 @@ async function handlePatch(
         end_date,
         timezone,
         max_teams,
+        description_info,
+        schedule_details,
+        schedule_rules,
+        format_details,
         created_at,
         updated_at
       `

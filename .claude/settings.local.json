@@ -56,7 +56,27 @@
       "Bash(git -C /c/Users/hirtz/depot/conference-website log --all --full-history --source -S \"SECRET\\\\|PASSWORD\\\\|KEY\" -- *.env*)",
       "Bash(find /c/Users/hirtz/depot/conference-website/pages/admin -name \"*.tsx\" -type f -exec grep -l \"getServerSideProps\" {})",
       "Bash(git rm:*)",
-      "Bash(xargs sed:*)"
+      "Bash(xargs sed:*)",
+      "Bash(find /c/Users/hirtz/depot/conference-website -type f -name *.sql -o -name *migration*)",
+      "Bash(find /c/Users/hirtz/depot/conference-website -name *account* -o -name *profile* -o -name *settings*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
+      "Bash(npx wait-on:*)",
+      "Bash(npx tsx:*)",
+      "Bash(git -C /c/Users/hirtz/depot/conference-website status)",
+      "Bash(git -C /c/Users/hirtz/depot/conference-website diff)",
+      "Bash(git -C /c/Users/hirtz/depot/conference-website log --oneline -5)",
+      "Bash(git -C /c/Users/hirtz/depot/conference-website push)",
+      "Bash(find /c/Users/hirtz/depot/conference-website/pages/admin/tournament -type f -name *.tsx -o -name *.ts -o -name *.jsx -o -name *.js)",
+      "Bash(npx playwright:*)",
+      "Bash(TEST_BASE_URL=https://owwomenscup.fr npx playwright test tests/e2e/admin-pages-coach.spec.ts --reporter=line)",
+      "Bash(TEST_BASE_URL=https://owwomenscup.fr npx playwright test tests/e2e/tournament-detail-debug.spec.ts --reporter=line)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git diff:*)",
+      "Bash(find c:Usershirtzdepotconference-websitehooks -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\) ! -path */.next/* ! -path */.history/*)",
+      "Bash(find /c/Users/hirtz/depot/conference-website -path ./node_modules -prune -o -type f \\\\\\(-name *middleware* -o -name *auth* \\\\\\) -print)",
+      "Bash(npm ls:*)",
+      "Bash(npm run:*)"
     ]
   }
 }

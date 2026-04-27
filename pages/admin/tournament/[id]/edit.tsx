@@ -45,6 +45,10 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
     is_featured: boolean;
     logo_url: string;
     banner_url: string;
+    description_info: string;
+    schedule_details: string;
+    schedule_rules: string;
+    format_details: string;
   }>({
     name: '',
     slug: '',
@@ -61,6 +65,10 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
     is_featured: false,
     logo_url: '',
     banner_url: '',
+    description_info: '',
+    schedule_details: '',
+    schedule_rules: '',
+    format_details: '',
   });
 
   function updateField<K extends keyof typeof form>(
@@ -107,6 +115,10 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
         is_featured: t.is_featured,
         logo_url: t.logo_url || '',
         banner_url: t.banner_url || '',
+        description_info: (t as any).description_info || '',
+        schedule_details: (t as any).schedule_details || '',
+        schedule_rules: (t as any).schedule_rules || '',
+        format_details: (t as any).format_details || '',
       });
 
       setFormReady(true);
@@ -174,6 +186,10 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
       is_featured: form.is_featured,
       logo_url: form.logo_url.trim() || null,
       banner_url: form.banner_url.trim() || null,
+      description_info: form.description_info.trim() || null,
+      schedule_details: form.schedule_details.trim() || null,
+      schedule_rules: form.schedule_rules.trim() || null,
+      format_details: form.format_details.trim() || null,
     };
 
     try {
@@ -551,6 +567,83 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                             updateField('banner_url', e.target.value)
                           }
                           placeholder="https://…"
+                        />
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* Informations publiques */}
+                  <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
+                    <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <svg
+                        className="w-5 h-5 text-neutral-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
+                      </svg>
+                      Informations publiques
+                    </h2>
+                    <p className="text-xs text-neutral-500 mb-4">
+                      Ces champs sont affichés sur la page publique du tournoi uniquement s&apos;ils sont remplis.
+                    </p>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm mb-1 text-neutral-300">
+                          Infos générales
+                        </label>
+                        <textarea
+                          rows={4}
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={form.description_info}
+                          onChange={(e) => updateField('description_info', e.target.value)}
+                          placeholder="Description du tournoi visible sur la page publique..."
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm mb-1 text-neutral-300">
+                          Calendrier précis
+                        </label>
+                        <textarea
+                          rows={4}
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={form.schedule_details}
+                          onChange={(e) => updateField('schedule_details', e.target.value)}
+                          placeholder="Dates clés, phases, deadlines..."
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm mb-1 text-neutral-300">
+                          Règles des horaires
+                        </label>
+                        <textarea
+                          rows={4}
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={form.schedule_rules}
+                          onChange={(e) => updateField('schedule_rules', e.target.value)}
+                          placeholder="Horaires de check-in, heures de match, délais..."
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm mb-1 text-neutral-300">
+                          Format du tournoi
+                        </label>
+                        <textarea
+                          rows={4}
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={form.format_details}
+                          onChange={(e) => updateField('format_details', e.target.value)}
+                          placeholder="Format des matchs, BO3/BO5, bracket, règles spécifiques..."
                         />
                       </div>
                     </div>

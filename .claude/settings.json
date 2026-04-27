@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/Users/hirtz/depot/conference-website -type f \\\\\\( -name \"*.sql\" -o -name \"*.ts\" -o -name \"*.tsx\" \\\\\\) ! -path \"*/node_modules/*\" ! -path \"*/.next/*\" ! -path \"*/.history/*\" -exec grep -l \"tournament_stages\" {} \\\\;)"
+    ]
+  }
+}
