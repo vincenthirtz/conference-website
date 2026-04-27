@@ -19,6 +19,9 @@ type TournamentDetail = {
   end_date: string | null;
   timezone: string | null;
   max_teams: number | null;
+  logo_url: string | null;
+  banner_url: string | null;
+  rules_url: string | null;
   description_info: string | null;
   schedule_details: string | null;
   schedule_rules: string | null;
@@ -79,13 +82,16 @@ async function handleGet(
         end_date,
         timezone,
         max_teams,
+        logo_url,
+        banner_url,
+        rules_url,
         description_info,
         schedule_details,
         schedule_rules,
         format_details,
         created_at,
         updated_at
-      `
+`
       )
       .eq('id', id)
       .maybeSingle();
@@ -129,7 +135,9 @@ async function handlePatch(
       max_players,
       is_public,
       is_featured,
+      logo_url,
       banner_url,
+      rules_url,
       description_info,
       schedule_details,
       schedule_rules,
@@ -250,7 +258,9 @@ async function handlePatch(
     // Map is_public (frontend) to visibility (database)
     if (is_public !== undefined) updatePayload.visibility = is_public ? 'public' : 'private';
     if (is_featured !== undefined) updatePayload.is_featured = is_featured;
+    if (logo_url !== undefined) updatePayload.logo_url = logo_url;
     if (banner_url !== undefined) updatePayload.banner_url = banner_url;
+    if (rules_url !== undefined) updatePayload.rules_url = rules_url;
     if (description_info !== undefined) updatePayload.description_info = description_info;
     if (schedule_details !== undefined) updatePayload.schedule_details = schedule_details;
     if (schedule_rules !== undefined) updatePayload.schedule_rules = schedule_rules;
@@ -277,13 +287,16 @@ async function handlePatch(
         end_date,
         timezone,
         max_teams,
+        logo_url,
+        banner_url,
+        rules_url,
         description_info,
         schedule_details,
         schedule_rules,
         format_details,
         created_at,
         updated_at
-      `
+`
       )
       .single();
 

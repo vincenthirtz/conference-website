@@ -29,6 +29,9 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
 
   const [dateError, setDateError] = useState<string | null>(null);
 
+  const [uploadingRules, setUploadingRules] = useState(false);
+  const [rulesError, setRulesError] = useState<string | null>(null);
+
   const [form, setForm] = useState<{
     name: string;
     slug: string;
@@ -45,6 +48,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
     is_featured: boolean;
     logo_url: string;
     banner_url: string;
+    rules_url: string;
     description_info: string;
     schedule_details: string;
     schedule_rules: string;
@@ -65,6 +69,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
     is_featured: false,
     logo_url: '',
     banner_url: '',
+    rules_url: '',
     description_info: '',
     schedule_details: '',
     schedule_rules: '',
@@ -76,6 +81,54 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
     value: (typeof form)[K]
   ) {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function handleRulesPdfChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    setRulesError(null);
+
+    if (file.type !== 'application/pdf') {
+      setRulesError('Seuls les fichiers PDF sont acceptés.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setRulesError('PDF trop lourd (max 5 Mo).');
+      return;
+    }
+
+    setUploadingRules(true);
+    try {
+      const dataUrl: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(reader.error || new Error('read failed'));
+        reader.readAsDataURL(file);
+      });
+
+      const res = await fetch('/api/admin/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          data: dataUrl,
+          mimeType: 'application/pdf',
+          filename: file.name,
+        }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(json.error || "Échec de l'upload du règlement");
+      }
+      updateField('rules_url', json.url || '');
+      addToast('Règlement uploadé.', 'success');
+    } catch (err: unknown) {
+      setRulesError((err as Error)?.message ?? 'Upload impossible');
+    } finally {
+      setUploadingRules(false);
+    }
   }
 
   useEffect(() => {
@@ -115,6 +168,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
         is_featured: t.is_featured,
         logo_url: t.logo_url || '',
         banner_url: t.banner_url || '',
+        rules_url: (t as any).rules_url || '',
         description_info: (t as any).description_info || '',
         schedule_details: (t as any).schedule_details || '',
         schedule_rules: (t as any).schedule_rules || '',
@@ -186,6 +240,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
       is_featured: form.is_featured,
       logo_url: form.logo_url.trim() || null,
       banner_url: form.banner_url.trim() || null,
+      rules_url: form.rules_url.trim() || null,
       description_info: form.description_info.trim() || null,
       schedule_details: form.schedule_details.trim() || null,
       schedule_rules: form.schedule_rules.trim() || null,
@@ -569,6 +624,47 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                           placeholder="https://…"
                         />
                       </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <label className="block text-sm mb-1 text-neutral-300">
+                        Règlement (PDF)
+                      </label>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <input
+                          type="text"
+                          className="flex-1 px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={form.rules_url}
+                          onChange={(e) => updateField('rules_url', e.target.value)}
+                          placeholder="https://…/reglement.pdf"
+                        />
+                        <label className="inline-flex items-center justify-center px-3 py-2 rounded-lg bg-neutral-700/60 hover:bg-neutral-700 border border-neutral-600 text-sm cursor-pointer whitespace-nowrap">
+                          {uploadingRules ? 'Upload…' : 'Uploader un PDF'}
+                          <input
+                            type="file"
+                            accept="application/pdf"
+                            className="hidden"
+                            disabled={uploadingRules}
+                            onChange={handleRulesPdfChange}
+                          />
+                        </label>
+                      </div>
+                      <p className="text-xs text-neutral-500 mt-1">
+                        Affiché en lien &laquo;&nbsp;Règlement du tournoi&nbsp;&raquo; sur la page publique. PDF max 5&nbsp;Mo.
+                      </p>
+                      {rulesError && (
+                        <p className="text-xs text-red-400 mt-1">{rulesError}</p>
+                      )}
+                      {form.rules_url && (
+                        <a
+                          href={form.rules_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-block text-xs text-blue-400 hover:text-blue-300 mt-1"
+                        >
+                          Ouvrir le règlement actuel ↗
+                        </a>
+                      )}
                     </div>
                   </section>
 

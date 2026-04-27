@@ -53,6 +53,7 @@ export type Tournament = {
   is_featured: boolean;
   logo_url: string | null;
   banner_url: string | null;
+  rules_url: string | null;
   description_info: string | null;
   schedule_details: string | null;
   schedule_rules: string | null;
