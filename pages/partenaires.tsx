@@ -1,6 +1,7 @@
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import type { GetStaticProps } from 'next';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
+import { supabaseAdmin } from '@/utils/supabase';
 
 type Partner = {
   id: string;
@@ -11,6 +12,34 @@ type Partner = {
   website_url?: string | null;
   note?: string | null;
   display_order: number;
+};
+
+type PartnersPageProps = {
+  partners: Partner[];
+};
+
+export const getStaticProps: GetStaticProps<PartnersPageProps> = async () => {
+  let partners: Partner[] = [];
+
+  if (supabaseAdmin) {
+    const { data, error } = await supabaseAdmin
+      .from('partners')
+      .select(
+        'id, name, description, category, logo_url, website_url, note, display_order'
+      )
+      .eq('is_active', true)
+      .order('display_order', { ascending: true })
+      .order('created_at', { ascending: true });
+
+    if (!error && data) {
+      partners = data as Partner[];
+    }
+  }
+
+  return {
+    props: { partners },
+    revalidate: 900,
+  };
 };
 
 type PartnerCategory = {
@@ -79,25 +108,7 @@ function groupPartnersByCategory(partners: Partner[]): PartnerCategory[] {
   return categories;
 }
 
-function PartnersPage() {
-  const [partners, setPartners] = useState<Partner[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchPartners() {
-      try {
-        const res = await fetch('/api/partners');
-        const json = await res.json();
-        setPartners(json.items ?? []);
-      } catch (err) {
-        console.error('Error fetching partners', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchPartners();
-  }, []);
-
+function PartnersPage({ partners }: PartnersPageProps) {
   const partnerCategories = groupPartnersByCategory(partners);
 
   return (

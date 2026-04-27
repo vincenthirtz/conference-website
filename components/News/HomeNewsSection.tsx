@@ -1,9 +1,10 @@
 import Link from 'next/link';
-import { useEffect, useState, JSX } from 'react';
+import Image from 'next/image';
+import { useMemo, useState, JSX } from 'react';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 
-type NewsItem = {
+export type HomeNewsItem = {
   id: string;
   title: string;
   slug: string;
@@ -25,105 +26,31 @@ const formatTagLabel = (tag?: string | null) => {
   return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
 };
 
-function HomeNewsSection(): JSX.Element {
-  const [news, setNews] = useState<NewsItem[]>([]);
-  const [availableTags, setAvailableTags] = useState<string[]>([]);
+type HomeNewsSectionProps = {
+  initialNews?: HomeNewsItem[];
+};
+
+function HomeNewsSection({ initialNews = [] }: HomeNewsSectionProps): JSX.Element {
   const [selectedTag, setSelectedTag] = useState<string>('all');
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let mounted = true;
-    const load = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const params = new URLSearchParams({
-          limit: DEFAULT_LIMIT.toString(),
-        });
-        if (selectedTag !== 'all') {
-          params.set('tag', selectedTag);
-        }
+  const availableTags = useMemo(() => {
+    const tags = new Set<string>();
+    for (const item of initialNews) {
+      if (item.tag) tags.add(item.tag);
+    }
+    return Array.from(tags).sort();
+  }, [initialNews]);
 
-        const res = await fetch(`/api/news?${params.toString()}`);
-        const json = await res.json();
-
-        if (!res.ok) {
-          throw new Error(json?.error || 'Impossible de charger les news.');
-        }
-        if (mounted) {
-          const items =
-            json.items?.map((row: any): NewsItem => ({
-              id: row.id,
-              title: row.title,
-              slug: row.slug,
-              tag: row.tag || 'general',
-              excerpt: row.excerpt,
-              content: row.content,
-              imageUrl: row.imageUrl ?? row.image_url,
-              publishedAt: row.publishedAt ?? row.published_at,
-              createdAt: row.createdAt ?? row.created_at,
-              updatedAt: row.updatedAt ?? row.updated_at,
-              commentsCount:
-                row.commentsCount ?? row.news_comments?.[0]?.count ?? 0,
-            })) || [];
-          setNews(items);
-          setAvailableTags((prev) => {
-            const tagsFromData = items.map(
-              (row: NewsItem) => row.tag || 'general'
-            );
-            const merged = new Set(
-              [
-                ...prev,
-                ...tagsFromData,
-                selectedTag !== 'all' ? selectedTag : null,
-              ].filter(Boolean) as string[]
-            );
-            return Array.from(merged).sort();
-          });
-        }
-      } catch (err: unknown) {
-        if (mounted) {
-          setError((err as Error)?.message || 'Erreur lors du chargement des news.');
-        }
-      } finally {
-        if (mounted) {
-          setIsLoading(false);
-        }
-      }
-    };
-    load();
-    return () => {
-      mounted = false;
-    };
-  }, [selectedTag]);
-
-  const renderSkeletons = () => (
-    <div className="grid gap-4 md:grid-cols-3">
-      {[0, 1, 2].map((i) => (
-        <div
-          key={i}
-          className="rounded-2xl border border-white/10 bg-white/5 p-4 animate-pulse"
-        >
-          <div className="h-3 w-24 bg-white/10 rounded mb-3" />
-          <div className="h-6 w-5/6 bg-white/10 rounded mb-2" />
-          <div className="h-4 w-4/6 bg-white/10 rounded mb-6" />
-          <div className="h-24 w-full bg-white/5 rounded" />
-        </div>
-      ))}
-    </div>
-  );
+  const filteredNews = useMemo(() => {
+    const items =
+      selectedTag === 'all'
+        ? initialNews
+        : initialNews.filter((item) => item.tag === selectedTag);
+    return items.slice(0, DEFAULT_LIMIT);
+  }, [initialNews, selectedTag]);
 
   const renderCards = () => {
-    if (isLoading) return renderSkeletons();
-    if (error) {
-      return (
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
-          <Paragraph textColor="text-gray-200">{error}</Paragraph>
-        </div>
-      );
-    }
-    if (!news.length) {
+    if (!filteredNews.length) {
       return (
         <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
           <Paragraph textColor="text-gray-200">
@@ -137,7 +64,7 @@ function HomeNewsSection(): JSX.Element {
 
     return (
       <div className="grid gap-4 md:grid-cols-3">
-        {news.map((item) => (
+        {filteredNews.map((item) => (
           <Link
             key={item.id}
             href={`/news/${item.slug}`}
@@ -173,13 +100,16 @@ function HomeNewsSection(): JSX.Element {
               {item.content && item.content.length > 140 ? '…' : ''}
             </Paragraph>
             {item.imageUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={item.imageUrl}
-                alt={item.title}
-                className="w-full h-32 object-cover rounded-xl border border-white/10"
-                loading="lazy"
-              />
+              <div className="relative w-full h-32 rounded-xl border border-white/10 overflow-hidden">
+                <Image
+                  src={item.imageUrl}
+                  alt={item.title}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                  className="object-cover"
+                  loading="lazy"
+                />
+              </div>
             )}
           </Link>
         ))}
@@ -210,26 +140,28 @@ function HomeNewsSection(): JSX.Element {
           Les annonces officielles du tournoi, publiées par le staff.
         </Paragraph>
       </div>
-      <div className="flex flex-col gap-2 items-center">
-        <div className="text-xs uppercase tracking-[0.18em] text-blue-200/80">
-          Filtrer par tag
-        </div>
-        <div className="flex flex-wrap justify-center gap-2">
-          <FilterPill
-            label="Toutes"
-            active={selectedTag === 'all'}
-            onClick={() => setSelectedTag('all')}
-          />
-          {availableTags.map((tag) => (
+      {availableTags.length > 0 && (
+        <div className="flex flex-col gap-2 items-center">
+          <div className="text-xs uppercase tracking-[0.18em] text-blue-200/80">
+            Filtrer par tag
+          </div>
+          <div className="flex flex-wrap justify-center gap-2">
             <FilterPill
-              key={tag}
-              label={formatTagLabel(tag)}
-              active={selectedTag === tag}
-              onClick={() => setSelectedTag(tag)}
+              label="Toutes"
+              active={selectedTag === 'all'}
+              onClick={() => setSelectedTag('all')}
             />
-          ))}
+            {availableTags.map((tag) => (
+              <FilterPill
+                key={tag}
+                label={formatTagLabel(tag)}
+                active={selectedTag === tag}
+                onClick={() => setSelectedTag(tag)}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
       {renderCards()}
     </section>
   );

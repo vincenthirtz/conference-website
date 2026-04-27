@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRef } from 'react';
 
-type Announcement = {
+export type Announcement = {
   id: string;
   title: string;
   message: string;
@@ -14,45 +14,42 @@ type Announcement = {
 
 const SWITCH_MS = 6000;
 const MARQUEE_SPEED_S = 16;
+const REFRESH_MS = 5 * 60_000;
 
-export default function AnnouncementsTicker() {
-  const [items, setItems] = useState<Announcement[]>([]);
+type AnnouncementsTickerProps = {
+  initialItems?: Announcement[];
+};
+
+export default function AnnouncementsTicker({
+  initialItems = [],
+}: AnnouncementsTickerProps) {
+  const [items, setItems] = useState<Announcement[]>(initialItems);
   const [index, setIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const loadedRef = useRef(false);
   const [animationReady, setAnimationReady] = useState(false);
+  const hasInitialItems = initialItems.length > 0;
 
   useEffect(() => {
-    if (loadedRef.current) return;
-    loadedRef.current = true;
     let mounted = true;
     const load = async () => {
-      setLoading(true);
-      setError(null);
       try {
         const res = await fetch('/api/announcements?limit=6');
         const json = await res.json();
-        if (json?.items.length > 0) {
+        if (mounted && json?.items?.length > 0) {
           setItems(json.items);
-          setIndex(0);
-        } else {
-          setError(json?.error || 'Impossible de charger les annonces.');
         }
-      } catch (e: any) {
+      } catch (e) {
         console.error('announcements load error', e);
-        if (mounted) setError('Impossible de charger les annonces.');
-      } finally {
-        if (mounted) setLoading(false);
       }
     };
-    load();
-    const refreshTimer = setInterval(load, 60_000);
+    if (!hasInitialItems) {
+      load();
+    }
+    const refreshTimer = setInterval(load, REFRESH_MS);
     return () => {
       mounted = false;
       clearInterval(refreshTimer);
     };
-  }, []);
+  }, [hasInitialItems]);
 
   useEffect(() => {
     if (items.length <= 1) return undefined;

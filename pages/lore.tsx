@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import type { GetStaticProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
+import { supabaseAdmin } from '@/utils/supabase';
 
 type MediaType = 'comic' | 'story' | 'music' | 'screenshot';
 
@@ -66,20 +68,33 @@ const TYPE_CONFIG: Record<
   },
 };
 
-export default function LorePage() {
-  const [media, setMedia] = useState<BlizzardMedia[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'all' | MediaType>('all');
+type LorePageProps = {
+  media: BlizzardMedia[];
+};
 
-  useEffect(() => {
-    fetch('/api/blizzard-media?limit=50')
-      .then((res) => res.json())
-      .then((data) => {
-        setMedia(data.items || []);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
+export const getStaticProps: GetStaticProps<LorePageProps> = async () => {
+  let media: BlizzardMedia[] = [];
+
+  if (supabaseAdmin) {
+    const { data } = await supabaseAdmin
+      .from('blizzard_media')
+      .select(
+        'id, title, type, category, link, thumbnail_url, description, parts'
+      )
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (data) media = data as BlizzardMedia[];
+  }
+
+  return {
+    props: { media },
+    revalidate: 3600,
+  };
+};
+
+export default function LorePage({ media }: LorePageProps) {
+  const [activeTab, setActiveTab] = useState<'all' | MediaType>('all');
+  const loading = false;
 
   const renderSkeleton = (count: number) => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -116,6 +131,7 @@ export default function LorePage() {
               src={item.thumbnail_url}
               alt={item.title}
               fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
               className="object-cover transition group-hover:scale-105"
               unoptimized
             />

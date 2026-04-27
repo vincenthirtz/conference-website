@@ -1,8 +1,32 @@
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import type { GetStaticProps } from 'next';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
+import { supabaseAdmin } from '@/utils/supabase';
 
 const DEFAULT_VIDEO_URL = 'https://www.youtube.com/watch?v=3j6w7CjXne8';
+
+type AboutPageProps = {
+  videoUrl: string;
+};
+
+export const getStaticProps: GetStaticProps<AboutPageProps> = async () => {
+  let videoUrl = DEFAULT_VIDEO_URL;
+
+  if (supabaseAdmin) {
+    const { data } = await supabaseAdmin
+      .from('site_settings')
+      .select('value')
+      .eq('key', 'about_video_url')
+      .single();
+    if (data?.value) videoUrl = data.value;
+  }
+
+  return {
+    props: { videoUrl },
+    revalidate: 900,
+  };
+};
 
 const stats = [
   { value: '3', label: '\u00c9ditions' },
@@ -171,18 +195,8 @@ const values = [
   },
 ];
 
-function AboutPage() {
-  const [videoUrl, setVideoUrl] = useState(DEFAULT_VIDEO_URL);
+function AboutPage({ videoUrl }: AboutPageProps) {
   const [showVideo, setShowVideo] = useState(false);
-
-  useEffect(() => {
-    fetch('/api/site-settings?key=about_video_url')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.value) setVideoUrl(data.value);
-      })
-      .catch(() => {});
-  }, []);
 
   const youtubeId =
     videoUrl.match(

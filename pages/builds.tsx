@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import type { GetStaticProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import Button from '@/components/Buttons/button';
@@ -71,31 +71,73 @@ function StatusBadge({ build }: { build: Build }) {
   );
 }
 
-export default function BuildsPage() {
-  const [builds, setBuilds] = useState<Build[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+type BuildsPageProps = {
+  builds: Build[];
+  error: string | null;
+};
 
-  useEffect(() => {
-    const fetchBuilds = async () => {
-      try {
-        // Use API route for local dev; on Netlify the API route will still work.
-        const res = await fetch('/api/netlify-builds');
-        if (!res.ok) {
-          throw new Error(`Erreur ${res.status}`);
-        }
-        const data = (await res.json()) as Build[];
-        setBuilds(data);
-      } catch (err: unknown) {
-        setError((err as Error)?.message || 'Impossible de charger les builds');
-      } finally {
-        setLoading(false);
-      }
+export const getStaticProps: GetStaticProps<BuildsPageProps> = async () => {
+  const NETLIFY_SITE_ID = process.env.NETLIFY_SITE_ID;
+  const NETLIFY_API_TOKEN = process.env.NETLIFY_API_TOKEN;
+
+  if (!NETLIFY_SITE_ID || !NETLIFY_API_TOKEN) {
+    return {
+      props: { builds: [], error: 'Service unavailable.' },
+      revalidate: 300,
     };
+  }
 
-    fetchBuilds();
-  }, []);
+  try {
+    const apiRes = await fetch(
+      `https://api.netlify.com/api/v1/sites/${NETLIFY_SITE_ID}/builds?per_page=20`,
+      { headers: { Authorization: `Bearer ${NETLIFY_API_TOKEN}` } }
+    );
 
+    if (!apiRes.ok) {
+      return {
+        props: { builds: [], error: `Erreur ${apiRes.status}` },
+        revalidate: 60,
+      };
+    }
+
+    const raw = (await apiRes.json()) as any[];
+    const builds: Build[] = raw.map((b) => ({
+      id: b.id,
+      state: b.state,
+      error: b.error || null,
+      created_at: b.created_at || null,
+      updated_at: b.updated_at || null,
+      published_at: b.published_at || null,
+      deploy_time: b.deploy_time ?? null,
+      commit_ref: b.commit_ref || null,
+      commit_url: b.commit_url || null,
+      commit_message: b.commit_message || null,
+      title: b.title || null,
+      branch: b.branch || null,
+      context: b.context || null,
+      deploy_url: b.deploy_url || null,
+      review_id: b.review_id || null,
+      review_url: b.review_url || null,
+      user_id: b.user_id || null,
+      user_name: b.user_name || null,
+    }));
+
+    return {
+      props: { builds, error: null },
+      revalidate: 60,
+    };
+  } catch (err) {
+    return {
+      props: {
+        builds: [],
+        error: (err as Error)?.message || 'Impossible de charger les builds',
+      },
+      revalidate: 60,
+    };
+  }
+};
+
+export default function BuildsPage({ builds, error }: BuildsPageProps) {
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#0b0b14] to-black text-white">
       <Head>
@@ -126,20 +168,17 @@ export default function BuildsPage() {
         </header>
 
         <section className="bg-white/5 border border-white/10 rounded-2xl p-4">
-          {loading && (
-            <p className="text-sm text-gray-300">Chargement des builds…</p>
-          )}
           {error && (
             <p className="text-sm text-red-300">
               Erreur lors du chargement : {error}
             </p>
           )}
 
-          {!loading && !error && builds.length === 0 && (
+          {!error && builds.length === 0 && (
             <p className="text-sm text-gray-300">Aucun build récent trouvé.</p>
           )}
 
-          {!loading && !error && builds.length > 0 && (
+          {!error && builds.length > 0 && (
             <ul className="divide-y divide-white/5">
               {builds.map((build) => (
                 <li

@@ -176,6 +176,7 @@ function ActualitesPage({ patchNotes, news }: ActualitesProps) {
             src={item.image_url}
             alt={item.title}
             fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
             className="object-cover transition group-hover:scale-105"
             unoptimized
           />
