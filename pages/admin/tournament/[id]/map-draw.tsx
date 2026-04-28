@@ -43,12 +43,18 @@ function typeLabel(t: string | null | undefined) {
 
 function typeBadgeColor(t: string | null | undefined): string {
   switch (t) {
-    case 'control': return 'border-blue-400/50 text-blue-200 bg-blue-600/20';
-    case 'escort': return 'border-amber-400/50 text-amber-200 bg-amber-600/20';
-    case 'hybrid': return 'border-emerald-400/50 text-emerald-200 bg-emerald-600/20';
-    case 'push': return 'border-pink-400/50 text-pink-200 bg-pink-600/20';
-    case 'flashpoint': return 'border-orange-400/50 text-orange-200 bg-orange-600/20';
-    default: return 'border-gray-400/50 text-gray-200 bg-gray-600/20';
+    case 'control':
+      return 'border-blue-400/50 text-blue-200 bg-blue-600/20';
+    case 'escort':
+      return 'border-amber-400/50 text-amber-200 bg-amber-600/20';
+    case 'hybrid':
+      return 'border-emerald-400/50 text-emerald-200 bg-emerald-600/20';
+    case 'push':
+      return 'border-pink-400/50 text-pink-200 bg-pink-600/20';
+    case 'flashpoint':
+      return 'border-orange-400/50 text-orange-200 bg-orange-600/20';
+    default:
+      return 'border-gray-400/50 text-gray-200 bg-gray-600/20';
   }
 }
 
@@ -63,7 +69,9 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 function makeEmptySlots(count: number): (TournamentMapRow | null)[][] {
-  return Array.from({ length: count }, () => Array<TournamentMapRow | null>(CHOICES_PER_SLOT).fill(null));
+  return Array.from({ length: count }, () =>
+    Array<TournamentMapRow | null>(CHOICES_PER_SLOT).fill(null)
+  );
 }
 
 export const getServerSideProps = withStaffPage('manager');
@@ -80,7 +88,9 @@ function AdminMapDrawPage(_: StaffProps) {
 
   const [format, setFormat] = useState<BoFormat>('bo3');
   // Each slot = array of 3 map choices (same category)
-  const [selectedSlots, setSelectedSlots] = useState<(TournamentMapRow | null)[][]>(makeEmptySlots(3));
+  const [selectedSlots, setSelectedSlots] = useState<
+    (TournamentMapRow | null)[][]
+  >(makeEmptySlots(3));
   const [matchLabel, setMatchLabel] = useState('');
 
   const slotCount = format === 'bo3' ? 3 : 5;
@@ -107,7 +117,9 @@ function AdminMapDrawPage(_: StaffProps) {
         throw new Error(json.error || 'Impossible de charger les maps');
       }
       const json = await res.json();
-      const enabledMaps = (json.maps || []).filter((m: TournamentMapRow) => m.enabled);
+      const enabledMaps = (json.maps || []).filter(
+        (m: TournamentMapRow) => m.enabled
+      );
       setMaps(enabledMaps);
       setTournament(json.tournament ?? null);
     } catch (err: unknown) {
@@ -120,7 +132,9 @@ function AdminMapDrawPage(_: StaffProps) {
   /** Random draw — picks 3 maps of the same category per slot, different category per slot */
   function handleRandomDraw() {
     if (maps.length < totalMapsNeeded) {
-      setErrorMsg(`Il faut au moins ${totalMapsNeeded} maps activées dans le pool pour un ${format.toUpperCase()} (${CHOICES_PER_SLOT} choix × ${slotCount} matchs).`);
+      setErrorMsg(
+        `Il faut au moins ${totalMapsNeeded} maps activées dans le pool pour un ${format.toUpperCase()} (${CHOICES_PER_SLOT} choix × ${slotCount} matchs).`
+      );
       return;
     }
 
@@ -137,7 +151,9 @@ function AdminMapDrawPage(_: StaffProps) {
     }
 
     // Find types with at least CHOICES_PER_SLOT maps
-    const eligibleTypes = Object.keys(byType).filter((t) => byType[t].length >= CHOICES_PER_SLOT);
+    const eligibleTypes = Object.keys(byType).filter(
+      (t) => byType[t].length >= CHOICES_PER_SLOT
+    );
 
     const result: (TournamentMapRow | null)[][] = [];
     const usedIds = new Set<string>();
@@ -177,7 +193,8 @@ function AdminMapDrawPage(_: StaffProps) {
         // Last resort: pick any remaining maps regardless of type
         const remaining = maps.filter((m) => !usedIds.has(m.id));
         const picks = remaining.slice(0, CHOICES_PER_SLOT);
-        while (picks.length < CHOICES_PER_SLOT) picks.push(null as unknown as TournamentMapRow);
+        while (picks.length < CHOICES_PER_SLOT)
+          picks.push(null as unknown as TournamentMapRow);
         result.push(picks);
         picks.filter(Boolean).forEach((p) => usedIds.add(p.id));
       }
@@ -188,7 +205,11 @@ function AdminMapDrawPage(_: StaffProps) {
     setErrorMsg(null);
   }
 
-  function handleSetChoice(slotIndex: number, choiceIndex: number, mapId: string | '') {
+  function handleSetChoice(
+    slotIndex: number,
+    choiceIndex: number,
+    mapId: string | ''
+  ) {
     const next = selectedSlots.map((slot) => [...slot]);
     if (mapId === '') {
       next[slotIndex][choiceIndex] = null;
@@ -218,12 +239,16 @@ function AdminMapDrawPage(_: StaffProps) {
   function allUsedMapIds(): Set<string> {
     const ids = new Set<string>();
     selectedSlots.forEach((slot) => {
-      slot.forEach((m) => { if (m) ids.add(m.id); });
+      slot.forEach((m) => {
+        if (m) ids.add(m.id);
+      });
     });
     return ids;
   }
 
-  const allSlotsFilled = selectedSlots.every((slot) => slot.every((m) => m !== null));
+  const allSlotsFilled = selectedSlots.every((slot) =>
+    slot.every((m) => m !== null)
+  );
 
   // Determine the category of a slot (from the first non-null map)
   function slotCategory(slotIndex: number): string | null {
@@ -290,11 +315,16 @@ function AdminMapDrawPage(_: StaffProps) {
 <p class="subtitle">${format.toUpperCase()} · ${totalFilled} maps · ${new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
 
 <div class="slots">
-${selectedSlots.map((slot, si) => `
+${selectedSlots
+  .map(
+    (slot, si) => `
   <div class="slot">
     <div class="slot-title">MAP ${si + 1}</div>
     <div class="slot-body">
-      ${slot.filter(Boolean).map((m) => `
+      ${slot
+        .filter(Boolean)
+        .map(
+          (m) => `
         <div class="choice">
           ${m!.image_url ? `<img class="choice-img" src="${m!.image_url}" alt="${m!.map_name}" />` : ''}
           <div class="choice-info">
@@ -302,10 +332,14 @@ ${selectedSlots.map((slot, si) => `
             <div class="choice-type">${typeLabel(m!.map_type)}</div>
           </div>
         </div>
-      `).join('')}
+      `
+        )
+        .join('')}
     </div>
   </div>
-`).join('')}
+`
+  )
+  .join('')}
 </div>
 
 <p class="meta">${tournament?.name ?? 'Tournoi'} · Tirage de maps</p>
@@ -389,7 +423,9 @@ ${selectedSlots.map((slot, si) => `
               <div className="mb-6 p-5 rounded-xl bg-white/5 border border-white/10 space-y-4">
                 {/* Format selector */}
                 <div className="flex items-center gap-4">
-                  <span className="text-sm text-gray-300 font-medium">Format :</span>
+                  <span className="text-sm text-gray-300 font-medium">
+                    Format :
+                  </span>
                   <div className="flex gap-2">
                     {(['bo3', 'bo5'] as BoFormat[]).map((f) => (
                       <button
@@ -406,7 +442,8 @@ ${selectedSlots.map((slot, si) => `
                     ))}
                   </div>
                   <span className="text-xs text-gray-500">
-                    ({CHOICES_PER_SLOT} choix × {slotCount} matchs = {totalMapsNeeded} maps · {maps.length} disponibles)
+                    ({CHOICES_PER_SLOT} choix × {slotCount} matchs ={' '}
+                    {totalMapsNeeded} maps · {maps.length} disponibles)
                   </span>
                 </div>
 
@@ -458,7 +495,9 @@ ${selectedSlots.map((slot, si) => `
                     ({CHOICES_PER_SLOT} choix par match)
                   </span>
                 </h2>
-                <div className={`grid grid-cols-1 gap-4 ${slotCount === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-3 lg:grid-cols-5'}`}>
+                <div
+                  className={`grid grid-cols-1 gap-4 ${slotCount === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-3 lg:grid-cols-5'}`}
+                >
                   {selectedSlots.map((slot, si) => {
                     const cat = slotCategory(si);
                     return (
@@ -472,7 +511,9 @@ ${selectedSlots.map((slot, si) => `
                             Map {si + 1}
                           </span>
                           {cat && (
-                            <span className={`ml-2 inline-block px-2 py-0.5 rounded-full text-[10px] border ${typeBadgeColor(cat)}`}>
+                            <span
+                              className={`ml-2 inline-block px-2 py-0.5 rounded-full text-[10px] border ${typeBadgeColor(cat)}`}
+                            >
                               {typeLabel(cat)}
                             </span>
                           )}
@@ -494,7 +535,9 @@ ${selectedSlots.map((slot, si) => `
                                     alt={choice.map_name}
                                     className="w-full h-full object-cover"
                                     onError={(e) => {
-                                      (e.target as HTMLImageElement).style.display = 'none';
+                                      (
+                                        e.target as HTMLImageElement
+                                      ).style.display = 'none';
                                     }}
                                   />
                                 </div>
@@ -506,8 +549,12 @@ ${selectedSlots.map((slot, si) => `
 
                               {choice && (
                                 <div className="text-center mb-1.5">
-                                  <p className="text-xs font-semibold">{choice.map_name}</p>
-                                  <span className={`inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] border ${typeBadgeColor(choice.map_type)}`}>
+                                  <p className="text-xs font-semibold">
+                                    {choice.map_name}
+                                  </p>
+                                  <span
+                                    className={`inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] border ${typeBadgeColor(choice.map_type)}`}
+                                  >
                                     {typeLabel(choice.map_type)}
                                   </span>
                                 </div>
@@ -516,13 +563,17 @@ ${selectedSlots.map((slot, si) => `
                               {/* Manual selector */}
                               <select
                                 value={choice?.id ?? ''}
-                                onChange={(e) => handleSetChoice(si, ci, e.target.value)}
+                                onChange={(e) =>
+                                  handleSetChoice(si, ci, e.target.value)
+                                }
                                 className="w-full px-2 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white text-xs"
                               >
                                 <option value="">— Choisir —</option>
                                 {maps
                                   .filter((m) => !usedMapIds(si, ci).has(m.id))
-                                  .sort((a, b) => a.map_name.localeCompare(b.map_name))
+                                  .sort((a, b) =>
+                                    a.map_name.localeCompare(b.map_name)
+                                  )
                                   .map((m) => (
                                     <option key={m.id} value={m.id}>
                                       {m.map_name} ({typeLabel(m.map_type)})
@@ -545,9 +596,10 @@ ${selectedSlots.map((slot, si) => `
                 </h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                   {maps
-                    .sort((a, b) =>
-                      (a.order_index ?? 0) - (b.order_index ?? 0) ||
-                      a.map_name.localeCompare(b.map_name)
+                    .sort(
+                      (a, b) =>
+                        (a.order_index ?? 0) - (b.order_index ?? 0) ||
+                        a.map_name.localeCompare(b.map_name)
                     )
                     .map((m) => {
                       const isUsed = allUsedMapIds().has(m.id);
@@ -567,14 +619,19 @@ ${selectedSlots.map((slot, si) => `
                                 alt={m.map_name}
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
-                                  (e.target as HTMLImageElement).style.display = 'none';
+                                  (e.target as HTMLImageElement).style.display =
+                                    'none';
                                 }}
                               />
                             </div>
                           )}
                           <div className="p-2">
-                            <p className="text-xs font-semibold truncate">{m.map_name}</p>
-                            <p className="text-[10px] text-gray-400">{typeLabel(m.map_type)}</p>
+                            <p className="text-xs font-semibold truncate">
+                              {m.map_name}
+                            </p>
+                            <p className="text-[10px] text-gray-400">
+                              {typeLabel(m.map_type)}
+                            </p>
                             {isUsed && (
                               <p className="text-[10px] text-purple-300 font-medium mt-0.5">
                                 Sélectionnée

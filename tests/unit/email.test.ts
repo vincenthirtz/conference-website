@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { sendEmail, sendWelcomeEmail, sendTeamJoinEmail, sendAccountDeletedEmail, sendTestEmail } from '../../utils/email';
+import {
+  sendEmail,
+  sendWelcomeEmail,
+  sendTeamJoinEmail,
+  sendAccountDeletedEmail,
+  sendTestEmail,
+} from '../../utils/email';
 
 // Save originals
 const origEnv = { ...process.env };
@@ -19,7 +25,11 @@ describe('sendEmail', () => {
     delete process.env.BREVO_API_KEY;
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    const result = await sendEmail({ to: 'a@b.com', subject: 'Hi', html: '<p>hi</p>' });
+    const result = await sendEmail({
+      to: 'a@b.com',
+      subject: 'Hi',
+      html: '<p>hi</p>',
+    });
 
     expect(result.success).toBe(false);
     expect(result.error).toContain('BREVO_API_KEY');
@@ -33,7 +43,11 @@ describe('sendEmail', () => {
     });
     vi.stubGlobal('fetch', mockFetch);
 
-    const result = await sendEmail({ to: 'user@test.com', subject: 'Test', html: '<p>body</p>' });
+    const result = await sendEmail({
+      to: 'user@test.com',
+      subject: 'Test',
+      html: '<p>body</p>',
+    });
 
     expect(result.success).toBe(true);
     expect(result.id).toBe('email-123');
@@ -46,11 +60,14 @@ describe('sendEmail', () => {
   });
 
   it('returns error on non-ok response', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: false,
-      status: 403,
-      json: () => Promise.resolve({ message: 'Forbidden' }),
-    }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        json: () => Promise.resolve({ message: 'Forbidden' }),
+      })
+    );
     vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const result = await sendEmail({ to: 'a@b.com', subject: 'Hi', html: '' });
@@ -60,7 +77,10 @@ describe('sendEmail', () => {
   });
 
   it('returns error on fetch exception', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network down')));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockRejectedValue(new Error('Network down'))
+    );
     vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const result = await sendEmail({ to: 'a@b.com', subject: 'Hi', html: '' });
@@ -70,11 +90,14 @@ describe('sendEmail', () => {
   });
 
   it('handles non-ok response with unparseable JSON', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: false,
-      status: 500,
-      json: () => Promise.reject(new Error('bad json')),
-    }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: () => Promise.reject(new Error('bad json')),
+      })
+    );
     vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const result = await sendEmail({ to: 'a@b.com', subject: 'Hi', html: '' });
@@ -111,7 +134,11 @@ describe('sendTeamJoinEmail', () => {
     });
     vi.stubGlobal('fetch', mockFetch);
 
-    const result = await sendTeamJoinEmail('u@t.com', 'Team <Script>', 'captain');
+    const result = await sendTeamJoinEmail(
+      'u@t.com',
+      'Team <Script>',
+      'captain'
+    );
 
     expect(result.success).toBe(true);
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -185,7 +212,10 @@ describe('Brevo API integration', () => {
     await sendEmail({ to: 'a@b.com', subject: 'Hi', html: '<p>hi</p>' });
 
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
-    expect(body.sender).toEqual({ name: 'OWWC', email: 'noreply@owwomenscup.fr' });
+    expect(body.sender).toEqual({
+      name: 'OWWC',
+      email: 'noreply@owwomenscup.fr',
+    });
   });
 
   it('uses htmlContent key instead of html', async () => {

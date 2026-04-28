@@ -9,10 +9,7 @@ import {
   computeStageStandings,
   computeGroupedStandings,
 } from '@/utils/stages/standings';
-import type {
-  StageStanding,
-  GroupedStandings,
-} from '@/utils/stages/standings';
+import type { StageStanding, GroupedStandings } from '@/utils/stages/standings';
 import { isValidUUID } from '@/utils/apiHelpers';
 
 type ApiResponse =
@@ -26,10 +23,7 @@ type ApiResponse =
 
 export default withStaffRoute(handler, 'manager');
 
-async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<ApiResponse>
-) {
+async function handler(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -40,12 +34,15 @@ async function handler(
   }
 
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Database service unavailable (missing service role).' });
+    return res
+      .status(500)
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
 
   const id = String(stageId);
   const exportParam = req.query.export as string | undefined;
-  const exportFormat = exportParam === 'csv' ? 'csv' : exportParam === 'json' ? 'json' : null;
+  const exportFormat =
+    exportParam === 'csv' ? 'csv' : exportParam === 'json' ? 'json' : null;
 
   try {
     // Fetch stage to get type and name
@@ -105,7 +102,10 @@ async function handler(
       const csv = [header.join(','), ...rows].join('\n');
       const filename = `standings-${(stage.name || id).replace(/[^a-zA-Z0-9_-]/g, '_')}.csv`;
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${filename}"`
+      );
       res.status(200).end(csv);
       return;
     }
@@ -129,7 +129,10 @@ async function handler(
       };
       const filename = `standings-${(stage.name || id).replace(/[^a-zA-Z0-9_-]/g, '_')}.json`;
       res.setHeader('Content-Type', 'application/json; charset=utf-8');
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${filename}"`
+      );
       res.status(200).end(JSON.stringify(exportData, null, 2));
       return;
     }

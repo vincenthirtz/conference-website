@@ -23,28 +23,32 @@ const KNOWN_SETTINGS = [
   {
     key: 'contact_email',
     label: 'Email de contact',
-    description: 'Email de contact principal affiché sur le site (pages contact, mentions légales, etc.)',
+    description:
+      'Email de contact principal affiché sur le site (pages contact, mentions légales, etc.)',
     placeholder: 'contact@example.com',
     type: 'email',
   },
   {
     key: 'about_video_url',
     label: 'URL vidéo "A propos"',
-    description: 'URL de la vidéo affichée dans la section "A propos" de la page d\'accueil (YouTube ou MP4)',
+    description:
+      'URL de la vidéo affichée dans la section "A propos" de la page d\'accueil (YouTube ou MP4)',
     placeholder: 'https://www.youtube.com/watch?v=...',
     type: 'url',
   },
   {
     key: 'mixte_tournament_id',
     label: 'ID du tournoi mixte',
-    description: 'UUID du tournoi mixte utilisé pour le bouton d\'inscription sur la page d\'accueil',
+    description:
+      "UUID du tournoi mixte utilisé pour le bouton d'inscription sur la page d'accueil",
     placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
     type: 'text',
   },
   {
     key: 'cotisation_amount',
     label: 'Montant de la cotisation annuelle',
-    description: 'Montant de la cotisation annuelle pour les adhérents (en euros)',
+    description:
+      'Montant de la cotisation annuelle pour les adhérents (en euros)',
     placeholder: '20.00',
     type: 'number',
   },
@@ -175,7 +179,9 @@ function AdminSiteSettingsPage({ staff }: Props) {
               {KNOWN_SETTINGS.map((known) => {
                 const setting = settings[known.key];
                 const currentValue = values[known.key] || '';
-                const hasChanged = setting ? setting.value !== currentValue : currentValue !== '';
+                const hasChanged = setting
+                  ? setting.value !== currentValue
+                  : currentValue !== '';
 
                 return (
                   <section
@@ -214,7 +220,9 @@ function AdminSiteSettingsPage({ staff }: Props) {
                           disabled={saving === known.key || !hasChanged}
                           className="px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors whitespace-nowrap"
                         >
-                          {saving === known.key ? 'Sauvegarde...' : 'Sauvegarder'}
+                          {saving === known.key
+                            ? 'Sauvegarde...'
+                            : 'Sauvegarder'}
                         </button>
                       </div>
 
@@ -229,7 +237,9 @@ function AdminSiteSettingsPage({ staff }: Props) {
                     {/* Preview for video URL */}
                     {known.key === 'about_video_url' && currentValue && (
                       <div className="mt-6 pt-6 border-t border-neutral-700">
-                        <p className="text-sm text-neutral-400 mb-3">Aperçu :</p>
+                        <p className="text-sm text-neutral-400 mb-3">
+                          Aperçu :
+                        </p>
                         <div className="relative w-full max-w-md aspect-video rounded-xl overflow-hidden bg-neutral-900">
                           {/youtu\.?be/.test(currentValue) ? (
                             <iframe

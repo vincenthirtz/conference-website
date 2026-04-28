@@ -178,7 +178,11 @@ async function handlePut(
     }
   }
 
-  if (mode === 'score' || hasScorePayload(req.body) || req.body.forfeit_team_id) {
+  if (
+    mode === 'score' ||
+    hasScorePayload(req.body) ||
+    req.body.forfeit_team_id
+  ) {
     // --- Update score (avec helper applyMatchScore) ---
     const {
       team1Score,
@@ -197,20 +201,33 @@ async function handlePut(
         });
       }
 
-      if (!Number.isInteger(team1Score) || !Number.isInteger(team2Score) || team1Score < 0 || team2Score < 0) {
+      if (
+        !Number.isInteger(team1Score) ||
+        !Number.isInteger(team2Score) ||
+        team1Score < 0 ||
+        team2Score < 0
+      ) {
         return res.status(400).json({
           error: 'Scores must be integers >= 0',
         });
       }
     }
 
-    const VALID_MATCH_STATUSES = ['pending', 'ongoing', 'finished', 'cancelled', 'postponed', 'walkover'];
+    const VALID_MATCH_STATUSES = [
+      'pending',
+      'ongoing',
+      'finished',
+      'cancelled',
+      'postponed',
+      'walkover',
+    ];
     if (status !== undefined && !VALID_MATCH_STATUSES.includes(status)) {
       // Le passage en 'disputed' DOIT passer par /api/admin/matches/[matchId]/dispute
       // pour garantir la saisie d'une raison + de l'auteur. On rejette ici.
       if (status === 'disputed') {
         return res.status(400).json({
-          error: 'Use POST /api/admin/matches/[matchId]/dispute to open a dispute.',
+          error:
+            'Use POST /api/admin/matches/[matchId]/dispute to open a dispute.',
           code: 'USE_DISPUTE_ENDPOINT',
         });
       }
@@ -224,7 +241,8 @@ async function handlePut(
       team1Score,
       team2Score,
       winnerTeamId: typeof winnerTeamId === 'string' ? winnerTeamId : undefined,
-      forfeitTeamId: typeof forfeit_team_id === 'string' ? forfeit_team_id : undefined,
+      forfeitTeamId:
+        typeof forfeit_team_id === 'string' ? forfeit_team_id : undefined,
       status,
       markFinished: status === 'finished' || (!status && !forfeit_team_id),
       staffId: ctx.staff?.id ?? null,
@@ -278,11 +296,19 @@ async function handlePut(
   updatePayload.updated_at = new Date().toISOString();
 
   // Validation des champs meta
-  const VALID_MATCH_STATUSES_META = ['pending', 'ongoing', 'finished', 'cancelled', 'postponed', 'walkover'];
+  const VALID_MATCH_STATUSES_META = [
+    'pending',
+    'ongoing',
+    'finished',
+    'cancelled',
+    'postponed',
+    'walkover',
+  ];
   if ('status' in updatePayload) {
     if (updatePayload.status === 'disputed') {
       return res.status(400).json({
-        error: 'Use POST /api/admin/matches/[matchId]/dispute to open a dispute.',
+        error:
+          'Use POST /api/admin/matches/[matchId]/dispute to open a dispute.',
         code: 'USE_DISPUTE_ENDPOINT',
       });
     }
@@ -302,18 +328,34 @@ async function handlePut(
   // continuer a planifier / annoter pendant qu'une dispute est ouverte.)
 
   const VALID_BRACKET_SIDES = ['wb', 'lb', 'final', 'none'];
-  if ('bracket_side' in updatePayload && updatePayload.bracket_side !== null && !VALID_BRACKET_SIDES.includes(updatePayload.bracket_side)) {
+  if (
+    'bracket_side' in updatePayload &&
+    updatePayload.bracket_side !== null &&
+    !VALID_BRACKET_SIDES.includes(updatePayload.bracket_side)
+  ) {
     return res.status(400).json({
       error: `Invalid bracket_side. Allowed values: ${VALID_BRACKET_SIDES.join(', ')}`,
     });
   }
 
-  if ('next_match_win_slot' in updatePayload && updatePayload.next_match_win_slot !== null && ![1, 2].includes(updatePayload.next_match_win_slot)) {
-    return res.status(400).json({ error: 'next_match_win_slot must be 1 or 2' });
+  if (
+    'next_match_win_slot' in updatePayload &&
+    updatePayload.next_match_win_slot !== null &&
+    ![1, 2].includes(updatePayload.next_match_win_slot)
+  ) {
+    return res
+      .status(400)
+      .json({ error: 'next_match_win_slot must be 1 or 2' });
   }
 
-  if ('next_match_lose_slot' in updatePayload && updatePayload.next_match_lose_slot !== null && ![1, 2].includes(updatePayload.next_match_lose_slot)) {
-    return res.status(400).json({ error: 'next_match_lose_slot must be 1 or 2' });
+  if (
+    'next_match_lose_slot' in updatePayload &&
+    updatePayload.next_match_lose_slot !== null &&
+    ![1, 2].includes(updatePayload.next_match_lose_slot)
+  ) {
+    return res
+      .status(400)
+      .json({ error: 'next_match_lose_slot must be 1 or 2' });
   }
 
   if (!supabaseAdmin) {
@@ -332,9 +374,10 @@ async function handlePut(
 
   // --- Warning: scheduled_at outside tournament date range ---
   const warnings: string[] = [];
-  const scheduledAtValue = 'scheduled_at' in updatePayload
-    ? updatePayload.scheduled_at
-    : before.scheduled_at;
+  const scheduledAtValue =
+    'scheduled_at' in updatePayload
+      ? updatePayload.scheduled_at
+      : before.scheduled_at;
 
   if (scheduledAtValue && before.tournament_id) {
     const { data: tournament } = await supabaseAdmin
@@ -345,12 +388,18 @@ async function handlePut(
 
     if (tournament) {
       const scheduledTime = new Date(scheduledAtValue).getTime();
-      if (tournament.start_date && scheduledTime < new Date(tournament.start_date).getTime()) {
+      if (
+        tournament.start_date &&
+        scheduledTime < new Date(tournament.start_date).getTime()
+      ) {
         warnings.push(
           `Le match est planifié avant le début du tournoi (${tournament.start_date})`
         );
       }
-      if (tournament.end_date && scheduledTime > new Date(tournament.end_date).getTime()) {
+      if (
+        tournament.end_date &&
+        scheduledTime > new Date(tournament.end_date).getTime()
+      ) {
         warnings.push(
           `Le match est planifié après la fin du tournoi (${tournament.end_date})`
         );

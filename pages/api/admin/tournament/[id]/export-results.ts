@@ -88,26 +88,30 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         round: m.round_number ?? '',
         round_name: m.round_name || '',
         bracket_side: m.bracket_side || '',
-        team1: m.team1_id ? (teamNameMap.get(m.team1_id) || m.team1_id) : '',
-        team2: m.team2_id ? (teamNameMap.get(m.team2_id) || m.team2_id) : '',
-        score: m.team1_score != null && m.team2_score != null
-          ? `${m.team1_score}-${m.team2_score}`
-          : '',
+        team1: m.team1_id ? teamNameMap.get(m.team1_id) || m.team1_id : '',
+        team2: m.team2_id ? teamNameMap.get(m.team2_id) || m.team2_id : '',
+        score:
+          m.team1_score != null && m.team2_score != null
+            ? `${m.team1_score}-${m.team2_score}`
+            : '',
         team1_score: m.team1_score ?? '',
         team2_score: m.team2_score ?? '',
         winner: m.winner_team_id
-          ? (teamNameMap.get(m.winner_team_id) || m.winner_team_id)
+          ? teamNameMap.get(m.winner_team_id) || m.winner_team_id
           : '',
         status: m.status,
-        format: m.best_of ? `BO${m.best_of}` : (m.match_format || ''),
+        format: m.best_of ? `BO${m.best_of}` : m.match_format || '',
         scheduled_at: m.scheduled_at || '',
         completed_at: m.completed_at || '',
         is_bye: m.is_bye ? 'true' : 'false',
       };
     });
 
-    const slugSafe = (tournament.slug || tournament.name || tournamentId)
-      .replace(/[^a-zA-Z0-9_-]/g, '_');
+    const slugSafe = (
+      tournament.slug ||
+      tournament.name ||
+      tournamentId
+    ).replace(/[^a-zA-Z0-9_-]/g, '_');
 
     if (format === 'json') {
       const exportData = {
@@ -124,16 +128,33 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
       const filename = `results-${slugSafe}.json`;
       res.setHeader('Content-Type', 'application/json; charset=utf-8');
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${filename}"`
+      );
       res.status(200).end(JSON.stringify(exportData, null, 2));
       return;
     }
 
     // CSV
     const header = [
-      'match_id', 'stage', 'stage_type', 'round', 'round_name', 'bracket_side',
-      'team1', 'team2', 'score', 'team1_score', 'team2_score', 'winner',
-      'status', 'format', 'scheduled_at', 'completed_at', 'is_bye',
+      'match_id',
+      'stage',
+      'stage_type',
+      'round',
+      'round_name',
+      'bracket_side',
+      'team1',
+      'team2',
+      'score',
+      'team1_score',
+      'team2_score',
+      'winner',
+      'status',
+      'format',
+      'scheduled_at',
+      'completed_at',
+      'is_bye',
     ];
 
     const escapeCsv = (v: string | number | null | undefined) => {

@@ -60,9 +60,7 @@ describe('TOURNAMENT_TEMPLATES', () => {
   });
 
   it('includes a multi-stage template', () => {
-    const multiStage = TOURNAMENT_TEMPLATES.find(
-      (t) => t.stages.length >= 2
-    );
+    const multiStage = TOURNAMENT_TEMPLATES.find((t) => t.stages.length >= 2);
     expect(multiStage).toBeDefined();
   });
 });

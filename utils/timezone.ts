@@ -30,7 +30,9 @@ export const TOURNAMENT_TIMEZONES = [
   { value: 'UTC', label: 'UTC' },
 ] as const;
 
-export type TournamentTimezone = (typeof TOURNAMENT_TIMEZONES)[number]['value'] | string;
+export type TournamentTimezone =
+  | (typeof TOURNAMENT_TIMEZONES)[number]['value']
+  | string;
 
 /**
  * Formate une date ISO en tenant compte du fuseau horaire du tournoi.

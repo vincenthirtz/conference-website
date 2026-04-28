@@ -70,7 +70,9 @@ function AdminAdherentsPage({ staff }: Props) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
-  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string | null>(null);
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string | null>(
+    null
+  );
   const [yearFilter, setYearFilter] = useState<string | null>(null);
   const [roleFilter, setRoleFilter] = useState<string | null>(null);
   const [cotisationAmount, setCotisationAmount] = useState<number>(0);
@@ -359,7 +361,9 @@ function AdminAdherentsPage({ staff }: Props) {
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={paymentStatusFilter || ''}
-                  onChange={(e) => setPaymentStatusFilter(e.target.value || null)}
+                  onChange={(e) =>
+                    setPaymentStatusFilter(e.target.value || null)
+                  }
                 >
                   <option value="">Tous les statuts</option>
                   <option value="pending">En attente</option>
@@ -488,7 +492,9 @@ function AdminAdherentsPage({ staff }: Props) {
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-neutral-400">{a.email}</td>
+                        <td className="px-4 py-3 text-neutral-400">
+                          {a.email}
+                        </td>
                         <td className="px-4 py-3">
                           <span className="text-neutral-300">
                             {roleLabels[a.role] || a.role}
@@ -509,11 +515,12 @@ function AdminAdherentsPage({ staff }: Props) {
                         <td className="px-4 py-3">
                           <span className="text-neutral-300">
                             {a.payment_amount.toFixed(2)} €
-                            {cotisationAmount > 0 && a.payment_status !== 'paid' && (
-                              <span className="text-neutral-500 text-xs ml-1">
-                                / {cotisationAmount.toFixed(2)} €
-                              </span>
-                            )}
+                            {cotisationAmount > 0 &&
+                              a.payment_status !== 'paid' && (
+                                <span className="text-neutral-500 text-xs ml-1">
+                                  / {cotisationAmount.toFixed(2)} €
+                                </span>
+                              )}
                           </span>
                         </td>
                         <td className="px-4 py-3">

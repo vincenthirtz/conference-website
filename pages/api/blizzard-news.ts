@@ -101,34 +101,55 @@ async function scrapeBlizzardNews(): Promise<BlizzardNewsItem[]> {
 
     // Titre
     const title =
-      $el.find('h3, h4, [class*="title"], [class*="Title"]').first().text().trim() ||
-      $el.find('a').text().trim();
+      $el
+        .find('h3, h4, [class*="title"], [class*="Title"]')
+        .first()
+        .text()
+        .trim() || $el.find('a').text().trim();
 
     if (!title || title.length < 5) return;
 
     // Date
     const date =
-      $el.find('[class*="date"], [class*="Date"], time').first().text().trim() ||
-      $el.find('span').filter((_, el) => {
-        const text = $(el).text();
-        return /\d{1,2}\s+\w+\s+\d{4}/.test(text);
-      }).first().text().trim();
+      $el
+        .find('[class*="date"], [class*="Date"], time')
+        .first()
+        .text()
+        .trim() ||
+      $el
+        .find('span')
+        .filter((_, el) => {
+          const text = $(el).text();
+          return /\d{1,2}\s+\w+\s+\d{4}/.test(text);
+        })
+        .first()
+        .text()
+        .trim();
 
     // Image
     const imageUrl =
       $el.find('img').attr('src') ||
-      $el.find('[style*="background"]').css('background-image')?.replace(/url\(['"]?|['"]?\)/g, '') ||
+      $el
+        .find('[style*="background"]')
+        .css('background-image')
+        ?.replace(/url\(['"]?|['"]?\)/g, '') ||
       null;
 
     // Catégorie
     const category =
-      $el.find('[class*="category"], [class*="tag"], [class*="Category"]').first().text().trim() ||
-      null;
+      $el
+        .find('[class*="category"], [class*="tag"], [class*="Category"]')
+        .first()
+        .text()
+        .trim() || null;
 
     // Résumé/description
     const summary =
-      $el.find('p, [class*="description"], [class*="excerpt"]').first().text().trim() ||
-      '';
+      $el
+        .find('p, [class*="description"], [class*="excerpt"]')
+        .first()
+        .text()
+        .trim() || '';
 
     // Construire le lien complet
     const fullLink = href.startsWith('http')
@@ -166,9 +187,12 @@ async function scrapeBlizzardNews(): Promise<BlizzardNewsItem[]> {
       if (items.find((item) => item.id === id)) return;
 
       // Remonter pour trouver le conteneur parent
-      const $container = $el.closest('[class*="Card"], article, li, div').first();
+      const $container = $el
+        .closest('[class*="Card"], article, li, div')
+        .first();
 
-      const title = $el.text().trim() || $container.find('h3, h4').text().trim();
+      const title =
+        $el.text().trim() || $container.find('h3, h4').text().trim();
       if (!title || title.length < 5) return;
 
       const fullLink = href.startsWith('http')
@@ -253,7 +277,10 @@ export default async function handler(
   }
 
   // Rate limiting: 20 requests per minute (scraping is expensive)
-  if (applyRateLimit(req, res, { max: 20, windowMs: 60 * 1000 }, 'blizzard-news')) return;
+  if (
+    applyRateLimit(req, res, { max: 20, windowMs: 60 * 1000 }, 'blizzard-news')
+  )
+    return;
 
   const limit = Math.min(parseInt(req.query.limit as string) || 8, 20);
 
@@ -286,7 +313,7 @@ export default async function handler(
   } catch (error) {
     console.error('[/api/blizzard-news] error:', error);
     return res.status(500).json({
-      error: "Failed to load Overwatch news.",
+      error: 'Failed to load Overwatch news.',
     });
   }
 }

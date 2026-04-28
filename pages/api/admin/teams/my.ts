@@ -43,7 +43,8 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<GetResponse | { error: string }>
 ) {
-  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-teams-my')) return;
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-teams-my'))
+    return;
   if (!supabaseAdmin) {
     return res.status(503).json({ error: 'Service unavailable.' });
   }
@@ -58,9 +59,8 @@ export default async function handler(
     return res.status(401).json({ error: 'Token required.' });
   }
 
-  const { data: userData, error: userErr } = await supabaseAdmin.auth.getUser(
-    token
-  );
+  const { data: userData, error: userErr } =
+    await supabaseAdmin.auth.getUser(token);
   if (userErr || !userData?.user) {
     return res.status(401).json({ error: 'User not authenticated.' });
   }
@@ -79,9 +79,7 @@ export default async function handler(
 
     if (membershipErr) {
       console.error('[teams/my] membership error:', membershipErr);
-      return res
-        .status(500)
-        .json({ error: 'Failed to load your team.' });
+      return res.status(500).json({ error: 'Failed to load your team.' });
     }
 
     if (!membership) {
@@ -151,19 +149,29 @@ export default async function handler(
     }
 
     if (teamData.captain_id !== userId) {
-      return res.status(403).json({ error: 'Access restricted to team captain.' });
+      return res
+        .status(403)
+        .json({ error: 'Access restricted to team captain.' });
     }
 
     // Validations
     if (typeof body.name === 'string') {
       const trimmed = body.name.trim();
       if (trimmed.length < 2 || trimmed.length > 100) {
-        return res.status(400).json({ error: 'Le nom doit faire entre 2 et 100 caractères.' });
+        return res
+          .status(400)
+          .json({ error: 'Le nom doit faire entre 2 et 100 caractères.' });
       }
     }
 
-    if ('description' in body && body.description && body.description.length > 2000) {
-      return res.status(400).json({ error: 'La description ne peut pas dépasser 2000 caractères.' });
+    if (
+      'description' in body &&
+      body.description &&
+      body.description.length > 2000
+    ) {
+      return res.status(400).json({
+        error: 'La description ne peut pas dépasser 2000 caractères.',
+      });
     }
 
     // Valider les URLs
@@ -172,7 +180,9 @@ export default async function handler(
       if (field in body && body[field]) {
         const safe = sanitizeUrl(body[field] as string);
         if (!safe) {
-          return res.status(400).json({ error: `${field} doit être une URL http(s) valide.` });
+          return res
+            .status(400)
+            .json({ error: `${field} doit être une URL http(s) valide.` });
         }
       }
     }
@@ -182,7 +192,9 @@ export default async function handler(
     if ('short_name' in body)
       updatePayload.short_name = body.short_name?.trim() || null;
     if ('logo_url' in body)
-      updatePayload.logo_url = body.logo_url ? sanitizeUrl(body.logo_url) : null;
+      updatePayload.logo_url = body.logo_url
+        ? sanitizeUrl(body.logo_url)
+        : null;
     if ('country' in body) updatePayload.country = body.country || null;
     if ('description' in body)
       updatePayload.description = body.description || null;
@@ -202,12 +214,12 @@ export default async function handler(
 
     if (updateErr) {
       console.error('[teams/my] update error:', updateErr);
-      return res
-        .status(500)
-        .json({ error: 'Failed to update team.' });
+      return res.status(500).json({ error: 'Failed to update team.' });
     }
 
-    return res.status(200).json({ team: updatedTeam, members: [], isCaptain: true });
+    return res
+      .status(200)
+      .json({ team: updatedTeam, members: [], isCaptain: true });
   }
 
   res.setHeader('Allow', 'GET,PATCH');

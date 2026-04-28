@@ -6,7 +6,8 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'site-settings')) return;
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'site-settings'))
+    return;
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });
@@ -35,7 +36,10 @@ export default async function handler(
     }
 
     // Cache for 5 minutes
-    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=60');
+    res.setHeader(
+      'Cache-Control',
+      'public, s-maxage=300, stale-while-revalidate=60'
+    );
     return res.status(200).json(data);
   }
 
@@ -57,6 +61,9 @@ export default async function handler(
   }
 
   // Cache for 5 minutes
-  res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=60');
+  res.setHeader(
+    'Cache-Control',
+    'public, s-maxage=300, stale-while-revalidate=60'
+  );
   return res.status(200).json(settings);
 }

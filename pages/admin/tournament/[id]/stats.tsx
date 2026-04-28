@@ -294,7 +294,9 @@ function AdminTournamentStatsPage({ staff }: StaffProps) {
               {/* Map Stats */}
               <div className="bg-neutral-800 border border-neutral-700 rounded-xl overflow-hidden">
                 <div className="px-4 py-3 border-b border-neutral-700">
-                  <h2 className="text-lg font-semibold">Statistiques des maps</h2>
+                  <h2 className="text-lg font-semibold">
+                    Statistiques des maps
+                  </h2>
                   <p className="text-xs text-neutral-400">
                     Par nombre de parties jouées
                   </p>
@@ -355,7 +357,9 @@ function AdminTournamentStatsPage({ staff }: StaffProps) {
             {/* Closest Matches */}
             <div className="bg-neutral-800 border border-neutral-700 rounded-xl overflow-hidden">
               <div className="px-4 py-3 border-b border-neutral-700">
-                <h2 className="text-lg font-semibold">Matchs les plus serrés</h2>
+                <h2 className="text-lg font-semibold">
+                  Matchs les plus serrés
+                </h2>
                 <p className="text-xs text-neutral-400">
                   Différence de score minimale (matchs terminés)
                 </p>
@@ -431,9 +435,7 @@ function StatCard({ label, value, color }: StatCardProps) {
   };
 
   return (
-    <div
-      className={`rounded-xl border p-4 ${colorClasses[color]}`}
-    >
+    <div className={`rounded-xl border p-4 ${colorClasses[color]}`}>
       <div className="text-2xl font-bold">{value}</div>
       <div className="text-xs text-neutral-400">{label}</div>
     </div>

@@ -35,7 +35,13 @@ type ApiResponse =
   | { error: string }
   | { success: boolean; tournament: TournamentDetail };
 
-const VALID_STATUSES = ['draft', 'published', 'running', 'completed', 'archived'];
+const VALID_STATUSES = [
+  'draft',
+  'published',
+  'running',
+  'completed',
+  'archived',
+];
 
 // Rôle minimum : manager
 export default withStaffRoute(handler, 'manager');
@@ -155,36 +161,65 @@ async function handlePatch(
     }
 
     // Nom non vide
-    if (name !== undefined && (typeof name !== 'string' || name.trim().length === 0)) {
+    if (
+      name !== undefined &&
+      (typeof name !== 'string' || name.trim().length === 0)
+    ) {
       return res.status(400).json({ error: 'Tournament name cannot be empty' });
     }
 
     // max_teams doit être un entier > 0
     if (max_teams !== undefined && max_teams !== null) {
-      if (typeof max_teams !== 'number' || !Number.isInteger(max_teams) || max_teams < 1) {
-        return res.status(400).json({ error: 'max_teams must be an integer >= 1' });
+      if (
+        typeof max_teams !== 'number' ||
+        !Number.isInteger(max_teams) ||
+        max_teams < 1
+      ) {
+        return res
+          .status(400)
+          .json({ error: 'max_teams must be an integer >= 1' });
       }
     }
 
     // min_players doit être un entier > 0
     if (min_players !== undefined && min_players !== null) {
-      if (typeof min_players !== 'number' || !Number.isInteger(min_players) || min_players < 1) {
-        return res.status(400).json({ error: 'min_players must be an integer >= 1' });
+      if (
+        typeof min_players !== 'number' ||
+        !Number.isInteger(min_players) ||
+        min_players < 1
+      ) {
+        return res
+          .status(400)
+          .json({ error: 'min_players must be an integer >= 1' });
       }
     }
 
     // max_players doit être un entier > 0
     if (max_players !== undefined && max_players !== null) {
-      if (typeof max_players !== 'number' || !Number.isInteger(max_players) || max_players < 1) {
-        return res.status(400).json({ error: 'max_players must be an integer >= 1' });
+      if (
+        typeof max_players !== 'number' ||
+        !Number.isInteger(max_players) ||
+        max_players < 1
+      ) {
+        return res
+          .status(400)
+          .json({ error: 'max_players must be an integer >= 1' });
       }
     }
 
     // Validation des dates ISO
-    if (start_date !== undefined && start_date !== null && isNaN(Date.parse(start_date))) {
+    if (
+      start_date !== undefined &&
+      start_date !== null &&
+      isNaN(Date.parse(start_date))
+    ) {
       return res.status(400).json({ error: 'start_date is not a valid date' });
     }
-    if (end_date !== undefined && end_date !== null && isNaN(Date.parse(end_date))) {
+    if (
+      end_date !== undefined &&
+      end_date !== null &&
+      isNaN(Date.parse(end_date))
+    ) {
       return res.status(400).json({ error: 'end_date is not a valid date' });
     }
 
@@ -200,7 +235,11 @@ async function handlePatch(
 
     // Cohérence des dates : start_date < end_date
     if (start_date !== undefined && end_date !== undefined) {
-      if (start_date && end_date && new Date(start_date) >= new Date(end_date)) {
+      if (
+        start_date &&
+        end_date &&
+        new Date(start_date) >= new Date(end_date)
+      ) {
         return res.status(400).json({
           error: 'start_date must be before end_date',
         });
@@ -236,9 +275,14 @@ async function handlePatch(
 
     // Vérifier la cohérence des dates avec les valeurs existantes
     // (quand une seule date est modifiée)
-    const effectiveStart = start_date !== undefined ? start_date : before.start_date;
+    const effectiveStart =
+      start_date !== undefined ? start_date : before.start_date;
     const effectiveEnd = end_date !== undefined ? end_date : before.end_date;
-    if (effectiveStart && effectiveEnd && new Date(effectiveStart) >= new Date(effectiveEnd)) {
+    if (
+      effectiveStart &&
+      effectiveEnd &&
+      new Date(effectiveStart) >= new Date(effectiveEnd)
+    ) {
       return res.status(400).json({
         error: 'start_date must be before end_date',
       });
@@ -246,9 +290,15 @@ async function handlePatch(
 
     // --- Gardes de transition de statut ---
     if (status !== undefined && status !== before.status) {
-      const guards = await checkStatusTransitionGuards(id as string, before.status, status);
+      const guards = await checkStatusTransitionGuards(
+        id as string,
+        before.status,
+        status
+      );
       if (guards) {
-        return res.status(400).json({ error: guards.error, warnings: guards.warnings } as any);
+        return res
+          .status(400)
+          .json({ error: guards.error, warnings: guards.warnings } as any);
       }
     }
 
@@ -261,22 +311,28 @@ async function handlePatch(
     if (game !== undefined) updatePayload.game = game;
     if (start_date !== undefined) updatePayload.start_date = start_date;
     if (end_date !== undefined) updatePayload.end_date = end_date;
-    if (roster_locked_at !== undefined) updatePayload.roster_locked_at = roster_locked_at;
+    if (roster_locked_at !== undefined)
+      updatePayload.roster_locked_at = roster_locked_at;
     if (timezone !== undefined) updatePayload.timezone = timezone;
     if (format_type !== undefined) updatePayload.format_type = format_type;
     if (max_teams !== undefined) updatePayload.max_teams = max_teams;
     if (min_players !== undefined) updatePayload.min_players = min_players;
     if (max_players !== undefined) updatePayload.max_players = max_players;
     // Map is_public (frontend) to visibility (database)
-    if (is_public !== undefined) updatePayload.visibility = is_public ? 'public' : 'private';
+    if (is_public !== undefined)
+      updatePayload.visibility = is_public ? 'public' : 'private';
     if (is_featured !== undefined) updatePayload.is_featured = is_featured;
     if (logo_url !== undefined) updatePayload.logo_url = logo_url;
     if (banner_url !== undefined) updatePayload.banner_url = banner_url;
     if (rules_url !== undefined) updatePayload.rules_url = rules_url;
-    if (description_info !== undefined) updatePayload.description_info = description_info;
-    if (schedule_details !== undefined) updatePayload.schedule_details = schedule_details;
-    if (schedule_rules !== undefined) updatePayload.schedule_rules = schedule_rules;
-    if (format_details !== undefined) updatePayload.format_details = format_details;
+    if (description_info !== undefined)
+      updatePayload.description_info = description_info;
+    if (schedule_details !== undefined)
+      updatePayload.schedule_details = schedule_details;
+    if (schedule_rules !== undefined)
+      updatePayload.schedule_rules = schedule_rules;
+    if (format_details !== undefined)
+      updatePayload.format_details = format_details;
 
     // Si rien à mettre à jour
     if (Object.keys(updatePayload).length === 0) {
@@ -370,7 +426,8 @@ async function checkStatusTransitionGuards(
 
     if (!stages || stages.length === 0) {
       return {
-        error: 'Impossible de publier : le tournoi doit avoir au moins 1 phase (stage).',
+        error:
+          'Impossible de publier : le tournoi doit avoir au moins 1 phase (stage).',
       };
     }
   }
@@ -385,7 +442,8 @@ async function checkStatusTransitionGuards(
 
     if (!stages || stages.length === 0) {
       return {
-        error: 'Impossible de lancer : le tournoi doit avoir au moins 1 phase (stage).',
+        error:
+          'Impossible de lancer : le tournoi doit avoir au moins 1 phase (stage).',
       };
     }
 
@@ -397,7 +455,8 @@ async function checkStatusTransitionGuards(
 
     if (!teams || teams.length === 0) {
       return {
-        error: 'Impossible de lancer : le tournoi doit avoir au moins 1 équipe inscrite.',
+        error:
+          'Impossible de lancer : le tournoi doit avoir au moins 1 équipe inscrite.',
       };
     }
   }
@@ -405,7 +464,8 @@ async function checkStatusTransitionGuards(
   // completed -> ne peut venir que de running
   if (newStatus === 'completed' && currentStatus !== 'running') {
     return {
-      error: 'Impossible de terminer : le tournoi doit être en cours (running) pour être marqué comme terminé.',
+      error:
+        'Impossible de terminer : le tournoi doit être en cours (running) pour être marqué comme terminé.',
     };
   }
 

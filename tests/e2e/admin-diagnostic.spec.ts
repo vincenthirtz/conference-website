@@ -106,10 +106,15 @@ async function withAuthPage(
 async function assertNoStuckLoading(page: Page) {
   await page.waitForTimeout(500);
 
-  const spinnerVisible = await page.locator('.animate-spin').first().isVisible().catch(() => false);
+  const spinnerVisible = await page
+    .locator('.animate-spin')
+    .first()
+    .isVisible()
+    .catch(() => false);
   if (spinnerVisible) {
-    await expect(page.locator('.animate-spin').first())
-      .not.toBeVisible({ timeout: THRESHOLDS.LOADING_INDICATOR });
+    await expect(page.locator('.animate-spin').first()).not.toBeVisible({
+      timeout: THRESHOLDS.LOADING_INDICATOR,
+    });
   }
 
   const loadingTextVisible = await page
@@ -118,8 +123,9 @@ async function assertNoStuckLoading(page: Page) {
     .isVisible()
     .catch(() => false);
   if (loadingTextVisible) {
-    await expect(page.getByText('Chargement...', { exact: false }).first())
-      .not.toBeVisible({ timeout: THRESHOLDS.LOADING_INDICATOR });
+    await expect(
+      page.getByText('Chargement...', { exact: false }).first()
+    ).not.toBeVisible({ timeout: THRESHOLDS.LOADING_INDICATOR });
   }
 }
 
@@ -135,10 +141,13 @@ async function cleanupTestData() {
     perPage: 100,
   });
 
-  const users = (data as any)?.users as { id: string; email?: string }[] | undefined;
-  const testUsers = users?.filter(
-    (u) => u.email && /^e2e-diag-admin-\d+@test\.local$/.test(u.email)
-  ) ?? [];
+  const users = (data as any)?.users as
+    | { id: string; email?: string }[]
+    | undefined;
+  const testUsers =
+    users?.filter(
+      (u) => u.email && /^e2e-diag-admin-\d+@test\.local$/.test(u.email)
+    ) ?? [];
 
   for (const user of testUsers) {
     // Recuperer l'id staff pour nettoyer les logs
@@ -149,7 +158,10 @@ async function cleanupTestData() {
       .maybeSingle();
 
     if (staffRow) {
-      await supabaseTestClient.from('staff_logs').delete().eq('staff_id', staffRow.id);
+      await supabaseTestClient
+        .from('staff_logs')
+        .delete()
+        .eq('staff_id', staffRow.id);
       await supabaseTestClient.from('staff').delete().eq('id', staffRow.id);
     }
 
@@ -158,7 +170,10 @@ async function cleanupTestData() {
 }
 
 /** Helper pour les appels API authentifies */
-async function apiGet(request: import('@playwright/test').APIRequestContext, endpoint: string) {
+async function apiGet(
+  request: import('@playwright/test').APIRequestContext,
+  endpoint: string
+) {
   return request.get(`${BASE_URL}${endpoint}`, {
     headers: { Authorization: `Bearer ${staffToken}` },
     timeout: THRESHOLDS.API_RESPONSE,
@@ -194,7 +209,10 @@ test.describe.serial('Diagnostic admin', () => {
     const page = await context.newPage();
 
     await page.goto(`${BASE_URL}/admin/login`);
-    await page.waitForSelector('input#email', { state: 'visible', timeout: 10_000 });
+    await page.waitForSelector('input#email', {
+      state: 'visible',
+      timeout: 10_000,
+    });
     await page.fill('input#email', STAFF_EMAIL);
     await page.fill('input#password', STAFF_PASSWORD);
     await page.click('button[type="submit"]');
@@ -219,7 +237,10 @@ test.describe.serial('Diagnostic admin', () => {
 
     const start = Date.now();
     await page.goto(`${BASE_URL}/admin/login`);
-    await page.waitForSelector('input#email', { state: 'visible', timeout: 10_000 });
+    await page.waitForSelector('input#email', {
+      state: 'visible',
+      timeout: 10_000,
+    });
     await page.fill('input#email', STAFF_EMAIL);
     await page.fill('input#password', STAFF_PASSWORD);
     await page.click('button[type="submit"]');
@@ -233,7 +254,9 @@ test.describe.serial('Diagnostic admin', () => {
     await context.close();
   });
 
-  test('Toutes les pages admin se chargent sans blocage', async ({ browser }) => {
+  test('Toutes les pages admin se chargent sans blocage', async ({
+    browser,
+  }) => {
     await withAuthPage(browser, async (page) => {
       type PageResult = {
         label: string;
@@ -252,7 +275,9 @@ test.describe.serial('Diagnostic admin', () => {
         const failedApiRequests: string[] = [];
         const onResponse = (res: import('@playwright/test').Response) => {
           if (res.url().includes('/api/') && res.status() >= 400) {
-            failedApiRequests.push(`${res.status()} ${new URL(res.url()).pathname}`);
+            failedApiRequests.push(
+              `${res.status()} ${new URL(res.url()).pathname}`
+            );
           }
         };
         page.on('response', onResponse);
@@ -261,14 +286,18 @@ test.describe.serial('Diagnostic admin', () => {
         let httpStatus: number | null = null;
         let timedOut = false;
         try {
-          const response = await page.goto(pagePath, { timeout: 15_000, waitUntil: 'domcontentloaded' });
+          const response = await page.goto(pagePath, {
+            timeout: 15_000,
+            waitUntil: 'domcontentloaded',
+          });
           httpStatus = response?.status() ?? null;
         } catch {
           timedOut = true;
         }
         const durationMs = Date.now() - start;
 
-        const redirectedToLogin = page.url().includes('/admin/login') || page.url().includes('/403');
+        const redirectedToLogin =
+          page.url().includes('/admin/login') || page.url().includes('/403');
 
         let stuckLoading = false;
         if (!timedOut && !redirectedToLogin) {
@@ -280,7 +309,16 @@ test.describe.serial('Diagnostic admin', () => {
         }
 
         page.off('response', onResponse);
-        results.push({ label, path: pagePath, durationMs, httpStatus, timedOut, redirectedToLogin, stuckLoading, failedApiRequests });
+        results.push({
+          label,
+          path: pagePath,
+          durationMs,
+          httpStatus,
+          timedOut,
+          redirectedToLogin,
+          stuckLoading,
+          failedApiRequests,
+        });
       }
 
       console.log('\nChargement des pages admin :');
@@ -289,25 +327,32 @@ test.describe.serial('Diagnostic admin', () => {
       for (const r of results) {
         const flags: string[] = [];
         if (r.timedOut) flags.push('TIMEOUT');
-        if (r.httpStatus && r.httpStatus >= 500) flags.push(`HTTP ${r.httpStatus}`);
+        if (r.httpStatus && r.httpStatus >= 500)
+          flags.push(`HTTP ${r.httpStatus}`);
         if (r.redirectedToLogin) flags.push('SESSION PERDUE');
         if (r.stuckLoading) flags.push('SPINNER BLOQUE');
-        if (r.durationMs > THRESHOLDS.SSR_PAGE_LOAD && !r.timedOut) flags.push('LENT');
+        if (r.durationMs > THRESHOLDS.SSR_PAGE_LOAD && !r.timedOut)
+          flags.push('LENT');
 
         const status = flags.length === 0 ? 'OK' : flags.join(', ');
         console.log(`  ${r.label} (${r.path}): ${r.durationMs}ms [${status}]`);
 
         if (r.failedApiRequests.length > 0) {
-          console.log(`    Requetes echouees: ${r.failedApiRequests.join(', ')}`);
+          console.log(
+            `    Requetes echouees: ${r.failedApiRequests.join(', ')}`
+          );
         }
 
         if (r.timedOut) failures.push(`${r.label}: timeout`);
-        if (r.httpStatus && r.httpStatus >= 500) failures.push(`${r.label}: HTTP ${r.httpStatus}`);
+        if (r.httpStatus && r.httpStatus >= 500)
+          failures.push(`${r.label}: HTTP ${r.httpStatus}`);
         if (r.redirectedToLogin) failures.push(`${r.label}: session perdue`);
         if (r.stuckLoading) failures.push(`${r.label}: spinner bloque`);
       }
 
-      expect(failures, `Pages en echec:\n${failures.join('\n')}`).toHaveLength(0);
+      expect(failures, `Pages en echec:\n${failures.join('\n')}`).toHaveLength(
+        0
+      );
     });
   });
 
@@ -321,13 +366,17 @@ test.describe.serial('Diagnostic admin', () => {
         let timedOut = false;
 
         try {
-          const response = await page.goto(pagePath, { timeout: 15_000, waitUntil: 'domcontentloaded' });
+          const response = await page.goto(pagePath, {
+            timeout: 15_000,
+            waitUntil: 'domcontentloaded',
+          });
           httpStatus = response?.status() ?? null;
         } catch {
           timedOut = true;
         }
 
-        const redirected = page.url().includes('/admin/login') || page.url().includes('/403');
+        const redirected =
+          page.url().includes('/admin/login') || page.url().includes('/403');
         const flags: string[] = [];
         if (timedOut) flags.push('TIMEOUT');
         if (httpStatus && httpStatus >= 500) flags.push(`HTTP ${httpStatus}`);
@@ -337,18 +386,24 @@ test.describe.serial('Diagnostic admin', () => {
         console.log(`  ${label} (${pagePath}): [${status}]`);
 
         if (timedOut) failures.push(`${label}: timeout`);
-        if (httpStatus && httpStatus >= 500) failures.push(`${label}: HTTP ${httpStatus}`);
+        if (httpStatus && httpStatus >= 500)
+          failures.push(`${label}: HTTP ${httpStatus}`);
         if (redirected) failures.push(`${label}: session perdue`);
       }
 
-      expect(failures, `Pages en echec:\n${failures.join('\n')}`).toHaveLength(0);
+      expect(failures, `Pages en echec:\n${failures.join('\n')}`).toHaveLength(
+        0
+      );
     });
   });
 
   test('Session survivra a un refresh de page (F5)', async ({ browser }) => {
     await withAuthPage(browser, async (page) => {
       // Charger une page admin
-      await page.goto('/admin/tournaments', { waitUntil: 'networkidle', timeout: 15_000 });
+      await page.goto('/admin/tournaments', {
+        waitUntil: 'networkidle',
+        timeout: 15_000,
+      });
       expect(page.url()).not.toContain('/admin/login');
 
       // Rafraichir la page (simule F5)
@@ -379,8 +434,13 @@ test.describe.serial('Diagnostic admin', () => {
         await page.goto(from.path, { waitUntil: 'networkidle' });
 
         const start = Date.now();
-        await page.goto(to.path, { waitUntil: 'domcontentloaded', timeout: 15_000 });
-        await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => {});
+        await page.goto(to.path, {
+          waitUntil: 'domcontentloaded',
+          timeout: 15_000,
+        });
+        await page
+          .waitForLoadState('networkidle', { timeout: 10_000 })
+          .catch(() => {});
         const duration = Date.now() - start;
 
         results.push({ from: from.path, to: to.path, durationMs: duration });
@@ -392,21 +452,33 @@ test.describe.serial('Diagnostic admin', () => {
         console.log(`  ${r.from} -> ${r.to} : ${r.durationMs}ms [${flag}]`);
       }
 
-      const avg = results.reduce((s, r) => s + r.durationMs, 0) / results.length;
+      const avg =
+        results.reduce((s, r) => s + r.durationMs, 0) / results.length;
       console.log(`  Moyenne : ${Math.round(avg)}ms`);
 
       for (const r of results) {
-        expect(r.durationMs, `${r.from} -> ${r.to} trop lent (${r.durationMs}ms)`).toBeLessThan(THRESHOLDS.NAVIGATION);
+        expect(
+          r.durationMs,
+          `${r.from} -> ${r.to} trop lent (${r.durationMs}ms)`
+        ).toBeLessThan(THRESHOLDS.NAVIGATION);
       }
     });
   });
 
-  test('Navigation rapide (clics successifs sans attendre)', async ({ browser }) => {
+  test('Navigation rapide (clics successifs sans attendre)', async ({
+    browser,
+  }) => {
     await withAuthPage(browser, async (page) => {
       // Simuler un admin qui clique rapidement entre pages sans attendre le chargement
       await page.goto('/admin', { waitUntil: 'networkidle', timeout: 15_000 });
 
-      const pages = ['/admin/tournaments', '/admin/teams', '/admin/news', '/admin/partners', '/admin/announcements'];
+      const pages = [
+        '/admin/tournaments',
+        '/admin/teams',
+        '/admin/news',
+        '/admin/partners',
+        '/admin/announcements',
+      ];
       const start = Date.now();
 
       for (const pagePath of pages) {
@@ -425,7 +497,9 @@ test.describe.serial('Diagnostic admin', () => {
       // Pas de crash : la page a du contenu
       await assertNoStuckLoading(page);
 
-      console.log(`Navigation rapide (${pages.length} pages) : ${totalDuration}ms`);
+      console.log(
+        `Navigation rapide (${pages.length} pages) : ${totalDuration}ms`
+      );
     });
   });
 
@@ -456,7 +530,9 @@ test.describe.serial('Diagnostic admin', () => {
       console.log(`  ${ep.label}: ${duration}ms [${flag}]`);
 
       expect(status, `${ep.label} timeout ou echoue`).toBeGreaterThan(0);
-      expect(duration, `${ep.label} trop lent (${duration}ms)`).toBeLessThan(THRESHOLDS.API_RESPONSE);
+      expect(duration, `${ep.label} trop lent (${duration}ms)`).toBeLessThan(
+        THRESHOLDS.API_RESPONSE
+      );
     }
   });
 
@@ -483,7 +559,10 @@ test.describe.serial('Diagnostic admin', () => {
     expect(staffToken, 'Token API manquant').toBeTruthy();
 
     // Tester la pagination sur l'endpoint tournois
-    const page1 = await apiGet(request, '/api/admin/tournaments?limit=2&offset=0&includeTotal=1');
+    const page1 = await apiGet(
+      request,
+      '/api/admin/tournaments?limit=2&offset=0&includeTotal=1'
+    );
     expect(page1.ok()).toBe(true);
 
     const data1 = await page1.json();
@@ -492,7 +571,10 @@ test.describe.serial('Diagnostic admin', () => {
 
     // Si assez de donnees, verifier page 2
     if (data1.total > 2) {
-      const page2 = await apiGet(request, '/api/admin/tournaments?limit=2&offset=2&includeTotal=1');
+      const page2 = await apiGet(
+        request,
+        '/api/admin/tournaments?limit=2&offset=2&includeTotal=1'
+      );
       expect(page2.ok()).toBe(true);
 
       const data2 = await page2.json();
@@ -504,14 +586,19 @@ test.describe.serial('Diagnostic admin', () => {
       }
     }
 
-    console.log(`Pagination tournois : total=${data1.total}, page1=${data1.tournaments.length} items`);
+    console.log(
+      `Pagination tournois : total=${data1.total}, page1=${data1.tournaments.length} items`
+    );
   });
 
   test('API filtrage par recherche fonctionne', async ({ request }) => {
     expect(staffToken, 'Token API manquant').toBeTruthy();
 
     // Recherche avec un terme improbable -> 0 resultats
-    const res = await apiGet(request, '/api/admin/teams?search=zzz_no_match_zzz&limit=10');
+    const res = await apiGet(
+      request,
+      '/api/admin/teams?search=zzz_no_match_zzz&limit=10'
+    );
     expect(res.ok()).toBe(true);
     const data = await res.json();
     expect(data.teams).toHaveLength(0);
@@ -522,7 +609,9 @@ test.describe.serial('Diagnostic admin', () => {
     const dataAll = await resAll.json();
     expect(Array.isArray(dataAll.teams)).toBe(true);
 
-    console.log(`Filtrage equipes : recherche vide=${dataAll.teams.length} resultats, recherche invalide=0 resultats`);
+    console.log(
+      `Filtrage equipes : recherche vide=${dataAll.teams.length} resultats, recherche invalide=0 resultats`
+    );
   });
 
   /* =========================================================
@@ -531,13 +620,25 @@ test.describe.serial('Diagnostic admin', () => {
 
   test('Pas de requetes reseau bloquees ou lentes', async ({ browser }) => {
     await withAuthPage(browser, async (page) => {
-      type RequestTiming = { id: number; url: string; start: number; end: number; status: number };
+      type RequestTiming = {
+        id: number;
+        url: string;
+        start: number;
+        end: number;
+        status: number;
+      };
       let nextId = 0;
       const timings: RequestTiming[] = [];
 
       page.on('request', (req) => {
         if (!req.url().includes('/api/')) return;
-        timings.push({ id: nextId++, url: req.url(), start: Date.now(), end: 0, status: 0 });
+        timings.push({
+          id: nextId++,
+          url: req.url(),
+          start: Date.now(),
+          end: 0,
+          status: 0,
+        });
       });
 
       page.on('response', (res) => {
@@ -551,13 +652,23 @@ test.describe.serial('Diagnostic admin', () => {
         }
       });
 
-      const criticalPages = ['/admin/tournaments', '/admin/teams', '/admin/news', '/admin/logs'];
+      const criticalPages = [
+        '/admin/tournaments',
+        '/admin/teams',
+        '/admin/news',
+        '/admin/logs',
+      ];
       for (const pagePath of criticalPages) {
-        await page.goto(pagePath, { waitUntil: 'networkidle', timeout: 15_000 });
+        await page.goto(pagePath, {
+          waitUntil: 'networkidle',
+          timeout: 15_000,
+        });
       }
 
       const completed = timings.filter((t) => t.end > 0);
-      const slow = completed.filter((t) => t.end - t.start > THRESHOLDS.SLOW_REQUEST);
+      const slow = completed.filter(
+        (t) => t.end - t.start > THRESHOLDS.SLOW_REQUEST
+      );
       const serverErrors = completed.filter((t) => t.status >= 500);
 
       if (completed.length > 0) {
@@ -575,7 +686,9 @@ test.describe.serial('Diagnostic admin', () => {
       }
 
       if (slow.length > 0) {
-        console.log(`\n${slow.length} requete(s) lente(s) (>${THRESHOLDS.SLOW_REQUEST}ms)`);
+        console.log(
+          `\n${slow.length} requete(s) lente(s) (>${THRESHOLDS.SLOW_REQUEST}ms)`
+        );
       }
 
       expect(
@@ -591,7 +704,10 @@ test.describe.serial('Diagnostic admin', () => {
 
   test('Recherche sur la page equipes fonctionne', async ({ browser }) => {
     await withAuthPage(browser, async (page) => {
-      await page.goto('/admin/teams', { waitUntil: 'networkidle', timeout: 15_000 });
+      await page.goto('/admin/teams', {
+        waitUntil: 'networkidle',
+        timeout: 15_000,
+      });
       await assertNoStuckLoading(page);
 
       // Trouver le champ de recherche et taper un terme
@@ -602,7 +718,9 @@ test.describe.serial('Diagnostic admin', () => {
 
       // Soumettre la recherche (Enter ou bouton)
       await searchInput.press('Enter');
-      await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => {});
+      await page
+        .waitForLoadState('networkidle', { timeout: 10_000 })
+        .catch(() => {});
 
       // Verifier que la page ne crash pas et affiche un etat coherent
       await assertNoStuckLoading(page);
@@ -614,14 +732,20 @@ test.describe.serial('Diagnostic admin', () => {
 
   test('Pagination UI sur la page tournois', async ({ browser }) => {
     await withAuthPage(browser, async (page) => {
-      await page.goto('/admin/tournaments', { waitUntil: 'networkidle', timeout: 15_000 });
+      await page.goto('/admin/tournaments', {
+        waitUntil: 'networkidle',
+        timeout: 15_000,
+      });
       await assertNoStuckLoading(page);
 
       // Verifier la presence d'un indicateur de total
       const body = await page.textContent('body');
       // La page affiche "X tournois" ou "Aucun tournoi"
-      const hasTournamentInfo = body?.includes('tournoi') || body?.includes('Aucun');
-      expect(hasTournamentInfo, 'Pas d\'info sur le nombre de tournois').toBe(true);
+      const hasTournamentInfo =
+        body?.includes('tournoi') || body?.includes('Aucun');
+      expect(hasTournamentInfo, "Pas d'info sur le nombre de tournois").toBe(
+        true
+      );
 
       // Si un bouton "Suivant" ou pagination existe, verifier qu'il est cliquable
       const nextButton = page.getByText('Suivant', { exact: false });
@@ -631,11 +755,15 @@ test.describe.serial('Diagnostic admin', () => {
         const isDisabled = await nextButton.isDisabled().catch(() => true);
         if (!isDisabled) {
           await nextButton.click();
-          await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => {});
+          await page
+            .waitForLoadState('networkidle', { timeout: 10_000 })
+            .catch(() => {});
           await assertNoStuckLoading(page);
           console.log('Pagination tournois : page 2 OK');
         } else {
-          console.log('Pagination tournois : bouton Suivant desactive (pas assez de donnees)');
+          console.log(
+            'Pagination tournois : bouton Suivant desactive (pas assez de donnees)'
+          );
         }
       } else {
         console.log('Pagination tournois : pas de bouton Suivant visible');
@@ -645,7 +773,10 @@ test.describe.serial('Diagnostic admin', () => {
 
   test('Filtres sur la page partenaires', async ({ browser }) => {
     await withAuthPage(browser, async (page) => {
-      await page.goto('/admin/partners', { waitUntil: 'networkidle', timeout: 15_000 });
+      await page.goto('/admin/partners', {
+        waitUntil: 'networkidle',
+        timeout: 15_000,
+      });
       await assertNoStuckLoading(page);
 
       // Trouver un select/filtre de categorie ou status
@@ -660,7 +791,9 @@ test.describe.serial('Diagnostic admin', () => {
         if (options.length > 1) {
           // Selectionner la deuxieme option (premiere = "Tous")
           await firstSelect.selectOption({ index: 1 });
-          await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => {});
+          await page
+            .waitForLoadState('networkidle', { timeout: 10_000 })
+            .catch(() => {});
           await assertNoStuckLoading(page);
           console.log(`Filtre partenaires : option "${options[1]}" OK`);
         }
@@ -685,7 +818,10 @@ test.describe.serial('Diagnostic admin', () => {
         body?.includes('Admin') ||
         body?.includes(STAFF_EMAIL) ||
         body?.includes('Test admin');
-      expect(hasProfileInfo, 'Aucune info de profil visible sur le dashboard').toBe(true);
+      expect(
+        hasProfileInfo,
+        'Aucune info de profil visible sur le dashboard'
+      ).toBe(true);
 
       console.log('Profil admin : infos visibles');
     });
@@ -695,37 +831,55 @@ test.describe.serial('Diagnostic admin', () => {
    * SECTION 6 : Gestion d'erreurs
    * =======================================================*/
 
-  test('API invalide renvoie une erreur propre, pas un crash', async ({ request }) => {
+  test('API invalide renvoie une erreur propre, pas un crash', async ({
+    request,
+  }) => {
     expect(staffToken, 'Token API manquant').toBeTruthy();
 
     // ID inexistant
-    const res = await apiGet(request, '/api/admin/teams/00000000-0000-0000-0000-000000000000');
+    const res = await apiGet(
+      request,
+      '/api/admin/teams/00000000-0000-0000-0000-000000000000'
+    );
     // Doit renvoyer 404 ou 200 avec null, pas 500
-    expect(res.status(), 'L\'API crash sur un ID inexistant').not.toBe(500);
+    expect(res.status(), "L'API crash sur un ID inexistant").not.toBe(500);
 
     // Methode invalide sur un endpoint GET-only
-    const resBadMethod = await request.delete(`${BASE_URL}/api/admin/tournaments`, {
-      headers: { Authorization: `Bearer ${staffToken}` },
-      timeout: 5_000,
-    });
+    const resBadMethod = await request.delete(
+      `${BASE_URL}/api/admin/tournaments`,
+      {
+        headers: { Authorization: `Bearer ${staffToken}` },
+        timeout: 5_000,
+      }
+    );
     expect(resBadMethod.status()).toBeGreaterThanOrEqual(400);
-    expect(resBadMethod.status(), 'L\'API crash sur une methode invalide').not.toBe(500);
+    expect(
+      resBadMethod.status(),
+      "L'API crash sur une methode invalide"
+    ).not.toBe(500);
 
     console.log('Gestion erreurs API : OK');
   });
 
-  test('Pages admin affichent un message d\'erreur, pas un ecran blanc', async ({ browser }) => {
+  test("Pages admin affichent un message d'erreur, pas un ecran blanc", async ({
+    browser,
+  }) => {
     await withAuthPage(browser, async (page) => {
       // Page avec un ID inexistant
-      const response = await page.goto('/admin/tournament/00000000-0000-0000-0000-000000000000', {
-        waitUntil: 'domcontentloaded',
-        timeout: 15_000,
-      });
+      const response = await page.goto(
+        '/admin/tournament/00000000-0000-0000-0000-000000000000',
+        {
+          waitUntil: 'domcontentloaded',
+          timeout: 15_000,
+        }
+      );
 
       // La page ne doit pas etre un ecran blanc
       const body = await page.textContent('body');
       const hasContent = body && body.trim().length > 50;
-      expect(hasContent, 'Page vide / ecran blanc sur un ID inexistant').toBe(true);
+      expect(hasContent, 'Page vide / ecran blanc sur un ID inexistant').toBe(
+        true
+      );
 
       // Pas de 500 server error
       const status = response?.status() ?? 0;
@@ -736,7 +890,8 @@ test.describe.serial('Diagnostic admin', () => {
   });
 
   test('Token expire renvoie 401, pas 500', async ({ request }) => {
-    const fakeToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U';
+    const fakeToken =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U';
 
     const res = await request.get(`${BASE_URL}/api/admin/me`, {
       headers: { Authorization: `Bearer ${fakeToken}` },

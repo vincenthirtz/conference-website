@@ -156,7 +156,8 @@ function AdminNewTeamPage({ staff }: StaffProps) {
                   Creer une nouvelle equipe
                 </h1>
                 <p className="text-neutral-400 text-sm mt-1">
-                  Renseigne les informations generales et les membres de l&apos;equipe
+                  Renseigne les informations generales et les membres de
+                  l&apos;equipe
                 </p>
               </div>
             </div>
@@ -196,7 +197,8 @@ function AdminNewTeamPage({ staff }: StaffProps) {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm text-neutral-300 mb-1">
-                      Nom de l&apos;equipe <span className="text-red-400">*</span>
+                      Nom de l&apos;equipe{' '}
+                      <span className="text-red-400">*</span>
                     </label>
                     <input
                       className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
@@ -408,8 +410,8 @@ function AdminNewTeamPage({ staff }: StaffProps) {
                   <div className="flex justify-between gap-4 py-2">
                     <span className="text-neutral-400">Membres</span>
                     <span className="text-neutral-200">
-                      {members.filter((m) => m.email.trim().length > 0).length} /{' '}
-                      {members.length}
+                      {members.filter((m) => m.email.trim().length > 0).length}{' '}
+                      / {members.length}
                     </span>
                   </div>
                 </div>

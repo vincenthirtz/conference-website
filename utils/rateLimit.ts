@@ -35,7 +35,9 @@ export function getClientIp(req: NextApiRequest): string {
   const raw =
     (typeof cfIp === 'string' ? cfIp : undefined) ||
     (typeof realIp === 'string' ? realIp : undefined) ||
-    (typeof forwarded === 'string' ? forwarded.split(',')[0]?.trim() : undefined) ||
+    (typeof forwarded === 'string'
+      ? forwarded.split(',')[0]?.trim()
+      : undefined) ||
     req.socket.remoteAddress ||
     'unknown';
 
@@ -60,9 +62,7 @@ export function applyRateLimit(
   const ip = getClientIp(req);
   const now = Date.now();
 
-  const timestamps = (store.get(ip) ?? []).filter(
-    (t) => now - t < windowMs
-  );
+  const timestamps = (store.get(ip) ?? []).filter((t) => now - t < windowMs);
 
   if (timestamps.length >= max) {
     res.setHeader('Retry-After', String(Math.ceil(windowMs / 1000)));

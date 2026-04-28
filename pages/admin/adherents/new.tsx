@@ -31,10 +31,23 @@ type FormData = {
   paymentStatus: 'pending' | 'partial' | 'paid' | 'exempt' | 'overdue';
   paymentAmount: number;
   paymentDate: string;
-  paymentMethod: 'cash' | 'check' | 'transfer' | 'card' | 'helloasso' | 'other' | '';
+  paymentMethod:
+    | 'cash'
+    | 'check'
+    | 'transfer'
+    | 'card'
+    | 'helloasso'
+    | 'other'
+    | '';
   paymentReference: string;
   isActive: boolean;
-  role: 'member' | 'volunteer' | 'board' | 'president' | 'treasurer' | 'secretary';
+  role:
+    | 'member'
+    | 'volunteer'
+    | 'board'
+    | 'president'
+    | 'treasurer'
+    | 'secretary';
   notes: string;
 };
 
@@ -70,9 +83,12 @@ function AdminNewAdherentPage({ staff }: Props) {
     notes: '',
   });
 
-  const { draftRestored, lastSaved, clearDraft, restoreDraft } = useAutoSave(form, {
-    key: 'adherent_new',
-  });
+  const { draftRestored, lastSaved, clearDraft, restoreDraft } = useAutoSave(
+    form,
+    {
+      key: 'adherent_new',
+    }
+  );
 
   useEffect(() => {
     if (draftRestored) setShowDraftBanner(true);
@@ -104,7 +120,10 @@ function AdminNewAdherentPage({ staff }: Props) {
     fetchSettings();
   }, []);
 
-  const updateField = <K extends keyof FormData>(field: K, value: FormData[K]) => {
+  const updateField = <K extends keyof FormData>(
+    field: K,
+    value: FormData[K]
+  ) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     setError(null);
   };
@@ -122,7 +141,7 @@ function AdminNewAdherentPage({ staff }: Props) {
       return;
     }
     if (!form.email.trim()) {
-      setError('L\'email est requis.');
+      setError("L'email est requis.");
       return;
     }
 
@@ -427,11 +446,13 @@ function AdminNewAdherentPage({ staff }: Props) {
                     }
                     className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
                   >
-                    {[currentYear, currentYear - 1, currentYear + 1].map((y) => (
-                      <option key={y} value={y}>
-                        {y}
-                      </option>
-                    ))}
+                    {[currentYear, currentYear - 1, currentYear + 1].map(
+                      (y) => (
+                        <option key={y} value={y}>
+                          {y}
+                        </option>
+                      )
+                    )}
                   </select>
                 </div>
 
@@ -460,7 +481,9 @@ function AdminNewAdherentPage({ staff }: Props) {
                     <input
                       type="checkbox"
                       checked={form.isActive}
-                      onChange={(e) => updateField('isActive', e.target.checked)}
+                      onChange={(e) =>
+                        updateField('isActive', e.target.checked)
+                      }
                       className="w-5 h-5 rounded border-neutral-600 bg-neutral-900/50 text-emerald-500 focus:ring-emerald-500"
                     />
                     <span className="text-sm font-medium text-neutral-300">
@@ -533,7 +556,10 @@ function AdminNewAdherentPage({ staff }: Props) {
                     min="0"
                     value={form.paymentAmount}
                     onChange={(e) =>
-                      updateField('paymentAmount', parseFloat(e.target.value) || 0)
+                      updateField(
+                        'paymentAmount',
+                        parseFloat(e.target.value) || 0
+                      )
                     }
                     className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
                     placeholder="0.00"
@@ -583,7 +609,9 @@ function AdminNewAdherentPage({ staff }: Props) {
                   <input
                     type="text"
                     value={form.paymentReference}
-                    onChange={(e) => updateField('paymentReference', e.target.value)}
+                    onChange={(e) =>
+                      updateField('paymentReference', e.target.value)
+                    }
                     className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
                     placeholder="N° de chèque, ID transaction HelloAsso..."
                   />
@@ -630,7 +658,7 @@ function AdminNewAdherentPage({ staff }: Props) {
                     Création...
                   </>
                 ) : (
-                  'Créer l\'adhérent'
+                  "Créer l'adhérent"
                 )}
               </button>
               <Link

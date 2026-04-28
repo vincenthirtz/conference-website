@@ -317,7 +317,9 @@ function AdminNewsPage({ news, total, errorMsg: ssrError }: Props) {
                           {n.status === 'published' && n.published_at && (
                             <>
                               <span className="hidden sm:inline">•</span>
-                              <span>Publiée le {formatDate(n.published_at)}</span>
+                              <span>
+                                Publiée le {formatDate(n.published_at)}
+                              </span>
                             </>
                           )}
                         </div>
@@ -351,10 +353,7 @@ function AdminNewsPage({ news, total, errorMsg: ssrError }: Props) {
               type="button"
               disabled={offset === 0}
               onClick={() =>
-                setFilter(
-                  'offset',
-                  String(Math.max(0, offset - limit)) || null
-                )
+                setFilter('offset', String(Math.max(0, offset - limit)) || null)
               }
               className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
@@ -415,7 +414,10 @@ function AdminNewsPage({ news, total, errorMsg: ssrError }: Props) {
         >
           <p className="text-sm text-neutral-300 bg-neutral-900/50 rounded-xl p-3">
             Supprimer l&apos;article{' '}
-            <span className="font-semibold text-white">{deleteTarget.title}</span> ?
+            <span className="font-semibold text-white">
+              {deleteTarget.title}
+            </span>{' '}
+            ?
           </p>
         </DeleteConfirmModal>
       )}

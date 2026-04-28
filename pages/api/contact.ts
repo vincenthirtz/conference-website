@@ -12,7 +12,8 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (applyRateLimit(req, res, { max: 5, windowMs: 60 * 60 * 1000 }, 'contact')) return;
+  if (applyRateLimit(req, res, { max: 5, windowMs: 60 * 60 * 1000 }, 'contact'))
+    return;
 
   const parsed = contactSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -24,7 +25,9 @@ export default async function handler(
 
   if (!result.success) {
     console.error('[api/contact] email send error:', result.error);
-    return res.status(500).json({ error: "Erreur lors de l'envoi du message." });
+    return res
+      .status(500)
+      .json({ error: "Erreur lors de l'envoi du message." });
   }
 
   return res.status(201).json({

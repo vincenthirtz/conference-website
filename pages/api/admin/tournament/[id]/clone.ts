@@ -50,13 +50,15 @@ async function handler(
 
     // 2) Determine name & slug for the clone
     const body = req.body || {};
-    const cloneName = (typeof body.name === 'string' && body.name.trim())
-      ? body.name.trim()
-      : `${source.name} (copie)`;
+    const cloneName =
+      typeof body.name === 'string' && body.name.trim()
+        ? body.name.trim()
+        : `${source.name} (copie)`;
 
-    let cloneSlug = (typeof body.slug === 'string' && body.slug.trim())
-      ? body.slug.trim()
-      : slugify(cloneName, { lower: true, strict: true });
+    let cloneSlug =
+      typeof body.slug === 'string' && body.slug.trim()
+        ? body.slug.trim()
+        : slugify(cloneName, { lower: true, strict: true });
 
     // Ensure slug uniqueness
     const { data: existingSlug } = await supabaseAdmin
@@ -94,7 +96,9 @@ async function handler(
 
     if (createErr || !cloned) {
       console.error('clone: create tournament error', createErr);
-      return res.status(500).json({ error: 'Failed to create cloned tournament' });
+      return res
+        .status(500)
+        .json({ error: 'Failed to create cloned tournament' });
     }
 
     // 4) Copy stages (structure only, no teams/matches)

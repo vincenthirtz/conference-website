@@ -11,7 +11,11 @@ export function parsePagination(
   req: NextApiRequest,
   defaults: { limit?: number; offset?: number; maxLimit?: number } = {}
 ): { limit: number; offset: number } {
-  const { limit: defaultLimit = 50, offset: defaultOffset = 0, maxLimit = 1000 } = defaults;
+  const {
+    limit: defaultLimit = 50,
+    offset: defaultOffset = 0,
+    maxLimit = 1000,
+  } = defaults;
   const rawLimit = req.query.limit;
   const rawOffset = req.query.offset;
 
@@ -20,7 +24,8 @@ export function parsePagination(
     Math.min(
       maxLimit,
       parseInt(
-        (Array.isArray(rawLimit) ? rawLimit[0] : rawLimit) ?? String(defaultLimit),
+        (Array.isArray(rawLimit) ? rawLimit[0] : rawLimit) ??
+          String(defaultLimit),
         10
       ) || defaultLimit
     )
@@ -29,7 +34,8 @@ export function parsePagination(
   const offset = Math.max(
     0,
     parseInt(
-      (Array.isArray(rawOffset) ? rawOffset[0] : rawOffset) ?? String(defaultOffset),
+      (Array.isArray(rawOffset) ? rawOffset[0] : rawOffset) ??
+        String(defaultOffset),
       10
     ) || defaultOffset
   );
@@ -51,7 +57,8 @@ export function sanitizeSearch(
   return value.trim().slice(0, maxLength);
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Check if a string is a valid UUID v4 format.

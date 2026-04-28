@@ -32,7 +32,8 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'tournaments')) return;
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'tournaments'))
+    return;
 
   if (!supabaseAdmin) {
     return res.status(500).json({ error: 'Database not configured' });
@@ -41,7 +42,9 @@ export default async function handler(
   try {
     const { status, id } = req.query;
 
-    const { limit: limitNum, offset: offsetNum } = parsePagination(req, { limit: 50 });
+    const { limit: limitNum, offset: offsetNum } = parsePagination(req, {
+      limit: 50,
+    });
 
     const selectColumns = `
       id,
@@ -101,7 +104,8 @@ export default async function handler(
         .in('tournament_id', tournamentIds);
       if (teamCounts) {
         for (const row of teamCounts) {
-          teamCountMap[row.tournament_id] = (teamCountMap[row.tournament_id] || 0) + 1;
+          teamCountMap[row.tournament_id] =
+            (teamCountMap[row.tournament_id] || 0) + 1;
         }
       }
     }
@@ -111,7 +115,10 @@ export default async function handler(
       team_count: teamCountMap[t.id] || 0,
     }));
 
-    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=120');
+    res.setHeader(
+      'Cache-Control',
+      'public, s-maxage=300, stale-while-revalidate=120'
+    );
     return res.status(200).json({
       tournaments: enriched,
       total: typeof count === 'number' ? count : null,

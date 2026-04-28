@@ -699,7 +699,9 @@ function AdminDemandesPage({
                 <div className="px-4 py-3 bg-neutral-800/80 flex items-center gap-3">
                   <input
                     type="checkbox"
-                    checked={selected.size === demandes.length && demandes.length > 0}
+                    checked={
+                      selected.size === demandes.length && demandes.length > 0
+                    }
                     onChange={toggleSelectAll}
                     className="w-4 h-4 rounded border-neutral-600 bg-neutral-900"
                   />
@@ -726,161 +728,168 @@ function AdminDemandesPage({
                       href={`/admin/demandes/${d.id}`}
                       className="flex items-center gap-4 flex-1 min-w-0"
                     >
-                    {/* Icon / Avatar */}
-                    <div className="flex-shrink-0">
-                      {d.user?.avatar_url ? (
-                        <Image
-                          src={d.user.avatar_url}
-                          alt={d.user.display_name || 'User'}
-                          width={48}
-                          height={48}
-                          className="w-12 h-12 rounded-xl object-cover border border-neutral-700"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-xl bg-neutral-700/50 flex items-center justify-center border border-neutral-700">
-                          <svg
-                            className="w-6 h-6 text-neutral-500"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                            />
-                          </svg>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <h3 className="font-semibold text-white group-hover:text-blue-400 transition-colors truncate">
-                          {d.user?.display_name || d.user_id || 'Utilisateur inconnu'}
-                        </h3>
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(
-                            d.status
-                          )}`}
-                        >
-                          {statusLabel(d.status)}
-                        </span>
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${typeColor(
-                            d.type
-                          )}`}
-                        >
-                          {typeLabel(d.type)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3 text-sm text-neutral-400 flex-wrap">
-                        {d.type === 'scrim' && d.payload?.from_team_name && (
-                          <>
-                            <span className="flex items-center gap-1.5">
-                              <span className="text-cyan-300">
-                                {d.payload.from_team_name}
-                              </span>
-                              <span className="text-neutral-500">→</span>
-                              <span>
-                                {d.team?.name ||
-                                  d.payload.target_team_name ||
-                                  'Equipe cible'}
-                              </span>
-                            </span>
-                            {d.payload.preferred_date && (
-                              <>
-                                <span>•</span>
-                                <span className="text-cyan-300/80 text-xs">
-                                  {new Date(
-                                    d.payload.preferred_date
-                                  ).toLocaleDateString('fr-FR', {
-                                    day: 'numeric',
-                                    month: 'short',
-                                    year: 'numeric',
-                                  })}
-                                </span>
-                              </>
-                            )}
-                            <span>•</span>
-                          </>
-                        )}
-                        {d.team && d.type !== 'scrim' && (
-                          <>
-                            <span className="flex items-center gap-1">
-                              {d.team.logo_url && (
-                                <Image
-                                  src={d.team.logo_url}
-                                  alt={d.team.name}
-                                  width={16}
-                                  height={16}
-                                  className="w-4 h-4 rounded object-cover"
-                                />
-                              )}
-                              {d.team.name}
-                            </span>
-                            <span>•</span>
-                          </>
-                        )}
-                        {d.type === 'captain_request' && d.payload && !d.team && (
-                          <>
-                            <span className="text-purple-300">
-                              {d.payload.request_type === 'existing_team'
-                                ? d.payload.existing_team_name
-                                : d.payload.team_name}
-                              {d.payload.request_type === 'new_team' && ' (a creer)'}
-                            </span>
-                            <span>•</span>
-                          </>
-                        )}
-                        {d.tournament && (
-                          <>
-                            <span>{d.tournament.name}</span>
-                            <span>•</span>
-                          </>
-                        )}
-                        <span className="text-xs">{formatDateTime(d.created_at)}</span>
-                      </div>
-                      {d.message && (
-                        <p className="text-xs text-neutral-500 mt-1 truncate max-w-xl">
-                          {d.message}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Handler info */}
-                    {d.handled_by && (
-                      <div className="hidden sm:block text-xs text-neutral-500 text-right flex-shrink-0">
-                        <div>
-                          par{' '}
-                          <span className="text-neutral-300">
-                            {d.handled_by.display_name || d.handled_by.id}
-                          </span>
-                        </div>
-                        {d.handled_at && (
-                          <div className="text-neutral-600">
-                            {formatDateTime(d.handled_at)}
+                      {/* Icon / Avatar */}
+                      <div className="flex-shrink-0">
+                        {d.user?.avatar_url ? (
+                          <Image
+                            src={d.user.avatar_url}
+                            alt={d.user.display_name || 'User'}
+                            width={48}
+                            height={48}
+                            className="w-12 h-12 rounded-xl object-cover border border-neutral-700"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-xl bg-neutral-700/50 flex items-center justify-center border border-neutral-700">
+                            <svg
+                              className="w-6 h-6 text-neutral-500"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                              />
+                            </svg>
                           </div>
                         )}
                       </div>
-                    )}
 
-                    {/* Arrow */}
-                    <svg
-                      className="w-5 h-5 text-neutral-500 group-hover:text-white transition-colors flex-shrink-0"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 5l7 7-7 7"
-                      />
-                    </svg>
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <h3 className="font-semibold text-white group-hover:text-blue-400 transition-colors truncate">
+                            {d.user?.display_name ||
+                              d.user_id ||
+                              'Utilisateur inconnu'}
+                          </h3>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(
+                              d.status
+                            )}`}
+                          >
+                            {statusLabel(d.status)}
+                          </span>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-xs font-medium ${typeColor(
+                              d.type
+                            )}`}
+                          >
+                            {typeLabel(d.type)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 text-sm text-neutral-400 flex-wrap">
+                          {d.type === 'scrim' && d.payload?.from_team_name && (
+                            <>
+                              <span className="flex items-center gap-1.5">
+                                <span className="text-cyan-300">
+                                  {d.payload.from_team_name}
+                                </span>
+                                <span className="text-neutral-500">→</span>
+                                <span>
+                                  {d.team?.name ||
+                                    d.payload.target_team_name ||
+                                    'Equipe cible'}
+                                </span>
+                              </span>
+                              {d.payload.preferred_date && (
+                                <>
+                                  <span>•</span>
+                                  <span className="text-cyan-300/80 text-xs">
+                                    {new Date(
+                                      d.payload.preferred_date
+                                    ).toLocaleDateString('fr-FR', {
+                                      day: 'numeric',
+                                      month: 'short',
+                                      year: 'numeric',
+                                    })}
+                                  </span>
+                                </>
+                              )}
+                              <span>•</span>
+                            </>
+                          )}
+                          {d.team && d.type !== 'scrim' && (
+                            <>
+                              <span className="flex items-center gap-1">
+                                {d.team.logo_url && (
+                                  <Image
+                                    src={d.team.logo_url}
+                                    alt={d.team.name}
+                                    width={16}
+                                    height={16}
+                                    className="w-4 h-4 rounded object-cover"
+                                  />
+                                )}
+                                {d.team.name}
+                              </span>
+                              <span>•</span>
+                            </>
+                          )}
+                          {d.type === 'captain_request' &&
+                            d.payload &&
+                            !d.team && (
+                              <>
+                                <span className="text-purple-300">
+                                  {d.payload.request_type === 'existing_team'
+                                    ? d.payload.existing_team_name
+                                    : d.payload.team_name}
+                                  {d.payload.request_type === 'new_team' &&
+                                    ' (a creer)'}
+                                </span>
+                                <span>•</span>
+                              </>
+                            )}
+                          {d.tournament && (
+                            <>
+                              <span>{d.tournament.name}</span>
+                              <span>•</span>
+                            </>
+                          )}
+                          <span className="text-xs">
+                            {formatDateTime(d.created_at)}
+                          </span>
+                        </div>
+                        {d.message && (
+                          <p className="text-xs text-neutral-500 mt-1 truncate max-w-xl">
+                            {d.message}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Handler info */}
+                      {d.handled_by && (
+                        <div className="hidden sm:block text-xs text-neutral-500 text-right flex-shrink-0">
+                          <div>
+                            par{' '}
+                            <span className="text-neutral-300">
+                              {d.handled_by.display_name || d.handled_by.id}
+                            </span>
+                          </div>
+                          {d.handled_at && (
+                            <div className="text-neutral-600">
+                              {formatDateTime(d.handled_at)}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Arrow */}
+                      <svg
+                        className="w-5 h-5 text-neutral-500 group-hover:text-white transition-colors flex-shrink-0"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
                     </Link>
                   </div>
                 ))}
@@ -894,10 +903,7 @@ function AdminDemandesPage({
               type="button"
               disabled={offset === 0}
               onClick={() =>
-                setFilter(
-                  'offset',
-                  String(Math.max(0, offset - limit)) || null
-                )
+                setFilter('offset', String(Math.max(0, offset - limit)) || null)
               }
               className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >

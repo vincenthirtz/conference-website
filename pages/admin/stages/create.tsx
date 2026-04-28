@@ -115,7 +115,8 @@ function AdminStageCreatePage({ staff }: StaffProps) {
       setTournaments(json.tournaments || []);
     } catch (err: unknown) {
       setErrorMsg(
-        (err as Error)?.message ?? 'Erreur inattendue lors du chargement des tournois'
+        (err as Error)?.message ??
+          'Erreur inattendue lors du chargement des tournois'
       );
     } finally {
       setLoadingTournaments(false);
@@ -158,7 +159,9 @@ function AdminStageCreatePage({ staff }: StaffProps) {
 
     if (form.start_date && form.end_date) {
       if (new Date(form.start_date) >= new Date(form.end_date)) {
-        setDateError('La date de fin doit être postérieure à la date de début.');
+        setDateError(
+          'La date de fin doit être postérieure à la date de début.'
+        );
         setErrorMsg('La date de fin doit être postérieure à la date de début.');
         return;
       }
@@ -168,7 +171,9 @@ function AdminStageCreatePage({ staff }: StaffProps) {
     try {
       settings = parseSettings();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur dans le JSON de configuration.');
+      setErrorMsg(
+        (err as Error)?.message ?? 'Erreur dans le JSON de configuration.'
+      );
       return;
     }
 
@@ -214,7 +219,8 @@ function AdminStageCreatePage({ staff }: StaffProps) {
       }
     } catch (err: unknown) {
       setErrorMsg(
-        (err as Error)?.message ?? 'Erreur inconnue lors de la création de la phase'
+        (err as Error)?.message ??
+          'Erreur inconnue lors de la création de la phase'
       );
       setSubmitting(false);
     }

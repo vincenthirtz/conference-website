@@ -83,7 +83,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   };
 
   const enriched: EnrichedRow[] = finishedMatches.map((m: any) => {
-    const poll = Array.isArray(m.mvp) ? m.mvp[0] ?? null : m.mvp ?? null;
+    const poll = Array.isArray(m.mvp) ? (m.mvp[0] ?? null) : (m.mvp ?? null);
     return {
       matchId: m.id,
       roundName: m.round_name ?? null,
@@ -129,7 +129,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   }
 
   const perMatch: PerMatchEntry[] = enriched.map((e) => {
-    const teamId = e.memberId ? memberToTeam.get(e.memberId) ?? null : null;
+    const teamId = e.memberId ? (memberToTeam.get(e.memberId) ?? null) : null;
     return {
       matchId: e.matchId,
       roundName: e.roundName,
@@ -137,7 +137,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       memberId: e.memberId,
       battleTag: e.battleTag,
       teamId,
-      teamName: teamId ? teamNameMap.get(teamId) ?? null : null,
+      teamName: teamId ? (teamNameMap.get(teamId) ?? null) : null,
     };
   });
 
@@ -179,9 +179,11 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
 };
 
 function rankColor(rank: number): string {
-  if (rank === 1) return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40';
+  if (rank === 1)
+    return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40';
   if (rank === 2) return 'bg-gray-400/20 text-gray-200 border-gray-400/40';
-  if (rank === 3) return 'bg-orange-700/20 text-orange-300 border-orange-700/40';
+  if (rank === 3)
+    return 'bg-orange-700/20 text-orange-300 border-orange-700/40';
   return 'bg-white/5 text-gray-300 border-white/10';
 }
 
@@ -232,15 +234,15 @@ export default function TournamentMvpPage({
                 >
                   MVP du tournoi
                 </Heading>
-                <p className="text-sm text-gray-300">
-                  {tournament.name}
-                </p>
+                <p className="text-sm text-gray-300">{tournament.name}</p>
                 <Paragraph
                   typeStyle="body-sm"
                   textColor="text-gray-200"
                   className="max-w-xl mt-2"
                 >
-                  Classement des joueuses élues MVP par sondage Discord après chaque match. {totalMvpAwards} MVP attribué(s) sur {totalFinishedMatches} match(s) terminé(s).
+                  Classement des joueuses élues MVP par sondage Discord après
+                  chaque match. {totalMvpAwards} MVP attribué(s) sur{' '}
+                  {totalFinishedMatches} match(s) terminé(s).
                 </Paragraph>
               </div>
 
@@ -276,7 +278,9 @@ export default function TournamentMvpPage({
           {leaderboard.length === 0 ? (
             <section className="bg-black/60 border border-white/5 rounded-2xl p-8 text-center">
               <Paragraph typeStyle="body-sm" textColor="text-gray-300">
-                Aucun MVP n&apos;a encore été désigné sur ce tournoi. Les MVP sont importés manuellement par le staff après le sondage Discord.
+                Aucun MVP n&apos;a encore été désigné sur ce tournoi. Les MVP
+                sont importés manuellement par le staff après le sondage
+                Discord.
               </Paragraph>
             </section>
           ) : (
@@ -319,11 +323,7 @@ export default function TournamentMvpPage({
 
               {matchesWithMvp.length > 0 && (
                 <section>
-                  <Heading
-                    level="h2"
-                    typeStyle="heading-md"
-                    className="mb-3"
-                  >
+                  <Heading level="h2" typeStyle="heading-md" className="mb-3">
                     MVP par match
                   </Heading>
                   <div className="bg-black/60 border border-white/5 rounded-2xl overflow-hidden">

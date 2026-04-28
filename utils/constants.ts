@@ -2,7 +2,12 @@
 // Centralized enums and constants used across API routes and components.
 // Import from here instead of redefining locally.
 
-import type { MatchStatus, BracketSide, StageType, TournamentStatus } from '@/types/admin';
+import type {
+  MatchStatus,
+  BracketSide,
+  StageType,
+  TournamentStatus,
+} from '@/types/admin';
 
 export const VALID_TOURNAMENT_STATUSES: TournamentStatus[] = [
   'draft',
@@ -19,12 +24,7 @@ export const VALID_MATCH_STATUSES: MatchStatus[] = [
   'cancelled',
 ];
 
-export const VALID_BRACKET_SIDES: BracketSide[] = [
-  'wb',
-  'lb',
-  'final',
-  'none',
-];
+export const VALID_BRACKET_SIDES: BracketSide[] = ['wb', 'lb', 'final', 'none'];
 
 export const VALID_STAGE_TYPES: StageType[] = [
   'group',

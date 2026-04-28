@@ -7,7 +7,12 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
-import { parsePagination, sanitizeSearch, escapePostgrestValue, isValidUUID } from '@/utils/apiHelpers';
+import {
+  parsePagination,
+  sanitizeSearch,
+  escapePostgrestValue,
+  isValidUUID,
+} from '@/utils/apiHelpers';
 
 export type DemandeType =
   | 'join'
@@ -133,7 +138,9 @@ async function handleGet(
     includeTotal,
   } = req.query;
 
-  const { limit: limitNum, offset: offsetNum } = parsePagination(req, { limit: 50 });
+  const { limit: limitNum, offset: offsetNum } = parsePagination(req, {
+    limit: 50,
+  });
   const search = sanitizeSearch(req.query.search);
 
   const withUser = includeUser === '1' || includeUser === 'true';
@@ -260,18 +267,25 @@ async function handleGet(
 
     const userMap = new Map<
       string,
-      { id: string; username: string | null; battle_tag: string | null; discord: string | null }
+      {
+        id: string;
+        username: string | null;
+        battle_tag: string | null;
+        discord: string | null;
+      }
     >();
 
     await Promise.all(
       uniqueUserIds.map(async (uid) => {
         try {
-          const { data: userData } = await supabaseAdmin!.auth.admin.getUserById(uid);
+          const { data: userData } =
+            await supabaseAdmin!.auth.admin.getUserById(uid);
           if (userData?.user) {
             const meta = userData.user.user_metadata ?? {};
             userMap.set(uid, {
               id: uid,
-              username: (meta.display_name as string) || userData.user.email || null,
+              username:
+                (meta.display_name as string) || userData.user.email || null,
               battle_tag: (meta.battle_tag as string) || null,
               discord: (meta.discord as string) || null,
             });
@@ -350,7 +364,12 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: any) {
     }
   }
 
-  const VALID_STATUSES: DemandeStatus[] = ['pending', 'approved', 'rejected', 'cancelled'];
+  const VALID_STATUSES: DemandeStatus[] = [
+    'pending',
+    'approved',
+    'rejected',
+    'cancelled',
+  ];
   if (!newStatus || !VALID_STATUSES.includes(newStatus)) {
     return res.status(400).json({
       error: `Invalid newStatus. Allowed values: ${VALID_STATUSES.join(', ')}`,
@@ -434,7 +453,8 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: any) {
             // Auto news: team approved for tournament
             try {
               const teamName = (d.payload as any)?.team_name || 'Équipe';
-              const tournamentName = (d.payload as any)?.tournament_name || 'tournoi';
+              const tournamentName =
+                (d.payload as any)?.tournament_name || 'tournoi';
               const { data: teamData } = await supabaseAdmin
                 .from('teams')
                 .select('logo_url')
@@ -544,7 +564,10 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: any) {
             console.error('auto-add join member error:', memberErr);
           } else {
             try {
-              const playerName = battleTag?.split('#')[0] || (d.payload as any)?.user_display_name || 'Joueur';
+              const playerName =
+                battleTag?.split('#')[0] ||
+                (d.payload as any)?.user_display_name ||
+                'Joueur';
               const teamName = (d.payload as any)?.team_name || 'Équipe';
               const { data: teamData } = await supabaseAdmin
                 .from('teams')

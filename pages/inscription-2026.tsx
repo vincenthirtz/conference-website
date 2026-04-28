@@ -73,7 +73,11 @@ const steps: Step[] = [
     title: 'Rejoins le Discord',
     description:
       'Toutes les annonces, plannings et confirmations passent par le Discord officiel. La présence de la capitaine y est obligatoire.',
-    cta: { label: 'Rejoindre le Discord', href: DISCORD_INVITE, external: true },
+    cta: {
+      label: 'Rejoindre le Discord',
+      href: DISCORD_INVITE,
+      external: true,
+    },
   },
 ];
 

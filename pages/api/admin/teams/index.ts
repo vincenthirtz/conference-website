@@ -47,7 +47,9 @@ async function handleGet(
 ) {
   const { isActive, includeTotal, tournamentId } = req.query;
 
-  const { limit: limitNum, offset: offsetNum } = parsePagination(req, { limit: 50 });
+  const { limit: limitNum, offset: offsetNum } = parsePagination(req, {
+    limit: 50,
+  });
   const search = sanitizeSearch(req.query.search);
 
   const activeFilter =
@@ -56,7 +58,8 @@ async function handleGet(
   let query = supabaseAdmin
     .from('teams')
     .select('*', {
-      count: includeTotal === '1' || includeTotal === 'true' ? 'exact' : undefined,
+      count:
+        includeTotal === '1' || includeTotal === 'true' ? 'exact' : undefined,
     })
     .order('created_at', { ascending: false })
     .range(offsetNum, offsetNum + limitNum - 1);

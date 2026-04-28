@@ -132,19 +132,35 @@ async function handlePut(
   // --- Validation des champs ---
 
   // Nom non vide
-  if ('name' in body && (typeof body.name !== 'string' || body.name.trim().length === 0)) {
+  if (
+    'name' in body &&
+    (typeof body.name !== 'string' || body.name.trim().length === 0)
+  ) {
     return res.status(400).json({ error: 'Stage name cannot be empty' });
   }
 
   // order_index >= 0
   if ('order_index' in body && body.order_index !== null) {
-    if (typeof body.order_index !== 'number' || !Number.isInteger(body.order_index) || body.order_index < 0) {
-      return res.status(400).json({ error: 'order_index must be an integer >= 0' });
+    if (
+      typeof body.order_index !== 'number' ||
+      !Number.isInteger(body.order_index) ||
+      body.order_index < 0
+    ) {
+      return res
+        .status(400)
+        .json({ error: 'order_index must be an integer >= 0' });
     }
   }
 
   // stage_type valide
-  const VALID_STAGE_TYPES: StageType[] = ['group', 'bracket', 'swiss', 'round_robin', 'showmatch', 'other'];
+  const VALID_STAGE_TYPES: StageType[] = [
+    'group',
+    'bracket',
+    'swiss',
+    'round_robin',
+    'showmatch',
+    'other',
+  ];
   if ('stage_type' in body && body.stage_type !== null) {
     if (!VALID_STAGE_TYPES.includes(body.stage_type)) {
       return res.status(400).json({
@@ -154,17 +170,31 @@ async function handlePut(
   }
 
   // Validation des dates ISO
-  if ('start_date' in body && body.start_date !== null && isNaN(Date.parse(body.start_date))) {
+  if (
+    'start_date' in body &&
+    body.start_date !== null &&
+    isNaN(Date.parse(body.start_date))
+  ) {
     return res.status(400).json({ error: 'start_date is not a valid date' });
   }
-  if ('end_date' in body && body.end_date !== null && isNaN(Date.parse(body.end_date))) {
+  if (
+    'end_date' in body &&
+    body.end_date !== null &&
+    isNaN(Date.parse(body.end_date))
+  ) {
     return res.status(400).json({ error: 'end_date is not a valid date' });
   }
 
   // Cohérence des dates : start_date < end_date
   if ('start_date' in body && 'end_date' in body) {
-    if (body.start_date && body.end_date && new Date(body.start_date) >= new Date(body.end_date)) {
-      return res.status(400).json({ error: 'start_date must be before end_date' });
+    if (
+      body.start_date &&
+      body.end_date &&
+      new Date(body.start_date) >= new Date(body.end_date)
+    ) {
+      return res
+        .status(400)
+        .json({ error: 'start_date must be before end_date' });
     }
   }
 
@@ -174,7 +204,10 @@ async function handlePut(
     const effectiveType = body.stage_type ?? null; // résolu plus bas si null
     // Si stage_type pas dans le body, on le résoudra après fetch du stage
     if (effectiveType) {
-      const settingsResult = validateStageSettings(effectiveType, body.settings);
+      const settingsResult = validateStageSettings(
+        effectiveType,
+        body.settings
+      );
       if (!settingsResult.valid) {
         return res.status(400).json({ error: settingsResult.error });
       }
@@ -204,10 +237,17 @@ async function handlePut(
   }
 
   // Vérifier la cohérence des dates avec les valeurs existantes
-  const effectiveStart = 'start_date' in body ? body.start_date : before.start_date;
+  const effectiveStart =
+    'start_date' in body ? body.start_date : before.start_date;
   const effectiveEnd = 'end_date' in body ? body.end_date : before.end_date;
-  if (effectiveStart && effectiveEnd && new Date(effectiveStart) >= new Date(effectiveEnd)) {
-    return res.status(400).json({ error: 'start_date must be before end_date' });
+  if (
+    effectiveStart &&
+    effectiveEnd &&
+    new Date(effectiveStart) >= new Date(effectiveEnd)
+  ) {
+    return res
+      .status(400)
+      .json({ error: 'start_date must be before end_date' });
   }
 
   const { data, error } = await supabaseAdmin

@@ -3,7 +3,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
-import { parsePagination, sanitizeSearch, escapePostgrestValue } from '@/utils/apiHelpers';
+import {
+  parsePagination,
+  sanitizeSearch,
+  escapePostgrestValue,
+} from '@/utils/apiHelpers';
 
 type CommentRow = {
   id: string;
@@ -78,9 +82,7 @@ async function listComments(
 
   if (error) {
     console.error('admin comments GET error:', error);
-    return res
-      .status(500)
-      .json({ error: 'Failed to fetch comments' });
+    return res.status(500).json({ error: 'Failed to fetch comments' });
   }
 
   return res.status(200).json({
@@ -125,9 +127,7 @@ async function updateComment(
 
   if (error) {
     console.error('admin comments PATCH error:', error);
-    return res
-      .status(500)
-      .json({ error: 'Failed to update comment' });
+    return res.status(500).json({ error: 'Failed to update comment' });
   }
 
   return res.status(200).json({ comment: data as unknown as CommentRow });
@@ -149,9 +149,7 @@ async function deleteComment(
 
   if (error) {
     console.error('admin comments DELETE error:', error);
-    return res
-      .status(500)
-      .json({ error: 'Failed to delete comment' });
+    return res.status(500).json({ error: 'Failed to delete comment' });
   }
 
   return res.status(200).json({ deleted: true });

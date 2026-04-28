@@ -19,7 +19,10 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (applyRateLimit(req, res, { max: 30, windowMs: 60_000 }, 'demandes-transfer')) return;
+  if (
+    applyRateLimit(req, res, { max: 30, windowMs: 60_000 }, 'demandes-transfer')
+  )
+    return;
   if (!supabaseAdmin) {
     return res
       .status(500)
@@ -57,9 +60,7 @@ export default async function handler(
 
     if (demandesErr) {
       console.error('[demandes/transfer] GET error:', demandesErr);
-      return res
-        .status(500)
-        .json({ error: 'Failed to load requests.' });
+      return res.status(500).json({ error: 'Failed to load requests.' });
     }
 
     return res.status(200).json({ demandes: demandes || [] });
@@ -77,7 +78,9 @@ export default async function handler(
     const teamId = body.teamId.trim();
     const rawMessage = body.message?.trim() || null;
     if (rawMessage && rawMessage.length > 1000) {
-      return res.status(400).json({ error: 'Message trop long (max 1000 caracteres).' });
+      return res
+        .status(400)
+        .json({ error: 'Message trop long (max 1000 caracteres).' });
     }
     const message = rawMessage?.slice(0, 1000) || null;
 
@@ -98,7 +101,9 @@ export default async function handler(
       }
 
       if (!captainMembership) {
-        return res.status(400).json({ error: "Tu n'es membre d'aucune equipe." });
+        return res
+          .status(400)
+          .json({ error: "Tu n'es membre d'aucune equipe." });
       }
 
       const { data: captTeam } = await supabaseAdmin
@@ -109,17 +114,18 @@ export default async function handler(
 
       if (captTeam?.captain_id !== userId) {
         return res.status(403).json({
-          error: 'Seul le capitaine peut proposer le transfert d\'un joueur.',
+          error: "Seul le capitaine peut proposer le transfert d'un joueur.",
         });
       }
 
       // Verifier que le joueur cible est dans l'equipe du capitaine
-      const { data: playerMembership, error: playerMemErr } = await supabaseAdmin
-        .from('team_members')
-        .select('id, team_id, role, battle_tag')
-        .eq('user_id', targetPlayerId)
-        .eq('team_id', captTeam.id)
-        .maybeSingle();
+      const { data: playerMembership, error: playerMemErr } =
+        await supabaseAdmin
+          .from('team_members')
+          .select('id, team_id, role, battle_tag')
+          .eq('user_id', targetPlayerId)
+          .eq('team_id', captTeam.id)
+          .maybeSingle();
 
       if (playerMemErr) {
         console.error('[demandes/transfer] player check error:', playerMemErr);
@@ -159,7 +165,9 @@ export default async function handler(
       }
 
       if (!targetTeam.is_joinable) {
-        return res.status(400).json({ error: "Cette equipe n'accepte pas les demandes pour le moment." });
+        return res.status(400).json({
+          error: "Cette equipe n'accepte pas les demandes pour le moment.",
+        });
       }
 
       // Verifier pas de demande pending existante pour ce joueur
@@ -184,14 +192,17 @@ export default async function handler(
       }
 
       // Recuperer les infos du joueur cible
-      const { data: playerData } = await supabaseAdmin.auth.admin.getUserById(targetPlayerId);
+      const { data: playerData } =
+        await supabaseAdmin.auth.admin.getUserById(targetPlayerId);
       const playerUser = playerData?.user;
 
       const rawRole = body.desiredRole?.trim().toLowerCase();
       const desiredRole =
-        rawRole === 'substitute' ? 'substitute' :
-        rawRole === 'coach' ? 'coach' :
-        'player';
+        rawRole === 'substitute'
+          ? 'substitute'
+          : rawRole === 'coach'
+            ? 'coach'
+            : 'player';
 
       const payload: Record<string, unknown> = {
         user_email: playerUser?.email || null,
@@ -199,7 +210,10 @@ export default async function handler(
           playerUser?.user_metadata?.display_name ||
           playerUser?.user_metadata?.full_name ||
           null,
-        user_battle_tag: playerMembership.battle_tag || playerUser?.user_metadata?.battle_tag || null,
+        user_battle_tag:
+          playerMembership.battle_tag ||
+          playerUser?.user_metadata?.battle_tag ||
+          null,
         team_name: targetTeam.name,
         desired_role: desiredRole,
         from_team_id: captTeam.id,
@@ -260,7 +274,8 @@ export default async function handler(
 
     if (!currentMembership) {
       return res.status(400).json({
-        error: "Tu n'es membre d'aucune equipe. Utilise la demande de join a la place.",
+        error:
+          "Tu n'es membre d'aucune equipe. Utilise la demande de join a la place.",
       });
     }
 
@@ -280,7 +295,8 @@ export default async function handler(
 
     if (currentTeam?.captain_id === userId) {
       return res.status(403).json({
-        error: 'Le capitaine ne peut pas demander un transfert. Transfere le role de capitaine d\'abord.',
+        error:
+          "Le capitaine ne peut pas demander un transfert. Transfere le role de capitaine d'abord.",
       });
     }
 
@@ -297,7 +313,9 @@ export default async function handler(
     }
 
     if (!targetTeam.is_joinable) {
-      return res.status(400).json({ error: "Cette equipe n'accepte pas les demandes pour le moment." });
+      return res.status(400).json({
+        error: "Cette equipe n'accepte pas les demandes pour le moment.",
+      });
     }
 
     // Verifier s'il existe deja une demande pending (join ou transfer)
@@ -316,7 +334,7 @@ export default async function handler(
 
     if (existingDemande) {
       return res.status(400).json({
-        error: 'Tu as deja une demande en attente. Annule-la d\'abord.',
+        error: "Tu as deja une demande en attente. Annule-la d'abord.",
         existingDemandeId: existingDemande.id,
       });
     }
@@ -324,9 +342,11 @@ export default async function handler(
     // Valider le role souhaite
     const rawRole = body.desiredRole?.trim().toLowerCase();
     const desiredRole =
-      rawRole === 'substitute' ? 'substitute' :
-      rawRole === 'coach' ? 'coach' :
-      'player';
+      rawRole === 'substitute'
+        ? 'substitute'
+        : rawRole === 'coach'
+          ? 'coach'
+          : 'player';
 
     // Construire le payload
     const payload: Record<string, unknown> = {
@@ -359,9 +379,7 @@ export default async function handler(
 
     if (insertErr) {
       console.error('[demandes/transfer] insert error:', insertErr);
-      return res
-        .status(500)
-        .json({ error: 'Failed to create request.' });
+      return res.status(500).json({ error: 'Failed to create request.' });
     }
 
     return res.status(201).json({

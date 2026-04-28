@@ -39,9 +39,12 @@ export default function AdminNewsCreate({ staff }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [showDraftBanner, setShowDraftBanner] = useState(false);
 
-  const { draftRestored, lastSaved, clearDraft, restoreDraft } = useAutoSave(form, {
-    key: 'news_new',
-  });
+  const { draftRestored, lastSaved, clearDraft, restoreDraft } = useAutoSave(
+    form,
+    {
+      key: 'news_new',
+    }
+  );
 
   useEffect(() => {
     if (draftRestored) setShowDraftBanner(true);
@@ -166,7 +169,9 @@ export default function AdminNewsCreate({ staff }: Props) {
               <form onSubmit={onSubmit} className="space-y-6">
                 {/* Informations generales */}
                 <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4">
-                  <h2 className="text-lg font-semibold">Informations generales</h2>
+                  <h2 className="text-lg font-semibold">
+                    Informations generales
+                  </h2>
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
@@ -191,7 +196,9 @@ export default function AdminNewsCreate({ staff }: Props) {
                         type="text"
                         className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
                         value={form.slug}
-                        onChange={(e) => updateField('slug', slugifyValue(e.target.value))}
+                        onChange={(e) =>
+                          updateField('slug', slugifyValue(e.target.value))
+                        }
                         placeholder="sera-genere-si-vide"
                       />
                       <p className="text-xs text-neutral-500 mt-1">
@@ -207,7 +214,9 @@ export default function AdminNewsCreate({ staff }: Props) {
                         type="text"
                         className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         value={form.tag}
-                        onChange={(e) => updateField('tag', slugifyValue(e.target.value))}
+                        onChange={(e) =>
+                          updateField('tag', slugifyValue(e.target.value))
+                        }
                         placeholder="general, tournoi, announcement..."
                         required
                       />
@@ -246,7 +255,8 @@ export default function AdminNewsCreate({ staff }: Props) {
 
                   <div>
                     <label className="block text-sm text-neutral-300 mb-1">
-                      Contenu (markdown ou texte) <span className="text-red-400">*</span>
+                      Contenu (markdown ou texte){' '}
+                      <span className="text-red-400">*</span>
                     </label>
                     <textarea
                       rows={12}
@@ -286,7 +296,9 @@ export default function AdminNewsCreate({ staff }: Props) {
                         type="datetime-local"
                         className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         value={form.publishedAt}
-                        onChange={(e) => updateField('publishedAt', e.target.value)}
+                        onChange={(e) =>
+                          updateField('publishedAt', e.target.value)
+                        }
                       />
                       <p className="text-xs text-neutral-500 mt-1">
                         Laisse vide pour utiliser la date actuelle.
@@ -378,17 +390,21 @@ export default function AdminNewsCreate({ staff }: Props) {
                         {form.title || 'Titre de la news'}
                       </p>
                       {form.slug && (
-                        <p className="text-xs text-neutral-400 font-mono">/{form.slug}</p>
+                        <p className="text-xs text-neutral-400 font-mono">
+                          /{form.slug}
+                        </p>
                       )}
                     </div>
                   </div>
 
                   <div className="flex flex-wrap gap-2">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      form.status === 'published'
-                        ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/30'
-                        : 'bg-neutral-600 text-neutral-300'
-                    }`}>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                        form.status === 'published'
+                          ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/30'
+                          : 'bg-neutral-600 text-neutral-300'
+                      }`}
+                    >
                       {form.status === 'published' ? 'Publie' : 'Brouillon'}
                     </span>
                     {form.tag && (

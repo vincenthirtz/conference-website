@@ -9,7 +9,9 @@ import { applyRateLimit } from '@/utils/rateLimit';
 
 async function authenticateCaptain(req: NextApiRequest, res: NextApiResponse) {
   if (!supabaseAdmin) {
-    res.status(500).json({ error: 'Database not configured (missing service role).' });
+    res
+      .status(500)
+      .json({ error: 'Database not configured (missing service role).' });
     return null;
   }
 
@@ -57,7 +59,9 @@ async function authenticateCaptain(req: NextApiRequest, res: NextApiResponse) {
     .maybeSingle();
 
   if (myTeam?.captain_id !== user.id) {
-    res.status(403).json({ error: 'Seul le capitaine peut utiliser la messagerie.' });
+    res
+      .status(403)
+      .json({ error: 'Seul le capitaine peut utiliser la messagerie.' });
     return null;
   }
 
@@ -68,7 +72,15 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (applyRateLimit(req, res, { max: 40, windowMs: 60_000 }, 'player-messages-conv')) return;
+  if (
+    applyRateLimit(
+      req,
+      res,
+      { max: 40, windowMs: 60_000 },
+      'player-messages-conv'
+    )
+  )
+    return;
 
   const conversationId = req.query.conversationId as string;
   if (!conversationId || !conversationId.includes('_')) {
@@ -85,7 +97,9 @@ export default async function handler(
 
     // Verify captain is part of this conversation
     if (team.id !== teamIdA && team.id !== teamIdB) {
-      return res.status(403).json({ error: "Tu n'as pas acces a cette conversation." });
+      return res
+        .status(403)
+        .json({ error: "Tu n'as pas acces a cette conversation." });
     }
 
     const otherTeamId = team.id === teamIdA ? teamIdB : teamIdA;
@@ -121,7 +135,9 @@ export default async function handler(
         content: m.comment,
         senderId: m.user_id,
         senderTeamId: (m.payload as Record<string, unknown>)?.from_team_id,
-        senderName: (m.payload as Record<string, unknown>)?.sender_display_name || 'Inconnu',
+        senderName:
+          (m.payload as Record<string, unknown>)?.sender_display_name ||
+          'Inconnu',
         fromTeamName: (m.payload as Record<string, unknown>)?.from_team_name,
         isRead: m.status !== 'pending',
         createdAt: m.created_at,
@@ -136,7 +152,9 @@ export default async function handler(
     const { team } = auth;
 
     if (team.id !== teamIdA && team.id !== teamIdB) {
-      return res.status(403).json({ error: "Tu n'as pas acces a cette conversation." });
+      return res
+        .status(403)
+        .json({ error: "Tu n'as pas acces a cette conversation." });
     }
 
     // Mark incoming messages as read (messages where team_id = my team, status = pending)

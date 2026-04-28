@@ -54,7 +54,8 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<LiveResponse>
 ) {
-  if (applyRateLimit(req, res, { max: 30, windowMs: 60_000 }, 'twitch-live')) return;
+  if (applyRateLimit(req, res, { max: 30, windowMs: 60_000 }, 'twitch-live'))
+    return;
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -102,7 +103,9 @@ export default async function handler(
     const data = await resp.json();
     const liveMap: Record<string, LiveStatus> = {};
     data.data?.forEach((stream: any) => {
-      const userLogin = (stream.user_login as string | undefined)?.toLowerCase();
+      const userLogin = (
+        stream.user_login as string | undefined
+      )?.toLowerCase();
       if (userLogin) {
         liveMap[userLogin] = {
           live: true,
@@ -119,12 +122,15 @@ export default async function handler(
       }
     });
 
-    res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=30');
+    res.setHeader(
+      'Cache-Control',
+      'public, s-maxage=60, stale-while-revalidate=30'
+    );
     return res.status(200).json({ statuses: liveMap });
   } catch (err: unknown) {
     console.error('[/api/twitch/live] error:', err);
-    return res
-      .status(500)
-      .json({ error: (err as Error)?.message || 'Failed to check live status' });
+    return res.status(500).json({
+      error: (err as Error)?.message || 'Failed to check live status',
+    });
   }
 }

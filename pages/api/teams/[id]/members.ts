@@ -15,7 +15,15 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (applyRateLimit(req, res, { max: 10, windowMs: 60_000 }, 'teams-remove-member')) return;
+  if (
+    applyRateLimit(
+      req,
+      res,
+      { max: 10, windowMs: 60_000 },
+      'teams-remove-member'
+    )
+  )
+    return;
   if (!supabaseAdmin) {
     return res.status(503).json({ error: 'Service unavailable.' });
   }
@@ -76,13 +84,16 @@ export default async function handler(
     .maybeSingle();
 
   if (fetchErr || !member) {
-    return res.status(404).json({ error: 'Membre introuvable dans cette équipe.' });
+    return res
+      .status(404)
+      .json({ error: 'Membre introuvable dans cette équipe.' });
   }
 
   // Empêcher le capitaine de se retirer lui-même via cet endpoint
   if (member.user_id === userId) {
     return res.status(400).json({
-      error: 'Le capitaine ne peut pas se retirer. Transfère le capitanat d\'abord.',
+      error:
+        "Le capitaine ne peut pas se retirer. Transfère le capitanat d'abord.",
     });
   }
 
@@ -94,11 +105,13 @@ export default async function handler(
 
   if (deleteErr) {
     console.error('[teams/[teamId]/members] delete error:', deleteErr);
-    return res.status(500).json({ error: 'Échec de la suppression du membre.' });
+    return res
+      .status(500)
+      .json({ error: 'Échec de la suppression du membre.' });
   }
 
   return res.status(200).json({
     success: true,
-    info: 'Membre retiré de l\'équipe.',
+    info: "Membre retiré de l'équipe.",
   });
 }

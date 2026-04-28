@@ -11,13 +11,9 @@ type Comment = {
   created_at: string;
 };
 
-type ListResponse =
-  | { items: Comment[] }
-  | { error: string };
+type ListResponse = { items: Comment[] } | { error: string };
 
-type CreateResponse =
-  | { comment: Comment }
-  | { error: string };
+type CreateResponse = { comment: Comment } | { error: string };
 
 export default async function handler(
   req: NextApiRequest,
@@ -60,12 +56,13 @@ async function listComments(
 
   if (error) {
     console.error('[/api/news/comments] list error:', error);
-    return res
-      .status(500)
-      .json({ error: 'Failed to fetch comments' });
+    return res.status(500).json({ error: 'Failed to fetch comments' });
   }
 
-  res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=30');
+  res.setHeader(
+    'Cache-Control',
+    'public, s-maxage=60, stale-while-revalidate=30'
+  );
   return res.status(200).json({ items: data || [] });
 }
 
@@ -75,15 +72,17 @@ async function createComment(
 ) {
   const client = supabaseAdmin || getServerClient(req, res);
   if (!client) {
-    return res
-      .status(500)
-      .json({ error: 'Service unavailable.' });
+    return res.status(500).json({ error: 'Service unavailable.' });
   }
 
   // Rate limiting: 10 comments per 10 minutes
-  if (applyRateLimit(req, res, { max: 10, windowMs: 10 * 60 * 1000 }, 'comments')) return;
+  if (
+    applyRateLimit(req, res, { max: 10, windowMs: 10 * 60 * 1000 }, 'comments')
+  )
+    return;
 
-  const { newsId, content, authorName, honeypot, captchaToken, captchaAnswer } = req.body || {};
+  const { newsId, content, authorName, honeypot, captchaToken, captchaAnswer } =
+    req.body || {};
   const trimmedContent = (content || '').toString().trim();
   const trimmedNewsId = (newsId || '').toString().trim();
   const trimmedAuthor = authorName ? authorName.toString().trim() : null;
@@ -99,7 +98,9 @@ async function createComment(
     (captchaAnswer || '').toString()
   );
   if (!captchaResult.valid) {
-    return res.status(400).json({ error: captchaResult.error || 'Invalid captcha' });
+    return res
+      .status(400)
+      .json({ error: captchaResult.error || 'Invalid captcha' });
   }
 
   if (!trimmedNewsId) {
@@ -112,11 +113,15 @@ async function createComment(
   }
 
   if (trimmedContent.length > 2000) {
-    return res.status(400).json({ error: 'content must be at most 2000 characters' });
+    return res
+      .status(400)
+      .json({ error: 'content must be at most 2000 characters' });
   }
 
   if (trimmedAuthor && trimmedAuthor.length > 50) {
-    return res.status(400).json({ error: 'author name must be at most 50 characters' });
+    return res
+      .status(400)
+      .json({ error: 'author name must be at most 50 characters' });
   }
 
   const { data, error } = await client
@@ -131,9 +136,7 @@ async function createComment(
 
   if (error || !data) {
     console.error('[/api/news/comments] create error:', error);
-    return res
-      .status(500)
-      .json({ error: 'Failed to create comment' });
+    return res.status(500).json({ error: 'Failed to create comment' });
   }
 
   return res.status(201).json({ comment: data });

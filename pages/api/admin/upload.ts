@@ -52,7 +52,10 @@ function validateMagicBytes(buffer: Buffer, mimeType: string): boolean {
   if (!matchesHeader) return false;
   // For WebP, also verify bytes 8-11 contain "WEBP"
   if (mimeType === 'image/webp') {
-    return buffer.length >= 12 && WEBP_MARKER.every((byte, i) => buffer[8 + i] === byte);
+    return (
+      buffer.length >= 12 &&
+      WEBP_MARKER.every((byte, i) => buffer[8 + i] === byte)
+    );
   }
   return true;
 }
@@ -65,7 +68,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Service role key manquante côté serveur.' });
+    return res
+      .status(500)
+      .json({ error: 'Service role key manquante côté serveur.' });
   }
 
   const { data, mimeType, filename } = req.body;
@@ -95,7 +100,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const maxBytes = MAX_BYTES_BY_TYPE[mimeType];
   if (buffer.length > maxBytes) {
     const maxMo = Math.round(maxBytes / (1024 * 1024));
-    return res.status(400).json({ error: `Fichier trop lourd (max ${maxMo} Mo)` });
+    return res
+      .status(400)
+      .json({ error: `Fichier trop lourd (max ${maxMo} Mo)` });
   }
 
   // Vérifier les magic bytes (le contenu correspond bien au type MIME déclaré)

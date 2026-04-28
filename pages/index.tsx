@@ -2,8 +2,12 @@
 import type { GetStaticProps } from 'next';
 import Header from '@/components/Header/header';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
-import HomeNewsSection, { HomeNewsItem } from '@/components/News/HomeNewsSection';
-import AnnouncementsTicker, { Announcement } from '@/components/Ads/AnnouncementsTicker';
+import HomeNewsSection, {
+  HomeNewsItem,
+} from '@/components/News/HomeNewsSection';
+import AnnouncementsTicker, {
+  Announcement,
+} from '@/components/Ads/AnnouncementsTicker';
 import PressSection from '@/components/Press/PressSection';
 import { supabaseAdmin } from '@/utils/supabase';
 
@@ -42,9 +46,7 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
         .limit(30),
       supabaseAdmin
         .from('announcements')
-        .select(
-          'id, title, message, cta_label, cta_url, priority, created_at'
-        )
+        .select('id, title, message, cta_label, cta_url, priority, created_at')
         .eq('is_active', true)
         .order('priority', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false })

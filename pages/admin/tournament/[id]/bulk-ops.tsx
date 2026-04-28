@@ -38,9 +38,16 @@ function BulkOpsPage(_: StaffProps) {
   const [reassignSourceStageId, setReassignSourceStageId] = useState('');
   const [reassignTargetStageId, setReassignTargetStageId] = useState('');
   const [reassignMatches, setReassignMatches] = useState<
-    { id: string; round_name: string | null; round_number: number | null; status: string }[]
+    {
+      id: string;
+      round_name: string | null;
+      round_number: number | null;
+      status: string;
+    }[]
   >([]);
-  const [reassignSelected, setReassignSelected] = useState<Set<string>>(new Set());
+  const [reassignSelected, setReassignSelected] = useState<Set<string>>(
+    new Set()
+  );
   const [reassignBusy, setReassignBusy] = useState(false);
 
   const loadStages = useCallback(async () => {
@@ -48,7 +55,9 @@ function BulkOpsPage(_: StaffProps) {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const res = await fetch(`/api/admin/tournament/${tournamentId}/matches?limit=1000`);
+      const res = await fetch(
+        `/api/admin/tournament/${tournamentId}/matches?limit=1000`
+      );
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         throw new Error(json.error || 'Erreur chargement');
@@ -73,7 +82,8 @@ function BulkOpsPage(_: StaffProps) {
       }
       setRoundOptions(
         Array.from(buckets.values()).sort((a, b) => {
-          if (a.stageId !== b.stageId) return a.stageId.localeCompare(b.stageId);
+          if (a.stageId !== b.stageId)
+            return a.stageId.localeCompare(b.stageId);
           return a.roundNumber - b.roundNumber;
         })
       );
@@ -140,16 +150,19 @@ function BulkOpsPage(_: StaffProps) {
       return;
     setShiftBusy(true);
     try {
-      const res = await fetch(`/api/admin/tournament/${tournamentId}/bulk-matches`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mode: 'shift_round',
-          stageId: shiftStageId,
-          roundNumber: Number(shiftRoundNumber),
-          offsetMinutes: offset,
-        }),
-      });
+      const res = await fetch(
+        `/api/admin/tournament/${tournamentId}/bulk-matches`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            mode: 'shift_round',
+            stageId: shiftStageId,
+            roundNumber: Number(shiftRoundNumber),
+            offsetMinutes: offset,
+          }),
+        }
+      );
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Erreur');
       addToast(
@@ -186,15 +199,18 @@ function BulkOpsPage(_: StaffProps) {
       return;
     setReassignBusy(true);
     try {
-      const res = await fetch(`/api/admin/tournament/${tournamentId}/bulk-matches`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mode: 'reassign_stage',
-          matchIds: Array.from(reassignSelected),
-          targetStageId: reassignTargetStageId,
-        }),
-      });
+      const res = await fetch(
+        `/api/admin/tournament/${tournamentId}/bulk-matches`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            mode: 'reassign_stage',
+            matchIds: Array.from(reassignSelected),
+            targetStageId: reassignTargetStageId,
+          }),
+        }
+      );
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Erreur');
       const skippedReasons = (json.skipped || [])
@@ -285,7 +301,9 @@ function BulkOpsPage(_: StaffProps) {
           </div>
 
           {loading && (
-            <div className="p-4 rounded-lg bg-white/5 border border-white/10">Chargement…</div>
+            <div className="p-4 rounded-lg bg-white/5 border border-white/10">
+              Chargement…
+            </div>
           )}
 
           {errorMsg && !loading && (
@@ -300,11 +318,15 @@ function BulkOpsPage(_: StaffProps) {
               <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-6">
                 <h2 className="text-lg font-semibold mb-1">Décaler un round</h2>
                 <p className="text-xs text-neutral-400 mb-4">
-                  Applique un offset (en minutes) à tous les matchs planifiés du round sélectionné. Les matchs sans horaire ou annulés sont ignorés.
+                  Applique un offset (en minutes) à tous les matchs planifiés du
+                  round sélectionné. Les matchs sans horaire ou annulés sont
+                  ignorés.
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs text-neutral-400 mb-1">Phase</label>
+                    <label className="block text-xs text-neutral-400 mb-1">
+                      Phase
+                    </label>
                     <select
                       className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-700 text-sm"
                       value={shiftStageId}
@@ -322,7 +344,9 @@ function BulkOpsPage(_: StaffProps) {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs text-neutral-400 mb-1">Round</label>
+                    <label className="block text-xs text-neutral-400 mb-1">
+                      Round
+                    </label>
                     <select
                       className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-700 text-sm"
                       value={shiftRoundNumber}
@@ -365,13 +389,18 @@ function BulkOpsPage(_: StaffProps) {
 
               {/* Reassign stage */}
               <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-6">
-                <h2 className="text-lg font-semibold mb-1">Réassigner des matchs vers une autre phase</h2>
+                <h2 className="text-lg font-semibold mb-1">
+                  Réassigner des matchs vers une autre phase
+                </h2>
                 <p className="text-xs text-neutral-400 mb-4">
-                  Les matchs avec liens bracket actifs ou en dispute sont rejetés. Le group_key est réinitialisé après le déplacement.
+                  Les matchs avec liens bracket actifs ou en dispute sont
+                  rejetés. Le group_key est réinitialisé après le déplacement.
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
                   <div>
-                    <label className="block text-xs text-neutral-400 mb-1">Phase source</label>
+                    <label className="block text-xs text-neutral-400 mb-1">
+                      Phase source
+                    </label>
                     <select
                       className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-700 text-sm"
                       value={reassignSourceStageId}
@@ -386,7 +415,9 @@ function BulkOpsPage(_: StaffProps) {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs text-neutral-400 mb-1">Phase cible</label>
+                    <label className="block text-xs text-neutral-400 mb-1">
+                      Phase cible
+                    </label>
                     <select
                       className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-700 text-sm"
                       value={reassignTargetStageId}
@@ -408,8 +439,8 @@ function BulkOpsPage(_: StaffProps) {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between text-xs text-neutral-400">
                       <span>
-                        {reassignMatches.length} match(s) — {reassignSelected.size}{' '}
-                        sélectionné(s)
+                        {reassignMatches.length} match(s) —{' '}
+                        {reassignSelected.size} sélectionné(s)
                       </span>
                       <div className="flex gap-2">
                         <button
@@ -439,7 +470,9 @@ function BulkOpsPage(_: StaffProps) {
                             <li
                               key={m.id}
                               className={`flex items-center gap-3 px-3 py-2 hover:bg-white/5 cursor-pointer ${
-                                reassignSelected.has(m.id) ? 'bg-blue-500/10' : ''
+                                reassignSelected.has(m.id)
+                                  ? 'bg-blue-500/10'
+                                  : ''
                               }`}
                               onClick={() => toggleMatch(m.id)}
                             >
@@ -455,7 +488,9 @@ function BulkOpsPage(_: StaffProps) {
                                   {m.id.slice(0, 8)}
                                 </span>
                               </span>
-                              <span className="text-xs text-neutral-400">{m.status}</span>
+                              <span className="text-xs text-neutral-400">
+                                {m.status}
+                              </span>
                             </li>
                           ))}
                         </ul>

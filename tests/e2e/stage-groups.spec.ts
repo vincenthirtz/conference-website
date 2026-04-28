@@ -22,7 +22,12 @@ test.describe('Stage groups & pool management (direct supabase)', () => {
     const slug = slugify(TOURNAMENT_NAME, { lower: true, strict: true });
     const { data: t } = await supabaseTestClient
       .from('tournaments')
-      .insert({ name: TOURNAMENT_NAME, slug, status: 'running', game: 'Overwatch' })
+      .insert({
+        name: TOURNAMENT_NAME,
+        slug,
+        status: 'running',
+        game: 'Overwatch',
+      })
       .select('id')
       .maybeSingle();
     tournamentId = t!.id;
@@ -44,7 +49,9 @@ test.describe('Stage groups & pool management (direct supabase)', () => {
     stageId = s!.id;
 
     // Create 4 teams
-    const teamNames = ['Alpha', 'Bravo', 'Charlie', 'Delta'].map((n) => `E2E ${n} ${TS}`);
+    const teamNames = ['Alpha', 'Bravo', 'Charlie', 'Delta'].map(
+      (n) => `E2E ${n} ${TS}`
+    );
     const teams: string[] = [];
     for (const name of teamNames) {
       const { data: tm } = await supabaseTestClient
@@ -67,10 +74,23 @@ test.describe('Stage groups & pool management (direct supabase)', () => {
 
   test.afterAll(async () => {
     if (!supabaseTestClient || !tournamentId) return;
-    await supabaseTestClient.from('matches').delete().eq('tournament_id', tournamentId);
-    if (stageId) await supabaseTestClient.from('stage_teams').delete().eq('stage_id', stageId);
-    await supabaseTestClient.from('stages').delete().eq('tournament_id', tournamentId);
-    await supabaseTestClient.from('tournaments').delete().eq('id', tournamentId);
+    await supabaseTestClient
+      .from('matches')
+      .delete()
+      .eq('tournament_id', tournamentId);
+    if (stageId)
+      await supabaseTestClient
+        .from('stage_teams')
+        .delete()
+        .eq('stage_id', stageId);
+    await supabaseTestClient
+      .from('stages')
+      .delete()
+      .eq('tournament_id', tournamentId);
+    await supabaseTestClient
+      .from('tournaments')
+      .delete()
+      .eq('id', tournamentId);
     for (const tid of [team1Id, team2Id, team3Id, team4Id]) {
       if (tid) await supabaseTestClient.from('teams').delete().eq('id', tid);
     }
@@ -161,7 +181,7 @@ test.describe('Stage groups & pool management (direct supabase)', () => {
     expect(groupB!.length).toBe(1);
   });
 
-  test('Modifier le group_key d\'un match', async () => {
+  test("Modifier le group_key d'un match", async () => {
     if (!supabaseTestClient || !stageId) return;
 
     const { data: match } = await supabaseTestClient

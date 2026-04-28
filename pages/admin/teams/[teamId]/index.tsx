@@ -104,10 +104,12 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
       </Head>
 
       <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
-        <Breadcrumb items={[
-          { label: 'Équipes', href: '/admin/teams' },
-          { label: team?.name || 'Équipe' },
-        ]} />
+        <Breadcrumb
+          items={[
+            { label: 'Équipes', href: '/admin/teams' },
+            { label: team?.name || 'Équipe' },
+          ]}
+        />
         <header className="flex items-center justify-between flex-wrap gap-4 mb-6">
           <div>
             <button
@@ -118,7 +120,8 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
               ← Retour à la liste des équipes
             </button>
             <h1 className="text-3xl font-bold">
-              {team?.name || 'Équipe'} {team?.short_name ? `(${team.short_name})` : ''}
+              {team?.name || 'Équipe'}{' '}
+              {team?.short_name ? `(${team.short_name})` : ''}
             </h1>
             <p className="text-sm text-neutral-400 mt-1">
               Vue d’ensemble de l’équipe et membres.
@@ -151,7 +154,9 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
         <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr] items-start">
           <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-6 space-y-4">
             {loading ? (
-              <p className="text-neutral-300 text-sm">Chargement de l’équipe…</p>
+              <p className="text-neutral-300 text-sm">
+                Chargement de l’équipe…
+              </p>
             ) : !team ? (
               <p className="text-neutral-300 text-sm">Équipe introuvable.</p>
             ) : (
@@ -171,7 +176,9 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
                     </p>
                     <p className="text-2xl font-semibold">{team.name}</p>
                     {team.short_name && (
-                      <p className="text-sm text-neutral-300">Tag : {team.short_name}</p>
+                      <p className="text-sm text-neutral-300">
+                        Tag : {team.short_name}
+                      </p>
                     )}
                     <p className="text-sm text-neutral-400">
                       Statut :{' '}
@@ -210,16 +217,23 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
           <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-6 space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">Membres</h2>
-              <Link href="/admin/teams/add-member" className="text-sm underline">
+              <Link
+                href="/admin/teams/add-member"
+                className="text-sm underline"
+              >
                 Ajouter un membre
               </Link>
             </div>
             {membersLoading ? (
-              <p className="text-neutral-300 text-sm">Chargement des membres…</p>
+              <p className="text-neutral-300 text-sm">
+                Chargement des membres…
+              </p>
             ) : membersError ? (
               <p className="text-red-200 text-sm">{membersError}</p>
             ) : members.length === 0 ? (
-              <p className="text-neutral-300 text-sm">Aucun membre pour le moment.</p>
+              <p className="text-neutral-300 text-sm">
+                Aucun membre pour le moment.
+              </p>
             ) : (
               <div className="space-y-2">
                 {members.map((m) => {
@@ -234,22 +248,40 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                          isCaptain ? 'bg-amber-500/20' : 'bg-neutral-700'
-                        }`}>
+                        <div
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                            isCaptain ? 'bg-amber-500/20' : 'bg-neutral-700'
+                          }`}
+                        >
                           {isCaptain ? (
-                            <svg className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
+                            <svg
+                              className="w-4 h-4 text-amber-400"
+                              fill="currentColor"
+                              viewBox="0 0 24 24"
+                            >
                               <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
                             </svg>
                           ) : (
-                            <svg className="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            <svg
+                              className="w-4 h-4 text-neutral-400"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                              />
                             </svg>
                           )}
                         </div>
                         <div className="flex flex-col">
                           <div className="flex items-center gap-2">
-                            <span className="font-semibold">{m.battle_tag || m.user_id.slice(0, 8) + '...'}</span>
+                            <span className="font-semibold">
+                              {m.battle_tag || m.user_id.slice(0, 8) + '...'}
+                            </span>
                             {isCaptain && (
                               <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold">
                                 Capitaine

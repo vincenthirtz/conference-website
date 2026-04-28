@@ -32,7 +32,10 @@ test.describe.serial('News comments', () => {
 
   test.afterAll(async () => {
     if (!supabaseTestClient || !createdNewsId) return;
-    await supabaseTestClient.from('news_comments').delete().eq('news_id', createdNewsId);
+    await supabaseTestClient
+      .from('news_comments')
+      .delete()
+      .eq('news_id', createdNewsId);
     await supabaseTestClient.from('news').delete().eq('id', createdNewsId);
   });
 
@@ -49,9 +52,7 @@ test.describe.serial('News comments', () => {
     const placeholder = await captchaInput.getAttribute('placeholder');
     const match = placeholder?.match(/Combien font (.+) \?/);
     expect(match).toBeTruthy();
-    const expression = match![1]
-      .replace('×', '*')
-      .replace('−', '-');
+    const expression = match![1].replace('×', '*').replace('−', '-');
     const answer = String(eval(expression));
 
     // Saisir commentaire

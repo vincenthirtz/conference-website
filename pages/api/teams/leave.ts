@@ -5,7 +5,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { isTeamRosterLocked, rosterLockErrorMessage } from '@/utils/teams/rosterLock';
+import {
+  isTeamRosterLocked,
+  rosterLockErrorMessage,
+} from '@/utils/teams/rosterLock';
 
 export default async function handler(
   req: NextApiRequest,
@@ -16,7 +19,8 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (applyRateLimit(req, res, { max: 10, windowMs: 60_000 }, 'teams-leave')) return;
+  if (applyRateLimit(req, res, { max: 10, windowMs: 60_000 }, 'teams-leave'))
+    return;
   if (!supabaseAdmin) {
     return res.status(503).json({ error: 'Service unavailable.' });
   }
@@ -67,7 +71,7 @@ export default async function handler(
   if (team?.captain_id === userId) {
     return res.status(403).json({
       error:
-        'Le capitaine ne peut pas quitter l\'équipe. Transfère le rôle de capitaine à un autre membre d\'abord.',
+        "Le capitaine ne peut pas quitter l'équipe. Transfère le rôle de capitaine à un autre membre d'abord.",
     });
   }
 

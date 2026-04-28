@@ -19,13 +19,13 @@ export default function LoadingSpinner({
   label,
 }: LoadingSpinnerProps) {
   return (
-    <div className={`flex flex-col items-center justify-center gap-3 ${className}`}>
+    <div
+      className={`flex flex-col items-center justify-center gap-3 ${className}`}
+    >
       <div
         className={`${SIZE_CLASSES[size]} border-purple-500/30 border-t-purple-400 rounded-full animate-spin`}
       />
-      {label && (
-        <span className="text-sm text-neutral-400">{label}</span>
-      )}
+      {label && <span className="text-sm text-neutral-400">{label}</span>}
     </div>
   );
 }

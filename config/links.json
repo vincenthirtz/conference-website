@@ -15,7 +15,11 @@
     "title": "Éditions",
     "subMenu": [
       { "title": "2025", "ref": "/tournoi" },
-      { "title": "2026", "ref": "/tournament/e8fa740c-d92b-49d8-a654-05a37d0eea3b", "badge": "soon" }
+      {
+        "title": "2026",
+        "ref": "/tournament/e8fa740c-d92b-49d8-a654-05a37d0eea3b",
+        "badge": "soon"
+      }
     ]
   },
   {

@@ -99,8 +99,8 @@ async function handleGet(matchId: string, res: NextApiResponse) {
     format,
     team1Id: match.team1_id,
     team2Id: match.team2_id,
-    team1Name: match.team1_id ? (teamNames[match.team1_id] || null) : null,
-    team2Name: match.team2_id ? (teamNames[match.team2_id] || null) : null,
+    team1Name: match.team1_id ? teamNames[match.team1_id] || null : null,
+    team2Name: match.team2_id ? teamNames[match.team2_id] || null : null,
     flow,
     steps: vetoSteps,
     currentStepIndex: vetoSteps.length,
@@ -128,7 +128,9 @@ async function handlePost(
 
   const validActions: VetoAction[] = ['ban', 'pick', 'decider'];
   if (!validActions.includes(body.action)) {
-    return res.status(400).json({ error: 'action must be ban, pick, or decider' });
+    return res
+      .status(400)
+      .json({ error: 'action must be ban, pick, or decider' });
   }
 
   // Fetch match to validate
@@ -168,7 +170,9 @@ async function handlePost(
 
   const usedMaps = new Set((existing || []).map((e: any) => e.map_name));
   if (usedMaps.has(body.map_name)) {
-    return res.status(400).json({ error: 'This map has already been used in this veto' });
+    return res
+      .status(400)
+      .json({ error: 'This map has already been used in this veto' });
   }
 
   const payload = {
@@ -298,9 +302,15 @@ async function sendVetoStepDiscord(params: {
   const byId = new Map<string, string>();
   for (const t of teams || []) byId.set(t.id, t.name);
 
-  const team1Name = params.team1Id ? (byId.get(params.team1Id) ?? 'Équipe 1') : 'Équipe 1';
-  const team2Name = params.team2Id ? (byId.get(params.team2Id) ?? 'Équipe 2') : 'Équipe 2';
-  const byTeamName = params.byTeamId ? (byId.get(params.byTeamId) ?? null) : null;
+  const team1Name = params.team1Id
+    ? (byId.get(params.team1Id) ?? 'Équipe 1')
+    : 'Équipe 1';
+  const team2Name = params.team2Id
+    ? (byId.get(params.team2Id) ?? 'Équipe 2')
+    : 'Équipe 2';
+  const byTeamName = params.byTeamId
+    ? (byId.get(params.byTeamId) ?? null)
+    : null;
 
   await notifyVetoStep({
     tournamentId: params.tournamentId,

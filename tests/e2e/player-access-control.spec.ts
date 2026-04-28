@@ -1,8 +1,5 @@
 import { test, expect } from '@playwright/test';
-import {
-  createTestStaff,
-  deleteTestStaff,
-} from '../utils/supabaseTestClient';
+import { createTestStaff, deleteTestStaff } from '../utils/supabaseTestClient';
 
 const TEST_PASSWORD = 'TestPassw0rd!';
 const STAFF_EMAIL = 'hirtzvincent+teststaff@gmail.com';
@@ -128,7 +125,9 @@ test.describe('Navbar visibility', () => {
 
     // The admin bar should be visible with the staff name or logout option
     // Look for admin bar indicators (the dark bar at the top with bg-neutral-950)
-    const adminBarOrLoggedIn = page.locator('[class*="bg-neutral-950"]').first();
+    const adminBarOrLoggedIn = page
+      .locator('[class*="bg-neutral-950"]')
+      .first();
     const isVisible = await adminBarOrLoggedIn.isVisible().catch(() => false);
 
     // Staff should be logged in and see some admin-related UI

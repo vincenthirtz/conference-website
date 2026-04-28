@@ -18,7 +18,9 @@ export default function LogoUpload({
   hint = 'PNG, JPEG ou WebP, max 2 Mo, idéalement 512×512.',
 }: LogoUploadProps) {
   const [mode, setMode] = useState<'upload' | 'url'>(
-    value && !value.startsWith('/img/') && !value.includes('supabase') ? 'url' : 'upload'
+    value && !value.startsWith('/img/') && !value.includes('supabase')
+      ? 'url'
+      : 'upload'
   );
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +54,9 @@ export default function LogoUpload({
         });
 
         // Récupérer le token d'auth
-        const { data: { session } } = await supabaseClient.auth.getSession();
+        const {
+          data: { session },
+        } = await supabaseClient.auth.getSession();
         const token = session?.access_token;
         if (!token) throw new Error('Session staff manquante.');
 

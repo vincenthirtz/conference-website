@@ -35,7 +35,7 @@ describe('OVERWATCH_MAPS config', () => {
     expect(types.has('flashpoint')).toBe(true);
   });
 
-  it('les URLs d\'images utilisent le CDN attendu', () => {
+  it("les URLs d'images utilisent le CDN attendu", () => {
     const cdnPrefix = 'https://overfast-api.tekrop.fr/static/maps';
     for (const map of OVERWATCH_MAPS) {
       expect(map.image).toContain(cdnPrefix);
@@ -51,7 +51,7 @@ describe('OVERWATCH_MAPS config', () => {
   it('contient des maps connues', () => {
     const names = OVERWATCH_MAPS.map((m) => m.name);
     expect(names).toContain('Busan');
-    expect(names).toContain('King\'s Row');
+    expect(names).toContain("King's Row");
     expect(names).toContain('Dorado');
     expect(names).toContain('Colosseo');
   });

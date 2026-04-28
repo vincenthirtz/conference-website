@@ -39,16 +39,14 @@ async function handler(
 
   if (error) {
     console.error('[admin/partnership-requests] list error', error);
-    return res
-      .status(500)
-      .json({ error: 'Failed to load requests.' });
+    return res.status(500).json({ error: 'Failed to load requests.' });
   }
 
   // Count by status for stats
   const { data: counts } = await admin
     .from('partnership_requests')
     .select('status')
-    .then(result => {
+    .then((result) => {
       if (!result.data) return { data: null };
       const statusCounts: Record<string, number> = {};
       result.data.forEach((r: { status: string }) => {

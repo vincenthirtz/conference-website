@@ -18,10 +18,7 @@ type ApiResponse =
 
 export default withStaffRoute(handler, 'manager');
 
-async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<ApiResponse>
-) {
+async function handler(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
   if (!supabaseAdmin) {
     return res.status(500).json({ error: 'Database service unavailable.' });
   }
@@ -55,7 +52,9 @@ async function getCustomTemplates(): Promise<TournamentTemplate[]> {
   }
 }
 
-async function saveCustomTemplates(templates: TournamentTemplate[]): Promise<void> {
+async function saveCustomTemplates(
+  templates: TournamentTemplate[]
+): Promise<void> {
   const value = JSON.stringify(templates);
 
   // Upsert: try update first, insert if not exists
@@ -92,7 +91,9 @@ async function handlePost(
   const { name, description, stages } = req.body || {};
 
   if (!name || typeof name !== 'string' || !name.trim()) {
-    return res.status(400).json({ error: 'Le nom du template est obligatoire.' });
+    return res
+      .status(400)
+      .json({ error: 'Le nom du template est obligatoire.' });
   }
 
   if (!Array.isArray(stages) || stages.length === 0) {
@@ -100,7 +101,14 @@ async function handlePost(
   }
 
   // Validate each stage
-  const validTypes = ['group', 'bracket', 'swiss', 'round_robin', 'showmatch', 'other'];
+  const validTypes = [
+    'group',
+    'bracket',
+    'swiss',
+    'round_robin',
+    'showmatch',
+    'other',
+  ];
   for (const s of stages) {
     if (!s.name || !s.stage_type || !validTypes.includes(s.stage_type)) {
       return res.status(400).json({

@@ -13,10 +13,7 @@
 import crypto from 'crypto';
 import { supabaseAdmin } from './supabase';
 import { sendMatchCheckinEmail } from './email';
-import {
-  notifyCheckinReminder,
-  notifyCheckinForfeit,
-} from './discord';
+import { notifyCheckinReminder, notifyCheckinForfeit } from './discord';
 import { applyMatchScore } from './matches/applyScore';
 
 export const CHECKIN_OPEN_MINUTES = 60;
@@ -70,7 +67,8 @@ export async function resolveCheckinToken(
   token: string
 ): Promise<CheckinResolveResult> {
   if (!supabaseAdmin) return { ok: false, error: 'Service indisponible' };
-  if (!token || token.length < 16) return { ok: false, error: 'Token invalide' };
+  if (!token || token.length < 16)
+    return { ok: false, error: 'Token invalide' };
 
   // Lookup the match by either team1 or team2 token
   const { data: match, error } = await supabaseAdmin
@@ -145,7 +143,10 @@ export async function redeemCheckinToken(
   const resolved = await resolveCheckinToken(token);
   if (!resolved.ok) return { ok: false, error: resolved.error };
 
-  if (resolved.matchStatus !== 'pending' && resolved.matchStatus !== 'ongoing') {
+  if (
+    resolved.matchStatus !== 'pending' &&
+    resolved.matchStatus !== 'ongoing'
+  ) {
     return {
       ok: false,
       error: `Check-in fermé (statut du match : ${resolved.matchStatus})`,
@@ -174,7 +175,7 @@ export async function redeemCheckinToken(
 
   if (error) {
     console.error('[checkin] redeem update error:', error);
-    return { ok: false, error: 'Échec de l\'enregistrement du check-in' };
+    return { ok: false, error: "Échec de l'enregistrement du check-in" };
   }
 
   return {
@@ -203,7 +204,9 @@ async function getCaptainEmail(teamId: string): Promise<string | null> {
   if (!team?.captain_id) return null;
 
   try {
-    const { data } = await supabaseAdmin.auth.admin.getUserById(team.captain_id);
+    const { data } = await supabaseAdmin.auth.admin.getUserById(
+      team.captain_id
+    );
     return data?.user?.email ?? null;
   } catch (e) {
     console.error('[checkin] getCaptainEmail error:', e);
@@ -249,7 +252,11 @@ export type ProcessStepResult = {
 export async function processMatchCheckin(
   match: MatchLite
 ): Promise<ProcessStepResult> {
-  const result: ProcessStepResult = { matchId: match.id, steps: [], errors: [] };
+  const result: ProcessStepResult = {
+    matchId: match.id,
+    steps: [],
+    errors: [],
+  };
 
   if (!supabaseAdmin) {
     result.errors.push('supabase admin unavailable');
@@ -294,11 +301,7 @@ export async function processMatchCheckin(
   }
 
   // Step 4: T-0 — auto-forfeit (allow up to 60min late so we don't miss matches)
-  if (
-    minutesUntil <= 0 &&
-    minutesUntil > -60 &&
-    !match.forfeit_processed_at
-  ) {
+  if (minutesUntil <= 0 && minutesUntil > -60 && !match.forfeit_processed_at) {
     await runForfeitStep(match, result);
   }
 
@@ -339,8 +342,7 @@ async function runCheckinOpenStep(
   }
 
   // 2) Send emails to both captains (only if not already checked in)
-  const tournamentName =
-    match.tournament?.name || 'OW Women\'s Cup';
+  const tournamentName = match.tournament?.name || "OW Women's Cup";
 
   const team1Email = match.team1_checked_in_at
     ? null
@@ -483,7 +485,7 @@ async function runForfeitStep(
       .from('matches')
       .update({
         status: 'cancelled',
-        notes: 'Annulé : aucune équipe n\'a check-in',
+        notes: "Annulé : aucune équipe n'a check-in",
       })
       .eq('id', match.id);
     if (error) {
@@ -500,8 +502,8 @@ async function runForfeitStep(
   const forfeitedName = team1CheckedIn ? team2Name : team1Name;
   const winnerName = team1CheckedIn ? team1Name : team2Name;
   const forfeitedRoleId = team1CheckedIn
-    ? match.team2?.discord_role_id ?? null
-    : match.team1?.discord_role_id ?? null;
+    ? (match.team2?.discord_role_id ?? null)
+    : (match.team1?.discord_role_id ?? null);
 
   try {
     await applyMatchScore({

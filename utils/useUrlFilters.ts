@@ -46,7 +46,10 @@ export function useUrlFilters<K extends string>(keys: readonly K[]) {
     (updates: Partial<Record<K, FilterValue>>) => {
       const query = { ...router.query };
 
-      for (const [key, value] of Object.entries(updates) as [K, FilterValue][]) {
+      for (const [key, value] of Object.entries(updates) as [
+        K,
+        FilterValue,
+      ][]) {
         if (value === null || value === '') {
           delete query[key];
         } else {

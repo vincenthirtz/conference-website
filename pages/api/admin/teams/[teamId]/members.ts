@@ -11,7 +11,10 @@ import {
 import { sendTeamJoinEmail } from '@/utils/email';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID, validateRole } from '@/utils/apiHelpers';
-import { isTeamRosterLocked, rosterLockErrorMessage } from '@/utils/teams/rosterLock';
+import {
+  isTeamRosterLocked,
+  rosterLockErrorMessage,
+} from '@/utils/teams/rosterLock';
 
 type TeamMemberRow = {
   id: string;
@@ -23,7 +26,8 @@ type TeamMemberRow = {
   created_at: string;
 };
 
-const MEMBER_SELECT = 'id, team_id, user_id, role, battle_tag, is_substitute, created_at';
+const MEMBER_SELECT =
+  'id, team_id, user_id, role, battle_tag, is_substitute, created_at';
 
 type MembersResponse =
   | {
@@ -43,7 +47,15 @@ async function handler(
   req: NextApiRequest,
   res: NextApiResponse<MembersResponse>
 ) {
-  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-team-members')) return;
+  if (
+    applyRateLimit(
+      req,
+      res,
+      { max: 60, windowMs: 60_000 },
+      'admin-team-members'
+    )
+  )
+    return;
   if (!supabaseAdmin) {
     return res
       .status(500)
@@ -77,7 +89,8 @@ async function handler(
 
   // POST - Ajouter un membre
   if (req.method === 'POST') {
-    const { userId, email, role, battleTag, setCaptain, isSubstitute, force } = req.body || {};
+    const { userId, email, role, battleTag, setCaptain, isSubstitute, force } =
+      req.body || {};
 
     // Garde roster lock : refus si l'equipe est inscrite a un tournoi avec
     // roster_locked_at <= now() (sauf flag force=true).
@@ -92,7 +105,9 @@ async function handler(
     }
 
     let resolvedUserId =
-      typeof userId === 'string' && userId.trim().length > 0 ? userId.trim() : '';
+      typeof userId === 'string' && userId.trim().length > 0
+        ? userId.trim()
+        : '';
 
     // BattleTag est obligatoire pour rejoindre une équipe
     if (!battleTag || typeof battleTag !== 'string' || !battleTag.trim()) {
@@ -182,20 +197,30 @@ async function handler(
       }
 
       // Send team join email (non-blocking)
-      const memberEmail = typeof email === 'string' ? email.trim().toLowerCase() : null;
+      const memberEmail =
+        typeof email === 'string' ? email.trim().toLowerCase() : null;
       if (memberEmail) {
-        sendTeamJoinEmail(memberEmail, team.name, memberPayload.role).catch((err) => {
-          console.error('[members POST] team join email error:', err);
-        });
+        sendTeamJoinEmail(memberEmail, team.name, memberPayload.role).catch(
+          (err) => {
+            console.error('[members POST] team join email error:', err);
+          }
+        );
       } else {
         // Resolve email from auth if userId was provided directly
-        supabaseAdmin.auth.admin.getUserById(resolvedUserId).then(({ data }) => {
-          if (data?.user?.email) {
-            sendTeamJoinEmail(data.user.email, team.name, memberPayload.role).catch((err) => {
-              console.error('[members POST] team join email error:', err);
-            });
-          }
-        }).catch(() => {});
+        supabaseAdmin.auth.admin
+          .getUserById(resolvedUserId)
+          .then(({ data }) => {
+            if (data?.user?.email) {
+              sendTeamJoinEmail(
+                data.user.email,
+                team.name,
+                memberPayload.role
+              ).catch((err) => {
+                console.error('[members POST] team join email error:', err);
+              });
+            }
+          })
+          .catch(() => {});
       }
 
       return res.status(201).json({
@@ -212,7 +237,8 @@ async function handler(
 
   // PATCH - Modifier un membre ou échanger deux membres (swap)
   if (req.method === 'PATCH') {
-    const { memberId, role, battleTag, isSubstitute, swapWithMemberId, force } = req.body || {};
+    const { memberId, role, battleTag, isSubstitute, swapWithMemberId, force } =
+      req.body || {};
 
     if (!memberId || typeof memberId !== 'string') {
       return res.status(400).json({ error: 'memberId is required' });
@@ -255,7 +281,9 @@ async function handler(
           .maybeSingle();
 
         if (errA || errB || !memberA || !memberB) {
-          return res.status(404).json({ error: 'One or both members not found' });
+          return res
+            .status(404)
+            .json({ error: 'One or both members not found' });
         }
 
         // Swap is_substitute values

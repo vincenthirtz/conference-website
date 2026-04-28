@@ -10,10 +10,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
-type ApiResponse =
-  | { success: boolean }
-  | { team: any }
-  | { error: string };
+type ApiResponse = { success: boolean } | { team: any } | { error: string };
 
 export default withStaffRoute(handler, 'manager');
 
@@ -24,7 +21,14 @@ async function handler(
 ) {
   const { id, teamId } = req.query;
 
-  if (!id || Array.isArray(id) || !teamId || Array.isArray(teamId) || !isValidUUID(id) || !isValidUUID(teamId)) {
+  if (
+    !id ||
+    Array.isArray(id) ||
+    !teamId ||
+    Array.isArray(teamId) ||
+    !isValidUUID(id) ||
+    !isValidUUID(teamId)
+  ) {
     return res.status(400).json({ error: 'Invalid tournament or team ID' });
   }
 
@@ -43,7 +47,10 @@ async function handler(
         return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (err: unknown) {
-    console.error('[/api/admin/tournament/[id]/teams/[teamId]] internal error:', err);
+    console.error(
+      '[/api/admin/tournament/[id]/teams/[teamId]] internal error:',
+      err
+    );
     return res.status(500).json({
       error: 'Internal server error',
     });
@@ -55,7 +62,9 @@ async function handleGet(
   res: NextApiResponse<ApiResponse>
 ) {
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Database service unavailable (missing service role).' });
+    return res
+      .status(500)
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
 
   const { data, error } = await supabaseAdmin
@@ -94,7 +103,9 @@ async function handlePatch(
   ctx: any
 ) {
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Database service unavailable (missing service role).' });
+    return res
+      .status(500)
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
 
   const { seed, status } = req.body || {};
@@ -175,7 +186,9 @@ async function handleDelete(
   ctx: any
 ) {
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Database service unavailable (missing service role).' });
+    return res
+      .status(500)
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
 
   // Récupérer l'équipe avant suppression pour le log
@@ -196,7 +209,9 @@ async function handleDelete(
 
   if (error) {
     console.error('admin DELETE tournament team error:', error);
-    return res.status(500).json({ error: 'Failed to remove team from tournament' });
+    return res
+      .status(500)
+      .json({ error: 'Failed to remove team from tournament' });
   }
 
   // Log staff action

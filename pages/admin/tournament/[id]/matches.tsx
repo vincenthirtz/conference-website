@@ -162,9 +162,14 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
   const [csvText, setCsvText] = useState('');
   const [csvImporting, setCsvImporting] = useState(false);
   const [csvPreview, setCsvPreview] = useState<
-    Array<{ team1: string; team2: string; round?: string; scheduled_at?: string; best_of?: string }>
+    Array<{
+      team1: string;
+      team2: string;
+      round?: string;
+      scheduled_at?: string;
+      best_of?: string;
+    }>
   >([]);
-
 
   // View mode: list or calendar
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
@@ -233,7 +238,8 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
         if (
           a.stream_url &&
           b.stream_url &&
-          a.stream_url.trim().toLowerCase() === b.stream_url.trim().toLowerCase()
+          a.stream_url.trim().toLowerCase() ===
+            b.stream_url.trim().toLowerCase()
         ) {
           const key = `stream-${a.stream_url.trim().toLowerCase()}-${Math.min(aStart, bStart)}`;
           const existing = found.get(key);
@@ -316,8 +322,13 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
       if (statusFilter) params.set('status', statusFilter);
       if (roundFilter) params.set('roundNumber', roundFilter);
       if (resultFilter) params.set('result', resultFilter);
-      if (dateFromFilter) params.set('dateFrom', new Date(dateFromFilter).toISOString());
-      if (dateToFilter) params.set('dateTo', new Date(dateToFilter + 'T23:59:59').toISOString());
+      if (dateFromFilter)
+        params.set('dateFrom', new Date(dateFromFilter).toISOString());
+      if (dateToFilter)
+        params.set(
+          'dateTo',
+          new Date(dateToFilter + 'T23:59:59').toISOString()
+        );
       if (search.trim()) params.set('search', search.trim());
 
       const res = await fetch(
@@ -348,7 +359,16 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
     if (!id) return;
     fetchMatches();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, offset, stageFilter, statusFilter, roundFilter, resultFilter, dateFromFilter, dateToFilter]);
+  }, [
+    id,
+    offset,
+    stageFilter,
+    statusFilter,
+    roundFilter,
+    resultFilter,
+    dateFromFilter,
+    dateToFilter,
+  ]);
 
   function handleFilterSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -510,7 +530,8 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
       fetchMatches();
     } catch (err: unknown) {
       setErrorMsg(
-        (err as Error)?.message ?? 'Erreur inattendue lors de la planification en masse'
+        (err as Error)?.message ??
+          'Erreur inattendue lors de la planification en masse'
       );
     } finally {
       setBulkScheduleSaving(false);
@@ -562,7 +583,8 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
       fetchMatches();
     } catch (err: unknown) {
       setErrorMsg(
-        (err as Error)?.message ?? 'Erreur inattendue lors de la suppression en masse'
+        (err as Error)?.message ??
+          'Erreur inattendue lors de la suppression en masse'
       );
     } finally {
       setBulkDeleting(false);
@@ -579,8 +601,10 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
     const fields: Record<string, unknown> = {};
     if (bulkEditFields.status) fields.status = bulkEditFields.status;
-    if (bulkEditFields.best_of !== undefined) fields.best_of = bulkEditFields.best_of;
-    if (bulkEditFields.round_number !== undefined) fields.round_number = bulkEditFields.round_number;
+    if (bulkEditFields.best_of !== undefined)
+      fields.best_of = bulkEditFields.best_of;
+    if (bulkEditFields.round_number !== undefined)
+      fields.round_number = bulkEditFields.round_number;
     if (bulkEditFields.notes !== undefined) fields.notes = bulkEditFields.notes;
 
     if (Object.keys(fields).length === 0) {
@@ -615,7 +639,10 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
       setBulkEditFields({});
       fetchMatches();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? "Erreur inattendue lors de l'édition en masse");
+      setErrorMsg(
+        (err as Error)?.message ??
+          "Erreur inattendue lors de l'édition en masse"
+      );
     } finally {
       setBulkEditSaving(false);
     }
@@ -623,15 +650,26 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
   // --- CSV import ---
   function parseCsvPreview(text: string) {
-    const lines = text.trim().split('\n').filter((l) => l.trim());
-    if (lines.length === 0) { setCsvPreview([]); return; }
+    const lines = text
+      .trim()
+      .split('\n')
+      .filter((l) => l.trim());
+    if (lines.length === 0) {
+      setCsvPreview([]);
+      return;
+    }
 
     // Detect separator
-    const sep = lines[0].includes('\t') ? '\t' : lines[0].includes(';') ? ';' : ',';
+    const sep = lines[0].includes('\t')
+      ? '\t'
+      : lines[0].includes(';')
+        ? ';'
+        : ',';
 
     const rows: typeof csvPreview = [];
     const headerLine = lines[0].toLowerCase();
-    const hasHeader = headerLine.includes('team1') || headerLine.includes('equipe');
+    const hasHeader =
+      headerLine.includes('team1') || headerLine.includes('equipe');
     const dataLines = hasHeader ? lines.slice(1) : lines;
 
     for (const line of dataLines) {
@@ -660,7 +698,11 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
       const teamsRes = await fetch(`/api/admin/tournament/${id}/teams`);
       if (!teamsRes.ok) throw new Error('Impossible de charger les équipes');
       const teamsJson = await teamsRes.json();
-      const teams: Array<{ id: string; name: string; short_name: string | null }> = teamsJson.teams || [];
+      const teams: Array<{
+        id: string;
+        name: string;
+        short_name: string | null;
+      }> = teamsJson.teams || [];
 
       const findTeam = (name: string) => {
         const lower = name.toLowerCase().trim();
@@ -680,7 +722,9 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
           team1_id: t1?.id || null,
           team2_id: t2?.id || null,
           round_number: row.round ? parseInt(row.round, 10) || null : null,
-          scheduled_at: row.scheduled_at ? new Date(row.scheduled_at).toISOString() : null,
+          scheduled_at: row.scheduled_at
+            ? new Date(row.scheduled_at).toISOString()
+            : null,
           best_of: row.best_of ? parseInt(row.best_of, 10) || null : null,
           status: 'pending' as const,
         };
@@ -711,7 +755,10 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
       }
 
       const json = await res.json();
-      addToast(`${json.matches?.length ?? 0} match(es) importé(s) depuis le CSV.`, 'info');
+      addToast(
+        `${json.matches?.length ?? 0} match(es) importé(s) depuis le CSV.`,
+        'info'
+      );
       setCsvImportMode(false);
       setCsvText('');
       setCsvPreview([]);
@@ -735,11 +782,16 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
         <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12">
           {/* Header */}
           <div className="mb-8">
-            <Breadcrumb items={[
-              { label: 'Tournois', href: '/admin/tournaments' },
-              { label: tournament?.name || 'Tournoi', href: `/admin/tournament/${id}` },
-              { label: 'Matchs' },
-            ]} />
+            <Breadcrumb
+              items={[
+                { label: 'Tournois', href: '/admin/tournaments' },
+                {
+                  label: tournament?.name || 'Tournoi',
+                  href: `/admin/tournament/${id}`,
+                },
+                { label: 'Matchs' },
+              ]}
+            />
             <button
               type="button"
               onClick={() => router.push(backUrl)}
@@ -823,8 +875,18 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                     : 'bg-neutral-800 hover:bg-neutral-700 border border-neutral-700'
                 }`}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                  />
                 </svg>
                 Import CSV
               </button>
@@ -834,8 +896,18 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                 className="px-4 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700"
                 title="Décaler un round, réassigner des matchs entre phases"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+                  />
                 </svg>
                 Opérations groupées
               </Link>
@@ -1099,7 +1171,9 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                   <ul className="mt-1 space-y-0.5">
                     {Array.from(conflicts.values()).map((c, i) => (
                       <li key={i} className="text-orange-200/80 text-xs">
-                        <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] mr-1 ${c.type === 'team' ? 'bg-orange-700/50' : 'bg-purple-700/50'}`}>
+                        <span
+                          className={`inline-block px-1.5 py-0.5 rounded text-[10px] mr-1 ${c.type === 'team' ? 'bg-orange-700/50' : 'bg-purple-700/50'}`}
+                        >
                           {c.type === 'team' ? 'Equipe' : 'Stream'}
                         </span>
                         <span className="font-medium">{c.label}</span> —{' '}
@@ -1365,7 +1439,9 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                       : 'bg-purple-600 hover:bg-purple-700'
                   }`}
                 >
-                  {bulkEditSaving ? 'Sauvegarde…' : 'Appliquer les modifications'}
+                  {bulkEditSaving
+                    ? 'Sauvegarde…'
+                    : 'Appliquer les modifications'}
                 </button>
                 <button
                   type="button"
@@ -1381,7 +1457,8 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
               {!stageFilter && (
                 <p className="mt-2 text-xs text-amber-400">
-                  Filtrez par phase (stage) pour activer l&apos;edition en masse.
+                  Filtrez par phase (stage) pour activer l&apos;edition en
+                  masse.
                 </p>
               )}
             </section>
@@ -1394,13 +1471,21 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                 Import CSV de matchs
               </h3>
               <p className="text-xs text-neutral-400 mb-3">
-                Format : <code className="bg-neutral-900 px-1 rounded">team1, team2, round, date_heure, best_of</code> (seules les 2 premières colonnes sont obligatoires).
-                Les noms d&apos;équipes doivent correspondre aux noms ou abréviations existantes. Séparateurs acceptés : virgule, point-virgule, tabulation.
+                Format :{' '}
+                <code className="bg-neutral-900 px-1 rounded">
+                  team1, team2, round, date_heure, best_of
+                </code>{' '}
+                (seules les 2 premières colonnes sont obligatoires). Les noms
+                d&apos;équipes doivent correspondre aux noms ou abréviations
+                existantes. Séparateurs acceptés : virgule, point-virgule,
+                tabulation.
               </p>
 
               <textarea
                 className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-600 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 min-h-[120px]"
-                placeholder={"Team Alpha, Team Beta, 1, 2026-03-15T14:00, 3\nTeam Gamma, Team Delta, 1, 2026-03-15T15:00, 3"}
+                placeholder={
+                  'Team Alpha, Team Beta, 1, 2026-03-15T14:00, 3\nTeam Gamma, Team Delta, 1, 2026-03-15T15:00, 3'
+                }
                 value={csvText}
                 onChange={(e) => {
                   setCsvText(e.target.value);
@@ -1425,10 +1510,14 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                           <span className="text-neutral-500">R{row.round}</span>
                         )}
                         {row.scheduled_at && (
-                          <span className="text-neutral-500">{row.scheduled_at}</span>
+                          <span className="text-neutral-500">
+                            {row.scheduled_at}
+                          </span>
                         )}
                         {row.best_of && (
-                          <span className="text-neutral-500">BO{row.best_of}</span>
+                          <span className="text-neutral-500">
+                            BO{row.best_of}
+                          </span>
                         )}
                       </div>
                     ))}
@@ -1942,8 +2031,12 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
               ? 'Cette action est irréversible. Les matches seront définitivement supprimés.'
               : undefined
           }
-          confirmLabel={pendingBulkDeleteHard ? 'Supprimer' : 'Annuler les matches'}
-          confirmingLabel={pendingBulkDeleteHard ? 'Suppression...' : 'Annulation...'}
+          confirmLabel={
+            pendingBulkDeleteHard ? 'Supprimer' : 'Annuler les matches'
+          }
+          confirmingLabel={
+            pendingBulkDeleteHard ? 'Suppression...' : 'Annulation...'
+          }
           loading={bulkDeleting}
           onConfirm={async () => {
             await executeBulkDelete();

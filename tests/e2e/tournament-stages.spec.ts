@@ -15,7 +15,12 @@ test.describe('Tournament stages CRUD (direct supabase)', () => {
     const slug = slugify(TOURNAMENT_NAME, { lower: true, strict: true });
     const { data, error } = await supabaseTestClient
       .from('tournaments')
-      .insert({ name: TOURNAMENT_NAME, slug, status: 'draft', game: 'Overwatch' })
+      .insert({
+        name: TOURNAMENT_NAME,
+        slug,
+        status: 'draft',
+        game: 'Overwatch',
+      })
       .select('id')
       .maybeSingle();
     expect(error).toBeNull();
@@ -24,8 +29,14 @@ test.describe('Tournament stages CRUD (direct supabase)', () => {
 
   test.afterAll(async () => {
     if (!supabaseTestClient || !tournamentId) return;
-    await supabaseTestClient.from('stages').delete().eq('tournament_id', tournamentId);
-    await supabaseTestClient.from('tournaments').delete().eq('id', tournamentId);
+    await supabaseTestClient
+      .from('stages')
+      .delete()
+      .eq('tournament_id', tournamentId);
+    await supabaseTestClient
+      .from('tournaments')
+      .delete()
+      .eq('id', tournamentId);
   });
 
   test('Créer une stage de type bracket', async () => {
@@ -51,7 +62,7 @@ test.describe('Tournament stages CRUD (direct supabase)', () => {
     expect(data!.is_active).toBe(true);
   });
 
-  test('Créer plusieurs stages et vérifier l\'ordre', async () => {
+  test("Créer plusieurs stages et vérifier l'ordre", async () => {
     if (!supabaseTestClient || !tournamentId) return;
 
     const stages = [
@@ -60,14 +71,14 @@ test.describe('Tournament stages CRUD (direct supabase)', () => {
       { name: 'Grande finale', stage_type: 'showmatch', order_index: 3 },
     ];
 
-    const { error } = await supabaseTestClient
-      .from('stages')
-      .insert(stages.map((s) => ({
+    const { error } = await supabaseTestClient.from('stages').insert(
+      stages.map((s) => ({
         ...s,
         tournament_id: tournamentId,
         is_active: false,
         is_public: false,
-      })));
+      }))
+    );
 
     expect(error).toBeNull();
 
@@ -128,6 +139,8 @@ test.describe('Tournament stages CRUD (direct supabase)', () => {
       .eq('tournament_id', tournamentId);
 
     expect(remaining!.length).toBe(3);
-    expect(remaining!.find((s: any) => s.name === 'Grande finale')).toBeUndefined();
+    expect(
+      remaining!.find((s: any) => s.name === 'Grande finale')
+    ).toBeUndefined();
   });
 });

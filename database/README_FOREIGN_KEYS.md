@@ -3,6 +3,7 @@
 ## Problem
 
 The `/api/admin/demandes` endpoint is failing with errors like:
+
 ```
 Could not find a relationship between 'demandes' and 'teams' in the schema cache
 ```
@@ -22,6 +23,7 @@ Follow these steps to properly configure the foreign key constraints:
 5. Click **Run** (or press Ctrl/Cmd + Enter)
 
 The script will:
+
 - Check if foreign key constraints exist with the correct names
 - Create them if missing
 - Show you a list of all foreign keys on the `demandes` table
@@ -29,6 +31,7 @@ The script will:
 ### Step 2: Verify Foreign Keys Were Created
 
 After running the script, you should see output like:
+
 ```
 constraint_name                 | table_name | column_name
 --------------------------------|------------|-------------
@@ -42,12 +45,15 @@ demandes_tournament_id_fkey    | demandes   | tournament_id
 **This is the most important step!** PostgREST caches the database schema, so you must reload it:
 
 #### Option A: Via Supabase Dashboard (Recommended)
+
 1. Go to: **Settings** > **API** (in left sidebar)
 2. Scroll down to find the **"Reload schema cache"** button
 3. Click it and wait for confirmation
 
 #### Option B: Via SQL (If available)
+
 Run this in SQL Editor:
+
 ```sql
 NOTIFY pgrst, 'reload schema';
 ```
@@ -59,6 +65,7 @@ Note: This might not work on all Supabase plans. Use Option A if this fails.
 After reloading the schema cache:
 
 1. Restart your Next.js development server:
+
    ```bash
    npm run dev
    ```
@@ -70,6 +77,7 @@ After reloading the schema cache:
 ## What Changed
 
 ### Before:
+
 ```javascript
 // API tried to join but PostgREST couldn't find the relationship
 select += `, team:teams(id, name, ...)`;
@@ -77,6 +85,7 @@ select += `, team:teams(id, name, ...)`;
 ```
 
 ### After:
+
 ```javascript
 // API uses explicit foreign key constraint name
 select += `, team:teams!demandes_team_id_fkey(id, name, ...)`;
@@ -88,6 +97,7 @@ select += `, team:teams!demandes_team_id_fkey(id, name, ...)`;
 ### Still Getting Errors?
 
 1. **Verify foreign keys exist:**
+
    ```sql
    SELECT constraint_name, table_name, column_name
    FROM information_schema.key_column_usage
@@ -95,6 +105,7 @@ select += `, team:teams!demandes_team_id_fkey(id, name, ...)`;
    ```
 
 2. **Check if teams/tournaments tables exist:**
+
    ```sql
    SELECT table_name FROM information_schema.tables
    WHERE table_schema = 'public'
@@ -125,6 +136,7 @@ If the foreign keys exist but PostgREST still can't find them:
 If you can't fix the foreign keys right now, you can temporarily disable the joins:
 
 In `pages/api/admin/demandes/index.ts`, comment out the team/tournament joins:
+
 ```javascript
 if (withTeam) {
   // Temporarily disabled - fix foreign keys first

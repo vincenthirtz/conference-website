@@ -59,9 +59,7 @@ export type MatchDay = {
 /** Parse "Seed 7 vs Seed 1 — Plaid SPC" → { seed1, seed2, venue } */
 export function parseNotes(notes: string | null) {
   if (!notes) return null;
-  const m = notes.match(
-    /Seed\s*(\d+)\s*vs\s*Seed\s*(\d+)\s*(?:—|–|-)\s*(.+)/i
-  );
+  const m = notes.match(/Seed\s*(\d+)\s*vs\s*Seed\s*(\d+)\s*(?:—|–|-)\s*(.+)/i);
   if (m) return { seed1: m[1], seed2: m[2], venue: m[3].trim() };
   if (notes.toLowerCase().includes('disponible'))
     return { seed1: null, seed2: null, venue: 'Plaid SPC' };

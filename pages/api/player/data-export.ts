@@ -14,7 +14,10 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (applyRateLimit(req, res, { max: 5, windowMs: 60_000 }, 'player-data-export')) return;
+  if (
+    applyRateLimit(req, res, { max: 5, windowMs: 60_000 }, 'player-data-export')
+  )
+    return;
 
   if (!supabaseAdmin) {
     return res.status(503).json({ error: 'Service unavailable.' });
@@ -42,11 +45,7 @@ export default async function handler(
   const userId = user.id;
 
   // Collect all user data in parallel
-  const [
-    teamMembership,
-    demandes,
-    staffEntry,
-  ] = await Promise.all([
+  const [teamMembership, demandes, staffEntry] = await Promise.all([
     // Team membership + team info
     supabaseAdmin
       .from('team_members')

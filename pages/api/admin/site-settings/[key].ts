@@ -9,7 +9,15 @@ async function handler(
   res: NextApiResponse,
   ctx: StaffContext
 ) {
-  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-site-settings-key')) return;
+  if (
+    applyRateLimit(
+      req,
+      res,
+      { max: 60, windowMs: 60_000 },
+      'admin-site-settings-key'
+    )
+  )
+    return;
   if (!supabaseAdmin) {
     return res
       .status(500)
@@ -31,9 +39,7 @@ async function handler(
 
     if (error) {
       console.error('[admin/site-settings] get error', error);
-      return res
-        .status(404)
-        .json({ error: 'Setting not found.' });
+      return res.status(404).json({ error: 'Setting not found.' });
     }
     return res.status(200).json(data);
   }
@@ -63,9 +69,7 @@ async function handler(
 
     if (error) {
       console.error('[admin/site-settings] update error', error);
-      return res
-        .status(500)
-        .json({ error: 'Failed to update the setting.' });
+      return res.status(500).json({ error: 'Failed to update the setting.' });
     }
 
     await logStaffAction({
@@ -80,16 +84,11 @@ async function handler(
   }
 
   if (req.method === 'DELETE') {
-    const { error } = await admin
-      .from('site_settings')
-      .delete()
-      .eq('key', key);
+    const { error } = await admin.from('site_settings').delete().eq('key', key);
 
     if (error) {
       console.error('[admin/site-settings] delete error', error);
-      return res
-        .status(500)
-        .json({ error: 'Failed to delete the setting.' });
+      return res.status(500).json({ error: 'Failed to delete the setting.' });
     }
 
     await logStaffAction({

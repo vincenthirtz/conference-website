@@ -41,9 +41,7 @@ export const partnershipRequestSchema = z.object({
   budgetRange: z.string().optional(),
 });
 
-export type PartnershipRequestInput = z.input<
-  typeof partnershipRequestSchema
->;
+export type PartnershipRequestInput = z.input<typeof partnershipRequestSchema>;
 
 // ── Captain request ─────────────────────────────────────────────────────
 

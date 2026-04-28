@@ -11,7 +11,8 @@ export default function handler(
   }
 
   // Rate limiting: 30 challenges per minute
-  if (applyRateLimit(req, res, { max: 30, windowMs: 60 * 1000 }, 'captcha')) return;
+  if (applyRateLimit(req, res, { max: 30, windowMs: 60 * 1000 }, 'captcha'))
+    return;
 
   const { token, question } = generateChallenge();
 

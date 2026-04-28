@@ -15,7 +15,15 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (applyRateLimit(req, res, { max: 10, windowMs: 60_000 }, 'teams-transfer-captain')) return;
+  if (
+    applyRateLimit(
+      req,
+      res,
+      { max: 10, windowMs: 60_000 },
+      'teams-transfer-captain'
+    )
+  )
+    return;
   if (!supabaseAdmin) {
     return res.status(503).json({ error: 'Service unavailable.' });
   }
@@ -41,7 +49,11 @@ export default async function handler(
   const userId = userData.user.id;
   const { newCaptainUserId } = req.body || {};
 
-  if (!newCaptainUserId || typeof newCaptainUserId !== 'string' || !isValidUUID(newCaptainUserId)) {
+  if (
+    !newCaptainUserId ||
+    typeof newCaptainUserId !== 'string' ||
+    !isValidUUID(newCaptainUserId)
+  ) {
     return res.status(400).json({ error: 'newCaptainUserId (UUID) requis.' });
   }
 
@@ -62,7 +74,9 @@ export default async function handler(
   }
 
   if (!team) {
-    return res.status(403).json({ error: "Tu n'es capitaine d'aucune équipe." });
+    return res
+      .status(403)
+      .json({ error: "Tu n'es capitaine d'aucune équipe." });
   }
 
   // Vérifier que le nouveau capitaine est bien membre de l'équipe
@@ -82,7 +96,10 @@ export default async function handler(
   // Transférer
   const { error: updateErr } = await supabaseAdmin
     .from('teams')
-    .update({ captain_id: newCaptainUserId, updated_at: new Date().toISOString() })
+    .update({
+      captain_id: newCaptainUserId,
+      updated_at: new Date().toISOString(),
+    })
     .eq('id', team.id);
 
   if (updateErr) {

@@ -17,7 +17,15 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (applyRateLimit(req, res, { max: 30, windowMs: 60_000 }, 'update-member-role')) return;
+  if (
+    applyRateLimit(
+      req,
+      res,
+      { max: 30, windowMs: 60_000 },
+      'update-member-role'
+    )
+  )
+    return;
   if (!supabaseAdmin) {
     return res.status(503).json({ error: 'Service unavailable.' });
   }
@@ -51,7 +59,9 @@ export default async function handler(
     .maybeSingle();
 
   if (teamErr || !captainTeam) {
-    return res.status(403).json({ error: 'Tu dois etre capitaine d\'une equipe active.' });
+    return res
+      .status(403)
+      .json({ error: "Tu dois etre capitaine d'une equipe active." });
   }
 
   const { memberId, role } = req.body || {};
@@ -75,12 +85,16 @@ export default async function handler(
     .maybeSingle();
 
   if (memberErr || !member) {
-    return res.status(404).json({ error: 'Membre introuvable dans ton equipe.' });
+    return res
+      .status(404)
+      .json({ error: 'Membre introuvable dans ton equipe.' });
   }
 
   // Captain cannot change their own role
   if (member.user_id === userId) {
-    return res.status(400).json({ error: 'Tu ne peux pas changer ton propre role.' });
+    return res
+      .status(400)
+      .json({ error: 'Tu ne peux pas changer ton propre role.' });
   }
 
   // Update role and is_substitute flag accordingly

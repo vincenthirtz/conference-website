@@ -9,7 +9,9 @@ export default function AdminLogoutPage() {
   useEffect(() => {
     const run = async () => {
       // Nettoyage du cache staff navbar
-      try { sessionStorage.removeItem('staff_cache'); } catch {}
+      try {
+        sessionStorage.removeItem('staff_cache');
+      } catch {}
 
       // Nettoyage serveur (cookies) et client (localStorage) en parallèle
       await Promise.allSettled([

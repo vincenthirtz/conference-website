@@ -124,10 +124,12 @@ export default function AdminNewsEdit({ staff }: Props) {
         <title>Admin – Éditer une news</title>
       </Head>
       <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
-        <Breadcrumb items={[
-          { label: 'News', href: '/admin/news' },
-          { label: 'Modifier' },
-        ]} />
+        <Breadcrumb
+          items={[
+            { label: 'News', href: '/admin/news' },
+            { label: 'Modifier' },
+          ]}
+        />
         <header className="flex items-center justify-between flex-wrap gap-4 mb-6">
           <div>
             <p className="text-sm text-neutral-400">Espace staff</p>
@@ -150,105 +152,108 @@ export default function AdminNewsEdit({ staff }: Props) {
             className="bg-neutral-800 border border-neutral-700 rounded-xl p-6 max-w-5xl"
           >
             <fieldset disabled={saving} className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field
-                label="Titre"
-                required
-                value={form.title}
-                onChange={(v) => updateField('title', v)}
-              />
-              <Field
-                label="Slug"
-                placeholder="sera généré si vide"
-                value={form.slug}
-                onChange={(v) => updateField('slug', slugifyValue(v))}
-              />
-            </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field
+                  label="Titre"
+                  required
+                  value={form.title}
+                  onChange={(v) => updateField('title', v)}
+                />
+                <Field
+                  label="Slug"
+                  placeholder="sera généré si vide"
+                  value={form.slug}
+                  onChange={(v) => updateField('slug', slugifyValue(v))}
+                />
+              </div>
 
-            <div className="grid gap-2">
-              <Field
-                label="Tag / catégorie"
-                placeholder="general, tournoi, announcement..."
-                value={form.tag}
-                onChange={(v) => updateField('tag', slugifyValue(v))}
-                required
-              />
-              <p className="text-xs text-neutral-400">
-                Utilisé pour filtrer les news par catégorie (slug simple).
-              </p>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <LogoUpload
-                value={form.imageUrl}
-                onChange={(url) => updateField('imageUrl', url)}
-                label="Image"
-                hint="PNG, JPEG ou WebP, max 2 Mo."
-              />
               <div className="grid gap-2">
-                <label className="text-sm text-neutral-300">Statut</label>
-                <select
-                  className="bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white"
-                  value={form.status}
-                  onChange={(e) =>
-                    updateField('status', e.target.value as FormState['status'])
-                  }
-                >
-                  <option value="draft">Brouillon</option>
-                  <option value="published">Publié</option>
-                </select>
-                <div className="grid gap-1">
-                  <label className="text-sm text-neutral-300">
-                    Date de publication (si publiée)
-                  </label>
-                  <input
-                    type="datetime-local"
+                <Field
+                  label="Tag / catégorie"
+                  placeholder="general, tournoi, announcement..."
+                  value={form.tag}
+                  onChange={(v) => updateField('tag', slugifyValue(v))}
+                  required
+                />
+                <p className="text-xs text-neutral-400">
+                  Utilisé pour filtrer les news par catégorie (slug simple).
+                </p>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <LogoUpload
+                  value={form.imageUrl}
+                  onChange={(url) => updateField('imageUrl', url)}
+                  label="Image"
+                  hint="PNG, JPEG ou WebP, max 2 Mo."
+                />
+                <div className="grid gap-2">
+                  <label className="text-sm text-neutral-300">Statut</label>
+                  <select
                     className="bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white"
-                    value={form.publishedAt}
+                    value={form.status}
                     onChange={(e) =>
-                      updateField('publishedAt', e.target.value)
+                      updateField(
+                        'status',
+                        e.target.value as FormState['status']
+                      )
                     }
-                  />
+                  >
+                    <option value="draft">Brouillon</option>
+                    <option value="published">Publié</option>
+                  </select>
+                  <div className="grid gap-1">
+                    <label className="text-sm text-neutral-300">
+                      Date de publication (si publiée)
+                    </label>
+                    <input
+                      type="datetime-local"
+                      className="bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white"
+                      value={form.publishedAt}
+                      onChange={(e) =>
+                        updateField('publishedAt', e.target.value)
+                      }
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="grid gap-2">
-              <label className="text-sm text-neutral-300">Résumé</label>
-              <textarea
-                className="bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white min-h-[80px]"
-                value={form.excerpt}
-                onChange={(e) => updateField('excerpt', e.target.value)}
-              />
-            </div>
+              <div className="grid gap-2">
+                <label className="text-sm text-neutral-300">Résumé</label>
+                <textarea
+                  className="bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white min-h-[80px]"
+                  value={form.excerpt}
+                  onChange={(e) => updateField('excerpt', e.target.value)}
+                />
+              </div>
 
-            <div className="grid gap-2">
-              <label className="text-sm text-neutral-300">
-                Contenu (markdown ou texte)
-              </label>
-              <textarea
-                className="bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white min-h-[220px]"
-                value={form.content}
-                required
-                onChange={(e) => updateField('content', e.target.value)}
-              />
-            </div>
+              <div className="grid gap-2">
+                <label className="text-sm text-neutral-300">
+                  Contenu (markdown ou texte)
+                </label>
+                <textarea
+                  className="bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white min-h-[220px]"
+                  value={form.content}
+                  required
+                  onChange={(e) => updateField('content', e.target.value)}
+                />
+              </div>
 
-            <div className="flex items-center gap-3">
-              <button
-                type="submit"
-                disabled={saving}
-                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 transition disabled:opacity-60"
-              >
-                {saving ? 'Enregistrement…' : 'Mettre à jour'}
-              </button>
-              <Link
-                href="/admin/news"
-                className={`px-4 py-2 rounded-lg border border-white/15 hover:border-white/30${saving ? ' pointer-events-none opacity-50' : ''}`}
-              >
-                Retour
-              </Link>
-            </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 transition disabled:opacity-60"
+                >
+                  {saving ? 'Enregistrement…' : 'Mettre à jour'}
+                </button>
+                <Link
+                  href="/admin/news"
+                  className={`px-4 py-2 rounded-lg border border-white/15 hover:border-white/30${saving ? ' pointer-events-none opacity-50' : ''}`}
+                >
+                  Retour
+                </Link>
+              </div>
             </fieldset>
           </form>
         )}

@@ -10,21 +10,9 @@ const checkoutSchema = z.object({
     .int()
     .min(100, 'Le montant minimum est 1 €')
     .max(100_000_00, 'Montant trop élevé'),
-  firstName: z
-    .string()
-    .trim()
-    .min(1, 'Prénom requis')
-    .max(100),
-  lastName: z
-    .string()
-    .trim()
-    .min(1, 'Nom requis')
-    .max(100),
-  email: z
-    .string()
-    .trim()
-    .email('Email invalide')
-    .max(254),
+  firstName: z.string().trim().min(1, 'Prénom requis').max(100),
+  lastName: z.string().trim().min(1, 'Nom requis').max(100),
+  email: z.string().trim().email('Email invalide').max(254),
 });
 
 export default async function handler(
@@ -37,7 +25,14 @@ export default async function handler(
   }
 
   // 10 checkout attempts per IP per hour
-  if (applyRateLimit(req, res, { max: 10, windowMs: 60 * 60 * 1000 }, 'helloasso-checkout')) {
+  if (
+    applyRateLimit(
+      req,
+      res,
+      { max: 10, windowMs: 60 * 60 * 1000 },
+      'helloasso-checkout'
+    )
+  ) {
     return;
   }
 
@@ -59,7 +54,7 @@ export default async function handler(
       payer: { firstName, lastName, email },
       returnUrl: `${origin}/don?status=success`,
       errorUrl: `${origin}/don?status=error`,
-      itemName: 'Don pour l\'association',
+      itemName: "Don pour l'association",
     });
 
     return res.status(200).json({ redirectUrl: checkout.redirectUrl });

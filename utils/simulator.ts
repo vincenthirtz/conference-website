@@ -17,7 +17,11 @@ export type SimTeam = {
   players: { name: string; battleTag: string }[];
 };
 
-export type SimMap = { name: string; mode: string; winner_team_id?: string | null };
+export type SimMap = {
+  name: string;
+  mode: string;
+  winner_team_id?: string | null;
+};
 
 export type SimMatch = {
   id: string;
@@ -95,7 +99,7 @@ export type MonteCarloResult = {
 export function computeSchedule(
   matchCount: number,
   roundNumbers: number[],
-  schedule: ScheduleConfig,
+  schedule: ScheduleConfig
 ): (string | null)[] {
   if (!schedule.startDate) return Array(matchCount).fill(null);
 
@@ -113,7 +117,9 @@ export function computeSchedule(
     const currentRound = roundNumbers[i] ?? 1;
 
     if (currentRound !== lastRound) {
-      cursor = new Date(cursor.getTime() + schedule.breakBetweenRoundsMin * 60000);
+      cursor = new Date(
+        cursor.getTime() + schedule.breakBetweenRoundsMin * 60000
+      );
       lastRound = currentRound;
       matchesToday = 0;
     }
@@ -133,7 +139,10 @@ export function computeSchedule(
     results.push(cursor.toISOString());
     matchesToday++;
 
-    cursor = new Date(cursor.getTime() + (schedule.matchDurationMin + schedule.breakBetweenMatchesMin) * 60000);
+    cursor = new Date(
+      cursor.getTime() +
+        (schedule.matchDurationMin + schedule.breakBetweenMatchesMin) * 60000
+    );
   }
 
   return results;
@@ -158,11 +167,12 @@ export function getBestOfForRound(
   roundNumber: number,
   totalRounds: number,
   escalation: EscalationConfig,
-  baseBestOf: number,
+  baseBestOf: number
 ): number {
   if (!escalation.enabled) return baseBestOf;
   if (roundNumber === totalRounds) return escalation.finalsBo;
-  if (roundNumber === totalRounds - 1 && totalRounds >= 3) return escalation.semiFinalsBo;
+  if (roundNumber === totalRounds - 1 && totalRounds >= 3)
+    return escalation.semiFinalsBo;
   return escalation.earlyRoundsBo;
 }
 
@@ -172,7 +182,10 @@ export function getBestOfForRound(
 
 /** Compute win probability for team1 based on strength ratings.
  *  Returns a value between 0.05 and 0.95. */
-export function computeWinProbability(team1: SimTeam | null, team2: SimTeam | null): number {
+export function computeWinProbability(
+  team1: SimTeam | null,
+  team2: SimTeam | null
+): number {
   if (!team1 || !team2) return 0.5;
   const s1 = team1.strength ?? 50;
   const s2 = team2.strength ?? 50;
@@ -192,15 +205,20 @@ export function simulateMatch(match: SimMatch): SimMatch {
   const t1WinProb = computeWinProbability(match.team1, match.team2);
 
   const winsNeeded = Math.ceil(match.best_of / 2);
-  let s1 = 0, s2 = 0;
+  let s1 = 0,
+    s2 = 0;
   const mapResults = [...match.maps];
   let mapIdx = 0;
 
   while (s1 < winsNeeded && s2 < winsNeeded) {
     const t1Wins = Math.random() < t1WinProb;
-    if (t1Wins) s1++; else s2++;
+    if (t1Wins) s1++;
+    else s2++;
     if (mapIdx < mapResults.length) {
-      mapResults[mapIdx] = { ...mapResults[mapIdx], winner_team_id: t1Wins ? match.team1.id : match.team2.id };
+      mapResults[mapIdx] = {
+        ...mapResults[mapIdx],
+        winner_team_id: t1Wins ? match.team1.id : match.team2.id,
+      };
       mapIdx++;
     }
   }
@@ -232,23 +250,43 @@ export function propagateBracket(matches: SimMatch[]): SimMatch[] {
     const winner = m.team1?.id === m.winner_team_id ? m.team1 : m.team2;
     const loser = m.team1?.id === m.winner_team_id ? m.team2 : m.team1;
 
-    const winIdx = m.next_match_win_id ? idxById.get(m.next_match_win_id) : m.next_match_win_idx;
+    const winIdx = m.next_match_win_id
+      ? idxById.get(m.next_match_win_id)
+      : m.next_match_win_idx;
     if (winIdx != null && winIdx < updated.length) {
       const slot = m.next_match_win_slot;
       if (slot === 1) {
-        updated[winIdx] = { ...updated[winIdx], team1: winner, team1_id: winner?.id ?? null };
+        updated[winIdx] = {
+          ...updated[winIdx],
+          team1: winner,
+          team1_id: winner?.id ?? null,
+        };
       } else if (slot === 2) {
-        updated[winIdx] = { ...updated[winIdx], team2: winner, team2_id: winner?.id ?? null };
+        updated[winIdx] = {
+          ...updated[winIdx],
+          team2: winner,
+          team2_id: winner?.id ?? null,
+        };
       }
     }
 
-    const loseIdx = m.next_match_lose_id ? idxById.get(m.next_match_lose_id) : m.next_match_lose_idx;
+    const loseIdx = m.next_match_lose_id
+      ? idxById.get(m.next_match_lose_id)
+      : m.next_match_lose_idx;
     if (loseIdx != null && loseIdx < updated.length && loser) {
       const slot = m.next_match_lose_slot;
       if (slot === 1) {
-        updated[loseIdx] = { ...updated[loseIdx], team1: loser, team1_id: loser.id };
+        updated[loseIdx] = {
+          ...updated[loseIdx],
+          team1: loser,
+          team1_id: loser.id,
+        };
       } else if (slot === 2) {
-        updated[loseIdx] = { ...updated[loseIdx], team2: loser, team2_id: loser.id };
+        updated[loseIdx] = {
+          ...updated[loseIdx],
+          team2: loser,
+          team2_id: loser.id,
+        };
       }
     }
   }
@@ -259,26 +297,39 @@ export function propagateBracket(matches: SimMatch[]): SimMatch[] {
 /*  Full tournament simulation (for Monte Carlo)                        */
 /* ------------------------------------------------------------------ */
 
-export function simulateFullTournament(stagesInput: SimStage[]): { winnerId: string | null; standings: string[] } {
-  const stages = stagesInput.map(s => ({ ...s, matches: s.matches.map(m => ({ ...m })) }));
+export function simulateFullTournament(stagesInput: SimStage[]): {
+  winnerId: string | null;
+  standings: string[];
+} {
+  const stages = stagesInput.map((s) => ({
+    ...s,
+    matches: s.matches.map((m) => ({ ...m })),
+  }));
 
   for (const stage of stages) {
     if (stage.stage_type === 'bracket' || stage.stage_type === 'showmatch') {
-      const roundNums = [...new Set(stage.matches.map(m => m.round_number))].sort((a, b) => a - b);
+      const roundNums = [
+        ...new Set(stage.matches.map((m) => m.round_number)),
+      ].sort((a, b) => a - b);
       for (const rn of roundNums) {
         for (let i = 0; i < stage.matches.length; i++) {
-          if (stage.matches[i].round_number === rn && stage.matches[i].status === 'pending') {
+          if (
+            stage.matches[i].round_number === rn &&
+            stage.matches[i].status === 'pending'
+          ) {
             stage.matches[i] = simulateMatch(stage.matches[i]);
           }
         }
         stage.matches = propagateBracket(stage.matches);
       }
     } else {
-      stage.matches = stage.matches.map(m => m.status === 'pending' ? simulateMatch(m) : m);
+      stage.matches = stage.matches.map((m) =>
+        m.status === 'pending' ? simulateMatch(m) : m
+      );
     }
   }
 
-  const allMatches = stages.flatMap(s => s.matches);
+  const allMatches = stages.flatMap((s) => s.matches);
   const wins = new Map<string, number>();
   const mapDiff = new Map<string, number>();
 
@@ -286,8 +337,14 @@ export function simulateFullTournament(stagesInput: SimStage[]): { winnerId: str
     if (m.status !== 'finished' || !m.winner_team_id) continue;
     wins.set(m.winner_team_id, (wins.get(m.winner_team_id) ?? 0) + 1);
     if (m.team1_id && m.team1_score != null && m.team2_score != null) {
-      mapDiff.set(m.team1_id, (mapDiff.get(m.team1_id) ?? 0) + m.team1_score - m.team2_score);
-      mapDiff.set(m.team2_id!, (mapDiff.get(m.team2_id!) ?? 0) + m.team2_score - m.team1_score);
+      mapDiff.set(
+        m.team1_id,
+        (mapDiff.get(m.team1_id) ?? 0) + m.team1_score - m.team2_score
+      );
+      mapDiff.set(
+        m.team2_id!,
+        (mapDiff.get(m.team2_id!) ?? 0) + m.team2_score - m.team1_score
+      );
     }
   }
 
@@ -297,8 +354,10 @@ export function simulateFullTournament(stagesInput: SimStage[]): { winnerId: str
     if (m.team2_id) teamIds.add(m.team2_id);
   }
 
-  const standings = [...teamIds].sort((a, b) =>
-    (wins.get(b) ?? 0) - (wins.get(a) ?? 0) || (mapDiff.get(b) ?? 0) - (mapDiff.get(a) ?? 0)
+  const standings = [...teamIds].sort(
+    (a, b) =>
+      (wins.get(b) ?? 0) - (wins.get(a) ?? 0) ||
+      (mapDiff.get(b) ?? 0) - (mapDiff.get(a) ?? 0)
   );
 
   return { winnerId: standings[0] ?? null, standings };
@@ -311,7 +370,7 @@ export function simulateFullTournament(stagesInput: SimStage[]): { winnerId: str
 export function runMonteCarlo(
   baseStages: SimStage[],
   teams: SimTeam[],
-  iterations: number,
+  iterations: number
 ): MonteCarloResult {
   const winCounts = new Map<string, number>();
   const placementDist = new Map<string, number[]>();
@@ -322,22 +381,38 @@ export function runMonteCarlo(
   }
 
   for (let i = 0; i < iterations; i++) {
-    const clonedStages = baseStages.map(s => ({
+    const clonedStages = baseStages.map((s) => ({
       ...s,
-      matches: s.matches.map(m => ({
-        ...m,
-        ...(m.locked ? {} : {
-          status: 'pending' as MatchStatus,
-          team1_score: null,
-          team2_score: null,
-          winner_team_id: null,
-        }),
-        ...(!m.locked && m.round_number > 1 && (m.bracket_side === 'wb' || m.bracket_side === 'lb' || m.bracket_side === 'final') ? {
-          team1: null, team1_id: null,
-          team2: null, team2_id: null,
-        } : {}),
-        maps: m.maps.map(mp => ({ ...mp, winner_team_id: null as string | null | undefined })),
-      } as SimMatch)),
+      matches: s.matches.map(
+        (m) =>
+          ({
+            ...m,
+            ...(m.locked
+              ? {}
+              : {
+                  status: 'pending' as MatchStatus,
+                  team1_score: null,
+                  team2_score: null,
+                  winner_team_id: null,
+                }),
+            ...(!m.locked &&
+            m.round_number > 1 &&
+            (m.bracket_side === 'wb' ||
+              m.bracket_side === 'lb' ||
+              m.bracket_side === 'final')
+              ? {
+                  team1: null,
+                  team1_id: null,
+                  team2: null,
+                  team2_id: null,
+                }
+              : {}),
+            maps: m.maps.map((mp) => ({
+              ...mp,
+              winner_team_id: null as string | null | undefined,
+            })),
+          }) as SimMatch
+      ),
     }));
 
     for (const stage of clonedStages) {
@@ -369,10 +444,24 @@ export function runMonteCarlo(
 /*  Competitiveness metrics                                             */
 /* ------------------------------------------------------------------ */
 
-export function computeCompetitiveness(allMatches: SimMatch[], teams: SimTeam[]): CompetitivenessMetrics {
-  const finishedMatches = allMatches.filter(m => m.status === 'finished' && m.team1 && m.team2);
+export function computeCompetitiveness(
+  allMatches: SimMatch[],
+  teams: SimTeam[]
+): CompetitivenessMetrics {
+  const finishedMatches = allMatches.filter(
+    (m) => m.status === 'finished' && m.team1 && m.team2
+  );
   if (finishedMatches.length === 0) {
-    return { closeMatches: 0, closeMatchPct: 0, upsets: 0, upsetPct: 0, avgMapsPerMatch: 0, maxWinStreak: 0, avgTeamJourney: 0, dominanceScore: 0 };
+    return {
+      closeMatches: 0,
+      closeMatchPct: 0,
+      upsets: 0,
+      upsetPct: 0,
+      avgMapsPerMatch: 0,
+      maxWinStreak: 0,
+      avgTeamJourney: 0,
+      dominanceScore: 0,
+    };
   }
 
   let closeMatches = 0;
@@ -411,20 +500,25 @@ export function computeCompetitiveness(allMatches: SimMatch[], teams: SimTeam[])
     totalMatchesPlayed += results.length;
     let streak = 0;
     for (const won of results) {
-      if (won) { streak++; maxWinStreak = Math.max(maxWinStreak, streak); }
-      else streak = 0;
+      if (won) {
+        streak++;
+        maxWinStreak = Math.max(maxWinStreak, streak);
+      } else streak = 0;
     }
   }
 
-  const avgTeamJourney = teamMatches.size > 0 ? totalMatchesPlayed / teamMatches.size : 0;
+  const avgTeamJourney =
+    teamMatches.size > 0 ? totalMatchesPlayed / teamMatches.size : 0;
 
   const wins = new Map<string, number>();
   for (const m of finishedMatches) {
-    if (m.winner_team_id) wins.set(m.winner_team_id, (wins.get(m.winner_team_id) ?? 0) + 1);
+    if (m.winner_team_id)
+      wins.set(m.winner_team_id, (wins.get(m.winner_team_id) ?? 0) + 1);
   }
   const winValues = [...wins.values()].sort((a, b) => b - a);
   const topWins = winValues[0] ?? 0;
-  const dominanceScore = finishedMatches.length > 0 ? topWins / finishedMatches.length : 0;
+  const dominanceScore =
+    finishedMatches.length > 0 ? topWins / finishedMatches.length : 0;
 
   return {
     closeMatches,
@@ -449,7 +543,7 @@ export type SwissPairing = { team1Idx: number; team2Idx: number };
  *  Already-played matchups are avoided when possible. */
 export function swissPairByRecord(
   teams: SimTeam[],
-  previousMatches: SimMatch[],
+  previousMatches: SimMatch[]
 ): SwissPairing[] {
   // Build record
   const wins = new Map<string, number>();
@@ -458,13 +552,20 @@ export function swissPairByRecord(
 
   for (const m of previousMatches) {
     if (m.status !== 'finished') continue;
-    if (m.winner_team_id) wins.set(m.winner_team_id, (wins.get(m.winner_team_id) ?? 0) + 1);
+    if (m.winner_team_id)
+      wins.set(m.winner_team_id, (wins.get(m.winner_team_id) ?? 0) + 1);
     if (m.team1_id && m.team2_id) {
       const pairKey = [m.team1_id, m.team2_id].sort().join('-');
       playedPairs.add(pairKey);
       if (m.team1_score != null && m.team2_score != null) {
-        mapDiff.set(m.team1_id, (mapDiff.get(m.team1_id) ?? 0) + m.team1_score - m.team2_score);
-        mapDiff.set(m.team2_id, (mapDiff.get(m.team2_id) ?? 0) + m.team2_score - m.team1_score);
+        mapDiff.set(
+          m.team1_id,
+          (mapDiff.get(m.team1_id) ?? 0) + m.team1_score - m.team2_score
+        );
+        mapDiff.set(
+          m.team2_id,
+          (mapDiff.get(m.team2_id) ?? 0) + m.team2_score - m.team1_score
+        );
       }
     }
   }
@@ -490,13 +591,21 @@ export function swissPairByRecord(
     // First pass: find unpaired opponent we haven't played
     for (let j = i + 1; j < indices.length; j++) {
       if (paired.has(indices[j])) continue;
-      const pairKey = [teams[indices[i]].id, teams[indices[j]].id].sort().join('-');
-      if (!playedPairs.has(pairKey)) { bestJ = j; break; }
+      const pairKey = [teams[indices[i]].id, teams[indices[j]].id]
+        .sort()
+        .join('-');
+      if (!playedPairs.has(pairKey)) {
+        bestJ = j;
+        break;
+      }
     }
     // Fallback: take next unpaired
     if (bestJ === -1) {
       for (let j = i + 1; j < indices.length; j++) {
-        if (!paired.has(indices[j])) { bestJ = j; break; }
+        if (!paired.has(indices[j])) {
+          bestJ = j;
+          break;
+        }
       }
     }
     if (bestJ === -1) continue; // odd team out
@@ -526,12 +635,25 @@ export function computeHeadToHead(matches: SimMatch[]): H2HRecord[] {
   const records = new Map<string, H2HRecord>();
 
   for (const m of matches) {
-    if (m.status !== 'finished' || !m.team1_id || !m.team2_id || !m.winner_team_id) continue;
+    if (
+      m.status !== 'finished' ||
+      !m.team1_id ||
+      !m.team2_id ||
+      !m.winner_team_id
+    )
+      continue;
     const key = [m.team1_id, m.team2_id].sort().join('-');
     const [first, second] = [m.team1_id, m.team2_id].sort();
 
     if (!records.has(key)) {
-      records.set(key, { team1Id: first, team2Id: second, team1Wins: 0, team2Wins: 0, mapScore1: 0, mapScore2: 0 });
+      records.set(key, {
+        team1Id: first,
+        team2Id: second,
+        team1Wins: 0,
+        team2Wins: 0,
+        mapScore1: 0,
+        mapScore2: 0,
+      });
     }
     const rec = records.get(key)!;
 

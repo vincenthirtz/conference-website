@@ -27,7 +27,9 @@ type SendEmailResult = {
  * Fails silently (logs error, returns { success: false }) so it never blocks
  * the main flow (user creation, team join, etc.).
  */
-export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult> {
+export async function sendEmail(
+  opts: SendEmailOptions
+): Promise<SendEmailResult> {
   const apiKey = process.env.BREVO_API_KEY;
   const fromEmail = process.env.EMAIL_FROM || 'noreply@example.com';
   const fromName = process.env.EMAIL_FROM_NAME || 'Tournoi';
@@ -68,11 +70,19 @@ export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult
       return { success: false, error: msg };
     }
 
-    console.log('[email] sent to=%s subject=%s messageId=%s', opts.to, opts.subject, data?.messageId);
+    console.log(
+      '[email] sent to=%s subject=%s messageId=%s',
+      opts.to,
+      opts.subject,
+      data?.messageId
+    );
     return { success: true, id: data?.messageId };
   } catch (err: unknown) {
     console.error('[email] fetch error:', err);
-    return { success: false, error: (err as Error)?.message || 'Network error' };
+    return {
+      success: false,
+      error: (err as Error)?.message || 'Network error',
+    };
   }
 }
 
@@ -135,7 +145,10 @@ function ctaButton(href: string, label: string): string {
 /**
  * Welcome email sent when a user account is auto-created.
  */
-export function sendWelcomeEmail(to: string, password: string): Promise<SendEmailResult> {
+export function sendWelcomeEmail(
+  to: string,
+  password: string
+): Promise<SendEmailResult> {
   return sendEmail({
     to,
     subject: 'Bienvenue — Votre compte a été créé',
@@ -235,7 +248,7 @@ export function sendAccountDeletedEmail(to: string): Promise<SendEmailResult> {
 export function sendTestEmail(to: string): Promise<SendEmailResult> {
   return sendEmail({
     to,
-    subject: '[Test] Email de test — OW Women\'s Cup',
+    subject: "[Test] Email de test — OW Women's Cup",
     tags: ['test'],
     html: emailLayout(`
       ${gradientBar()}
@@ -385,7 +398,7 @@ export function sendSupportConfirmationEmail(opts: {
 
   return sendEmail({
     to: opts.to,
-    subject: 'Signalement reçu — OW Women\'s Cup',
+    subject: "Signalement reçu — OW Women's Cup",
     tags: ['support-confirmation'],
     html: emailLayout(`
       ${gradientBar()}
@@ -430,7 +443,9 @@ export function sendSupportConfirmationEmail(opts: {
 const STAFF_NOTIFY_EMAIL =
   process.env.STAFF_NOTIFY_EMAIL || 'owwomenscup@gmail.com';
 
-function detailsTable(rows: { label: string; value: string; isCode?: boolean }[]): string {
+function detailsTable(
+  rows: { label: string; value: string; isCode?: boolean }[]
+): string {
   const last = rows.length - 1;
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:rgba(255,255,255,0.05);border-radius:10px;border:1px solid rgba(255,255,255,0.08);margin:0 0 24px;">
     ${rows
@@ -561,7 +576,7 @@ export function sendPartnershipConfirmationEmail(opts: {
 }): Promise<SendEmailResult> {
   return sendEmail({
     to: opts.to,
-    subject: 'Demande de partenariat reçue — OW Women\'s Cup',
+    subject: "Demande de partenariat reçue — OW Women's Cup",
     tags: ['partnership-confirmation'],
     html: emailLayout(`
       ${gradientBar()}
@@ -590,7 +605,7 @@ export function sendPasswordResetEmail(opts: {
 }): Promise<SendEmailResult> {
   return sendEmail({
     to: opts.to,
-    subject: 'Réinitialisation de votre mot de passe — OW Women\'s Cup',
+    subject: "Réinitialisation de votre mot de passe — OW Women's Cup",
     tags: ['password-reset'],
     html: emailLayout(`
       ${gradientBar()}
@@ -664,7 +679,7 @@ export function sendSupportStaffNotificationEmail(opts: {
       ${detailsTable(rows)}
       <p style="margin:0 0 8px;font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Message</p>
       ${preformattedBlock(opts.message)}
-      ${ctaButton(opts.adminUrl, 'Ouvrir dans l\'admin')}
+      ${ctaButton(opts.adminUrl, "Ouvrir dans l'admin")}
     `),
   });
 }

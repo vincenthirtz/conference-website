@@ -99,8 +99,8 @@ export default async function handler(
     };
     const enriched = finishedMatches.map((m: any) => {
       const poll: RawPoll | null = Array.isArray(m.mvp)
-        ? m.mvp[0] ?? null
-        : m.mvp ?? null;
+        ? (m.mvp[0] ?? null)
+        : (m.mvp ?? null);
       return {
         matchId: m.id as string,
         roundName: (m.round_name ?? null) as string | null,
@@ -151,7 +151,7 @@ export default async function handler(
 
     // Construire perMatch (un par match termine, MVP eventuellement null)
     const perMatch = enriched.map((e) => {
-      const teamId = e.memberId ? memberToTeam.get(e.memberId) ?? null : null;
+      const teamId = e.memberId ? (memberToTeam.get(e.memberId) ?? null) : null;
       return {
         matchId: e.matchId,
         roundName: e.roundName,
@@ -159,7 +159,7 @@ export default async function handler(
         memberId: e.memberId,
         battleTag: e.battleTag,
         teamId,
-        teamName: teamId ? teamNameMap.get(teamId) ?? null : null,
+        teamName: teamId ? (teamNameMap.get(teamId) ?? null) : null,
       };
     });
 

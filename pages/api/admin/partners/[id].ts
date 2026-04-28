@@ -21,7 +21,10 @@ async function handler(
   res: NextApiResponse,
   ctx: StaffContext
 ) {
-  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-partners-id')) return;
+  if (
+    applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-partners-id')
+  )
+    return;
   if (!supabaseAdmin) {
     return res
       .status(500)
@@ -57,16 +60,19 @@ async function handler(
     if (body.category !== undefined) {
       const validCategories = ['super', 'major', 'cultural'];
       if (!validCategories.includes(body.category)) {
-        return res
-          .status(400)
-          .json({ error: 'Invalid category. Allowed values: super, major, cultural.' });
+        return res.status(400).json({
+          error: 'Invalid category. Allowed values: super, major, cultural.',
+        });
       }
       updates.category = body.category;
     }
-    if (body.logoUrl !== undefined) updates.logo_url = sanitizeUrl(body.logoUrl);
-    if (body.websiteUrl !== undefined) updates.website_url = sanitizeUrl(body.websiteUrl);
+    if (body.logoUrl !== undefined)
+      updates.logo_url = sanitizeUrl(body.logoUrl);
+    if (body.websiteUrl !== undefined)
+      updates.website_url = sanitizeUrl(body.websiteUrl);
     if (body.note !== undefined) updates.note = body.note || null;
-    if (body.displayOrder !== undefined) updates.display_order = body.displayOrder;
+    if (body.displayOrder !== undefined)
+      updates.display_order = body.displayOrder;
     if (body.isActive !== undefined) updates.is_active = body.isActive;
 
     if (Object.keys(updates).length === 0) {
@@ -82,9 +88,7 @@ async function handler(
 
     if (error) {
       console.error('[admin/partners] update error', error);
-      return res
-        .status(500)
-        .json({ error: 'Failed to update the partner.' });
+      return res.status(500).json({ error: 'Failed to update the partner.' });
     }
 
     if (!data) {
@@ -119,9 +123,7 @@ async function handler(
 
     if (error) {
       console.error('[admin/partners] delete error', error);
-      return res
-        .status(500)
-        .json({ error: 'Failed to delete the partner.' });
+      return res.status(500).json({ error: 'Failed to delete the partner.' });
     }
 
     if (ctx.staff?.id) {

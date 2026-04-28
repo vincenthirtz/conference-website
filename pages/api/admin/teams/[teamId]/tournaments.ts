@@ -19,7 +19,15 @@ import { isValidUUID } from '@/utils/apiHelpers';
  */
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-team-tournaments')) return;
+  if (
+    applyRateLimit(
+      req,
+      res,
+      { max: 60, windowMs: 60_000 },
+      'admin-team-tournaments'
+    )
+  )
+    return;
   const { teamId } = req.query;
 
   if (!teamId || typeof teamId !== 'string' || !isValidUUID(teamId)) {
@@ -52,27 +60,34 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-async function handleGet(req: NextApiRequest, res: NextApiResponse, teamId: string) {
+async function handleGet(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  teamId: string
+) {
   if (!supabaseAdmin) {
     return res.status(500).json({ error: 'Database not configured' });
   }
 
   try {
     // Get all published tournaments
-    const { data: allTournaments, error: tournamentsError } = await supabaseAdmin
-      .from('tournaments')
-      .select('id, name, slug, game, status, start_date, end_date, max_teams')
-      .eq('status', 'published')
-      .order('start_date', { ascending: false });
+    const { data: allTournaments, error: tournamentsError } =
+      await supabaseAdmin
+        .from('tournaments')
+        .select('id, name, slug, game, status, start_date, end_date, max_teams')
+        .eq('status', 'published')
+        .order('start_date', { ascending: false });
 
     if (tournamentsError) {
       throw tournamentsError;
     }
 
     // Get tournaments the team is registered for (via stage_teams)
-    const { data: registrations, error: registrationsError } = await supabaseAdmin
-      .from('stage_teams')
-      .select(`
+    const { data: registrations, error: registrationsError } =
+      await supabaseAdmin
+        .from('stage_teams')
+        .select(
+          `
         stage_id,
         team_id,
         tournament_stages!inner(
@@ -90,8 +105,9 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse, teamId: stri
             end_date
           )
         )
-      `)
-      .eq('team_id', teamId);
+      `
+        )
+        .eq('team_id', teamId);
 
     if (registrationsError) {
       throw registrationsError;
@@ -118,14 +134,15 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse, teamId: stri
 
     // Separate registered and available tournaments
     const registered = (allTournaments || [])
-      .filter(t => registeredTournamentIds.has(t.id))
-      .map(t => ({
+      .filter((t) => registeredTournamentIds.has(t.id))
+      .map((t) => ({
         ...t,
         stages: tournamentRegistrations[t.id] || [],
       }));
 
-    const available = (allTournaments || [])
-      .filter(t => !registeredTournamentIds.has(t.id));
+    const available = (allTournaments || []).filter(
+      (t) => !registeredTournamentIds.has(t.id)
+    );
 
     return res.status(200).json({
       teamId,
@@ -167,15 +184,18 @@ async function handlePost(
     }
 
     if (tournament.status !== 'published') {
-      return res.status(400).json({ error: 'Tournament must be published to register a team' });
+      return res
+        .status(400)
+        .json({ error: 'Tournament must be published to register a team' });
     }
 
     // Check if team has enough players (min_players validation)
     if (tournament.min_players) {
-      const { count: playerCount, error: countPlayersError } = await supabaseAdmin
-        .from('team_members')
-        .select('*', { count: 'exact', head: true })
-        .eq('team_id', teamId);
+      const { count: playerCount, error: countPlayersError } =
+        await supabaseAdmin
+          .from('team_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('team_id', teamId);
 
       if (countPlayersError) {
         throw countPlayersError;
@@ -183,7 +203,7 @@ async function handlePost(
 
       if ((playerCount || 0) < tournament.min_players) {
         return res.status(400).json({
-          error: `L'équipe doit avoir au moins ${tournament.min_players} joueur(s) pour s'inscrire. Actuellement : ${playerCount || 0} membre(s).`
+          error: `L'équipe doit avoir au moins ${tournament.min_players} joueur(s) pour s'inscrire. Actuellement : ${playerCount || 0} membre(s).`,
         });
       }
     }
@@ -199,10 +219,10 @@ async function handlePost(
         throw countError;
       }
 
-      const uniqueTeams = new Set(existingTeams?.map(t => t.team_id) || []);
+      const uniqueTeams = new Set(existingTeams?.map((t) => t.team_id) || []);
       if (uniqueTeams.size >= tournament.max_teams) {
         return res.status(400).json({
-          error: `Tournament has reached the limit of ${tournament.max_teams} teams`
+          error: `Tournament has reached the limit of ${tournament.max_teams} teams`,
         });
       }
     }
@@ -219,7 +239,9 @@ async function handlePost(
         .single();
 
       if (stageError || !stage) {
-        return res.status(404).json({ error: 'Stage not found for this tournament' });
+        return res
+          .status(404)
+          .json({ error: 'Stage not found for this tournament' });
       }
 
       targetStageIds = [stageId];
@@ -236,19 +258,20 @@ async function handlePost(
 
       if (!stages || stages.length === 0) {
         return res.status(400).json({
-          error: 'Tournament has no stages. Create a stage first.'
+          error: 'Tournament has no stages. Create a stage first.',
         });
       }
 
-      targetStageIds = stages.map(s => s.id);
+      targetStageIds = stages.map((s) => s.id);
     }
 
     // Check if team is already registered to any of these stages
-    const { data: existingRegistrations, error: existingError } = await supabaseAdmin
-      .from('stage_teams')
-      .select('stage_id')
-      .eq('team_id', teamId)
-      .in('stage_id', targetStageIds);
+    const { data: existingRegistrations, error: existingError } =
+      await supabaseAdmin
+        .from('stage_teams')
+        .select('stage_id')
+        .eq('team_id', teamId)
+        .in('stage_id', targetStageIds);
 
     if (existingError) {
       throw existingError;
@@ -256,12 +279,12 @@ async function handlePost(
 
     if (existingRegistrations && existingRegistrations.length > 0) {
       return res.status(400).json({
-        error: 'Team is already registered for this tournament'
+        error: 'Team is already registered for this tournament',
       });
     }
 
     // Insert into stage_teams for each stage
-    const insertData = targetStageIds.map(stgId => ({
+    const insertData = targetStageIds.map((stgId) => ({
       stage_id: stgId,
       team_id: teamId,
     }));
@@ -371,7 +394,7 @@ async function handleDelete(
       });
     }
 
-    const stageIds = stages.map(s => s.id);
+    const stageIds = stages.map((s) => s.id);
 
     // Delete from stage_teams
     const { error: deleteError, count } = await supabaseAdmin

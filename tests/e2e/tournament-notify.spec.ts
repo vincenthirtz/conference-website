@@ -35,10 +35,11 @@ test.describe('Tournament notify captains API', () => {
 
     // Create staff user (manager)
     await createTestStaff(STAFF_EMAIL, PASSWORD, 'manager');
-    const { data: staffAuth } = await supabaseTestClient!.auth.signInWithPassword({
-      email: STAFF_EMAIL,
-      password: PASSWORD,
-    });
+    const { data: staffAuth } =
+      await supabaseTestClient!.auth.signInWithPassword({
+        email: STAFF_EMAIL,
+        password: PASSWORD,
+      });
     staffToken = staffAuth.session!.access_token;
 
     // Create captains
@@ -56,7 +57,11 @@ test.describe('Tournament notify captains API', () => {
     // Create teams
     const { data: teamA } = await supabaseTestClient!
       .from('teams')
-      .insert({ name: `${PREFIX}-teamA`, captain_id: captainAUserId, is_active: true })
+      .insert({
+        name: `${PREFIX}-teamA`,
+        captain_id: captainAUserId,
+        is_active: true,
+      })
       .select('id')
       .single();
     teamAId = teamA!.id;
@@ -70,7 +75,11 @@ test.describe('Tournament notify captains API', () => {
 
     const { data: teamB } = await supabaseTestClient!
       .from('teams')
-      .insert({ name: `${PREFIX}-teamB`, captain_id: captainBUserId, is_active: true })
+      .insert({
+        name: `${PREFIX}-teamB`,
+        captain_id: captainBUserId,
+        is_active: true,
+      })
       .select('id')
       .single();
     teamBId = teamB!.id;
@@ -100,15 +109,29 @@ test.describe('Tournament notify captains API', () => {
     if (!HAS_SUPABASE) return;
     // Cleanup messages
     if (teamAId) {
-      await supabaseTestClient!.from('demandes').delete().eq('team_id', teamAId).eq('type', 'captain_message');
+      await supabaseTestClient!
+        .from('demandes')
+        .delete()
+        .eq('team_id', teamAId)
+        .eq('type', 'captain_message');
     }
     if (teamBId) {
-      await supabaseTestClient!.from('demandes').delete().eq('team_id', teamBId).eq('type', 'captain_message');
+      await supabaseTestClient!
+        .from('demandes')
+        .delete()
+        .eq('team_id', teamBId)
+        .eq('type', 'captain_message');
     }
     // Cleanup tournament
     if (tournamentId) {
-      await supabaseTestClient!.from('tournament_maps').delete().eq('tournament_id', tournamentId);
-      await supabaseTestClient!.from('tournaments').delete().eq('id', tournamentId);
+      await supabaseTestClient!
+        .from('tournament_maps')
+        .delete()
+        .eq('tournament_id', tournamentId);
+      await supabaseTestClient!
+        .from('tournaments')
+        .delete()
+        .eq('id', tournamentId);
     }
     await deleteTeamsByName([`${PREFIX}%`]);
     for (const email of [STAFF_EMAIL, CAPTAIN_A_EMAIL, CAPTAIN_B_EMAIL]) {
@@ -157,7 +180,9 @@ test.describe('Tournament notify captains API', () => {
 
   // ─── Successful notification ────────────────────────
 
-  test('Staff notifies all captains about a tournament', async ({ request }) => {
+  test('Staff notifies all captains about a tournament', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.post('/api/admin/tournaments/notify-captains', {
       headers: { Authorization: `Bearer ${staffToken}` },
@@ -170,7 +195,9 @@ test.describe('Tournament notify captains API', () => {
     expect(body.messagesSent).toBeGreaterThanOrEqual(2);
   });
 
-  test('Captain A has a system message about the tournament', async ({ request }) => {
+  test('Captain A has a system message about the tournament', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     // Check demandes for team A
     const { data } = await supabaseTestClient!
@@ -207,7 +234,9 @@ test.describe('Tournament notify captains API', () => {
     expect(data!.comment).toContain(`${PREFIX}-Tournament`);
   });
 
-  test('GET /api/player/messages shows system conversation for captain A', async ({ request }) => {
+  test('GET /api/player/messages shows system conversation for captain A', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.get('/api/player/messages', {
       headers: { Authorization: `Bearer ${captainAToken}` },

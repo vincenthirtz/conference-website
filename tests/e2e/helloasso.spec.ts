@@ -3,7 +3,9 @@ import { test, expect } from '@playwright/test';
 // ─── Page de don (frontend) ────────────────────────────────────
 
 test.describe('Page de don — coming soon', () => {
-  test('La page /don affiche le bandeau "coming soon" sur le formulaire', async ({ page }) => {
+  test('La page /don affiche le bandeau "coming soon" sur le formulaire', async ({
+    page,
+  }) => {
     await page.goto('/don');
 
     // The overlay on the form section
@@ -14,7 +16,9 @@ test.describe('Page de don — coming soon', () => {
     ).toBeVisible();
   });
 
-  test('Le formulaire de don est désactivé (inputs disabled)', async ({ page }) => {
+  test('Le formulaire de don est désactivé (inputs disabled)', async ({
+    page,
+  }) => {
     await page.goto('/don');
 
     await expect(page.locator('#don-prenom')).toBeDisabled();
@@ -29,13 +33,23 @@ test.describe('Page de don — coming soon', () => {
   test('Les boutons de montant prédéfini sont désactivés', async ({ page }) => {
     await page.goto('/don');
 
-    await expect(page.getByRole('button', { name: '25 €', exact: true })).toBeDisabled();
-    await expect(page.getByRole('button', { name: '50 €', exact: true })).toBeDisabled();
-    await expect(page.getByRole('button', { name: '100 €', exact: true })).toBeDisabled();
-    await expect(page.getByRole('button', { name: '250 €', exact: true })).toBeDisabled();
+    await expect(
+      page.getByRole('button', { name: '25 €', exact: true })
+    ).toBeDisabled();
+    await expect(
+      page.getByRole('button', { name: '50 €', exact: true })
+    ).toBeDisabled();
+    await expect(
+      page.getByRole('button', { name: '100 €', exact: true })
+    ).toBeDisabled();
+    await expect(
+      page.getByRole('button', { name: '250 €', exact: true })
+    ).toBeDisabled();
   });
 
-  test('Le CTA hero affiche "bientôt disponible" au lieu du lien', async ({ page }) => {
+  test('Le CTA hero affiche "bientôt disponible" au lieu du lien', async ({
+    page,
+  }) => {
     await page.goto('/don');
 
     // The CTA should NOT be a link
@@ -44,27 +58,29 @@ test.describe('Page de don — coming soon', () => {
     ).not.toBeVisible();
 
     // Instead, it should be a static text
-    const heroBanner = page.locator('span', { hasText: 'Paiement en ligne bientôt disponible' });
+    const heroBanner = page.locator('span', {
+      hasText: 'Paiement en ligne bientôt disponible',
+    });
     await expect(heroBanner.first()).toBeVisible();
   });
 
-  test('Le bandeau de succès s\'affiche avec ?status=success', async ({ page }) => {
+  test("Le bandeau de succès s'affiche avec ?status=success", async ({
+    page,
+  }) => {
     await page.goto('/don?status=success');
 
-    await expect(
-      page.getByText('Merci pour votre don')
-    ).toBeVisible();
+    await expect(page.getByText('Merci pour votre don')).toBeVisible();
   });
 
-  test('Le bandeau d\'erreur s\'affiche avec ?status=error', async ({ page }) => {
+  test("Le bandeau d'erreur s'affiche avec ?status=error", async ({ page }) => {
     await page.goto('/don?status=error');
 
-    await expect(
-      page.getByText("Le paiement n'a pas abouti")
-    ).toBeVisible();
+    await expect(page.getByText("Le paiement n'a pas abouti")).toBeVisible();
   });
 
-  test('Les sections alternatives (virement / entreprises) restent actives', async ({ page }) => {
+  test('Les sections alternatives (virement / entreprises) restent actives', async ({
+    page,
+  }) => {
     await page.goto('/don');
 
     await expect(page.getByText('Virement', { exact: true })).toBeVisible();

@@ -6,10 +6,14 @@ test.describe('Formulaire de contact', () => {
 
     // Vérifier que les champs du formulaire sont présents
     await expect(page.locator('input[name="name"], input#name')).toBeVisible();
-    await expect(page.locator('input[name="email"], input#email, input[type="email"]')).toBeVisible();
+    await expect(
+      page.locator('input[name="email"], input#email, input[type="email"]')
+    ).toBeVisible();
   });
 
-  test('Validation du formulaire de contact - champs requis', async ({ page }) => {
+  test('Validation du formulaire de contact - champs requis', async ({
+    page,
+  }) => {
     await page.goto('/contact');
 
     // Essayer de soumettre sans remplir
@@ -24,8 +28,8 @@ test.describe('Formulaire de contact', () => {
   });
 });
 
-test.describe('Formulaire d\'inscription', () => {
-  test('Le formulaire d\'inscription est accessible', async ({ page }) => {
+test.describe("Formulaire d'inscription", () => {
+  test("Le formulaire d'inscription est accessible", async ({ page }) => {
     await page.goto('/register');
 
     // Vérifier que les champs du formulaire sont présents
@@ -63,8 +67,10 @@ test.describe('Formulaire d\'inscription', () => {
   });
 });
 
-test.describe('Formulaire de création d\'équipe', () => {
-  test('Le formulaire de création d\'équipe est accessible', async ({ page }) => {
+test.describe("Formulaire de création d'équipe", () => {
+  test("Le formulaire de création d'équipe est accessible", async ({
+    page,
+  }) => {
     await page.goto('/team/create');
 
     // Vérifier que les champs principaux sont présents
@@ -76,13 +82,17 @@ test.describe('Formulaire de création d\'équipe', () => {
     await page.goto('/team/create');
 
     // Compter les champs email initiaux
-    const initialEmailInputs = await page.getByPlaceholder('joueuse@email.tld').count();
+    const initialEmailInputs = await page
+      .getByPlaceholder('joueuse@email.tld')
+      .count();
 
     // Cliquer sur ajouter un membre
     await page.click('button:has-text("Ajouter")');
 
     // Il devrait y avoir un champ email de plus
-    const newEmailInputs = await page.getByPlaceholder('joueuse@email.tld').count();
+    const newEmailInputs = await page
+      .getByPlaceholder('joueuse@email.tld')
+      .count();
     expect(newEmailInputs).toBeGreaterThan(initialEmailInputs);
   });
 });

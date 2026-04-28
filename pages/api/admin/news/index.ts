@@ -31,7 +31,8 @@ async function handler(
   res: NextApiResponse,
   ctx: StaffContext
 ) {
-  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-news')) return;
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-news'))
+    return;
   if (!supabaseAdmin) {
     return res
       .status(500)
@@ -60,9 +61,7 @@ async function handler(
 
     if (error) {
       console.error('[admin/news] list error', error);
-      return res
-        .status(500)
-        .json({ error: 'Failed to load articles.' });
+      return res.status(500).json({ error: 'Failed to load articles.' });
     }
 
     return res.status(200).json({ items: data ?? [] });
@@ -71,9 +70,7 @@ async function handler(
   if (req.method === 'POST') {
     const body = req.body as NewsPayload;
     if (!body?.title || !body.content) {
-      return res
-        .status(400)
-        .json({ error: 'Title and content are required.' });
+      return res.status(400).json({ error: 'Title and content are required.' });
     }
 
     const slug = normalizeSlug(body.title, body.slug);
@@ -104,9 +101,7 @@ async function handler(
 
     if (error) {
       console.error('[admin/news] create error', error);
-      return res
-        .status(500)
-        .json({ error: 'Failed to create the article.' });
+      return res.status(500).json({ error: 'Failed to create the article.' });
     }
 
     return res.status(201).json(data);

@@ -19,7 +19,8 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<MeResponse>
 ) {
-  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-me')) return;
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-me'))
+    return;
   // Prevent caching of sensitive staff data
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
 
@@ -122,9 +123,7 @@ export default async function handler(
 
     if (updateError) {
       console.error('[/api/admin/me] update error:', updateError);
-      return res
-        .status(500)
-        .json({ error: 'Failed to update the profile.' });
+      return res.status(500).json({ error: 'Failed to update the profile.' });
     }
 
     if (!updated) {

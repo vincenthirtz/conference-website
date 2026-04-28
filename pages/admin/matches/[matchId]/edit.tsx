@@ -123,7 +123,9 @@ function AdminMatchEditPage({ staff }: StaffProps) {
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [conflictMsg, setConflictMsg] = useState<string | null>(null);
-  const [conflictServerTime, setConflictServerTime] = useState<string | null>(null);
+  const [conflictServerTime, setConflictServerTime] = useState<string | null>(
+    null
+  );
 
   // Status regression confirmation
   const [showStatusConfirm, setShowStatusConfirm] = useState(false);
@@ -234,7 +236,8 @@ function AdminMatchEditPage({ staff }: StaffProps) {
       });
     } catch (err: unknown) {
       setErrorMsg(
-        (err as Error)?.message ?? 'Erreur inattendue lors du chargement du match'
+        (err as Error)?.message ??
+          'Erreur inattendue lors du chargement du match'
       );
     } finally {
       setLoading(false);
@@ -250,17 +253,18 @@ function AdminMatchEditPage({ staff }: StaffProps) {
 
     try {
       // 1) Save metadata (with optimistic locking)
-      const payload: Partial<Match> & { expected_updated_at?: string | null } = {
-        status: form.status,
-        best_of: form.best_of ? Number(form.best_of) : null,
-        round_number: form.round_number ? Number(form.round_number) : null,
-        scheduled_at: form.scheduled_at
-          ? new Date(form.scheduled_at).toISOString()
-          : null,
-        stream_url: form.stream_url.trim() || null,
-        notes: form.notes.trim() || null,
-        expected_updated_at: match.updated_at ?? null,
-      };
+      const payload: Partial<Match> & { expected_updated_at?: string | null } =
+        {
+          status: form.status,
+          best_of: form.best_of ? Number(form.best_of) : null,
+          round_number: form.round_number ? Number(form.round_number) : null,
+          scheduled_at: form.scheduled_at
+            ? new Date(form.scheduled_at).toISOString()
+            : null,
+          stream_url: form.stream_url.trim() || null,
+          notes: form.notes.trim() || null,
+          expected_updated_at: match.updated_at ?? null,
+        };
 
       const metaRes = await fetch(`/api/admin/matches/${matchId}`, {
         method: 'PUT',
@@ -321,7 +325,9 @@ function AdminMatchEditPage({ staff }: StaffProps) {
             await fetchMatch();
             return;
           }
-          throw new Error(json.error || 'Erreur lors de la mise à jour du score');
+          throw new Error(
+            json.error || 'Erreur lors de la mise à jour du score'
+          );
         }
       }
 
@@ -338,7 +344,9 @@ function AdminMatchEditPage({ staff }: StaffProps) {
 
         if (!gamesRes.ok) {
           const json = await gamesRes.json().catch(() => ({}));
-          throw new Error(json.error || 'Erreur lors de la sauvegarde des maps');
+          throw new Error(
+            json.error || 'Erreur lors de la sauvegarde des maps'
+          );
         }
       }
 
@@ -347,7 +355,9 @@ function AdminMatchEditPage({ staff }: StaffProps) {
 
       addToast('Match mis à jour avec succès.', 'success');
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue lors de la mise à jour');
+      setErrorMsg(
+        (err as Error)?.message ?? 'Erreur inattendue lors de la mise à jour'
+      );
     } finally {
       setSaving(false);
     }
@@ -400,7 +410,9 @@ function AdminMatchEditPage({ staff }: StaffProps) {
       await fetchMatch();
       addToast('Forfait enregistré avec succès.', 'success');
     } catch (err: unknown) {
-      setForfeitError((err as Error)?.message ?? 'Erreur inattendue lors du forfait');
+      setForfeitError(
+        (err as Error)?.message ?? 'Erreur inattendue lors du forfait'
+      );
     } finally {
       setForfeitSaving(false);
     }
@@ -418,10 +430,12 @@ function AdminMatchEditPage({ staff }: StaffProps) {
       </Head>
 
       <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
-        <Breadcrumb items={[
-          { label: 'Matchs', href: '/admin/matches' },
-          { label: 'Modifier match' },
-        ]} />
+        <Breadcrumb
+          items={[
+            { label: 'Matchs', href: '/admin/matches' },
+            { label: 'Modifier match' },
+          ]}
+        />
         {/* Header */}
         <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
           <div>
@@ -475,12 +489,32 @@ function AdminMatchEditPage({ staff }: StaffProps) {
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-sm font-medium transition-colors"
               title="Ouvrir le dashboard caster (lobby code, veto live, H2H, rosters)"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                />
               </svg>
               Vue caster
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              <svg
+                className="w-3 h-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                />
               </svg>
             </a>
           )}
@@ -489,21 +523,31 @@ function AdminMatchEditPage({ staff }: StaffProps) {
         {/* Messages */}
         {conflictMsg && (
           <div className="mb-4 rounded bg-amber-900/60 border border-amber-500 px-4 py-3 text-sm flex items-start gap-3">
-            <span className="text-amber-400 text-lg leading-none mt-0.5">&#9888;</span>
+            <span className="text-amber-400 text-lg leading-none mt-0.5">
+              &#9888;
+            </span>
             <div>
-              <p className="font-semibold text-amber-200 mb-1">Modification concurrente</p>
+              <p className="font-semibold text-amber-200 mb-1">
+                Modification concurrente
+              </p>
               <p className="text-amber-100/80">{conflictMsg}</p>
               {conflictServerTime && (
                 <p className="text-amber-100/60 text-xs mt-1">
-                  Dernière modification serveur : {new Date(conflictServerTime).toLocaleString('fr-FR')}
+                  Dernière modification serveur :{' '}
+                  {new Date(conflictServerTime).toLocaleString('fr-FR')}
                 </p>
               )}
               <p className="text-amber-100/60 text-xs mt-1">
-                Le formulaire a été rechargé avec les données à jour. Vérifiez les champs et réessayez.
+                Le formulaire a été rechargé avec les données à jour. Vérifiez
+                les champs et réessayez.
               </p>
               <button
                 type="button"
-                onClick={() => { setConflictMsg(null); setConflictServerTime(null); fetchMatch(); }}
+                onClick={() => {
+                  setConflictMsg(null);
+                  setConflictServerTime(null);
+                  fetchMatch();
+                }}
                 className="mt-2 px-3 py-1 rounded bg-amber-700/50 hover:bg-amber-700/80 text-amber-100 text-xs font-medium transition-colors"
               >
                 Fermer et recharger
@@ -520,7 +564,9 @@ function AdminMatchEditPage({ staff }: StaffProps) {
           <div className="mb-4 rounded bg-amber-900/40 border border-amber-600/60 px-4 py-3 text-sm text-amber-200">
             <p className="font-semibold mb-1">Avertissements</p>
             <ul className="list-disc list-inside space-y-0.5">
-              {warningMsgs.map((w, i) => <li key={i}>{w}</li>)}
+              {warningMsgs.map((w, i) => (
+                <li key={i}>{w}</li>
+              ))}
             </ul>
           </div>
         )}
@@ -678,39 +724,43 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                 </section>
 
                 {/* Forfait / No-show */}
-                {match.team1_id && match.team2_id && match.status !== 'finished' && (
-                  <section className="space-y-4">
-                    <h2 className="font-semibold text-lg">Forfait / No-show</h2>
-                    <p className="text-xs text-neutral-500">
-                      Déclarer un forfait termine le match et attribue la victoire
-                      à l&apos;équipe adverse.
-                    </p>
-                    <div className="flex gap-3">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setForfeitTeamId(match.team1_id);
-                          setForfeitError(null);
-                          setShowForfeitDialog(true);
-                        }}
-                        className="flex-1 px-3 py-2 rounded bg-red-900/40 border border-red-700/60 text-red-300 hover:bg-red-900/60 text-sm font-medium transition-colors"
-                      >
-                        Forfait {team1?.name || 'Équipe 1'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setForfeitTeamId(match.team2_id);
-                          setForfeitError(null);
-                          setShowForfeitDialog(true);
-                        }}
-                        className="flex-1 px-3 py-2 rounded bg-red-900/40 border border-red-700/60 text-red-300 hover:bg-red-900/60 text-sm font-medium transition-colors"
-                      >
-                        Forfait {team2?.name || 'Équipe 2'}
-                      </button>
-                    </div>
-                  </section>
-                )}
+                {match.team1_id &&
+                  match.team2_id &&
+                  match.status !== 'finished' && (
+                    <section className="space-y-4">
+                      <h2 className="font-semibold text-lg">
+                        Forfait / No-show
+                      </h2>
+                      <p className="text-xs text-neutral-500">
+                        Déclarer un forfait termine le match et attribue la
+                        victoire à l&apos;équipe adverse.
+                      </p>
+                      <div className="flex gap-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setForfeitTeamId(match.team1_id);
+                            setForfeitError(null);
+                            setShowForfeitDialog(true);
+                          }}
+                          className="flex-1 px-3 py-2 rounded bg-red-900/40 border border-red-700/60 text-red-300 hover:bg-red-900/60 text-sm font-medium transition-colors"
+                        >
+                          Forfait {team1?.name || 'Équipe 1'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setForfeitTeamId(match.team2_id);
+                            setForfeitError(null);
+                            setShowForfeitDialog(true);
+                          }}
+                          className="flex-1 px-3 py-2 rounded bg-red-900/40 border border-red-700/60 text-red-300 hover:bg-red-900/60 text-sm font-medium transition-colors"
+                        >
+                          Forfait {team2?.name || 'Équipe 2'}
+                        </button>
+                      </div>
+                    </section>
+                  )}
 
                 {/* Games (maps) */}
                 <section className="space-y-4">
@@ -850,9 +900,7 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                         <button
                           type="button"
                           onClick={() =>
-                            setGames((prev) =>
-                              prev.filter((_, i) => i !== idx)
-                            )
+                            setGames((prev) => prev.filter((_, i) => i !== idx))
                           }
                           className="mt-5 p-1.5 rounded hover:bg-red-900/50 text-neutral-500 hover:text-red-400 transition-colors"
                           title="Supprimer cette map"
@@ -1354,7 +1402,9 @@ function MvpSection({ matchId }: { matchId: string }) {
           <button
             type="button"
             onClick={save}
-            disabled={saving || !selected || selected === poll?.winner_member_id}
+            disabled={
+              saving || !selected || selected === poll?.winner_member_id
+            }
             className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-sm font-medium transition-colors disabled:opacity-50"
           >
             {saving ? 'Enregistrement...' : 'Enregistrer le MVP'}

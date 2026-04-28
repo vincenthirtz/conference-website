@@ -145,8 +145,20 @@ describe('resultToPastMatch', () => {
 describe('resultsToPastMatches', () => {
   it('converts a list of results', () => {
     const results: SwissMatchResult[] = [
-      { round: 1, player1Id: 'A', player2Id: 'B', player1Score: 3, player2Score: 0 },
-      { round: 1, player1Id: 'C', player2Id: null, player1Score: 3, player2Score: 0 },
+      {
+        round: 1,
+        player1Id: 'A',
+        player2Id: 'B',
+        player1Score: 3,
+        player2Score: 0,
+      },
+      {
+        round: 1,
+        player1Id: 'C',
+        player2Id: null,
+        player1Score: 3,
+        player2Score: 0,
+      },
     ];
     const past = resultsToPastMatches(results);
     expect(past).toHaveLength(2);
@@ -156,11 +168,41 @@ describe('resultsToPastMatches', () => {
 
 // Shared fixtures for history tests
 const sampleResults: SwissMatchResult[] = [
-  { round: 1, player1Id: 'A', player2Id: 'B', player1Score: 3, player2Score: 0 },
-  { round: 1, player1Id: 'C', player2Id: 'D', player1Score: 0, player2Score: 3 },
-  { round: 2, player1Id: 'A', player2Id: 'C', player1Score: 1, player2Score: 1 },
-  { round: 2, player1Id: 'B', player2Id: null, player1Score: 3, player2Score: 0 }, // bye
-  { round: 3, player1Id: 'A', player2Id: 'B', player1Score: 0, player2Score: 3 },
+  {
+    round: 1,
+    player1Id: 'A',
+    player2Id: 'B',
+    player1Score: 3,
+    player2Score: 0,
+  },
+  {
+    round: 1,
+    player1Id: 'C',
+    player2Id: 'D',
+    player1Score: 0,
+    player2Score: 3,
+  },
+  {
+    round: 2,
+    player1Id: 'A',
+    player2Id: 'C',
+    player1Score: 1,
+    player2Score: 1,
+  },
+  {
+    round: 2,
+    player1Id: 'B',
+    player2Id: null,
+    player1Score: 3,
+    player2Score: 0,
+  }, // bye
+  {
+    round: 3,
+    player1Id: 'A',
+    player2Id: 'B',
+    player1Score: 0,
+    player2Score: 3,
+  },
 ];
 
 describe('getPlayerMatchHistory', () => {

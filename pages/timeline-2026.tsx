@@ -428,8 +428,8 @@ function Timeline2026Page({ matches }: Props) {
           {totalMatches === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-8 text-center">
               <p className="text-neutral-300">
-                Le calendrier du tournoi féminin 2026 sera publié dès la fin
-                des inscriptions.
+                Le calendrier du tournoi féminin 2026 sera publié dès la fin des
+                inscriptions.
               </p>
               <p className="text-neutral-500 text-sm mt-2">
                 Reviens bientôt ou rejoins le Discord pour être prévenue.

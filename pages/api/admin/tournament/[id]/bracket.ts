@@ -10,7 +10,10 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 import type { BracketSide } from '@/types/admin';
 import type { MatchForGraph } from '@/types/bracket';
-import { buildBracketGraph, validateBracketGraph } from '@/utils/bracket/buildGraph';
+import {
+  buildBracketGraph,
+  validateBracketGraph,
+} from '@/utils/bracket/buildGraph';
 
 export default withStaffRoute(handler, 'manager');
 
@@ -38,15 +41,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
     } else if (action === 'validate') {
       return await handleValidate(tournamentId, req, res);
     } else {
-      return res
-        .status(400)
-        .json({ error: "action must be 'generate', 'generate_double_elim', 'save', or 'validate'" });
+      return res.status(400).json({
+        error:
+          "action must be 'generate', 'generate_double_elim', 'save', or 'validate'",
+      });
     }
   } catch (err: unknown) {
     console.error('[/api/admin/tournament/[id]/bracket] error:', err);
-    return res
-      .status(500)
-      .json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }
 
@@ -204,7 +206,11 @@ async function handleGenerate(
     roundMap.set(`${r.round_number}:${r.pos}`, r.id);
   }
 
-  const updates: { id: string; next_match_win_id: string; next_match_win_slot: 1 | 2 }[] = [];
+  const updates: {
+    id: string;
+    next_match_win_id: string;
+    next_match_win_slot: 1 | 2;
+  }[] = [];
 
   for (const r of enriched) {
     if (r.round_number >= totalRounds) continue; // finale has no next match
@@ -243,10 +249,7 @@ async function handleGenerate(
     if (linkErrors.length > 0) {
       console.error('bracket linkage errors, rolling back:', linkErrors);
       const matchIds = rows.map((r) => r.id);
-      await supabaseAdmin
-        .from('matches')
-        .delete()
-        .in('id', matchIds);
+      await supabaseAdmin.from('matches').delete().in('id', matchIds);
       return res.status(500).json({
         error: 'Failed to link bracket matches, all matches rolled back',
         detail: linkErrors,
@@ -489,7 +492,9 @@ async function handleGenerateDoubleElim(
 
   function nextSchedule(): string | null {
     if (!baseDate) return null;
-    const d = new Date(baseDate.getTime() + matchCounter * intervalMinutes * 60 * 1000);
+    const d = new Date(
+      baseDate.getTime() + matchCounter * intervalMinutes * 60 * 1000
+    );
     matchCounter++;
     return d.toISOString();
   }
@@ -646,7 +651,12 @@ async function handleGenerateDoubleElim(
   // LB matches: side='lb', grouped by round_number
   // GF matches: side='final'
 
-  type RowInfo = { id: string; round_number: number; bracket_side: string; pos: number };
+  type RowInfo = {
+    id: string;
+    round_number: number;
+    bracket_side: string;
+    pos: number;
+  };
   const enriched: RowInfo[] = [];
   const posCounters = new Map<string, number>();
 
@@ -664,7 +674,11 @@ async function handleGenerateDoubleElim(
   }
 
   // Helper to get match id
-  function getMatchId(side: string, roundNumber: number, pos: number): string | undefined {
+  function getMatchId(
+    side: string,
+    roundNumber: number,
+    pos: number
+  ): string | undefined {
     return matchMap.get(`${side}:${roundNumber}:${pos}`);
   }
 
@@ -846,12 +860,10 @@ async function handleGenerateDoubleElim(
   if (linkErrors.length > 0) {
     console.error('double elim linkage errors, rolling back:', linkErrors);
     const matchIds = rows.map((r) => r.id);
-    await supabaseAdmin
-      .from('matches')
-      .delete()
-      .in('id', matchIds);
+    await supabaseAdmin.from('matches').delete().in('id', matchIds);
     return res.status(500).json({
-      error: 'Failed to link double elimination bracket, all matches rolled back',
+      error:
+        'Failed to link double elimination bracket, all matches rolled back',
       detail: linkErrors,
     });
   }

@@ -36,7 +36,9 @@ export default function JoinTeamPage() {
   const [availableCountries, setAvailableCountries] = useState<string[]>([]);
 
   // Role souhaite
-  const [desiredRole, setDesiredRole] = useState<'player' | 'substitute'>('player');
+  const [desiredRole, setDesiredRole] = useState<'player' | 'substitute'>(
+    'player'
+  );
 
   // Message et etats
   const [message, setMessage] = useState('');
@@ -190,7 +192,7 @@ export default function JoinTeamPage() {
       }
 
       const team = teams.find((t) => t.id === selectedTeamId);
-      setSuccessTeamName(team?.name || 'l\'equipe selectionnee');
+      setSuccessTeamName(team?.name || "l'equipe selectionnee");
       setSuccess(true);
     } catch (err: unknown) {
       setError((err as Error).message || 'Une erreur est survenue.');
@@ -369,7 +371,9 @@ export default function JoinTeamPage() {
                             )}
                             {typeof team.member_count === 'number' && (
                               <>
-                                {(team.short_name || team.country) && <span>·</span>}
+                                {(team.short_name || team.country) && (
+                                  <span>·</span>
+                                )}
                                 <span>{team.member_count}/5 membres</span>
                               </>
                             )}

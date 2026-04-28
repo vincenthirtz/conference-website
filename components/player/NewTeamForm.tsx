@@ -11,14 +11,22 @@ type Props = {
   onTeamNameChange: (value: string) => void;
   members: TeamMember[];
   onAddMember: () => void;
-  onUpdateMember: (index: number, field: keyof TeamMember, value: string) => void;
+  onUpdateMember: (
+    index: number,
+    field: keyof TeamMember,
+    value: string
+  ) => void;
   onRemoveMember: (index: number) => void;
 };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const BATTLETAG_RE = /^.+#\d{4,}$/;
 
-function validateMember(member: TeamMember, index: number, allMembers: TeamMember[]) {
+function validateMember(
+  member: TeamMember,
+  index: number,
+  allMembers: TeamMember[]
+) {
   const errors: Partial<Record<keyof TeamMember, string>> = {};
 
   if (member.email && !EMAIL_RE.test(member.email)) {
@@ -29,7 +37,8 @@ function validateMember(member: TeamMember, index: number, allMembers: TeamMembe
   if (
     member.email &&
     allMembers.some(
-      (m, i) => i !== index && m.email.toLowerCase() === member.email.toLowerCase()
+      (m, i) =>
+        i !== index && m.email.toLowerCase() === member.email.toLowerCase()
     )
   ) {
     errors.email = 'Email déjà utilisé par un autre membre';
@@ -57,9 +66,7 @@ function validateMember(member: TeamMember, index: number, allMembers: TeamMembe
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
-  return (
-    <p className="text-xs text-red-400 mt-1">{message}</p>
-  );
+  return <p className="text-xs text-red-400 mt-1">{message}</p>;
 }
 
 export default function NewTeamForm({
@@ -139,9 +146,7 @@ export default function NewTeamForm({
                         onUpdateMember(index, 'email', e.target.value)
                       }
                       className={`w-full rounded-lg border bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-purple-400/60 ${
-                        errors.email
-                          ? 'border-red-500/50'
-                          : 'border-white/10'
+                        errors.email ? 'border-red-500/50' : 'border-white/10'
                       }`}
                     />
                     <FieldError message={errors.email} />

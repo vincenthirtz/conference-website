@@ -121,19 +121,22 @@ export default function HeroPickerPage() {
     return { totals, bans, maxA: maxBan('A'), maxB: maxBan('B') };
   }, [votes]);
 
-  const pickFavorite = useCallback((hero: Hero) => {
-    if (phase === 'favorite') {
-      setFavoriteHero(hero);
-      setPendingFavorite(hero);
-      setPhase('cooldown');
-      setCooldownEnds(() => Date.now() + 30_000);
-      setBanHero(null);
-      setBanned([]);
-    } else if (phase === 'ban') {
-      setBanHero(hero);
-      setBanned([hero.name]);
-    }
-  }, [phase]);
+  const pickFavorite = useCallback(
+    (hero: Hero) => {
+      if (phase === 'favorite') {
+        setFavoriteHero(hero);
+        setPendingFavorite(hero);
+        setPhase('cooldown');
+        setCooldownEnds(() => Date.now() + 30_000);
+        setBanHero(null);
+        setBanned([]);
+      } else if (phase === 'ban') {
+        setBanHero(hero);
+        setBanned([hero.name]);
+      }
+    },
+    [phase]
+  );
 
   const finalizeBanPhase = useCallback(() => {
     if (phase !== 'ban') return;

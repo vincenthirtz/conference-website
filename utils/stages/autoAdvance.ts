@@ -58,7 +58,9 @@ export async function tryAutoAdvanceFromMatch(params: {
     return { triggered: false, reason: 'stage_inactive' };
   }
 
-  const rules = stage.settings?.advancement_rules as AdvancementRules | undefined;
+  const rules = stage.settings?.advancement_rules as
+    | AdvancementRules
+    | undefined;
   if (!rules || !rules.target_stage_id) {
     return { triggered: false, reason: 'no_advancement_rules' };
   }
@@ -139,7 +141,9 @@ export async function tryAutoAdvanceFromMatch(params: {
       teamIdsToAdvance.push(...ids.slice(0, rules.advance_per_group));
     }
   } else if (rules.advance_top) {
-    teamIdsToAdvance = standings.slice(0, rules.advance_top).map((s) => s.teamId);
+    teamIdsToAdvance = standings
+      .slice(0, rules.advance_top)
+      .map((s) => s.teamId);
   }
 
   if (teamIdsToAdvance.length === 0) {
@@ -152,7 +156,9 @@ export async function tryAutoAdvanceFromMatch(params: {
     .select('team_id')
     .eq('stage_id', rules.target_stage_id);
 
-  const existingIds = new Set((existingTarget || []).map((r: any) => r.team_id));
+  const existingIds = new Set(
+    (existingTarget || []).map((r: any) => r.team_id)
+  );
   const newTeams = teamIdsToAdvance.filter((id) => !existingIds.has(id));
 
   if (newTeams.length === 0) {

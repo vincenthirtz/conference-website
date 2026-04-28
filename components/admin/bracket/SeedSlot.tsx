@@ -3,7 +3,12 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import type { ScheduleMatch, TeamMini, TournamentTeam, DragPayload } from './types';
+import type {
+  ScheduleMatch,
+  TeamMini,
+  TournamentTeam,
+  DragPayload,
+} from './types';
 
 type SeedSlotProps = {
   match: ScheduleMatch;
@@ -15,7 +20,11 @@ type SeedSlotProps = {
   isTBD: boolean;
   onDragStart: (e: React.DragEvent<HTMLDivElement>, p: DragPayload) => void;
   onDragOverSlot: (e: React.DragEvent<HTMLDivElement>) => void;
-  onDropOnSlot: (e: React.DragEvent<HTMLDivElement>, id: string, slot: 1 | 2) => void;
+  onDropOnSlot: (
+    e: React.DragEvent<HTMLDivElement>,
+    id: string,
+    slot: 1 | 2
+  ) => void;
   onClear: () => void;
   availableTeams: TournamentTeam[];
   onAssignTeam: (team: TournamentTeam) => void;
@@ -52,7 +61,9 @@ export default function SeedSlot({
   const pickerRef = useRef<HTMLDivElement>(null);
   const hasTeam = !!(team || teamId);
 
-  const gradientClass = seed ? SEED_GRADIENT_COLORS[seed] || 'from-neutral-500 to-neutral-600' : '';
+  const gradientClass = seed
+    ? SEED_GRADIENT_COLORS[seed] || 'from-neutral-500 to-neutral-600'
+    : '';
   const canPick = !hasTeam && availableTeams.length > 0;
 
   const filteredPickerTeams = availableTeams.filter((t) =>
@@ -94,7 +105,9 @@ export default function SeedSlot({
       <div
         className={`flex items-center gap-3 flex-1 ${hasTeam ? 'cursor-move' : ''}`}
         draggable={hasTeam}
-        onDragStart={(e) => hasTeam && onDragStart(e, { matchId: match.id, slot })}
+        onDragStart={(e) =>
+          hasTeam && onDragStart(e, { matchId: match.id, slot })
+        }
       >
         {/* Seed badge */}
         {seed && (
@@ -149,9 +162,7 @@ export default function SeedSlot({
               Seed {seed}
             </span>
           ) : (
-            <span className="text-xs text-neutral-600 italic">
-              Slot vide
-            </span>
+            <span className="text-xs text-neutral-600 italic">Slot vide</span>
           )}
           {teamId && !team && (
             <span className="text-[10px] text-neutral-500 font-mono truncate">
@@ -164,16 +175,24 @@ export default function SeedSlot({
       {/* Assign hint */}
       {canPick && !showPicker && (
         <div className="text-[10px] text-purple-400/60 flex-shrink-0">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 4v16m8-8H4"
+            />
           </svg>
         </div>
       )}
 
       {/* Winner indicator */}
-      {isWinner && (
-        <div className="text-emerald-400 text-xs font-bold">W</div>
-      )}
+      {isWinner && <div className="text-emerald-400 text-xs font-bold">W</div>}
 
       {/* Clear button */}
       {hasTeam && (
@@ -183,7 +202,12 @@ export default function SeedSlot({
           className="opacity-0 group-hover:opacity-100 text-neutral-500 hover:text-red-400 transition-all p-0.5"
         >
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-            <path d="M4 4l8 8m0-8L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            <path
+              d="M4 4l8 8m0-8L4 12"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
           </svg>
         </button>
       )}
@@ -230,7 +254,9 @@ export default function SeedSlot({
                       className="w-5 h-5 rounded object-cover flex-shrink-0"
                     />
                   )}
-                  <span className="text-sm text-white truncate">{t.team.name}</span>
+                  <span className="text-sm text-white truncate">
+                    {t.team.name}
+                  </span>
                   {t.seed != null && (
                     <span className="ml-auto text-[10px] text-neutral-500 flex-shrink-0">
                       Seed {t.seed}

@@ -117,8 +117,14 @@ export function computeSwissStandings(
 
     // Head-to-head : accumuler le différentiel de score (gère les multi-rencontres)
     const diff = m.player1Score - m.player2Score;
-    headToHead.set(h2hKey(p1.id, p2.id), (headToHead.get(h2hKey(p1.id, p2.id)) ?? 0) + diff);
-    headToHead.set(h2hKey(p2.id, p1.id), (headToHead.get(h2hKey(p2.id, p1.id)) ?? 0) - diff);
+    headToHead.set(
+      h2hKey(p1.id, p2.id),
+      (headToHead.get(h2hKey(p1.id, p2.id)) ?? 0) + diff
+    );
+    headToHead.set(
+      h2hKey(p2.id, p1.id),
+      (headToHead.get(h2hKey(p2.id, p1.id)) ?? 0) - diff
+    );
 
     // Adversaires pour tie-breakers
     p1.opponents.add(p2.id);

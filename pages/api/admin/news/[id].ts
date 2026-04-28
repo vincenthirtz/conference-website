@@ -27,11 +27,9 @@ function normalizeTag(tag?: string) {
   return slugify(cleaned, { lower: true, strict: true });
 }
 
-async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-news-id')) return;
+async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-news-id'))
+    return;
   const { id } = req.query;
   if (!id || Array.isArray(id) || !isValidUUID(id)) {
     return res.status(400).json({ error: 'Missing or invalid ID.' });
@@ -53,9 +51,7 @@ async function handler(
 
     if (error) {
       console.error('[admin/news/id] fetch error', error);
-      return res
-        .status(500)
-        .json({ error: 'Failed to load the article.' });
+      return res.status(500).json({ error: 'Failed to load the article.' });
     }
 
     if (!data) {
@@ -68,9 +64,7 @@ async function handler(
   if (req.method === 'PUT') {
     const body = req.body as NewsPayload;
     if (!body?.title || !body.content) {
-      return res
-        .status(400)
-        .json({ error: 'Title and content are required.' });
+      return res.status(400).json({ error: 'Title and content are required.' });
     }
 
     const { data: existing, error: existingErr } = await admin
@@ -121,9 +115,7 @@ async function handler(
 
     if (error) {
       console.error('[admin/news/id] update error', error);
-      return res
-        .status(500)
-        .json({ error: 'Failed to update the article.' });
+      return res.status(500).json({ error: 'Failed to update the article.' });
     }
 
     return res.status(200).json(data);
@@ -134,9 +126,7 @@ async function handler(
 
     if (error) {
       console.error('[admin/news/id] delete error', error);
-      return res
-        .status(500)
-        .json({ error: 'Failed to delete the article.' });
+      return res.status(500).json({ error: 'Failed to delete the article.' });
     }
 
     return res.status(204).end();

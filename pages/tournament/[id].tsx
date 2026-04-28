@@ -1,5 +1,5 @@
 // pages/tournament/[id].tsx
- 
+
 import { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -99,14 +99,16 @@ export const getServerSideProps: GetServerSideProps<
   }
 
   const asString = String(rawId);
-  const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
-    asString
-  );
+  const isUuid =
+    /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+      asString
+    );
 
   // 1) Tournoi (accept both uuid id and slug)
   let tournament: Tournament | null = null;
 
-  const tournamentColumns = 'id, name, short_name, slug, game, status, format, max_teams, start_date, end_date, rules_url, description_info, schedule_details, schedule_rules, format_details, visibility, created_at, updated_at';
+  const tournamentColumns =
+    'id, name, short_name, slug, game, status, format, max_teams, start_date, end_date, rules_url, description_info, schedule_details, schedule_rules, format_details, visibility, created_at, updated_at';
 
   if (isUuid) {
     const { data, error } = await supabaseAdmin
@@ -146,7 +148,9 @@ export const getServerSideProps: GetServerSideProps<
     // 2) Stages
     supabaseAdmin
       .from('tournament_stages')
-      .select('id, tournament_id, name, stage_type, default_match_format, swiss_rounds, bracket_format, visible')
+      .select(
+        'id, tournament_id, name, stage_type, default_match_format, swiss_rounds, bracket_format, visible'
+      )
       .eq('tournament_id', tournamentId)
       .order('created_at', { ascending: true }),
 
@@ -181,9 +185,12 @@ export const getServerSideProps: GetServerSideProps<
       .eq('tournament_id', tournamentId),
   ]);
 
-  if (stagesResult.error) console.error('tournament stages error:', stagesResult.error);
-  if (matchesResult.error) console.error('tournament matches error:', matchesResult.error);
-  if (teamsResult.error) console.error('tournament teams error:', teamsResult.error);
+  if (stagesResult.error)
+    console.error('tournament stages error:', stagesResult.error);
+  if (matchesResult.error)
+    console.error('tournament matches error:', matchesResult.error);
+  if (teamsResult.error)
+    console.error('tournament teams error:', teamsResult.error);
 
   const stages = (stagesResult.data || []) as any;
   const matches = (matchesResult.data || []) as any as SimpleMatch[];
@@ -195,7 +202,10 @@ export const getServerSideProps: GetServerSideProps<
   const teams = Array.from(teamMap.values());
 
   // Cache SSR response for 60s, serve stale for 120s while revalidating
-  ctx.res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
+  ctx.res.setHeader(
+    'Cache-Control',
+    'public, s-maxage=60, stale-while-revalidate=120'
+  );
 
   return {
     props: {
@@ -270,13 +280,19 @@ export default function TournamentPage({
           content={`${tournament.name} – Tournoi ${tournament.game || 'Overwatch'} OW Women's Cup. Brackets, résultats, équipes et calendrier des matchs.`}
         />
         <meta property="og:type" content="website" />
-        <meta property="og:title" content={`${tournament.name} | OW Women's Cup`} />
+        <meta
+          property="og:title"
+          content={`${tournament.name} | OW Women's Cup`}
+        />
         <meta
           property="og:description"
           content={`${tournament.name} – Tournoi ${tournament.game || 'Overwatch'} OW Women's Cup. Brackets, résultats et équipes.`}
         />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={`${tournament.name} | OW Women's Cup`} />
+        <meta
+          name="twitter:title"
+          content={`${tournament.name} | OW Women's Cup`}
+        />
         {tournament.start_date && (
           <script
             type="application/ld+json"
@@ -293,7 +309,8 @@ export default function TournamentPage({
                     : tournament.status === 'running'
                       ? 'https://schema.org/EventScheduled'
                       : 'https://schema.org/EventScheduled',
-                eventAttendanceMode: 'https://schema.org/OnlineEventAttendanceMode',
+                eventAttendanceMode:
+                  'https://schema.org/OnlineEventAttendanceMode',
                 location: {
                   '@type': 'VirtualLocation',
                   url: `https://owwomenscup.com/tournament/${tournament.slug || tournament.id}`,
@@ -312,7 +329,10 @@ export default function TournamentPage({
       </Head>
 
       {/* Decorative background blobs */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
+      <div
+        className="pointer-events-none fixed inset-0 overflow-hidden"
+        aria-hidden="true"
+      >
         <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-purple-600/8 blur-3xl" />
         <div className="absolute top-1/3 -right-32 w-[500px] h-[500px] rounded-full bg-pink-500/6 blur-3xl" />
         <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] rounded-full bg-blue-500/5 blur-3xl" />
@@ -335,18 +355,36 @@ export default function TournamentPage({
                 <span className={statusColor}>{statusLabel}</span>
               </div>
 
-              <Heading typeStyle="heading-lg" level="h1" className="text-gradient mb-2">
+              <Heading
+                typeStyle="heading-lg"
+                level="h1"
+                className="text-gradient mb-2"
+              >
                 {tournament.name}
               </Heading>
 
               {dateRangeLabel && (
                 <p className="text-sm text-gray-400 mb-3 flex items-center gap-2">
-                  <svg className="w-3.5 h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                  <svg
+                    className="w-3.5 h-3.5 text-purple-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
                   {dateRangeLabel}
                   {tournament.format && (
                     <>
                       {' · '}
-                      <span className="text-gray-200 font-medium">{tournament.format}</span>
+                      <span className="text-gray-200 font-medium">
+                        {tournament.format}
+                      </span>
                     </>
                   )}
                 </p>
@@ -392,9 +430,7 @@ export default function TournamentPage({
 
                 {tournament.status !== 'completed' &&
                   tournament.status !== 'finished' && (
-                    <Link
-                      href={`/team/create?tournament=${tournament.id}`}
-                    >
+                    <Link href={`/team/create?tournament=${tournament.id}`}>
                       <Button
                         type="button"
                         className="px-6 py-2.5 text-xs font-bold rounded-full bg-gradient-to-r from-pink-500 to-orange-400 text-black hover:from-pink-400 hover:to-orange-300 shadow-lg shadow-pink-500/20 transition-all hover:shadow-pink-500/30 hover:scale-[1.02]"
@@ -413,7 +449,19 @@ export default function TournamentPage({
                     rel="noreferrer"
                     className="inline-flex items-center gap-1.5 text-[11px] text-gray-400 hover:text-purple-300 transition-colors"
                   >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                    <svg
+                      className="w-3 h-3"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
                     Règlement du tournoi
                   </a>
                 </div>
@@ -459,19 +507,38 @@ export default function TournamentPage({
         </section>
 
         {/* INFOS TOURNOI */}
-        {(tournament.description_info || tournament.schedule_details || tournament.schedule_rules || tournament.format_details) && (
+        {(tournament.description_info ||
+          tournament.schedule_details ||
+          tournament.schedule_rules ||
+          tournament.format_details) && (
           <section className="mb-14 grid grid-cols-1 md:grid-cols-2 gap-6">
             {tournament.description_info && (
-              <InfoCard title="Infos" content={tournament.description_info} accent="purple" />
+              <InfoCard
+                title="Infos"
+                content={tournament.description_info}
+                accent="purple"
+              />
             )}
             {tournament.schedule_details && (
-              <InfoCard title="Calendrier" content={tournament.schedule_details} accent="blue" />
+              <InfoCard
+                title="Calendrier"
+                content={tournament.schedule_details}
+                accent="blue"
+              />
             )}
             {tournament.schedule_rules && (
-              <InfoCard title="Règles des horaires" content={tournament.schedule_rules} accent="emerald" />
+              <InfoCard
+                title="Règles des horaires"
+                content={tournament.schedule_rules}
+                accent="emerald"
+              />
             )}
             {tournament.format_details && (
-              <InfoCard title="Détails du format" content={tournament.format_details} accent="pink" />
+              <InfoCard
+                title="Détails du format"
+                content={tournament.format_details}
+                accent="pink"
+              />
             )}
           </section>
         )}
@@ -522,7 +589,19 @@ export default function TournamentPage({
                     </div>
                     <Link href={`/tournament/${tournament.id}/bracket`}>
                       <span className="mt-1 inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-purple-400/40 text-purple-200 bg-purple-900/20 hover:bg-purple-900/40 cursor-pointer text-[10px] transition-colors">
-                        <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+                        <svg
+                          className="w-2.5 h-2.5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M13 7l5 5m0 0l-5 5m5-5H6"
+                          />
+                        </svg>
                         Bracket
                       </span>
                     </Link>
@@ -674,8 +753,11 @@ export default function TournamentPage({
                 Les stats détaillées (popularité, overtimes, rounds moyens) sont
                 visibles sur la page{' '}
                 <Link href={`/tournament/${tournament.id}/maps`}>
-                  <span className="text-blue-400 hover:text-blue-300 cursor-pointer transition-colors font-medium">Top maps</span>
-                </Link>.
+                  <span className="text-blue-400 hover:text-blue-300 cursor-pointer transition-colors font-medium">
+                    Top maps
+                  </span>
+                </Link>
+                .
               </p>
             </div>
           </div>
@@ -709,7 +791,9 @@ function StatCard({
 }) {
   const style = ACCENT_STYLES[accent] || ACCENT_STYLES.purple;
   return (
-    <div className={`rounded-2xl bg-gradient-to-br ${style.glow} via-white/5 to-transparent border ${style.border} backdrop-blur-sm px-4 py-4 hover:border-white/20 transition-colors`}>
+    <div
+      className={`rounded-2xl bg-gradient-to-br ${style.glow} via-white/5 to-transparent border ${style.border} backdrop-blur-sm px-4 py-4 hover:border-white/20 transition-colors`}
+    >
       <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-1.5">
         {label}
       </p>
@@ -757,7 +841,9 @@ function MatchLine({
                 <span className="text-gray-500 font-normal">vs</span> {t2}
               </>
             )}
-            {match.is_bye && <span className="text-gray-500 font-normal"> (bye)</span>}
+            {match.is_bye && (
+              <span className="text-gray-500 font-normal"> (bye)</span>
+            )}
           </p>
           <div className="flex items-center gap-1.5 shrink-0">
             {scoreLabel && (
@@ -852,7 +938,8 @@ function getStatusLabel(status: string): string {
 }
 
 function getStatusChipColor(status: string): string {
-  const base = 'px-2 py-[3px] rounded-full text-[9px] font-bold uppercase tracking-wider';
+  const base =
+    'px-2 py-[3px] rounded-full text-[9px] font-bold uppercase tracking-wider';
   switch (status) {
     case 'upcoming':
       return `${base} bg-yellow-500/15 text-yellow-300 border border-yellow-500/40`;
@@ -878,7 +965,9 @@ function InfoCard({
 }) {
   const style = ACCENT_STYLES[accent] || ACCENT_STYLES.purple;
   return (
-    <div className={`bg-white/[0.03] backdrop-blur-sm border ${style.border} rounded-2xl p-5`}>
+    <div
+      className={`bg-white/[0.03] backdrop-blur-sm border ${style.border} rounded-2xl p-5`}
+    >
       <p className="text-[10px] uppercase tracking-widest text-gray-500 font-medium mb-3">
         {title}
       </p>

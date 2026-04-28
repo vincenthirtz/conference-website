@@ -9,7 +9,8 @@ export default function handler(
   req: NextApiRequest,
   res: NextApiResponse<CallbackResponse>
 ) {
-  if (applyRateLimit(req, res, { max: 20, windowMs: 60_000 }, 'twitch-oauth')) return;
+  if (applyRateLimit(req, res, { max: 20, windowMs: 60_000 }, 'twitch-oauth'))
+    return;
   if (req.method !== 'GET') {
     return res.status(405).json({ ok: false, error: 'Method not allowed' });
   }

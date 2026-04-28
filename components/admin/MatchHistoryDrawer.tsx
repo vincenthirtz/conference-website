@@ -85,12 +85,8 @@ export default function MatchHistoryDrawer({ matchId, open, onClose }: Props) {
         </header>
 
         <div className="flex-1 overflow-y-auto px-4 py-3">
-          {loading && (
-            <p className="text-sm text-neutral-400">Chargement…</p>
-          )}
-          {errorMsg && (
-            <p className="text-sm text-red-300">{errorMsg}</p>
-          )}
+          {loading && <p className="text-sm text-neutral-400">Chargement…</p>}
+          {errorMsg && <p className="text-sm text-red-300">{errorMsg}</p>}
           {!loading && !errorMsg && logs.length === 0 && (
             <p className="text-sm text-neutral-500 italic">
               Aucune action staff enregistrée sur ce match.
@@ -169,8 +165,7 @@ function describeChange(log: FormattedLog): string | null {
 
   if (p.mode === 'meta' && p.before && p.after) {
     const fields: string[] = [];
-    if (p.before.scheduled_at !== p.after.scheduled_at)
-      fields.push('horaire');
+    if (p.before.scheduled_at !== p.after.scheduled_at) fields.push('horaire');
     if (p.before.status !== p.after.status) fields.push('statut');
     if (p.before.notes !== p.after.notes) fields.push('notes');
     if (p.before.lobby_code !== p.after.lobby_code) fields.push('lobby');
@@ -181,7 +176,10 @@ function describeChange(log: FormattedLog): string | null {
   if (log.action === 'open_match_dispute' && typeof p.reason === 'string') {
     return `Motif: ${p.reason.slice(0, 40)}${p.reason.length > 40 ? '…' : ''}`;
   }
-  if (log.action === 'resolve_match_dispute' && typeof p.resolution === 'string') {
+  if (
+    log.action === 'resolve_match_dispute' &&
+    typeof p.resolution === 'string'
+  ) {
     return `Décision: ${p.resolution.slice(0, 40)}${p.resolution.length > 40 ? '…' : ''}`;
   }
   if (p.cancelled === true) return 'Annulé';

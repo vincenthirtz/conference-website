@@ -58,8 +58,11 @@ function StagesPage(_: StaffProps) {
 
   // Template append
   const [showTemplateModal, setShowTemplateModal] = useState(false);
-  const [customTemplates, setCustomTemplates] = useState<TournamentTemplate[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<TournamentTemplate | null>(null);
+  const [customTemplates, setCustomTemplates] = useState<TournamentTemplate[]>(
+    []
+  );
+  const [selectedTemplate, setSelectedTemplate] =
+    useState<TournamentTemplate | null>(null);
   const [applyingTemplate, setApplyingTemplate] = useState(false);
   const { addToast } = useToast();
 
@@ -74,7 +77,9 @@ function StagesPage(_: StaffProps) {
     setErrorMsg(null);
     try {
       // Fetch stages
-      const stagesRes = await fetch(`/api/admin/tournament/${tournamentId}/stages`);
+      const stagesRes = await fetch(
+        `/api/admin/tournament/${tournamentId}/stages`
+      );
       if (!stagesRes.ok) {
         const json = await stagesRes.json().catch(() => ({}));
         throw new Error(json.error || 'Impossible de charger les phases');
@@ -83,10 +88,14 @@ function StagesPage(_: StaffProps) {
       setStages(stagesJson.stages || []);
 
       // Fetch tournament name
-      const tournamentRes = await fetch(`/api/admin/tournament/${tournamentId}`);
+      const tournamentRes = await fetch(
+        `/api/admin/tournament/${tournamentId}`
+      );
       if (tournamentRes.ok) {
         const tournamentJson = await tournamentRes.json();
-        setTournamentName(tournamentJson.tournament?.name || tournamentId || 'Tournoi');
+        setTournamentName(
+          tournamentJson.tournament?.name || tournamentId || 'Tournoi'
+        );
       }
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message || 'Erreur de chargement');
@@ -110,7 +119,10 @@ function StagesPage(_: StaffProps) {
 
     // Swap order_index values
     const temp = sorted[index].order_index;
-    sorted[index] = { ...sorted[index], order_index: sorted[targetIndex].order_index };
+    sorted[index] = {
+      ...sorted[index],
+      order_index: sorted[targetIndex].order_index,
+    };
     sorted[targetIndex] = { ...sorted[targetIndex], order_index: temp };
 
     setStages(sorted);
@@ -164,11 +176,17 @@ function StagesPage(_: StaffProps) {
     setApplyingTemplate(true);
     setErrorMsg(null);
     try {
-      const res = await fetch(`/api/admin/tournament/${tournamentId}/apply-template`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ templateId: selectedTemplate.id, append: true }),
-      });
+      const res = await fetch(
+        `/api/admin/tournament/${tournamentId}/apply-template`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            templateId: selectedTemplate.id,
+            append: true,
+          }),
+        }
+      );
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         throw new Error(json.error || "Impossible d'appliquer le template");
@@ -178,7 +196,9 @@ function StagesPage(_: StaffProps) {
       addToast(`Template « ${selectedTemplate.name} » ajouté`, 'success');
       fetchStages();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || "Erreur lors de l'application du template");
+      setErrorMsg(
+        (err as Error)?.message || "Erreur lors de l'application du template"
+      );
     } finally {
       setApplyingTemplate(false);
     }
@@ -208,11 +228,16 @@ function StagesPage(_: StaffProps) {
       </Head>
       <div className="min-h-screen bg-neutral-950 text-white pt-24">
         <div className="max-w-6xl mx-auto px-6 py-10">
-          <Breadcrumb items={[
-            { label: 'Tournois', href: '/admin/tournaments' },
-            { label: tournamentName, href: `/admin/tournament/${tournamentId}` },
-            { label: 'Phases' },
-          ]} />
+          <Breadcrumb
+            items={[
+              { label: 'Tournois', href: '/admin/tournaments' },
+              {
+                label: tournamentName,
+                href: `/admin/tournament/${tournamentId}`,
+              },
+              { label: 'Phases' },
+            ]}
+          />
           <div className="flex items-center justify-between gap-4 mb-6">
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-purple-200/80">
@@ -293,79 +318,89 @@ function StagesPage(_: StaffProps) {
           )}
 
           {stages.length > 0 && (
-            <div className={reorderMode ? 'flex flex-col gap-3' : 'grid grid-cols-1 md:grid-cols-2 gap-4'}>
+            <div
+              className={
+                reorderMode
+                  ? 'flex flex-col gap-3'
+                  : 'grid grid-cols-1 md:grid-cols-2 gap-4'
+              }
+            >
               {getSortedStages().map((stage, idx) => (
-                  <div
-                    key={stage.id}
-                    className={`p-4 rounded-xl bg-white/5 border ${
-                      reorderMode ? 'border-purple-400/30' : 'border-white/10'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-3 mb-2">
-                      <div className="flex items-center gap-3">
-                        {reorderMode && (
-                          <div className="flex flex-col gap-1">
-                            <button
-                              onClick={() => moveStage(idx, 'up')}
-                              disabled={idx === 0}
-                              className="px-2 py-0.5 rounded bg-white/10 border border-white/15 text-xs hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed"
-                              title="Monter"
-                            >
-                              &#9650;
-                            </button>
-                            <button
-                              onClick={() => moveStage(idx, 'down')}
-                              disabled={idx === stages.length - 1}
-                              className="px-2 py-0.5 rounded bg-white/10 border border-white/15 text-xs hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed"
-                              title="Descendre"
-                            >
-                              &#9660;
-                            </button>
-                          </div>
-                        )}
-                        <div>
-                          <p className="text-sm font-semibold">{stage.name}</p>
-                          <p className="text-xs text-gray-400">
-                            {typeLabel(stage.stage_type)} · Ordre{' '}
-                            {stage.order_index ?? '—'}
-                          </p>
+                <div
+                  key={stage.id}
+                  className={`p-4 rounded-xl bg-white/5 border ${
+                    reorderMode ? 'border-purple-400/30' : 'border-white/10'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3 mb-2">
+                    <div className="flex items-center gap-3">
+                      {reorderMode && (
+                        <div className="flex flex-col gap-1">
+                          <button
+                            onClick={() => moveStage(idx, 'up')}
+                            disabled={idx === 0}
+                            className="px-2 py-0.5 rounded bg-white/10 border border-white/15 text-xs hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                            title="Monter"
+                          >
+                            &#9650;
+                          </button>
+                          <button
+                            onClick={() => moveStage(idx, 'down')}
+                            disabled={idx === stages.length - 1}
+                            className="px-2 py-0.5 rounded bg-white/10 border border-white/15 text-xs hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                            title="Descendre"
+                          >
+                            &#9660;
+                          </button>
                         </div>
+                      )}
+                      <div>
+                        <p className="text-sm font-semibold">{stage.name}</p>
+                        <p className="text-xs text-gray-400">
+                          {typeLabel(stage.stage_type)} · Ordre{' '}
+                          {stage.order_index ?? '—'}
+                        </p>
                       </div>
-                      <Link
-                        href={`/admin/stages/${stage.id}`}
-                        className="text-sm px-3 py-1 rounded-lg bg-white/10 border border-white/15 hover:bg-white/15"
-                      >
-                        Ouvrir
-                      </Link>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-gray-300">
-                      <span
-                        className={`px-2 py-0.5 rounded-full border ${
-                          stage.is_active ? 'border-emerald-400/50 text-emerald-200' : 'border-gray-500/40 text-gray-300'
-                        }`}
-                      >
-                        {stage.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                      <span
-                        className={`px-2 py-0.5 rounded-full border ${
-                          stage.is_public ? 'border-blue-300/50 text-blue-200' : 'border-gray-500/40 text-gray-300'
-                        }`}
-                      >
-                        {stage.is_public ? 'Publique' : 'Privée'}
-                      </span>
-                      {stage.start_date && (
-                        <span className="px-2 py-0.5 rounded-full border border-white/10 text-gray-200">
-                          Débute : {new Date(stage.start_date).toLocaleString()}
-                        </span>
-                      )}
-                      {stage.end_date && (
-                        <span className="px-2 py-0.5 rounded-full border border-white/10 text-gray-200">
-                          Fin : {new Date(stage.end_date).toLocaleString()}
-                        </span>
-                      )}
-                    </div>
+                    <Link
+                      href={`/admin/stages/${stage.id}`}
+                      className="text-sm px-3 py-1 rounded-lg bg-white/10 border border-white/15 hover:bg-white/15"
+                    >
+                      Ouvrir
+                    </Link>
                   </div>
-                ))}
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-gray-300">
+                    <span
+                      className={`px-2 py-0.5 rounded-full border ${
+                        stage.is_active
+                          ? 'border-emerald-400/50 text-emerald-200'
+                          : 'border-gray-500/40 text-gray-300'
+                      }`}
+                    >
+                      {stage.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded-full border ${
+                        stage.is_public
+                          ? 'border-blue-300/50 text-blue-200'
+                          : 'border-gray-500/40 text-gray-300'
+                      }`}
+                    >
+                      {stage.is_public ? 'Publique' : 'Privée'}
+                    </span>
+                    {stage.start_date && (
+                      <span className="px-2 py-0.5 rounded-full border border-white/10 text-gray-200">
+                        Débute : {new Date(stage.start_date).toLocaleString()}
+                      </span>
+                    )}
+                    {stage.end_date && (
+                      <span className="px-2 py-0.5 rounded-full border border-white/10 text-gray-200">
+                        Fin : {new Date(stage.end_date).toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -375,9 +410,12 @@ function StagesPage(_: StaffProps) {
       {showTemplateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
-            <h3 className="text-lg font-semibold mb-2">Ajouter un bloc template</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              Ajouter un bloc template
+            </h3>
             <p className="text-xs text-neutral-400 mb-4">
-              Les phases du template seront ajoutées après les phases existantes.
+              Les phases du template seront ajoutées après les phases
+              existantes.
             </p>
 
             <div className="grid gap-2 max-h-72 overflow-y-auto pr-1 mb-4">

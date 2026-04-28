@@ -17,7 +17,8 @@ const COACH_EMAIL = `test-tr-coach-${TS}@test.local`;
 const PASSWORD = 'TestPassword123!';
 
 // Separate admin client that won't be affected by signIn calls
-const supabaseUrl = process.env.TEST_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseUrl =
+  process.env.TEST_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const serviceRoleKey =
   process.env.TEST_SUPABASE_SERVICE_ROLE_KEY ||
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
@@ -25,7 +26,9 @@ const serviceRoleKey =
   '';
 const adminClient =
   supabaseUrl && serviceRoleKey
-    ? createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } })
+    ? createClient(supabaseUrl, serviceRoleKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      })
     : null;
 
 /**
@@ -53,11 +56,17 @@ async function cleanupAllTestData() {
   await deleteTeamsByName(['E2E-TR-%']);
 
   // Supprimer tous les auth users de test (pattern test-tr-*@test.local)
-  const { data } = await adminClient.auth.admin.listUsers({ page: 1, perPage: 100 });
-  const users = (data as any)?.users as { id: string; email?: string }[] | undefined;
-  const testUsers = users?.filter(
-    (u) => u.email && /^test-tr-\w+-\d+@test\.local$/.test(u.email)
-  ) ?? [];
+  const { data } = await adminClient.auth.admin.listUsers({
+    page: 1,
+    perPage: 100,
+  });
+  const users = (data as any)?.users as
+    | { id: string; email?: string }[]
+    | undefined;
+  const testUsers =
+    users?.filter(
+      (u) => u.email && /^test-tr-\w+-\d+@test\.local$/.test(u.email)
+    ) ?? [];
 
   for (const user of testUsers) {
     await adminClient.auth.admin.deleteUser(user.id);
@@ -83,7 +92,12 @@ test.describe('Team transfers, role management & coach system', () => {
 
     // Cleanup du run courant
     await deleteTeamsByName([`${PREFIX}%`]);
-    for (const email of [CAPTAIN_A_EMAIL, CAPTAIN_B_EMAIL, PLAYER_EMAIL, COACH_EMAIL]) {
+    for (const email of [
+      CAPTAIN_A_EMAIL,
+      CAPTAIN_B_EMAIL,
+      PLAYER_EMAIL,
+      COACH_EMAIL,
+    ]) {
       await deleteTestUser(email);
     }
 
@@ -99,21 +113,40 @@ test.describe('Team transfers, role management & coach system', () => {
     // Create teams and members via admin client (bypasses RLS)
     const { data: tA, error: tAErr } = await adminClient!
       .from('teams')
-      .insert({ name: `${PREFIX}-teamA`, captain_id: captainAUserId, is_joinable: true })
+      .insert({
+        name: `${PREFIX}-teamA`,
+        captain_id: captainAUserId,
+        is_joinable: true,
+      })
       .select('id')
       .single();
     if (tAErr) throw new Error(`Failed to create team A: ${tAErr.message}`);
     teamAId = tA!.id;
 
     const { error: mAErr } = await adminClient!.from('team_members').insert([
-      { team_id: teamAId, user_id: captainAUserId, role: 'player', battle_tag: `CapA${TS}#0001` },
-      { team_id: teamAId, user_id: playerUserId, role: 'player', battle_tag: `Plr${TS}#0001` },
+      {
+        team_id: teamAId,
+        user_id: captainAUserId,
+        role: 'player',
+        battle_tag: `CapA${TS}#0001`,
+      },
+      {
+        team_id: teamAId,
+        user_id: playerUserId,
+        role: 'player',
+        battle_tag: `Plr${TS}#0001`,
+      },
     ]);
-    if (mAErr) throw new Error(`Failed to add team A members: ${mAErr.message}`);
+    if (mAErr)
+      throw new Error(`Failed to add team A members: ${mAErr.message}`);
 
     const { data: tB, error: tBErr } = await adminClient!
       .from('teams')
-      .insert({ name: `${PREFIX}-teamB`, captain_id: captainBUserId, is_joinable: true })
+      .insert({
+        name: `${PREFIX}-teamB`,
+        captain_id: captainBUserId,
+        is_joinable: true,
+      })
       .select('id')
       .single();
     if (tBErr) throw new Error(`Failed to create team B: ${tBErr.message}`);
@@ -125,11 +158,15 @@ test.describe('Team transfers, role management & coach system', () => {
       role: 'player',
       battle_tag: `CapB${TS}#0001`,
     });
-    if (mBErr) throw new Error(`Failed to add team B members: ${mBErr.message}`);
+    if (mBErr)
+      throw new Error(`Failed to add team B members: ${mBErr.message}`);
 
     // Sign in to get tokens
     const signIn = async (email: string) => {
-      const { data } = await supabaseTestClient!.auth.signInWithPassword({ email, password: PASSWORD });
+      const { data } = await supabaseTestClient!.auth.signInWithPassword({
+        email,
+        password: PASSWORD,
+      });
       return data.session!.access_token;
     };
     captainAToken = await signIn(CAPTAIN_A_EMAIL);
@@ -150,12 +187,17 @@ test.describe('Team transfers, role management & coach system', () => {
     expect(res.status()).toBe(401);
   });
 
-  test('POST /api/demandes/transfer — validation errors', async ({ request }) => {
+  test('POST /api/demandes/transfer — validation errors', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
 
     // Not in a team
     const res1 = await request.post('/api/demandes/transfer', {
-      headers: { Authorization: `Bearer ${coachToken}`, 'Content-Type': 'application/json' },
+      headers: {
+        Authorization: `Bearer ${coachToken}`,
+        'Content-Type': 'application/json',
+      },
       data: { teamId: teamBId },
     });
     expect(res1.status()).toBe(400);
@@ -163,7 +205,10 @@ test.describe('Team transfers, role management & coach system', () => {
 
     // Same team
     const res2 = await request.post('/api/demandes/transfer', {
-      headers: { Authorization: `Bearer ${playerToken}`, 'Content-Type': 'application/json' },
+      headers: {
+        Authorization: `Bearer ${playerToken}`,
+        'Content-Type': 'application/json',
+      },
       data: { teamId: teamAId },
     });
     expect(res2.status()).toBe(400);
@@ -171,7 +216,10 @@ test.describe('Team transfers, role management & coach system', () => {
 
     // Captain cannot transfer
     const res3 = await request.post('/api/demandes/transfer', {
-      headers: { Authorization: `Bearer ${captainAToken}`, 'Content-Type': 'application/json' },
+      headers: {
+        Authorization: `Bearer ${captainAToken}`,
+        'Content-Type': 'application/json',
+      },
       data: { teamId: teamBId },
     });
     expect(res3.status()).toBe(403);
@@ -180,10 +228,15 @@ test.describe('Team transfers, role management & coach system', () => {
 
   // ─── Transfer flow: create -> list -> approve ─────────
 
-  test('POST /api/demandes/transfer — cree une demande de transfert', async ({ request }) => {
+  test('POST /api/demandes/transfer — cree une demande de transfert', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.post('/api/demandes/transfer', {
-      headers: { Authorization: `Bearer ${playerToken}`, 'Content-Type': 'application/json' },
+      headers: {
+        Authorization: `Bearer ${playerToken}`,
+        'Content-Type': 'application/json',
+      },
       data: {
         teamId: teamBId,
         desiredRole: 'substitute',
@@ -199,17 +252,24 @@ test.describe('Team transfers, role management & coach system', () => {
     expect(body.demande.payload.from_team_id).toBe(teamAId);
   });
 
-  test('POST /api/demandes/transfer — 400 si demande deja en attente', async ({ request }) => {
+  test('POST /api/demandes/transfer — 400 si demande deja en attente', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.post('/api/demandes/transfer', {
-      headers: { Authorization: `Bearer ${playerToken}`, 'Content-Type': 'application/json' },
+      headers: {
+        Authorization: `Bearer ${playerToken}`,
+        'Content-Type': 'application/json',
+      },
       data: { teamId: teamBId },
     });
     expect(res.status()).toBe(400);
     expect((await res.json()).error).toContain('deja une demande');
   });
 
-  test('GET /api/demandes/transfer — retourne les demandes du joueur', async ({ request }) => {
+  test('GET /api/demandes/transfer — retourne les demandes du joueur', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.get('/api/demandes/transfer', {
       headers: { Authorization: `Bearer ${playerToken}` },
@@ -222,12 +282,16 @@ test.describe('Team transfers, role management & coach system', () => {
 
   // ─── GET /api/teams/transfer-requests ──────────────────
 
-  test('GET /api/teams/transfer-requests — 401 sans auth', async ({ request }) => {
+  test('GET /api/teams/transfer-requests — 401 sans auth', async ({
+    request,
+  }) => {
     const res = await request.get('/api/teams/transfer-requests');
     expect(res.status()).toBe(401);
   });
 
-  test('GET /api/teams/transfer-requests — 403 si pas capitaine', async ({ request }) => {
+  test('GET /api/teams/transfer-requests — 403 si pas capitaine', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.get('/api/teams/transfer-requests', {
       headers: { Authorization: `Bearer ${playerToken}` },
@@ -235,7 +299,9 @@ test.describe('Team transfers, role management & coach system', () => {
     expect(res.status()).toBe(403);
   });
 
-  test('GET /api/teams/transfer-requests — liste les demandes pending', async ({ request }) => {
+  test('GET /api/teams/transfer-requests — liste les demandes pending', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.get('/api/teams/transfer-requests', {
       headers: { Authorization: `Bearer ${captainBToken}` },
@@ -249,7 +315,9 @@ test.describe('Team transfers, role management & coach system', () => {
 
   // ─── POST /api/teams/transfer-requests (approve) ──────
 
-  test('POST /api/teams/transfer-requests — approve transfere le joueur', async ({ request }) => {
+  test('POST /api/teams/transfer-requests — approve transfere le joueur', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
 
     // Get pending transfer request
@@ -262,7 +330,10 @@ test.describe('Team transfers, role management & coach system', () => {
 
     // Approve
     const res = await request.post('/api/teams/transfer-requests', {
-      headers: { Authorization: `Bearer ${captainBToken}`, 'Content-Type': 'application/json' },
+      headers: {
+        Authorization: `Bearer ${captainBToken}`,
+        'Content-Type': 'application/json',
+      },
       data: { demandeId, action: 'approve' },
     });
     expect(res.status()).toBe(200);
@@ -292,21 +363,33 @@ test.describe('Team transfers, role management & coach system', () => {
 
   // ─── PATCH /api/teams/update-member-role ───────────────
 
-  test('PATCH /api/teams/update-member-role — 401 sans auth', async ({ request }) => {
+  test('PATCH /api/teams/update-member-role — 401 sans auth', async ({
+    request,
+  }) => {
     const res = await request.patch('/api/teams/update-member-role');
     expect(res.status()).toBe(401);
   });
 
-  test('PATCH /api/teams/update-member-role — 403 si pas capitaine', async ({ request }) => {
+  test('PATCH /api/teams/update-member-role — 403 si pas capitaine', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.patch('/api/teams/update-member-role', {
-      headers: { Authorization: `Bearer ${playerToken}`, 'Content-Type': 'application/json' },
-      data: { memberId: '00000000-0000-0000-0000-000000000000', role: 'player' },
+      headers: {
+        Authorization: `Bearer ${playerToken}`,
+        'Content-Type': 'application/json',
+      },
+      data: {
+        memberId: '00000000-0000-0000-0000-000000000000',
+        role: 'player',
+      },
     });
     expect(res.status()).toBe(403);
   });
 
-  test('PATCH /api/teams/update-member-role — capitaine change sub en player puis player en sub', async ({ request }) => {
+  test('PATCH /api/teams/update-member-role — capitaine change sub en player puis player en sub', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
 
     // Get player's member ID in team B (use admin client)
@@ -320,7 +403,10 @@ test.describe('Team transfers, role management & coach system', () => {
 
     // Change substitute -> player
     const res1 = await request.patch('/api/teams/update-member-role', {
-      headers: { Authorization: `Bearer ${captainBToken}`, 'Content-Type': 'application/json' },
+      headers: {
+        Authorization: `Bearer ${captainBToken}`,
+        'Content-Type': 'application/json',
+      },
       data: { memberId: member!.id, role: 'player' },
     });
     expect(res1.status()).toBe(200);
@@ -330,7 +416,10 @@ test.describe('Team transfers, role management & coach system', () => {
 
     // Change player -> substitute
     const res2 = await request.patch('/api/teams/update-member-role', {
-      headers: { Authorization: `Bearer ${captainBToken}`, 'Content-Type': 'application/json' },
+      headers: {
+        Authorization: `Bearer ${captainBToken}`,
+        'Content-Type': 'application/json',
+      },
       data: { memberId: member!.id, role: 'substitute' },
     });
     expect(res2.status()).toBe(200);
@@ -340,7 +429,10 @@ test.describe('Team transfers, role management & coach system', () => {
 
     // Change to coach
     const res3 = await request.patch('/api/teams/update-member-role', {
-      headers: { Authorization: `Bearer ${captainBToken}`, 'Content-Type': 'application/json' },
+      headers: {
+        Authorization: `Bearer ${captainBToken}`,
+        'Content-Type': 'application/json',
+      },
       data: { memberId: member!.id, role: 'coach' },
     });
     expect(res3.status()).toBe(200);
@@ -349,11 +441,16 @@ test.describe('Team transfers, role management & coach system', () => {
 
   // ─── Coach join (no player limit) ─────────────────────
 
-  test('POST /api/demandes/join — coach peut demander a rejoindre en tant que coach', async ({ request }) => {
+  test('POST /api/demandes/join — coach peut demander a rejoindre en tant que coach', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
 
     const res = await request.post('/api/demandes/join', {
-      headers: { Authorization: `Bearer ${coachToken}`, 'Content-Type': 'application/json' },
+      headers: {
+        Authorization: `Bearer ${coachToken}`,
+        'Content-Type': 'application/json',
+      },
       data: {
         teamId: teamBId,
         desiredRole: 'coach',

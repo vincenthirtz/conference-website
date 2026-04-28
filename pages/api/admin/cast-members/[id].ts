@@ -16,11 +16,16 @@ type CastMemberPayload = {
   sortOrder?: number;
 };
 
-async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-cast-members-id')) return;
+async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (
+    applyRateLimit(
+      req,
+      res,
+      { max: 60, windowMs: 60_000 },
+      'admin-cast-members-id'
+    )
+  )
+    return;
   if (!supabaseAdmin) {
     return res
       .status(500)
@@ -42,9 +47,7 @@ async function handler(
 
     if (error) {
       console.error('[admin/cast-members] get error', error);
-      return res
-        .status(404)
-        .json({ error: 'Cast member not found.' });
+      return res.status(404).json({ error: 'Cast member not found.' });
     }
     return res.status(200).json(data);
   }
@@ -53,22 +56,17 @@ async function handler(
     const body = req.body as CastMemberPayload;
     const updatePayload: Record<string, any> = {};
 
-    if (typeof body.name === 'string')
-      updatePayload.name = body.name.trim();
-    if ('title' in body)
-      updatePayload.title = body.title?.trim() || null;
+    if (typeof body.name === 'string') updatePayload.name = body.name.trim();
+    if ('title' in body) updatePayload.title = body.title?.trim() || null;
     if ('description' in body)
       updatePayload.description = body.description?.trim() || null;
     if ('imageUrl' in body)
       updatePayload.image_url = sanitizeUrl(body.imageUrl);
     if ('twitchUrl' in body)
       updatePayload.twitch_url = sanitizeUrl(body.twitchUrl);
-    if ('city' in body)
-      updatePayload.city = body.city?.trim() || null;
-    if ('isActive' in body)
-      updatePayload.is_active = !!body.isActive;
-    if ('isPromo' in body)
-      updatePayload.is_promo = !!body.isPromo;
+    if ('city' in body) updatePayload.city = body.city?.trim() || null;
+    if ('isActive' in body) updatePayload.is_active = !!body.isActive;
+    if ('isPromo' in body) updatePayload.is_promo = !!body.isPromo;
     if ('sortOrder' in body && Number.isFinite(body.sortOrder))
       updatePayload.sort_order = Number(body.sortOrder);
 
@@ -90,10 +88,7 @@ async function handler(
   }
 
   if (req.method === 'DELETE') {
-    const { error } = await admin
-      .from('cast_members')
-      .delete()
-      .eq('id', id);
+    const { error } = await admin.from('cast_members').delete().eq('id', id);
 
     if (error) {
       console.error('[admin/cast-members] delete error', error);

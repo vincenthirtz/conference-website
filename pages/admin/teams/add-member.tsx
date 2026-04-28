@@ -100,7 +100,7 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
 
       const json: AddMemberResponse & { error?: string } = await res.json();
       if (!res.ok || json.error) {
-        throw new Error(json.error || 'Impossible d\'ajouter le membre');
+        throw new Error(json.error || "Impossible d'ajouter le membre");
       }
 
       addToast(json.info || 'Membre ajoute', 'success');
@@ -151,7 +151,8 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
                   Ajouter un membre
                 </h1>
                 <p className="text-neutral-400 text-sm mt-1">
-                  Lier un utilisateur a une equipe et le definir comme capitaine si besoin
+                  Lier un utilisateur a une equipe et le definir comme capitaine
+                  si besoin
                 </p>
               </div>
             </div>
@@ -198,7 +199,8 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
                       placeholder="user@email.tld"
                     />
                     <p className="text-xs text-neutral-500 mt-1">
-                      L&apos;API trouvera l&apos;utilisateur par email si userId n&apos;est pas fourni.
+                      L&apos;API trouvera l&apos;utilisateur par email si userId
+                      n&apos;est pas fourni.
                     </p>
                   </div>
 
@@ -218,7 +220,8 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
 
                 <div>
                   <label className="block text-sm text-neutral-300 mb-1">
-                    BattleTag (Pseudo#0000) <span className="text-red-400">*</span>
+                    BattleTag (Pseudo#0000){' '}
+                    <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="text"
@@ -327,15 +330,24 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
                 <div className="text-xs text-neutral-400 space-y-2">
                   <div className="flex items-start gap-2">
                     <span className="text-neutral-500">•</span>
-                    <p>L&apos;API ajoute a team_members (role par defaut: joueur).</p>
+                    <p>
+                      L&apos;API ajoute a team_members (role par defaut:
+                      joueur).
+                    </p>
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="text-neutral-500">•</span>
-                    <p>Si l&apos;option capitaine est cochee, teams.captain_id est mis a jour.</p>
+                    <p>
+                      Si l&apos;option capitaine est cochee, teams.captain_id
+                      est mis a jour.
+                    </p>
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="text-neutral-500">•</span>
-                    <p>Fournis soit l&apos;email (recherche) soit le userId (prioritaire).</p>
+                    <p>
+                      Fournis soit l&apos;email (recherche) soit le userId
+                      (prioritaire).
+                    </p>
                   </div>
                 </div>
               </section>

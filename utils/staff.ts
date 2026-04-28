@@ -34,12 +34,7 @@ export class StaffUnauthenticatedError extends Error {
   }
 }
 
-export const STAFF_ROLES: StaffRole[] = [
-  'owner',
-  'admin',
-  'manager',
-  'caster',
-];
+export const STAFF_ROLES: StaffRole[] = ['owner', 'admin', 'manager', 'caster'];
 
 export const STAFF_ROLE_LABEL: Record<StaffRole, string> = {
   owner: 'Owner',
@@ -101,7 +96,10 @@ export function hasAtLeastRole(
  * ---------------------------------------------------------*/
 
 const STAFF_CACHE_TTL = 5 * 60 * 1_000; // 5 minutes
-const staffCache = new Map<string, { data: StaffMember | null; expiresAt: number }>();
+const staffCache = new Map<
+  string,
+  { data: StaffMember | null; expiresAt: number }
+>();
 
 export async function getStaffByUserId(
   userId: string
@@ -149,7 +147,10 @@ export async function getStaffRole(userId: string): Promise<StaffRole | null> {
 // Token → userId cache (60s). Évite un roundtrip réseau supabase.auth.getUser
 // par appel d'API admin lors d'une même navigation utilisateur.
 const TOKEN_CACHE_TTL = 60 * 1_000;
-const tokenUserCache = new Map<string, { user: User | null; expiresAt: number }>();
+const tokenUserCache = new Map<
+  string,
+  { user: User | null; expiresAt: number }
+>();
 
 async function resolveUserFromToken(token: string): Promise<User | null> {
   const now = Date.now();
@@ -165,7 +166,10 @@ async function resolveUserFromToken(token: string): Promise<User | null> {
     } = await supabaseAdmin.auth.getUser(token);
     if (error) {
       console.error('resolveUserFromToken error:', error);
-      tokenUserCache.set(token, { user: null, expiresAt: now + TOKEN_CACHE_TTL });
+      tokenUserCache.set(token, {
+        user: null,
+        expiresAt: now + TOKEN_CACHE_TTL,
+      });
       return null;
     }
     tokenUserCache.set(token, { user, expiresAt: now + TOKEN_CACHE_TTL });
@@ -284,7 +288,8 @@ export async function requireStaffRoleFromRequest(
  */
 function csrfCheck(req: NextApiRequest): boolean {
   const method = (req.method || 'GET').toUpperCase();
-  if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return true;
+  if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS')
+    return true;
 
   // Requests with a Bearer token are not browser-initiated, skip CSRF check
   const auth = req.headers.authorization;
@@ -335,7 +340,9 @@ export function withStaffRoute(
         err instanceof StaffUnauthorizedError
       ) {
         // Expected auth errors - no need to log
-        res.status(err.statusCode || 401).json({ error: (err as Error).message });
+        res
+          .status(err.statusCode || 401)
+          .json({ error: (err as Error).message });
         return;
       }
 
@@ -367,7 +374,9 @@ type StaffPageLoader<P> = (
   staffCtx: StaffContext
 ) => Promise<P> | P;
 
-export function withStaffPage<P extends Record<string, unknown> = Record<string, unknown>>(
+export function withStaffPage<
+  P extends Record<string, unknown> = Record<string, unknown>,
+>(
   minRole: StaffRole = 'admin',
   loader?: StaffPageLoader<P>
 ): GetServerSideProps {

@@ -40,7 +40,10 @@ function AdminNewPartnerPage({ staff }: Props) {
     isActive: true,
   });
 
-  const updateField = <K extends keyof FormData>(field: K, value: FormData[K]) => {
+  const updateField = <K extends keyof FormData>(
+    field: K,
+    value: FormData[K]
+  ) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     setError(null);
   };
@@ -253,7 +256,8 @@ function AdminNewPartnerPage({ staff }: Props) {
                   placeholder="0"
                 />
                 <p className="text-xs text-neutral-500 mt-1">
-                  Plus le nombre est bas, plus le partenaire apparaît en premier.
+                  Plus le nombre est bas, plus le partenaire apparaît en
+                  premier.
                 </p>
               </div>
 

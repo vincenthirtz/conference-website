@@ -385,13 +385,19 @@ function detectDoubleBooking(
   originalMatches: MatchToSchedule[]
 ): SchedulingConflict[] {
   // Construire un index matchId → teamIds
-  const matchTeams = new Map<string, { team1Id: string | null; team2Id: string | null }>();
+  const matchTeams = new Map<
+    string,
+    { team1Id: string | null; team2Id: string | null }
+  >();
   for (const m of originalMatches) {
     matchTeams.set(m.id, { team1Id: m.team1Id, team2Id: m.team2Id });
   }
 
   // Grouper les matchs programmés par teamId
-  const teamSchedules = new Map<string, { matchId: string; start: Date; end: Date }[]>();
+  const teamSchedules = new Map<
+    string,
+    { matchId: string; start: Date; end: Date }[]
+  >();
 
   for (const s of scheduled) {
     const teams = matchTeams.get(s.matchId);

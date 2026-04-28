@@ -54,7 +54,12 @@ type TournamentMatch = {
   team1_score: number | null;
   team2_score: number | null;
   winner_team_id: string | null;
-  opponent: { id: string; name: string; short_name: string | null; logo_url: string | null } | null;
+  opponent: {
+    id: string;
+    name: string;
+    short_name: string | null;
+    logo_url: string | null;
+  } | null;
   isTeam1: boolean;
 };
 
@@ -139,9 +144,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
           .select('id, name, short_name, logo_url')
           .in('id', Array.from(opponentIds))
       : { data: [] };
-  const oppMap = new Map(
-    (opponentTeams || []).map((t: any) => [t.id, t])
-  );
+  const oppMap = new Map((opponentTeams || []).map((t: any) => [t.id, t]));
 
   // 7) Stats W/L/D pour ce tournoi (matchs finis uniquement, hors bye)
   let wins = 0,
@@ -190,7 +193,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   const tournamentMatches: TournamentMatch[] = matches.map((m: any) => {
     const isTeam1 = m.team1_id === teamId;
     const opponentId = isTeam1 ? m.team2_id : m.team1_id;
-    const opponent = opponentId ? oppMap.get(opponentId) ?? null : null;
+    const opponent = opponentId ? (oppMap.get(opponentId) ?? null) : null;
     return {
       id: m.id,
       status: m.status,
@@ -261,7 +264,8 @@ function formatDate(iso: string | null) {
 
 function matchOutcome(m: TournamentMatch, teamId: string) {
   if (m.status !== 'finished' && m.status !== 'walkover') {
-    if (m.status === 'ongoing') return { label: 'En cours', color: 'text-amber-300' };
+    if (m.status === 'ongoing')
+      return { label: 'En cours', color: 'text-amber-300' };
     return { label: 'À venir', color: 'text-neutral-400' };
   }
   if (m.winner_team_id === teamId)
@@ -363,10 +367,22 @@ export default function TournamentTeamPage({
           <section className="mb-6">
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               <StatCard label="Matchs joués" value={stats.played} />
-              <StatCard label="Victoires" value={stats.wins} accent="text-emerald-300" />
-              <StatCard label="Défaites" value={stats.losses} accent="text-red-300" />
+              <StatCard
+                label="Victoires"
+                value={stats.wins}
+                accent="text-emerald-300"
+              />
+              <StatCard
+                label="Défaites"
+                value={stats.losses}
+                accent="text-red-300"
+              />
               <StatCard label="Winrate" value={`${winrate.toFixed(0)}%`} />
-              <StatCard label="MVP" value={totalMvpAwards} accent="text-yellow-300" />
+              <StatCard
+                label="MVP"
+                value={totalMvpAwards}
+                accent="text-yellow-300"
+              />
             </div>
           </section>
 
@@ -458,7 +474,9 @@ export default function TournamentTeamPage({
                           ? `${ourScore} - ${theirScore}`
                           : '—'}
                       </div>
-                      <div className={`col-span-1 text-xs text-right ${outcome.color}`}>
+                      <div
+                        className={`col-span-1 text-xs text-right ${outcome.color}`}
+                      >
                         {outcome.label}
                       </div>
                     </Link>
@@ -484,7 +502,9 @@ function StatCard({
 }) {
   return (
     <div className="bg-black/60 border border-white/5 rounded-xl p-3">
-      <p className="text-[10px] uppercase tracking-widest text-gray-500">{label}</p>
+      <p className="text-[10px] uppercase tracking-widest text-gray-500">
+        {label}
+      </p>
       <p className={`text-2xl font-bold mt-1 ${accent || 'text-white'}`}>
         {value}
       </p>

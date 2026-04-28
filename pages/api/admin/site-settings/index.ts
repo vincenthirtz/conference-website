@@ -17,7 +17,15 @@ async function handler(
   res: NextApiResponse,
   ctx: StaffContext
 ) {
-  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-site-settings')) return;
+  if (
+    applyRateLimit(
+      req,
+      res,
+      { max: 60, windowMs: 60_000 },
+      'admin-site-settings'
+    )
+  )
+    return;
   if (!supabaseAdmin) {
     return res
       .status(500)
@@ -33,9 +41,7 @@ async function handler(
 
     if (error) {
       console.error('[admin/site-settings] list error', error);
-      return res
-        .status(500)
-        .json({ error: 'Failed to load settings.' });
+      return res.status(500).json({ error: 'Failed to load settings.' });
     }
 
     return res.status(200).json({ items: data ?? [] });
@@ -64,9 +70,7 @@ async function handler(
 
     if (error) {
       console.error('[admin/site-settings] upsert error', error);
-      return res
-        .status(500)
-        .json({ error: 'Failed to save the setting.' });
+      return res.status(500).json({ error: 'Failed to save the setting.' });
     }
 
     await logStaffAction({

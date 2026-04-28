@@ -34,7 +34,9 @@ function randomDraw(maps: FakeMap[], slotCount: number): FakeMap[][] {
     byType[t] = shuffle(byType[t]);
   }
 
-  const eligibleTypes = Object.keys(byType).filter((t) => byType[t].length >= CHOICES_PER_SLOT);
+  const eligibleTypes = Object.keys(byType).filter(
+    (t) => byType[t].length >= CHOICES_PER_SLOT
+  );
 
   const result: FakeMap[][] = [];
   const usedIds = new Set<string>();
@@ -176,7 +178,7 @@ describe('randomDraw — 3 choix par slot', () => {
     }
   });
 
-  it('les 3 maps d\'un slot sont de la même catégorie', () => {
+  it("les 3 maps d'un slot sont de la même catégorie", () => {
     for (let i = 0; i < 50; i++) {
       const result = randomDraw(POOL, 3);
       for (const slot of result) {
@@ -186,7 +188,7 @@ describe('randomDraw — 3 choix par slot', () => {
     }
   });
 
-  it('les 3 maps d\'un slot sont de la même catégorie (BO5)', () => {
+  it("les 3 maps d'un slot sont de la même catégorie (BO5)", () => {
     for (let i = 0; i < 50; i++) {
       const result = randomDraw(POOL, 5);
       for (const slot of result) {

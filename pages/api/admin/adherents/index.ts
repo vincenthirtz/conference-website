@@ -20,10 +20,22 @@ type AdherentPayload = {
   paymentStatus?: 'pending' | 'partial' | 'paid' | 'exempt' | 'overdue';
   paymentAmount?: number;
   paymentDate?: string;
-  paymentMethod?: 'cash' | 'check' | 'transfer' | 'card' | 'helloasso' | 'other';
+  paymentMethod?:
+    | 'cash'
+    | 'check'
+    | 'transfer'
+    | 'card'
+    | 'helloasso'
+    | 'other';
   paymentReference?: string;
   isActive?: boolean;
-  role?: 'member' | 'volunteer' | 'board' | 'president' | 'treasurer' | 'secretary';
+  role?:
+    | 'member'
+    | 'volunteer'
+    | 'board'
+    | 'president'
+    | 'treasurer'
+    | 'secretary';
   notes?: string;
 };
 
@@ -32,7 +44,10 @@ async function handler(
   res: NextApiResponse,
   ctx: StaffContext
 ) {
-  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-adherents')) return;
+  if (
+    applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-adherents')
+  )
+    return;
   if (!supabaseAdmin) {
     return res
       .status(500)
@@ -42,13 +57,7 @@ async function handler(
 
   // GET - Liste des adhérents
   if (req.method === 'GET') {
-    const {
-      limit = '100',
-      paymentStatus,
-      year,
-      role,
-      active,
-    } = req.query;
+    const { limit = '100', paymentStatus, year, role, active } = req.query;
     const limitNum = Math.max(1, Math.min(500, Number(limit) || 100));
     const search = sanitizeSearch(req.query.search);
 
@@ -93,9 +102,7 @@ async function handler(
 
     if (error) {
       console.error('[admin/adherents] list error', error);
-      return res
-        .status(500)
-        .json({ error: 'Failed to load members.' });
+      return res.status(500).json({ error: 'Failed to load members.' });
     }
 
     // Récupérer les stats
@@ -107,7 +114,8 @@ async function handler(
 
     const statsData = {
       total: stats?.length || 0,
-      currentYear: stats?.filter((a) => a.current_year === currentYear).length || 0,
+      currentYear:
+        stats?.filter((a) => a.current_year === currentYear).length || 0,
       paid: stats?.filter((a) => a.payment_status === 'paid').length || 0,
       pending: stats?.filter((a) => a.payment_status === 'pending').length || 0,
       overdue: stats?.filter((a) => a.payment_status === 'overdue').length || 0,
@@ -120,7 +128,11 @@ async function handler(
   if (req.method === 'POST') {
     const body = req.body as AdherentPayload;
 
-    if (!body?.firstName?.trim() || !body?.lastName?.trim() || !body?.email?.trim()) {
+    if (
+      !body?.firstName?.trim() ||
+      !body?.lastName?.trim() ||
+      !body?.email?.trim()
+    ) {
       return res
         .status(400)
         .json({ error: 'First name, last name and email are required.' });
@@ -170,9 +182,7 @@ async function handler(
 
     if (error) {
       console.error('[admin/adherents] create error', error);
-      return res
-        .status(500)
-        .json({ error: 'Failed to create the member.' });
+      return res.status(500).json({ error: 'Failed to create the member.' });
     }
 
     if (ctx.staff?.id) {

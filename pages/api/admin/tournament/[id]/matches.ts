@@ -127,7 +127,10 @@ async function handleGet(
     dateTo,
   } = req.query;
 
-  const { limit: limitNum, offset: offsetNum } = parsePagination(req, { limit: 200, maxLimit: 512 });
+  const { limit: limitNum, offset: offsetNum } = parsePagination(req, {
+    limit: 200,
+    maxLimit: 512,
+  });
 
   const orderField =
     orderBy === 'scheduled_at'

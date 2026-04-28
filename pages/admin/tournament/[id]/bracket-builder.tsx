@@ -78,7 +78,9 @@ function AdminBracketBuilderPage(_: StaffProps) {
     setDirty(false);
     try {
       const [matchRes, teamsRes] = await Promise.all([
-        fetch(`/api/admin/tournament/${id}/matches?layout=bracket&limit=512&includeGraph=1`),
+        fetch(
+          `/api/admin/tournament/${id}/matches?layout=bracket&limit=512&includeGraph=1`
+        ),
         fetch(`/api/admin/tournament/${id}/teams`),
       ]);
       if (!matchRes.ok) {
@@ -116,7 +118,11 @@ function AdminBracketBuilderPage(_: StaffProps) {
     [tournamentTeams, assignedTeamIds]
   );
 
-  function assignTeamToSlot(matchId: string, slot: 1 | 2, team: TournamentTeam) {
+  function assignTeamToSlot(
+    matchId: string,
+    slot: 1 | 2,
+    team: TournamentTeam
+  ) {
     setMatches((prev) =>
       prev.map((m) => {
         if (m.id !== matchId) return m;
@@ -126,7 +132,8 @@ function AdminBracketBuilderPage(_: StaffProps) {
           short_name: null,
           logo_url: team.team.logo_url,
         };
-        if (slot === 1) return { ...m, team1_id: team.team_id, team1: teamMini };
+        if (slot === 1)
+          return { ...m, team1_id: team.team_id, team1: teamMini };
         return { ...m, team2_id: team.team_id, team2: teamMini };
       })
     );
@@ -143,13 +150,13 @@ function AdminBracketBuilderPage(_: StaffProps) {
         new Date(b.scheduled_at || '').getTime()
     );
     for (const m of sorted) {
-      const dateKey = m.scheduled_at
-        ? m.scheduled_at.slice(0, 10)
-        : 'no-date';
+      const dateKey = m.scheduled_at ? m.scheduled_at.slice(0, 10) : 'no-date';
       if (!groups.has(dateKey)) {
         groups.set(dateKey, {
           dateKey,
-          label: m.scheduled_at ? formatDateHeader(m.scheduled_at) : 'Sans date',
+          label: m.scheduled_at
+            ? formatDateHeader(m.scheduled_at)
+            : 'Sans date',
           roundName: m.round_name,
           matches: [],
         });
@@ -173,7 +180,9 @@ function AdminBracketBuilderPage(_: StaffProps) {
     if (!matches.length) return [];
     // For double elim, only show WB + GF in main tree
     const filtered = isDoubleElim
-      ? matches.filter((m) => m.bracket_side === 'wb' || m.bracket_side === 'final')
+      ? matches.filter(
+          (m) => m.bracket_side === 'wb' || m.bracket_side === 'final'
+        )
       : matches;
     const roundMap = new Map<number, ScheduleMatch[]>();
     for (const m of filtered) {
@@ -225,8 +234,10 @@ function AdminBracketBuilderPage(_: StaffProps) {
       return 'TBD';
     };
 
-    const isElimination = bracketRounds.length > 1 &&
-      bracketRounds[0].matches.length > bracketRounds[bracketRounds.length - 1].matches.length;
+    const isElimination =
+      bracketRounds.length > 1 &&
+      bracketRounds[0].matches.length >
+        bracketRounds[bracketRounds.length - 1].matches.length;
     const roundCount = bracketRounds.length;
     const colWidthPx = isElimination ? 160 : 140;
     const totalBracketWidth = roundCount * (colWidthPx + 8);
@@ -286,57 +297,89 @@ function AdminBracketBuilderPage(_: StaffProps) {
 <h1>${tournament?.name ?? 'Tournoi'} — Planning des matchs</h1>
 <p class="subtitle">Export du ${new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })} · ${totalMatches} matchs · ${roundCount} journées</p>
 
-${bracketRounds.length > 1 ? `
+${
+  bracketRounds.length > 1
+    ? `
 <div class="bracket-section">
 <h2>Vue Bracket</h2>
-${isElimination ? `
+${
+  isElimination
+    ? `
 <div class="bracket-scaler">
 <div class="bracket-container">
-${bracketRounds.map((r) => `
+${bracketRounds
+  .map(
+    (r) => `
   <div class="bracket-round">
     <div class="bracket-round-title">${r.roundName}</div>
-    ${r.matches.map((m) => `
+    ${r.matches
+      .map(
+        (m) => `
       <div class="bracket-match">
         <div class="bracket-time">${m.scheduled_at ? new Date(m.scheduled_at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'}</div>
         <div class="bracket-team${m.winner_team_id === m.team1_id && m.winner_team_id ? ' winner' : ''}">${teamName(m, 1)}</div>
         <div class="bracket-team${m.winner_team_id === m.team2_id && m.winner_team_id ? ' winner' : ''}">${teamName(m, 2)}</div>
       </div>
-    `).join('')}
+    `
+      )
+      .join('')}
   </div>
-`).join('')}
+`
+  )
+  .join('')}
 </div>
-</div>` : `
+</div>`
+    : `
 <div class="bracket-grid">
-${bracketRounds.map((r) => `
+${bracketRounds
+  .map(
+    (r) => `
   <div class="bracket-grid-round">
     <div class="bracket-round-title">${r.roundName}</div>
-    ${r.matches.map((m) => `
+    ${r.matches
+      .map(
+        (m) => `
       <div class="bracket-match">
         <div class="bracket-time">${m.scheduled_at ? new Date(m.scheduled_at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'}</div>
         <div class="bracket-team${m.winner_team_id === m.team1_id && m.winner_team_id ? ' winner' : ''}">${teamName(m, 1)}</div>
         <div class="bracket-team${m.winner_team_id === m.team2_id && m.winner_team_id ? ' winner' : ''}">${teamName(m, 2)}</div>
       </div>
-    `).join('')}
+    `
+      )
+      .join('')}
   </div>
-`).join('')}
-</div>`}
-</div>` : ''}
+`
+  )
+  .join('')}
+</div>`
+}
+</div>`
+    : ''
+}
 
 <h2>Liste des matchs</h2>
-${matchDays.map((day) => `
+${matchDays
+  .map(
+    (day) => `
 <h2>${day.label}${day.roundName ? ` — ${day.roundName}` : ''}</h2>
 <table>
 <thead><tr><th>Heure</th><th>Équipe 1</th><th>Équipe 2</th><th>Format</th><th>Statut</th></tr></thead>
 <tbody>
-${day.matches.map((m) => `<tr>
+${day.matches
+  .map(
+    (m) => `<tr>
   <td>${m.scheduled_at ? new Date(m.scheduled_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '—'}</td>
   <td class="${m.winner_team_id === m.team1_id && m.winner_team_id ? 'winner' : ''}">${teamName(m, 1)}</td>
   <td class="${m.winner_team_id === m.team2_id && m.winner_team_id ? 'winner' : ''}">${teamName(m, 2)}</td>
   <td>${m.match_format?.toUpperCase() ?? '—'}</td>
   <td><span class="status status-${m.status}">${STATUS_CONFIG[m.status].label}</span></td>
-</tr>`).join('')}
+</tr>`
+  )
+  .join('')}
 </tbody>
-</table>`).join('')}
+</table>`
+  )
+  .join('')}
 
 <p class="meta">${totalMatches} matchs · ${finishedCount} terminés</p>
 </body></html>`;
@@ -362,7 +405,10 @@ ${day.matches.map((m) => `<tr>
     setEditingDateId(null);
   }
 
-  function onDragStart(e: React.DragEvent<HTMLDivElement>, payload: DragPayload) {
+  function onDragStart(
+    e: React.DragEvent<HTMLDivElement>,
+    payload: DragPayload
+  ) {
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('application/json', JSON.stringify(payload));
   }
@@ -397,10 +443,20 @@ ${day.matches.map((m) => `<tr>
       const sObj = srcSlot === 1 ? src.team1 || null : src.team2 || null;
       const tId = targetSlot === 1 ? tgt.team1_id : tgt.team2_id;
       const tObj = targetSlot === 1 ? tgt.team1 || null : tgt.team2 || null;
-      if (srcSlot === 1) { src.team1_id = tId; src.team1 = tObj; }
-      else { src.team2_id = tId; src.team2 = tObj; }
-      if (targetSlot === 1) { tgt.team1_id = sId; tgt.team1 = sObj; }
-      else { tgt.team2_id = sId; tgt.team2 = sObj; }
+      if (srcSlot === 1) {
+        src.team1_id = tId;
+        src.team1 = tObj;
+      } else {
+        src.team2_id = tId;
+        src.team2 = tObj;
+      }
+      if (targetSlot === 1) {
+        tgt.team1_id = sId;
+        tgt.team1 = sObj;
+      } else {
+        tgt.team2_id = sId;
+        tgt.team2 = sObj;
+      }
       return copy;
     });
     setDirty(true);
@@ -411,8 +467,13 @@ ${day.matches.map((m) => `<tr>
       prev.map((m) => {
         if (m.id !== matchId) return m;
         const c = { ...m };
-        if (slot === 1) { c.team1_id = null; c.team1 = null; }
-        else { c.team2_id = null; c.team2 = null; }
+        if (slot === 1) {
+          c.team1_id = null;
+          c.team1 = null;
+        } else {
+          c.team2_id = null;
+          c.team2 = null;
+        }
         return c;
       })
     );
@@ -471,8 +532,20 @@ ${day.matches.map((m) => `<tr>
               onClick={() => router.push(`/admin/tournament/${id}`)}
               className="mb-4 inline-flex items-center gap-1.5 text-sm text-purple-300/70 hover:text-purple-200 transition-colors"
             >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="opacity-70">
-                <path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                className="opacity-70"
+              >
+                <path
+                  d="M10 12L6 8l4-4"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
               Retour au tournoi
             </button>
@@ -522,11 +595,23 @@ ${day.matches.map((m) => `<tr>
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3 flex-wrap">
             {/* View mode toggle */}
             <div className="flex rounded-lg border border-white/10 overflow-hidden">
-              {([
-                { key: 'planning' as ViewMode, label: 'Planning', icon: 'M3 3h4v4H3zm6 0h4v4H9zm-6 6h4v4H3zm6 0h4v4H9z' },
-                { key: 'list' as ViewMode, label: 'Liste', icon: 'M3 4h10M3 8h10M3 12h10' },
-                { key: 'bracket' as ViewMode, label: 'Arbre', icon: 'M2 3v4h4M10 3v4h4M5 7v2h6M8 9v4' },
-              ]).map((v) => (
+              {[
+                {
+                  key: 'planning' as ViewMode,
+                  label: 'Planning',
+                  icon: 'M3 3h4v4H3zm6 0h4v4H9zm-6 6h4v4H3zm6 0h4v4H9z',
+                },
+                {
+                  key: 'list' as ViewMode,
+                  label: 'Liste',
+                  icon: 'M3 4h10M3 8h10M3 12h10',
+                },
+                {
+                  key: 'bracket' as ViewMode,
+                  label: 'Arbre',
+                  icon: 'M2 3v4h4M10 3v4h4M5 7v2h6M8 9v4',
+                },
+              ].map((v) => (
                 <button
                   key={v.key}
                   type="button"
@@ -538,7 +623,13 @@ ${day.matches.map((m) => `<tr>
                   }`}
                 >
                   <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                    <path d={v.icon} stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                    <path
+                      d={v.icon}
+                      stroke="currentColor"
+                      strokeWidth="1.3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                   {v.label}
                 </button>
@@ -565,7 +656,11 @@ ${day.matches.map((m) => `<tr>
                   : 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-600/20'
               }`}
             >
-              {saving ? 'Enregistrement...' : dirty ? 'Enregistrer' : 'Sauvegardé'}
+              {saving
+                ? 'Enregistrement...'
+                : dirty
+                  ? 'Enregistrer'
+                  : 'Sauvegardé'}
             </button>
             {dirty && (
               <span className="text-[11px] text-amber-400/70">
@@ -583,9 +678,27 @@ ${day.matches.map((m) => `<tr>
               className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium border border-white/10 bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-40"
             >
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                <path d="M4 14h8a1 1 0 001-1V5.5L9.5 2H5a1 1 0 00-1 1v2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M9 2v4h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M2 10h5M5.5 8L7 10l-1.5 2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                <path
+                  d="M4 14h8a1 1 0 001-1V5.5L9.5 2H5a1 1 0 00-1 1v2"
+                  stroke="currentColor"
+                  strokeWidth="1.3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M9 2v4h4"
+                  stroke="currentColor"
+                  strokeWidth="1.3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M2 10h5M5.5 8L7 10l-1.5 2"
+                  stroke="currentColor"
+                  strokeWidth="1.3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
               Exporter PDF
             </button>
@@ -598,10 +711,11 @@ ${day.matches.map((m) => `<tr>
         </div>
 
         {/* ---- Content ---- */}
-        <div ref={printRef} className={`${viewMode === 'bracket' ? 'max-w-full' : 'max-w-6xl'} mx-auto px-4 sm:px-6 py-8`}>
-          {loading && (
-            <LoadingSpinner className="py-20" />
-          )}
+        <div
+          ref={printRef}
+          className={`${viewMode === 'bracket' ? 'max-w-full' : 'max-w-6xl'} mx-auto px-4 sm:px-6 py-8`}
+        >
+          {loading && <LoadingSpinner className="py-20" />}
 
           {!loading && matches.length === 0 && (
             <div className="text-center py-20">
@@ -639,7 +753,8 @@ ${day.matches.map((m) => `<tr>
                     </div>
                     <div className="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent" />
                     <span className="text-xs text-neutral-500 font-medium">
-                      {day.matches.length} match{day.matches.length > 1 ? 's' : ''}
+                      {day.matches.length} match
+                      {day.matches.length > 1 ? 's' : ''}
                     </span>
                   </div>
 
@@ -667,10 +782,7 @@ ${day.matches.map((m) => `<tr>
 
           {/* ===== LIST VIEW ===== */}
           {!loading && matches.length > 0 && viewMode === 'list' && (
-            <MatchListView
-              matches={matches}
-              matchDays={matchDays}
-            />
+            <MatchListView matches={matches} matchDays={matchDays} />
           )}
 
           {/* ===== BRACKET TREE VIEW ===== */}

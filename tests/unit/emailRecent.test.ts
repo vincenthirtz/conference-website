@@ -242,9 +242,7 @@ describe('sendSupportStaffNotificationEmail', () => {
     const fetchMock = mockFetchOk();
     await sendSupportStaffNotificationEmail(base);
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
-    expect(body.subject).toBe(
-      '[Signalement] Comportement toxique (01234567)'
-    );
+    expect(body.subject).toBe('[Signalement] Comportement toxique (01234567)');
   });
 
   it('switches to [URGENT] prefix for HIGH severity', async () => {
@@ -278,9 +276,7 @@ describe('sendSupportStaffNotificationEmail', () => {
     const fetchMock = mockFetchOk();
     await sendSupportStaffNotificationEmail({ ...base, subject: null });
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
-    expect(body.subject).toBe(
-      '[Signalement] Comportement / Safety (01234567)'
-    );
+    expect(body.subject).toBe('[Signalement] Comportement / Safety (01234567)');
   });
 
   it('embeds the admin URL in the CTA', async () => {
@@ -342,8 +338,7 @@ describe('sendPasswordResetEmail', () => {
     const fetchMock = mockFetchOk();
     await sendPasswordResetEmail(base);
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
-    const occurrences =
-      body.htmlContent.split(base.actionLink).length - 1;
+    const occurrences = body.htmlContent.split(base.actionLink).length - 1;
     expect(occurrences).toBeGreaterThanOrEqual(2);
   });
 

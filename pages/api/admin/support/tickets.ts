@@ -35,7 +35,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
-  if (typeof status === 'string' && (VALID_STATUSES as readonly string[]).includes(status)) {
+  if (
+    typeof status === 'string' &&
+    (VALID_STATUSES as readonly string[]).includes(status)
+  ) {
     q = q.eq('status', status);
   }
   if (

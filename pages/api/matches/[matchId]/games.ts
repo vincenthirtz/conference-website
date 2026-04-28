@@ -228,7 +228,11 @@ async function handlePut(
     if (team1Id && team2Id && newGames.length > 0) {
       const updates: { id: string; winner_team_id: string }[] = [];
       for (const g of newGames) {
-        if (!g.winner_team_id && g.team1_score != null && g.team2_score != null) {
+        if (
+          !g.winner_team_id &&
+          g.team1_score != null &&
+          g.team2_score != null
+        ) {
           const w =
             g.team1_score > g.team2_score
               ? team1Id

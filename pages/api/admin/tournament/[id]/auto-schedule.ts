@@ -226,8 +226,12 @@ async function handler(
         .maybeSingle();
 
       if (tournament) {
-        const startLimit = tournament.start_date ? new Date(tournament.start_date).getTime() : null;
-        const endLimit = tournament.end_date ? new Date(tournament.end_date).getTime() : null;
+        const startLimit = tournament.start_date
+          ? new Date(tournament.start_date).getTime()
+          : null;
+        const endLimit = tournament.end_date
+          ? new Date(tournament.end_date).getTime()
+          : null;
         let outOfRange = 0;
 
         for (const s of result.scheduled) {

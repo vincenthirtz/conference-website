@@ -85,8 +85,8 @@ export default function Contact({ className = '' }: { className?: string }) {
         {/* Titre style site: gradient + sous-titre fin */}
         <div className="text-center">
           <p className="mt-4 text-gray-300">
-            Une question sur l&apos;OW Women&apos;s Cup ? Laisse-nous un message,
-            on répond vite.
+            Une question sur l&apos;OW Women&apos;s Cup ? Laisse-nous un
+            message, on répond vite.
           </p>
         </div>
 

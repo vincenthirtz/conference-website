@@ -21,11 +21,16 @@ function toISO(value?: string | null) {
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
-async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-announcements-id')) return;
+async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (
+    applyRateLimit(
+      req,
+      res,
+      { max: 60, windowMs: 60_000 },
+      'admin-announcements-id'
+    )
+  )
+    return;
   if (!supabaseAdmin) {
     return res
       .status(500)
@@ -47,9 +52,7 @@ async function handler(
 
     if (error) {
       console.error('[admin/announcements] get error', error);
-      return res
-        .status(404)
-        .json({ error: "Announcement not found." });
+      return res.status(404).json({ error: 'Announcement not found.' });
     }
     return res.status(200).json(data);
   }
@@ -83,23 +86,20 @@ async function handler(
       console.error('[admin/announcements] update error', error);
       return res
         .status(500)
-        .json({ error: "Failed to update the announcement." });
+        .json({ error: 'Failed to update the announcement.' });
     }
 
     return res.status(200).json(data);
   }
 
   if (req.method === 'DELETE') {
-    const { error } = await admin
-      .from('announcements')
-      .delete()
-      .eq('id', id);
+    const { error } = await admin.from('announcements').delete().eq('id', id);
 
     if (error) {
       console.error('[admin/announcements] delete error', error);
       return res
         .status(500)
-        .json({ error: "Failed to delete the announcement." });
+        .json({ error: 'Failed to delete the announcement.' });
     }
 
     return res.status(204).end();

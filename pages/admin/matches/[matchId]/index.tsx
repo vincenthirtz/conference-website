@@ -152,7 +152,8 @@ function MatchViewPage(_: StaffProps) {
   const [disputeReason, setDisputeReason] = useState('');
   const [showResolveDispute, setShowResolveDispute] = useState(false);
   const [resolveText, setResolveText] = useState('');
-  const [resolveResumeStatus, setResolveResumeStatus] = useState<MatchStatus>('finished');
+  const [resolveResumeStatus, setResolveResumeStatus] =
+    useState<MatchStatus>('finished');
   const [resolveTeam1Score, setResolveTeam1Score] = useState<string>('');
   const [resolveTeam2Score, setResolveTeam2Score] = useState<string>('');
   const [disputeBusy, setDisputeBusy] = useState(false);
@@ -204,7 +205,8 @@ function MatchViewPage(_: StaffProps) {
         resumeStatus: resolveResumeStatus,
       };
       if (
-        (resolveResumeStatus === 'finished' || resolveResumeStatus === 'walkover') &&
+        (resolveResumeStatus === 'finished' ||
+          resolveResumeStatus === 'walkover') &&
         resolveTeam1Score !== '' &&
         resolveTeam2Score !== ''
       ) {
@@ -232,7 +234,10 @@ function MatchViewPage(_: StaffProps) {
 
   async function cancelDispute() {
     if (!matchIdStr) return;
-    if (!confirm('Annuler cette dispute (sans décision) ? Le motif sera effacé.')) return;
+    if (
+      !confirm('Annuler cette dispute (sans décision) ? Le motif sera effacé.')
+    )
+      return;
     setDisputeBusy(true);
     setDisputeMsg(null);
     try {
@@ -255,7 +260,9 @@ function MatchViewPage(_: StaffProps) {
     setErrorMsg(null);
     try {
       if (!matchIdStr) throw new Error('Match ID manquant');
-      const res = await fetch(`/api/admin/matches/${matchIdStr}?includeGames=1`);
+      const res = await fetch(
+        `/api/admin/matches/${matchIdStr}?includeGames=1`
+      );
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         throw new Error(json.error || 'Impossible de charger le match');
@@ -339,7 +346,8 @@ function MatchViewPage(_: StaffProps) {
                   </button>
                 </>
               ) : (
-                match && match.status !== 'cancelled' && (
+                match &&
+                match.status !== 'cancelled' && (
                   <button
                     onClick={() => {
                       setDisputeReason('');
@@ -385,7 +393,9 @@ function MatchViewPage(_: StaffProps) {
                 >
                   <div className="flex items-start justify-between gap-4 mb-2">
                     <h2 className="text-lg font-semibold">
-                      {match.status === 'disputed' ? 'Dispute en cours' : 'Dispute résolue'}
+                      {match.status === 'disputed'
+                        ? 'Dispute en cours'
+                        : 'Dispute résolue'}
                     </h2>
                     {match.dispute_opened_at && (
                       <span className="text-xs text-gray-300">
@@ -395,7 +405,9 @@ function MatchViewPage(_: StaffProps) {
                   </div>
                   {match.dispute_reason && (
                     <div className="mb-3">
-                      <p className="text-xs uppercase tracking-[0.16em] text-gray-400">Motif</p>
+                      <p className="text-xs uppercase tracking-[0.16em] text-gray-400">
+                        Motif
+                      </p>
                       <p className="text-sm text-gray-100 whitespace-pre-wrap">
                         {match.dispute_reason}
                       </p>
@@ -415,7 +427,8 @@ function MatchViewPage(_: StaffProps) {
                   )}
                   {match.status === 'disputed' && (
                     <p className="text-xs text-orange-200 mt-3">
-                      Tant que cette dispute est ouverte, le score ne peut pas être modifié et la propagation bracket est bloquée.
+                      Tant que cette dispute est ouverte, le score ne peut pas
+                      être modifié et la propagation bracket est bloquée.
                     </p>
                   )}
                 </div>
@@ -487,11 +500,19 @@ function MatchViewPage(_: StaffProps) {
 
               <div className="p-4 rounded-xl bg-white/5 border border-white/10">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                  <TeamLine team={team1} side="home" score={match.team1_score} />
+                  <TeamLine
+                    team={team1}
+                    side="home"
+                    score={match.team1_score}
+                  />
                   <div className="text-lg font-semibold text-white">
                     {match.team1_score ?? 0} — {match.team2_score ?? 0}
                   </div>
-                  <TeamLine team={team2} side="away" score={match.team2_score} />
+                  <TeamLine
+                    team={team2}
+                    side="away"
+                    score={match.team2_score}
+                  />
                 </div>
               </div>
 
@@ -557,7 +578,9 @@ function MatchViewPage(_: StaffProps) {
           <div className="bg-neutral-900 border border-neutral-700 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
             <h3 className="text-lg font-semibold mb-1">Ouvrir une dispute</h3>
             <p className="text-xs text-neutral-400 mb-4">
-              Le match passera en statut « disputed ». Tant qu&apos;il y est, le score ne peut pas être modifié et la propagation bracket est bloquée.
+              Le match passera en statut « disputed ». Tant qu&apos;il y est, le
+              score ne peut pas être modifié et la propagation bracket est
+              bloquée.
             </p>
             <label className="block text-sm mb-1 text-neutral-300">Motif</label>
             <textarea
@@ -596,10 +619,13 @@ function MatchViewPage(_: StaffProps) {
           <div className="bg-neutral-900 border border-neutral-700 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
             <h3 className="text-lg font-semibold mb-1">Résoudre la dispute</h3>
             <p className="text-xs text-neutral-400 mb-4">
-              Saisis la décision finale. Tu peux corriger le score si nécessaire — la propagation bracket sera relancée automatiquement.
+              Saisis la décision finale. Tu peux corriger le score si nécessaire
+              — la propagation bracket sera relancée automatiquement.
             </p>
 
-            <label className="block text-sm mb-1 text-neutral-300">Décision</label>
+            <label className="block text-sm mb-1 text-neutral-300">
+              Décision
+            </label>
             <textarea
               value={resolveText}
               onChange={(e) => setResolveText(e.target.value)}
@@ -609,10 +635,14 @@ function MatchViewPage(_: StaffProps) {
               className="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 mb-3"
             />
 
-            <label className="block text-sm mb-1 text-neutral-300">Statut après résolution</label>
+            <label className="block text-sm mb-1 text-neutral-300">
+              Statut après résolution
+            </label>
             <select
               value={resolveResumeStatus}
-              onChange={(e) => setResolveResumeStatus(e.target.value as MatchStatus)}
+              onChange={(e) =>
+                setResolveResumeStatus(e.target.value as MatchStatus)
+              }
               className="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-700 text-sm mb-3"
             >
               <option value="finished">Terminé (avec score)</option>
@@ -621,11 +651,13 @@ function MatchViewPage(_: StaffProps) {
               <option value="pending">À venir</option>
             </select>
 
-            {(resolveResumeStatus === 'finished' || resolveResumeStatus === 'walkover') && (
+            {(resolveResumeStatus === 'finished' ||
+              resolveResumeStatus === 'walkover') && (
               <div className="grid grid-cols-2 gap-2 mb-3">
                 <div>
                   <label className="block text-xs mb-1 text-neutral-400">
-                    Score {match.team1?.short_name || match.team1?.name || 'Équipe 1'}
+                    Score{' '}
+                    {match.team1?.short_name || match.team1?.name || 'Équipe 1'}
                   </label>
                   <input
                     type="number"
@@ -637,7 +669,8 @@ function MatchViewPage(_: StaffProps) {
                 </div>
                 <div>
                   <label className="block text-xs mb-1 text-neutral-400">
-                    Score {match.team2?.short_name || match.team2?.name || 'Équipe 2'}
+                    Score{' '}
+                    {match.team2?.short_name || match.team2?.name || 'Équipe 2'}
                   </label>
                   <input
                     type="number"
@@ -695,9 +728,7 @@ function TeamLine({
         <div className="text-sm font-semibold truncate">
           {team?.name || `Équipe ${side === 'home' ? '1' : '2'}`}
         </div>
-        <div className="text-xs text-gray-400">
-          Score : {score ?? 0}
-        </div>
+        <div className="text-xs text-gray-400">Score : {score ?? 0}</div>
       </div>
     </div>
   );

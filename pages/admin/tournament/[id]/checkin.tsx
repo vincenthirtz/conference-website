@@ -129,10 +129,9 @@ function CheckinStatusPage(_: StaffProps) {
     if (!tournamentId) return;
     setProcessing(true);
     try {
-      const res = await fetch(
-        `/api/admin/tournament/${tournamentId}/checkin`,
-        { method: 'POST' }
-      );
+      const res = await fetch(`/api/admin/tournament/${tournamentId}/checkin`, {
+        method: 'POST',
+      });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || 'Échec');
       addToast(
@@ -154,7 +153,8 @@ function CheckinStatusPage(_: StaffProps) {
           (r) =>
             r.status === 'pending' ||
             r.status === 'ongoing' ||
-            (r.scheduledAt && new Date(r.scheduledAt).getTime() > now - 86_400_000)
+            (r.scheduledAt &&
+              new Date(r.scheduledAt).getTime() > now - 86_400_000)
         )
       : rows;
 
@@ -185,15 +185,27 @@ function CheckinStatusPage(_: StaffProps) {
             onClick={() => router.push(`/admin/tournament/${tournamentId}`)}
             className="mb-4 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
             </svg>
             Retour au tournoi
           </button>
 
           <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Check-in matchs</h1>
+              <h1 className="text-3xl font-bold tracking-tight">
+                Check-in matchs
+              </h1>
               <p className="text-sm text-neutral-400 mt-1">
                 Suivi des présences et auto-forfaits. Le processeur tourne tout
                 seul (cron Netlify), mais vous pouvez forcer un passage ici.
@@ -368,8 +380,8 @@ function CheckinStatusPage(_: StaffProps) {
 
           <p className="text-xs text-neutral-500 mt-6 text-center">
             Le processeur cron tourne automatiquement toutes les 5 minutes via
-            Netlify Scheduled Functions. Les matchs sans <code>scheduled_at</code>{' '}
-            sont ignorés.
+            Netlify Scheduled Functions. Les matchs sans{' '}
+            <code>scheduled_at</code> sont ignorés.
           </p>
         </div>
       </div>
@@ -410,15 +422,21 @@ function CheckinDot({ at }: { at: string | null }) {
         className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-600/20 border border-emerald-500/40"
         title={`Check-in à ${formatTimeFr(at)}`}
       >
-        <svg className="w-3 h-3 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+        <svg
+          className="w-3 h-3 text-emerald-400"
+          fill="currentColor"
+          viewBox="0 0 20 20"
+        >
+          <path
+            fillRule="evenodd"
+            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+            clipRule="evenodd"
+          />
         </svg>
       </span>
     );
   }
-  return (
-    <span className="inline-block w-2 h-2 rounded-full bg-neutral-700" />
-  );
+  return <span className="inline-block w-2 h-2 rounded-full bg-neutral-700" />;
 }
 
 export default CheckinStatusPage;

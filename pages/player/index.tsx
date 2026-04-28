@@ -182,7 +182,7 @@ export default function PlayerDashboard() {
     });
 
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Echec de l\'annulation.');
+    if (!res.ok) throw new Error(data.error || "Echec de l'annulation.");
 
     await loadData();
   };
@@ -205,7 +205,9 @@ export default function PlayerDashboard() {
   };
 
   const handleProfileUpdate = async () => {
-    const { data: { session } } = await supabaseClient.auth.getSession();
+    const {
+      data: { session },
+    } = await supabaseClient.auth.getSession();
     if (session?.user) setUser(session.user);
   };
 
@@ -292,12 +294,27 @@ export default function PlayerDashboard() {
                     href="/player/requests?tab=transfer"
                     className="flex items-center gap-3 px-4 py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition"
                   >
-                    <svg className="w-5 h-5 text-purple-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M16 3h5v5" /><line x1="21" y1="3" x2="14" y2="10" /><path d="M8 21H3v-5" /><line x1="3" y1="21" x2="10" y2="14" />
+                    <svg
+                      className="w-5 h-5 text-purple-400 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M16 3h5v5" />
+                      <line x1="21" y1="3" x2="14" y2="10" />
+                      <path d="M8 21H3v-5" />
+                      <line x1="3" y1="21" x2="10" y2="14" />
                     </svg>
                     <div>
-                      <div className="text-sm font-medium text-white">Demander un transfert</div>
-                      <div className="text-xs text-gray-500">Vers une autre equipe</div>
+                      <div className="text-sm font-medium text-white">
+                        Demander un transfert
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Vers une autre equipe
+                      </div>
                     </div>
                   </Link>
                 )}
@@ -307,12 +324,27 @@ export default function PlayerDashboard() {
                     href="/player/requests?tab=transfer"
                     className="flex items-center gap-3 px-4 py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition"
                   >
-                    <svg className="w-5 h-5 text-purple-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M16 3h5v5" /><line x1="21" y1="3" x2="14" y2="10" /><path d="M8 21H3v-5" /><line x1="3" y1="21" x2="10" y2="14" />
+                    <svg
+                      className="w-5 h-5 text-purple-400 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M16 3h5v5" />
+                      <line x1="21" y1="3" x2="14" y2="10" />
+                      <path d="M8 21H3v-5" />
+                      <line x1="3" y1="21" x2="10" y2="14" />
                     </svg>
                     <div>
-                      <div className="text-sm font-medium text-white">Proposer un transfert</div>
-                      <div className="text-xs text-gray-500">Transferer un joueur</div>
+                      <div className="text-sm font-medium text-white">
+                        Proposer un transfert
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Transferer un joueur
+                      </div>
                     </div>
                   </Link>
                 )}
@@ -322,11 +354,22 @@ export default function PlayerDashboard() {
                     href="/player/requests?tab=scrim"
                     className="flex items-center gap-3 px-4 py-3 rounded-xl border border-blue-400/20 bg-blue-500/10 hover:bg-blue-500/20 transition"
                   >
-                    <svg className="w-5 h-5 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10" /><polygon points="10 8 16 12 10 16 10 8" />
+                    <svg
+                      className="w-5 h-5 text-blue-400 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <polygon points="10 8 16 12 10 16 10 8" />
                     </svg>
                     <div>
-                      <div className="text-sm font-medium text-white">Proposer un scrim</div>
+                      <div className="text-sm font-medium text-white">
+                        Proposer un scrim
+                      </div>
                       <div className="text-xs text-gray-500">Match amical</div>
                     </div>
                   </Link>
@@ -337,7 +380,15 @@ export default function PlayerDashboard() {
                     href="/player/messages"
                     className="flex items-center gap-3 px-4 py-3 rounded-xl border border-emerald-400/20 bg-emerald-500/10 hover:bg-emerald-500/20 transition"
                   >
-                    <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <svg
+                      className="w-5 h-5 text-emerald-400 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
                       <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
                     </svg>
                     <div>
@@ -349,7 +400,9 @@ export default function PlayerDashboard() {
                           </span>
                         )}
                       </div>
-                      <div className="text-xs text-gray-500">Discuter entre capitaines</div>
+                      <div className="text-xs text-gray-500">
+                        Discuter entre capitaines
+                      </div>
                     </div>
                   </Link>
                 )}
@@ -359,12 +412,27 @@ export default function PlayerDashboard() {
                     href="/player/manage-team"
                     className="flex items-center gap-3 px-4 py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition"
                   >
-                    <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" />
+                    <svg
+                      className="w-5 h-5 text-gray-400 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M23 21v-2a4 4 0 00-3-3.87" />
+                      <path d="M16 3.13a4 4 0 010 7.75" />
                     </svg>
                     <div>
-                      <div className="text-sm font-medium text-white">Gerer l&apos;equipe</div>
-                      <div className="text-xs text-gray-500">Roster et demandes</div>
+                      <div className="text-sm font-medium text-white">
+                        Gerer l&apos;equipe
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Roster et demandes
+                      </div>
                     </div>
                   </Link>
                 )}
@@ -373,11 +441,23 @@ export default function PlayerDashboard() {
                   href={`/team/${team.id}`}
                   className="flex items-center gap-3 px-4 py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition"
                 >
-                  <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4" /><polyline points="10 17 15 12 10 7" /><line x1="15" y1="12" x2="3" y2="12" />
+                  <svg
+                    className="w-5 h-5 text-gray-400 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4" />
+                    <polyline points="10 17 15 12 10 7" />
+                    <line x1="15" y1="12" x2="3" y2="12" />
                   </svg>
                   <div>
-                    <div className="text-sm font-medium text-white">Page equipe</div>
+                    <div className="text-sm font-medium text-white">
+                      Page equipe
+                    </div>
                     <div className="text-xs text-gray-500">Profil public</div>
                   </div>
                 </Link>
@@ -405,18 +485,29 @@ export default function PlayerDashboard() {
                         {scrim.payload?.from_team_name || 'Equipe inconnue'}
                       </div>
                       {scrim.comment && (
-                        <p className="text-xs text-gray-400 mt-1 truncate">{scrim.comment}</p>
+                        <p className="text-xs text-gray-400 mt-1 truncate">
+                          {scrim.comment}
+                        </p>
                       )}
                       <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
                         {scrim.payload?.preferred_date && (
                           <span>
-                            Date : {new Date(scrim.payload.preferred_date).toLocaleDateString('fr-FR', {
-                              day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                            Date :{' '}
+                            {new Date(
+                              scrim.payload.preferred_date
+                            ).toLocaleDateString('fr-FR', {
+                              day: 'numeric',
+                              month: 'short',
+                              hour: '2-digit',
+                              minute: '2-digit',
                             })}
                           </span>
                         )}
                         <span>
-                          Recu le {new Date(scrim.created_at).toLocaleDateString('fr-FR')}
+                          Recu le{' '}
+                          {new Date(scrim.created_at).toLocaleDateString(
+                            'fr-FR'
+                          )}
                         </span>
                       </div>
                     </div>
@@ -432,10 +523,7 @@ export default function PlayerDashboard() {
             </div>
           )}
 
-          <DemandesHistory
-            demandes={demandes}
-            onCancel={handleCancelDemande}
-          />
+          <DemandesHistory demandes={demandes} onCancel={handleCancelDemande} />
 
           {/* Liens utiles */}
           <div className="mt-8 flex flex-wrap gap-4 text-sm">

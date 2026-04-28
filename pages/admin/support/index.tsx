@@ -108,7 +108,9 @@ function AdminSupportPage(_: StaffProps) {
     if (severity) params.set('severity', severity);
     if (category) params.set('category', category);
     try {
-      const res = await fetch(`/api/admin/support/tickets?${params.toString()}`);
+      const res = await fetch(
+        `/api/admin/support/tickets?${params.toString()}`
+      );
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Erreur');
       setTickets(json.tickets || []);
@@ -154,8 +156,15 @@ function AdminSupportPage(_: StaffProps) {
   const stats = {
     total: tickets.length,
     open: tickets.filter((t) => t.status === 'open').length,
-    high: tickets.filter((t) => t.severity === 'high' && t.status !== 'resolved' && t.status !== 'closed').length,
-    resolved: tickets.filter((t) => t.status === 'resolved' || t.status === 'closed').length,
+    high: tickets.filter(
+      (t) =>
+        t.severity === 'high' &&
+        t.status !== 'resolved' &&
+        t.status !== 'closed'
+    ).length,
+    resolved: tickets.filter(
+      (t) => t.status === 'resolved' || t.status === 'closed'
+    ).length,
   };
 
   return (
@@ -167,17 +176,28 @@ function AdminSupportPage(_: StaffProps) {
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
           <div className="mb-6">
-            <h1 className="text-3xl font-bold tracking-tight">Tickets de support</h1>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Tickets de support
+            </h1>
             <p className="text-sm text-neutral-400 mt-1">
-              Litiges, safety, technique. Les sévérités HAUTES déclenchent un ping immédiat de la modération sur Discord.
+              Litiges, safety, technique. Les sévérités HAUTES déclenchent un
+              ping immédiat de la modération sur Discord.
             </p>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
             <Stat label="Tickets" value={stats.total} />
             <Stat label="Ouverts" value={stats.open} accent="red" />
-            <Stat label="Haute sévérité (actifs)" value={stats.high} accent="amber" />
-            <Stat label="Résolus / fermés" value={stats.resolved} accent="emerald" />
+            <Stat
+              label="Haute sévérité (actifs)"
+              value={stats.high}
+              accent="amber"
+            />
+            <Stat
+              label="Résolus / fermés"
+              value={stats.resolved}
+              accent="emerald"
+            />
           </div>
 
           {/* Filters */}
@@ -272,20 +292,25 @@ function AdminSupportPage(_: StaffProps) {
                           {formatDateFr(t.created_at)}
                         </span>
                         {t.is_anonymous && (
-                          <span className="text-xs text-purple-300">_anonyme_</span>
+                          <span className="text-xs text-purple-300">
+                            _anonyme_
+                          </span>
                         )}
                       </div>
                       <div className="text-sm text-white mt-1 truncate">
                         {t.subject || t.message.slice(0, 100)}
                       </div>
-                      {!t.is_anonymous && (t.reporter_name || t.reporter_email) && (
-                        <div className="text-xs text-neutral-500 mt-0.5 truncate">
-                          {t.reporter_name || ''}{' '}
-                          {t.reporter_email && (
-                            <span className="font-mono">({t.reporter_email})</span>
-                          )}
-                        </div>
-                      )}
+                      {!t.is_anonymous &&
+                        (t.reporter_name || t.reporter_email) && (
+                          <div className="text-xs text-neutral-500 mt-0.5 truncate">
+                            {t.reporter_name || ''}{' '}
+                            {t.reporter_email && (
+                              <span className="font-mono">
+                                ({t.reporter_email})
+                              </span>
+                            )}
+                          </div>
+                        )}
                     </div>
                     <div className="text-xs text-neutral-500 font-mono flex-shrink-0">
                       {t.id.slice(0, 8)}
@@ -337,8 +362,18 @@ function AdminSupportPage(_: StaffProps) {
                 onClick={() => setSelected(null)}
                 className="p-1 rounded-lg hover:bg-neutral-700 transition-colors"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
@@ -365,7 +400,9 @@ function AdminSupportPage(_: StaffProps) {
                 </div>
               </Field>
               {selected.resolved_at && (
-                <Field label="Résolu le">{formatDateFr(selected.resolved_at)}</Field>
+                <Field label="Résolu le">
+                  {formatDateFr(selected.resolved_at)}
+                </Field>
               )}
             </div>
 
@@ -430,7 +467,9 @@ function Stat({
   };
   return (
     <div className="bg-neutral-800/50 border border-neutral-700/50 rounded-xl px-4 py-3">
-      <p className="text-xs text-neutral-400 uppercase tracking-wide">{label}</p>
+      <p className="text-xs text-neutral-400 uppercase tracking-wide">
+        {label}
+      </p>
       <p
         className={`text-2xl font-bold mt-1 ${accent ? colors[accent] : 'text-white'}`}
       >

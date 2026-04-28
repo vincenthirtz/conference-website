@@ -203,7 +203,9 @@ function AdminTwitchChannelEditPage({ staff }: Props) {
                       className="w-16 h-16 rounded-xl object-cover"
                     />
                     <div>
-                      <div className="font-semibold text-white">{form.label || 'Label'}</div>
+                      <div className="font-semibold text-white">
+                        {form.label || 'Label'}
+                      </div>
                       <div className="text-sm text-neutral-400">
                         twitch.tv/{form.channel || 'channel'}
                       </div>
@@ -214,7 +216,8 @@ function AdminTwitchChannelEditPage({ staff }: Props) {
                 <div className="grid gap-6 md:grid-cols-2">
                   <div>
                     <label className="block text-sm text-neutral-300 mb-1">
-                      Nom de la chaîne Twitch <span className="text-red-400">*</span>
+                      Nom de la chaîne Twitch{' '}
+                      <span className="text-red-400">*</span>
                     </label>
                     <input
                       type="text"
@@ -228,7 +231,8 @@ function AdminTwitchChannelEditPage({ staff }: Props) {
 
                   <div>
                     <label className="block text-sm text-neutral-300 mb-1">
-                      Label d&apos;affichage <span className="text-red-400">*</span>
+                      Label d&apos;affichage{' '}
+                      <span className="text-red-400">*</span>
                     </label>
                     <input
                       type="text"
@@ -277,7 +281,9 @@ function AdminTwitchChannelEditPage({ staff }: Props) {
                   <input
                     type="url"
                     value={form.backgroundUrl}
-                    onChange={(e) => updateField('backgroundUrl', e.target.value)}
+                    onChange={(e) =>
+                      updateField('backgroundUrl', e.target.value)
+                    }
                     placeholder="https://static-cdn.jtvnw.net/..."
                     className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm font-mono"
                   />
@@ -301,7 +307,9 @@ function AdminTwitchChannelEditPage({ staff }: Props) {
                     <input
                       type="checkbox"
                       checked={form.isActive}
-                      onChange={(e) => updateField('isActive', e.target.checked)}
+                      onChange={(e) =>
+                        updateField('isActive', e.target.checked)
+                      }
                       className="sr-only peer"
                     />
                     <div className="w-11 h-6 bg-neutral-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>

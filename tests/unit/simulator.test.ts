@@ -72,26 +72,40 @@ function makeMatch(id: string, overrides: Partial<SimMatch> = {}): SimMatch {
  *  m2 (T2 vs T3) → m3 (final)
  */
 function make4TeamBracket(): { teams: SimTeam[]; stage: SimStage } {
-  const teams = [makeTeam('t1', 1), makeTeam('t2', 2), makeTeam('t3', 3), makeTeam('t4', 4)];
+  const teams = [
+    makeTeam('t1', 1),
+    makeTeam('t2', 2),
+    makeTeam('t3', 3),
+    makeTeam('t4', 4),
+  ];
   const matches: SimMatch[] = [
     makeMatch('m1', {
-      team1: teams[0], team1_id: 't1',
-      team2: teams[3], team2_id: 't4',
-      round_number: 1, round_name: 'Demi-finales',
+      team1: teams[0],
+      team1_id: 't1',
+      team2: teams[3],
+      team2_id: 't4',
+      round_number: 1,
+      round_name: 'Demi-finales',
       position_in_round: 1,
-      next_match_win_idx: 2, next_match_win_slot: 1,
+      next_match_win_idx: 2,
+      next_match_win_slot: 1,
       next_match_win_id: 'm3',
     }),
     makeMatch('m2', {
-      team1: teams[1], team1_id: 't2',
-      team2: teams[2], team2_id: 't3',
-      round_number: 1, round_name: 'Demi-finales',
+      team1: teams[1],
+      team1_id: 't2',
+      team2: teams[2],
+      team2_id: 't3',
+      round_number: 1,
+      round_name: 'Demi-finales',
       position_in_round: 2,
-      next_match_win_idx: 2, next_match_win_slot: 2,
+      next_match_win_idx: 2,
+      next_match_win_slot: 2,
       next_match_win_id: 'm3',
     }),
     makeMatch('m3', {
-      round_number: 2, round_name: 'Finale',
+      round_number: 2,
+      round_name: 'Finale',
       position_in_round: 1,
     }),
   ];
@@ -194,14 +208,17 @@ describe('computeSchedule', () => {
   };
 
   it('returns all nulls when no startDate', () => {
-    const result = computeSchedule(3, [1, 1, 1], { ...baseSchedule, startDate: '' });
+    const result = computeSchedule(3, [1, 1, 1], {
+      ...baseSchedule,
+      startDate: '',
+    });
     expect(result).toEqual([null, null, null]);
   });
 
   it('returns correct number of dates', () => {
     const result = computeSchedule(4, [1, 1, 2, 2], baseSchedule);
     expect(result).toHaveLength(4);
-    result.forEach(d => expect(d).not.toBeNull());
+    result.forEach((d) => expect(d).not.toBeNull());
   });
 
   it('spaces matches by duration + break', () => {
@@ -240,10 +257,13 @@ describe('simulateMatch', () => {
     const t1 = makeTeam('t1', 1);
     const t2 = makeTeam('t2', 2);
     const match = makeMatch('m1', {
-      team1: t1, team1_id: 't1',
-      team2: t2, team2_id: 't2',
+      team1: t1,
+      team1_id: 't1',
+      team2: t2,
+      team2_id: 't2',
       status: 'finished',
-      team1_score: 2, team2_score: 1,
+      team1_score: 2,
+      team2_score: 1,
       winner_team_id: 't1',
     });
     const result = simulateMatch(match);
@@ -261,8 +281,10 @@ describe('simulateMatch', () => {
     const t1 = makeTeam('t1', 1);
     const t2 = makeTeam('t2', 2);
     const match = makeMatch('m1', {
-      team1: t1, team1_id: 't1',
-      team2: t2, team2_id: 't2',
+      team1: t1,
+      team1_id: 't1',
+      team2: t2,
+      team2_id: 't2',
       best_of: 3,
     });
 
@@ -285,10 +307,15 @@ describe('simulateMatch', () => {
     const t1 = makeTeam('t1', 1);
     const t2 = makeTeam('t2', 2);
     const match = makeMatch('m1', {
-      team1: t1, team1_id: 't1',
-      team2: t2, team2_id: 't2',
+      team1: t1,
+      team1_id: 't1',
+      team2: t2,
+      team2_id: 't2',
       best_of: 5,
-      maps: Array.from({ length: 5 }, (_, i) => ({ name: `Map ${i}`, mode: 'Control' })),
+      maps: Array.from({ length: 5 }, (_, i) => ({
+        name: `Map ${i}`,
+        mode: 'Control',
+      })),
     });
 
     const result = simulateMatch(match);
@@ -303,8 +330,10 @@ describe('simulateMatch', () => {
     const t1 = makeTeam('t1', 1);
     const t2 = makeTeam('t2', 2);
     const match = makeMatch('m1', {
-      team1: t1, team1_id: 't1',
-      team2: t2, team2_id: 't2',
+      team1: t1,
+      team1_id: 't1',
+      team2: t2,
+      team2_id: 't2',
     });
 
     for (let i = 0; i < 20; i++) {
@@ -317,13 +346,15 @@ describe('simulateMatch', () => {
     const t1 = makeTeam('t1', 1);
     const t2 = makeTeam('t2', 2);
     const match = makeMatch('m1', {
-      team1: t1, team1_id: 't1',
-      team2: t2, team2_id: 't2',
+      team1: t1,
+      team1_id: 't1',
+      team2: t2,
+      team2_id: 't2',
       best_of: 3,
     });
 
     const result = simulateMatch(match);
-    const playedMaps = result.maps.filter(m => m.winner_team_id != null);
+    const playedMaps = result.maps.filter((m) => m.winner_team_id != null);
     expect(playedMaps.length).toBe(result.team1_score! + result.team2_score!);
   });
 });
@@ -338,12 +369,16 @@ describe('propagateBracket', () => {
     const t2 = makeTeam('t2', 2);
     const matches: SimMatch[] = [
       makeMatch('m1', {
-        team1: t1, team1_id: 't1',
-        team2: t2, team2_id: 't2',
+        team1: t1,
+        team1_id: 't1',
+        team2: t2,
+        team2_id: 't2',
         status: 'finished',
         winner_team_id: 't1',
-        team1_score: 2, team2_score: 0,
-        next_match_win_idx: 1, next_match_win_slot: 1,
+        team1_score: 2,
+        team2_score: 0,
+        next_match_win_idx: 1,
+        next_match_win_slot: 1,
       }),
       makeMatch('m2'),
     ];
@@ -358,12 +393,16 @@ describe('propagateBracket', () => {
     const t2 = makeTeam('t2', 2);
     const matches: SimMatch[] = [
       makeMatch('m1', {
-        team1: t1, team1_id: 't1',
-        team2: t2, team2_id: 't2',
+        team1: t1,
+        team1_id: 't1',
+        team2: t2,
+        team2_id: 't2',
         status: 'finished',
         winner_team_id: 't2',
-        team1_score: 0, team2_score: 2,
-        next_match_win_id: 'm2', next_match_win_slot: 2,
+        team1_score: 0,
+        team2_score: 2,
+        next_match_win_id: 'm2',
+        next_match_win_slot: 2,
       }),
       makeMatch('m2'),
     ];
@@ -377,13 +416,18 @@ describe('propagateBracket', () => {
     const t2 = makeTeam('t2', 2);
     const matches: SimMatch[] = [
       makeMatch('m1', {
-        team1: t1, team1_id: 't1',
-        team2: t2, team2_id: 't2',
+        team1: t1,
+        team1_id: 't1',
+        team2: t2,
+        team2_id: 't2',
         status: 'finished',
         winner_team_id: 't1',
-        team1_score: 2, team2_score: 1,
-        next_match_win_id: 'm2', next_match_win_slot: 1,
-        next_match_lose_id: 'm3', next_match_lose_slot: 1,
+        team1_score: 2,
+        team2_score: 1,
+        next_match_win_id: 'm2',
+        next_match_win_slot: 1,
+        next_match_lose_id: 'm3',
+        next_match_lose_slot: 1,
       }),
       makeMatch('m2'),
       makeMatch('m3', { bracket_side: 'lb' }),
@@ -399,10 +443,13 @@ describe('propagateBracket', () => {
     const t2 = makeTeam('t2', 2);
     const matches: SimMatch[] = [
       makeMatch('m1', {
-        team1: t1, team1_id: 't1',
-        team2: t2, team2_id: 't2',
+        team1: t1,
+        team1_id: 't1',
+        team2: t2,
+        team2_id: 't2',
         status: 'pending',
-        next_match_win_id: 'm2', next_match_win_slot: 1,
+        next_match_win_id: 'm2',
+        next_match_win_slot: 1,
       }),
       makeMatch('m2'),
     ];
@@ -415,8 +462,20 @@ describe('propagateBracket', () => {
     const { stage } = make4TeamBracket();
 
     // Simulate both semis
-    stage.matches[0] = { ...stage.matches[0], status: 'finished', winner_team_id: 't1', team1_score: 2, team2_score: 0 };
-    stage.matches[1] = { ...stage.matches[1], status: 'finished', winner_team_id: 't3', team1_score: 1, team2_score: 2 };
+    stage.matches[0] = {
+      ...stage.matches[0],
+      status: 'finished',
+      winner_team_id: 't1',
+      team1_score: 2,
+      team2_score: 0,
+    };
+    stage.matches[1] = {
+      ...stage.matches[1],
+      status: 'finished',
+      winner_team_id: 't3',
+      team1_score: 1,
+      team2_score: 2,
+    };
 
     const result = propagateBracket(stage.matches);
     // Final should have t1 vs t3
@@ -435,14 +494,14 @@ describe('simulateFullTournament', () => {
     const { winnerId, standings } = simulateFullTournament([stage]);
 
     expect(winnerId).toBeDefined();
-    expect(teams.map(t => t.id)).toContain(winnerId);
+    expect(teams.map((t) => t.id)).toContain(winnerId);
     expect(standings).toHaveLength(4);
   });
 
   it('finishes all matches', () => {
     const { stage } = make4TeamBracket();
     // We need to check after simulation - simulateFullTournament modifies a deep clone
-    const cloned = { ...stage, matches: stage.matches.map(m => ({ ...m })) };
+    const cloned = { ...stage, matches: stage.matches.map((m) => ({ ...m })) };
     simulateFullTournament([cloned]);
     // The original should be untouched (function clones internally)
     expect(stage.matches[2].status).toBe('pending');
@@ -452,9 +511,17 @@ describe('simulateFullTournament', () => {
     const t1 = makeTeam('t1', 1);
     const t2 = makeTeam('t2', 2);
     const stage: SimStage = {
-      id: 's1', name: 'Round Robin', stage_type: 'round_robin',
+      id: 's1',
+      name: 'Round Robin',
+      stage_type: 'round_robin',
       matches: [
-        makeMatch('m1', { team1: t1, team1_id: 't1', team2: t2, team2_id: 't2', bracket_side: 'none' }),
+        makeMatch('m1', {
+          team1: t1,
+          team1_id: 't1',
+          team2: t2,
+          team2_id: 't2',
+          bracket_side: 'none',
+        }),
       ],
     };
 
@@ -482,9 +549,14 @@ describe('computeCompetitiveness', () => {
     const t2 = makeTeam('t2', 2);
     const matches: SimMatch[] = [
       makeMatch('m1', {
-        team1: t1, team1_id: 't1', team2: t2, team2_id: 't2',
-        status: 'finished', winner_team_id: 't1',
-        team1_score: 2, team2_score: 1,
+        team1: t1,
+        team1_id: 't1',
+        team2: t2,
+        team2_id: 't2',
+        status: 'finished',
+        winner_team_id: 't1',
+        team1_score: 2,
+        team2_score: 1,
       }),
     ];
 
@@ -498,9 +570,14 @@ describe('computeCompetitiveness', () => {
     const t2 = makeTeam('t2', 2);
     const matches: SimMatch[] = [
       makeMatch('m1', {
-        team1: t1, team1_id: 't1', team2: t2, team2_id: 't2',
-        status: 'finished', winner_team_id: 't1',
-        team1_score: 2, team2_score: 0,
+        team1: t1,
+        team1_id: 't1',
+        team2: t2,
+        team2_id: 't2',
+        status: 'finished',
+        winner_team_id: 't1',
+        team1_score: 2,
+        team2_score: 0,
       }),
     ];
 
@@ -513,9 +590,14 @@ describe('computeCompetitiveness', () => {
     const t2 = makeTeam('t2', 4); // seed 4 = worse
     const matches: SimMatch[] = [
       makeMatch('m1', {
-        team1: t1, team1_id: 't1', team2: t2, team2_id: 't2',
-        status: 'finished', winner_team_id: 't2', // upset!
-        team1_score: 1, team2_score: 2,
+        team1: t1,
+        team1_id: 't1',
+        team2: t2,
+        team2_id: 't2',
+        status: 'finished',
+        winner_team_id: 't2', // upset!
+        team1_score: 1,
+        team2_score: 2,
       }),
     ];
 
@@ -528,9 +610,14 @@ describe('computeCompetitiveness', () => {
     const t2 = makeTeam('t2', 4);
     const matches: SimMatch[] = [
       makeMatch('m1', {
-        team1: t1, team1_id: 't1', team2: t2, team2_id: 't2',
-        status: 'finished', winner_team_id: 't1',
-        team1_score: 2, team2_score: 0,
+        team1: t1,
+        team1_id: 't1',
+        team2: t2,
+        team2_id: 't2',
+        status: 'finished',
+        winner_team_id: 't1',
+        team1_score: 2,
+        team2_score: 0,
       }),
     ];
 
@@ -543,14 +630,24 @@ describe('computeCompetitiveness', () => {
     const t2 = makeTeam('t2', 2);
     const matches: SimMatch[] = [
       makeMatch('m1', {
-        team1: t1, team1_id: 't1', team2: t2, team2_id: 't2',
-        status: 'finished', winner_team_id: 't1',
-        team1_score: 2, team2_score: 1, // 3 maps
+        team1: t1,
+        team1_id: 't1',
+        team2: t2,
+        team2_id: 't2',
+        status: 'finished',
+        winner_team_id: 't1',
+        team1_score: 2,
+        team2_score: 1, // 3 maps
       }),
       makeMatch('m2', {
-        team1: t1, team1_id: 't1', team2: t2, team2_id: 't2',
-        status: 'finished', winner_team_id: 't1',
-        team1_score: 2, team2_score: 0, // 2 maps
+        team1: t1,
+        team1_id: 't1',
+        team2: t2,
+        team2_id: 't2',
+        status: 'finished',
+        winner_team_id: 't1',
+        team1_score: 2,
+        team2_score: 0, // 2 maps
       }),
     ];
 
@@ -563,9 +660,36 @@ describe('computeCompetitiveness', () => {
     const t2 = makeTeam('t2', 2);
     const t3 = makeTeam('t3', 3);
     const matches: SimMatch[] = [
-      makeMatch('m1', { team1: t1, team1_id: 't1', team2: t2, team2_id: 't2', status: 'finished', winner_team_id: 't1', team1_score: 2, team2_score: 0 }),
-      makeMatch('m2', { team1: t1, team1_id: 't1', team2: t3, team2_id: 't3', status: 'finished', winner_team_id: 't1', team1_score: 2, team2_score: 1 }),
-      makeMatch('m3', { team1: t1, team1_id: 't1', team2: t2, team2_id: 't2', status: 'finished', winner_team_id: 't2', team1_score: 0, team2_score: 2 }),
+      makeMatch('m1', {
+        team1: t1,
+        team1_id: 't1',
+        team2: t2,
+        team2_id: 't2',
+        status: 'finished',
+        winner_team_id: 't1',
+        team1_score: 2,
+        team2_score: 0,
+      }),
+      makeMatch('m2', {
+        team1: t1,
+        team1_id: 't1',
+        team2: t3,
+        team2_id: 't3',
+        status: 'finished',
+        winner_team_id: 't1',
+        team1_score: 2,
+        team2_score: 1,
+      }),
+      makeMatch('m3', {
+        team1: t1,
+        team1_id: 't1',
+        team2: t2,
+        team2_id: 't2',
+        status: 'finished',
+        winner_team_id: 't2',
+        team1_score: 0,
+        team2_score: 2,
+      }),
     ];
 
     const result = computeCompetitiveness(matches, [t1, t2, t3]);
@@ -577,9 +701,36 @@ describe('computeCompetitiveness', () => {
     const t2 = makeTeam('t2', 2);
     // t1 wins all 3 matches
     const matches: SimMatch[] = [
-      makeMatch('m1', { team1: t1, team1_id: 't1', team2: t2, team2_id: 't2', status: 'finished', winner_team_id: 't1', team1_score: 2, team2_score: 0 }),
-      makeMatch('m2', { team1: t1, team1_id: 't1', team2: t2, team2_id: 't2', status: 'finished', winner_team_id: 't1', team1_score: 2, team2_score: 0 }),
-      makeMatch('m3', { team1: t1, team1_id: 't1', team2: t2, team2_id: 't2', status: 'finished', winner_team_id: 't1', team1_score: 2, team2_score: 0 }),
+      makeMatch('m1', {
+        team1: t1,
+        team1_id: 't1',
+        team2: t2,
+        team2_id: 't2',
+        status: 'finished',
+        winner_team_id: 't1',
+        team1_score: 2,
+        team2_score: 0,
+      }),
+      makeMatch('m2', {
+        team1: t1,
+        team1_id: 't1',
+        team2: t2,
+        team2_id: 't2',
+        status: 'finished',
+        winner_team_id: 't1',
+        team1_score: 2,
+        team2_score: 0,
+      }),
+      makeMatch('m3', {
+        team1: t1,
+        team1_id: 't1',
+        team2: t2,
+        team2_id: 't2',
+        status: 'finished',
+        winner_team_id: 't1',
+        team1_score: 2,
+        team2_score: 0,
+      }),
     ];
 
     const result = computeCompetitiveness(matches, [t1, t2]);

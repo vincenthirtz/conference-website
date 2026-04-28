@@ -49,9 +49,7 @@ export default async function handler(
 
   if (!apiRes.ok) {
     console.error('[netlify-builds] API error:', apiRes.status);
-    return res
-      .status(502)
-      .json({ error: 'Failed to fetch builds.' });
+    return res.status(502).json({ error: 'Failed to fetch builds.' });
   }
 
   const builds = (await apiRes.json()) as Build[];

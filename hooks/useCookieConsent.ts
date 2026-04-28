@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 
-export type CookieCategory = 'essential' | 'functional' | 'analytics' | 'marketing';
+export type CookieCategory =
+  | 'essential'
+  | 'functional'
+  | 'analytics'
+  | 'marketing';
 
 export interface CookiePreferences {
   essential: boolean; // Toujours true, non modifiable
@@ -72,7 +76,10 @@ export function useCookieConsent() {
 
     window.addEventListener(COOKIE_CONSENT_CHANGE_EVENT, handleConsentChange);
     return () => {
-      window.removeEventListener(COOKIE_CONSENT_CHANGE_EVENT, handleConsentChange);
+      window.removeEventListener(
+        COOKIE_CONSENT_CHANGE_EVENT,
+        handleConsentChange
+      );
     };
   }, []);
 
@@ -122,13 +129,16 @@ export function useCookieConsent() {
   }, [rejectAll]);
 
   // Sauvegarder des préférences personnalisées
-  const saveCustomPreferences = useCallback((preferences: Partial<CookiePreferences>) => {
-    saveConsent({
-      ...state.preferences,
-      ...preferences,
-      essential: true, // Toujours true
-    });
-  }, [saveConsent, state.preferences]);
+  const saveCustomPreferences = useCallback(
+    (preferences: Partial<CookiePreferences>) => {
+      saveConsent({
+        ...state.preferences,
+        ...preferences,
+        essential: true, // Toujours true
+      });
+    },
+    [saveConsent, state.preferences]
+  );
 
   // Réinitialiser le consentement (pour permettre à l'utilisateur de modifier)
   const resetConsent = useCallback(() => {

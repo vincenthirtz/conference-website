@@ -35,7 +35,10 @@ describe('makeSideGroupKey / parseSideGroupKey', () => {
   it('parses key back to side and group', () => {
     expect(parseSideGroupKey('wb::A')).toEqual({ side: 'wb', groupKey: 'A' });
     expect(parseSideGroupKey('lb::')).toEqual({ side: 'lb', groupKey: null });
-    expect(parseSideGroupKey('final::')).toEqual({ side: 'final', groupKey: null });
+    expect(parseSideGroupKey('final::')).toEqual({
+      side: 'final',
+      groupKey: null,
+    });
   });
 });
 

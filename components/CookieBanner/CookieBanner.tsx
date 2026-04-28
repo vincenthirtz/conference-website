@@ -14,7 +14,8 @@ const cookieCategories: CookieCategoryInfo[] = [
   {
     key: 'essential',
     name: 'Cookies essentiels',
-    description: 'Nécessaires au fonctionnement du site (authentification, sécurité). Ces cookies ne peuvent pas être désactivés.',
+    description:
+      'Nécessaires au fonctionnement du site (authentification, sécurité). Ces cookies ne peuvent pas être désactivés.',
     required: true,
   },
   {
@@ -26,7 +27,8 @@ const cookieCategories: CookieCategoryInfo[] = [
   {
     key: 'analytics',
     name: 'Cookies analytiques',
-    description: 'Nous aident à comprendre comment vous utilisez le site pour l\'améliorer.',
+    description:
+      "Nous aident à comprendre comment vous utilisez le site pour l'améliorer.",
     required: false,
   },
   {
@@ -48,7 +50,8 @@ export default function CookieBanner() {
   } = useCookieConsent();
 
   const [showDetails, setShowDetails] = useState(false);
-  const [customPreferences, setCustomPreferences] = useState<CookiePreferences>(preferences);
+  const [customPreferences, setCustomPreferences] =
+    useState<CookiePreferences>(preferences);
   const trapRef = useFocusTrap<HTMLDivElement>();
 
   // Ne pas afficher si pas encore chargé ou si déjà consenti
@@ -58,7 +61,7 @@ export default function CookieBanner() {
 
   const handleToggleCategory = (key: keyof CookiePreferences) => {
     if (key === 'essential') return; // Ne peut pas être désactivé
-    setCustomPreferences(prev => ({
+    setCustomPreferences((prev) => ({
       ...prev,
       [key]: !prev[key],
     }));
@@ -69,15 +72,23 @@ export default function CookieBanner() {
   };
 
   return (
-    <div ref={trapRef} className="cookie-banner" role="dialog" aria-modal="true" aria-labelledby="cookie-banner-title" aria-describedby="cookie-banner-description">
+    <div
+      ref={trapRef}
+      className="cookie-banner"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="cookie-banner-title"
+      aria-describedby="cookie-banner-description"
+    >
       <div className="cookie-banner-content">
         <div className="cookie-banner-header">
           <h2 id="cookie-banner-title" className="cookie-banner-title">
             Gestion des cookies
           </h2>
           <p id="cookie-banner-description" className="cookie-banner-text">
-            Nous utilisons des cookies pour assurer le bon fonctionnement du site et améliorer votre expérience.
-            Vous pouvez personnaliser vos préférences ci-dessous.
+            Nous utilisons des cookies pour assurer le bon fonctionnement du
+            site et améliorer votre expérience. Vous pouvez personnaliser vos
+            préférences ci-dessous.
           </p>
         </div>
 
@@ -89,18 +100,26 @@ export default function CookieBanner() {
                   <label className="cookie-category-label">
                     <input
                       type="checkbox"
-                      checked={category.key === 'essential' ? true : customPreferences[category.key]}
+                      checked={
+                        category.key === 'essential'
+                          ? true
+                          : customPreferences[category.key]
+                      }
                       onChange={() => handleToggleCategory(category.key)}
                       disabled={category.required}
                       className="cookie-checkbox"
                     />
-                    <span className="cookie-category-name">{category.name}</span>
+                    <span className="cookie-category-name">
+                      {category.name}
+                    </span>
                     {category.required && (
                       <span className="cookie-required-badge">Requis</span>
                     )}
                   </label>
                 </div>
-                <p className="cookie-category-description">{category.description}</p>
+                <p className="cookie-category-description">
+                  {category.description}
+                </p>
               </div>
             ))}
           </div>

@@ -9,7 +9,14 @@ import { logStaffAction } from '@/utils/staffLogs';
 
 type DeletedItem = {
   id: string;
-  type: 'stage' | 'team' | 'match' | 'announcement' | 'partner' | 'cast_member' | 'adherent';
+  type:
+    | 'stage'
+    | 'team'
+    | 'match'
+    | 'announcement'
+    | 'partner'
+    | 'cast_member'
+    | 'adherent';
   name: string;
   details: string | null;
   deleted_at: string | null;
@@ -44,7 +51,10 @@ async function handler(
   }
 }
 
-async function handleGet(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
+async function handleGet(
+  req: NextApiRequest,
+  res: NextApiResponse<ApiResponse>
+) {
   const typeFilter = req.query.type as string | undefined;
   const items: DeletedItem[] = [];
 
@@ -121,8 +131,8 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse<ApiResponse>)
     }
 
     for (const m of matches || []) {
-      const t1 = m.team1_id ? (teamNameMap.get(m.team1_id) || 'TBD') : 'TBD';
-      const t2 = m.team2_id ? (teamNameMap.get(m.team2_id) || 'TBD') : 'TBD';
+      const t1 = m.team1_id ? teamNameMap.get(m.team1_id) || 'TBD' : 'TBD';
+      const t2 = m.team2_id ? teamNameMap.get(m.team2_id) || 'TBD' : 'TBD';
       items.push({
         id: m.id,
         type: 'match',
@@ -247,7 +257,12 @@ async function handleRestore(
       case 'stage': {
         const { error } = await supabaseAdmin!
           .from('tournament_stages')
-          .update({ is_active: true, is_public: true, deleted_at: null, updated_at: nowIso })
+          .update({
+            is_active: true,
+            is_public: true,
+            deleted_at: null,
+            updated_at: nowIso,
+          })
           .eq('id', id);
 
         if (error) throw error;

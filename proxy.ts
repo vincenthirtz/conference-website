@@ -36,6 +36,9 @@ export function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     // Match all routes except static files and API routes
-    { source: '/((?!api|_next/static|_next/image|favicon.ico|img/).*)', missing: [{ type: 'header', key: 'next-router-prefetch' }] },
+    {
+      source: '/((?!api|_next/static|_next/image|favicon.ico|img/).*)',
+      missing: [{ type: 'header', key: 'next-router-prefetch' }],
+    },
   ],
 };

@@ -10,7 +10,10 @@ import {
 import { sendTeamJoinEmail } from '@/utils/email';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { validateRole } from '@/utils/apiHelpers';
-import { isTeamRosterLocked, rosterLockErrorMessage } from '@/utils/teams/rosterLock';
+import {
+  isTeamRosterLocked,
+  rosterLockErrorMessage,
+} from '@/utils/teams/rosterLock';
 
 type AddMemberResponse =
   | {
@@ -32,7 +35,15 @@ export default async function handler(
   }
 
   // Rate limiting: 10 member additions per 10 minutes
-  if (applyRateLimit(req, res, { max: 10, windowMs: 10 * 60 * 1000 }, 'add-member')) return;
+  if (
+    applyRateLimit(
+      req,
+      res,
+      { max: 10, windowMs: 10 * 60 * 1000 },
+      'add-member'
+    )
+  )
+    return;
 
   if (!supabaseAdmin) {
     return res.status(500).json({ error: 'Supabase admin not configured' });
@@ -40,7 +51,9 @@ export default async function handler(
 
   // Check if user is authenticated
   const supabase = getServerClient(req, res);
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
     return res.status(401).json({ error: 'Not authenticated' });
@@ -76,7 +89,7 @@ export default async function handler(
     const re = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
     if (!re.test(trimmed)) {
       throw new Error(
-        "BattleTag required (format Name#0000, alphanumeric + # + 3 to 6 digits)"
+        'BattleTag required (format Name#0000, alphanumeric + # + 3 to 6 digits)'
       );
     }
     return trimmed;
@@ -86,14 +99,18 @@ export default async function handler(
   try {
     battleTagValue = validateBattleTag(battleTag);
   } catch (err: unknown) {
-    return res.status(400).json({ error: (err as Error)?.message || 'Invalid BattleTag' });
+    return res
+      .status(400)
+      .json({ error: (err as Error)?.message || 'Invalid BattleTag' });
   }
 
   try {
     // Resolve user by email (or create if not found)
     if (!resolvedUserId) {
       if (!email || typeof email !== 'string') {
-        return res.status(400).json({ error: 'Provide userId or email to find the user' });
+        return res
+          .status(400)
+          .json({ error: 'Provide userId or email to find the user' });
       }
 
       try {
@@ -118,17 +135,18 @@ export default async function handler(
     // Check max_players limit across all tournaments (coaches are excluded)
     const validatedRole = validateRole(role);
     if (validatedRole !== 'coach') {
-      const [{ count: currentNonCoachCount }, { data: teamTournaments }] = await Promise.all([
-        supabaseAdmin
-          .from('team_members')
-          .select('*', { count: 'exact', head: true })
-          .eq('team_id', captainTeam.id)
-          .neq('role', 'coach'),
-        supabaseAdmin
-          .from('tournament_teams')
-          .select('tournament_id, tournaments!inner(max_players)')
-          .eq('team_id', captainTeam.id),
-      ]);
+      const [{ count: currentNonCoachCount }, { data: teamTournaments }] =
+        await Promise.all([
+          supabaseAdmin
+            .from('team_members')
+            .select('*', { count: 'exact', head: true })
+            .eq('team_id', captainTeam.id)
+            .neq('role', 'coach'),
+          supabaseAdmin
+            .from('tournament_teams')
+            .select('tournament_id, tournaments!inner(max_players)')
+            .eq('team_id', captainTeam.id),
+        ]);
 
       if (teamTournaments && teamTournaments.length > 0) {
         for (const tt of teamTournaments) {
@@ -161,24 +179,36 @@ export default async function handler(
         insertErr.message?.includes('duplicate') ||
         insertErr.message?.includes('unique')
           ? 'Ce joueur est déjà dans une équipe'
-          : 'Échec de l\'ajout du membre';
+          : "Échec de l'ajout du membre";
       return res.status(400).json({ error: msg });
     }
 
     // Send team join email (non-blocking)
-    const memberEmail = typeof email === 'string' ? email.trim().toLowerCase() : null;
+    const memberEmail =
+      typeof email === 'string' ? email.trim().toLowerCase() : null;
     if (memberEmail) {
-      sendTeamJoinEmail(memberEmail, captainTeam.name, memberPayload.role).catch((err) => {
+      sendTeamJoinEmail(
+        memberEmail,
+        captainTeam.name,
+        memberPayload.role
+      ).catch((err) => {
         console.error('[add-member] team join email error:', err);
       });
     } else if (resolvedUserId) {
-      supabaseAdmin.auth.admin.getUserById(resolvedUserId).then(({ data }) => {
-        if (data?.user?.email) {
-          sendTeamJoinEmail(data.user.email, captainTeam.name, memberPayload.role).catch((err) => {
-            console.error('[add-member] team join email error:', err);
-          });
-        }
-      }).catch(() => {});
+      supabaseAdmin.auth.admin
+        .getUserById(resolvedUserId)
+        .then(({ data }) => {
+          if (data?.user?.email) {
+            sendTeamJoinEmail(
+              data.user.email,
+              captainTeam.name,
+              memberPayload.role
+            ).catch((err) => {
+              console.error('[add-member] team join email error:', err);
+            });
+          }
+        })
+        .catch(() => {});
     }
 
     // Create auto news
@@ -205,7 +235,7 @@ export default async function handler(
       userId: resolvedUserId,
       role: memberPayload.role,
       battle_tag: battleTagValue,
-      info: 'Membre ajouté à l\'équipe',
+      info: "Membre ajouté à l'équipe",
     });
   } catch (err: unknown) {
     console.error('[/api/teams/add-member] error:', err);

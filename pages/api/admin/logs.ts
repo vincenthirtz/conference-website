@@ -26,7 +26,11 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { StaffLog, formatStaffLog } from '@/utils/staffLogs';
-import { parsePagination, sanitizeSearch, escapePostgrestValue } from '@/utils/apiHelpers';
+import {
+  parsePagination,
+  sanitizeSearch,
+  escapePostgrestValue,
+} from '@/utils/apiHelpers';
 
 export type AdminLogsResponse = {
   logs: Array<ReturnType<typeof formatStaffLog>>;
@@ -57,7 +61,9 @@ async function handler(
       includeTotal,
     } = req.query;
 
-    const { limit: limitNum, offset: offsetNum } = parsePagination(req, { limit: 100 });
+    const { limit: limitNum, offset: offsetNum } = parsePagination(req, {
+      limit: 100,
+    });
     const search = sanitizeSearch(req.query.search);
 
     const ascending = orderDir === 'asc' ? true : false;
@@ -71,10 +77,9 @@ async function handler(
     // Pas de relation FK déclarée côté DB → on reste sur un select simple.
     let query = supabaseAdmin
       .from('staff_logs')
-      .select(
-        'id, created_at, staff_id, action, entity_type, entity_id',
-        { count: wantTotal ? 'exact' : undefined }
-      );
+      .select('id, created_at, staff_id, action, entity_type, entity_id', {
+        count: wantTotal ? 'exact' : undefined,
+      });
 
     if (staffId && !Array.isArray(staffId)) {
       query = query.eq('staff_id', staffId);
@@ -112,7 +117,6 @@ async function handler(
       console.error('admin logs GET error:', error);
       return res.status(500).json({
         error: 'Failed to fetch staff logs',
-        
       });
     }
 

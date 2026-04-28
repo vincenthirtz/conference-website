@@ -20,7 +20,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
 
   const { tournamentId } = req.body || {};
 
-  if (!tournamentId || typeof tournamentId !== 'string' || !isValidUUID(tournamentId)) {
+  if (
+    !tournamentId ||
+    typeof tournamentId !== 'string' ||
+    !isValidUUID(tournamentId)
+  ) {
     return res.status(400).json({ error: 'tournamentId invalide.' });
   }
 
@@ -56,7 +60,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
   }
 
   // Deduplicate captains (a captain can only have one team, but just in case)
-  const captainIds = [...new Set(teams.map((t) => t.captain_id).filter(Boolean))] as string[];
+  const captainIds = [
+    ...new Set(teams.map((t) => t.captain_id).filter(Boolean)),
+  ] as string[];
 
   let emailsSent = 0;
   let messagesSent = 0;
@@ -79,7 +85,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
   for (const captainId of captainIds) {
     try {
       // Get captain email from auth
-      const { data: userData } = await supabaseAdmin!.auth.admin.getUserById(captainId);
+      const { data: userData } =
+        await supabaseAdmin!.auth.admin.getUserById(captainId);
       const captainEmail = userData?.user?.email;
 
       // Find the team for this captain
@@ -96,35 +103,37 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
         if (emailResult.success) {
           emailsSent++;
         } else {
-          errors.push(`Email echoue pour ${captainEmail}: ${emailResult.error}`);
+          errors.push(
+            `Email echoue pour ${captainEmail}: ${emailResult.error}`
+          );
         }
       }
 
       // Always send an internal message via the messaging system
       if (captainTeam) {
-        const { error: msgErr } = await supabaseAdmin!
-          .from('demandes')
-          .insert({
-            user_id: null,
-            team_id: captainTeam.id,
-            type: 'captain_message',
-            status: 'pending',
-            comment: messageContent,
-            source: 'system',
-            payload: {
-              conversation_id: `system_${captainTeam.id}`,
-              from_team_id: 'system',
-              from_team_name: 'OW Women\'s Cup',
-              target_team_name: captainTeam.name,
-              sender_display_name: 'Organisateur',
-              notification_type: 'tournament_open',
-              tournament_id: tournament.id,
-              tournament_name: tournament.name,
-            },
-          });
+        const { error: msgErr } = await supabaseAdmin!.from('demandes').insert({
+          user_id: null,
+          team_id: captainTeam.id,
+          type: 'captain_message',
+          status: 'pending',
+          comment: messageContent,
+          source: 'system',
+          payload: {
+            conversation_id: `system_${captainTeam.id}`,
+            from_team_id: 'system',
+            from_team_name: "OW Women's Cup",
+            target_team_name: captainTeam.name,
+            sender_display_name: 'Organisateur',
+            notification_type: 'tournament_open',
+            tournament_id: tournament.id,
+            tournament_name: tournament.name,
+          },
+        });
 
         if (msgErr) {
-          errors.push(`Message echoue pour team ${captainTeam.name}: ${msgErr.message}`);
+          errors.push(
+            `Message echoue pour team ${captainTeam.name}: ${msgErr.message}`
+          );
         } else {
           messagesSent++;
         }

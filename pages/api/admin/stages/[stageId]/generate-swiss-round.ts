@@ -228,7 +228,11 @@ async function handler(
 
     // Enforce total_rounds limit from settings
     const totalRounds = typedStage.settings?.total_rounds;
-    if (typeof totalRounds === 'number' && totalRounds > 0 && nextRound > totalRounds) {
+    if (
+      typeof totalRounds === 'number' &&
+      totalRounds > 0 &&
+      nextRound > totalRounds
+    ) {
       return res.status(400).json({
         error: `Impossible de generer le round ${nextRound} : le nombre maximum de rounds est ${totalRounds}. Modifiez les settings du stage pour augmenter total_rounds.`,
       });
@@ -338,7 +342,12 @@ async function handler(
 
       if (winThreshold !== null && wins >= winThreshold) {
         const losses = lossesMap.get(tid) ?? 0;
-        eliminatedTeams.push({ teamId: tid, reason: 'win_threshold', wins, losses });
+        eliminatedTeams.push({
+          teamId: tid,
+          reason: 'win_threshold',
+          wins,
+          losses,
+        });
         eliminatedIds.add(tid);
       }
     }
@@ -347,13 +356,18 @@ async function handler(
     // pour éviter de terminer le tournoi prématurément
     if (lossThreshold !== null) {
       // Collecter les candidats à l'élimination par défaites
-      const lossCandidates: { teamId: string; wins: number; losses: number }[] = [];
+      const lossCandidates: { teamId: string; wins: number; losses: number }[] =
+        [];
       for (const p of participantsRows) {
         const tid = p.team_id;
         if (eliminatedIds.has(tid)) continue; // déjà éliminé par win_threshold
         const losses = lossesMap.get(tid) ?? 0;
         if (losses >= lossThreshold) {
-          lossCandidates.push({ teamId: tid, wins: winsMap.get(tid) ?? 0, losses });
+          lossCandidates.push({
+            teamId: tid,
+            wins: winsMap.get(tid) ?? 0,
+            losses,
+          });
         }
       }
 
@@ -364,7 +378,12 @@ async function handler(
       if (lossCandidates.length <= maxEliminations) {
         // On peut tous les éliminer sans problème
         for (const c of lossCandidates) {
-          eliminatedTeams.push({ teamId: c.teamId, reason: 'loss_threshold', wins: c.wins, losses: c.losses });
+          eliminatedTeams.push({
+            teamId: c.teamId,
+            reason: 'loss_threshold',
+            wins: c.wins,
+            losses: c.losses,
+          });
           eliminatedIds.add(c.teamId);
         }
       } else if (maxEliminations > 0) {
@@ -372,7 +391,12 @@ async function handler(
         lossCandidates.sort((a, b) => b.losses - a.losses);
         for (let i = 0; i < maxEliminations; i++) {
           const c = lossCandidates[i];
-          eliminatedTeams.push({ teamId: c.teamId, reason: 'loss_threshold', wins: c.wins, losses: c.losses });
+          eliminatedTeams.push({
+            teamId: c.teamId,
+            reason: 'loss_threshold',
+            wins: c.wins,
+            losses: c.losses,
+          });
           eliminatedIds.add(c.teamId);
         }
       }

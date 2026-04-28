@@ -74,7 +74,9 @@ async function openDispute(
   }
 
   if (reason.length > 2000) {
-    return res.status(400).json({ error: 'reason is too long (max 2000 chars)' });
+    return res
+      .status(400)
+      .json({ error: 'reason is too long (max 2000 chars)' });
   }
 
   const { data: match, error: fetchErr } = await supabaseAdmin
@@ -89,14 +91,15 @@ async function openDispute(
 
   if (match.status === 'disputed') {
     return res.status(409).json({
-      error: 'Ce match est deja en dispute. Resolvez-la avant d\'en ouvrir une nouvelle.',
+      error:
+        "Ce match est deja en dispute. Resolvez-la avant d'en ouvrir une nouvelle.",
       code: 'ALREADY_DISPUTED',
     });
   }
 
   if (match.status === 'cancelled') {
     return res.status(400).json({
-      error: 'Impossible d\'ouvrir une dispute sur un match annule.',
+      error: "Impossible d'ouvrir une dispute sur un match annule.",
     });
   }
 
@@ -173,17 +176,24 @@ async function resolveDispute(
     forfeitTeamId?: unknown;
   };
 
-  if (typeof body.resolution !== 'string' || body.resolution.trim().length === 0) {
+  if (
+    typeof body.resolution !== 'string' ||
+    body.resolution.trim().length === 0
+  ) {
     return res.status(400).json({ error: 'resolution is required' });
   }
 
   if (body.resolution.length > 2000) {
-    return res.status(400).json({ error: 'resolution is too long (max 2000 chars)' });
+    return res
+      .status(400)
+      .json({ error: 'resolution is too long (max 2000 chars)' });
   }
 
   const { data: match, error: fetchErr } = await supabaseAdmin
     .from('matches')
-    .select('id, tournament_id, status, team1_id, team2_id, team1_score, team2_score')
+    .select(
+      'id, tournament_id, status, team1_id, team2_id, team1_score, team2_score'
+    )
     .eq('id', matchId)
     .maybeSingle();
 
@@ -193,7 +203,7 @@ async function resolveDispute(
 
   if (match.status !== 'disputed') {
     return res.status(409).json({
-      error: 'Ce match n\'est pas en dispute.',
+      error: "Ce match n'est pas en dispute.",
       code: 'NOT_DISPUTED',
     });
   }
@@ -348,7 +358,9 @@ async function cancelDispute(
 ) {
   let resumeStatus: MatchStatus = 'pending';
   if (typeof req.query.resumeStatus === 'string') {
-    if (!VALID_RESUME_STATUSES.includes(req.query.resumeStatus as MatchStatus)) {
+    if (
+      !VALID_RESUME_STATUSES.includes(req.query.resumeStatus as MatchStatus)
+    ) {
       return res.status(400).json({
         error: `Invalid resumeStatus. Allowed: ${VALID_RESUME_STATUSES.join(', ')}`,
       });
@@ -368,7 +380,7 @@ async function cancelDispute(
 
   if (match.status !== 'disputed') {
     return res.status(409).json({
-      error: 'Ce match n\'est pas en dispute.',
+      error: "Ce match n'est pas en dispute.",
       code: 'NOT_DISPUTED',
     });
   }

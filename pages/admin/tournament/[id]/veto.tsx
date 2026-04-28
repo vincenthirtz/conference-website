@@ -50,30 +50,44 @@ function typeLabel(t: string | null | undefined) {
 
 function typeBadgeColor(t: string | null | undefined): string {
   switch (t) {
-    case 'control': return 'border-blue-400/50 text-blue-200 bg-blue-600/20';
-    case 'escort': return 'border-amber-400/50 text-amber-200 bg-amber-600/20';
-    case 'hybrid': return 'border-emerald-400/50 text-emerald-200 bg-emerald-600/20';
-    case 'push': return 'border-pink-400/50 text-pink-200 bg-pink-600/20';
-    case 'flashpoint': return 'border-orange-400/50 text-orange-200 bg-orange-600/20';
-    default: return 'border-gray-400/50 text-gray-200 bg-gray-600/20';
+    case 'control':
+      return 'border-blue-400/50 text-blue-200 bg-blue-600/20';
+    case 'escort':
+      return 'border-amber-400/50 text-amber-200 bg-amber-600/20';
+    case 'hybrid':
+      return 'border-emerald-400/50 text-emerald-200 bg-emerald-600/20';
+    case 'push':
+      return 'border-pink-400/50 text-pink-200 bg-pink-600/20';
+    case 'flashpoint':
+      return 'border-orange-400/50 text-orange-200 bg-orange-600/20';
+    default:
+      return 'border-gray-400/50 text-gray-200 bg-gray-600/20';
   }
 }
 
 function actionLabel(action: string): string {
   switch (action) {
-    case 'ban': return 'BAN';
-    case 'pick': return 'PICK';
-    case 'decider': return 'DECIDER';
-    default: return action.toUpperCase();
+    case 'ban':
+      return 'BAN';
+    case 'pick':
+      return 'PICK';
+    case 'decider':
+      return 'DECIDER';
+    default:
+      return action.toUpperCase();
   }
 }
 
 function actionColor(action: string): string {
   switch (action) {
-    case 'ban': return 'bg-red-600/30 border-red-500/40 text-red-200';
-    case 'pick': return 'bg-emerald-600/30 border-emerald-500/40 text-emerald-200';
-    case 'decider': return 'bg-yellow-600/30 border-yellow-500/40 text-yellow-200';
-    default: return 'bg-white/10 border-white/20 text-gray-200';
+    case 'ban':
+      return 'bg-red-600/30 border-red-500/40 text-red-200';
+    case 'pick':
+      return 'bg-emerald-600/30 border-emerald-500/40 text-emerald-200';
+    case 'decider':
+      return 'bg-yellow-600/30 border-yellow-500/40 text-yellow-200';
+    default:
+      return 'bg-white/10 border-white/20 text-gray-200';
   }
 }
 
@@ -120,7 +134,6 @@ function AdminVetoPage(_: StaffProps) {
     } else {
       setVetoState(null);
     }
-     
   }, [selectedMatchId]);
 
   async function fetchData() {
@@ -272,14 +285,12 @@ function AdminVetoPage(_: StaffProps) {
   }, [selectedMatchId, addToast]);
 
   // Compute used maps in current veto
-  const usedMapNames = new Set(
-    (vetoState?.steps || []).map((s) => s.map_name)
-  );
+  const usedMapNames = new Set((vetoState?.steps || []).map((s) => s.map_name));
 
   // Current step info
   const currentFlowStep: VetoFlowStep | null =
     vetoState && !vetoState.isComplete
-      ? vetoState.flow[vetoState.currentStepIndex] ?? null
+      ? (vetoState.flow[vetoState.currentStepIndex] ?? null)
       : null;
 
   return (
@@ -345,7 +356,9 @@ function AdminVetoPage(_: StaffProps) {
                       <option key={m.id} value={m.id}>
                         {m.team1_name} vs {m.team2_name}
                         {m.round_name ? ` (${m.round_name})` : ''}
-                        {m.match_format ? ` · ${m.match_format.toUpperCase()}` : ''}
+                        {m.match_format
+                          ? ` · ${m.match_format.toUpperCase()}`
+                          : ''}
                       </option>
                     ))}
                   </select>
@@ -353,8 +366,8 @@ function AdminVetoPage(_: StaffProps) {
 
                 {matches.length === 0 && (
                   <p className="text-sm text-gray-400">
-                    Aucun match éligible (il faut des matchs pending/ongoing avec
-                    les deux équipes assignées).
+                    Aucun match éligible (il faut des matchs pending/ongoing
+                    avec les deux équipes assignées).
                   </p>
                 )}
               </div>
@@ -440,9 +453,7 @@ function AdminVetoPage(_: StaffProps) {
                               key={step.id}
                               className={`px-3 py-2 rounded-lg border text-sm ${actionColor(step.action)}`}
                             >
-                              <span className="font-bold mr-1">
-                                {i + 1}.
-                              </span>
+                              <span className="font-bold mr-1">{i + 1}.</span>
                               <span className="font-semibold mr-1">
                                 {actionLabel(step.action)}
                               </span>

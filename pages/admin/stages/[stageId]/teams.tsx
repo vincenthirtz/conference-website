@@ -101,7 +101,9 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
   const [bulkSeedSaving, setBulkSeedSaving] = useState(false);
 
   // Bulk selection (pour retrait en masse)
-  const [selectedTeamIds, setSelectedTeamIds] = useState<Set<string>>(new Set());
+  const [selectedTeamIds, setSelectedTeamIds] = useState<Set<string>>(
+    new Set()
+  );
   const [bulkRemoving, setBulkRemoving] = useState(false);
 
   useEffect(() => {
@@ -204,7 +206,9 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
       setAddSeed('');
       fetchStageTeams();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? "Erreur inattendue lors de l'ajout");
+      setErrorMsg(
+        (err as Error)?.message ?? "Erreur inattendue lors de l'ajout"
+      );
     } finally {
       setAdding(false);
     }
@@ -231,7 +235,9 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
       addToast('Équipe retirée de la phase.', 'info');
       fetchStageTeams();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue lors du retrait');
+      setErrorMsg(
+        (err as Error)?.message ?? 'Erreur inattendue lors du retrait'
+      );
     } finally {
       setRemovingTeamId(null);
     }
@@ -272,7 +278,8 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
       fetchStageTeams();
     } catch (err: unknown) {
       setErrorMsg(
-        (err as Error)?.message ?? 'Erreur inattendue lors de la mise à jour du seed'
+        (err as Error)?.message ??
+          'Erreur inattendue lors de la mise à jour du seed'
       );
     } finally {
       setUpdatingSeedId(null);
@@ -302,14 +309,22 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
       });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Erreur lors de la mise à jour des seeds');
+        throw new Error(
+          json.error || 'Erreur lors de la mise à jour des seeds'
+        );
       }
       const json = await res.json();
-      const successCount = json.results?.filter((r: any) => r.success).length ?? 0;
-      addToast(`Seeds mis à jour pour ${successCount} équipe${successCount > 1 ? 's' : ''}.`, 'info');
+      const successCount =
+        json.results?.filter((r: any) => r.success).length ?? 0;
+      addToast(
+        `Seeds mis à jour pour ${successCount} équipe${successCount > 1 ? 's' : ''}.`,
+        'info'
+      );
       fetchStageTeams();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue lors du bulk seed');
+      setErrorMsg(
+        (err as Error)?.message ?? 'Erreur inattendue lors du bulk seed'
+      );
     } finally {
       setBulkSeedSaving(false);
     }
@@ -349,7 +364,11 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
     if (!stageId || selectedTeamIds.size === 0) return;
 
     const count = selectedTeamIds.size;
-    if (!confirm(`Retirer ${count} équipe${count > 1 ? 's' : ''} de cette phase ?`)) {
+    if (
+      !confirm(
+        `Retirer ${count} équipe${count > 1 ? 's' : ''} de cette phase ?`
+      )
+    ) {
       return;
     }
 
@@ -367,11 +386,16 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
         throw new Error(json.error || 'Erreur lors du retrait en masse');
       }
       await res.json();
-      addToast(`${count} équipe${count > 1 ? 's' : ''} retirée${count > 1 ? 's' : ''} de la phase.`, 'info');
+      addToast(
+        `${count} équipe${count > 1 ? 's' : ''} retirée${count > 1 ? 's' : ''} de la phase.`,
+        'info'
+      );
       setSelectedTeamIds(new Set());
       fetchStageTeams();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue lors du retrait en masse');
+      setErrorMsg(
+        (err as Error)?.message ?? 'Erreur inattendue lors du retrait en masse'
+      );
     } finally {
       setBulkRemoving(false);
     }
@@ -587,7 +611,10 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
                       <th className="px-3 py-2 text-center w-10">
                         <input
                           type="checkbox"
-                          checked={selectedTeamIds.size === stageTeams.length && stageTeams.length > 0}
+                          checked={
+                            selectedTeamIds.size === stageTeams.length &&
+                            stageTeams.length > 0
+                          }
                           onChange={toggleSelectAll}
                           className="accent-blue-500"
                         />
@@ -603,7 +630,9 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
                       <tr
                         key={st.team_id}
                         className={`border-t border-neutral-700 ${
-                          selectedTeamIds.has(st.team_id) ? 'bg-blue-900/20' : ''
+                          selectedTeamIds.has(st.team_id)
+                            ? 'bg-blue-900/20'
+                            : ''
                         }`}
                       >
                         {/* Checkbox */}

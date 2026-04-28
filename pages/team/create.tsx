@@ -67,16 +67,25 @@ export default function PublicCreateTeamPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [result, setResult] = useState<CreateResponse | null>(null);
-  const [tournamentInfo, setTournamentInfo] = useState<TournamentInfo | null>(null);
+  const [tournamentInfo, setTournamentInfo] = useState<TournamentInfo | null>(
+    null
+  );
 
   useEffect(() => {
     if (!tournamentIdParam) return;
     fetch(`/api/tournaments`)
       .then((r) => r.json())
       .then((data) => {
-        const found = data.tournaments?.find((t: any) => t.id === tournamentIdParam);
+        const found = data.tournaments?.find(
+          (t: any) => t.id === tournamentIdParam
+        );
         if (found) {
-          setTournamentInfo({ id: found.id, name: found.name, game: found.game, start_date: found.start_date });
+          setTournamentInfo({
+            id: found.id,
+            name: found.name,
+            game: found.game,
+            start_date: found.start_date,
+          });
         }
       })
       .catch(() => {});
@@ -227,9 +236,18 @@ export default function PublicCreateTeamPage() {
                 </p>
                 <p className="text-sm text-blue-50/90">
                   Ton équipe sera automatiquement inscrite au tournoi{' '}
-                  <span className="font-semibold text-white">{tournamentInfo.name}</span>
+                  <span className="font-semibold text-white">
+                    {tournamentInfo.name}
+                  </span>
                   {tournamentInfo.start_date && (
-                    <> — {new Date(tournamentInfo.start_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</>
+                    <>
+                      {' '}
+                      —{' '}
+                      {new Date(tournamentInfo.start_date).toLocaleDateString(
+                        'fr-FR',
+                        { day: 'numeric', month: 'long', year: 'numeric' }
+                      )}
+                    </>
                   )}
                 </p>
               </div>
@@ -526,7 +544,8 @@ export default function PublicCreateTeamPage() {
                   </p>
                   {result.tournament && (
                     <div className="rounded-xl border border-blue-500/60 bg-blue-500/10 px-3 py-2 text-blue-100">
-                      Inscrite au tournoi &laquo;&nbsp;{result.tournament.tournament_name}&nbsp;&raquo;
+                      Inscrite au tournoi &laquo;&nbsp;
+                      {result.tournament.tournament_name}&nbsp;&raquo;
                     </div>
                   )}
                   {teamSlug && (

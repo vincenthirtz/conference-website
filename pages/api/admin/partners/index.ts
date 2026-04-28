@@ -21,7 +21,8 @@ async function handler(
   res: NextApiResponse,
   ctx: StaffContext
 ) {
-  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-partners')) return;
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-partners'))
+    return;
   if (!supabaseAdmin) {
     return res
       .status(500)
@@ -54,9 +55,7 @@ async function handler(
 
     if (error) {
       console.error('[admin/partners] list error', error);
-      return res
-        .status(500)
-        .json({ error: 'Failed to load partners.' });
+      return res.status(500).json({ error: 'Failed to load partners.' });
     }
 
     return res.status(200).json({ items: data ?? [] });
@@ -72,9 +71,9 @@ async function handler(
 
     const validCategories = ['super', 'major', 'cultural'];
     if (!validCategories.includes(body.category)) {
-      return res
-        .status(400)
-        .json({ error: 'Invalid category. Allowed values: super, major, cultural.' });
+      return res.status(400).json({
+        error: 'Invalid category. Allowed values: super, major, cultural.',
+      });
     }
 
     const insertPayload = {
@@ -96,9 +95,7 @@ async function handler(
 
     if (error) {
       console.error('[admin/partners] create error', error);
-      return res
-        .status(500)
-        .json({ error: 'Failed to create the partner.' });
+      return res.status(500).json({ error: 'Failed to create the partner.' });
     }
 
     if (ctx.staff?.id) {

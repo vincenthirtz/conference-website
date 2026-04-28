@@ -327,7 +327,10 @@ function AdminCommentsPage({ staff }: Props) {
                       className="w-full rounded-xl bg-neutral-900/50 border border-neutral-600 px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                       value={editing[c.id] ?? c.content}
                       onChange={(e) =>
-                        setEditing((prev) => ({ ...prev, [c.id]: e.target.value }))
+                        setEditing((prev) => ({
+                          ...prev,
+                          [c.id]: e.target.value,
+                        }))
                       }
                       rows={3}
                     />
@@ -337,13 +340,15 @@ function AdminCommentsPage({ staff }: Props) {
                       <button
                         type="button"
                         onClick={() => handleSave(c)}
-                        disabled={saving === c.id || (editing[c.id] === undefined)}
+                        disabled={
+                          saving === c.id || editing[c.id] === undefined
+                        }
                         className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 ${
                           saving === c.id
                             ? 'bg-blue-800 cursor-wait'
                             : editing[c.id] !== undefined
-                            ? 'bg-blue-600 hover:bg-blue-700'
-                            : 'bg-neutral-700 text-neutral-400 cursor-not-allowed'
+                              ? 'bg-blue-600 hover:bg-blue-700'
+                              : 'bg-neutral-700 text-neutral-400 cursor-not-allowed'
                         }`}
                       >
                         {saving === c.id ? (
@@ -446,7 +451,9 @@ function AdminCommentsPage({ staff }: Props) {
 
               <button
                 type="button"
-                disabled={loading || (total !== null && offset + limit >= total)}
+                disabled={
+                  loading || (total !== null && offset + limit >= total)
+                }
                 onClick={() => setOffset(offset + limit)}
                 className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >

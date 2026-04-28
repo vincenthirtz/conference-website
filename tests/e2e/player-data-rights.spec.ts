@@ -33,27 +33,40 @@ test.describe('Player data rights (GDPR)', () => {
   // ─── Unauthenticated access ───
 
   test.describe('Unauthenticated requests', () => {
-    test('GET /api/player/data-export returns 401 without token', async ({ request }) => {
+    test('GET /api/player/data-export returns 401 without token', async ({
+      request,
+    }) => {
       const resp = await request.get(`${BASE_URL}/api/player/data-export`);
       expect(resp.status()).toBe(401);
     });
 
-    test('GET /api/player/data-export returns 401 with invalid token', async ({ request }) => {
+    test('GET /api/player/data-export returns 401 with invalid token', async ({
+      request,
+    }) => {
       const resp = await request.get(`${BASE_URL}/api/player/data-export`, {
         headers: { Authorization: 'Bearer invalid_token_xyz' },
       });
       expect(resp.status()).toBe(401);
     });
 
-    test('DELETE /api/player/delete-account returns 401 without token', async ({ request }) => {
-      const resp = await request.delete(`${BASE_URL}/api/player/delete-account`);
+    test('DELETE /api/player/delete-account returns 401 without token', async ({
+      request,
+    }) => {
+      const resp = await request.delete(
+        `${BASE_URL}/api/player/delete-account`
+      );
       expect(resp.status()).toBe(401);
     });
 
-    test('DELETE /api/player/delete-account returns 401 with invalid token', async ({ request }) => {
-      const resp = await request.delete(`${BASE_URL}/api/player/delete-account`, {
-        headers: { Authorization: 'Bearer invalid_token_xyz' },
-      });
+    test('DELETE /api/player/delete-account returns 401 with invalid token', async ({
+      request,
+    }) => {
+      const resp = await request.delete(
+        `${BASE_URL}/api/player/delete-account`,
+        {
+          headers: { Authorization: 'Bearer invalid_token_xyz' },
+        }
+      );
       expect(resp.status()).toBe(401);
     });
   });
@@ -124,9 +137,12 @@ test.describe('Player data rights (GDPR)', () => {
       test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
       const token = await getToken(OWNER_EMAIL, PASSWORD);
-      const resp = await request.delete(`${BASE_URL}/api/player/delete-account`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const resp = await request.delete(
+        `${BASE_URL}/api/player/delete-account`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       expect(resp.status()).toBe(403);
       const body = await resp.json();
@@ -179,9 +195,12 @@ test.describe('Player data rights (GDPR)', () => {
       test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
       const token = await getToken(STAFF_DELETE_EMAIL, PASSWORD);
-      const resp = await request.delete(`${BASE_URL}/api/player/delete-account`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const resp = await request.delete(
+        `${BASE_URL}/api/player/delete-account`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       expect(resp.status()).toBe(200);
       const body = await resp.json();
@@ -217,9 +236,12 @@ test.describe('Player data rights (GDPR)', () => {
       test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
       const token = await getToken(PLAYER_EMAIL, PASSWORD);
-      const resp = await request.delete(`${BASE_URL}/api/player/delete-account`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const resp = await request.delete(
+        `${BASE_URL}/api/player/delete-account`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       expect(resp.status()).toBe(200);
       const body = await resp.json();

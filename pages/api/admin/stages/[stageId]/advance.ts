@@ -48,7 +48,9 @@ async function handler(
   }
 
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Database service unavailable (missing service role).' });
+    return res
+      .status(500)
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
 
   const sourceStageId = String(stageId);
@@ -128,7 +130,9 @@ async function handler(
       }
 
       if (!Array.isArray(teamIds) || teamIds.length === 0) {
-        return res.status(400).json({ error: 'teamIds must be a non-empty array' });
+        return res
+          .status(400)
+          .json({ error: 'teamIds must be a non-empty array' });
       }
 
       const validSeedModes = ['rank', 'manual', 'none'];
@@ -159,10 +163,14 @@ async function handler(
       .eq('stage_id', sourceStageId);
 
     if (srcTeamsErr) {
-      return res.status(500).json({ error: 'Failed to fetch source stage teams' });
+      return res
+        .status(500)
+        .json({ error: 'Failed to fetch source stage teams' });
     }
 
-    const sourceTeamIds = new Set((sourceTeams || []).map((t: any) => t.team_id));
+    const sourceTeamIds = new Set(
+      (sourceTeams || []).map((t: any) => t.team_id)
+    );
     const invalidTeams = teamIds.filter((id: string) => !sourceTeamIds.has(id));
 
     if (invalidTeams.length > 0) {
@@ -181,7 +189,9 @@ async function handler(
       (existingTargetTeams || []).map((t: any) => t.team_id)
     );
 
-    const toAdvance = teamIds.filter((id: string) => !existingTargetIds.has(id));
+    const toAdvance = teamIds.filter(
+      (id: string) => !existingTargetIds.has(id)
+    );
     const skipped = teamIds.filter((id: string) => existingTargetIds.has(id));
 
     if (toAdvance.length === 0) {
@@ -193,7 +203,8 @@ async function handler(
     }
 
     // Compute seeds based on seedMode
-    const seedModeForRank = finalSeedMode === 'standings' ? 'rank' : finalSeedMode;
+    const seedModeForRank =
+      finalSeedMode === 'standings' ? 'rank' : finalSeedMode;
     let seedMap = new Map<string, number | null>();
 
     if (seedModeForRank === 'rank') {

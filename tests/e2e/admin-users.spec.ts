@@ -50,12 +50,16 @@ test.describe.serial('Admin users management', () => {
     await page.waitForURL(/\/admin\/users\/manage/, { timeout: 10000 });
 
     // Should see the page title
-    await expect(page.getByRole('heading', { name: 'Gestion des inscrits' })).toBeVisible({
+    await expect(
+      page.getByRole('heading', { name: 'Gestion des inscrits' })
+    ).toBeVisible({
       timeout: 15000,
     });
 
     // Should see user search form and data loaded
-    await expect(page.getByPlaceholder('Email, nom ou BattleTag...')).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.getByPlaceholder('Email, nom ou BattleTag...')
+    ).toBeVisible({ timeout: 10000 });
     // Should have at least one user visible (the test admin we just logged in with)
     await expect(page.getByText(ADMIN_EMAIL)).toBeVisible({ timeout: 10000 });
   });
@@ -149,7 +153,9 @@ test.describe.serial('Admin users management', () => {
 
     // Verify the UI shows the role badge was updated to "Caster"
     // Look for a span with the role badge class containing "Caster"
-    await expect(page.locator('span').filter({ hasText: 'Caster' })).toBeVisible({
+    await expect(
+      page.locator('span').filter({ hasText: 'Caster' })
+    ).toBeVisible({
       timeout: 5000,
     });
   });
@@ -202,26 +208,34 @@ test.describe.serial('Admin users management', () => {
     });
 
     // Verify the role badge shows "Membre" now (look for the span badge, not option)
-    await expect(page.locator('span').filter({ hasText: 'Membre' })).toBeVisible({
+    await expect(
+      page.locator('span').filter({ hasText: 'Membre' })
+    ).toBeVisible({
       timeout: 5000,
     });
   });
 });
 
 test.describe('Admin users API', () => {
-  test('GET /api/admin/users/manage returns 401 without auth', async ({ request }) => {
+  test('GET /api/admin/users/manage returns 401 without auth', async ({
+    request,
+  }) => {
     const response = await request.get('/api/admin/users/manage');
     expect(response.status()).toBe(401);
   });
 
-  test('PATCH /api/admin/users/manage returns 401 without auth', async ({ request }) => {
+  test('PATCH /api/admin/users/manage returns 401 without auth', async ({
+    request,
+  }) => {
     const response = await request.patch('/api/admin/users/manage', {
       data: { userId: 'test', role: 'member' },
     });
     expect(response.status()).toBe(401);
   });
 
-  test('GET /api/admin/users/manage returns 401 with invalid token', async ({ request }) => {
+  test('GET /api/admin/users/manage returns 401 with invalid token', async ({
+    request,
+  }) => {
     const response = await request.get('/api/admin/users/manage', {
       headers: {
         Authorization: 'Bearer invalid_token_12345',

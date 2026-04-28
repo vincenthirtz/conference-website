@@ -62,21 +62,19 @@ function AdminBracketPage(_: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await fetch(
-        `/api/admin/tournament/${tournamentId}/bracket`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: bracketType === 'double' ? 'generate_double_elim' : 'generate',
-            size,
-            bestOf,
-            startDate: startDate || undefined,
-            intervalMinutes,
-            ...(bracketType === 'double' ? { grandFinalReset } : {}),
-          }),
-        }
-      );
+      const res = await fetch(`/api/admin/tournament/${tournamentId}/bracket`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action:
+            bracketType === 'double' ? 'generate_double_elim' : 'generate',
+          size,
+          bestOf,
+          startDate: startDate || undefined,
+          intervalMinutes,
+          ...(bracketType === 'double' ? { grandFinalReset } : {}),
+        }),
+      });
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -89,9 +87,7 @@ function AdminBracketPage(_: StaffProps) {
         'success'
       );
       setTimeout(() => {
-        router.push(
-          `/admin/tournament/${tournamentId}/bracket-builder`
-        );
+        router.push(`/admin/tournament/${tournamentId}/bracket-builder`);
       }, 1000);
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? 'Erreur inconnue');
@@ -110,14 +106,21 @@ function AdminBracketPage(_: StaffProps) {
     let lbTotal = 0;
     let lbCurrentTeams = size / 2;
     for (let lbR = 1; lbR <= lbRounds; lbR++) {
-      if (lbR === 1) { lbTotal += lbCurrentTeams / 2; lbCurrentTeams = lbCurrentTeams / 2; }
-      else if (lbR % 2 === 0) { lbTotal += lbCurrentTeams; }
-      else { lbTotal += lbCurrentTeams / 2; lbCurrentTeams = lbCurrentTeams / 2; }
+      if (lbR === 1) {
+        lbTotal += lbCurrentTeams / 2;
+        lbCurrentTeams = lbCurrentTeams / 2;
+      } else if (lbR % 2 === 0) {
+        lbTotal += lbCurrentTeams;
+      } else {
+        lbTotal += lbCurrentTeams / 2;
+        lbCurrentTeams = lbCurrentTeams / 2;
+      }
     }
     return singleElimMatches + lbTotal + 1 + (grandFinalReset ? 1 : 0);
   }
 
-  const totalMatches = bracketType === 'double' ? computeDoubleElimMatches() : singleElimMatches;
+  const totalMatches =
+    bracketType === 'double' ? computeDoubleElimMatches() : singleElimMatches;
 
   return (
     <>
@@ -126,18 +129,21 @@ function AdminBracketPage(_: StaffProps) {
       </Head>
       <div className="min-h-screen bg-neutral-950 text-white pt-24">
         <div className="max-w-3xl mx-auto px-6 py-10 space-y-6">
-          <Breadcrumb items={[
-            { label: 'Tournois', href: '/admin/tournaments' },
-            { label: `Tournoi ${tournamentId?.slice(0, 8) ?? '—'}`, href: `/admin/tournament/${tournamentId}` },
-            { label: 'Bracket' },
-          ]} />
+          <Breadcrumb
+            items={[
+              { label: 'Tournois', href: '/admin/tournaments' },
+              {
+                label: `Tournoi ${tournamentId?.slice(0, 8) ?? '—'}`,
+                href: `/admin/tournament/${tournamentId}`,
+              },
+              { label: 'Bracket' },
+            ]}
+          />
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
               <button
                 type="button"
-                onClick={() =>
-                  router.push(`/admin/tournament/${tournamentId}`)
-                }
+                onClick={() => router.push(`/admin/tournament/${tournamentId}`)}
                 className="mb-2 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
               >
                 &larr; Retour au tournoi
@@ -286,8 +292,8 @@ function AdminBracketPage(_: StaffProps) {
                     className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                   <p className="mt-1 text-xs text-neutral-500">
-                    Optionnel. Les horaires pourront aussi être modifiés dans
-                    le bracket builder.
+                    Optionnel. Les horaires pourront aussi être modifiés dans le
+                    bracket builder.
                   </p>
                 </div>
 
@@ -322,11 +328,13 @@ function AdminBracketPage(_: StaffProps) {
                         onChange={(e) => setGrandFinalReset(e.target.checked)}
                         className="rounded border-neutral-500 bg-neutral-700"
                       />
-                      <span className="font-medium text-neutral-200">Grand Final Reset</span>
+                      <span className="font-medium text-neutral-200">
+                        Grand Final Reset
+                      </span>
                     </label>
                     <p className="mt-1 text-xs text-neutral-500 ml-6">
-                      Si le joueur venant du Loser Bracket gagne la Grande Finale,
-                      un match supplementaire est joue pour departager.
+                      Si le joueur venant du Loser Bracket gagne la Grande
+                      Finale, un match supplementaire est joue pour departager.
                     </p>
                   </div>
                 )}
@@ -338,16 +346,27 @@ function AdminBracketPage(_: StaffProps) {
                   </h3>
                   {/* Winners bracket preview */}
                   {bracketType === 'double' && (
-                    <p className="text-xs text-purple-300 uppercase tracking-wider mb-2 font-semibold">Winners Bracket</p>
+                    <p className="text-xs text-purple-300 uppercase tracking-wider mb-2 font-semibold">
+                      Winners Bracket
+                    </p>
                   )}
                   <div className="flex items-center gap-4 overflow-x-auto pb-2">
                     {Array.from({ length: totalRounds }, (_, r) => {
                       const matchesInRound = size / Math.pow(2, r + 1);
                       let label: string;
-                      if (r + 1 === totalRounds) label = bracketType === 'double' ? 'WB Finale' : 'Finale';
-                      else if (r + 1 === totalRounds - 1) label = bracketType === 'double' ? 'WB Demi' : 'Demi';
-                      else if (r + 1 === totalRounds - 2 && totalRounds >= 3) label = bracketType === 'double' ? 'WB Quarts' : 'Quarts';
-                      else label = bracketType === 'double' ? `WB R${r + 1}` : `R${r + 1}`;
+                      if (r + 1 === totalRounds)
+                        label =
+                          bracketType === 'double' ? 'WB Finale' : 'Finale';
+                      else if (r + 1 === totalRounds - 1)
+                        label = bracketType === 'double' ? 'WB Demi' : 'Demi';
+                      else if (r + 1 === totalRounds - 2 && totalRounds >= 3)
+                        label =
+                          bracketType === 'double' ? 'WB Quarts' : 'Quarts';
+                      else
+                        label =
+                          bracketType === 'double'
+                            ? `WB R${r + 1}`
+                            : `R${r + 1}`;
 
                       return (
                         <div key={r} className="flex-shrink-0 text-center">
@@ -355,17 +374,14 @@ function AdminBracketPage(_: StaffProps) {
                             {label}
                           </div>
                           <div className="flex flex-col gap-1">
-                            {Array.from(
-                              { length: matchesInRound },
-                              (_, i) => (
-                                <div
-                                  key={i}
-                                  className="w-20 h-8 rounded border border-neutral-700 bg-neutral-800 flex items-center justify-center text-[10px] text-neutral-500"
-                                >
-                                  M{i + 1}
-                                </div>
-                              )
-                            )}
+                            {Array.from({ length: matchesInRound }, (_, i) => (
+                              <div
+                                key={i}
+                                className="w-20 h-8 rounded border border-neutral-700 bg-neutral-800 flex items-center justify-center text-[10px] text-neutral-500"
+                              >
+                                M{i + 1}
+                              </div>
+                            ))}
                           </div>
                         </div>
                       );
@@ -391,7 +407,9 @@ function AdminBracketPage(_: StaffProps) {
                   {/* Losers bracket preview */}
                   {bracketType === 'double' && (
                     <>
-                      <p className="text-xs text-red-300 uppercase tracking-wider mb-2 mt-4 font-semibold">Losers Bracket</p>
+                      <p className="text-xs text-red-300 uppercase tracking-wider mb-2 mt-4 font-semibold">
+                        Losers Bracket
+                      </p>
                       <div className="flex items-center gap-4 overflow-x-auto pb-2">
                         {(() => {
                           const lbRoundsCount = 2 * (wbRounds - 1);
@@ -399,16 +417,28 @@ function AdminBracketPage(_: StaffProps) {
                           let lbTeams = size / 2;
                           for (let lbR = 1; lbR <= lbRoundsCount; lbR++) {
                             let count: number;
-                            if (lbR === 1) { count = lbTeams / 2; lbTeams = lbTeams / 2; }
-                            else if (lbR % 2 === 0) { count = lbTeams; }
-                            else { count = lbTeams / 2; lbTeams = lbTeams / 2; }
+                            if (lbR === 1) {
+                              count = lbTeams / 2;
+                              lbTeams = lbTeams / 2;
+                            } else if (lbR % 2 === 0) {
+                              count = lbTeams;
+                            } else {
+                              count = lbTeams / 2;
+                              lbTeams = lbTeams / 2;
+                            }
                             rounds.push({
-                              label: lbR === lbRoundsCount ? 'LB Finale' : `LB R${lbR}`,
+                              label:
+                                lbR === lbRoundsCount
+                                  ? 'LB Finale'
+                                  : `LB R${lbR}`,
                               count,
                             });
                           }
                           return rounds.map((rd, idx) => (
-                            <div key={idx} className="flex-shrink-0 text-center">
+                            <div
+                              key={idx}
+                              className="flex-shrink-0 text-center"
+                            >
                               <div className="text-[10px] uppercase tracking-wider text-neutral-500 mb-2">
                                 {rd.label}
                               </div>

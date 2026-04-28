@@ -157,7 +157,10 @@ test.describe('Cast members CRUD (supabase)', () => {
     expect(found).toBeFalsy();
 
     // Cleanup
-    await supabaseTestClient.from('cast_members').delete().eq('id', castMemberId);
+    await supabaseTestClient
+      .from('cast_members')
+      .delete()
+      .eq('id', castMemberId);
   });
 
   test('Le sort_order est respecté', async ({ request }) => {
@@ -205,7 +208,10 @@ test.describe('Cast members CRUD (supabase)', () => {
       await supabaseTestClient.from('cast_members').delete().eq('id', first.id);
     }
     if (second?.id) {
-      await supabaseTestClient.from('cast_members').delete().eq('id', second.id);
+      await supabaseTestClient
+        .from('cast_members')
+        .delete()
+        .eq('id', second.id);
     }
   });
 });

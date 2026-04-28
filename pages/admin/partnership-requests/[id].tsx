@@ -214,7 +214,9 @@ function AdminPartnershipRequestDetailPage({ staff }: Props) {
             <div className="lg:col-span-2 space-y-6">
               {/* Contact Info */}
               <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
-                <h2 className="text-lg font-semibold mb-4">Informations de contact</h2>
+                <h2 className="text-lg font-semibold mb-4">
+                  Informations de contact
+                </h2>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <div className="text-xs text-neutral-500 uppercase tracking-wider mb-1">
@@ -266,7 +268,9 @@ function AdminPartnershipRequestDetailPage({ staff }: Props) {
 
               {/* Request Details */}
               <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
-                <h2 className="text-lg font-semibold mb-4">Détails de la demande</h2>
+                <h2 className="text-lg font-semibold mb-4">
+                  Détails de la demande
+                </h2>
                 <div className="space-y-4">
                   <div className="flex flex-wrap gap-3">
                     <div className="px-3 py-1.5 rounded-lg bg-neutral-700/50 text-sm">
@@ -278,7 +282,9 @@ function AdminPartnershipRequestDetailPage({ staff }: Props) {
                     {request.budget_range && (
                       <div className="px-3 py-1.5 rounded-lg bg-neutral-700/50 text-sm">
                         <span className="text-neutral-400">Budget:</span>{' '}
-                        <span className="font-medium">{request.budget_range}</span>
+                        <span className="font-medium">
+                          {request.budget_range}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -478,7 +484,9 @@ function AdminPartnershipRequestDetailPage({ staff }: Props) {
                 <div className="space-y-2 text-xs">
                   <div>
                     <span className="text-neutral-500">ID:</span>{' '}
-                    <span className="font-mono text-neutral-400">{request.id}</span>
+                    <span className="font-mono text-neutral-400">
+                      {request.id}
+                    </span>
                   </div>
                   {request.ip_address && (
                     <div>

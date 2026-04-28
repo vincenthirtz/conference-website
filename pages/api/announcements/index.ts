@@ -31,7 +31,8 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'announcements')) return;
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'announcements'))
+    return;
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });
@@ -39,9 +40,7 @@ export default async function handler(
 
   const admin = supabaseAdmin ?? getServerClient(req, res);
   if (!admin) {
-    return res
-      .status(500)
-      .json({ error: 'Database service unavailable.' });
+    return res.status(500).json({ error: 'Database service unavailable.' });
   }
 
   const limit = Math.max(1, Math.min(20, Number(req.query.limit) || 10));
@@ -55,9 +54,7 @@ export default async function handler(
 
   if (error) {
     console.error('[announcements] public list error', error);
-    return res
-      .status(500)
-      .json({ error: 'Failed to load announcements.' });
+    return res.status(500).json({ error: 'Failed to load announcements.' });
   }
 
   const items =
@@ -74,6 +71,9 @@ export default async function handler(
       updatedAt: row.updated_at,
     })) ?? [];
 
-  res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=120');
+  res.setHeader(
+    'Cache-Control',
+    'public, s-maxage=300, stale-while-revalidate=120'
+  );
   return res.status(200).json({ items });
 }

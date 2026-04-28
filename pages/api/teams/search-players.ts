@@ -14,9 +14,7 @@ type PlayerResult = {
   has_team: boolean;
 };
 
-type SearchResponse =
-  | { players: PlayerResult[] }
-  | { error: string };
+type SearchResponse = { players: PlayerResult[] } | { error: string };
 
 export default async function handler(
   req: NextApiRequest,
@@ -31,11 +29,16 @@ export default async function handler(
   }
 
   // Rate limiting: 30 searches per minute
-  if (applyRateLimit(req, res, { max: 30, windowMs: 60 * 1000 }, 'search-players')) return;
+  if (
+    applyRateLimit(req, res, { max: 30, windowMs: 60 * 1000 }, 'search-players')
+  )
+    return;
 
   // Check if user is authenticated and is a captain
   const supabase = getServerClient(req, res);
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
     return res.status(401).json({ error: 'Not authenticated' });
@@ -56,11 +59,15 @@ export default async function handler(
   const query = typeof q === 'string' ? q.trim() : '';
 
   if (!query || query.length < 2) {
-    return res.status(400).json({ error: 'Query must be at least 2 characters' });
+    return res
+      .status(400)
+      .json({ error: 'Query must be at least 2 characters' });
   }
 
   if (query.length > 100) {
-    return res.status(400).json({ error: 'Query too long (max 100 characters)' });
+    return res
+      .status(400)
+      .json({ error: 'Query too long (max 100 characters)' });
   }
 
   const safeQuery = escapePostgrestValue(query);
@@ -77,15 +84,19 @@ export default async function handler(
     const seenUserIds = new Set<string>();
 
     // 1) Search by email/display_name in auth.users
-    const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers({
-      perPage: 50,
-    });
+    const { data: authUsers, error: authError } =
+      await supabaseAdmin.auth.admin.listUsers({
+        perPage: 50,
+      });
 
     if (!authError && authUsers?.users) {
       const lowerQuery = query.toLowerCase();
-      const matchingUsers = authUsers.users.filter(u =>
-        u.email?.toLowerCase().includes(lowerQuery) ||
-        (u.user_metadata?.display_name as string)?.toLowerCase().includes(lowerQuery)
+      const matchingUsers = authUsers.users.filter(
+        (u) =>
+          u.email?.toLowerCase().includes(lowerQuery) ||
+          (u.user_metadata?.display_name as string)
+            ?.toLowerCase()
+            .includes(lowerQuery)
       );
 
       for (const authUser of matchingUsers.slice(0, 15)) {
@@ -94,7 +105,8 @@ export default async function handler(
           candidates.push({
             id: authUser.id,
             email: authUser.email || null,
-            display_name: (authUser.user_metadata?.display_name as string) || null,
+            display_name:
+              (authUser.user_metadata?.display_name as string) || null,
             battle_tag_hint: null,
           });
         }
@@ -145,10 +157,13 @@ export default async function handler(
 
     // Cap candidates before batch-fetching
     const limitedCandidates = candidates.slice(0, 20);
-    const candidateIds = limitedCandidates.map(c => c.id);
+    const candidateIds = limitedCandidates.map((c) => c.id);
 
     // Batch-fetch team memberships in a single query (avoids N+1)
-    const membershipMap = new Map<string, { battle_tag: string | null; has_team: boolean }>();
+    const membershipMap = new Map<
+      string,
+      { battle_tag: string | null; has_team: boolean }
+    >();
     if (candidateIds.length > 0) {
       const { data: allMemberships } = await supabaseAdmin
         .from('team_members')
@@ -168,16 +183,21 @@ export default async function handler(
     }
 
     // Batch-fetch auth data for candidates missing email
-    const needsAuth = limitedCandidates.filter(c => !c.email);
-    const authMap = new Map<string, { email: string | null; display_name: string | null }>();
+    const needsAuth = limitedCandidates.filter((c) => !c.email);
+    const authMap = new Map<
+      string,
+      { email: string | null; display_name: string | null }
+    >();
     await Promise.all(
       needsAuth.map(async (c) => {
         try {
-          const { data: userData } = await supabaseAdmin!.auth.admin.getUserById(c.id);
+          const { data: userData } =
+            await supabaseAdmin!.auth.admin.getUserById(c.id);
           if (userData?.user) {
             authMap.set(c.id, {
               email: userData.user.email || null,
-              display_name: (userData.user.user_metadata?.display_name as string) || null,
+              display_name:
+                (userData.user.user_metadata?.display_name as string) || null,
             });
           }
         } catch {
@@ -187,7 +207,7 @@ export default async function handler(
     );
 
     // Assemble final results
-    const players: PlayerResult[] = limitedCandidates.map(c => {
+    const players: PlayerResult[] = limitedCandidates.map((c) => {
       const membership = membershipMap.get(c.id);
       const auth = authMap.get(c.id);
       return {

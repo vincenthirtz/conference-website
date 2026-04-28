@@ -46,7 +46,9 @@ async function handler(
   }
 
   if (!Array.isArray(body.teamIds) || body.teamIds.length === 0) {
-    return res.status(400).json({ error: "Champ 'teamIds' requis (tableau non vide)" });
+    return res
+      .status(400)
+      .json({ error: "Champ 'teamIds' requis (tableau non vide)" });
   }
 
   if (body.teamIds.length > 200) {
@@ -122,7 +124,10 @@ async function handler(
 
         const { data: upserted, error } = await supabaseAdmin
           .from('tournament_teams')
-          .upsert(rows, { onConflict: 'tournament_id,team_id', ignoreDuplicates: true })
+          .upsert(rows, {
+            onConflict: 'tournament_id,team_id',
+            ignoreDuplicates: true,
+          })
           .select('id');
 
         if (error) throw error;

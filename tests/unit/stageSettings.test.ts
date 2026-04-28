@@ -56,12 +56,16 @@ describe('validateStageSettings', () => {
     });
 
     it('rejects invalid bracket_type', () => {
-      const result = validateStageSettings('bracket', { bracket_type: 'triple_elim' });
+      const result = validateStageSettings('bracket', {
+        bracket_type: 'triple_elim',
+      });
       expect(result.valid).toBe(false);
     });
 
     it('rejects invalid seeding_method', () => {
-      const result = validateStageSettings('bracket', { seeding_method: 'alphabetical' });
+      const result = validateStageSettings('bracket', {
+        seeding_method: 'alphabetical',
+      });
       expect(result.valid).toBe(false);
     });
 
@@ -78,7 +82,8 @@ describe('validateStageSettings', () => {
         custom_field: 'hello',
       });
       expect(result.valid).toBe(true);
-      if (result.valid) expect(result.data).toHaveProperty('custom_field', 'hello');
+      if (result.valid)
+        expect(result.data).toHaveProperty('custom_field', 'hello');
     });
   });
 
@@ -163,7 +168,9 @@ describe('validateStageSettings', () => {
     });
 
     it('rejects invalid group_format', () => {
-      const result = validateStageSettings('group', { group_format: 'battle_royale' });
+      const result = validateStageSettings('group', {
+        group_format: 'battle_royale',
+      });
       expect(result.valid).toBe(false);
     });
 
@@ -194,7 +201,9 @@ describe('validateStageSettings', () => {
     });
 
     it('rejects description > 1000 chars', () => {
-      const result = validateStageSettings('showmatch', { description: 'x'.repeat(1001) });
+      const result = validateStageSettings('showmatch', {
+        description: 'x'.repeat(1001),
+      });
       expect(result.valid).toBe(false);
     });
   });

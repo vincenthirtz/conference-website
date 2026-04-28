@@ -1,9 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import {
-  partnershipRequestSchema,
-  formatZodError,
-} from '@/utils/validation';
+import { partnershipRequestSchema, formatZodError } from '@/utils/validation';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { sanitizeUrl } from '@/utils/apiHelpers';
 import {
@@ -16,9 +13,7 @@ export default async function handler(
   res: NextApiResponse
 ) {
   if (!supabaseAdmin) {
-    return res
-      .status(500)
-      .json({ error: 'Database service unavailable.' });
+    return res.status(500).json({ error: 'Database service unavailable.' });
   }
 
   if (req.method !== 'POST') {
@@ -27,7 +22,15 @@ export default async function handler(
   }
 
   // Rate limiting: 5 requests per hour
-  if (applyRateLimit(req, res, { max: 5, windowMs: 60 * 60 * 1000 }, 'partnership')) return;
+  if (
+    applyRateLimit(
+      req,
+      res,
+      { max: 5, windowMs: 60 * 60 * 1000 },
+      'partnership'
+    )
+  )
+    return;
 
   // Validation
   const parsed = partnershipRequestSchema.safeParse(req.body);
@@ -38,9 +41,10 @@ export default async function handler(
 
   // Get IP and user agent for spam detection
   const forwarded = req.headers['x-forwarded-for'];
-  const ipAddress = typeof forwarded === 'string'
-    ? forwarded.split(',')[0].trim()
-    : req.socket?.remoteAddress ?? null;
+  const ipAddress =
+    typeof forwarded === 'string'
+      ? forwarded.split(',')[0].trim()
+      : (req.socket?.remoteAddress ?? null);
   const userAgent = req.headers['user-agent'] ?? null;
 
   const insertPayload = {
@@ -94,6 +98,7 @@ export default async function handler(
   return res.status(201).json({
     success: true,
     requestId: data?.id ?? null,
-    message: 'Votre demande de partenariat a bien été envoyée. Nous vous recontacterons rapidement.'
+    message:
+      'Votre demande de partenariat a bien été envoyée. Nous vous recontacterons rapidement.',
   });
 }

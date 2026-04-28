@@ -117,7 +117,8 @@ function AdminTwitchChannelNewPage({ staff }: Props) {
               Ajouter une chaîne Twitch
             </h1>
             <p className="text-neutral-400 text-sm mt-1">
-              Configurez une nouvelle chaîne partenaire pour la page d&apos;accueil
+              Configurez une nouvelle chaîne partenaire pour la page
+              d&apos;accueil
             </p>
           </div>
 
@@ -144,7 +145,8 @@ function AdminTwitchChannelNewPage({ staff }: Props) {
               <div className="grid gap-6 md:grid-cols-2">
                 <div>
                   <label className="block text-sm text-neutral-300 mb-1">
-                    Nom de la chaîne Twitch <span className="text-red-400">*</span>
+                    Nom de la chaîne Twitch{' '}
+                    <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="text"
@@ -161,7 +163,8 @@ function AdminTwitchChannelNewPage({ staff }: Props) {
 
                 <div>
                   <label className="block text-sm text-neutral-300 mb-1">
-                    Label d&apos;affichage <span className="text-red-400">*</span>
+                    Label d&apos;affichage{' '}
+                    <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="text"

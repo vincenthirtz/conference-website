@@ -28,11 +28,12 @@ type Props = {
   sourceStageType?: string | null;
 };
 
-const SEED_BY_OPTIONS: { value: AdvancementRules['seed_by']; label: string }[] = [
-  { value: 'standings', label: 'Classement (automatique)' },
-  { value: 'manual', label: 'Manuel' },
-  { value: 'none', label: 'Sans seed' },
-];
+const SEED_BY_OPTIONS: { value: AdvancementRules['seed_by']; label: string }[] =
+  [
+    { value: 'standings', label: 'Classement (automatique)' },
+    { value: 'manual', label: 'Manuel' },
+    { value: 'none', label: 'Sans seed' },
+  ];
 
 type Mode = 'top_n' | 'per_group';
 
@@ -54,8 +55,12 @@ export default function AdvancementRulesEditor({
   const [advancePerGroup, setAdvancePerGroup] = useState(
     value?.advance_per_group ?? 2
   );
-  const [targetStageId, setTargetStageId] = useState(value?.target_stage_id ?? '');
-  const [seedBy, setSeedBy] = useState<AdvancementRules['seed_by']>(value?.seed_by ?? 'standings');
+  const [targetStageId, setTargetStageId] = useState(
+    value?.target_stage_id ?? ''
+  );
+  const [seedBy, setSeedBy] = useState<AdvancementRules['seed_by']>(
+    value?.seed_by ?? 'standings'
+  );
 
   // Sync when parent value changes (e.g., after a fresh fetch)
   useEffect(() => {
@@ -113,12 +118,26 @@ export default function AdvancementRulesEditor({
 
   function handleToggle(nextEnabled: boolean) {
     setEnabled(nextEnabled);
-    emitChange(nextEnabled, mode, advanceTop, advancePerGroup, targetStageId, seedBy);
+    emitChange(
+      nextEnabled,
+      mode,
+      advanceTop,
+      advancePerGroup,
+      targetStageId,
+      seedBy
+    );
   }
 
   function handleModeChange(nextMode: Mode) {
     setMode(nextMode);
-    emitChange(enabled, nextMode, advanceTop, advancePerGroup, targetStageId, seedBy);
+    emitChange(
+      enabled,
+      nextMode,
+      advanceTop,
+      advancePerGroup,
+      targetStageId,
+      seedBy
+    );
   }
 
   function handleTopChange(v: number) {
@@ -166,7 +185,8 @@ export default function AdvancementRulesEditor({
             </label>
             {availableStages.length === 0 ? (
               <p className="text-xs text-amber-400">
-                Aucune autre phase disponible. Créez d&apos;abord la phase suivante dans le tournoi.
+                Aucune autre phase disponible. Créez d&apos;abord la phase
+                suivante dans le tournoi.
               </p>
             ) : (
               <select
@@ -239,7 +259,8 @@ export default function AdvancementRulesEditor({
                 disabled={disabled}
               />
               <p className="text-xs text-neutral-500 mt-1">
-                Les N premières équipes de <strong>chaque</strong> poule seront avancées.
+                Les N premières équipes de <strong>chaque</strong> poule seront
+                avancées.
               </p>
             </div>
           ) : (
@@ -253,11 +274,14 @@ export default function AdvancementRulesEditor({
                 max={128}
                 className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={advanceTop}
-                onChange={(e) => handleTopChange(Math.max(1, Number(e.target.value) || 1))}
+                onChange={(e) =>
+                  handleTopChange(Math.max(1, Number(e.target.value) || 1))
+                }
                 disabled={disabled}
               />
               <p className="text-xs text-neutral-500 mt-1">
-                Les N premières équipes du classement seront avancées vers la phase cible.
+                Les N premières équipes du classement seront avancées vers la
+                phase cible.
               </p>
             </div>
           )}
@@ -269,7 +293,10 @@ export default function AdvancementRulesEditor({
             </label>
             <div className="flex flex-col gap-2">
               {SEED_BY_OPTIONS.map((opt) => (
-                <label key={opt.value} className="flex items-center gap-2 text-sm text-neutral-300 cursor-pointer">
+                <label
+                  key={opt.value}
+                  className="flex items-center gap-2 text-sm text-neutral-300 cursor-pointer"
+                >
                   <input
                     type="radio"
                     name="seed_by"

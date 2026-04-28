@@ -11,14 +11,14 @@ const serviceRoleKey =
 const envReady = Boolean(supabaseUrl && serviceRoleKey);
 
 if (!envReady) {
-   
   console.warn(
     '[tests] Supabase env manquants (TEST_SUPABASE_URL / TEST_SUPABASE_SERVICE_ROLE_KEY ou NEXT_SUPABASE_SERVICE_ROLE_KEY). Auth e2e tests seront ignorés.'
   );
 }
 
-export const supabaseTestClient =
-  envReady ? createClient(supabaseUrl, serviceRoleKey) : null;
+export const supabaseTestClient = envReady
+  ? createClient(supabaseUrl, serviceRoleKey)
+  : null;
 
 export async function createTestUser(email: string, password: string) {
   if (!supabaseTestClient) return null;
@@ -38,7 +38,9 @@ export async function deleteTestUser(email: string) {
     perPage: 100,
   });
   if (error) throw error;
-  const users = (data as any)?.users as { id: string; email?: string }[] | undefined;
+  const users = (data as any)?.users as
+    | { id: string; email?: string }[]
+    | undefined;
   const user = users?.find(
     (u) => u.email?.toLowerCase() === email.toLowerCase()
   );
@@ -137,7 +139,9 @@ export async function deleteTestStaff(email: string) {
     perPage: 100,
   });
 
-  const users = (data as any)?.users as { id: string; email?: string }[] | undefined;
+  const users = (data as any)?.users as
+    | { id: string; email?: string }[]
+    | undefined;
   const user = users?.find(
     (u) => u.email?.toLowerCase() === email.toLowerCase()
   );

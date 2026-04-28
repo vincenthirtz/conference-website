@@ -36,9 +36,15 @@ const siteSections: SiteSection[] = [
     description: 'Inscription, \u00e9quipes et \u00e9changes avec le staff.',
     links: [
       { label: 'Inscription staff / joueur', href: '/register' },
-      { label: 'Inscription tournoi f\u00e9minin 2026', href: '/inscription-2026' },
+      {
+        label: 'Inscription tournoi f\u00e9minin 2026',
+        href: '/inscription-2026',
+      },
       { label: 'Cr\u00e9er une \u00e9quipe', href: '/team/create' },
-      { label: 'Espace capitaine \u2014 pr\u00e9sentation', href: '/espace-capitaine' },
+      {
+        label: 'Espace capitaine \u2014 pr\u00e9sentation',
+        href: '/espace-capitaine',
+      },
       { label: 'Espace joueur', href: '/player' },
       { label: 'Devenir partenaire', href: '/partenaires/demande' },
       { label: 'Contact', href: '/contact' },
@@ -70,7 +76,10 @@ const siteSections: SiteSection[] = [
       { label: 'Dashboard staff', href: '/admin' },
       { label: 'Connexion staff', href: '/admin/login' },
       { label: 'Mot de passe oubli\u00e9', href: '/admin/forgot-password' },
-      { label: 'R\u00e9initialiser le mot de passe', href: '/admin/reset-password' },
+      {
+        label: 'R\u00e9initialiser le mot de passe',
+        href: '/admin/reset-password',
+      },
     ],
   },
 ];
@@ -93,9 +102,9 @@ function SiteMapPage() {
             Tous les liens internes, en un coup d&apos;&#339;il
           </h1>
           <p className="mt-4 max-w-3xl text-lg text-gray-200">
-            Retrouvez ici l&apos;ensemble des pages publiques et des acc&egrave;s staff. Le
-            sitemap XML reste disponible pour les moteurs de recherche et les
-            int&eacute;grations externes.
+            Retrouvez ici l&apos;ensemble des pages publiques et des
+            acc&egrave;s staff. Le sitemap XML reste disponible pour les moteurs
+            de recherche et les int&eacute;grations externes.
           </p>
           <div className="mt-6 inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-gray-200">
             <span className="rounded-full bg-purple-500/20 px-2 py-[2px] text-[11px] font-semibold uppercase tracking-[0.18em] text-purple-100">

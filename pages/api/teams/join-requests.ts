@@ -12,7 +12,8 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (applyRateLimit(req, res, { max: 20, windowMs: 60_000 }, 'join-requests')) return;
+  if (applyRateLimit(req, res, { max: 20, windowMs: 60_000 }, 'join-requests'))
+    return;
   if (!supabaseAdmin) {
     return res.status(503).json({ error: 'Service unavailable.' });
   }
@@ -46,7 +47,9 @@ export default async function handler(
     .maybeSingle();
 
   if (teamErr || !captainTeam) {
-    return res.status(403).json({ error: 'Tu dois etre capitaine d\'une equipe active.' });
+    return res
+      .status(403)
+      .json({ error: "Tu dois etre capitaine d'une equipe active." });
   }
 
   if (req.method === 'GET') {
@@ -75,7 +78,10 @@ async function handleGet(
     .eq('type', 'join')
     .order('created_at', { ascending: false });
 
-  if (statusFilter && ['pending', 'approved', 'rejected', 'cancelled'].includes(statusFilter)) {
+  if (
+    statusFilter &&
+    ['pending', 'approved', 'rejected', 'cancelled'].includes(statusFilter)
+  ) {
     query = query.eq('status', statusFilter);
   } else {
     // Default: show pending
@@ -95,7 +101,9 @@ async function handleGet(
       let userInfo = null;
       if (d.user_id) {
         try {
-          const { data: u } = await supabaseAdmin!.auth.admin.getUserById(d.user_id);
+          const { data: u } = await supabaseAdmin!.auth.admin.getUserById(
+            d.user_id
+          );
           if (u?.user) {
             const meta = u.user.user_metadata ?? {};
             userInfo = {
@@ -137,7 +145,9 @@ async function handlePost(
   }
 
   if (action !== 'approve' && action !== 'reject') {
-    return res.status(400).json({ error: 'Action invalide. Utilise "approve" ou "reject".' });
+    return res
+      .status(400)
+      .json({ error: 'Action invalide. Utilise "approve" ou "reject".' });
   }
 
   // Fetch the demande and verify it belongs to this team
@@ -151,7 +161,9 @@ async function handlePost(
     .maybeSingle();
 
   if (fetchErr || !demande) {
-    return res.status(404).json({ error: 'Demande introuvable ou deja traitee.' });
+    return res
+      .status(404)
+      .json({ error: 'Demande introuvable ou deja traitee.' });
   }
 
   const newStatus = action === 'approve' ? 'approved' : 'rejected';
@@ -164,17 +176,18 @@ async function handlePost(
 
     // Check max_players limit (coaches are excluded from this limit)
     if (desiredRole !== 'coach') {
-      const [{ count: currentNonCoachCount }, { data: teamTournaments }] = await Promise.all([
-        supabaseAdmin!
-          .from('team_members')
-          .select('*', { count: 'exact', head: true })
-          .eq('team_id', captainTeam.id)
-          .neq('role', 'coach'),
-        supabaseAdmin!
-          .from('tournament_teams')
-          .select('tournament_id, tournaments!inner(max_players)')
-          .eq('team_id', captainTeam.id),
-      ]);
+      const [{ count: currentNonCoachCount }, { data: teamTournaments }] =
+        await Promise.all([
+          supabaseAdmin!
+            .from('team_members')
+            .select('*', { count: 'exact', head: true })
+            .eq('team_id', captainTeam.id)
+            .neq('role', 'coach'),
+          supabaseAdmin!
+            .from('tournament_teams')
+            .select('tournament_id, tournaments!inner(max_players)')
+            .eq('team_id', captainTeam.id),
+        ]);
 
       if (teamTournaments && teamTournaments.length > 0) {
         for (const tt of teamTournaments) {
@@ -199,15 +212,19 @@ async function handlePost(
 
     if (insertErr) {
       const msg =
-        insertErr.message?.includes('duplicate') || insertErr.message?.includes('unique')
+        insertErr.message?.includes('duplicate') ||
+        insertErr.message?.includes('unique')
           ? 'Ce joueur est deja dans une equipe.'
-          : 'Echec de l\'ajout du membre.';
+          : "Echec de l'ajout du membre.";
       return res.status(400).json({ error: msg });
     }
 
     // Auto news
     try {
-      const playerName = battleTag?.split('#')[0] || (demande.payload as any)?.user_display_name || 'Joueur';
+      const playerName =
+        battleTag?.split('#')[0] ||
+        (demande.payload as any)?.user_display_name ||
+        'Joueur';
       const newsSlug = `team-${captainTeam.id}-join-${Date.now().toString(36)}`;
       await supabaseAdmin!.from('news').insert({
         title: `${playerName} rejoint ${captainTeam.name}`,
@@ -236,15 +253,18 @@ async function handlePost(
 
   if (updateErr) {
     console.error('[join-requests] update error:', updateErr);
-    return res.status(500).json({ error: 'Echec de la mise a jour de la demande.' });
+    return res
+      .status(500)
+      .json({ error: 'Echec de la mise a jour de la demande.' });
   }
 
   return res.status(200).json({
     success: true,
     demandeId,
     newStatus,
-    message: action === 'approve'
-      ? 'Joueur accepte et ajoute a l\'equipe.'
-      : 'Demande rejetee.',
+    message:
+      action === 'approve'
+        ? "Joueur accepte et ajoute a l'equipe."
+        : 'Demande rejetee.',
   });
 }

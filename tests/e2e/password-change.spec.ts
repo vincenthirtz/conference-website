@@ -1,8 +1,5 @@
 import { test, expect } from '@playwright/test';
-import {
-  createTestStaff,
-  deleteTestStaff,
-} from '../utils/supabaseTestClient';
+import { createTestStaff, deleteTestStaff } from '../utils/supabaseTestClient';
 
 const password = 'TestPassw0rd!';
 const newPassword = 'NewTestPassw0rd!';
@@ -48,7 +45,9 @@ test.describe('Password change feature', () => {
       await page.waitForURL(/\/admin(?!\/login)/, { timeout: 10000 });
 
       // Check password change form is present (use heading to avoid ambiguity)
-      await expect(page.getByRole('heading', { name: 'Changer mon mot de passe' })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: 'Changer mon mot de passe' })
+      ).toBeVisible();
       await expect(page.getByPlaceholder('••••••••').first()).toBeVisible();
     });
 
@@ -64,19 +63,29 @@ test.describe('Password change feature', () => {
       await page.waitForURL(/\/admin(?!\/login)/, { timeout: 10000 });
 
       // Find the password change section
-      const passwordSection = page.locator('section').filter({ hasText: 'Changer mon mot de passe' });
+      const passwordSection = page
+        .locator('section')
+        .filter({ hasText: 'Changer mon mot de passe' });
 
       // Fill in mismatched passwords
-      await passwordSection.getByPlaceholder('••••••••').first().fill('Password123!');
-      await passwordSection.getByPlaceholder('••••••••').last().fill('DifferentPassword123!');
+      await passwordSection
+        .getByPlaceholder('••••••••')
+        .first()
+        .fill('Password123!');
+      await passwordSection
+        .getByPlaceholder('••••••••')
+        .last()
+        .fill('DifferentPassword123!');
 
       // Submit
-      await passwordSection.getByRole('button', { name: 'Changer mon mot de passe' }).click();
+      await passwordSection
+        .getByRole('button', { name: 'Changer mon mot de passe' })
+        .click();
 
       // Should show error message
-      await expect(
-        page.getByText(/ne correspondent pas/i)
-      ).toBeVisible({ timeout: 5000 });
+      await expect(page.getByText(/ne correspondent pas/i)).toBeVisible({
+        timeout: 5000,
+      });
     });
 
     test('shows error when password is too short', async ({ page }) => {
@@ -91,19 +100,23 @@ test.describe('Password change feature', () => {
       await page.waitForURL(/\/admin(?!\/login)/, { timeout: 10000 });
 
       // Find the password change section
-      const passwordSection = page.locator('section').filter({ hasText: 'Changer mon mot de passe' });
+      const passwordSection = page
+        .locator('section')
+        .filter({ hasText: 'Changer mon mot de passe' });
 
       // Fill in short password
       await passwordSection.getByPlaceholder('••••••••').first().fill('short');
       await passwordSection.getByPlaceholder('••••••••').last().fill('short');
 
       // Submit
-      await passwordSection.getByRole('button', { name: 'Changer mon mot de passe' }).click();
+      await passwordSection
+        .getByRole('button', { name: 'Changer mon mot de passe' })
+        .click();
 
       // Should show error message
-      await expect(
-        page.getByText(/8 caractères/i)
-      ).toBeVisible({ timeout: 5000 });
+      await expect(page.getByText(/8 caractères/i)).toBeVisible({
+        timeout: 5000,
+      });
     });
 
     test('changes password successfully', async ({ page }) => {
@@ -118,19 +131,29 @@ test.describe('Password change feature', () => {
       await page.waitForURL(/\/admin(?!\/login)/, { timeout: 10000 });
 
       // Find the password change section
-      const passwordSection = page.locator('section').filter({ hasText: 'Changer mon mot de passe' });
+      const passwordSection = page
+        .locator('section')
+        .filter({ hasText: 'Changer mon mot de passe' });
 
       // Fill in matching passwords
-      await passwordSection.getByPlaceholder('••••••••').first().fill(newPassword);
-      await passwordSection.getByPlaceholder('••••••••').last().fill(newPassword);
+      await passwordSection
+        .getByPlaceholder('••••••••')
+        .first()
+        .fill(newPassword);
+      await passwordSection
+        .getByPlaceholder('••••••••')
+        .last()
+        .fill(newPassword);
 
       // Submit
-      await passwordSection.getByRole('button', { name: 'Changer mon mot de passe' }).click();
+      await passwordSection
+        .getByRole('button', { name: 'Changer mon mot de passe' })
+        .click();
 
       // Should show success message
-      await expect(
-        page.getByText(/modifié avec succès/i)
-      ).toBeVisible({ timeout: 10000 });
+      await expect(page.getByText(/modifié avec succès/i)).toBeVisible({
+        timeout: 10000,
+      });
     });
   });
 });

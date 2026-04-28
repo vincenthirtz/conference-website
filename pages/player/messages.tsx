@@ -230,9 +230,7 @@ export default function MessagesPage() {
     e.preventDefault();
     if (!newMessage.trim()) return;
 
-    const targetTeamId = activeConvId
-      ? otherTeam?.id
-      : selectedTeamId;
+    const targetTeamId = activeConvId ? otherTeam?.id : selectedTeamId;
 
     if (!targetTeamId) {
       setError('Selectionne une equipe.');
@@ -256,7 +254,8 @@ export default function MessagesPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Impossible d\'envoyer le message.');
+      if (!res.ok)
+        throw new Error(data.error || "Impossible d'envoyer le message.");
 
       setNewMessage('');
 
@@ -303,8 +302,18 @@ export default function MessagesPage() {
         <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white flex items-center justify-center px-4">
           <div className="max-w-md text-center">
             <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-amber-500/20 flex items-center justify-center">
-              <svg className="w-8 h-8 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg
+                className="w-8 h-8 text-amber-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
             </div>
             <h1 className="text-2xl font-bold mb-4">Messagerie capitaine</h1>
@@ -348,8 +357,18 @@ export default function MessagesPage() {
                   onClick={backToInbox}
                   className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 19l-7-7 7-7"
+                    />
                   </svg>
                   Inbox
                 </button>
@@ -361,7 +380,11 @@ export default function MessagesPage() {
                 <div className="flex items-center gap-2">
                   {otherTeam.logo_url && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={otherTeam.logo_url} alt="" className="w-6 h-6 rounded-full object-cover border border-white/10" />
+                    <img
+                      src={otherTeam.logo_url}
+                      alt=""
+                      className="w-6 h-6 rounded-full object-cover border border-white/10"
+                    />
                   )}
                   <span className="text-sm font-medium">{otherTeam.name}</span>
                 </div>
@@ -376,8 +399,18 @@ export default function MessagesPage() {
                   onClick={handleNewConversation}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-sm font-semibold transition"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4v16m8-8H4"
+                    />
                   </svg>
                   Nouveau
                 </button>
@@ -396,11 +429,23 @@ export default function MessagesPage() {
                 {!convLoading && conversations.length === 0 && (
                   <div className="px-6 py-12 text-center">
                     <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-white/5 flex items-center justify-center">
-                      <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      <svg
+                        className="w-6 h-6 text-gray-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                        />
                       </svg>
                     </div>
-                    <p className="text-sm text-gray-500 mb-2">Aucune conversation</p>
+                    <p className="text-sm text-gray-500 mb-2">
+                      Aucune conversation
+                    </p>
                     <p className="text-xs text-gray-600">
                       Envoie un premier message a un autre capitaine.
                     </p>
@@ -421,7 +466,9 @@ export default function MessagesPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className={`font-medium truncate ${conv.unreadCount > 0 ? 'text-white' : 'text-gray-300'}`}>
+                          <span
+                            className={`font-medium truncate ${conv.unreadCount > 0 ? 'text-white' : 'text-gray-300'}`}
+                          >
                             {conv.otherTeamName}
                           </span>
                           {conv.unreadCount > 0 && (
@@ -430,7 +477,9 @@ export default function MessagesPage() {
                             </span>
                           )}
                         </div>
-                        <p className={`text-sm truncate ${conv.unreadCount > 0 ? 'text-gray-300' : 'text-gray-500'}`}>
+                        <p
+                          className={`text-sm truncate ${conv.unreadCount > 0 ? 'text-gray-300' : 'text-gray-500'}`}
+                        >
                           {conv.lastMessage.comment || '...'}
                         </p>
                       </div>
@@ -458,10 +507,14 @@ export default function MessagesPage() {
 
                 <div className="max-h-48 overflow-y-auto space-y-1 rounded-xl border border-white/10 bg-black/40 p-2 mb-4">
                   {teamsLoading && (
-                    <div className="text-sm text-gray-500 text-center py-4">Chargement...</div>
+                    <div className="text-sm text-gray-500 text-center py-4">
+                      Chargement...
+                    </div>
                   )}
                   {!teamsLoading && teams.length === 0 && (
-                    <div className="text-sm text-gray-500 text-center py-4">Aucune equipe trouvee</div>
+                    <div className="text-sm text-gray-500 text-center py-4">
+                      Aucune equipe trouvee
+                    </div>
                   )}
                   {!teamsLoading &&
                     teams.map((t) => (
@@ -478,21 +531,35 @@ export default function MessagesPage() {
                         <div className="w-8 h-8 rounded-full bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
                           {t.logo_url ? (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={t.logo_url} alt="" className="w-full h-full object-cover" />
+                            <img
+                              src={t.logo_url}
+                              alt=""
+                              className="w-full h-full object-cover"
+                            />
                           ) : (
                             <span className="text-[10px] text-gray-500">
-                              {(t.short_name || t.name).slice(0, 2).toUpperCase()}
+                              {(t.short_name || t.name)
+                                .slice(0, 2)
+                                .toUpperCase()}
                             </span>
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium text-white text-sm truncate">{t.name}</div>
+                          <div className="font-medium text-white text-sm truncate">
+                            {t.name}
+                          </div>
                           {t.short_name && (
-                            <div className="text-xs text-gray-400">{t.short_name}</div>
+                            <div className="text-xs text-gray-400">
+                              {t.short_name}
+                            </div>
                           )}
                         </div>
                         {selectedTeamId === t.id && (
-                          <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <svg
+                            className="w-5 h-5 text-emerald-400 flex-shrink-0"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
                             <path
                               fillRule="evenodd"
                               d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
@@ -547,7 +614,10 @@ export default function MessagesPage() {
 
                 {!msgLoading && (
                   <>
-                    <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3" style={{ maxHeight: '400px' }}>
+                    <div
+                      className="flex-1 overflow-y-auto px-6 py-4 space-y-3"
+                      style={{ maxHeight: '400px' }}
+                    >
                       {messages.length === 0 && (
                         <div className="text-center text-sm text-gray-500 py-8">
                           Aucun message dans cette conversation.
@@ -576,7 +646,9 @@ export default function MessagesPage() {
                               <p className="text-sm text-white whitespace-pre-wrap break-words">
                                 {msg.content}
                               </p>
-                              <div className={`text-[10px] mt-1 ${isMine ? 'text-emerald-400/60' : 'text-gray-500'}`}>
+                              <div
+                                className={`text-[10px] mt-1 ${isMine ? 'text-emerald-400/60' : 'text-gray-500'}`}
+                              >
                                 {formatTime(msg.createdAt)}
                               </div>
                             </div>
@@ -635,7 +707,10 @@ function formatDate(iso: string): string {
   const diffDays = Math.floor(diffMs / 86_400_000);
 
   if (diffDays === 0) {
-    return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   }
   if (diffDays === 1) return 'Hier';
   if (diffDays < 7) return d.toLocaleDateString('fr-FR', { weekday: 'short' });

@@ -450,10 +450,10 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
                                 rank === 1
                                   ? 'bg-amber-500 text-black'
                                   : rank === 2
-                                  ? 'bg-neutral-400 text-black'
-                                  : rank === 3
-                                  ? 'bg-amber-700 text-white'
-                                  : 'bg-neutral-700 text-neutral-300'
+                                    ? 'bg-neutral-400 text-black'
+                                    : rank === 3
+                                      ? 'bg-amber-700 text-white'
+                                      : 'bg-neutral-700 text-neutral-300'
                               }`}
                             >
                               {rank}
@@ -536,7 +536,9 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
                             <span className="text-neutral-500"> / </span>
                             <span className="text-red-400">{row.losses}</span>
                             <span className="text-neutral-500"> / </span>
-                            <span className="text-neutral-400">{row.draws}</span>
+                            <span className="text-neutral-400">
+                              {row.draws}
+                            </span>
                           </td>
 
                           {/* Match winrate */}
@@ -546,8 +548,8 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
                                 (row.winrate ?? 0) >= 0.6
                                   ? 'bg-emerald-900/50 text-emerald-300'
                                   : (row.winrate ?? 0) >= 0.4
-                                  ? 'bg-amber-900/50 text-amber-300'
-                                  : 'bg-red-900/50 text-red-300'
+                                    ? 'bg-amber-900/50 text-amber-300'
+                                    : 'bg-red-900/50 text-red-300'
                               }`}
                             >
                               {formatPercent(row.winrate)}
@@ -564,8 +566,8 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
                                 diff > 0
                                   ? 'text-emerald-400'
                                   : diff < 0
-                                  ? 'text-red-400'
-                                  : 'text-neutral-500'
+                                    ? 'text-red-400'
+                                    : 'text-neutral-500'
                               }`}
                             >
                               ({diff > 0 ? '+' : ''}

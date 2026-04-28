@@ -60,7 +60,10 @@ export const getServerSideProps = withStaffPage('caster');
 
 function MyTeamPage({ staff }: StaffProps) {
   const router = useRouter();
-  const isStaffAdmin = staff.role === 'admin' || staff.role === 'owner' || staff.role === 'manager';
+  const isStaffAdmin =
+    staff.role === 'admin' ||
+    staff.role === 'owner' ||
+    staff.role === 'manager';
 
   // Team selection for admins
   const [allTeams, setAllTeams] = useState<TeamOption[]>([]);
@@ -102,14 +105,18 @@ function MyTeamPage({ staff }: StaffProps) {
   };
   const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
   const [joinRequestsLoading, setJoinRequestsLoading] = useState(false);
-  const [processingRequestId, setProcessingRequestId] = useState<string | null>(null);
+  const [processingRequestId, setProcessingRequestId] = useState<string | null>(
+    null
+  );
 
   // Search and add member state
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [selectedPlayer, setSelectedPlayer] = useState<SearchResult | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<SearchResult | null>(
+    null
+  );
   const [newMemberRole, setNewMemberRole] = useState('player');
   const [newMemberBattleTag, setNewMemberBattleTag] = useState('');
   const [addingMember, setAddingMember] = useState(false);
@@ -135,56 +142,46 @@ function MyTeamPage({ staff }: StaffProps) {
     loadAllTeams();
   }, [loadAllTeams]);
 
-  const load = useCallback(async (teamId?: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      if (!session) {
-        router.replace('/admin/login');
-        return;
-      }
-
-      // If admin and a specific team is selected, fetch that team
-      let url = '/api/admin/teams/my';
-      if (isStaffAdmin && teamId) {
-        url = `/api/admin/teams/${teamId}`;
-      }
-
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      const json = await res.json();
-
-      if (!res.ok) {
-        // For admin fetching specific team, format response
-        if (isStaffAdmin && teamId) {
-          throw new Error(json?.error || 'Equipe introuvable');
+  const load = useCallback(
+    async (teamId?: string) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const {
+          data: { session },
+        } = await supabaseClient.auth.getSession();
+        if (!session) {
+          router.replace('/admin/login');
+          return;
         }
-        throw new Error(json?.error || 'Chargement impossible');
-      }
 
-      // Handle different API response formats
-      if (isStaffAdmin && teamId && json.team) {
-        // Admin team fetch returns { team, members }
-        setData({
-          team: json.team,
-          members: json.members || [],
-          isCaptain: true, // Admin has full access
+        // If admin and a specific team is selected, fetch that team
+        let url = '/api/admin/teams/my';
+        if (isStaffAdmin && teamId) {
+          url = `/api/admin/teams/${teamId}`;
+        }
+
+        const res = await fetch(url, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
         });
-        setForm({
-          name: json.team.name || '',
-          short_name: json.team.short_name || '',
-          bio: json.team.bio || '',
-          logo_url: json.team.logo_url || '',
-          country: json.team.country || '',
-          description: json.team.description || '',
-        });
-      } else {
-        setData(json);
-        if (json.team) {
+        const json = await res.json();
+
+        if (!res.ok) {
+          // For admin fetching specific team, format response
+          if (isStaffAdmin && teamId) {
+            throw new Error(json?.error || 'Equipe introuvable');
+          }
+          throw new Error(json?.error || 'Chargement impossible');
+        }
+
+        // Handle different API response formats
+        if (isStaffAdmin && teamId && json.team) {
+          // Admin team fetch returns { team, members }
+          setData({
+            team: json.team,
+            members: json.members || [],
+            isCaptain: true, // Admin has full access
+          });
           setForm({
             name: json.team.name || '',
             short_name: json.team.short_name || '',
@@ -193,14 +190,27 @@ function MyTeamPage({ staff }: StaffProps) {
             country: json.team.country || '',
             description: json.team.description || '',
           });
+        } else {
+          setData(json);
+          if (json.team) {
+            setForm({
+              name: json.team.name || '',
+              short_name: json.team.short_name || '',
+              bio: json.team.bio || '',
+              logo_url: json.team.logo_url || '',
+              country: json.team.country || '',
+              description: json.team.description || '',
+            });
+          }
         }
+      } catch (err: unknown) {
+        setError((err as Error)?.message || 'Erreur inattendue.');
+      } finally {
+        setLoading(false);
       }
-    } catch (err: unknown) {
-      setError((err as Error)?.message || 'Erreur inattendue.');
-    } finally {
-      setLoading(false);
-    }
-  }, [router, isStaffAdmin]);
+    },
+    [router, isStaffAdmin]
+  );
 
   useEffect(() => {
     // If admin has selected a team, load that team
@@ -272,9 +282,12 @@ function MyTeamPage({ staff }: StaffProps) {
       } = await supabaseClient.auth.getSession();
       if (!session) return;
 
-      const res = await fetch(`/api/teams/search-players?q=${encodeURIComponent(query)}`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
+      const res = await fetch(
+        `/api/teams/search-players?q=${encodeURIComponent(query)}`,
+        {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        }
+      );
       const json = await res.json();
       if (res.ok && json.players) {
         setSearchResults(json.players);
@@ -334,7 +347,7 @@ function MyTeamPage({ staff }: StaffProps) {
       });
       const json = await res.json();
       if (!res.ok) {
-        alert(json?.error || 'Erreur lors de l\'ajout');
+        alert(json?.error || "Erreur lors de l'ajout");
         return;
       }
       // Reset and reload
@@ -351,7 +364,7 @@ function MyTeamPage({ staff }: StaffProps) {
         await load();
       }
     } catch (err: unknown) {
-      alert((err as Error)?.message || 'Erreur lors de l\'ajout');
+      alert((err as Error)?.message || "Erreur lors de l'ajout");
     } finally {
       setAddingMember(false);
     }
@@ -411,7 +424,10 @@ function MyTeamPage({ staff }: StaffProps) {
   };
 
   // Handle approve/reject join request
-  const handleJoinRequestAction = async (demandeId: string, action: 'approve' | 'reject') => {
+  const handleJoinRequestAction = async (
+    demandeId: string,
+    action: 'approve' | 'reject'
+  ) => {
     setProcessingRequestId(demandeId);
     try {
       const {
@@ -502,16 +518,32 @@ function MyTeamPage({ staff }: StaffProps) {
                   : 'bg-neutral-900/50 border border-neutral-700/50 hover:bg-neutral-800/50'
               }`}
             >
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                isCaptain ? 'bg-amber-500/20' : 'bg-neutral-700/50'
-              }`}>
+              <div
+                className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                  isCaptain ? 'bg-amber-500/20' : 'bg-neutral-700/50'
+                }`}
+              >
                 {isCaptain ? (
-                  <svg className="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
+                  <svg
+                    className="w-5 h-5 text-amber-400"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                  >
                     <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
                   </svg>
                 ) : (
-                  <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  <svg
+                    className="w-5 h-5 text-neutral-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                    />
                   </svg>
                 )}
               </div>
@@ -584,7 +616,9 @@ function MyTeamPage({ staff }: StaffProps) {
 
               <button
                 type="button"
-                onClick={() => isStaffAdmin && selectedTeamId ? load(selectedTeamId) : load()}
+                onClick={() =>
+                  isStaffAdmin && selectedTeamId ? load(selectedTeamId) : load()
+                }
                 className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-sm font-medium transition-colors flex items-center gap-2"
               >
                 <svg
@@ -620,7 +654,9 @@ function MyTeamPage({ staff }: StaffProps) {
                     disabled={loadingAllTeams}
                   >
                     <option value="">
-                      {loadingAllTeams ? 'Chargement...' : '-- Choisir une equipe --'}
+                      {loadingAllTeams
+                        ? 'Chargement...'
+                        : '-- Choisir une equipe --'}
                     </option>
                     {allTeams.map((t) => (
                       <option key={t.id} value={t.id}>
@@ -654,7 +690,8 @@ function MyTeamPage({ staff }: StaffProps) {
               </div>
 
               <p className="text-xs text-neutral-500 mt-3">
-                En tant qu&apos;admin, vous pouvez selectionner n&apos;importe quelle equipe pour la modifier.
+                En tant qu&apos;admin, vous pouvez selectionner n&apos;importe
+                quelle equipe pour la modifier.
               </p>
             </section>
           )}
@@ -716,7 +753,7 @@ function MyTeamPage({ staff }: StaffProps) {
               <p className="text-neutral-400">
                 {isStaffAdmin
                   ? 'Selectionnez une equipe dans la liste ci-dessus pour la gerer.'
-                  : 'Vous n\'etes capitaine d\'aucune equipe.'}
+                  : "Vous n'etes capitaine d'aucune equipe."}
               </p>
             </div>
           )}
@@ -753,7 +790,9 @@ function MyTeamPage({ staff }: StaffProps) {
                     </div>
                   )}
                   <div>
-                    <h2 className="text-xl font-semibold">Informations equipe</h2>
+                    <h2 className="text-xl font-semibold">
+                      Informations equipe
+                    </h2>
                     {!canEdit && (
                       <p className="text-xs text-neutral-500">Lecture seule</p>
                     )}
@@ -780,7 +819,9 @@ function MyTeamPage({ staff }: StaffProps) {
                       </label>
                       <input
                         value={form.short_name}
-                        onChange={(e) => updateField('short_name', e.target.value)}
+                        onChange={(e) =>
+                          updateField('short_name', e.target.value)
+                        }
                         disabled={!canEdit}
                         className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                       />
@@ -829,7 +870,9 @@ function MyTeamPage({ staff }: StaffProps) {
                     </label>
                     <textarea
                       value={form.description}
-                      onChange={(e) => updateField('description', e.target.value)}
+                      onChange={(e) =>
+                        updateField('description', e.target.value)
+                      }
                       disabled={!canEdit}
                       rows={2}
                       className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-y disabled:opacity-50 disabled:cursor-not-allowed"
@@ -840,7 +883,9 @@ function MyTeamPage({ staff }: StaffProps) {
                 {canEdit && (
                   <div className="flex items-center justify-between rounded-xl bg-neutral-900/50 border border-neutral-600 px-4 py-3">
                     <div>
-                      <p className="text-sm text-neutral-200 font-medium">Recrutement ouvert</p>
+                      <p className="text-sm text-neutral-200 font-medium">
+                        Recrutement ouvert
+                      </p>
                       <p className="text-xs text-neutral-500">
                         {isJoinable
                           ? 'Les joueurs peuvent demander à rejoindre ton equipe'
@@ -906,7 +951,8 @@ function MyTeamPage({ staff }: StaffProps) {
                   <div>
                     <h2 className="text-xl font-semibold">Membres</h2>
                     <p className="text-xs text-neutral-500">
-                      {data.members?.length || 0} membre{(data.members?.length || 0) > 1 ? 's' : ''}
+                      {data.members?.length || 0} membre
+                      {(data.members?.length || 0) > 1 ? 's' : ''}
                     </p>
                   </div>
                   {canEdit && (
@@ -941,9 +987,12 @@ function MyTeamPage({ staff }: StaffProps) {
                 <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-5 lg:col-span-2">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h2 className="text-xl font-semibold">Demandes de joueurs</h2>
+                      <h2 className="text-xl font-semibold">
+                        Demandes de joueurs
+                      </h2>
                       <p className="text-xs text-neutral-500">
-                        {joinRequests.length} demande{joinRequests.length > 1 ? 's' : ''} en attente
+                        {joinRequests.length} demande
+                        {joinRequests.length > 1 ? 's' : ''} en attente
                       </p>
                     </div>
                     <button
@@ -965,10 +1014,20 @@ function MyTeamPage({ staff }: StaffProps) {
                     <div className="space-y-3">
                       {joinRequests.map((jr) => {
                         const isProcessing = processingRequestId === jr.id;
-                        const displayName = jr.user?.display_name || jr.payload?.user_display_name || 'Joueur inconnu';
-                        const battleTag = jr.user?.battle_tag || jr.payload?.user_battle_tag || null;
-                        const desiredRole = jr.payload?.desired_role || 'player';
-                        const roleLabel = desiredRole === 'substitute' ? 'Remplacant' : 'Joueur';
+                        const displayName =
+                          jr.user?.display_name ||
+                          jr.payload?.user_display_name ||
+                          'Joueur inconnu';
+                        const battleTag =
+                          jr.user?.battle_tag ||
+                          jr.payload?.user_battle_tag ||
+                          null;
+                        const desiredRole =
+                          jr.payload?.desired_role || 'player';
+                        const roleLabel =
+                          desiredRole === 'substitute'
+                            ? 'Remplacant'
+                            : 'Joueur';
 
                         return (
                           <div
@@ -978,16 +1037,22 @@ function MyTeamPage({ staff }: StaffProps) {
                             <div className="flex items-start justify-between gap-4 flex-wrap">
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="font-semibold text-white">{displayName}</span>
+                                  <span className="font-semibold text-white">
+                                    {displayName}
+                                  </span>
                                   <span className="text-[10px] uppercase tracking-wide bg-blue-500/20 text-blue-300 rounded-lg px-2 py-0.5 border border-blue-500/30 font-semibold">
                                     {roleLabel}
                                   </span>
                                 </div>
                                 {battleTag && (
-                                  <p className="text-xs text-blue-400 mt-0.5">{battleTag}</p>
+                                  <p className="text-xs text-blue-400 mt-0.5">
+                                    {battleTag}
+                                  </p>
                                 )}
                                 {jr.user?.email && (
-                                  <p className="text-xs text-neutral-500 mt-0.5">{jr.user.email}</p>
+                                  <p className="text-xs text-neutral-500 mt-0.5">
+                                    {jr.user.email}
+                                  </p>
                                 )}
                                 {jr.comment && (
                                   <p className="text-sm text-neutral-300 mt-2 bg-neutral-800/50 rounded-lg px-3 py-2 border border-neutral-700/30">
@@ -995,40 +1060,67 @@ function MyTeamPage({ staff }: StaffProps) {
                                   </p>
                                 )}
                                 <p className="text-[11px] text-neutral-500 mt-1">
-                                  {new Date(jr.created_at).toLocaleDateString('fr-FR', {
-                                    day: 'numeric',
-                                    month: 'long',
-                                    year: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                  })}
+                                  {new Date(jr.created_at).toLocaleDateString(
+                                    'fr-FR',
+                                    {
+                                      day: 'numeric',
+                                      month: 'long',
+                                      year: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                    }
+                                  )}
                                 </p>
                               </div>
 
                               <div className="flex gap-2 flex-shrink-0">
                                 <button
                                   type="button"
-                                  onClick={() => handleJoinRequestAction(jr.id, 'approve')}
+                                  onClick={() =>
+                                    handleJoinRequestAction(jr.id, 'approve')
+                                  }
                                   disabled={isProcessing}
                                   className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                                 >
                                   {isProcessing ? (
                                     <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                                   ) : (
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    <svg
+                                      className="w-4 h-4"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M5 13l4 4L19 7"
+                                      />
                                     </svg>
                                   )}
                                   Accepter
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => handleJoinRequestAction(jr.id, 'reject')}
+                                  onClick={() =>
+                                    handleJoinRequestAction(jr.id, 'reject')
+                                  }
                                   disabled={isProcessing}
                                   className="px-4 py-2 rounded-xl bg-red-600/80 hover:bg-red-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                                 >
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M6 18L18 6M6 6l12 12"
+                                    />
                                   </svg>
                                   Refuser
                                 </button>
@@ -1063,8 +1155,18 @@ function MyTeamPage({ staff }: StaffProps) {
                 }}
                 className="p-2 rounded-xl hover:bg-neutral-700 text-neutral-400 hover:text-white transition-colors"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
@@ -1110,11 +1212,13 @@ function MyTeamPage({ staff }: StaffProps) {
                         Recherche...
                       </div>
                     )}
-                    {!searchLoading && searchQuery.length >= 2 && searchResults.length === 0 && (
-                      <div className="text-neutral-400 text-sm py-4 text-center">
-                        Aucun resultat
-                      </div>
-                    )}
+                    {!searchLoading &&
+                      searchQuery.length >= 2 &&
+                      searchResults.length === 0 && (
+                        <div className="text-neutral-400 text-sm py-4 text-center">
+                          Aucun resultat
+                        </div>
+                      )}
                     {searchResults.map((player) => (
                       <button
                         key={player.id}
@@ -1134,13 +1238,19 @@ function MyTeamPage({ staff }: StaffProps) {
                         <div className="flex items-center justify-between">
                           <div>
                             <div className="font-medium text-white">
-                              {player.display_name || player.email || 'Utilisateur'}
+                              {player.display_name ||
+                                player.email ||
+                                'Utilisateur'}
                             </div>
                             {player.email && player.display_name && (
-                              <div className="text-xs text-neutral-400">{player.email}</div>
+                              <div className="text-xs text-neutral-400">
+                                {player.email}
+                              </div>
                             )}
                             {player.battle_tag && (
-                              <div className="text-xs text-blue-400">{player.battle_tag}</div>
+                              <div className="text-xs text-blue-400">
+                                {player.battle_tag}
+                              </div>
                             )}
                           </div>
                           {player.has_team && (
@@ -1160,10 +1270,14 @@ function MyTeamPage({ staff }: StaffProps) {
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="font-medium text-white">
-                          {selectedPlayer.display_name || selectedPlayer.email || 'Utilisateur'}
+                          {selectedPlayer.display_name ||
+                            selectedPlayer.email ||
+                            'Utilisateur'}
                         </div>
                         {selectedPlayer.email && (
-                          <div className="text-xs text-neutral-400">{selectedPlayer.email}</div>
+                          <div className="text-xs text-neutral-400">
+                            {selectedPlayer.email}
+                          </div>
                         )}
                       </div>
                       <button

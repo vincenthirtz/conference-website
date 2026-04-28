@@ -19,7 +19,9 @@ function conversationId(teamA: string, teamB: string): string {
 
 async function authenticateCaptain(req: NextApiRequest, res: NextApiResponse) {
   if (!supabaseAdmin) {
-    res.status(500).json({ error: 'Database not configured (missing service role).' });
+    res
+      .status(500)
+      .json({ error: 'Database not configured (missing service role).' });
     return null;
   }
 
@@ -69,7 +71,9 @@ async function authenticateCaptain(req: NextApiRequest, res: NextApiResponse) {
     .maybeSingle();
 
   if (myTeam?.captain_id !== user.id) {
-    res.status(403).json({ error: 'Seul le capitaine peut utiliser la messagerie.' });
+    res
+      .status(403)
+      .json({ error: 'Seul le capitaine peut utiliser la messagerie.' });
     return null;
   }
 
@@ -80,7 +84,10 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (applyRateLimit(req, res, { max: 40, windowMs: 60_000 }, 'player-messages')) return;
+  if (
+    applyRateLimit(req, res, { max: 40, windowMs: 60_000 }, 'player-messages')
+  )
+    return;
 
   if (req.method === 'GET') {
     const auth = await authenticateCaptain(req, res);
@@ -178,12 +185,16 @@ export default async function handler(
     const body = req.body as SendMessageBody;
 
     if (!body?.content?.trim()) {
-      return res.status(400).json({ error: 'Le message ne peut pas etre vide.' });
+      return res
+        .status(400)
+        .json({ error: 'Le message ne peut pas etre vide.' });
     }
 
     const content = body.content.trim();
     if (content.length > 2000) {
-      return res.status(400).json({ error: 'Message trop long (max 2000 caracteres).' });
+      return res
+        .status(400)
+        .json({ error: 'Message trop long (max 2000 caracteres).' });
     }
 
     if (!body?.targetTeamId?.trim()) {
@@ -194,7 +205,9 @@ export default async function handler(
 
     // Cannot message own team
     if (targetTeamId === team.id) {
-      return res.status(400).json({ error: 'Tu ne peux pas envoyer un message a ta propre equipe.' });
+      return res.status(400).json({
+        error: 'Tu ne peux pas envoyer un message a ta propre equipe.',
+      });
     }
 
     // Check target team exists and is active

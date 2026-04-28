@@ -32,7 +32,13 @@ function bracketTeamLabel(m: ScheduleMatch, slot: 1 | 2) {
   const team = slot === 1 ? m.team1 : m.team2;
   const info = parseNotes(m.notes);
   const seed = (slot === 1 ? info?.seed1 : info?.seed2) ?? null;
-  if (team) return { name: team.short_name ?? team.name, logo: team.logo_url, hasSeed: !!seed, seed };
+  if (team)
+    return {
+      name: team.short_name ?? team.name,
+      logo: team.logo_url,
+      hasSeed: !!seed,
+      seed,
+    };
   if (seed) return { name: `Seed ${seed}`, logo: null, hasSeed: true, seed };
   return { name: 'TBD', logo: null, hasSeed: false, seed: null };
 }
@@ -40,7 +46,8 @@ function bracketTeamLabel(m: ScheduleMatch, slot: 1 | 2) {
 export default function BracketTreeView({ rounds }: BracketTreeViewProps) {
   if (!rounds.length) return null;
 
-  const isElimination = rounds.length > 1 &&
+  const isElimination =
+    rounds.length > 1 &&
     rounds[0].matches.length > rounds[rounds.length - 1].matches.length;
 
   if (!isElimination) {
@@ -60,28 +67,36 @@ function SwissBracketView({ rounds }: { rounds: BracketRound[] }) {
           className="grid gap-4"
           style={{
             gridTemplateColumns: `repeat(${Math.min(rounds.length, 5)}, minmax(200px, 1fr))`,
-            minWidth: rounds.length > 5 ? `${rounds.length * 212}px` : undefined,
+            minWidth:
+              rounds.length > 5 ? `${rounds.length * 212}px` : undefined,
           }}
         >
           {rounds.map((round, roundIdx) => {
-            const isFinale = roundIdx === rounds.length - 1 && round.matches.length <= 2 &&
+            const isFinale =
+              roundIdx === rounds.length - 1 &&
+              round.matches.length <= 2 &&
               round.roundName.toLowerCase().includes('final');
 
             return (
               <div key={round.roundNumber} className="flex flex-col">
-                <div className={`mb-3 px-3 py-2 rounded-lg border text-center ${
-                  isFinale
-                    ? 'bg-amber-500/10 border-amber-500/20'
-                    : 'bg-purple-500/5 border-purple-500/15'
-                }`}>
-                  <div className={`text-[11px] font-bold uppercase tracking-wider ${
-                    isFinale ? 'text-amber-300' : 'text-purple-300'
-                  }`}>
+                <div
+                  className={`mb-3 px-3 py-2 rounded-lg border text-center ${
+                    isFinale
+                      ? 'bg-amber-500/10 border-amber-500/20'
+                      : 'bg-purple-500/5 border-purple-500/15'
+                  }`}
+                >
+                  <div
+                    className={`text-[11px] font-bold uppercase tracking-wider ${
+                      isFinale ? 'text-amber-300' : 'text-purple-300'
+                    }`}
+                  >
                     {isFinale && <span className="mr-1">&#9733;</span>}
                     {round.roundName}
                   </div>
                   <div className="text-[10px] text-neutral-500 mt-0.5">
-                    {round.matches.length} match{round.matches.length > 1 ? 's' : ''}
+                    {round.matches.length} match
+                    {round.matches.length > 1 ? 's' : ''}
                   </div>
                 </div>
 
@@ -107,7 +122,8 @@ function SwissBracketView({ rounds }: { rounds: BracketRound[] }) {
 /* ---- Elimination bracket (tree) view ---- */
 
 function EliminationBracketView({ rounds }: { rounds: BracketRound[] }) {
-  const isFinalRound = (idx: number) => idx === rounds.length - 1 && rounds[idx].matches.length === 1;
+  const isFinalRound = (idx: number) =>
+    idx === rounds.length - 1 && rounds[idx].matches.length === 1;
 
   const yPositions: number[][] = [];
   for (let r = 0; r < rounds.length; r++) {
@@ -129,7 +145,8 @@ function EliminationBracketView({ rounds }: { rounds: BracketRound[] }) {
   }
 
   const allYs = yPositions.flat();
-  const totalH = (allYs.length > 0 ? Math.max(...allYs) : 0) + CARD_H + GAP_BASE;
+  const totalH =
+    (allYs.length > 0 ? Math.max(...allYs) : 0) + CARD_H + GAP_BASE;
 
   return (
     <div className="overflow-x-auto pb-4">
@@ -141,38 +158,98 @@ function EliminationBracketView({ rounds }: { rounds: BracketRound[] }) {
           const isFinale = isFinalRound(roundIdx);
 
           return (
-            <div key={round.roundNumber} className="flex-shrink-0" style={{ display: 'flex' }}>
+            <div
+              key={round.roundNumber}
+              className="flex-shrink-0"
+              style={{ display: 'flex' }}
+            >
               {/* SVG connectors */}
               {showConnectors && (
-                <svg width={CONNECTOR_W} height={totalH + HEADER_H} className="flex-shrink-0">
+                <svg
+                  width={CONNECTOR_W}
+                  height={totalH + HEADER_H}
+                  className="flex-shrink-0"
+                >
                   {ys.map((y, i) => {
                     const topIdx = i * 2;
                     const botIdx = i * 2 + 1;
-                    const topY = (prevYs![topIdx] ?? prevYs![prevYs!.length - 1] ?? 0) + HEADER_H + CARD_H / 2;
-                    const botY = (prevYs![botIdx] ?? topY - HEADER_H) + HEADER_H + CARD_H / 2;
+                    const topY =
+                      (prevYs![topIdx] ?? prevYs![prevYs!.length - 1] ?? 0) +
+                      HEADER_H +
+                      CARD_H / 2;
+                    const botY =
+                      (prevYs![botIdx] ?? topY - HEADER_H) +
+                      HEADER_H +
+                      CARD_H / 2;
                     const midY = y + HEADER_H + CARD_H / 2;
                     const hasTwo = prevYs![botIdx] !== undefined;
 
                     if (!hasTwo) {
                       return (
-                        <line key={i} x1={0} y1={topY} x2={CONNECTOR_W} y2={midY}
-                          stroke="rgba(139,92,246,0.25)" strokeWidth={1.5} />
+                        <line
+                          key={i}
+                          x1={0}
+                          y1={topY}
+                          x2={CONNECTOR_W}
+                          y2={midY}
+                          stroke="rgba(139,92,246,0.25)"
+                          strokeWidth={1.5}
+                        />
                       );
                     }
 
                     return (
                       <g key={i}>
-                        <line x1={0} y1={topY} x2={CONNECTOR_W / 2} y2={topY}
-                          stroke="rgba(139,92,246,0.25)" strokeWidth={1.5} />
-                        <line x1={0} y1={botY} x2={CONNECTOR_W / 2} y2={botY}
-                          stroke="rgba(139,92,246,0.25)" strokeWidth={1.5} />
-                        <line x1={CONNECTOR_W / 2} y1={topY} x2={CONNECTOR_W / 2} y2={botY}
-                          stroke="rgba(139,92,246,0.25)" strokeWidth={1.5} />
-                        <line x1={CONNECTOR_W / 2} y1={midY} x2={CONNECTOR_W} y2={midY}
-                          stroke="rgba(139,92,246,0.3)" strokeWidth={1.5} />
-                        <circle cx={CONNECTOR_W / 2} cy={topY} r={2} fill="rgba(139,92,246,0.4)" />
-                        <circle cx={CONNECTOR_W / 2} cy={botY} r={2} fill="rgba(139,92,246,0.4)" />
-                        <circle cx={CONNECTOR_W / 2} cy={midY} r={2.5} fill="rgba(139,92,246,0.5)" />
+                        <line
+                          x1={0}
+                          y1={topY}
+                          x2={CONNECTOR_W / 2}
+                          y2={topY}
+                          stroke="rgba(139,92,246,0.25)"
+                          strokeWidth={1.5}
+                        />
+                        <line
+                          x1={0}
+                          y1={botY}
+                          x2={CONNECTOR_W / 2}
+                          y2={botY}
+                          stroke="rgba(139,92,246,0.25)"
+                          strokeWidth={1.5}
+                        />
+                        <line
+                          x1={CONNECTOR_W / 2}
+                          y1={topY}
+                          x2={CONNECTOR_W / 2}
+                          y2={botY}
+                          stroke="rgba(139,92,246,0.25)"
+                          strokeWidth={1.5}
+                        />
+                        <line
+                          x1={CONNECTOR_W / 2}
+                          y1={midY}
+                          x2={CONNECTOR_W}
+                          y2={midY}
+                          stroke="rgba(139,92,246,0.3)"
+                          strokeWidth={1.5}
+                        />
+                        <circle
+                          cx={CONNECTOR_W / 2}
+                          cy={topY}
+                          r={2}
+                          fill="rgba(139,92,246,0.4)"
+                        />
+                        <circle
+                          cx={CONNECTOR_W / 2}
+                          cy={botY}
+                          r={2}
+                          fill="rgba(139,92,246,0.4)"
+                        />
+                        <circle
+                          cx={CONNECTOR_W / 2}
+                          cy={midY}
+                          r={2.5}
+                          fill="rgba(139,92,246,0.5)"
+                        />
                       </g>
                     );
                   })}
@@ -181,12 +258,17 @@ function EliminationBracketView({ rounds }: { rounds: BracketRound[] }) {
 
               {/* Round column */}
               <div className="flex-shrink-0 relative" style={{ width: CARD_W }}>
-                <div className="flex items-center justify-center gap-2" style={{ height: HEADER_H }}>
-                  <div className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border ${
-                    isFinale
-                      ? 'bg-amber-500/10 text-amber-300 border-amber-500/20'
-                      : 'bg-purple-500/10 text-purple-300 border-purple-500/20'
-                  }`}>
+                <div
+                  className="flex items-center justify-center gap-2"
+                  style={{ height: HEADER_H }}
+                >
+                  <div
+                    className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border ${
+                      isFinale
+                        ? 'bg-amber-500/10 text-amber-300 border-amber-500/20'
+                        : 'bg-purple-500/10 text-purple-300 border-purple-500/20'
+                    }`}
+                  >
                     {isFinale && <span className="mr-1">&#9733;</span>}
                     {round.roundName}
                   </div>
@@ -238,16 +320,23 @@ function BracketMatchCard({
   const posLabel = m.position_in_round ?? mIdx + 1;
 
   return (
-    <div className={`rounded-xl border overflow-hidden transition-all ${fixedHeight ? 'h-full' : ''} ${
-      isFinale
-        ? 'bg-gradient-to-br from-amber-950/30 via-[#12121a] to-purple-950/30 border-amber-500/20 shadow-xl shadow-amber-500/5'
-        : m.status === 'finished'
-          ? 'bg-[#12121a] border-white/[0.08]'
-          : 'bg-[#12121a] border-white/[0.06] hover:border-purple-500/20'
-    }`}>
-      <div className="flex items-center justify-between px-2.5 py-1 border-b border-white/[0.05]" style={{ height: 26 }}>
+    <div
+      className={`rounded-xl border overflow-hidden transition-all ${fixedHeight ? 'h-full' : ''} ${
+        isFinale
+          ? 'bg-gradient-to-br from-amber-950/30 via-[#12121a] to-purple-950/30 border-amber-500/20 shadow-xl shadow-amber-500/5'
+          : m.status === 'finished'
+            ? 'bg-[#12121a] border-white/[0.08]'
+            : 'bg-[#12121a] border-white/[0.06] hover:border-purple-500/20'
+      }`}
+    >
+      <div
+        className="flex items-center justify-between px-2.5 py-1 border-b border-white/[0.05]"
+        style={{ height: 26 }}
+      >
         <div className="flex items-center gap-1.5">
-          <span className="text-[9px] font-bold text-neutral-600 font-mono">#{posLabel}</span>
+          <span className="text-[9px] font-bold text-neutral-600 font-mono">
+            #{posLabel}
+          </span>
           {m.scheduled_at && (
             <span className="text-[10px] tabular-nums text-neutral-400 font-medium">
               {formatTime(m.scheduled_at)}
@@ -260,7 +349,9 @@ function BracketMatchCard({
               {m.match_format}
             </span>
           )}
-          <span className={`inline-flex items-center gap-1 px-1.5 py-px rounded-full text-[9px] font-medium border ${statusCfg.bg}`}>
+          <span
+            className={`inline-flex items-center gap-1 px-1.5 py-px rounded-full text-[9px] font-medium border ${statusCfg.bg}`}
+          >
             <span className={`w-1 h-1 rounded-full ${statusCfg.dot}`} />
             {statusCfg.label}
           </span>
@@ -278,7 +369,12 @@ function BracketTeamRow({
   t,
   isWinner,
 }: {
-  t: { name: string; logo: string | null; hasSeed: boolean; seed: string | null };
+  t: {
+    name: string;
+    logo: string | null;
+    hasSeed: boolean;
+    seed: string | null;
+  };
   isWinner: boolean;
 }) {
   const rowH = (CARD_H - 26) / 2;
@@ -288,23 +384,52 @@ function BracketTeamRow({
       style={{ height: rowH }}
     >
       {t.seed && (
-        <span className={`inline-flex items-center justify-center w-5 h-5 rounded text-[9px] font-extrabold border ${
-          SEED_COLORS[t.seed] ?? 'bg-neutral-500/20 text-neutral-400 border-neutral-500/30'
-        }`}>
+        <span
+          className={`inline-flex items-center justify-center w-5 h-5 rounded text-[9px] font-extrabold border ${
+            SEED_COLORS[t.seed] ??
+            'bg-neutral-500/20 text-neutral-400 border-neutral-500/30'
+          }`}
+        >
           {t.seed}
         </span>
       )}
       {t.logo && (
-        <Image src={t.logo} alt="" width={16} height={16} className="w-4 h-4 rounded object-cover flex-shrink-0" />
+        <Image
+          src={t.logo}
+          alt=""
+          width={16}
+          height={16}
+          className="w-4 h-4 rounded object-cover flex-shrink-0"
+        />
       )}
-      <span className={`text-xs truncate flex-1 ${
-        isWinner ? 'text-emerald-300 font-semibold' : t.name === 'TBD' ? 'text-neutral-600 italic' : 'text-white/80'
-      }`}>
-        {t.hasSeed && t.seed ? t.name.replace(/^Seed \d+$/, '') || t.name : t.name}
+      <span
+        className={`text-xs truncate flex-1 ${
+          isWinner
+            ? 'text-emerald-300 font-semibold'
+            : t.name === 'TBD'
+              ? 'text-neutral-600 italic'
+              : 'text-white/80'
+        }`}
+      >
+        {t.hasSeed && t.seed
+          ? t.name.replace(/^Seed \d+$/, '') || t.name
+          : t.name}
       </span>
       {isWinner && (
-        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" className="flex-shrink-0 text-emerald-400">
-          <path d="M3 8.5l3 3 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 16 16"
+          fill="none"
+          className="flex-shrink-0 text-emerald-400"
+        >
+          <path
+            d="M3 8.5l3 3 7-7"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       )}
     </div>

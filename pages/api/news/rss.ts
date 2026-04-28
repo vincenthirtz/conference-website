@@ -3,8 +3,7 @@ import { supabaseAdmin, getServerClient } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 
 const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ||
-  'https://example.com';
+  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || 'https://example.com';
 
 function xmlEscape(str: string) {
   return str
@@ -38,9 +37,7 @@ export default async function handler(
 
   if (error) {
     console.error('[news/rss] error', error);
-    return res
-      .status(500)
-      .json({ error: 'Failed to generate RSS feed.' });
+    return res.status(500).json({ error: 'Failed to generate RSS feed.' });
   }
 
   const items = data ?? [];

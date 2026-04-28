@@ -91,7 +91,6 @@ function AdminCreateUserPage({ staff }: StaffProps) {
     if (assignToTeam && teams.length === 0) {
       loadTeams();
     }
-     
   }, [assignToTeam, teams.length]);
 
   async function loadTeams() {
@@ -125,9 +124,7 @@ function AdminCreateUserPage({ staff }: StaffProps) {
         }
         const battleTagRegex = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
         if (!battleTagRegex.test(battleTag.trim())) {
-          throw new Error(
-            'Format BattleTag invalide (ex: Pseudo#1234)'
-          );
+          throw new Error('Format BattleTag invalide (ex: Pseudo#1234)');
         }
       }
 
@@ -279,11 +276,14 @@ function AdminCreateUserPage({ staff }: StaffProps) {
                     </p>
                     {success.user.passwordSentByEmail ? (
                       <p className="text-emerald-300 text-xs">
-                        Le mot de passe a été envoyé par email à l&apos;utilisateur.
+                        Le mot de passe a été envoyé par email à
+                        l&apos;utilisateur.
                       </p>
                     ) : (
                       <p className="text-amber-300 text-xs">
-                        L&apos;email de bienvenue n&apos;a pas pu être envoyé. Utilisez &quot;Renvoyer les identifiants&quot; depuis la gestion des utilisateurs.
+                        L&apos;email de bienvenue n&apos;a pas pu être envoyé.
+                        Utilisez &quot;Renvoyer les identifiants&quot; depuis la
+                        gestion des utilisateurs.
                       </p>
                     )}
                   </div>
@@ -307,7 +307,9 @@ function AdminCreateUserPage({ staff }: StaffProps) {
                           </span>
                         </p>
                         {success.teamAssignment.captainSet && (
-                          <p className="text-amber-300">Défini comme capitaine</p>
+                          <p className="text-amber-300">
+                            Défini comme capitaine
+                          </p>
                         )}
                       </div>
                     </div>

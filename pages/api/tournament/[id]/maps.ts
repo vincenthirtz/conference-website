@@ -274,11 +274,15 @@ async function handlePatch(
   const updatePayload: any = {};
 
   if (body.map_name !== undefined) updatePayload.map_name = body.map_name;
-  if (body.map_slug !== undefined) updatePayload.map_slug = body.map_slug ?? null;
-  if (body.map_type !== undefined) updatePayload.map_type = body.map_type ?? null;
-  if (body.image_url !== undefined) updatePayload.image_url = body.image_url ?? null;
+  if (body.map_slug !== undefined)
+    updatePayload.map_slug = body.map_slug ?? null;
+  if (body.map_type !== undefined)
+    updatePayload.map_type = body.map_type ?? null;
+  if (body.image_url !== undefined)
+    updatePayload.image_url = body.image_url ?? null;
   if (body.enabled !== undefined) updatePayload.enabled = body.enabled;
-  if (body.order_index !== undefined) updatePayload.order_index = body.order_index ?? null;
+  if (body.order_index !== undefined)
+    updatePayload.order_index = body.order_index ?? null;
 
   const { data, error } = await supabaseAdmin
     .from('tournament_maps')

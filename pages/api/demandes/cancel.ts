@@ -15,7 +15,10 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (applyRateLimit(req, res, { max: 10, windowMs: 60_000 }, 'demandes-cancel')) return;
+  if (
+    applyRateLimit(req, res, { max: 10, windowMs: 60_000 }, 'demandes-cancel')
+  )
+    return;
   if (!supabaseAdmin) {
     return res.status(503).json({ error: 'Service unavailable.' });
   }
@@ -57,7 +60,9 @@ export default async function handler(
   }
 
   if (demande.user_id !== userId) {
-    return res.status(403).json({ error: 'Cette demande ne t\'appartient pas.' });
+    return res
+      .status(403)
+      .json({ error: "Cette demande ne t'appartient pas." });
   }
 
   if (demande.status !== 'pending') {
@@ -74,7 +79,7 @@ export default async function handler(
 
   if (updateErr) {
     console.error('[demandes/cancel] update error:', updateErr);
-    return res.status(500).json({ error: 'Échec de l\'annulation.' });
+    return res.status(500).json({ error: "Échec de l'annulation." });
   }
 
   return res.status(200).json({

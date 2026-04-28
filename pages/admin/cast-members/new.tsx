@@ -251,7 +251,9 @@ function AdminCastMemberNewPage({ staff }: Props) {
                     <input
                       type="checkbox"
                       checked={form.isActive}
-                      onChange={(e) => updateField('isActive', e.target.checked)}
+                      onChange={(e) =>
+                        updateField('isActive', e.target.checked)
+                      }
                       className="sr-only peer"
                     />
                     <div className="w-11 h-6 bg-neutral-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
@@ -272,7 +274,8 @@ function AdminCastMemberNewPage({ staff }: Props) {
                     <div className="w-11 h-6 bg-neutral-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
                   </label>
                   <span className="text-sm text-neutral-300">
-                    Carte promotionnelle (ex: &quot;Envie de rejoindre le cast ?&quot;)
+                    Carte promotionnelle (ex: &quot;Envie de rejoindre le cast
+                    ?&quot;)
                   </span>
                 </div>
               </div>

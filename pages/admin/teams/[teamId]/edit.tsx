@@ -43,8 +43,12 @@ function AdminEditTeamPage({ staff }: StaffProps) {
   const [members, setMembers] = useState<TeamMemberRow[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
 
-  const [registeredTournaments, setRegisteredTournaments] = useState<TournamentRegistration[]>([]);
-  const [availableTournaments, setAvailableTournaments] = useState<TournamentRow[]>([]);
+  const [registeredTournaments, setRegisteredTournaments] = useState<
+    TournamentRegistration[]
+  >([]);
+  const [availableTournaments, setAvailableTournaments] = useState<
+    TournamentRow[]
+  >([]);
   const [tournamentsLoading, setTournamentsLoading] = useState(false);
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>('');
 
@@ -64,7 +68,9 @@ function AdminEditTeamPage({ staff }: StaffProps) {
   // Member modals
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [showEditMemberModal, setShowEditMemberModal] = useState(false);
-  const [editingMember, setEditingMember] = useState<TeamMemberRow | null>(null);
+  const [editingMember, setEditingMember] = useState<TeamMemberRow | null>(
+    null
+  );
   const [memberForm, setMemberForm] = useState({
     email: '',
     userId: '',
@@ -102,7 +108,7 @@ function AdminEditTeamPage({ staff }: StaffProps) {
       const res = await fetch(`/api/admin/teams/${teamId}`);
       const json = await res.json();
       if (!res.ok || json.error) {
-        throw new Error(json.error || 'Impossible de charger l\'équipe');
+        throw new Error(json.error || "Impossible de charger l'équipe");
       }
 
       const t: TeamRow = json.team;
@@ -219,7 +225,7 @@ function AdminEditTeamPage({ staff }: StaffProps) {
 
       const json = await res.json();
       if (!res.ok || json.error) {
-        throw new Error(json.error || 'Échec de l\'inscription');
+        throw new Error(json.error || "Échec de l'inscription");
       }
 
       setSelectedTournamentId('');
@@ -255,7 +261,14 @@ function AdminEditTeamPage({ staff }: StaffProps) {
 
   // Member handlers
   function openAddMemberModal() {
-    setMemberForm({ email: '', userId: '', role: 'player', battleTag: '', setCaptain: false, isSubstitute: false });
+    setMemberForm({
+      email: '',
+      userId: '',
+      role: 'player',
+      battleTag: '',
+      setCaptain: false,
+      isSubstitute: false,
+    });
     setMemberError(null);
     setSearchQuery('');
     setSearchResults([]);
@@ -274,7 +287,9 @@ function AdminEditTeamPage({ staff }: StaffProps) {
     setSearchLoading(true);
     setShowSearchResults(true);
     try {
-      const res = await fetch(`/api/admin/users/search?q=${encodeURIComponent(query)}`);
+      const res = await fetch(
+        `/api/admin/users/search?q=${encodeURIComponent(query)}`
+      );
       const json = await res.json();
       if (res.ok && json.players) {
         setSearchResults(json.players);
@@ -296,7 +311,9 @@ function AdminEditTeamPage({ staff }: StaffProps) {
       battleTag: player.battle_tag || '',
     });
     setShowSearchResults(false);
-    setSearchQuery(player.email || player.battle_tag || player.display_name || '');
+    setSearchQuery(
+      player.email || player.battle_tag || player.display_name || ''
+    );
   }
 
   function openEditMemberModal(member: TeamMemberRow) {
@@ -343,7 +360,7 @@ function AdminEditTeamPage({ staff }: StaffProps) {
 
       const json = await res.json();
       if (!res.ok || json.error) {
-        throw new Error(json.error || 'Impossible d\'ajouter le membre');
+        throw new Error(json.error || "Impossible d'ajouter le membre");
       }
 
       setShowAddMemberModal(false);
@@ -392,7 +409,10 @@ function AdminEditTeamPage({ staff }: StaffProps) {
 
   async function handleDeleteMember(member: TeamMemberRow) {
     if (!teamId) return;
-    if (!confirm(`Retirer ${member.battle_tag || member.user_id} de l'équipe ?`)) return;
+    if (
+      !confirm(`Retirer ${member.battle_tag || member.user_id} de l'équipe ?`)
+    )
+      return;
 
     try {
       const res = await fetch(`/api/admin/teams/${teamId}/members`, {
@@ -413,7 +433,12 @@ function AdminEditTeamPage({ staff }: StaffProps) {
 
   async function handleSetCaptain(member: TeamMemberRow) {
     if (!teamId) return;
-    if (!confirm(`Définir ${member.battle_tag || member.user_id} comme capitaine ?`)) return;
+    if (
+      !confirm(
+        `Définir ${member.battle_tag || member.user_id} comme capitaine ?`
+      )
+    )
+      return;
 
     try {
       const res = await fetch(`/api/admin/teams/${teamId}`, {
@@ -449,7 +474,7 @@ function AdminEditTeamPage({ staff }: StaffProps) {
 
       const json = await res.json();
       if (!res.ok || json.error) {
-        throw new Error(json.error || 'Impossible d\'échanger les membres');
+        throw new Error(json.error || "Impossible d'échanger les membres");
       }
 
       setSwapSource(null);
@@ -463,7 +488,9 @@ function AdminEditTeamPage({ staff }: StaffProps) {
   return (
     <>
       <Head>
-        <title>Admin – Éditer équipe{team?.name ? ` : ${team.name}` : ''}</title>
+        <title>
+          Admin – Éditer équipe{team?.name ? ` : ${team.name}` : ''}
+        </title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -487,18 +514,33 @@ function AdminEditTeamPage({ staff }: StaffProps) {
         >
           {/* Header */}
           <div className="mb-8">
-            <Breadcrumb items={[
-              { label: 'Équipes', href: '/admin/teams' },
-              { label: team?.name || 'Équipe', href: `/admin/teams/${teamId}` },
-              { label: 'Modifier' },
-            ]} />
+            <Breadcrumb
+              items={[
+                { label: 'Équipes', href: '/admin/teams' },
+                {
+                  label: team?.name || 'Équipe',
+                  href: `/admin/teams/${teamId}`,
+                },
+                { label: 'Modifier' },
+              ]}
+            />
             <button
               type="button"
               onClick={() => router.push('/admin/teams')}
               className="mb-4 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
               </svg>
               Retour à la liste
             </button>
@@ -523,7 +565,9 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                       <span className="font-mono text-xs bg-neutral-800/80 px-2 py-0.5 rounded">
                         {team.short_name}
                       </span>
-                      {team.country && <span className="ml-2">{team.country}</span>}
+                      {team.country && (
+                        <span className="ml-2">{team.country}</span>
+                      )}
                     </p>
                   )}
                 </div>
@@ -548,8 +592,16 @@ function AdminEditTeamPage({ staff }: StaffProps) {
           {/* Messages */}
           {errorMsg && (
             <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
-              <svg className="w-5 h-5 text-red-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              <svg
+                className="w-5 h-5 text-red-400 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
               </svg>
               {errorMsg}
             </div>
@@ -567,8 +619,18 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                 {/* Team Info Form */}
                 <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
                   <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    <svg
+                      className="w-5 h-5 text-neutral-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
                     </svg>
                     Informations générales
                   </h2>
@@ -576,7 +638,9 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                   <form onSubmit={handleSubmit} className="space-y-5">
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>
-                        <label className="block text-sm text-neutral-400 mb-1">Nom *</label>
+                        <label className="block text-sm text-neutral-400 mb-1">
+                          Nom *
+                        </label>
                         <input
                           type="text"
                           required
@@ -587,7 +651,9 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm text-neutral-400 mb-1">Tag / Short name</label>
+                        <label className="block text-sm text-neutral-400 mb-1">
+                          Tag / Short name
+                        </label>
                         <input
                           type="text"
                           value={shortName}
@@ -605,7 +671,9 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                         label="Logo"
                       />
                       <div>
-                        <label className="block text-sm text-neutral-400 mb-1">URL Bannière</label>
+                        <label className="block text-sm text-neutral-400 mb-1">
+                          URL Bannière
+                        </label>
                         <input
                           type="text"
                           value={bannerUrl}
@@ -618,7 +686,9 @@ function AdminEditTeamPage({ staff }: StaffProps) {
 
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>
-                        <label className="block text-sm text-neutral-400 mb-1">Pays</label>
+                        <label className="block text-sm text-neutral-400 mb-1">
+                          Pays
+                        </label>
                         <input
                           type="text"
                           value={country}
@@ -635,14 +705,19 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                           onChange={(e) => setIsActive(e.target.checked)}
                           className="h-4 w-4 rounded border-neutral-600 bg-neutral-700"
                         />
-                        <label htmlFor="active" className="text-sm text-neutral-300">
+                        <label
+                          htmlFor="active"
+                          className="text-sm text-neutral-300"
+                        >
                           Équipe active
                         </label>
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-sm text-neutral-400 mb-1">Description</label>
+                      <label className="block text-sm text-neutral-400 mb-1">
+                        Description
+                      </label>
                       <textarea
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
@@ -653,7 +728,9 @@ function AdminEditTeamPage({ staff }: StaffProps) {
 
                     <div className="grid gap-4 md:grid-cols-3">
                       <div>
-                        <label className="block text-sm text-neutral-400 mb-1">Twitter</label>
+                        <label className="block text-sm text-neutral-400 mb-1">
+                          Twitter
+                        </label>
                         <input
                           type="text"
                           value={twitter}
@@ -663,7 +740,9 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm text-neutral-400 mb-1">Discord</label>
+                        <label className="block text-sm text-neutral-400 mb-1">
+                          Discord
+                        </label>
                         <input
                           type="text"
                           value={discord}
@@ -684,11 +763,14 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                           placeholder="1234567890123456789"
                         />
                         <p className="text-xs text-neutral-500 mt-1">
-                          Pingé automatiquement lors des annonces de match (J-15min, résultats).
+                          Pingé automatiquement lors des annonces de match
+                          (J-15min, résultats).
                         </p>
                       </div>
                       <div>
-                        <label className="block text-sm text-neutral-400 mb-1">Site web</label>
+                        <label className="block text-sm text-neutral-400 mb-1">
+                          Site web
+                        </label>
                         <input
                           type="text"
                           value={website}
@@ -711,8 +793,18 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                         </>
                       ) : (
                         <>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M5 13l4 4L19 7"
+                            />
                           </svg>
                           Enregistrer
                         </>
@@ -725,8 +817,18 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                 <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-lg font-semibold flex items-center gap-2">
-                      <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                      <svg
+                        className="w-5 h-5 text-neutral-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                        />
                       </svg>
                       Membres ({members.length})
                     </h2>
@@ -743,8 +845,18 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                         onClick={openAddMemberModal}
                         className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors flex items-center gap-1.5"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 4v16m8-8H4"
+                          />
                         </svg>
                         Ajouter
                       </button>
@@ -753,17 +865,30 @@ function AdminEditTeamPage({ staff }: StaffProps) {
 
                   {swapSource && (
                     <div className="mb-4 rounded-xl bg-blue-900/30 border border-blue-500/40 px-4 py-3 text-sm flex items-center gap-2">
-                      <svg className="w-5 h-5 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                      <svg
+                        className="w-5 h-5 text-blue-400 flex-shrink-0"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+                        />
                       </svg>
                       <span>
-                        Sélectionnez un membre pour échanger avec <strong>{swapSource.battle_tag}</strong>
+                        Sélectionnez un membre pour échanger avec{' '}
+                        <strong>{swapSource.battle_tag}</strong>
                       </span>
                     </div>
                   )}
 
                   {membersLoading ? (
-                    <div className="text-neutral-400 text-sm py-4">Chargement...</div>
+                    <div className="text-neutral-400 text-sm py-4">
+                      Chargement...
+                    </div>
                   ) : members.length === 0 ? (
                     <div className="text-neutral-400 text-sm py-8 text-center bg-neutral-900/30 rounded-xl">
                       Aucun membre dans cette équipe
@@ -772,8 +897,12 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                     <div className="space-y-6">
                       {/* Roster (active members) */}
                       {(() => {
-                        const rosterMembers = members.filter((m) => !m.is_substitute);
-                        const subMembers = members.filter((m) => m.is_substitute);
+                        const rosterMembers = members.filter(
+                          (m) => !m.is_substitute
+                        );
+                        const subMembers = members.filter(
+                          (m) => m.is_substitute
+                        );
 
                         return (
                           <>
@@ -788,8 +917,10 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                               ) : (
                                 <div className="space-y-2">
                                   {rosterMembers.map((member) => {
-                                    const isCaptain = team?.captain_id === member.user_id;
-                                    const isSwapTarget = swapSource && swapSource.id !== member.id;
+                                    const isCaptain =
+                                      team?.captain_id === member.user_id;
+                                    const isSwapTarget =
+                                      swapSource && swapSource.id !== member.id;
                                     return (
                                       <div
                                         key={member.id}
@@ -800,19 +931,42 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                                               ? 'bg-blue-900/30 border border-blue-500/40'
                                               : 'bg-neutral-900/50'
                                         } ${isSwapTarget ? 'cursor-pointer hover:border-blue-500/40 hover:bg-blue-900/20 border border-transparent' : ''}`}
-                                        onClick={isSwapTarget ? () => handleSwap(swapSource!, member) : undefined}
+                                        onClick={
+                                          isSwapTarget
+                                            ? () =>
+                                                handleSwap(swapSource!, member)
+                                            : undefined
+                                        }
                                       >
                                         <div className="flex items-center gap-3 min-w-0">
-                                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                                            isCaptain ? 'bg-amber-500/20 text-amber-400' : 'bg-neutral-700 text-neutral-400'
-                                          }`}>
+                                          <div
+                                            className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                                              isCaptain
+                                                ? 'bg-amber-500/20 text-amber-400'
+                                                : 'bg-neutral-700 text-neutral-400'
+                                            }`}
+                                          >
                                             {isCaptain ? (
-                                              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                              <svg
+                                                className="w-5 h-5"
+                                                fill="currentColor"
+                                                viewBox="0 0 24 24"
+                                              >
                                                 <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
                                               </svg>
                                             ) : (
-                                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                              <svg
+                                                className="w-5 h-5"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                              >
+                                                <path
+                                                  strokeLinecap="round"
+                                                  strokeLinejoin="round"
+                                                  strokeWidth={2}
+                                                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                                                />
                                               </svg>
                                             )}
                                           </div>
@@ -839,48 +993,96 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                             {subMembers.length > 0 && (
                                               <button
-                                                onClick={(e) => { e.stopPropagation(); setSwapSource(member); }}
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setSwapSource(member);
+                                                }}
                                                 className="p-2 rounded-lg hover:bg-blue-900/50 text-neutral-400 hover:text-blue-400 transition-colors"
                                                 title="Échanger avec un remplaçant"
                                               >
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                                <svg
+                                                  className="w-4 h-4"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  viewBox="0 0 24 24"
+                                                >
+                                                  <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    strokeWidth={2}
+                                                    d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+                                                  />
                                                 </svg>
                                               </button>
                                             )}
                                             {!isCaptain && (
                                               <button
-                                                onClick={(e) => { e.stopPropagation(); handleSetCaptain(member); }}
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleSetCaptain(member);
+                                                }}
                                                 className="p-2 rounded-lg hover:bg-amber-900/50 text-neutral-400 hover:text-amber-400 transition-colors"
                                                 title="Définir comme capitaine"
                                               >
-                                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                                <svg
+                                                  className="w-4 h-4"
+                                                  fill="currentColor"
+                                                  viewBox="0 0 24 24"
+                                                >
                                                   <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
                                                 </svg>
                                               </button>
                                             )}
                                             <button
-                                              onClick={(e) => { e.stopPropagation(); openEditMemberModal(member); }}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                openEditMemberModal(member);
+                                              }}
                                               className="p-2 rounded-lg hover:bg-neutral-700 text-neutral-400 hover:text-white transition-colors"
                                               title="Modifier"
                                             >
-                                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                              <svg
+                                                className="w-4 h-4"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                              >
+                                                <path
+                                                  strokeLinecap="round"
+                                                  strokeLinejoin="round"
+                                                  strokeWidth={2}
+                                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                                />
                                               </svg>
                                             </button>
                                             <button
-                                              onClick={(e) => { e.stopPropagation(); handleDeleteMember(member); }}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteMember(member);
+                                              }}
                                               className="p-2 rounded-lg hover:bg-red-900/50 text-neutral-400 hover:text-red-400 transition-colors"
                                               title="Supprimer"
                                             >
-                                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                              <svg
+                                                className="w-4 h-4"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                              >
+                                                <path
+                                                  strokeLinecap="round"
+                                                  strokeLinejoin="round"
+                                                  strokeWidth={2}
+                                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                                />
                                               </svg>
                                             </button>
                                           </div>
                                         )}
                                         {isSwapTarget && (
-                                          <span className="text-xs text-blue-400 font-medium">Cliquer pour échanger</span>
+                                          <span className="text-xs text-blue-400 font-medium">
+                                            Cliquer pour échanger
+                                          </span>
                                         )}
                                       </div>
                                     );
@@ -901,7 +1103,8 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                               ) : (
                                 <div className="space-y-2">
                                   {subMembers.map((member) => {
-                                    const isSwapTarget = swapSource && swapSource.id !== member.id;
+                                    const isSwapTarget =
+                                      swapSource && swapSource.id !== member.id;
                                     return (
                                       <div
                                         key={member.id}
@@ -910,12 +1113,27 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                                             ? 'bg-blue-900/30 border border-blue-500/40'
                                             : 'bg-neutral-900/30 border border-dashed border-neutral-700'
                                         } ${isSwapTarget ? 'cursor-pointer hover:border-blue-500/40 hover:bg-blue-900/20' : ''}`}
-                                        onClick={isSwapTarget ? () => handleSwap(swapSource!, member) : undefined}
+                                        onClick={
+                                          isSwapTarget
+                                            ? () =>
+                                                handleSwap(swapSource!, member)
+                                            : undefined
+                                        }
                                       >
                                         <div className="flex items-center gap-3 min-w-0">
                                           <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-neutral-800 text-neutral-500">
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                            <svg
+                                              className="w-5 h-5"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              viewBox="0 0 24 24"
+                                            >
+                                              <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+                                              />
                                             </svg>
                                           </div>
                                           <div className="min-w-0">
@@ -939,37 +1157,78 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                             {rosterMembers.length > 0 && (
                                               <button
-                                                onClick={(e) => { e.stopPropagation(); setSwapSource(member); }}
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setSwapSource(member);
+                                                }}
                                                 className="p-2 rounded-lg hover:bg-blue-900/50 text-neutral-400 hover:text-blue-400 transition-colors"
                                                 title="Échanger avec un joueur du roster"
                                               >
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                                <svg
+                                                  className="w-4 h-4"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  viewBox="0 0 24 24"
+                                                >
+                                                  <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    strokeWidth={2}
+                                                    d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+                                                  />
                                                 </svg>
                                               </button>
                                             )}
                                             <button
-                                              onClick={(e) => { e.stopPropagation(); openEditMemberModal(member); }}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                openEditMemberModal(member);
+                                              }}
                                               className="p-2 rounded-lg hover:bg-neutral-700 text-neutral-400 hover:text-white transition-colors"
                                               title="Modifier"
                                             >
-                                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                              <svg
+                                                className="w-4 h-4"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                              >
+                                                <path
+                                                  strokeLinecap="round"
+                                                  strokeLinejoin="round"
+                                                  strokeWidth={2}
+                                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                                />
                                               </svg>
                                             </button>
                                             <button
-                                              onClick={(e) => { e.stopPropagation(); handleDeleteMember(member); }}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteMember(member);
+                                              }}
                                               className="p-2 rounded-lg hover:bg-red-900/50 text-neutral-400 hover:text-red-400 transition-colors"
                                               title="Supprimer"
                                             >
-                                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                              <svg
+                                                className="w-4 h-4"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                              >
+                                                <path
+                                                  strokeLinecap="round"
+                                                  strokeLinejoin="round"
+                                                  strokeWidth={2}
+                                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                                />
                                               </svg>
                                             </button>
                                           </div>
                                         )}
                                         {isSwapTarget && (
-                                          <span className="text-xs text-blue-400 font-medium">Cliquer pour échanger</span>
+                                          <span className="text-xs text-blue-400 font-medium">
+                                            Cliquer pour échanger
+                                          </span>
                                         )}
                                       </div>
                                     );
@@ -987,19 +1246,33 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                 {/* Tournaments Section */}
                 <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
                   <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                    <svg
+                      className="w-5 h-5 text-neutral-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
+                      />
                     </svg>
                     Tournois
                   </h2>
 
                   {tournamentsLoading ? (
-                    <div className="text-neutral-400 text-sm py-4">Chargement...</div>
+                    <div className="text-neutral-400 text-sm py-4">
+                      Chargement...
+                    </div>
                   ) : (
                     <div className="space-y-4">
                       {/* Registered tournaments */}
                       <div>
-                        <h3 className="text-sm font-semibold text-neutral-400 mb-2">Inscrits ({registeredTournaments.length})</h3>
+                        <h3 className="text-sm font-semibold text-neutral-400 mb-2">
+                          Inscrits ({registeredTournaments.length})
+                        </h3>
                         {registeredTournaments.length === 0 ? (
                           <div className="text-sm text-neutral-500 py-4 text-center bg-neutral-900/30 rounded-xl">
                             Aucune inscription
@@ -1007,15 +1280,22 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                         ) : (
                           <div className="space-y-2">
                             {registeredTournaments.map((t) => (
-                              <div key={t.id} className="flex items-center justify-between gap-3 bg-neutral-900/50 rounded-xl px-4 py-3">
+                              <div
+                                key={t.id}
+                                className="flex items-center justify-between gap-3 bg-neutral-900/50 rounded-xl px-4 py-3"
+                              >
                                 <div>
-                                  <div className="font-medium text-sm">{t.name}</div>
+                                  <div className="font-medium text-sm">
+                                    {t.name}
+                                  </div>
                                   <div className="text-xs text-neutral-500 mt-0.5">
                                     {t.game} • {t.status}
                                   </div>
                                 </div>
                                 <button
-                                  onClick={() => handleUnregisterFromTournament(t.id)}
+                                  onClick={() =>
+                                    handleUnregisterFromTournament(t.id)
+                                  }
                                   className="px-3 py-1 rounded-lg text-xs font-medium bg-red-900/40 hover:bg-red-900/60 text-red-300 border border-red-700/50 transition-colors"
                                 >
                                   Désinscrire
@@ -1029,14 +1309,20 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                       {/* Register to new tournament */}
                       {availableTournaments.length > 0 && (
                         <div className="pt-4 border-t border-neutral-700">
-                          <h3 className="text-sm font-semibold text-neutral-400 mb-2">Inscrire à un tournoi</h3>
+                          <h3 className="text-sm font-semibold text-neutral-400 mb-2">
+                            Inscrire à un tournoi
+                          </h3>
                           <div className="flex gap-2">
                             <select
                               value={selectedTournamentId}
-                              onChange={(e) => setSelectedTournamentId(e.target.value)}
+                              onChange={(e) =>
+                                setSelectedTournamentId(e.target.value)
+                              }
                               className="flex-1 px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                             >
-                              <option value="">Sélectionner un tournoi...</option>
+                              <option value="">
+                                Sélectionner un tournoi...
+                              </option>
                               {availableTournaments.map((t) => (
                                 <option key={t.id} value={t.id}>
                                   {t.name} ({t.game})
@@ -1045,7 +1331,9 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                             </select>
                             <button
                               onClick={handleRegisterToTournament}
-                              disabled={!selectedTournamentId || tournamentsLoading}
+                              disabled={
+                                !selectedTournamentId || tournamentsLoading
+                              }
                               className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
                             >
                               Inscrire
@@ -1061,10 +1349,14 @@ function AdminEditTeamPage({ staff }: StaffProps) {
               {/* Right Column - Quick Info */}
               <div className="space-y-6">
                 <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
-                  <h2 className="text-sm font-semibold text-neutral-400 mb-3">Informations système</h2>
+                  <h2 className="text-sm font-semibold text-neutral-400 mb-3">
+                    Informations système
+                  </h2>
                   <div className="space-y-3 text-sm">
                     <div>
-                      <div className="text-xs text-neutral-500 mb-1">ID de l&apos;équipe</div>
+                      <div className="text-xs text-neutral-500 mb-1">
+                        ID de l&apos;équipe
+                      </div>
                       <div className="font-mono text-xs bg-neutral-900 px-3 py-2 rounded-lg border border-neutral-700 break-all">
                         {team.id}
                       </div>
@@ -1073,7 +1365,9 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                 </section>
 
                 <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
-                  <h2 className="text-sm font-semibold text-neutral-400 mb-3">Liens rapides</h2>
+                  <h2 className="text-sm font-semibold text-neutral-400 mb-3">
+                    Liens rapides
+                  </h2>
                   <div className="space-y-2">
                     <Link
                       href={`/team/${team.id}`}
@@ -1082,14 +1376,34 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-lg bg-blue-600/20 flex items-center justify-center">
-                          <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          <svg
+                            className="w-4 h-4 text-blue-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                            />
                           </svg>
                         </div>
                         <span className="text-sm">Page publique</span>
                       </div>
-                      <svg className="w-4 h-4 text-neutral-500 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      <svg
+                        className="w-4 h-4 text-neutral-500 group-hover:text-white transition-colors"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5l7 7-7 7"
+                        />
                       </svg>
                     </Link>
                   </div>
@@ -1120,8 +1434,18 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                     className="w-full px-3 py-2 pl-9 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                     placeholder="Rechercher un joueur..."
                   />
-                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  <svg
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
                   </svg>
                   {searchLoading && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -1146,13 +1470,26 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                           className="w-full px-3 py-2 text-left hover:bg-neutral-700 transition-colors flex items-center gap-3"
                         >
                           <div className="w-8 h-8 rounded-lg bg-neutral-700 flex items-center justify-center flex-shrink-0">
-                            <svg className="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            <svg
+                              className="w-4 h-4 text-neutral-400"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                              />
                             </svg>
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="text-sm font-medium truncate">
-                              {player.battle_tag || player.display_name || player.email || 'Joueur'}
+                              {player.battle_tag ||
+                                player.display_name ||
+                                player.email ||
+                                'Joueur'}
                             </div>
                             <div className="text-xs text-neutral-400 truncate">
                               {player.email}
@@ -1171,50 +1508,70 @@ function AdminEditTeamPage({ staff }: StaffProps) {
               </div>
 
               <div className="border-t border-neutral-700 pt-4">
-                <p className="text-xs text-neutral-500 mb-3">Ou saisir manuellement :</p>
+                <p className="text-xs text-neutral-500 mb-3">
+                  Ou saisir manuellement :
+                </p>
               </div>
 
               <div>
-                <label className="block text-sm text-neutral-400 mb-1">Email utilisateur</label>
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Email utilisateur
+                </label>
                 <input
                   type="email"
                   value={memberForm.email}
-                  onChange={(e) => setMemberForm({ ...memberForm, email: e.target.value })}
+                  onChange={(e) =>
+                    setMemberForm({ ...memberForm, email: e.target.value })
+                  }
                   className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                   placeholder="user@email.com"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-neutral-400 mb-1">Ou User ID</label>
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Ou User ID
+                </label>
                 <input
                   type="text"
                   value={memberForm.userId}
-                  onChange={(e) => setMemberForm({ ...memberForm, userId: e.target.value })}
+                  onChange={(e) =>
+                    setMemberForm({ ...memberForm, userId: e.target.value })
+                  }
                   className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-mono"
                   placeholder="UUID de l'utilisateur"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-neutral-400 mb-1">BattleTag *</label>
+                <label className="block text-sm text-neutral-400 mb-1">
+                  BattleTag *
+                </label>
                 <input
                   type="text"
                   required
                   value={memberForm.battleTag}
-                  onChange={(e) => setMemberForm({ ...memberForm, battleTag: e.target.value })}
+                  onChange={(e) =>
+                    setMemberForm({ ...memberForm, battleTag: e.target.value })
+                  }
                   className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                   placeholder="Pseudo#1234"
                 />
-                <p className="text-xs text-neutral-500 mt-1">Format: Pseudo#0000</p>
+                <p className="text-xs text-neutral-500 mt-1">
+                  Format: Pseudo#0000
+                </p>
               </div>
 
               <div>
-                <label className="block text-sm text-neutral-400 mb-1">Rôle</label>
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Rôle
+                </label>
                 <input
                   type="text"
                   value={memberForm.role}
-                  onChange={(e) => setMemberForm({ ...memberForm, role: e.target.value })}
+                  onChange={(e) =>
+                    setMemberForm({ ...memberForm, role: e.target.value })
+                  }
                   className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                   placeholder="player / coach / sub"
                 />
@@ -1225,7 +1582,13 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                   <input
                     type="checkbox"
                     checked={memberForm.setCaptain}
-                    onChange={(e) => setMemberForm({ ...memberForm, setCaptain: e.target.checked, isSubstitute: false })}
+                    onChange={(e) =>
+                      setMemberForm({
+                        ...memberForm,
+                        setCaptain: e.target.checked,
+                        isSubstitute: false,
+                      })
+                    }
                     className="h-4 w-4 rounded border-neutral-600 bg-neutral-700"
                   />
                   <span>Capitaine</span>
@@ -1235,7 +1598,13 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                   <input
                     type="checkbox"
                     checked={memberForm.isSubstitute}
-                    onChange={(e) => setMemberForm({ ...memberForm, isSubstitute: e.target.checked, setCaptain: false })}
+                    onChange={(e) =>
+                      setMemberForm({
+                        ...memberForm,
+                        isSubstitute: e.target.checked,
+                        setCaptain: false,
+                      })
+                    }
                     className="h-4 w-4 rounded border-neutral-600 bg-neutral-700"
                   />
                   <span>Remplaçant</span>
@@ -1261,7 +1630,9 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                 disabled={memberSaving}
                 className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                {memberSaving && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                {memberSaving && (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                )}
                 {memberSaving ? 'Ajout...' : 'Ajouter'}
               </button>
             </div>
@@ -1277,29 +1648,39 @@ function AdminEditTeamPage({ staff }: StaffProps) {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-neutral-400 mb-1">User ID</label>
+                <label className="block text-sm text-neutral-400 mb-1">
+                  User ID
+                </label>
                 <div className="font-mono text-xs bg-neutral-900 px-3 py-2 rounded-lg border border-neutral-700 break-all">
                   {editingMember.user_id}
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm text-neutral-400 mb-1">BattleTag</label>
+                <label className="block text-sm text-neutral-400 mb-1">
+                  BattleTag
+                </label>
                 <input
                   type="text"
                   value={memberForm.battleTag}
-                  onChange={(e) => setMemberForm({ ...memberForm, battleTag: e.target.value })}
+                  onChange={(e) =>
+                    setMemberForm({ ...memberForm, battleTag: e.target.value })
+                  }
                   className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   placeholder="Pseudo#1234"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-neutral-400 mb-1">Rôle</label>
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Rôle
+                </label>
                 <input
                   type="text"
                   value={memberForm.role}
-                  onChange={(e) => setMemberForm({ ...memberForm, role: e.target.value })}
+                  onChange={(e) =>
+                    setMemberForm({ ...memberForm, role: e.target.value })
+                  }
                   className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   placeholder="player / coach / sub"
                 />
@@ -1309,7 +1690,12 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                 <input
                   type="checkbox"
                   checked={memberForm.isSubstitute}
-                  onChange={(e) => setMemberForm({ ...memberForm, isSubstitute: e.target.checked })}
+                  onChange={(e) =>
+                    setMemberForm({
+                      ...memberForm,
+                      isSubstitute: e.target.checked,
+                    })
+                  }
                   className="h-4 w-4 rounded border-neutral-600 bg-neutral-700"
                 />
                 <span>Remplaçant</span>
@@ -1337,7 +1723,9 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                 disabled={memberSaving}
                 className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                {memberSaving && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                {memberSaving && (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                )}
                 {memberSaving ? 'Enregistrement...' : 'Enregistrer'}
               </button>
             </div>

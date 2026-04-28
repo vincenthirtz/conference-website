@@ -251,7 +251,9 @@ function AdminMapsStatsPage({}: StaffProps) {
                   <option value="matches_played">Matchs joués</option>
                   <option value="rounds_played">Rounds totaux</option>
                   <option value="match_winrate_attack">Victoires Team 1</option>
-                  <option value="match_winrate_defense">Victoires Team 2</option>
+                  <option value="match_winrate_defense">
+                    Victoires Team 2
+                  </option>
                   <option value="avg_total_rounds">Moy. rounds/match</option>
                   <option value="map_name">Nom de la map</option>
                 </select>

@@ -1,8 +1,5 @@
 import { test, expect } from '@playwright/test';
-import {
-  createTestStaff,
-  deleteTestStaff,
-} from '../utils/supabaseTestClient';
+import { createTestStaff, deleteTestStaff } from '../utils/supabaseTestClient';
 
 const password = 'TestPassw0rd!';
 const STAFF_EMAIL = `hirtzvincent+emailchangestaff@gmail.com`;
@@ -49,7 +46,9 @@ test.describe('Email change feature', () => {
       await page.waitForURL(/\/admin(?!\/login)/, { timeout: 10000 });
 
       // Check email change form is present (use heading to avoid ambiguity)
-      await expect(page.getByRole('heading', { name: 'Changer mon email' })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: 'Changer mon email' })
+      ).toBeVisible();
       await expect(page.getByPlaceholder('nouveau@email.com')).toBeVisible();
     });
 
@@ -70,8 +69,12 @@ test.describe('Email change feature', () => {
 
       // Button should be disabled when email is the same
       // Use section filter to find the right form
-      const emailSection = page.locator('section').filter({ hasText: 'Changer mon email' });
-      const submitButton = emailSection.getByRole('button', { name: 'Changer mon email' });
+      const emailSection = page
+        .locator('section')
+        .filter({ hasText: 'Changer mon email' });
+      const submitButton = emailSection.getByRole('button', {
+        name: 'Changer mon email',
+      });
       await expect(submitButton).toBeDisabled();
     });
 
@@ -92,14 +95,18 @@ test.describe('Email change feature', () => {
       await emailInput.fill(newEmail);
 
       // Submit
-      const emailSection = page.locator('section').filter({ hasText: 'Changer mon email' });
-      const submitButton = emailSection.getByRole('button', { name: 'Changer mon email' });
+      const emailSection = page
+        .locator('section')
+        .filter({ hasText: 'Changer mon email' });
+      const submitButton = emailSection.getByRole('button', {
+        name: 'Changer mon email',
+      });
       await submitButton.click();
 
       // Wait for success message
-      await expect(
-        page.getByText(/email de confirmation/i)
-      ).toBeVisible({ timeout: 10000 });
+      await expect(page.getByText(/email de confirmation/i)).toBeVisible({
+        timeout: 10000,
+      });
     });
   });
 });

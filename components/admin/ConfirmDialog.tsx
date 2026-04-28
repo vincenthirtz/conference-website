@@ -19,7 +19,13 @@ type ConfirmDialogProps = {
 
 const VARIANT_STYLES: Record<
   ConfirmDialogVariant,
-  { iconBg: string; iconColor: string; btnBg: string; btnHover: string; btnActive: string }
+  {
+    iconBg: string;
+    iconColor: string;
+    btnBg: string;
+    btnHover: string;
+    btnActive: string;
+  }
 > = {
   danger: {
     iconBg: 'bg-red-900/50',
@@ -46,7 +52,12 @@ const VARIANT_STYLES: Record<
 
 const VARIANT_ICONS: Record<ConfirmDialogVariant, ReactNode> = {
   danger: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -56,7 +67,12 @@ const VARIANT_ICONS: Record<ConfirmDialogVariant, ReactNode> = {
     </svg>
   ),
   warning: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -66,7 +82,12 @@ const VARIANT_ICONS: Record<ConfirmDialogVariant, ReactNode> = {
     </svg>
   ),
   info: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -103,14 +124,26 @@ export default function ConfirmDialog({
   }, [loading, onCancel]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title">
-      <div ref={trapRef} className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="confirm-dialog-title"
+    >
+      <div
+        ref={trapRef}
+        className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl"
+      >
         <div className="flex items-center gap-3 mb-4">
-          <div className={`w-10 h-10 rounded-full ${styles.iconBg} flex items-center justify-center ${styles.iconColor}`}>
+          <div
+            className={`w-10 h-10 rounded-full ${styles.iconBg} flex items-center justify-center ${styles.iconColor}`}
+          >
             {VARIANT_ICONS[variant]}
           </div>
           <div>
-            <h3 id="confirm-dialog-title" className="text-lg font-semibold">{title}</h3>
+            <h3 id="confirm-dialog-title" className="text-lg font-semibold">
+              {title}
+            </h3>
             {subtitle && <p className="text-sm text-neutral-400">{subtitle}</p>}
           </div>
         </div>

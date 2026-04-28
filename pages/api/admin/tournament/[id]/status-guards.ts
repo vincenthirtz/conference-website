@@ -85,9 +85,20 @@ async function handler(
 
     const guards: StatusGuard[] = [];
 
-    for (const status of ['draft', 'published', 'running', 'completed', 'archived']) {
+    for (const status of [
+      'draft',
+      'published',
+      'running',
+      'completed',
+      'archived',
+    ]) {
       if (status === currentStatus) {
-        guards.push({ status, label: STATUS_LABELS[status], allowed: false, reason: 'Statut actuel' });
+        guards.push({
+          status,
+          label: STATUS_LABELS[status],
+          allowed: false,
+          reason: 'Statut actuel',
+        });
         continue;
       }
 

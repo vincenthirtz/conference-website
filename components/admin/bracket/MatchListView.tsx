@@ -20,12 +20,22 @@ function teamDisplay(m: ScheduleMatch, slot: 1 | 2) {
   const seed = slot === 1 ? info?.seed1 : info?.seed2;
 
   return (
-    <div className={`flex items-center gap-2 ${isWinner ? 'text-emerald-300 font-semibold' : ''}`}>
+    <div
+      className={`flex items-center gap-2 ${isWinner ? 'text-emerald-300 font-semibold' : ''}`}
+    >
       {team?.logo_url && (
-        <Image src={team.logo_url} alt={team.name} width={18} height={18} className="w-[18px] h-[18px] rounded object-cover" />
+        <Image
+          src={team.logo_url}
+          alt={team.name}
+          width={18}
+          height={18}
+          className="w-[18px] h-[18px] rounded object-cover"
+        />
       )}
       <span>{team?.name ?? (seed ? `Seed ${seed}` : 'TBD')}</span>
-      {isWinner && <span className="text-[10px] text-emerald-500 font-bold">W</span>}
+      {isWinner && (
+        <span className="text-[10px] text-emerald-500 font-bold">W</span>
+      )}
     </div>
   );
 }
@@ -49,39 +59,65 @@ export default function MatchListView({ matchDays }: MatchListViewProps) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-white/10">
-                  <th className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">Heure</th>
-                  <th className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">Équipe 1</th>
-                  <th className="text-center px-2 py-2 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">vs</th>
-                  <th className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">Équipe 2</th>
-                  <th className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">Format</th>
-                  <th className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">Round</th>
-                  <th className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">Statut</th>
+                  <th className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
+                    Heure
+                  </th>
+                  <th className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
+                    Équipe 1
+                  </th>
+                  <th className="text-center px-2 py-2 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
+                    vs
+                  </th>
+                  <th className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
+                    Équipe 2
+                  </th>
+                  <th className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
+                    Format
+                  </th>
+                  <th className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
+                    Round
+                  </th>
+                  <th className="text-left px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
+                    Statut
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {day.matches.map((m) => {
                   const statusCfg = STATUS_CONFIG[m.status];
                   return (
-                    <tr key={m.id} className="border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors">
+                    <tr
+                      key={m.id}
+                      className="border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors"
+                    >
                       <td className="px-3 py-2.5 tabular-nums font-medium text-white/80">
                         {m.scheduled_at ? formatTime(m.scheduled_at) : '—'}
                       </td>
                       <td className="px-3 py-2.5">{teamDisplay(m, 1)}</td>
-                      <td className="px-2 py-2.5 text-center text-[10px] text-neutral-600 font-bold">vs</td>
+                      <td className="px-2 py-2.5 text-center text-[10px] text-neutral-600 font-bold">
+                        vs
+                      </td>
                       <td className="px-3 py-2.5">{teamDisplay(m, 2)}</td>
                       <td className="px-3 py-2.5">
                         {m.match_format ? (
                           <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase bg-white/5 text-neutral-400 border border-white/5">
                             {m.match_format}
                           </span>
-                        ) : '—'}
+                        ) : (
+                          '—'
+                        )}
                       </td>
                       <td className="px-3 py-2.5 text-xs text-neutral-400">
-                        {m.round_name ?? (m.round_number ? `R${m.round_number}` : '—')}
+                        {m.round_name ??
+                          (m.round_number ? `R${m.round_number}` : '—')}
                       </td>
                       <td className="px-3 py-2.5">
-                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium border ${statusCfg.bg}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium border ${statusCfg.bg}`}
+                        >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`}
+                          />
                           {statusCfg.label}
                         </span>
                       </td>

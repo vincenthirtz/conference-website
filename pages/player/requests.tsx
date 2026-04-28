@@ -39,9 +39,18 @@ export default function PlayerRequestsPage() {
   const [teamSearch, setTeamSearch] = useState('');
 
   // Transfert
-  const [desiredRole, setDesiredRole] = useState<'player' | 'substitute' | 'coach'>('player');
+  const [desiredRole, setDesiredRole] = useState<
+    'player' | 'substitute' | 'coach'
+  >('player');
   const [transferMode, setTransferMode] = useState<'self' | 'propose'>('self');
-  const [teamMembers, setTeamMembers] = useState<{ user_id: string; role: string; battle_tag: string | null; display_name?: string }[]>([]);
+  const [teamMembers, setTeamMembers] = useState<
+    {
+      user_id: string;
+      role: string;
+      battle_tag: string | null;
+      display_name?: string;
+    }[]
+  >([]);
   const [selectedPlayerId, setSelectedPlayerId] = useState('');
 
   // Scrim
@@ -183,18 +192,20 @@ export default function PlayerRequestsPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Impossible de creer la demande.');
+      if (!res.ok)
+        throw new Error(data.error || 'Impossible de creer la demande.');
 
       const team = teams.find((t) => t.id === selectedTeamId);
       if (transferMode === 'propose') {
         const player = teamMembers.find((m) => m.user_id === selectedPlayerId);
-        const playerName = player?.display_name || player?.battle_tag || 'le joueur';
+        const playerName =
+          player?.display_name || player?.battle_tag || 'le joueur';
         setSuccess(
-          `La proposition de transfert de ${playerName} vers "${team?.name || 'l\'equipe'}" a ete envoyee.`
+          `La proposition de transfert de ${playerName} vers "${team?.name || "l'equipe"}" a ete envoyee.`
         );
       } else {
         setSuccess(
-          `Ta demande de transfert vers "${team?.name || 'l\'equipe'}" a ete envoyee. Le capitaine de l'equipe cible la validera.`
+          `Ta demande de transfert vers "${team?.name || "l'equipe"}" a ete envoyee. Le capitaine de l'equipe cible la validera.`
         );
       }
       setSelectedTeamId('');
@@ -232,11 +243,12 @@ export default function PlayerRequestsPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Impossible de creer la demande.');
+      if (!res.ok)
+        throw new Error(data.error || 'Impossible de creer la demande.');
 
       const team = teams.find((t) => t.id === selectedTeamId);
       setSuccess(
-        `Ta demande de scrim contre "${team?.name || 'l\'equipe'}" a ete envoyee.`
+        `Ta demande de scrim contre "${team?.name || "l'equipe"}" a ete envoyee.`
       );
       setSelectedTeamId('');
       setMessage('');
@@ -274,8 +286,18 @@ export default function PlayerRequestsPage() {
         <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white flex items-center justify-center px-4">
           <div className="max-w-md text-center">
             <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
-              <svg className="w-8 h-8 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              <svg
+                className="w-8 h-8 text-emerald-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
             </div>
             <h1 className="text-2xl font-bold mb-4">Demande envoyee</h1>
@@ -324,7 +346,15 @@ export default function PlayerRequestsPage() {
                     : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
                 }`}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <path d="M16 3h5v5" />
                   <line x1="21" y1="3" x2="14" y2="10" />
                   <path d="M8 21H3v-5" />
@@ -341,7 +371,15 @@ export default function PlayerRequestsPage() {
                     : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
                 }`}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <circle cx="12" cy="12" r="10" />
                   <polygon points="10 8 16 12 10 16 10 8" />
                 </svg>
@@ -356,8 +394,12 @@ export default function PlayerRequestsPage() {
                   <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 text-sm text-amber-200">
                     <p className="font-semibold mb-1">Pas d&apos;equipe</p>
                     <p>
-                      Tu dois etre membre d&apos;une equipe pour demander un transfert.{' '}
-                      <Link href="/player/join-team" className="text-purple-300 hover:text-purple-200 underline">
+                      Tu dois etre membre d&apos;une equipe pour demander un
+                      transfert.{' '}
+                      <Link
+                        href="/player/join-team"
+                        className="text-purple-300 hover:text-purple-200 underline"
+                      >
                         Rejoindre une equipe
                       </Link>
                     </p>
@@ -369,7 +411,12 @@ export default function PlayerRequestsPage() {
                       <div className="flex gap-2 mb-6">
                         <button
                           type="button"
-                          onClick={() => { setTransferMode('propose'); setSelectedTeamId(''); setSelectedPlayerId(''); setError(null); }}
+                          onClick={() => {
+                            setTransferMode('propose');
+                            setSelectedTeamId('');
+                            setSelectedPlayerId('');
+                            setError(null);
+                          }}
                           className={`flex-1 px-4 py-3 rounded-xl text-sm font-semibold transition border ${
                             transferMode === 'propose'
                               ? 'bg-purple-600/30 border-purple-400/50 text-white'
@@ -380,7 +427,12 @@ export default function PlayerRequestsPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => { setTransferMode('self'); setSelectedTeamId(''); setSelectedPlayerId(''); setError(null); }}
+                          onClick={() => {
+                            setTransferMode('self');
+                            setSelectedTeamId('');
+                            setSelectedPlayerId('');
+                            setError(null);
+                          }}
                           className={`flex-1 px-4 py-3 rounded-xl text-sm font-semibold transition border ${
                             transferMode === 'self'
                               ? 'bg-purple-600/30 border-purple-400/50 text-white'
@@ -397,15 +449,19 @@ export default function PlayerRequestsPage() {
                       <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 text-sm text-amber-200">
                         <p className="font-semibold mb-1">Capitaine</p>
                         <p>
-                          En tant que capitaine, tu dois d&apos;abord transferer le role de capitaine
-                          avant de pouvoir demander ton propre transfert.
+                          En tant que capitaine, tu dois d&apos;abord transferer
+                          le role de capitaine avant de pouvoir demander ton
+                          propre transfert.
                         </p>
                       </div>
                     )}
 
                     {/* Mode "proposer un transfert" (capitaine uniquement) */}
                     {isCaptain && transferMode === 'propose' && (
-                      <form onSubmit={handleSubmitTransfer} className="space-y-6">
+                      <form
+                        onSubmit={handleSubmitTransfer}
+                        className="space-y-6"
+                      >
                         <div>
                           <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
                             Joueur a transferer
@@ -429,7 +485,9 @@ export default function PlayerRequestsPage() {
                               >
                                 <div className="w-8 h-8 rounded-full bg-black/60 border border-white/10 flex items-center justify-center flex-shrink-0">
                                   <span className="text-xs text-gray-400">
-                                    {(m.display_name || m.battle_tag || '?').slice(0, 2).toUpperCase()}
+                                    {(m.display_name || m.battle_tag || '?')
+                                      .slice(0, 2)
+                                      .toUpperCase()}
                                   </span>
                                 </div>
                                 <div className="flex-1 min-w-0">
@@ -437,12 +495,20 @@ export default function PlayerRequestsPage() {
                                     {m.display_name || m.battle_tag || 'Joueur'}
                                   </div>
                                   <div className="text-xs text-gray-400">
-                                    {m.role === 'substitute' ? 'Remplacant' : m.role === 'coach' ? 'Coach' : 'Joueur'}
+                                    {m.role === 'substitute'
+                                      ? 'Remplacant'
+                                      : m.role === 'coach'
+                                        ? 'Coach'
+                                        : 'Joueur'}
                                     {m.battle_tag && ` \u00b7 ${m.battle_tag}`}
                                   </div>
                                 </div>
                                 {selectedPlayerId === m.user_id && (
-                                  <svg className="w-5 h-5 text-purple-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                  <svg
+                                    className="w-5 h-5 text-purple-400 flex-shrink-0"
+                                    fill="currentColor"
+                                    viewBox="0 0 20 20"
+                                  >
                                     <path
                                       fillRule="evenodd"
                                       d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
@@ -462,7 +528,9 @@ export default function PlayerRequestsPage() {
                           <input
                             type="text"
                             value={teamSearch}
-                            onChange={(e) => handleTeamSearchChange(e.target.value)}
+                            onChange={(e) =>
+                              handleTeamSearchChange(e.target.value)
+                            }
                             className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 mb-3"
                             placeholder="Rechercher une equipe..."
                           />
@@ -480,29 +548,41 @@ export default function PlayerRequestsPage() {
                             Role souhaite
                           </label>
                           <div className="flex gap-3">
-                            {(['player', 'substitute', 'coach'] as const).map((role) => (
-                              <button
-                                key={role}
-                                type="button"
-                                onClick={() => setDesiredRole(role)}
-                                className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium transition border ${
-                                  desiredRole === role
-                                    ? 'bg-purple-600/30 border-purple-400/50 text-white'
-                                    : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
-                                }`}
-                              >
-                                {role === 'player' ? 'Joueur' : role === 'substitute' ? 'Remplacant' : 'Coach'}
-                              </button>
-                            ))}
+                            {(['player', 'substitute', 'coach'] as const).map(
+                              (role) => (
+                                <button
+                                  key={role}
+                                  type="button"
+                                  onClick={() => setDesiredRole(role)}
+                                  className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium transition border ${
+                                    desiredRole === role
+                                      ? 'bg-purple-600/30 border-purple-400/50 text-white'
+                                      : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
+                                  }`}
+                                >
+                                  {role === 'player'
+                                    ? 'Joueur'
+                                    : role === 'substitute'
+                                      ? 'Remplacant'
+                                      : 'Coach'}
+                                </button>
+                              )
+                            )}
                           </div>
                         </div>
 
-                        <MessageField value={message} onChange={setMessage} label="Message au capitaine cible (optionnel)" />
+                        <MessageField
+                          value={message}
+                          onChange={setMessage}
+                          label="Message au capitaine cible (optionnel)"
+                        />
 
                         {error && <ErrorBanner message={error} />}
 
                         <SubmitButton
-                          disabled={submitting || !selectedTeamId || !selectedPlayerId}
+                          disabled={
+                            submitting || !selectedTeamId || !selectedPlayerId
+                          }
                           loading={submitting}
                           label="Proposer le transfert"
                         />
@@ -511,7 +591,10 @@ export default function PlayerRequestsPage() {
 
                     {/* Mode "mon transfert" (joueur non-capitaine) */}
                     {!isCaptain && (
-                      <form onSubmit={handleSubmitTransfer} className="space-y-6">
+                      <form
+                        onSubmit={handleSubmitTransfer}
+                        className="space-y-6"
+                      >
                         <div>
                           <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
                             Equipe cible
@@ -519,7 +602,9 @@ export default function PlayerRequestsPage() {
                           <input
                             type="text"
                             value={teamSearch}
-                            onChange={(e) => handleTeamSearchChange(e.target.value)}
+                            onChange={(e) =>
+                              handleTeamSearchChange(e.target.value)
+                            }
                             className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 mb-3"
                             placeholder="Rechercher une equipe..."
                           />
@@ -537,24 +622,34 @@ export default function PlayerRequestsPage() {
                             Role souhaite
                           </label>
                           <div className="flex gap-3">
-                            {(['player', 'substitute', 'coach'] as const).map((role) => (
-                              <button
-                                key={role}
-                                type="button"
-                                onClick={() => setDesiredRole(role)}
-                                className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium transition border ${
-                                  desiredRole === role
-                                    ? 'bg-purple-600/30 border-purple-400/50 text-white'
-                                    : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
-                                }`}
-                              >
-                                {role === 'player' ? 'Joueur' : role === 'substitute' ? 'Remplacant' : 'Coach'}
-                              </button>
-                            ))}
+                            {(['player', 'substitute', 'coach'] as const).map(
+                              (role) => (
+                                <button
+                                  key={role}
+                                  type="button"
+                                  onClick={() => setDesiredRole(role)}
+                                  className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium transition border ${
+                                    desiredRole === role
+                                      ? 'bg-purple-600/30 border-purple-400/50 text-white'
+                                      : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
+                                  }`}
+                                >
+                                  {role === 'player'
+                                    ? 'Joueur'
+                                    : role === 'substitute'
+                                      ? 'Remplacant'
+                                      : 'Coach'}
+                                </button>
+                              )
+                            )}
                           </div>
                         </div>
 
-                        <MessageField value={message} onChange={setMessage} label="Message au capitaine (optionnel)" />
+                        <MessageField
+                          value={message}
+                          onChange={setMessage}
+                          label="Message au capitaine (optionnel)"
+                        />
 
                         {error && <ErrorBanner message={error} />}
 
@@ -577,8 +672,12 @@ export default function PlayerRequestsPage() {
                   <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 text-sm text-amber-200">
                     <p className="font-semibold mb-1">Pas d&apos;equipe</p>
                     <p>
-                      Tu dois etre membre d&apos;une equipe pour proposer un scrim.{' '}
-                      <Link href="/player/join-team" className="text-purple-300 hover:text-purple-200 underline">
+                      Tu dois etre membre d&apos;une equipe pour proposer un
+                      scrim.{' '}
+                      <Link
+                        href="/player/join-team"
+                        className="text-purple-300 hover:text-purple-200 underline"
+                      >
                         Rejoindre une equipe
                       </Link>
                     </p>
@@ -587,7 +686,8 @@ export default function PlayerRequestsPage() {
                   <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 text-sm text-amber-200">
                     <p className="font-semibold mb-1">Capitaine requis</p>
                     <p>
-                      Seul le capitaine de l&apos;equipe peut envoyer une demande de scrim.
+                      Seul le capitaine de l&apos;equipe peut envoyer une
+                      demande de scrim.
                     </p>
                   </div>
                 ) : (
@@ -676,16 +776,28 @@ function TeamList({
 }) {
   const accent =
     accentColor === 'blue'
-      ? { bg: 'bg-blue-600/30', border: 'border-blue-400/50', check: 'text-blue-400' }
-      : { bg: 'bg-purple-600/30', border: 'border-purple-400/50', check: 'text-purple-400' };
+      ? {
+          bg: 'bg-blue-600/30',
+          border: 'border-blue-400/50',
+          check: 'text-blue-400',
+        }
+      : {
+          bg: 'bg-purple-600/30',
+          border: 'border-purple-400/50',
+          check: 'text-purple-400',
+        };
 
   return (
     <div className="max-h-72 overflow-y-auto space-y-2 rounded-xl border border-white/10 bg-black/40 p-2">
       {loading && (
-        <div className="text-sm text-gray-500 text-center py-4">Chargement...</div>
+        <div className="text-sm text-gray-500 text-center py-4">
+          Chargement...
+        </div>
       )}
       {!loading && teams.length === 0 && (
-        <div className="text-sm text-gray-500 text-center py-4">{emptyMessage}</div>
+        <div className="text-sm text-gray-500 text-center py-4">
+          {emptyMessage}
+        </div>
       )}
       {!loading &&
         teams.map((team) => (
@@ -702,7 +814,11 @@ function TeamList({
             <div className="w-10 h-10 rounded-full bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
               {team.logo_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={team.logo_url} alt="" className="w-full h-full object-cover" />
+                <img
+                  src={team.logo_url}
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 <span className="text-xs text-gray-500">
                   {(team.short_name || team.name).slice(0, 2).toUpperCase()}
@@ -728,7 +844,11 @@ function TeamList({
               </div>
             </div>
             {selectedId === team.id && (
-              <svg className={`w-5 h-5 ${accent.check} flex-shrink-0`} fill="currentColor" viewBox="0 0 20 20">
+              <svg
+                className={`w-5 h-5 ${accent.check} flex-shrink-0`}
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
                 <path
                   fillRule="evenodd"
                   d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"

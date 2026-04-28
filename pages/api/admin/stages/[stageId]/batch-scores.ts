@@ -115,7 +115,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
     return res.status(500).json({ error: 'Failed to verify matches' });
   }
 
-  const matchStageMap = new Map((matchRows || []).map((m: any) => [m.id, m.stage_id]));
+  const matchStageMap = new Map(
+    (matchRows || []).map((m: any) => [m.id, m.stage_id])
+  );
   for (const entry of scores) {
     if (matchStageMap.get(entry.matchId) !== stageId) {
       return res.status(400).json({

@@ -158,7 +158,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Erreur lors de l\'ajout');
+        throw new Error(json.error || "Erreur lors de l'ajout");
       }
 
       // Réinitialiser le formulaire
@@ -171,7 +171,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
       // Recharger la liste
       await fetchMaps();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || 'Erreur lors de l\'ajout');
+      setErrorMsg((err as Error)?.message || "Erreur lors de l'ajout");
     } finally {
       setAdding(false);
     }
@@ -206,7 +206,12 @@ function AdminTournamentMapsPage(_: StaffProps) {
 
   async function handleDeleteAllMaps() {
     if (!tournamentId) return;
-    if (!confirm('Supprimer TOUTES les maps du pool ? Cette action est irréversible.')) return;
+    if (
+      !confirm(
+        'Supprimer TOUTES les maps du pool ? Cette action est irréversible.'
+      )
+    )
+      return;
 
     setErrorMsg(null);
 
@@ -587,7 +592,8 @@ function AdminTournamentMapsPage(_: StaffProps) {
                           alt={m.map_name}
                           className="w-full h-full object-cover"
                           onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = 'none';
+                            (e.target as HTMLImageElement).style.display =
+                              'none';
                           }}
                         />
                       </div>

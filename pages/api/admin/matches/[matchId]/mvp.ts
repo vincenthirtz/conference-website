@@ -112,7 +112,11 @@ async function handlePost(
   ctx: any
 ) {
   const { winnerMemberId } = req.body || {};
-  if (!winnerMemberId || typeof winnerMemberId !== 'string' || !isValidUUID(winnerMemberId)) {
+  if (
+    !winnerMemberId ||
+    typeof winnerMemberId !== 'string' ||
+    !isValidUUID(winnerMemberId)
+  ) {
     return res.status(400).json({ error: 'winnerMemberId invalide' });
   }
 
@@ -139,7 +143,7 @@ async function handlePost(
 
   if (member.team_id !== match.team1_id && member.team_id !== match.team2_id) {
     return res.status(400).json({
-      error: 'La joueuse ne fait pas partie d\'une des deux équipes du match',
+      error: "La joueuse ne fait pas partie d'une des deux équipes du match",
     });
   }
 
@@ -170,7 +174,7 @@ async function handlePost(
       .maybeSingle();
     if (error) {
       console.error('[admin/matches/mvp] update error:', error);
-      return res.status(500).json({ error: 'Échec de l\'enregistrement' });
+      return res.status(500).json({ error: "Échec de l'enregistrement" });
     }
     result = data;
   } else {
@@ -184,7 +188,7 @@ async function handlePost(
       .maybeSingle();
     if (error) {
       console.error('[admin/matches/mvp] insert error:', error);
-      return res.status(500).json({ error: 'Échec de l\'enregistrement' });
+      return res.status(500).json({ error: "Échec de l'enregistrement" });
     }
     result = data;
   }

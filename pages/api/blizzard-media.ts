@@ -1492,7 +1492,10 @@ export default async function handler(
   }
 
   // Rate limiting: 20 requests per minute (scraping is expensive)
-  if (applyRateLimit(req, res, { max: 20, windowMs: 60 * 1000 }, 'blizzard-media')) return;
+  if (
+    applyRateLimit(req, res, { max: 20, windowMs: 60 * 1000 }, 'blizzard-media')
+  )
+    return;
 
   const type = req.query.type as MediaType | undefined;
   const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);

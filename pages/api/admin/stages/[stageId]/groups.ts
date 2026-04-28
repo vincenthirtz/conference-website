@@ -28,7 +28,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
   }
 
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Database service unavailable (missing service role).' });
+    return res
+      .status(500)
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
 
   try {
@@ -271,12 +273,21 @@ async function handlePost(
 ) {
   const { numGroups, method = 'snake' } = req.body || {};
 
-  if (!numGroups || typeof numGroups !== 'number' || numGroups < 1 || numGroups > 32) {
-    return res.status(400).json({ error: 'numGroups must be between 1 and 32' });
+  if (
+    !numGroups ||
+    typeof numGroups !== 'number' ||
+    numGroups < 1 ||
+    numGroups > 32
+  ) {
+    return res
+      .status(400)
+      .json({ error: 'numGroups must be between 1 and 32' });
   }
 
   if (!['snake', 'random'].includes(method)) {
-    return res.status(400).json({ error: "method must be 'snake' or 'random'" });
+    return res
+      .status(400)
+      .json({ error: "method must be 'snake' or 'random'" });
   }
 
   // Verify stage

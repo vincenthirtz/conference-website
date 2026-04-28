@@ -81,7 +81,9 @@ export default function MatchReadinessChecklist({
     {
       label: 'Equipe 1 assignee',
       ok: !!match.team1_id,
-      detail: match.team1_id ? team1Name || match.team1_id.slice(0, 8) : 'Non assignee',
+      detail: match.team1_id
+        ? team1Name || match.team1_id.slice(0, 8)
+        : 'Non assignee',
     },
     ...(!isBye
       ? [
@@ -128,8 +130,8 @@ export default function MatchReadinessChecklist({
         tournamentStatus === 'running'
           ? 'En cours'
           : tournamentStatus === 'published'
-          ? 'Publie'
-          : tournamentStatus || 'Statut inconnu',
+            ? 'Publie'
+            : tournamentStatus || 'Statut inconnu',
     },
     ...(stageActive !== null
       ? [
@@ -147,10 +149,10 @@ export default function MatchReadinessChecklist({
         match.status === 'cancelled'
           ? 'Annule'
           : match.status === 'finished'
-          ? 'Termine'
-          : match.status === 'ongoing'
-          ? 'En cours'
-          : 'A venir',
+            ? 'Termine'
+            : match.status === 'ongoing'
+              ? 'En cours'
+              : 'A venir',
     },
   ];
 
@@ -168,8 +170,8 @@ export default function MatchReadinessChecklist({
             allReady
               ? 'bg-emerald-600/20 text-emerald-300'
               : percentage >= 60
-              ? 'bg-amber-600/20 text-amber-300'
-              : 'bg-red-600/20 text-red-300'
+                ? 'bg-amber-600/20 text-amber-300'
+                : 'bg-red-600/20 text-red-300'
           }`}
         >
           {readyCount}/{totalCount}
@@ -183,8 +185,8 @@ export default function MatchReadinessChecklist({
             allReady
               ? 'bg-emerald-500'
               : percentage >= 60
-              ? 'bg-amber-500'
-              : 'bg-red-500'
+                ? 'bg-amber-500'
+                : 'bg-red-500'
           }`}
           style={{ width: `${percentage}%` }}
         />

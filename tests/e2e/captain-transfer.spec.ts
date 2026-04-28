@@ -59,20 +59,39 @@ test.describe('Captain-proposed transfer API', () => {
     // Team A with captain + player
     const { data: teamA } = await supabaseTestClient!
       .from('teams')
-      .insert({ name: `${PREFIX}-teamA`, captain_id: captainUserId, is_active: true })
+      .insert({
+        name: `${PREFIX}-teamA`,
+        captain_id: captainUserId,
+        is_active: true,
+      })
       .select('id')
       .single();
     teamAId = teamA!.id;
 
     await supabaseTestClient!.from('team_members').insert([
-      { team_id: teamAId, user_id: captainUserId, role: 'player', battle_tag: 'Capt#0001' },
-      { team_id: teamAId, user_id: playerUserId, role: 'player', battle_tag: 'Player#0001' },
+      {
+        team_id: teamAId,
+        user_id: captainUserId,
+        role: 'player',
+        battle_tag: 'Capt#0001',
+      },
+      {
+        team_id: teamAId,
+        user_id: playerUserId,
+        role: 'player',
+        battle_tag: 'Player#0001',
+      },
     ]);
 
     // Team B (target, joinable)
     const { data: teamB } = await supabaseTestClient!
       .from('teams')
-      .insert({ name: `${PREFIX}-teamB`, captain_id: captainBUserId, is_active: true, is_joinable: true })
+      .insert({
+        name: `${PREFIX}-teamB`,
+        captain_id: captainBUserId,
+        is_active: true,
+        is_joinable: true,
+      })
       .select('id')
       .single();
     teamBId = teamB!.id;
@@ -124,7 +143,9 @@ test.describe('Captain-proposed transfer API', () => {
     expect(body.error).toContain("n'est pas dans ton equipe");
   });
 
-  test('Cannot propose transfer of self via targetPlayerId', async ({ request }) => {
+  test('Cannot propose transfer of self via targetPlayerId', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.post('/api/demandes/transfer', {
       headers: { Authorization: `Bearer ${captainToken}` },
@@ -150,7 +171,10 @@ test.describe('Captain-proposed transfer API', () => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.post('/api/demandes/transfer', {
       headers: { Authorization: `Bearer ${captainToken}` },
-      data: { teamId: '00000000-0000-0000-0000-000000000000', targetPlayerId: playerUserId },
+      data: {
+        teamId: '00000000-0000-0000-0000-000000000000',
+        targetPlayerId: playerUserId,
+      },
     });
     expect(res.status()).toBe(400);
     const body = await res.json();
@@ -186,7 +210,9 @@ test.describe('Captain-proposed transfer API', () => {
     expect(payload.from_team_id).toBe(teamAId);
   });
 
-  test('Cannot create duplicate pending transfer for same player', async ({ request }) => {
+  test('Cannot create duplicate pending transfer for same player', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.post('/api/demandes/transfer', {
       headers: { Authorization: `Bearer ${captainToken}` },
@@ -197,7 +223,9 @@ test.describe('Captain-proposed transfer API', () => {
     expect(body.error).toContain('deja une demande en attente');
   });
 
-  test('Captain B sees the proposed transfer in transfer-requests', async ({ request }) => {
+  test('Captain B sees the proposed transfer in transfer-requests', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.get('/api/teams/transfer-requests', {
       headers: { Authorization: `Bearer ${captainBToken}` },
@@ -207,7 +235,8 @@ test.describe('Captain-proposed transfer API', () => {
     expect(body.demandes.length).toBeGreaterThanOrEqual(1);
 
     const transfer = body.demandes.find(
-      (d: { payload: { proposed_by_captain?: boolean } }) => d.payload?.proposed_by_captain
+      (d: { payload: { proposed_by_captain?: boolean } }) =>
+        d.payload?.proposed_by_captain
     );
     expect(transfer).toBeTruthy();
     expect(transfer.payload.from_team_name).toContain(`${PREFIX}-teamA`);

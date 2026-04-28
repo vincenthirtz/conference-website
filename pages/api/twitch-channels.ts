@@ -14,16 +14,17 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'twitch-channels')) return;
+  if (
+    applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'twitch-channels')
+  )
+    return;
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   if (!supabaseAdmin) {
-    return res
-      .status(500)
-      .json({ error: 'Database service unavailable.' });
+    return res.status(500).json({ error: 'Database service unavailable.' });
   }
 
   try {
@@ -36,9 +37,7 @@ export default async function handler(
 
     if (error) {
       console.error('[/api/twitch-channels] fetch error', error);
-      return res
-        .status(500)
-        .json({ error: 'Failed to load channels.' });
+      return res.status(500).json({ error: 'Failed to load channels.' });
     }
 
     const items: TwitchChannelPublic[] = (data || []).map((row) => ({

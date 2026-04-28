@@ -268,7 +268,9 @@ function AdminSwissStagePage({ staff }: StaffProps) {
       setPreviewRound(null);
       fetchSwissData();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur lors de la generation de la ronde');
+      setErrorMsg(
+        (err as Error)?.message ?? 'Erreur lors de la generation de la ronde'
+      );
     } finally {
       setLoadingGenerate(false);
     }
@@ -276,10 +278,7 @@ function AdminSwissStagePage({ staff }: StaffProps) {
 
   function handleExportCsv() {
     if (!stageId) return;
-    window.open(
-      `/api/admin/stages/${stageId}/standings?export=csv`,
-      '_blank'
-    );
+    window.open(`/api/admin/stages/${stageId}/standings?export=csv`, '_blank');
   }
 
   const backStageUrl = `/admin/stages/${stageId}`;
@@ -396,7 +395,8 @@ function AdminSwissStagePage({ staff }: StaffProps) {
                   Apercu — Ronde #{previewRound ?? '?'}
                 </h3>
                 <p className="text-xs text-neutral-400 mt-0.5">
-                  {preview.length} match{preview.length > 1 ? 'es' : ''} proposes
+                  {preview.length} match{preview.length > 1 ? 'es' : ''}{' '}
+                  proposes
                   {previewHasRematches && (
                     <span className="ml-2 text-amber-400 font-medium">
                       (contient des rematches)

@@ -27,8 +27,20 @@ type Conflict = {
   type: 'team_overlap';
   team_id: string;
   team_name: string;
-  match_a: { id: string; scheduled_at: string; estimated_end: string; stage_name: string | null; round_number: number | null };
-  match_b: { id: string; scheduled_at: string; estimated_end: string; stage_name: string | null; round_number: number | null };
+  match_a: {
+    id: string;
+    scheduled_at: string;
+    estimated_end: string;
+    stage_name: string | null;
+    round_number: number | null;
+  };
+  match_b: {
+    id: string;
+    scheduled_at: string;
+    estimated_end: string;
+    stage_name: string | null;
+    round_number: number | null;
+  };
   overlap_minutes: number;
 };
 
@@ -70,7 +82,8 @@ async function handler(
     // Fetch all scheduled, non-cancelled, non-bye matches with team names
     const { data: matchesData, error: mErr } = await supabaseAdmin
       .from('matches')
-      .select(`
+      .select(
+        `
         id,
         stage_id,
         round_number,
@@ -82,7 +95,8 @@ async function handler(
         status,
         team1:teams!matches_team1_id_fkey(name),
         team2:teams!matches_team2_id_fkey(name)
-      `)
+      `
+      )
       .eq('tournament_id', tournamentId)
       .neq('status', 'cancelled')
       .not('scheduled_at', 'is', null);
@@ -149,7 +163,11 @@ async function handler(
       if (tMatches.length < 2) continue;
 
       // Sort by scheduled_at
-      tMatches.sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
+      tMatches.sort(
+        (a, b) =>
+          new Date(a.scheduled_at).getTime() -
+          new Date(b.scheduled_at).getTime()
+      );
 
       for (let i = 0; i < tMatches.length; i++) {
         for (let j = i + 1; j < tMatches.length; j++) {
@@ -167,9 +185,10 @@ async function handler(
             seenPairs.add(conflictKey);
 
             const overlapMs = aEnd - bStart;
-            const teamName = a.team1_id === teamId
-              ? (a.team1_name ?? teamId)
-              : (a.team2_name ?? teamId);
+            const teamName =
+              a.team1_id === teamId
+                ? (a.team1_name ?? teamId)
+                : (a.team2_name ?? teamId);
 
             conflicts.push({
               type: 'team_overlap',

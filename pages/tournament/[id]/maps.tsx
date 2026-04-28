@@ -1,5 +1,5 @@
 // pages/tournament/[id]/maps.tsx
- 
+
 import { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -178,7 +178,11 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   };
 };
 
-export default function TournamentMapsPage({ tournament, maps, hasVetoData }: Props) {
+export default function TournamentMapsPage({
+  tournament,
+  maps,
+  hasVetoData,
+}: Props) {
   const dateRangeLabel = formatTournamentDates(
     tournament.start_date,
     tournament.end_date
@@ -298,11 +302,14 @@ export default function TournamentMapsPage({ tournament, maps, hasVetoData }: Pr
                     <StatCard
                       label="Map la + bannie"
                       value={
-                        [...maps].sort((a, b) => b.timesBanned - a.timesBanned)[0]
-                          ?.mapName || '—'
+                        [...maps].sort(
+                          (a, b) => b.timesBanned - a.timesBanned
+                        )[0]?.mapName || '—'
                       }
                       hint={
-                        [...maps].sort((a, b) => b.timesBanned - a.timesBanned)[0]
+                        [...maps].sort(
+                          (a, b) => b.timesBanned - a.timesBanned
+                        )[0]
                           ? `${[...maps].sort((a, b) => b.timesBanned - a.timesBanned)[0].timesBanned} bans`
                           : undefined
                       }
@@ -382,13 +389,17 @@ export default function TournamentMapsPage({ tournament, maps, hasVetoData }: Pr
                         {hasVetoData && (
                           <>
                             <td className="py-1.5 px-3 text-right">
-                              <span className="text-red-300">{m.timesBanned}</span>
+                              <span className="text-red-300">
+                                {m.timesBanned}
+                              </span>
                               <span className="text-[10px] text-gray-500 ml-1">
                                 ({(m.banRate * 100).toFixed(0)}%)
                               </span>
                             </td>
                             <td className="py-1.5 px-3 text-right">
-                              <span className="text-emerald-300">{m.timesPicked}</span>
+                              <span className="text-emerald-300">
+                                {m.timesPicked}
+                              </span>
                               {m.timesDecider > 0 && (
                                 <span className="text-[10px] text-yellow-400 ml-1">
                                   +{m.timesDecider}d
@@ -402,7 +413,9 @@ export default function TournamentMapsPage({ tournament, maps, hasVetoData }: Pr
                             <div className="flex flex-col items-end gap-0.5">
                               {m.teamWinrates.slice(0, 3).map((tw) => (
                                 <span key={tw.teamId} className="text-[10px]">
-                                  <span className="text-gray-400">{tw.teamName}</span>{' '}
+                                  <span className="text-gray-400">
+                                    {tw.teamName}
+                                  </span>{' '}
                                   <span
                                     className={
                                       tw.winrate >= 0.5
@@ -494,7 +507,11 @@ function computeMapStats(
         [loserId, false],
       ] as [string | null, boolean][]) {
         if (!teamId) continue;
-        const ta = mapTeams.get(teamId) || { gamesPlayed: 0, wins: 0, losses: 0 };
+        const ta = mapTeams.get(teamId) || {
+          gamesPlayed: 0,
+          wins: 0,
+          losses: 0,
+        };
         ta.gamesPlayed += 1;
         if (isWin) ta.wins += 1;
         else ta.losses += 1;

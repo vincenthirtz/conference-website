@@ -136,9 +136,7 @@ export default function ManageTeamPage() {
         prev ? { ...prev, is_joinable: data.is_joinable } : prev
       );
       showSuccess(
-        data.is_joinable
-          ? 'Recrutement ouvert'
-          : 'Recrutement ferme'
+        data.is_joinable ? 'Recrutement ouvert' : 'Recrutement ferme'
       );
     } catch (err: unknown) {
       setError((err as Error).message);
@@ -226,9 +224,7 @@ export default function ManageTeamPage() {
       if (action === 'approve') {
         await loadData(t);
       }
-      showSuccess(
-        action === 'approve' ? 'Joueur accepte' : 'Demande rejetee'
-      );
+      showSuccess(action === 'approve' ? 'Joueur accepte' : 'Demande rejetee');
     } catch (err: unknown) {
       setError((err as Error).message);
     } finally {
@@ -376,9 +372,7 @@ export default function ManageTeamPage() {
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <select
                         value={m.role || 'player'}
-                        onChange={(e) =>
-                          handleUpdateRole(m.id, e.target.value)
-                        }
+                        onChange={(e) => handleUpdateRole(m.id, e.target.value)}
                         disabled={!!actionLoading}
                         className="bg-black/60 border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-purple-400"
                       >
@@ -437,8 +431,7 @@ export default function ManageTeamPage() {
                     req.user?.email?.split('@')[0] ||
                     'Joueur';
                   const btag =
-                    req.user?.battle_tag ||
-                    req.payload?.user_battle_tag;
+                    req.user?.battle_tag || req.payload?.user_battle_tag;
                   const role = req.payload?.desired_role || 'player';
 
                   return (
@@ -470,23 +463,15 @@ export default function ManageTeamPage() {
                         </div>
                         <div className="flex gap-2 flex-shrink-0">
                           <button
-                            onClick={() =>
-                              handleJoinAction(req.id, 'approve')
-                            }
-                            disabled={
-                              actionLoading === `join-${req.id}`
-                            }
+                            onClick={() => handleJoinAction(req.id, 'approve')}
+                            disabled={actionLoading === `join-${req.id}`}
                             className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold transition disabled:opacity-50"
                           >
                             Accepter
                           </button>
                           <button
-                            onClick={() =>
-                              handleJoinAction(req.id, 'reject')
-                            }
-                            disabled={
-                              actionLoading === `join-${req.id}`
-                            }
+                            onClick={() => handleJoinAction(req.id, 'reject')}
+                            disabled={actionLoading === `join-${req.id}`}
                             className="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-xs font-semibold transition disabled:opacity-50"
                           >
                             Refuser

@@ -11,9 +11,15 @@ test.describe('Page partenaires publique', () => {
     await page.goto('/partenaires');
 
     // Vérifier que les trois catégories sont présentes
-    await expect(page.getByText('Super partenaire')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText('Partenaire majeur')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText('Partenaire culturel')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Super partenaire')).toBeVisible({
+      timeout: 5000,
+    });
+    await expect(page.getByText('Partenaire majeur')).toBeVisible({
+      timeout: 5000,
+    });
+    await expect(page.getByText('Partenaire culturel')).toBeVisible({
+      timeout: 5000,
+    });
   });
 
   test('Le bouton Devenir partenaire est présent', async ({ page }) => {
@@ -24,7 +30,9 @@ test.describe('Page partenaires publique', () => {
     await expect(link).toHaveAttribute('href', '/partenaires/demande');
   });
 
-  test('Les liens Rejoindre le programme pointent vers le formulaire', async ({ page }) => {
+  test('Les liens Rejoindre le programme pointent vers le formulaire', async ({
+    page,
+  }) => {
     await page.goto('/partenaires');
 
     const links = page.getByRole('link', { name: /rejoindre le programme/i });
@@ -51,7 +59,9 @@ test.describe('Formulaire de demande de partenariat', () => {
     await expect(page.getByPlaceholder('Prénom Nom')).toBeVisible();
     await expect(page.getByPlaceholder('contact@entreprise.com')).toBeVisible();
     await expect(page.locator('select').first()).toBeVisible(); // Catégorie
-    await expect(page.getByPlaceholder(/présentez votre entreprise/i)).toBeVisible();
+    await expect(
+      page.getByPlaceholder(/présentez votre entreprise/i)
+    ).toBeVisible();
   });
 
   test('Validation du formulaire - champs requis', async ({ page }) => {
@@ -67,7 +77,9 @@ test.describe('Formulaire de demande de partenariat', () => {
   test('Le lien retour vers partenaires fonctionne', async ({ page }) => {
     await page.goto('/partenaires/demande');
 
-    const backLink = page.getByRole('link', { name: /retour aux partenaires/i });
+    const backLink = page.getByRole('link', {
+      name: /retour aux partenaires/i,
+    });
     await expect(backLink).toBeVisible();
     await backLink.click();
 
@@ -106,7 +118,9 @@ test.describe('Admin partners pages (sans auth)', () => {
     ).toBeTruthy();
   });
 
-  test('GET /admin/partnership-requests redirige vers login', async ({ page }) => {
+  test('GET /admin/partnership-requests redirige vers login', async ({
+    page,
+  }) => {
     await page.goto('/admin/partnership-requests');
     await page.waitForTimeout(1000);
 

@@ -1,7 +1,11 @@
 // components/admin/bracket/MatchCard.tsx
 // Match card for the planning view in bracket-builder
 
-import { formatTime, isoToLocalInput, localInputToIso } from '@/utils/dateFormatters';
+import {
+  formatTime,
+  isoToLocalInput,
+  localInputToIso,
+} from '@/utils/dateFormatters';
 import { STATUS_CONFIG } from '@/utils/statusConfig';
 import SeedSlot from './SeedSlot';
 import { parseNotes } from './types';
@@ -14,7 +18,11 @@ type MatchCardProps = {
   onScheduleChange: (id: string, value: string) => void;
   onDragStart: (e: React.DragEvent<HTMLDivElement>, p: DragPayload) => void;
   onDragOverSlot: (e: React.DragEvent<HTMLDivElement>) => void;
-  onDropOnSlot: (e: React.DragEvent<HTMLDivElement>, id: string, slot: 1 | 2) => void;
+  onDropOnSlot: (
+    e: React.DragEvent<HTMLDivElement>,
+    id: string,
+    slot: 1 | 2
+  ) => void;
   onClearSlot: (id: string, slot: 1 | 2) => void;
   availableTeams: TournamentTeam[];
   onAssignTeam: (matchId: string, slot: 1 | 2, team: TournamentTeam) => void;
@@ -106,7 +114,9 @@ export default function MatchCard({
             seed={info?.seed1 ?? null}
             team={match.team1}
             teamId={match.team1_id}
-            isWinner={!!match.winner_team_id && match.winner_team_id === match.team1_id}
+            isWinner={
+              !!match.winner_team_id && match.winner_team_id === match.team1_id
+            }
             isTBD={!!isTBD}
             onDragStart={onDragStart}
             onDragOverSlot={onDragOverSlot}
@@ -131,7 +141,9 @@ export default function MatchCard({
             seed={info?.seed2 ?? null}
             team={match.team2}
             teamId={match.team2_id}
-            isWinner={!!match.winner_team_id && match.winner_team_id === match.team2_id}
+            isWinner={
+              !!match.winner_team_id && match.winner_team_id === match.team2_id
+            }
             isTBD={!!isTBD}
             onDragStart={onDragStart}
             onDragOverSlot={onDragOverSlot}
@@ -145,13 +157,25 @@ export default function MatchCard({
         {/* Venue */}
         {info?.venue && (
           <div className="mt-2.5 flex items-center gap-1.5 text-[10px] text-neutral-500">
-            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" className="opacity-50">
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 16 16"
+              fill="none"
+              className="opacity-50"
+            >
               <path
                 d="M8 1.5C5.5 1.5 3.5 3.5 3.5 6c0 3.5 4.5 8.5 4.5 8.5s4.5-5 4.5-8.5c0-2.5-2-4.5-4.5-4.5z"
                 stroke="currentColor"
                 strokeWidth="1.2"
               />
-              <circle cx="8" cy="6" r="1.5" stroke="currentColor" strokeWidth="1.2" />
+              <circle
+                cx="8"
+                cy="6"
+                r="1.5"
+                stroke="currentColor"
+                strokeWidth="1.2"
+              />
             </svg>
             {info.venue}
           </div>

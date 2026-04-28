@@ -153,7 +153,9 @@ export default function DefaultSeo({
       <meta name="twitter:title" content={metaTitle} />
       <meta name="twitter:description" content={metaDescription} />
       {ogImage && <meta name="twitter:image" content={ogImage} />}
-      {ogImage && <meta name="twitter:image:alt" content={title || SITE_NAME} />}
+      {ogImage && (
+        <meta name="twitter:image:alt" content={title || SITE_NAME} />
+      )}
 
       {/* Theme and favicon */}
       <meta name="theme-color" content="#0E0A1F" />

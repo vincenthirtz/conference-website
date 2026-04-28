@@ -41,7 +41,15 @@ async function handler(
   res: NextApiResponse<ListResponse | UpdateResponse | { error: string }>,
   ctx: StaffContext
 ) {
-  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-users-manage')) return;
+  if (
+    applyRateLimit(
+      req,
+      res,
+      { max: 60, windowMs: 60_000 },
+      'admin-users-manage'
+    )
+  )
+    return;
   if (!supabaseAdmin) {
     return res.status(503).json({ error: 'Service unavailable.' });
   }
@@ -58,24 +66,25 @@ async function handler(
 
     if (error) {
       console.error('[admin/users/manage] list error:', error);
-      return res
-        .status(500)
-        .json({ error: 'Failed to load users.' });
+      return res.status(500).json({ error: 'Failed to load users.' });
     }
 
     const items =
-      data?.users
-        ?.map((u) => ({
-          id: u.id,
-          email: u.email ?? null,
-          role: ((u.user_metadata as any)?.role as string | null)?.toLowerCase() ?? null,
-          display_name: (u.user_metadata as any)?.display_name ?? null,
-          created_at: u.created_at ?? null,
-        })) ?? [];
+      data?.users?.map((u) => ({
+        id: u.id,
+        email: u.email ?? null,
+        role:
+          ((u.user_metadata as any)?.role as string | null)?.toLowerCase() ??
+          null,
+        display_name: (u.user_metadata as any)?.display_name ?? null,
+        created_at: u.created_at ?? null,
+      })) ?? [];
 
     // Auto-fix roles with wrong casing in user_metadata
     for (const item of items) {
-      const raw = (data?.users?.find((u) => u.id === item.id)?.user_metadata as any)?.role;
+      const raw = (
+        data?.users?.find((u) => u.id === item.id)?.user_metadata as any
+      )?.role;
       if (typeof raw === 'string' && raw !== raw.toLowerCase()) {
         await supabaseAdmin.auth.admin.updateUserById(item.id, {
           user_metadata: { role: raw.toLowerCase() },
@@ -90,13 +99,15 @@ async function handler(
       // Fetch team memberships with battle_tag
       const { data: teamMembers, error: tmErr } = await supabaseAdmin
         .from('team_members')
-        .select(`
+        .select(
+          `
           user_id,
           team_id,
           role,
           battle_tag,
           team:teams ( id, name )
-        `)
+        `
+        )
         .in('user_id', userIds);
 
       if (!tmErr && teamMembers) {
@@ -124,8 +135,8 @@ async function handler(
       .filter((u) => {
         if (!search || Array.isArray(search)) return true;
         const term = search.toLowerCase();
-        const battleTagMatch = u.team_memberships?.some(
-          (tm) => (tm.battle_tag || '').toLowerCase().includes(term)
+        const battleTagMatch = u.team_memberships?.some((tm) =>
+          (tm.battle_tag || '').toLowerCase().includes(term)
         );
         return (
           (u.email || '').toLowerCase().includes(term) ||
@@ -151,10 +162,10 @@ async function handler(
       }
 
       const newPassword = generatePassword(16);
-      const { error: updateErr } = await supabaseAdmin.auth.admin.updateUserById(
-        userId,
-        { password: newPassword }
-      );
+      const { error: updateErr } =
+        await supabaseAdmin.auth.admin.updateUserById(userId, {
+          password: newPassword,
+        });
 
       if (updateErr) {
         console.error('[admin/users/manage] reset password error:', updateErr);
@@ -165,7 +176,10 @@ async function handler(
       if (email) {
         const emailResult = await sendWelcomeEmail(email, newPassword);
         if (!emailResult.success) {
-          console.error('[admin/users/manage] email failed:', emailResult.error);
+          console.error(
+            '[admin/users/manage] email failed:',
+            emailResult.error
+          );
           return res.status(200).json({
             success: true,
             warning: `Mot de passe réinitialisé mais l'email n'a pas pu être envoyé : ${emailResult.error}`,
@@ -196,7 +210,10 @@ async function handler(
         .eq('team_id', teamId);
 
       if (updateErr) {
-        console.error('[admin/users/manage] battle_tag update error:', updateErr);
+        console.error(
+          '[admin/users/manage] battle_tag update error:',
+          updateErr
+        );
         return res.status(500).json({ error: 'Failed to update BattleTag.' });
       }
 
@@ -204,7 +221,11 @@ async function handler(
     }
 
     // Handle display_name update
-    if (userId && typeof req.body.display_name === 'string' && role === undefined) {
+    if (
+      userId &&
+      typeof req.body.display_name === 'string' &&
+      role === undefined
+    ) {
       const { data: target, error: targetErr } =
         await supabaseAdmin.auth.admin.getUserById(userId);
       if (targetErr || !target?.user) {
@@ -214,12 +235,19 @@ async function handler(
       const existingMeta = (target.user.user_metadata as any) || {};
       const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
         userId,
-        { user_metadata: { ...existingMeta, display_name: req.body.display_name.trim() || null } }
+        {
+          user_metadata: {
+            ...existingMeta,
+            display_name: req.body.display_name.trim() || null,
+          },
+        }
       );
 
       if (error || !data?.user) {
         console.error('[admin/users/manage] display_name update error:', error);
-        return res.status(500).json({ error: 'Failed to update display name.' });
+        return res
+          .status(500)
+          .json({ error: 'Failed to update display name.' });
       }
 
       // Sync staff display_name if exists
@@ -295,9 +323,7 @@ async function handler(
 
     if (error || !data?.user) {
       console.error('[admin/users/manage] update error:', error);
-      return res
-        .status(500)
-        .json({ error: 'Failed to update user.' });
+      return res.status(500).json({ error: 'Failed to update user.' });
     }
 
     // Synchroniser la table staff selon le rôle
@@ -327,10 +353,7 @@ async function handler(
       }
     } else if (existingStaff?.id) {
       // Supprimer l'entrée staff si le rôle n'est plus un rôle staff
-      await supabaseAdmin
-        .from('staff')
-        .delete()
-        .eq('auth_user_id', userId);
+      await supabaseAdmin.from('staff').delete().eq('auth_user_id', userId);
     }
 
     const u = data.user;
@@ -382,16 +405,10 @@ async function handler(
     }
 
     // Remove team memberships
-    await supabaseAdmin
-      .from('team_members')
-      .delete()
-      .eq('user_id', userId);
+    await supabaseAdmin.from('team_members').delete().eq('user_id', userId);
 
     // Remove staff entry if exists
-    await supabaseAdmin
-      .from('staff')
-      .delete()
-      .eq('auth_user_id', userId);
+    await supabaseAdmin.from('staff').delete().eq('auth_user_id', userId);
 
     // Send account deleted email before deleting (non-blocking)
     const deletedEmail = target.user.email;

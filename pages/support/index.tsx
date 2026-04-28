@@ -8,7 +8,11 @@ import Head from 'next/head';
 type Category = 'dispute' | 'behavior' | 'technical' | 'other';
 type Severity = 'low' | 'medium' | 'high';
 
-const CATEGORY_OPTIONS: { value: Category; label: string; description: string }[] = [
+const CATEGORY_OPTIONS: {
+  value: Category;
+  label: string;
+  description: string;
+}[] = [
   {
     value: 'dispute',
     label: 'Litige / Contestation',
@@ -17,7 +21,8 @@ const CATEGORY_OPTIONS: { value: Category; label: string; description: string }[
   {
     value: 'behavior',
     label: 'Comportement / Safety',
-    description: 'Toxicité, harcèlement, comportement inapproprié, propos déplacés...',
+    description:
+      'Toxicité, harcèlement, comportement inapproprié, propos déplacés...',
   },
   {
     value: 'technical',
@@ -38,7 +43,12 @@ const SEVERITY_OPTIONS: {
   color: string;
 }[] = [
   { value: 'low', label: 'Basse', hint: 'Pas urgent', color: 'blue' },
-  { value: 'medium', label: 'Moyenne', hint: 'À traiter sous 24-48h', color: 'amber' },
+  {
+    value: 'medium',
+    label: 'Moyenne',
+    hint: 'À traiter sous 24-48h',
+    color: 'amber',
+  },
   {
     value: 'high',
     label: 'Haute',
@@ -117,8 +127,8 @@ export default function SupportPage() {
               Signalement / Support
             </h1>
             <p className="text-neutral-400 mt-2 max-w-lg mx-auto">
-              Litige, comportement inapproprié, problème technique : signalez-le ici.
-              Vous pouvez rester anonyme.
+              Litige, comportement inapproprié, problème technique : signalez-le
+              ici. Vous pouvez rester anonyme.
             </p>
           </div>
 
@@ -349,7 +359,8 @@ export default function SupportPage() {
               </button>
 
               <p className="text-xs text-neutral-500 text-center">
-                Pour toute urgence immédiate, contactez aussi la modération sur Discord.
+                Pour toute urgence immédiate, contactez aussi la modération sur
+                Discord.
               </p>
             </form>
           )}

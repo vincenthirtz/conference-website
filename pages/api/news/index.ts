@@ -45,9 +45,7 @@ export default async function handler(
 
   if (error) {
     console.error('[news] public list error', error);
-    return res
-      .status(500)
-      .json({ error: 'Failed to load news.' });
+    return res.status(500).json({ error: 'Failed to load news.' });
   }
 
   const items =
@@ -65,6 +63,9 @@ export default async function handler(
       commentsCount: row.news_comments?.[0]?.count ?? 0,
     })) ?? [];
 
-  res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=120');
+  res.setHeader(
+    'Cache-Control',
+    'public, s-maxage=300, stale-while-revalidate=120'
+  );
   return res.status(200).json({ items });
 }

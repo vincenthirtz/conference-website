@@ -38,9 +38,12 @@ const advancementRulesSchema = z
     target_stage_id: z.string().uuid(),
     seed_by: z.enum(['standings', 'manual', 'none']).optional(),
   })
-  .refine((v) => v.advance_top !== undefined || v.advance_per_group !== undefined, {
-    message: 'advance_top or advance_per_group is required',
-  })
+  .refine(
+    (v) => v.advance_top !== undefined || v.advance_per_group !== undefined,
+    {
+      message: 'advance_top or advance_per_group is required',
+    }
+  )
   .optional();
 
 /** Swiss */

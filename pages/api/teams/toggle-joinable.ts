@@ -14,7 +14,10 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (applyRateLimit(req, res, { max: 10, windowMs: 60_000 }, 'toggle-joinable')) return;
+  if (
+    applyRateLimit(req, res, { max: 10, windowMs: 60_000 }, 'toggle-joinable')
+  )
+    return;
   if (!supabaseAdmin) {
     return res.status(503).json({ error: 'Service unavailable.' });
   }
@@ -48,7 +51,9 @@ export default async function handler(
     .maybeSingle();
 
   if (teamErr || !team) {
-    return res.status(403).json({ error: 'Tu dois etre capitaine d\'une equipe active.' });
+    return res
+      .status(403)
+      .json({ error: "Tu dois etre capitaine d'une equipe active." });
   }
 
   const { joinable } = req.body || {};

@@ -19,12 +19,16 @@ test.describe('Admin API protection', () => {
   ];
 
   for (const endpoint of stageEndpoints) {
-    test(`${endpoint.method} ${endpoint.path} returns 401 or 403 without auth`, async ({ request }) => {
+    test(`${endpoint.method} ${endpoint.path} returns 401 or 403 without auth`, async ({
+      request,
+    }) => {
       const response = await request.get(endpoint.path);
       expect([401, 403]).toContain(response.status());
     });
 
-    test(`${endpoint.method} ${endpoint.path} returns 401 or 403 with invalid token`, async ({ request }) => {
+    test(`${endpoint.method} ${endpoint.path} returns 401 or 403 with invalid token`, async ({
+      request,
+    }) => {
       const response = await request.get(endpoint.path, {
         headers: {
           Authorization: 'Bearer invalid_token_xyz123',
@@ -41,12 +45,16 @@ test.describe('Admin API protection', () => {
   ];
 
   for (const endpoint of endpoints401) {
-    test(`${endpoint.method} ${endpoint.path} returns 401 without auth`, async ({ request }) => {
+    test(`${endpoint.method} ${endpoint.path} returns 401 without auth`, async ({
+      request,
+    }) => {
       const response = await request.get(endpoint.path);
       expect(response.status()).toBe(401);
     });
 
-    test(`${endpoint.method} ${endpoint.path} returns 401 with invalid token`, async ({ request }) => {
+    test(`${endpoint.method} ${endpoint.path} returns 401 with invalid token`, async ({
+      request,
+    }) => {
       const response = await request.get(endpoint.path, {
         headers: {
           Authorization: 'Bearer invalid_token_xyz123',
@@ -57,12 +65,16 @@ test.describe('Admin API protection', () => {
   }
 
   for (const endpoint of endpoints403) {
-    test(`${endpoint.method} ${endpoint.path} returns 403 without auth`, async ({ request }) => {
+    test(`${endpoint.method} ${endpoint.path} returns 403 without auth`, async ({
+      request,
+    }) => {
       const response = await request.get(endpoint.path);
       expect(response.status()).toBe(403);
     });
 
-    test(`${endpoint.method} ${endpoint.path} returns 403 with invalid token`, async ({ request }) => {
+    test(`${endpoint.method} ${endpoint.path} returns 403 with invalid token`, async ({
+      request,
+    }) => {
       const response = await request.get(endpoint.path, {
         headers: {
           Authorization: 'Bearer invalid_token_xyz123',
@@ -79,14 +91,18 @@ test.describe('Admin API protection', () => {
     expect(response.status()).toBe(403);
   });
 
-  test('POST /api/admin/announcements returns 403 without auth', async ({ request }) => {
+  test('POST /api/admin/announcements returns 403 without auth', async ({
+    request,
+  }) => {
     const response = await request.post('/api/admin/announcements', {
       data: { title: 'Test', message: 'Test announcement' },
     });
     expect(response.status()).toBe(403);
   });
 
-  test('PATCH /api/admin/users/manage returns 401 without auth', async ({ request }) => {
+  test('PATCH /api/admin/users/manage returns 401 without auth', async ({
+    request,
+  }) => {
     const response = await request.patch('/api/admin/users/manage', {
       data: { userId: 'test-id', role: 'player' },
     });

@@ -49,7 +49,11 @@ test.describe('Scrim response API (/api/teams/scrim-requests)', () => {
     // Team A
     const { data: teamA } = await supabaseTestClient!
       .from('teams')
-      .insert({ name: `${PREFIX}-teamA`, captain_id: captainAUserId, is_active: true })
+      .insert({
+        name: `${PREFIX}-teamA`,
+        captain_id: captainAUserId,
+        is_active: true,
+      })
       .select('id')
       .single();
     teamAId = teamA!.id;
@@ -64,7 +68,11 @@ test.describe('Scrim response API (/api/teams/scrim-requests)', () => {
     // Team B
     const { data: teamB } = await supabaseTestClient!
       .from('teams')
-      .insert({ name: `${PREFIX}-teamB`, captain_id: captainBUserId, is_active: true })
+      .insert({
+        name: `${PREFIX}-teamB`,
+        captain_id: captainBUserId,
+        is_active: true,
+      })
       .select('id')
       .single();
     teamBId = teamB!.id;
@@ -107,7 +115,11 @@ test.describe('Scrim response API (/api/teams/scrim-requests)', () => {
     }
     // Also clean notification demandes
     if (teamBId) {
-      await supabaseTestClient!.from('demandes').delete().eq('team_id', teamBId).eq('type', 'other');
+      await supabaseTestClient!
+        .from('demandes')
+        .delete()
+        .eq('team_id', teamBId)
+        .eq('type', 'other');
     }
     await deleteTeamsByName([`${PREFIX}%`]);
     for (const email of [CAPTAIN_A_EMAIL, CAPTAIN_B_EMAIL]) {
@@ -148,20 +160,26 @@ test.describe('Scrim response API (/api/teams/scrim-requests)', () => {
     expect(Array.isArray(body.demandes)).toBe(true);
     expect(body.demandes.length).toBeGreaterThanOrEqual(1);
 
-    const scrim = body.demandes.find((d: { id: string }) => d.id === scrimDemandeId);
+    const scrim = body.demandes.find(
+      (d: { id: string }) => d.id === scrimDemandeId
+    );
     expect(scrim).toBeTruthy();
     expect(scrim.payload.from_team_name).toContain(`${PREFIX}-teamA`);
     expect(scrim.comment).toBe('Scrim ce soir ?');
   });
 
-  test('Captain A sees no pending scrims (sender, not target)', async ({ request }) => {
+  test('Captain A sees no pending scrims (sender, not target)', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.get('/api/teams/scrim-requests', {
       headers: { Authorization: `Bearer ${captainAToken}` },
     });
     expect(res.status()).toBe(200);
     const body = await res.json();
-    const scrim = (body.demandes || []).find((d: { id: string }) => d.id === scrimDemandeId);
+    const scrim = (body.demandes || []).find(
+      (d: { id: string }) => d.id === scrimDemandeId
+    );
     expect(scrim).toBeFalsy();
   });
 
@@ -189,7 +207,10 @@ test.describe('Scrim response API (/api/teams/scrim-requests)', () => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.post('/api/teams/scrim-requests', {
       headers: { Authorization: `Bearer ${captainBToken}` },
-      data: { demandeId: '00000000-0000-0000-0000-000000000000', action: 'approve' },
+      data: {
+        demandeId: '00000000-0000-0000-0000-000000000000',
+        action: 'approve',
+      },
     });
     expect(res.status()).toBe(404);
   });
@@ -219,7 +240,9 @@ test.describe('Scrim response API (/api/teams/scrim-requests)', () => {
     expect(data!.status).toBe('approved');
   });
 
-  test('Admin notification demande was created on approval', async ({ request }) => {
+  test('Admin notification demande was created on approval', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const { data } = await supabaseTestClient!
       .from('demandes')

@@ -96,9 +96,7 @@ export default function MatchTimeline({ matchId }: Props) {
   }
 
   if (error) {
-    return (
-      <div className="text-xs text-red-400 py-3">{error}</div>
-    );
+    return <div className="text-xs text-red-400 py-3">{error}</div>;
   }
 
   if (logs.length === 0) {
@@ -128,7 +126,11 @@ export default function MatchTimeline({ matchId }: Props) {
             </p>
             <div className="flex items-center gap-2 mt-0.5 text-[11px]">
               {log.staff?.display_name && (
-                <span className={ROLE_COLORS[log.staff.role ?? ''] ?? 'text-neutral-400'}>
+                <span
+                  className={
+                    ROLE_COLORS[log.staff.role ?? ''] ?? 'text-neutral-400'
+                  }
+                >
                   {log.staff.display_name}
                 </span>
               )}

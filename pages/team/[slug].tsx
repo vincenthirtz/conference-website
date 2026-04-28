@@ -92,7 +92,9 @@ type TeamPageProps = {
   recentMatches: RecentMatch[];
 };
 
-export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (ctx) => {
+export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
+  ctx
+) => {
   const slug = ctx.params?.slug as string;
   if (!slug) {
     return { notFound: true };
@@ -172,11 +174,13 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (ctx)
   // Try tournament_registrations
   const { data: registrations } = await supabaseAdmin
     .from('tournament_registrations')
-    .select(`
+    .select(
+      `
       tournament:tournaments (
         id, name, slug, game, status, start_date, end_date, logo_url
       )
-    `)
+    `
+    )
     .eq('team_id', teamId);
 
   if (registrations) {
@@ -191,11 +195,13 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (ctx)
   // Try tournament_teams
   const { data: tournamentTeams } = await supabaseAdmin
     .from('tournament_teams')
-    .select(`
+    .select(
+      `
       tournament:tournaments (
         id, name, slug, game, status, start_date, end_date, logo_url
       )
-    `)
+    `
+    )
     .eq('team_id', teamId);
 
   if (tournamentTeams) {
@@ -210,13 +216,15 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (ctx)
   // Try stage_teams
   const { data: stageTeams } = await supabaseAdmin
     .from('stage_teams')
-    .select(`
+    .select(
+      `
       stage:tournament_stages (
         tournament:tournaments (
           id, name, slug, game, status, start_date, end_date, logo_url
         )
       )
-    `)
+    `
+    )
     .eq('team_id', teamId);
 
   if (stageTeams) {
@@ -232,7 +240,9 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (ctx)
   // 4) Fetch match stats - use winner_team_id for accurate results
   const { data: allMatches } = await supabaseAdmin
     .from('matches')
-    .select('id, status, team1_id, team2_id, team1_score, team2_score, winner_team_id')
+    .select(
+      'id, status, team1_id, team2_id, team1_score, team2_score, winner_team_id'
+    )
     .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
     .in('status', ['finished', 'completed', 'done']);
 
@@ -286,39 +296,47 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (ctx)
     if (m.tournament_id) tournamentIds.add(m.tournament_id);
   });
 
-  const { data: opponentTeams } = opponentIds.size > 0
-    ? await supabaseAdmin
-        .from('teams')
-        .select('id, name, short_name, logo_url')
-        .in('id', Array.from(opponentIds))
-    : { data: [] };
+  const { data: opponentTeams } =
+    opponentIds.size > 0
+      ? await supabaseAdmin
+          .from('teams')
+          .select('id, name, short_name, logo_url')
+          .in('id', Array.from(opponentIds))
+      : { data: [] };
 
-  const { data: tournamentData } = tournamentIds.size > 0
-    ? await supabaseAdmin
-        .from('tournaments')
-        .select('id, name')
-        .in('id', Array.from(tournamentIds))
-    : { data: [] };
+  const { data: tournamentData } =
+    tournamentIds.size > 0
+      ? await supabaseAdmin
+          .from('tournaments')
+          .select('id, name')
+          .in('id', Array.from(tournamentIds))
+      : { data: [] };
 
   const teamsMap = new Map((opponentTeams || []).map((t: any) => [t.id, t]));
-  const tournamentsMap = new Map((tournamentData || []).map((t: any) => [t.id, t]));
+  const tournamentsMap = new Map(
+    (tournamentData || []).map((t: any) => [t.id, t])
+  );
 
-  const recentMatches: RecentMatch[] = (recentMatchesData || []).map((m: any) => {
-    const isTeam1 = m.team1_id === teamId;
-    const opponentId = isTeam1 ? m.team2_id : m.team1_id;
-    return {
-      id: m.id,
-      scheduled_at: m.scheduled_at,
-      status: m.status,
-      team1_score: m.team1_score,
-      team2_score: m.team2_score,
-      winner_team_id: m.winner_team_id,
-      round_name: m.round_name,
-      opponent: opponentId ? teamsMap.get(opponentId) || null : null,
-      tournament: m.tournament_id ? tournamentsMap.get(m.tournament_id) || null : null,
-      isTeam1,
-    };
-  });
+  const recentMatches: RecentMatch[] = (recentMatchesData || []).map(
+    (m: any) => {
+      const isTeam1 = m.team1_id === teamId;
+      const opponentId = isTeam1 ? m.team2_id : m.team1_id;
+      return {
+        id: m.id,
+        scheduled_at: m.scheduled_at,
+        status: m.status,
+        team1_score: m.team1_score,
+        team2_score: m.team2_score,
+        winner_team_id: m.winner_team_id,
+        round_name: m.round_name,
+        opponent: opponentId ? teamsMap.get(opponentId) || null : null,
+        tournament: m.tournament_id
+          ? tournamentsMap.get(m.tournament_id) || null
+          : null,
+        isTeam1,
+      };
+    }
+  );
 
   return {
     props: {
@@ -338,12 +356,16 @@ export default function TeamPage({
   matchStats,
   recentMatches,
 }: TeamPageProps) {
-  const winRate = matchStats.total > 0
-    ? Math.round((matchStats.wins / matchStats.total) * 100)
-    : 0;
+  const winRate =
+    matchStats.total > 0
+      ? Math.round((matchStats.wins / matchStats.total) * 100)
+      : 0;
 
-  const activeTournaments = tournaments.filter(t =>
-    t.status === 'running' || t.status === 'ongoing' || t.status === 'published'
+  const activeTournaments = tournaments.filter(
+    (t) =>
+      t.status === 'running' ||
+      t.status === 'ongoing' ||
+      t.status === 'published'
   );
 
   const hasSocials = team.twitter || team.discord || team.website;
@@ -353,7 +375,10 @@ export default function TeamPage({
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <Head>
         <title>{team.name} | OW Women&apos;s Cup</title>
-        <meta name="description" content={description || `Page de l'équipe ${team.name}`} />
+        <meta
+          name="description"
+          content={description || `Page de l'équipe ${team.name}`}
+        />
       </Head>
 
       {/* Banner */}
@@ -369,7 +394,9 @@ export default function TeamPage({
         </div>
       )}
 
-      <main className={`container mx-auto px-4 max-w-6xl pb-16 ${team.banner_url ? '-mt-20 relative z-10' : 'pt-24'}`}>
+      <main
+        className={`container mx-auto px-4 max-w-6xl pb-16 ${team.banner_url ? '-mt-20 relative z-10' : 'pt-24'}`}
+      >
         {/* Header */}
         <section className="mb-10">
           <div className="flex flex-col md:flex-row md:items-end gap-6">
@@ -419,7 +446,11 @@ export default function TeamPage({
               </Heading>
 
               {description && (
-                <Paragraph typeStyle="body-md" textColor="text-gray-300" className="max-w-2xl whitespace-pre-line">
+                <Paragraph
+                  typeStyle="body-md"
+                  textColor="text-gray-300"
+                  className="max-w-2xl whitespace-pre-line"
+                >
                   {description}
                 </Paragraph>
               )}
@@ -427,19 +458,32 @@ export default function TeamPage({
               {/* Social links */}
               {hasSocials && (
                 <div className="flex flex-wrap gap-3 mt-4">
-                  {team.twitter && safeHref(team.twitter.startsWith('http') ? team.twitter : `https://twitter.com/${team.twitter.replace('@', '')}`) && (
-                    <a
-                      href={safeHref(team.twitter.startsWith('http') ? team.twitter : `https://twitter.com/${team.twitter.replace('@', '')}`)}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:border-blue-400/50 hover:bg-blue-500/10 transition-colors text-xs"
-                    >
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                      </svg>
-                      Twitter
-                    </a>
-                  )}
+                  {team.twitter &&
+                    safeHref(
+                      team.twitter.startsWith('http')
+                        ? team.twitter
+                        : `https://twitter.com/${team.twitter.replace('@', '')}`
+                    ) && (
+                      <a
+                        href={safeHref(
+                          team.twitter.startsWith('http')
+                            ? team.twitter
+                            : `https://twitter.com/${team.twitter.replace('@', '')}`
+                        )}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:border-blue-400/50 hover:bg-blue-500/10 transition-colors text-xs"
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          fill="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                        </svg>
+                        Twitter
+                      </a>
+                    )}
                   {team.discord && safeHref(team.discord) && (
                     <a
                       href={safeHref(team.discord)}
@@ -447,7 +491,11 @@ export default function TeamPage({
                       rel="noreferrer"
                       className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:border-indigo-400/50 hover:bg-indigo-500/10 transition-colors text-xs"
                     >
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <svg
+                        className="w-4 h-4"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                      >
                         <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
                       </svg>
                       Discord
@@ -460,8 +508,18 @@ export default function TeamPage({
                       rel="noreferrer"
                       className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:border-white/30 transition-colors text-xs"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+                        />
                       </svg>
                       Site web
                     </a>
@@ -479,7 +537,11 @@ export default function TeamPage({
                 hint={matchStats.total > 0 ? `${winRate}%` : undefined}
                 color="emerald"
               />
-              <StatCard label="Défaites" value={matchStats.losses} color="red" />
+              <StatCard
+                label="Défaites"
+                value={matchStats.losses}
+                color="red"
+              />
               <StatCard label="Membres" value={members.length} />
             </div>
           </div>
@@ -492,7 +554,9 @@ export default function TeamPage({
             {/* Members */}
             <section className="bg-black/60 border border-white/5 rounded-2xl p-5">
               {(() => {
-                const rosterMembers = members.filter((m: any) => !m.is_substitute);
+                const rosterMembers = members.filter(
+                  (m: any) => !m.is_substitute
+                );
                 const subMembers = members.filter((m: any) => m.is_substitute);
 
                 return (
@@ -502,7 +566,8 @@ export default function TeamPage({
                         Roster
                       </p>
                       <span className="text-xs text-gray-500">
-                        {rosterMembers.length} joueur{rosterMembers.length > 1 ? 's' : ''}
+                        {rosterMembers.length} joueur
+                        {rosterMembers.length > 1 ? 's' : ''}
                       </span>
                     </div>
 
@@ -521,18 +586,34 @@ export default function TeamPage({
                                 : 'bg-white/5 border border-white/10'
                             }`}
                           >
-                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                              member.is_captain
-                                ? 'bg-amber-500/20 border border-amber-500/30'
-                                : 'bg-gradient-to-br from-neutral-700 to-neutral-800'
-                            }`}>
+                            <div
+                              className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                                member.is_captain
+                                  ? 'bg-amber-500/20 border border-amber-500/30'
+                                  : 'bg-gradient-to-br from-neutral-700 to-neutral-800'
+                              }`}
+                            >
                               {member.is_captain ? (
-                                <svg className="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
+                                <svg
+                                  className="w-5 h-5 text-amber-400"
+                                  fill="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
                                   <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
                                 </svg>
                               ) : (
-                                <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                <svg
+                                  className="w-5 h-5 text-neutral-400"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                                  />
                                 </svg>
                               )}
                             </div>
@@ -542,15 +623,23 @@ export default function TeamPage({
                                   {member.battle_tag || 'Membre'}
                                 </p>
                                 {member.is_captain && (
-                                  <svg className="w-4 h-4 text-amber-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                                  <svg
+                                    className="w-4 h-4 text-amber-400 flex-shrink-0"
+                                    fill="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
                                     <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
                                   </svg>
                                 )}
                               </div>
                               <div className="flex items-center gap-2">
-                                <p className="text-xs text-gray-400 capitalize">{member.role}</p>
+                                <p className="text-xs text-gray-400 capitalize">
+                                  {member.role}
+                                </p>
                                 {member.is_captain && (
-                                  <span className="text-[10px] text-amber-400 font-semibold">Capitaine</span>
+                                  <span className="text-[10px] text-amber-400 font-semibold">
+                                    Capitaine
+                                  </span>
                                 )}
                               </div>
                             </div>
@@ -576,15 +665,27 @@ export default function TeamPage({
                               className="flex items-center gap-3 rounded-xl px-4 py-3 bg-white/[0.02] border border-dashed border-white/10"
                             >
                               <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br from-neutral-800 to-neutral-900">
-                                <svg className="w-5 h-5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                <svg
+                                  className="w-5 h-5 text-neutral-500"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+                                  />
                                 </svg>
                               </div>
                               <div className="min-w-0 flex-1">
                                 <p className="text-sm font-semibold text-gray-300 truncate">
                                   {member.battle_tag || 'Membre'}
                                 </p>
-                                <p className="text-xs text-gray-500 capitalize">{member.role}</p>
+                                <p className="text-xs text-gray-500 capitalize">
+                                  {member.role}
+                                </p>
                               </div>
                             </div>
                           ))}
@@ -627,7 +728,8 @@ export default function TeamPage({
                   Tournois
                 </p>
                 <span className="text-xs text-gray-500">
-                  {tournaments.length} tournoi{tournaments.length > 1 ? 's' : ''}
+                  {tournaments.length} tournoi
+                  {tournaments.length > 1 ? 's' : ''}
                 </span>
               </div>
 
@@ -638,7 +740,10 @@ export default function TeamPage({
               ) : (
                 <div className="space-y-2">
                   {tournaments.slice(0, 8).map((tournament) => (
-                    <Link key={tournament.id} href={`/tournament/${tournament.slug || tournament.id}`}>
+                    <Link
+                      key={tournament.id}
+                      href={`/tournament/${tournament.slug || tournament.id}`}
+                    >
                       <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3 hover:border-emerald-400/50 hover:bg-emerald-500/5 transition-colors cursor-pointer group">
                         {tournament.logo_url ? (
                           <Image
@@ -650,8 +755,18 @@ export default function TeamPage({
                           />
                         ) : (
                           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-600/30 to-pink-600/30 flex items-center justify-center">
-                            <svg className="w-4 h-4 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                            <svg
+                              className="w-4 h-4 text-purple-300"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
+                              />
                             </svg>
                           </div>
                         )}
@@ -665,8 +780,18 @@ export default function TeamPage({
                             <StatusBadge status={tournament.status} />
                           </div>
                         </div>
-                        <svg className="w-4 h-4 text-gray-500 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        <svg
+                          className="w-4 h-4 text-gray-500 group-hover:text-white transition-colors"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5l7 7-7 7"
+                          />
                         </svg>
                       </div>
                     </Link>
@@ -699,15 +824,25 @@ export default function TeamPage({
                 {/* Stats breakdown */}
                 <div className="grid grid-cols-3 gap-3 text-center">
                   <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl py-3">
-                    <p className="text-lg font-bold text-emerald-300">{matchStats.wins}</p>
-                    <p className="text-[10px] text-gray-400 uppercase">Victoires</p>
+                    <p className="text-lg font-bold text-emerald-300">
+                      {matchStats.wins}
+                    </p>
+                    <p className="text-[10px] text-gray-400 uppercase">
+                      Victoires
+                    </p>
                   </div>
                   <div className="bg-red-500/10 border border-red-500/20 rounded-xl py-3">
-                    <p className="text-lg font-bold text-red-300">{matchStats.losses}</p>
-                    <p className="text-[10px] text-gray-400 uppercase">Défaites</p>
+                    <p className="text-lg font-bold text-red-300">
+                      {matchStats.losses}
+                    </p>
+                    <p className="text-[10px] text-gray-400 uppercase">
+                      Défaites
+                    </p>
                   </div>
                   <div className="bg-white/5 border border-white/10 rounded-xl py-3">
-                    <p className="text-lg font-bold text-gray-300">{matchStats.draws}</p>
+                    <p className="text-lg font-bold text-gray-300">
+                      {matchStats.draws}
+                    </p>
                     <p className="text-[10px] text-gray-400 uppercase">Nuls</p>
                   </div>
                 </div>
@@ -759,7 +894,9 @@ function StatCard({
   };
 
   return (
-    <div className={`rounded-2xl bg-gradient-to-br ${color ? colorClasses[color] : 'from-white/8 via-white/5 to-white/0'} border ${color ? '' : 'border-white/10'} px-3 py-3`}>
+    <div
+      className={`rounded-2xl bg-gradient-to-br ${color ? colorClasses[color] : 'from-white/8 via-white/5 to-white/0'} border ${color ? '' : 'border-white/10'} px-3 py-3`}
+    >
       <p className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">
         {label}
       </p>
@@ -773,7 +910,8 @@ function StatCard({
 
 function MatchCard({ match, teamId }: { match: RecentMatch; teamId: string }) {
   // Consider match finished if status contains 'finish' or 'complete' or 'done'
-  const isFinished = match.status === 'finished' ||
+  const isFinished =
+    match.status === 'finished' ||
     match.status === 'completed' ||
     match.status === 'done' ||
     match.status?.toLowerCase().includes('finish');
@@ -822,16 +960,20 @@ function MatchCard({ match, teamId }: { match: RecentMatch; teamId: string }) {
     ? result === 'win'
       ? 'border-emerald-500/40 hover:border-emerald-500/60'
       : result === 'loss'
-      ? 'border-red-500/40 hover:border-red-500/60'
-      : 'border-yellow-500/40 hover:border-yellow-500/60'
+        ? 'border-red-500/40 hover:border-red-500/60'
+        : 'border-yellow-500/40 hover:border-yellow-500/60'
     : 'border-white/10 hover:border-white/30';
 
   return (
     <Link href={`/match/${match.id}`}>
-      <div className={`flex items-center gap-3 bg-white/5 border ${cardBorderColor} rounded-xl px-4 py-3 transition-colors cursor-pointer group`}>
+      <div
+        className={`flex items-center gap-3 bg-white/5 border ${cardBorderColor} rounded-xl px-4 py-3 transition-colors cursor-pointer group`}
+      >
         {/* Result indicator */}
         {result && (
-          <div className={`w-10 h-10 rounded-lg border ${resultColors[result]} flex items-center justify-center text-sm font-bold`}>
+          <div
+            className={`w-10 h-10 rounded-lg border ${resultColors[result]} flex items-center justify-center text-sm font-bold`}
+          >
             {result === 'win' ? 'V' : result === 'loss' ? 'D' : 'N'}
           </div>
         )}
@@ -848,9 +990,15 @@ function MatchCard({ match, teamId }: { match: RecentMatch; teamId: string }) {
               vs {match.opponent?.short_name || match.opponent?.name || 'TBD'}
             </p>
             {ourScore !== null && theirScore !== null && (
-              <span className={`text-sm font-bold font-mono ${
-                result === 'win' ? 'text-emerald-400' : result === 'loss' ? 'text-red-400' : 'text-gray-300'
-              }`}>
+              <span
+                className={`text-sm font-bold font-mono ${
+                  result === 'win'
+                    ? 'text-emerald-400'
+                    : result === 'loss'
+                      ? 'text-red-400'
+                      : 'text-gray-300'
+                }`}
+              >
                 {ourScore} - {theirScore}
               </span>
             )}
@@ -872,8 +1020,18 @@ function MatchCard({ match, teamId }: { match: RecentMatch; teamId: string }) {
           </div>
         </div>
 
-        <svg className="w-4 h-4 text-gray-500 group-hover:text-white transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        <svg
+          className="w-4 h-4 text-gray-500 group-hover:text-white transition-colors flex-shrink-0"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 5l7 7-7 7"
+          />
         </svg>
       </div>
     </Link>
@@ -891,7 +1049,10 @@ function StatusBadge({ status }: { status: string }) {
     draft: { label: 'Brouillon', color: 'text-gray-500' },
   };
 
-  const config = statusConfig[status] || { label: status, color: 'text-gray-400' };
+  const config = statusConfig[status] || {
+    label: status,
+    color: 'text-gray-400',
+  };
 
   return <span className={config.color}>{config.label}</span>;
 }

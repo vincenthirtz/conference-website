@@ -122,9 +122,7 @@ async function handler(
 
   if (error) {
     console.error('[/api/admin/stats/maps] fetch error', error);
-    return res
-      .status(500)
-      .json({ error: 'Failed to load map stats.' });
+    return res.status(500).json({ error: 'Failed to load map stats.' });
   }
 
   // Transformer les données de la vue vers le format attendu par le frontend

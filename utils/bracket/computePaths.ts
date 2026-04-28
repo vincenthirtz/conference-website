@@ -9,10 +9,7 @@ import type {
   BracketEdgePath,
   BracketLayout,
 } from '@/types/bracket';
-import {
-  buildColumnsBySideAndGroup,
-  listSideGroupKeys,
-} from './buildGraph';
+import { buildColumnsBySideAndGroup, listSideGroupKeys } from './buildGraph';
 
 export type {
   MatchPosition,

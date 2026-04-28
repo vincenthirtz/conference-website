@@ -6,7 +6,14 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 
 type UpdatePayload = {
-  status?: 'new' | 'read' | 'contacted' | 'negotiating' | 'accepted' | 'declined' | 'archived';
+  status?:
+    | 'new'
+    | 'read'
+    | 'contacted'
+    | 'negotiating'
+    | 'accepted'
+    | 'declined'
+    | 'archived';
   adminNotes?: string;
 };
 
@@ -15,7 +22,15 @@ async function handler(
   res: NextApiResponse,
   ctx: StaffContext
 ) {
-  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-partnership-req')) return;
+  if (
+    applyRateLimit(
+      req,
+      res,
+      { max: 60, windowMs: 60_000 },
+      'admin-partnership-req'
+    )
+  )
+    return;
   if (!supabaseAdmin) {
     return res
       .status(500)
@@ -57,7 +72,15 @@ async function handler(
     const updates: Record<string, unknown> = {};
 
     if (body.status !== undefined) {
-      const validStatuses = ['new', 'read', 'contacted', 'negotiating', 'accepted', 'declined', 'archived'];
+      const validStatuses = [
+        'new',
+        'read',
+        'contacted',
+        'negotiating',
+        'accepted',
+        'declined',
+        'archived',
+      ];
       if (!validStatuses.includes(body.status)) {
         return res.status(400).json({ error: 'Invalid status.' });
       }
@@ -101,13 +124,17 @@ async function handler(
       currentRequest.status !== 'accepted'
     ) {
       const partnerCategory =
-        currentRequest.category === 'other' ? 'cultural' : currentRequest.category;
+        currentRequest.category === 'other'
+          ? 'cultural'
+          : currentRequest.category;
 
       const { data: newPartner, error: partnerError } = await admin
         .from('partners')
         .insert({
           name: currentRequest.company_name,
-          description: currentRequest.message || `Partenaire ${currentRequest.company_name}`,
+          description:
+            currentRequest.message ||
+            `Partenaire ${currentRequest.company_name}`,
           category: partnerCategory,
           website_url: currentRequest.website || null,
           is_active: false,
@@ -117,7 +144,10 @@ async function handler(
         .single();
 
       if (partnerError) {
-        console.error('[admin/partnership-requests] auto-create partner error', partnerError);
+        console.error(
+          '[admin/partnership-requests] auto-create partner error',
+          partnerError
+        );
       } else if (ctx.staff?.id && newPartner) {
         await logStaffAction({
           staff_id: ctx.staff.id,
@@ -135,9 +165,7 @@ async function handler(
 
     if (error) {
       console.error('[admin/partnership-requests] update error', error);
-      return res
-        .status(500)
-        .json({ error: 'Failed to update the request.' });
+      return res.status(500).json({ error: 'Failed to update the request.' });
     }
 
     if (!data) {
@@ -168,13 +196,14 @@ async function handler(
       return res.status(404).json({ error: 'Request not found.' });
     }
 
-    const { error } = await admin.from('partnership_requests').delete().eq('id', id);
+    const { error } = await admin
+      .from('partnership_requests')
+      .delete()
+      .eq('id', id);
 
     if (error) {
       console.error('[admin/partnership-requests] delete error', error);
-      return res
-        .status(500)
-        .json({ error: 'Failed to delete the request.' });
+      return res.status(500).json({ error: 'Failed to delete the request.' });
     }
 
     if (ctx.staff?.id) {

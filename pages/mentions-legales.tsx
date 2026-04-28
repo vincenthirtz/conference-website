@@ -72,14 +72,12 @@ function MentionsLegalesPage() {
               Association Women&apos;s Cup
             </h2>
             <p className="mt-2 text-sm text-gray-200">
-              Site édité par l’association Women&apos;s Cup, organisation à
-              but non lucratif (loi 1901) animée par une équipe bénévole pour
+              Site édité par l’association Women&apos;s Cup, organisation à but
+              non lucratif (loi 1901) animée par une équipe bénévole pour
               promouvoir l’esport féminin.
             </p>
             <ul className="mt-3 space-y-2 text-sm text-gray-200">
-              <li>
-                Numéro RNA : W691112531.
-              </li>
+              <li>Numéro RNA : W691112531.</li>
               <li>
                 Responsable de la publication : cellule communication
                 Women&apos;s Cup.
@@ -162,8 +160,7 @@ function MentionsLegalesPage() {
               <span>
                 Toute signalisation d’un contenu problématique ou d’un
                 dysfonctionnement peut être adressée à{' '}
-                <a href={`mailto:${contactEmail}`}>{contactEmail}</a>
-                .
+                <a href={`mailto:${contactEmail}`}>{contactEmail}</a>.
               </span>
             </li>
           </ul>
@@ -313,9 +310,9 @@ function MentionsLegalesPage() {
               Contenus & crédits
             </h3>
             <p className="text-sm text-gray-300">
-              Textes, visuels, identité graphique et logo Women&apos;s Cup
-              sont la propriété de l’association ou utilisés avec l’autorisation
-              de leurs propriétaires.
+              Textes, visuels, identité graphique et logo Women&apos;s Cup sont
+              la propriété de l’association ou utilisés avec l’autorisation de
+              leurs propriétaires.
             </p>
           </div>
           <ul className="mt-4 space-y-2 text-sm text-gray-200">

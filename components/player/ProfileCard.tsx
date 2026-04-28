@@ -9,7 +9,11 @@ type Props = {
   onProfileUpdate?: () => void;
 };
 
-export default function ProfileCard({ user, displayName, onProfileUpdate }: Props) {
+export default function ProfileCard({
+  user,
+  displayName,
+  onProfileUpdate,
+}: Props) {
   const router = useRouter();
 
   // Profile edit state
@@ -85,7 +89,9 @@ export default function ProfileCard({ user, displayName, onProfileUpdate }: Prop
     setEmailSuccess(null);
 
     try {
-      const { error } = await supabaseClient.auth.updateUser({ email: newEmail });
+      const { error } = await supabaseClient.auth.updateUser({
+        email: newEmail,
+      });
       if (error) throw error;
 
       setEmailSuccess(
@@ -94,7 +100,9 @@ export default function ProfileCard({ user, displayName, onProfileUpdate }: Prop
       setNewEmail('');
     } catch (err: unknown) {
       console.error('[player] email change error:', err);
-      setEmailError((err as Error)?.message || "Erreur lors du changement d'email.");
+      setEmailError(
+        (err as Error)?.message || "Erreur lors du changement d'email."
+      );
     } finally {
       setEmailChanging(false);
     }
@@ -232,7 +240,9 @@ export default function ProfileCard({ user, displayName, onProfileUpdate }: Prop
       {editingProfile ? (
         <div className="space-y-3 text-sm">
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Nom affiche</label>
+            <label className="block text-xs text-gray-400 mb-1">
+              Nom affiche
+            </label>
             <input
               type="text"
               value={editDisplayName}
@@ -243,7 +253,9 @@ export default function ProfileCard({ user, displayName, onProfileUpdate }: Prop
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">BattleTag</label>
+            <label className="block text-xs text-gray-400 mb-1">
+              BattleTag
+            </label>
             <input
               type="text"
               value={editBattleTag}
@@ -410,7 +422,9 @@ export default function ProfileCard({ user, displayName, onProfileUpdate }: Prop
                 disabled={exporting}
                 className="flex-1 px-3 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition"
               >
-                {exporting ? 'Export en cours...' : 'Confirmer le téléchargement'}
+                {exporting
+                  ? 'Export en cours...'
+                  : 'Confirmer le téléchargement'}
               </button>
               <button
                 onClick={() => setExportConfirm(false)}

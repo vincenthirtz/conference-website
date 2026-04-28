@@ -18,7 +18,14 @@ type StaffProps = {
 
 type DeletedItem = {
   id: string;
-  type: 'stage' | 'team' | 'match' | 'announcement' | 'partner' | 'cast_member' | 'adherent';
+  type:
+    | 'stage'
+    | 'team'
+    | 'match'
+    | 'announcement'
+    | 'partner'
+    | 'cast_member'
+    | 'adherent';
   name: string;
   details: string | null;
   deleted_at: string | null;

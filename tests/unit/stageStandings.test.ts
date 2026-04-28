@@ -29,7 +29,11 @@ type DbMatch = {
   team2_score: number | null;
 };
 
-function makeTeam(id: string, name: string, seed: number | null = null): StageTeamRow {
+function makeTeam(
+  id: string,
+  name: string,
+  seed: number | null = null
+): StageTeamRow {
   return {
     team_id: id,
     seed,
@@ -270,11 +274,7 @@ describe('computeBracketStandings', () => {
 
     const finishedMatches = allMatches.filter((m) => m.status === 'finished');
 
-    const result = computeBracketStandings(
-      teams,
-      finishedMatches,
-      allMatches
-    );
+    const result = computeBracketStandings(teams, finishedMatches, allMatches);
 
     // t1 won round 2 (final) → rank 1
     // t2 won round 1 (semi) → rank 2
@@ -286,10 +286,7 @@ describe('computeBracketStandings', () => {
   });
 
   it('uses seed as tiebreaker for teams with same results', () => {
-    const teams = [
-      makeTeam('t1', 'Alpha', 3),
-      makeTeam('t2', 'Beta', 1),
-    ];
+    const teams = [makeTeam('t1', 'Alpha', 3), makeTeam('t2', 'Beta', 1)];
 
     // No matches played yet
     const result = computeBracketStandings(teams, [], []);
@@ -300,10 +297,7 @@ describe('computeBracketStandings', () => {
   });
 
   it('tracks wins and losses correctly', () => {
-    const teams = [
-      makeTeam('t1', 'Alpha'),
-      makeTeam('t2', 'Beta'),
-    ];
+    const teams = [makeTeam('t1', 'Alpha'), makeTeam('t2', 'Beta')];
 
     const matches = [
       makeFinishedMatch('m1', {

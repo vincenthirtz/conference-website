@@ -201,7 +201,8 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<PatchNotesResponse | { error: string }>
 ) {
-  if (applyRateLimit(req, res, { max: 20, windowMs: 60_000 }, 'patch-notes')) return;
+  if (applyRateLimit(req, res, { max: 20, windowMs: 60_000 }, 'patch-notes'))
+    return;
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -237,8 +238,7 @@ export default async function handler(
   } catch (error) {
     console.error('[/api/patch-notes] failed to load patch notes', error);
     return res.status(500).json({
-      error:
-        "Failed to load Overwatch patch notes.",
+      error: 'Failed to load Overwatch patch notes.',
     });
   }
 }

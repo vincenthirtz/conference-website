@@ -70,7 +70,11 @@ type CastData = {
     steps: VetoStep[];
     currentStepIndex: number;
     isComplete: boolean;
-    pickedMaps: { map_name: string; map_type: string | null; picked_by: string | null }[];
+    pickedMaps: {
+      map_name: string;
+      map_type: string | null;
+      picked_by: string | null;
+    }[];
   };
   h2h: {
     total: number;
@@ -261,7 +265,9 @@ function CastPage(_: StaffProps) {
   return (
     <>
       <Head>
-        <title>Cast — {team1?.name || '?'} vs {team2?.name || '?'}</title>
+        <title>
+          Cast — {team1?.name || '?'} vs {team2?.name || '?'}
+        </title>
         <meta name="robots" content="noindex" />
       </Head>
 
@@ -281,9 +287,7 @@ function CastPage(_: StaffProps) {
                 </span>
               )}
               {stage && (
-                <span className="text-sm text-neutral-500">
-                  · {stage.name}
-                </span>
+                <span className="text-sm text-neutral-500">· {stage.name}</span>
               )}
               {match.roundName && (
                 <span className="text-sm text-neutral-500">
@@ -326,7 +330,12 @@ function CastPage(_: StaffProps) {
           {/* Score / teams banner */}
           <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4 mb-4 items-stretch">
             {/* Team 1 */}
-            <TeamBanner team={team1} score={match.team1Score} isWinner={match.winnerTeamId === team1?.id} side="left" />
+            <TeamBanner
+              team={team1}
+              score={match.team1Score}
+              isWinner={match.winnerTeamId === team1?.id}
+              side="left"
+            />
 
             {/* Center: lobby code */}
             <div className="bg-neutral-800/60 backdrop-blur border border-neutral-700/50 rounded-2xl p-5 flex flex-col items-center justify-center min-w-[220px]">
@@ -343,10 +352,14 @@ function CastPage(_: StaffProps) {
                   {match.lobbyCode}
                 </button>
               ) : (
-                <span className="text-neutral-600 italic text-sm">non défini</span>
+                <span className="text-neutral-600 italic text-sm">
+                  non défini
+                </span>
               )}
               {copied && (
-                <span className="text-[11px] text-emerald-400 mt-1">copié ✓</span>
+                <span className="text-[11px] text-emerald-400 mt-1">
+                  copié ✓
+                </span>
               )}
               {match.streamUrl && (
                 <a
@@ -361,7 +374,12 @@ function CastPage(_: StaffProps) {
             </div>
 
             {/* Team 2 */}
-            <TeamBanner team={team2} score={match.team2Score} isWinner={match.winnerTeamId === team2?.id} side="right" />
+            <TeamBanner
+              team={team2}
+              score={match.team2Score}
+              isWinner={match.winnerTeamId === team2?.id}
+              side="right"
+            />
           </div>
 
           {/* Main grid: Players (left), Veto+H2H (right) */}
@@ -385,9 +403,12 @@ function CastPage(_: StaffProps) {
                     Veto ({veto.format.toUpperCase()})
                   </h2>
                   <span className="text-[11px] text-neutral-500">
-                    Étape {Math.min(veto.currentStepIndex + 1, veto.flow.length)} /{' '}
+                    Étape{' '}
+                    {Math.min(veto.currentStepIndex + 1, veto.flow.length)} /{' '}
                     {veto.flow.length}
-                    {veto.isComplete && <span className="text-emerald-400 ml-2">✓ terminé</span>}
+                    {veto.isComplete && (
+                      <span className="text-emerald-400 ml-2">✓ terminé</span>
+                    )}
                   </span>
                 </div>
                 <VetoTimeline
@@ -487,10 +508,13 @@ function CastPage(_: StaffProps) {
                             >
                               <span className="text-neutral-500 w-16">
                                 {m.completedAt
-                                  ? new Date(m.completedAt).toLocaleDateString('fr-FR', {
-                                      day: '2-digit',
-                                      month: 'short',
-                                    })
+                                  ? new Date(m.completedAt).toLocaleDateString(
+                                      'fr-FR',
+                                      {
+                                        day: '2-digit',
+                                        month: 'short',
+                                      }
+                                    )
                                   : '—'}
                               </span>
                               <span
@@ -522,13 +546,17 @@ function CastPage(_: StaffProps) {
 
           {match.notes && (
             <div className="mt-4 bg-neutral-800/40 border border-neutral-700/40 rounded-xl p-3 text-xs text-neutral-400">
-              <span className="uppercase tracking-widest text-neutral-500 mr-2">Notes</span>
+              <span className="uppercase tracking-widest text-neutral-500 mr-2">
+                Notes
+              </span>
               {match.notes}
             </div>
           )}
 
           {/* Replay / VOD editor — visible after match end */}
-          {(match.status === 'finished' || match.status === 'walkover' || match.replayUrl) && (
+          {(match.status === 'finished' ||
+            match.status === 'walkover' ||
+            match.replayUrl) && (
             <div className="mt-4 bg-neutral-800/40 border border-neutral-700/40 rounded-xl p-3">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs uppercase tracking-widest text-neutral-500">
@@ -555,7 +583,9 @@ function CastPage(_: StaffProps) {
                 />
                 <button
                   onClick={saveReplayUrl}
-                  disabled={savingReplay || replayDraft === (match.replayUrl ?? '')}
+                  disabled={
+                    savingReplay || replayDraft === (match.replayUrl ?? '')
+                  }
                   className="px-3 py-2 rounded bg-blue-600 hover:bg-blue-500 text-sm font-medium disabled:opacity-50"
                 >
                   {savingReplay ? 'Enregistrement…' : 'Enregistrer'}
@@ -564,7 +594,8 @@ function CastPage(_: StaffProps) {
               {replayMsg && (
                 <p
                   className={`text-xs mt-2 ${
-                    replayMsg.toLowerCase().includes('erreur') || replayMsg.toLowerCase().includes('invalide')
+                    replayMsg.toLowerCase().includes('erreur') ||
+                    replayMsg.toLowerCase().includes('invalide')
                       ? 'text-red-300'
                       : 'text-emerald-300'
                   }`}
@@ -573,7 +604,8 @@ function CastPage(_: StaffProps) {
                 </p>
               )}
               <p className="text-xs text-neutral-500 mt-2">
-                Colle ici le lien YouTube ou Twitch du VOD post-match. Il sera affiché publiquement sur la page du match.
+                Colle ici le lien YouTube ou Twitch du VOD post-match. Il sera
+                affiché publiquement sur la page du match.
               </p>
             </div>
           )}
@@ -643,10 +675,7 @@ function RosterColumn({ team }: { team: Team | null }) {
               className={`flex items-center gap-2 text-xs ${m.is_substitute ? 'opacity-60' : ''}`}
             >
               {m.is_captain && (
-                <span
-                  className="text-amber-400 text-xs"
-                  title="Capitaine"
-                >
+                <span className="text-amber-400 text-xs" title="Capitaine">
                   ★
                 </span>
               )}
@@ -690,7 +719,11 @@ function VetoTimeline({
         const isDone = !!step;
         const isCurrent = !isDone && idx === steps.length;
         const sideName =
-          f.side === 'team1' ? team1Name : f.side === 'team2' ? team2Name : 'Auto';
+          f.side === 'team1'
+            ? team1Name
+            : f.side === 'team2'
+              ? team2Name
+              : 'Auto';
 
         const actionColor =
           f.action === 'ban'
@@ -721,7 +754,9 @@ function VetoTimeline({
             }`}
           >
             <span className="w-5 text-neutral-500">{idx + 1}.</span>
-            <span className={`w-5 ${actionColor} font-bold`}>{actionEmoji}</span>
+            <span className={`w-5 ${actionColor} font-bold`}>
+              {actionEmoji}
+            </span>
             <span className="text-neutral-400 w-12 uppercase tracking-wider text-[10px]">
               {f.action}
             </span>

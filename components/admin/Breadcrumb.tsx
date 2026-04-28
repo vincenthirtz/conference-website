@@ -36,7 +36,11 @@ export default function Breadcrumb({ items }: BreadcrumbProps) {
               )}
               {isLast || !item.href ? (
                 <span
-                  className={isLast ? 'text-white font-medium truncate max-w-[200px]' : 'truncate max-w-[200px]'}
+                  className={
+                    isLast
+                      ? 'text-white font-medium truncate max-w-[200px]'
+                      : 'truncate max-w-[200px]'
+                  }
                   aria-current={isLast ? 'page' : undefined}
                 >
                   {item.label}

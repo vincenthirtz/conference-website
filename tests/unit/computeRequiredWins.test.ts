@@ -34,9 +34,7 @@ describe('computeRequiredWins', () => {
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining('Format inconnu')
     );
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('freeforall')
-    );
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('freeforall'));
 
     warnSpy.mockRestore();
   });

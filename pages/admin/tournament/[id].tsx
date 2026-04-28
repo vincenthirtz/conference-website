@@ -102,7 +102,11 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   // --- Auth (same as withStaffPage) ---
   let staff: { id: string | null; role: string; display_name: string | null };
   try {
-    const staffCtx = await requireStaffRoleFromRequest(req as any, res as any, 'manager');
+    const staffCtx = await requireStaffRoleFromRequest(
+      req as any,
+      res as any,
+      'manager'
+    );
     staff = {
       id: staffCtx.staff?.id ?? null,
       role: staffCtx.role ?? 'manager',
@@ -140,12 +144,16 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
         .maybeSingle(),
       supabaseAdmin
         .from('tournament_stages')
-        .select('id, name, stage_type, order_index, is_active, is_public, start_date, end_date')
+        .select(
+          'id, name, stage_type, order_index, is_active, is_public, start_date, end_date'
+        )
         .eq('tournament_id', id)
         .order('order_index', { ascending: true, nullsFirst: false }),
       supabaseAdmin
         .from('tournament_teams')
-        .select('id, tournament_id, team_id, seed, status, created_at, team:teams ( id, name, logo_url )')
+        .select(
+          'id, tournament_id, team_id, seed, status, created_at, team:teams ( id, name, logo_url )'
+        )
         .eq('tournament_id', id)
         .order('seed', { ascending: true, nullsFirst: false }),
       supabaseAdmin
@@ -196,10 +204,20 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     archived: 'Archivé',
   };
 
-  const guards: { status: string; label: string; allowed: boolean; reason: string | null }[] = [];
+  const guards: {
+    status: string;
+    label: string;
+    allowed: boolean;
+    reason: string | null;
+  }[] = [];
   for (const s of ['draft', 'published', 'running', 'completed', 'archived']) {
     if (s === currentStatus) {
-      guards.push({ status: s, label: STATUS_LABELS_MAP[s], allowed: false, reason: 'Statut actuel' });
+      guards.push({
+        status: s,
+        label: STATUS_LABELS_MAP[s],
+        allowed: false,
+        reason: 'Statut actuel',
+      });
       continue;
     }
     let allowed = true;
@@ -208,8 +226,13 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
       allowed = false;
       reason = 'Le tournoi doit avoir au moins 1 phase';
     } else if (s === 'running') {
-      if (stagesCount === 0) { allowed = false; reason = 'Le tournoi doit avoir au moins 1 phase'; }
-      else if (teamsCount === 0) { allowed = false; reason = 'Le tournoi doit avoir au moins 1 équipe'; }
+      if (stagesCount === 0) {
+        allowed = false;
+        reason = 'Le tournoi doit avoir au moins 1 phase';
+      } else if (teamsCount === 0) {
+        allowed = false;
+        reason = 'Le tournoi doit avoir au moins 1 équipe';
+      }
     } else if (s === 'completed' && currentStatus !== 'running') {
       allowed = false;
       reason = 'Le tournoi doit être en cours';
@@ -225,7 +248,10 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     if (m.team2_id) teamIdsSet.add(m.team2_id);
   }
 
-  let teamNameMap: Record<string, { id: string; name: string; logo_url: string | null }> = {};
+  let teamNameMap: Record<
+    string,
+    { id: string; name: string; logo_url: string | null }
+  > = {};
   if (teamIdsSet.size > 0) {
     const { data: teamsData } = await supabaseAdmin
       .from('teams')
@@ -242,8 +268,8 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     round_number: m.round_number,
     status: m.status,
     scheduled_at: m.scheduled_at,
-    team1: m.team1_id ? teamNameMap[m.team1_id] ?? null : null,
-    team2: m.team2_id ? teamNameMap[m.team2_id] ?? null : null,
+    team1: m.team1_id ? (teamNameMap[m.team1_id] ?? null) : null,
+    team2: m.team2_id ? (teamNameMap[m.team2_id] ?? null) : null,
     team1_score: m.team1_score,
     team2_score: m.team2_score,
     winner_team_id: m.winner_team_id,
@@ -423,15 +449,25 @@ type InitialData = {
   stages: Stage[];
   teams: TournamentTeam[];
   recentMatches: RecentMatch[];
-  statusGuards: { status: string; label: string; allowed: boolean; reason?: string }[];
+  statusGuards: {
+    status: string;
+    label: string;
+    allowed: boolean;
+    reason?: string;
+  }[];
 };
 
-function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData: InitialData | null }) {
+function AdminTournamentPage({
+  staff,
+  initialData,
+}: StaffProps & { initialData: InitialData | null }) {
   const router = useRouter();
   const { id } = router.query;
 
   const [loading, setLoading] = useState(!initialData);
-  const [tournament, setTournament] = useState<Tournament | null>(initialData?.tournament ?? null);
+  const [tournament, setTournament] = useState<Tournament | null>(
+    initialData?.tournament ?? null
+  );
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const { addToast } = useToast();
@@ -441,7 +477,9 @@ function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData:
   const [loadingStages, setLoadingStages] = useState(false);
 
   // Teams
-  const [tournamentTeams, setTournamentTeams] = useState<TournamentTeam[]>(initialData?.teams ?? []);
+  const [tournamentTeams, setTournamentTeams] = useState<TournamentTeam[]>(
+    initialData?.teams ?? []
+  );
   const [loadingTeams, setLoadingTeams] = useState(false);
   const [allTeams, setAllTeams] = useState<Team[]>([]);
   const [showAddTeamModal, setShowAddTeamModal] = useState(false);
@@ -451,15 +489,21 @@ function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData:
 
   // Status regression confirmation
   const [showStatusConfirm, setShowStatusConfirm] = useState(false);
-  const [pendingStatusValue, setPendingStatusValue] = useState<string | null>(null);
+  const [pendingStatusValue, setPendingStatusValue] = useState<string | null>(
+    null
+  );
 
   // Remove team confirmation
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
-  const [pendingRemoveTeamId, setPendingRemoveTeamId] = useState<string | null>(null);
+  const [pendingRemoveTeamId, setPendingRemoveTeamId] = useState<string | null>(
+    null
+  );
 
   // Bulk team add
   const [showBulkAddModal, setShowBulkAddModal] = useState(false);
-  const [bulkSelectedTeamIds, setBulkSelectedTeamIds] = useState<Set<string>>(new Set());
+  const [bulkSelectedTeamIds, setBulkSelectedTeamIds] = useState<Set<string>>(
+    new Set()
+  );
   const [bulkAdding, setBulkAdding] = useState(false);
   const [bulkProgress, setBulkProgress] = useState({ done: 0, total: 0 });
   const [bulkSearchFilter, setBulkSearchFilter] = useState('');
@@ -479,20 +523,41 @@ function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData:
   } | null>(null);
 
   // Recent matches
-  const [recentMatches, setRecentMatches] = useState<RecentMatch[]>(initialData?.recentMatches ?? []);
+  const [recentMatches, setRecentMatches] = useState<RecentMatch[]>(
+    initialData?.recentMatches ?? []
+  );
   const [loadingMatches, setLoadingMatches] = useState(false);
 
   // Status guards
-  type StatusGuard = { status: string; label: string; allowed: boolean; reason?: string };
-  const [statusGuards, setStatusGuards] = useState<StatusGuard[]>(initialData?.statusGuards ?? []);
+  type StatusGuard = {
+    status: string;
+    label: string;
+    allowed: boolean;
+    reason?: string;
+  };
+  const [statusGuards, setStatusGuards] = useState<StatusGuard[]>(
+    initialData?.statusGuards ?? []
+  );
 
   // Conflict detection
   type Conflict = {
     type: string;
     team_id: string;
     team_name: string;
-    match_a: { id: string; scheduled_at: string; estimated_end: string; stage_name: string | null; round_number: number | null };
-    match_b: { id: string; scheduled_at: string; estimated_end: string; stage_name: string | null; round_number: number | null };
+    match_a: {
+      id: string;
+      scheduled_at: string;
+      estimated_end: string;
+      stage_name: string | null;
+      round_number: number | null;
+    };
+    match_b: {
+      id: string;
+      scheduled_at: string;
+      estimated_end: string;
+      stage_name: string | null;
+      round_number: number | null;
+    };
     overlap_minutes: number;
   };
   const [conflicts, setConflicts] = useState<Conflict[] | null>(null);
@@ -737,9 +802,12 @@ function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData:
     if (!pendingRemoveTeamId) return;
 
     try {
-      const res = await fetch(`/api/admin/tournament/${id}/teams/${pendingRemoveTeamId}`, {
-        method: 'DELETE',
-      });
+      const res = await fetch(
+        `/api/admin/tournament/${id}/teams/${pendingRemoveTeamId}`,
+        {
+          method: 'DELETE',
+        }
+      );
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -868,10 +936,12 @@ function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData:
         >
           {/* Header */}
           <div className="mb-8">
-            <Breadcrumb items={[
-              { label: 'Tournois', href: '/admin/tournaments' },
-              { label: tournament?.name || 'Tournoi' },
-            ]} />
+            <Breadcrumb
+              items={[
+                { label: 'Tournois', href: '/admin/tournaments' },
+                { label: tournament?.name || 'Tournoi' },
+              ]}
+            />
             <button
               type="button"
               onClick={() => router.push('/admin/tournaments')}
@@ -982,8 +1052,18 @@ function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData:
                   href={`/admin/tournament/${tournament.id}/dashboard`}
                   className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-medium transition-colors flex items-center gap-2"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                    />
                   </svg>
                   Dashboard
                 </Link>
@@ -1235,33 +1315,49 @@ function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData:
                           );
                           const isCurrent = option.value === tournament.status;
                           const isPast = idx < currentIdx;
-                          const guard = statusGuards.find((g) => g.status === option.value);
+                          const guard = statusGuards.find(
+                            (g) => g.status === option.value
+                          );
 
                           return (
-                            <div key={option.value} className="flex flex-col items-center flex-1">
+                            <div
+                              key={option.value}
+                              className="flex flex-col items-center flex-1"
+                            >
                               <div className="relative flex items-center w-full">
                                 {idx > 0 && (
                                   <div
                                     className={`absolute left-0 right-1/2 h-0.5 top-1/2 -translate-y-1/2 ${
-                                      isPast || isCurrent ? 'bg-emerald-500' : 'bg-neutral-700'
+                                      isPast || isCurrent
+                                        ? 'bg-emerald-500'
+                                        : 'bg-neutral-700'
                                     }`}
                                   />
                                 )}
                                 {idx < STATUS_OPTIONS.length - 1 && (
                                   <div
                                     className={`absolute left-1/2 right-0 h-0.5 top-1/2 -translate-y-1/2 ${
-                                      isPast ? 'bg-emerald-500' : 'bg-neutral-700'
+                                      isPast
+                                        ? 'bg-emerald-500'
+                                        : 'bg-neutral-700'
                                     }`}
                                   />
                                 )}
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    if (!isCurrent && guard?.allowed !== false) {
+                                    if (
+                                      !isCurrent &&
+                                      guard?.allowed !== false
+                                    ) {
                                       updateStatus(option.value);
                                     }
                                   }}
-                                  disabled={updatingStatus || isCurrent || guard?.allowed === false}
+                                  disabled={
+                                    updatingStatus ||
+                                    isCurrent ||
+                                    guard?.allowed === false
+                                  }
                                   title={
                                     isCurrent
                                       ? 'Statut actuel'
@@ -1280,8 +1376,16 @@ function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData:
                                   }`}
                                 >
                                   {isPast ? (
-                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    <svg
+                                      className="w-4 h-4"
+                                      fill="currentColor"
+                                      viewBox="0 0 20 20"
+                                    >
+                                      <path
+                                        fillRule="evenodd"
+                                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                        clipRule="evenodd"
+                                      />
                                     </svg>
                                   ) : (
                                     <span>{idx + 1}</span>
@@ -1290,7 +1394,9 @@ function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData:
                               </div>
                               <span
                                 className={`text-[10px] mt-1.5 text-center leading-tight ${
-                                  isCurrent ? 'text-white font-semibold' : 'text-neutral-500'
+                                  isCurrent
+                                    ? 'text-white font-semibold'
+                                    : 'text-neutral-500'
                                 }`}
                               >
                                 {option.label}
@@ -1302,17 +1408,37 @@ function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData:
                     </div>
 
                     {/* Guard warnings */}
-                    {statusGuards.filter((g) => !g.allowed && g.status !== tournament.status && g.reason && g.reason !== 'Statut actuel').length > 0 && (
+                    {statusGuards.filter(
+                      (g) =>
+                        !g.allowed &&
+                        g.status !== tournament.status &&
+                        g.reason &&
+                        g.reason !== 'Statut actuel'
+                    ).length > 0 && (
                       <div className="space-y-1.5 mt-3">
                         {statusGuards
-                          .filter((g) => !g.allowed && g.status !== tournament.status && g.reason && g.reason !== 'Statut actuel')
+                          .filter(
+                            (g) =>
+                              !g.allowed &&
+                              g.status !== tournament.status &&
+                              g.reason &&
+                              g.reason !== 'Statut actuel'
+                          )
                           .map((g) => (
                             <div
                               key={g.status}
                               className="flex items-start gap-2 text-xs text-amber-300/80 bg-amber-900/20 border border-amber-500/20 rounded-lg px-3 py-2"
                             >
-                              <svg className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                              <svg
+                                className="w-3.5 h-3.5 mt-0.5 flex-shrink-0"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                  clipRule="evenodd"
+                                />
                               </svg>
                               <span>
                                 <strong>{g.label}</strong> : {g.reason}
@@ -1830,7 +1956,9 @@ function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData:
                                   />
                                 ) : (
                                   <div className="w-6 h-6 rounded bg-neutral-700 flex items-center justify-center text-[10px] font-semibold">
-                                    {(match.team1?.name || 'TBD').slice(0, 2).toUpperCase()}
+                                    {(match.team1?.name || 'TBD')
+                                      .slice(0, 2)
+                                      .toUpperCase()}
                                   </div>
                                 )}
                                 <span
@@ -1873,7 +2001,9 @@ function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData:
                                   />
                                 ) : (
                                   <div className="w-6 h-6 rounded bg-neutral-700 flex items-center justify-center text-[10px] font-semibold">
-                                    {(match.team2?.name || 'TBD').slice(0, 2).toUpperCase()}
+                                    {(match.team2?.name || 'TBD')
+                                      .slice(0, 2)
+                                      .toUpperCase()}
                                   </div>
                                 )}
                               </div>
@@ -2029,7 +2159,9 @@ function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData:
       {showBulkAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
-            <h3 className="text-lg font-semibold mb-4">Ajouter plusieurs équipes</h3>
+            <h3 className="text-lg font-semibold mb-4">
+              Ajouter plusieurs équipes
+            </h3>
 
             {/* Search filter */}
             <input
@@ -2050,7 +2182,11 @@ function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData:
                   type="button"
                   onClick={() => {
                     const filtered = availableTeamsToAdd
-                      .filter((t) => t.name.toLowerCase().includes(bulkSearchFilter.toLowerCase()))
+                      .filter((t) =>
+                        t.name
+                          .toLowerCase()
+                          .includes(bulkSearchFilter.toLowerCase())
+                      )
                       .map((t) => t.id);
                     setBulkSelectedTeamIds(new Set(filtered));
                   }}
@@ -2071,7 +2207,9 @@ function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData:
             {/* Team checkbox list */}
             <div className="max-h-64 overflow-y-auto space-y-1 mb-4 border border-neutral-700 rounded-lg p-2">
               {availableTeamsToAdd
-                .filter((t) => t.name.toLowerCase().includes(bulkSearchFilter.toLowerCase()))
+                .filter((t) =>
+                  t.name.toLowerCase().includes(bulkSearchFilter.toLowerCase())
+                )
                 .map((team) => (
                   <label
                     key={team.id}
@@ -2237,8 +2375,18 @@ function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData:
           <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-2xl shadow-2xl max-h-[80vh] flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold flex items-center gap-2">
-                <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                <svg
+                  className="w-5 h-5 text-amber-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
                 </svg>
                 Rapport de conflits
               </h3>
@@ -2246,8 +2394,18 @@ function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData:
                 onClick={() => setShowConflicts(false)}
                 className="p-1.5 rounded-lg hover:bg-neutral-700 transition-colors"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
@@ -2262,10 +2420,22 @@ function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData:
               </div>
             ) : conflicts.length === 0 ? (
               <div className="flex flex-col items-center py-12 text-center">
-                <svg className="w-12 h-12 text-emerald-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg
+                  className="w-12 h-12 text-emerald-400 mb-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
-                <p className="text-emerald-300 font-medium">Aucun conflit détecté</p>
+                <p className="text-emerald-300 font-medium">
+                  Aucun conflit détecté
+                </p>
                 <p className="text-neutral-500 text-xs mt-1">
                   Aucune équipe ne joue deux matchs en même temps.
                 </p>
@@ -2273,7 +2443,8 @@ function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData:
             ) : (
               <div className="overflow-y-auto flex-1 space-y-3 pr-1">
                 <div className="text-sm text-amber-300 bg-amber-900/30 border border-amber-500/20 rounded-lg px-3 py-2 mb-3">
-                  {conflicts.length} conflit{conflicts.length > 1 ? 's' : ''} détecté{conflicts.length > 1 ? 's' : ''}
+                  {conflicts.length} conflit{conflicts.length > 1 ? 's' : ''}{' '}
+                  détecté{conflicts.length > 1 ? 's' : ''}
                 </div>
                 {conflicts.map((c, i) => (
                   <div
@@ -2284,31 +2455,53 @@ function AdminTournamentPage({ staff, initialData }: StaffProps & { initialData:
                       <span className="px-2 py-0.5 rounded-full text-xs bg-red-500/20 text-red-300 border border-red-500/30">
                         Chevauchement {c.overlap_minutes} min
                       </span>
-                      <span className="font-medium text-white">{c.team_name}</span>
+                      <span className="font-medium text-white">
+                        {c.team_name}
+                      </span>
                     </div>
                     <div className="grid grid-cols-2 gap-3 text-xs">
                       <div className="bg-neutral-800/50 rounded-lg p-2.5">
                         <div className="text-neutral-500 mb-1">Match A</div>
                         <div className="text-neutral-300">
-                          {c.match_a.stage_name && <span>{c.match_a.stage_name} · </span>}
-                          {c.match_a.round_number && <span>Round {c.match_a.round_number}</span>}
+                          {c.match_a.stage_name && (
+                            <span>{c.match_a.stage_name} · </span>
+                          )}
+                          {c.match_a.round_number && (
+                            <span>Round {c.match_a.round_number}</span>
+                          )}
                         </div>
                         <div className="text-neutral-400 mt-1">
-                          {new Date(c.match_a.scheduled_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
+                          {new Date(c.match_a.scheduled_at).toLocaleString(
+                            'fr-FR',
+                            { dateStyle: 'short', timeStyle: 'short' }
+                          )}
                           {' → '}
-                          {new Date(c.match_a.estimated_end).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(c.match_a.estimated_end).toLocaleTimeString(
+                            'fr-FR',
+                            { hour: '2-digit', minute: '2-digit' }
+                          )}
                         </div>
                       </div>
                       <div className="bg-neutral-800/50 rounded-lg p-2.5">
                         <div className="text-neutral-500 mb-1">Match B</div>
                         <div className="text-neutral-300">
-                          {c.match_b.stage_name && <span>{c.match_b.stage_name} · </span>}
-                          {c.match_b.round_number && <span>Round {c.match_b.round_number}</span>}
+                          {c.match_b.stage_name && (
+                            <span>{c.match_b.stage_name} · </span>
+                          )}
+                          {c.match_b.round_number && (
+                            <span>Round {c.match_b.round_number}</span>
+                          )}
                         </div>
                         <div className="text-neutral-400 mt-1">
-                          {new Date(c.match_b.scheduled_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
+                          {new Date(c.match_b.scheduled_at).toLocaleString(
+                            'fr-FR',
+                            { dateStyle: 'short', timeStyle: 'short' }
+                          )}
                           {' → '}
-                          {new Date(c.match_b.estimated_end).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(c.match_b.estimated_end).toLocaleTimeString(
+                            'fr-FR',
+                            { hour: '2-digit', minute: '2-digit' }
+                          )}
                         </div>
                       </div>
                     </div>

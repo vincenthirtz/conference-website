@@ -33,13 +33,37 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
   try {
     switch (req.method) {
       case 'POST':
-        return await handleBulkUndo(stageId, stage.tournament_id, req, res, ctx);
+        return await handleBulkUndo(
+          stageId,
+          stage.tournament_id,
+          req,
+          res,
+          ctx
+        );
       case 'PATCH':
-        return await handleBulkSchedule(stageId, stage.tournament_id, req, res, ctx);
+        return await handleBulkSchedule(
+          stageId,
+          stage.tournament_id,
+          req,
+          res,
+          ctx
+        );
       case 'PUT':
-        return await handleBulkUpdate(stageId, stage.tournament_id, req, res, ctx);
+        return await handleBulkUpdate(
+          stageId,
+          stage.tournament_id,
+          req,
+          res,
+          ctx
+        );
       case 'DELETE':
-        return await handleBulkDelete(stageId, stage.tournament_id, req, res, ctx);
+        return await handleBulkDelete(
+          stageId,
+          stage.tournament_id,
+          req,
+          res,
+          ctx
+        );
       default:
         return res.status(405).json({ error: 'Method not allowed' });
     }
@@ -73,22 +97,27 @@ async function handleBulkSchedule(
     });
   }
 
-  const results: Array<{ matchId: string; success: boolean; error?: string }> = [];
+  const results: Array<{ matchId: string; success: boolean; error?: string }> =
+    [];
   // Track successful updates so we can rollback on partial failure if requested
-  const succeeded: Array<{ matchId: string; previousScheduledAt: string | null }> = [];
+  const succeeded: Array<{
+    matchId: string;
+    previousScheduledAt: string | null;
+  }> = [];
 
   // Snapshot current scheduled_at values for rollback capability
   const validMatchIds = schedules
     .filter((e: any) => e.matchId && typeof e.matchId === 'string')
     .map((e: any) => e.matchId);
 
-  const { data: snapshots } = validMatchIds.length > 0
-    ? await supabaseAdmin
-        .from('matches')
-        .select('id, scheduled_at')
-        .eq('stage_id', stageId)
-        .in('id', validMatchIds)
-    : { data: [] };
+  const { data: snapshots } =
+    validMatchIds.length > 0
+      ? await supabaseAdmin
+          .from('matches')
+          .select('id, scheduled_at')
+          .eq('stage_id', stageId)
+          .in('id', validMatchIds)
+      : { data: [] };
 
   const snapshotMap = new Map(
     (snapshots || []).map((s: any) => [s.id, s.scheduled_at])
@@ -96,7 +125,11 @@ async function handleBulkSchedule(
 
   for (const entry of schedules) {
     if (!entry.matchId || typeof entry.matchId !== 'string') {
-      results.push({ matchId: entry.matchId, success: false, error: 'Invalid matchId' });
+      results.push({
+        matchId: entry.matchId,
+        success: false,
+        error: 'Invalid matchId',
+      });
       continue;
     }
 
@@ -107,7 +140,11 @@ async function handleBulkSchedule(
       .eq('stage_id', stageId);
 
     if (error) {
-      results.push({ matchId: entry.matchId, success: false, error: 'Database update failed' });
+      results.push({
+        matchId: entry.matchId,
+        success: false,
+        error: 'Database update failed',
+      });
 
       // Rollback all previously successful updates in this batch
       if (succeeded.length > 0) {
@@ -121,7 +158,6 @@ async function handleBulkSchedule(
         return res.status(500).json({
           error: `Partial failure at match ${entry.matchId}. All ${succeeded.length} previous updates have been rolled back.`,
           failedMatchId: entry.matchId,
-          
         });
       }
     } else {
@@ -170,8 +206,23 @@ async function handleBulkSchedule(
  *  { matchIds: string[], fields: { status?, best_of?, round_number?, notes?, stream_url?, lobby_code? } }
  * ---------------------------------------------------------*/
 
-const VALID_STATUSES = ['pending', 'ongoing', 'finished', 'cancelled', 'postponed', 'disputed', 'walkover'];
-const BULK_EDITABLE_FIELDS = ['status', 'best_of', 'round_number', 'notes', 'stream_url', 'lobby_code'] as const;
+const VALID_STATUSES = [
+  'pending',
+  'ongoing',
+  'finished',
+  'cancelled',
+  'postponed',
+  'disputed',
+  'walkover',
+];
+const BULK_EDITABLE_FIELDS = [
+  'status',
+  'best_of',
+  'round_number',
+  'notes',
+  'stream_url',
+  'lobby_code',
+] as const;
 
 async function handleBulkUpdate(
   stageId: string,
@@ -183,11 +234,19 @@ async function handleBulkUpdate(
   const { matchIds, fields } = req.body;
 
   if (!Array.isArray(matchIds) || matchIds.length === 0) {
-    return res.status(400).json({ error: "Body must include non-empty array 'matchIds'" });
+    return res
+      .status(400)
+      .json({ error: "Body must include non-empty array 'matchIds'" });
   }
 
-  if (!fields || typeof fields !== 'object' || Object.keys(fields).length === 0) {
-    return res.status(400).json({ error: "Body must include non-empty object 'fields'" });
+  if (
+    !fields ||
+    typeof fields !== 'object' ||
+    Object.keys(fields).length === 0
+  ) {
+    return res
+      .status(400)
+      .json({ error: "Body must include non-empty object 'fields'" });
   }
 
   // Build update payload with only allowed fields
@@ -206,7 +265,10 @@ async function handleBulkUpdate(
   }
 
   // Validate status
-  if ('status' in updatePayload && !VALID_STATUSES.includes(updatePayload.status as string)) {
+  if (
+    'status' in updatePayload &&
+    !VALID_STATUSES.includes(updatePayload.status as string)
+  ) {
     return res.status(400).json({
       error: `Invalid status. Allowed: ${VALID_STATUSES.join(', ')}`,
     });
@@ -216,7 +278,9 @@ async function handleBulkUpdate(
   if ('best_of' in updatePayload && updatePayload.best_of !== null) {
     const bo = Number(updatePayload.best_of);
     if (!Number.isInteger(bo) || bo < 1 || bo > 15) {
-      return res.status(400).json({ error: 'best_of must be an integer between 1 and 15' });
+      return res
+        .status(400)
+        .json({ error: 'best_of must be an integer between 1 and 15' });
     }
     updatePayload.best_of = bo;
   }
@@ -303,7 +367,10 @@ async function handleBulkDelete(
   }
 
   // Snapshot for undo (only useful for soft cancel, hard delete is irreversible)
-  let undoPayload: { type: string; snapshots: { matchId: string; fields: Record<string, unknown> }[] } | null = null;
+  let undoPayload: {
+    type: string;
+    snapshots: { matchId: string; fields: Record<string, unknown> }[];
+  } | null = null;
 
   if (!hard) {
     const { data: snapshotRows } = await supabaseAdmin
@@ -403,7 +470,9 @@ async function handleBulkUndo(
   const { action, undoPayload } = req.body;
 
   if (action !== 'undo') {
-    return res.status(400).json({ error: "POST body must include action: 'undo'" });
+    return res
+      .status(400)
+      .json({ error: "POST body must include action: 'undo'" });
   }
 
   if (
@@ -413,18 +482,24 @@ async function handleBulkUndo(
     undoPayload.snapshots.length === 0
   ) {
     return res.status(400).json({
-      error: "Body must include undoPayload with type and non-empty snapshots array",
+      error:
+        'Body must include undoPayload with type and non-empty snapshots array',
     });
   }
 
   const snapshots: Array<{ matchId: string; fields: Record<string, unknown> }> =
     undoPayload.snapshots;
 
-  const results: Array<{ matchId: string; success: boolean; error?: string }> = [];
+  const results: Array<{ matchId: string; success: boolean; error?: string }> =
+    [];
 
   for (const snap of snapshots) {
     if (!snap.matchId || typeof snap.matchId !== 'string' || !snap.fields) {
-      results.push({ matchId: snap.matchId, success: false, error: 'Invalid snapshot entry' });
+      results.push({
+        matchId: snap.matchId,
+        success: false,
+        error: 'Invalid snapshot entry',
+      });
       continue;
     }
 
@@ -435,7 +510,11 @@ async function handleBulkUndo(
       .eq('stage_id', stageId);
 
     if (error) {
-      results.push({ matchId: snap.matchId, success: false, error: 'Database update failed' });
+      results.push({
+        matchId: snap.matchId,
+        success: false,
+        error: 'Database update failed',
+      });
     } else {
       results.push({ matchId: snap.matchId, success: true });
     }
@@ -459,5 +538,7 @@ async function handleBulkUndo(
     });
   }
 
-  return res.status(200).json({ success: successCount > 0, results, successCount });
+  return res
+    .status(200)
+    .json({ success: successCount > 0, results, successCount });
 }

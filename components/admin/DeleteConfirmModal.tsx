@@ -32,8 +32,16 @@ export default function DeleteConfirmModal({
   }, [deleting, onCancel]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
-      <div ref={trapRef} className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-modal-title"
+    >
+      <div
+        ref={trapRef}
+        className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl"
+      >
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-full bg-red-900/50 flex items-center justify-center">
             <svg
@@ -51,7 +59,9 @@ export default function DeleteConfirmModal({
             </svg>
           </div>
           <div>
-            <h3 id="delete-modal-title" className="text-lg font-semibold">{title}</h3>
+            <h3 id="delete-modal-title" className="text-lg font-semibold">
+              {title}
+            </h3>
             <p className="text-sm text-neutral-400">{subtitle}</p>
           </div>
         </div>

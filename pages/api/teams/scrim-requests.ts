@@ -13,7 +13,8 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (applyRateLimit(req, res, { max: 20, windowMs: 60_000 }, 'scrim-requests')) return;
+  if (applyRateLimit(req, res, { max: 20, windowMs: 60_000 }, 'scrim-requests'))
+    return;
   if (!supabaseAdmin) {
     return res.status(503).json({ error: 'Service unavailable.' });
   }
@@ -46,7 +47,9 @@ export default async function handler(
     .maybeSingle();
 
   if (teamErr || !captainTeam) {
-    return res.status(403).json({ error: "Tu dois etre capitaine d'une equipe active." });
+    return res
+      .status(403)
+      .json({ error: "Tu dois etre capitaine d'une equipe active." });
   }
 
   if (req.method === 'GET') {
@@ -59,7 +62,10 @@ export default async function handler(
       .eq('type', 'scrim')
       .order('created_at', { ascending: false });
 
-    if (statusFilter && ['pending', 'approved', 'rejected', 'cancelled'].includes(statusFilter)) {
+    if (
+      statusFilter &&
+      ['pending', 'approved', 'rejected', 'cancelled'].includes(statusFilter)
+    ) {
       query = query.eq('status', statusFilter);
     } else {
       query = query.eq('status', 'pending');
@@ -78,7 +84,9 @@ export default async function handler(
         let userInfo = null;
         if (d.user_id) {
           try {
-            const { data: u } = await supabaseAdmin!.auth.admin.getUserById(d.user_id);
+            const { data: u } = await supabaseAdmin!.auth.admin.getUserById(
+              d.user_id
+            );
             if (u?.user) {
               const meta = u.user.user_metadata ?? {};
               userInfo = {
@@ -109,12 +117,18 @@ export default async function handler(
   if (req.method === 'POST') {
     const { demandeId, action } = req.body || {};
 
-    if (!demandeId || typeof demandeId !== 'string' || !isValidUUID(demandeId)) {
+    if (
+      !demandeId ||
+      typeof demandeId !== 'string' ||
+      !isValidUUID(demandeId)
+    ) {
       return res.status(400).json({ error: 'demandeId invalide.' });
     }
 
     if (action !== 'approve' && action !== 'reject') {
-      return res.status(400).json({ error: 'Action invalide. Utilise "approve" ou "reject".' });
+      return res
+        .status(400)
+        .json({ error: 'Action invalide. Utilise "approve" ou "reject".' });
     }
 
     const { data: demande, error: fetchErr } = await supabaseAdmin
@@ -127,7 +141,9 @@ export default async function handler(
       .maybeSingle();
 
     if (fetchErr || !demande) {
-      return res.status(404).json({ error: 'Demande introuvable ou deja traitee.' });
+      return res
+        .status(404)
+        .json({ error: 'Demande introuvable ou deja traitee.' });
     }
 
     const newStatus = action === 'approve' ? 'approved' : 'rejected';
@@ -153,36 +169,38 @@ export default async function handler(
       const fromTeamName = payload.from_team_name || 'Equipe inconnue';
       const preferredDate = payload.preferred_date || null;
 
-      await supabaseAdmin
-        .from('demandes')
-        .insert({
-          user_id: null,
-          team_id: captainTeam.id,
-          type: 'other',
-          status: 'pending',
-          source: 'website',
-          comment: `Scrim accepte : ${fromTeamName} vs ${captainTeam.name}` +
-            (preferredDate ? ` (date souhaitee : ${new Date(preferredDate).toLocaleDateString('fr-FR')})` : '') +
-            ((demande as any).comment ? ` — "${(demande as any).comment}"` : ''),
-          payload: {
-            notification_type: 'scrim_accepted',
-            from_team_id: payload.from_team_id,
-            from_team_name: fromTeamName,
-            target_team_id: captainTeam.id,
-            target_team_name: captainTeam.name,
-            preferred_date: preferredDate,
-            original_demande_id: demandeId,
-          },
-        });
+      await supabaseAdmin.from('demandes').insert({
+        user_id: null,
+        team_id: captainTeam.id,
+        type: 'other',
+        status: 'pending',
+        source: 'website',
+        comment:
+          `Scrim accepte : ${fromTeamName} vs ${captainTeam.name}` +
+          (preferredDate
+            ? ` (date souhaitee : ${new Date(preferredDate).toLocaleDateString('fr-FR')})`
+            : '') +
+          ((demande as any).comment ? ` — "${(demande as any).comment}"` : ''),
+        payload: {
+          notification_type: 'scrim_accepted',
+          from_team_id: payload.from_team_id,
+          from_team_name: fromTeamName,
+          target_team_id: captainTeam.id,
+          target_team_name: captainTeam.name,
+          preferred_date: preferredDate,
+          original_demande_id: demandeId,
+        },
+      });
     }
 
     return res.status(200).json({
       success: true,
       demandeId,
       newStatus,
-      message: action === 'approve'
-        ? 'Scrim accepte ! L\'equipe organisatrice a ete notifiee.'
-        : 'Demande de scrim refusee.',
+      message:
+        action === 'approve'
+          ? "Scrim accepte ! L'equipe organisatrice a ete notifiee."
+          : 'Demande de scrim refusee.',
     });
   }
 

@@ -16,7 +16,14 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (applyRateLimit(req, res, { max: 10, windowMs: 60_000 }, 'player-update-profile'))
+  if (
+    applyRateLimit(
+      req,
+      res,
+      { max: 10, windowMs: 60_000 },
+      'player-update-profile'
+    )
+  )
     return;
 
   if (!supabaseAdmin) {
@@ -64,16 +71,16 @@ export default async function handler(
   }
 
   if (Object.keys(updates).length === 0) {
-    return res
-      .status(400)
-      .json({ error: 'Aucun champ a mettre a jour.' });
+    return res.status(400).json({ error: 'Aucun champ a mettre a jour.' });
   }
 
   const existingMeta = userData.user.user_metadata ?? {};
-  const { error: updateErr } =
-    await supabaseAdmin.auth.admin.updateUserById(userData.user.id, {
+  const { error: updateErr } = await supabaseAdmin.auth.admin.updateUserById(
+    userData.user.id,
+    {
       user_metadata: { ...existingMeta, ...updates },
-    });
+    }
+  );
 
   if (updateErr) {
     console.error('[player/update-profile] error:', updateErr);

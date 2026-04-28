@@ -49,7 +49,9 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
   const router = useRouter();
   const { addToast } = useToast();
 
-  const [customTemplates, setCustomTemplates] = useState<TournamentTemplate[]>([]);
+  const [customTemplates, setCustomTemplates] = useState<TournamentTemplate[]>(
+    []
+  );
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -162,7 +164,11 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
     setNewStages((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  function updateStageRow(idx: number, field: keyof TemplateStage, value: string) {
+  function updateStageRow(
+    idx: number,
+    field: keyof TemplateStage,
+    value: string
+  ) {
     setNewStages((prev) => {
       const updated = [...prev];
       updated[idx] = { ...updated[idx], [field]: value };
@@ -233,9 +239,7 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
           ))}
         </div>
 
-        <p className="text-[11px] text-neutral-500 font-mono">
-          ID: {tpl.id}
-        </p>
+        <p className="text-[11px] text-neutral-500 font-mono">ID: {tpl.id}</p>
       </div>
     );
   }
@@ -277,7 +281,8 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
                   Templates de tournoi
                 </h1>
                 <p className="text-neutral-400 text-sm mt-1">
-                  Gere les templates integres et personnalises pour creer rapidement des structures de tournoi.
+                  Gere les templates integres et personnalises pour creer
+                  rapidement des structures de tournoi.
                 </p>
               </div>
 
@@ -324,7 +329,9 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
           {/* Create form */}
           {showCreate && (
             <section className="mb-8 bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4">
-              <h2 className="text-lg font-semibold">Creer un template personnalise</h2>
+              <h2 className="text-lg font-semibold">
+                Creer un template personnalise
+              </h2>
 
               <form onSubmit={handleCreate} className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">
@@ -381,13 +388,17 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
                           type="text"
                           className="flex-1 px-2 py-1.5 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                           value={stage.name}
-                          onChange={(e) => updateStageRow(idx, 'name', e.target.value)}
+                          onChange={(e) =>
+                            updateStageRow(idx, 'name', e.target.value)
+                          }
                           placeholder="Nom du stage"
                         />
                         <select
                           className="px-2 py-1.5 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                           value={stage.stage_type}
-                          onChange={(e) => updateStageRow(idx, 'stage_type', e.target.value)}
+                          onChange={(e) =>
+                            updateStageRow(idx, 'stage_type', e.target.value)
+                          }
                         >
                           {STAGE_TYPES.map((st) => (
                             <option key={st.value} value={st.value}>

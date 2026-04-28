@@ -38,9 +38,21 @@ describe('computeSwissStandings', () => {
   it('correctly accumulates scores from results', () => {
     const results: SwissMatchResult[] = [
       // A beats B: A gets 3, B gets 0
-      { round: 1, player1Id: 'A', player2Id: 'B', player1Score: 3, player2Score: 0 },
+      {
+        round: 1,
+        player1Id: 'A',
+        player2Id: 'B',
+        player1Score: 3,
+        player2Score: 0,
+      },
       // C beats D: C gets 3, D gets 0
-      { round: 1, player1Id: 'C', player2Id: 'D', player1Score: 3, player2Score: 0 },
+      {
+        round: 1,
+        player1Id: 'C',
+        player2Id: 'D',
+        player1Score: 3,
+        player2Score: 0,
+      },
     ];
 
     const standings = computeSwissStandings({ participants, results });
@@ -56,7 +68,13 @@ describe('computeSwissStandings', () => {
 
   it('handles draws correctly', () => {
     const results: SwissMatchResult[] = [
-      { round: 1, player1Id: 'A', player2Id: 'B', player1Score: 1, player2Score: 1 },
+      {
+        round: 1,
+        player1Id: 'A',
+        player2Id: 'B',
+        player1Score: 1,
+        player2Score: 1,
+      },
     ];
 
     const standings = computeSwissStandings({ participants, results });
@@ -70,7 +88,13 @@ describe('computeSwissStandings', () => {
 
   it('handles byes', () => {
     const results: SwissMatchResult[] = [
-      { round: 1, player1Id: 'A', player2Id: null, player1Score: 3, player2Score: 0 },
+      {
+        round: 1,
+        player1Id: 'A',
+        player2Id: null,
+        player1Score: 3,
+        player2Score: 0,
+      },
     ];
 
     const standings = computeSwissStandings({ participants, results });
@@ -92,10 +116,34 @@ describe('computeSwissStandings', () => {
     // C's opponents: D(0) + A(6) → Buchholz=6
     // D's opponents: C(3) + B(3) → Buchholz=6
     const results: SwissMatchResult[] = [
-      { round: 1, player1Id: 'A', player2Id: 'B', player1Score: 3, player2Score: 0 },
-      { round: 1, player1Id: 'C', player2Id: 'D', player1Score: 3, player2Score: 0 },
-      { round: 2, player1Id: 'A', player2Id: 'C', player1Score: 3, player2Score: 0 },
-      { round: 2, player1Id: 'B', player2Id: 'D', player1Score: 3, player2Score: 0 },
+      {
+        round: 1,
+        player1Id: 'A',
+        player2Id: 'B',
+        player1Score: 3,
+        player2Score: 0,
+      },
+      {
+        round: 1,
+        player1Id: 'C',
+        player2Id: 'D',
+        player1Score: 3,
+        player2Score: 0,
+      },
+      {
+        round: 2,
+        player1Id: 'A',
+        player2Id: 'C',
+        player1Score: 3,
+        player2Score: 0,
+      },
+      {
+        round: 2,
+        player1Id: 'B',
+        player2Id: 'D',
+        player1Score: 3,
+        player2Score: 0,
+      },
     ];
 
     const standings = computeSwissStandings({ participants, results });
@@ -107,10 +155,34 @@ describe('computeSwissStandings', () => {
 
   it('sorts by score DESC, then Buchholz DESC', () => {
     const results: SwissMatchResult[] = [
-      { round: 1, player1Id: 'A', player2Id: 'B', player1Score: 3, player2Score: 0 },
-      { round: 1, player1Id: 'C', player2Id: 'D', player1Score: 3, player2Score: 0 },
-      { round: 2, player1Id: 'A', player2Id: 'C', player1Score: 3, player2Score: 0 },
-      { round: 2, player1Id: 'B', player2Id: 'D', player1Score: 3, player2Score: 0 },
+      {
+        round: 1,
+        player1Id: 'A',
+        player2Id: 'B',
+        player1Score: 3,
+        player2Score: 0,
+      },
+      {
+        round: 1,
+        player1Id: 'C',
+        player2Id: 'D',
+        player1Score: 3,
+        player2Score: 0,
+      },
+      {
+        round: 2,
+        player1Id: 'A',
+        player2Id: 'C',
+        player1Score: 3,
+        player2Score: 0,
+      },
+      {
+        round: 2,
+        player1Id: 'B',
+        player2Id: 'D',
+        player1Score: 3,
+        player2Score: 0,
+      },
     ];
 
     const standings = computeSwissStandings({ participants, results });
@@ -190,9 +262,27 @@ describe('outcomeToSwissResult', () => {
 
 describe('swiss utils helpers', () => {
   const results: SwissMatchResult[] = [
-    { round: 1, player1Id: 'A', player2Id: 'B', player1Score: 3, player2Score: 0 },
-    { round: 1, player1Id: 'C', player2Id: null, player1Score: 3, player2Score: 0 },
-    { round: 2, player1Id: 'A', player2Id: 'C', player1Score: 3, player2Score: 0 },
+    {
+      round: 1,
+      player1Id: 'A',
+      player2Id: 'B',
+      player1Score: 3,
+      player2Score: 0,
+    },
+    {
+      round: 1,
+      player1Id: 'C',
+      player2Id: null,
+      player1Score: 3,
+      player2Score: 0,
+    },
+    {
+      round: 2,
+      player1Id: 'A',
+      player2Id: 'C',
+      player1Score: 3,
+      player2Score: 0,
+    },
   ];
 
   it('getPlayerOpponents excludes byes', () => {

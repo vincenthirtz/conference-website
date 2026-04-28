@@ -93,7 +93,10 @@ export function getServerClient(
         return req.cookies?.[name];
       },
       set(name: string, value: string, options: CookieOptions) {
-        appendSetCookie(res, serialize(name, value, hardenCookieOptions(options)));
+        appendSetCookie(
+          res,
+          serialize(name, value, hardenCookieOptions(options))
+        );
       },
       remove(name: string, options: CookieOptions) {
         appendSetCookie(

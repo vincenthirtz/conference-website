@@ -14,14 +14,22 @@ const ALL_TEST_EMAILS = [PLAYER_EMAIL, ...EXTRA_MEMBER_EMAILS];
 
 test.describe.serial('Team creation page', () => {
   test.beforeAll(async () => {
-    await deleteTeamsByName([`${TEAM_NAME}%`, `${TEAM_NAME}-bulk%`, 'E2E Team%']);
+    await deleteTeamsByName([
+      `${TEAM_NAME}%`,
+      `${TEAM_NAME}-bulk%`,
+      'E2E Team%',
+    ]);
     for (const email of ALL_TEST_EMAILS) {
       await deleteTestUser(email);
     }
   });
 
   test.afterAll(async () => {
-    await deleteTeamsByName([`${TEAM_NAME}%`, `${TEAM_NAME}-bulk%`, 'E2E Team%']);
+    await deleteTeamsByName([
+      `${TEAM_NAME}%`,
+      `${TEAM_NAME}-bulk%`,
+      'E2E Team%',
+    ]);
     for (const email of ALL_TEST_EMAILS) {
       await deleteTestUser(email);
     }
@@ -39,9 +47,9 @@ test.describe.serial('Team creation page', () => {
 
     await page.getByPlaceholder('Ex : Phénix').fill(TEAM_NAME);
     await page.getByPlaceholder('France, Europe…').fill('France');
-    await page.getByPlaceholder('Pitch rapide, palmarès, ambitions…').fill(
-      'Equipe test e2e.'
-    );
+    await page
+      .getByPlaceholder('Pitch rapide, palmarès, ambitions…')
+      .fill('Equipe test e2e.');
     // Ajouter un membre par défaut
     await page.getByPlaceholder('joueuse@email.tld').fill(PLAYER_EMAIL);
     await page.getByPlaceholder('player / coach / sub').fill('player');
@@ -49,7 +57,9 @@ test.describe.serial('Team creation page', () => {
 
     await page.getByRole('button', { name: "Créer l'équipe" }).click();
 
-    await expect(page.getByText('Équipe créée')).toBeVisible({ timeout: 20000 });
+    await expect(page.getByText('Équipe créée')).toBeVisible({
+      timeout: 20000,
+    });
 
     // Le lien de page équipe doit apparaître après succès
     await expect(
@@ -57,8 +67,13 @@ test.describe.serial('Team creation page', () => {
     ).toBeVisible({ timeout: 10000 });
 
     // Vérifie côté base que l'équipe existe
-    if (process.env.TEST_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_SUPABASE_SERVICE_ROLE_KEY) {
-      const { supabaseTestClient } = await import('../utils/supabaseTestClient');
+    if (
+      process.env.TEST_SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.NEXT_SUPABASE_SERVICE_ROLE_KEY
+    ) {
+      const { supabaseTestClient } =
+        await import('../utils/supabaseTestClient');
       if (supabaseTestClient) {
         const { data, error } = await supabaseTestClient
           .from('teams')
@@ -96,9 +111,7 @@ test.describe.serial('Team creation page', () => {
     // Ajouter 4 autres membres (total 5)
     for (let i = 0; i < 4; i++) {
       await page.getByRole('button', { name: 'Ajouter une personne' }).click();
-      const emailInput = page
-        .getByPlaceholder('joueuse@email.tld')
-        .nth(i + 1);
+      const emailInput = page.getByPlaceholder('joueuse@email.tld').nth(i + 1);
       const roleInput = page
         .getByPlaceholder('player / coach / sub')
         .nth(i + 1);

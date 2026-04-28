@@ -78,5 +78,9 @@ export type MatchVetoState = {
   currentStepIndex: number;
   isComplete: boolean;
   /** Maps selected for play (picks + decider) in order */
-  pickedMaps: { map_name: string; map_type: string | null; picked_by: string | null }[];
+  pickedMaps: {
+    map_name: string;
+    map_type: string | null;
+    picked_by: string | null;
+  }[];
 };

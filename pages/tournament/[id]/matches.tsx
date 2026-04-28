@@ -1,5 +1,5 @@
 // pages/tournament/[id]/matches.tsx
- 
+
 import { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';

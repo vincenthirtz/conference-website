@@ -78,7 +78,13 @@ function formatDate(d: string | null) {
   }
 }
 
-const T_FILTER_KEYS = ['search', 'status', 'dateFrom', 'dateTo', 'offset'] as const;
+const T_FILTER_KEYS = [
+  'search',
+  'status',
+  'dateFrom',
+  'dateTo',
+  'offset',
+] as const;
 const LIMIT = 20;
 
 function AdminTournamentsPage({
@@ -125,7 +131,9 @@ function AdminTournamentsPage({
                   Gestion des tournois
                 </h1>
                 <p className="text-neutral-400 text-sm mt-1">
-                  {total !== null ? `${total} tournoi${total > 1 ? 's' : ''}` : 'Chargement...'}
+                  {total !== null
+                    ? `${total} tournoi${total > 1 ? 's' : ''}`
+                    : 'Chargement...'}
                 </p>
               </div>
 
@@ -213,7 +221,9 @@ function AdminTournamentsPage({
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={status || ''}
-                  onChange={(e) => setFilters({ status: e.target.value || null, offset: null })}
+                  onChange={(e) =>
+                    setFilters({ status: e.target.value || null, offset: null })
+                  }
                 >
                   <option value="">Tous les statuts</option>
                   <option value="draft">Brouillon</option>
@@ -233,7 +243,10 @@ function AdminTournamentsPage({
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={dateFrom}
                   onChange={(e) => {
-                    setFilters({ dateFrom: e.target.value || null, offset: null });
+                    setFilters({
+                      dateFrom: e.target.value || null,
+                      offset: null,
+                    });
                   }}
                 />
               </div>
@@ -247,7 +260,10 @@ function AdminTournamentsPage({
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={dateTo}
                   onChange={(e) => {
-                    setFilters({ dateTo: e.target.value || null, offset: null });
+                    setFilters({
+                      dateTo: e.target.value || null,
+                      offset: null,
+                    });
                   }}
                 />
               </div>
@@ -277,8 +293,16 @@ function AdminTournamentsPage({
           {/* Error Message */}
           {errorMsg && (
             <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
-              <svg className="w-5 h-5 text-red-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              <svg
+                className="w-5 h-5 text-red-400 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
               </svg>
               <span className="flex-1">{errorMsg}</span>
               <button
@@ -416,7 +440,9 @@ function AdminTournamentsPage({
             <button
               type="button"
               disabled={offset === 0}
-              onClick={() => setFilter('offset', String(Math.max(0, offset - LIMIT)) || null)}
+              onClick={() =>
+                setFilter('offset', String(Math.max(0, offset - LIMIT)) || null)
+              }
               className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <svg
@@ -512,7 +538,11 @@ export const getServerSideProps = withStaffPage('manager', async (ctx) => {
 
   if (error) {
     console.error('admin tournaments SSR error:', error);
-    return { tournaments: [], total: null, errorMsg: 'Erreur lors du chargement' };
+    return {
+      tournaments: [],
+      total: null,
+      errorMsg: 'Erreur lors du chargement',
+    };
   }
 
   return {

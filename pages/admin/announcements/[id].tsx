@@ -130,10 +130,7 @@ function AdminAnnouncementEditPage({ staff }: Props) {
     fetchAnnouncement();
   }, [fetchAnnouncement]);
 
-  function updateField<K extends keyof FormState>(
-    key: K,
-    value: FormState[K]
-  ) {
+  function updateField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -184,13 +181,16 @@ function AdminAnnouncementEditPage({ staff }: Props) {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Erreur lors de la mise à jour de l'annonce");
+        throw new Error(
+          json.error || "Erreur lors de la mise à jour de l'annonce"
+        );
       }
 
       addToast('Annonce mise à jour avec succès.', 'success');
     } catch (err: unknown) {
       setErrorMsg(
-        (err as Error)?.message ?? "Erreur inconnue lors de la mise à jour de l'annonce"
+        (err as Error)?.message ??
+          "Erreur inconnue lors de la mise à jour de l'annonce"
       );
     } finally {
       setSubmitting(false);
@@ -198,7 +198,7 @@ function AdminAnnouncementEditPage({ staff }: Props) {
   }
 
   async function handleDelete() {
-    if (!confirm("Supprimer cette annonce ? Cette action est irréversible.")) {
+    if (!confirm('Supprimer cette annonce ? Cette action est irréversible.')) {
       return;
     }
 
@@ -221,7 +221,7 @@ function AdminAnnouncementEditPage({ staff }: Props) {
 
       if (!res.ok && res.status !== 204) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Erreur lors de la suppression.");
+        throw new Error(json.error || 'Erreur lors de la suppression.');
       }
 
       router.push('/admin/announcements');
@@ -289,10 +289,12 @@ function AdminAnnouncementEditPage({ staff }: Props) {
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white p-6 pt-20">
-        <Breadcrumb items={[
-          { label: 'Annonces', href: '/admin/announcements' },
-          { label: 'Modifier' },
-        ]} />
+        <Breadcrumb
+          items={[
+            { label: 'Annonces', href: '/admin/announcements' },
+            { label: 'Modifier' },
+          ]}
+        />
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -388,7 +390,9 @@ function AdminAnnouncementEditPage({ staff }: Props) {
                       type="checkbox"
                       className="rounded border-neutral-500 bg-neutral-700 h-4 w-4"
                       checked={form.isActive}
-                      onChange={(e) => updateField('isActive', e.target.checked)}
+                      onChange={(e) =>
+                        updateField('isActive', e.target.checked)
+                      }
                     />
                     <span>Activer l&apos;annonce</span>
                   </label>
@@ -411,7 +415,9 @@ function AdminAnnouncementEditPage({ staff }: Props) {
 
             {/* Call to Action */}
             <section className="space-y-4">
-              <h2 className="font-semibold text-lg">Call to Action (optionnel)</h2>
+              <h2 className="font-semibold text-lg">
+                Call to Action (optionnel)
+              </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm mb-1 text-neutral-300">
@@ -513,7 +519,9 @@ function AdminAnnouncementEditPage({ staff }: Props) {
                 disabled={submitting}
                 className="px-5 py-2.5 font-semibold bg-emerald-600 hover:bg-emerald-700"
               >
-                {submitting ? 'Enregistrement...' : 'Enregistrer les modifications'}
+                {submitting
+                  ? 'Enregistrement...'
+                  : 'Enregistrer les modifications'}
               </Button>
             </div>
           </form>

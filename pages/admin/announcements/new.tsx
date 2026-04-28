@@ -46,18 +46,18 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showDraftBanner, setShowDraftBanner] = useState(false);
 
-  const { draftRestored, lastSaved, clearDraft, restoreDraft } = useAutoSave(form, {
-    key: 'announcement_new',
-  });
+  const { draftRestored, lastSaved, clearDraft, restoreDraft } = useAutoSave(
+    form,
+    {
+      key: 'announcement_new',
+    }
+  );
 
   useEffect(() => {
     if (draftRestored) setShowDraftBanner(true);
   }, [draftRestored]);
 
-  function updateField<K extends keyof FormState>(
-    key: K,
-    value: FormState[K]
-  ) {
+  function updateField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -108,14 +108,17 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Erreur lors de la création de l'annonce");
+        throw new Error(
+          json.error || "Erreur lors de la création de l'annonce"
+        );
       }
 
       clearDraft();
       router.push('/admin/announcements');
     } catch (err: unknown) {
       setErrorMsg(
-        (err as Error)?.message ?? "Erreur inconnue lors de la création de l'annonce"
+        (err as Error)?.message ??
+          "Erreur inconnue lors de la création de l'annonce"
       );
       setSubmitting(false);
     }
@@ -158,7 +161,8 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
                   Nouvelle annonce
                 </h1>
                 <p className="text-neutral-400 text-sm mt-1">
-                  Creez un bandeau publicitaire ou une annonce pour la page d&apos;accueil.
+                  Creez un bandeau publicitaire ou une annonce pour la page
+                  d&apos;accueil.
                 </p>
               </div>
             </div>
@@ -201,7 +205,9 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Informations generales */}
                 <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4">
-                  <h2 className="text-lg font-semibold">Informations generales</h2>
+                  <h2 className="text-lg font-semibold">
+                    Informations generales
+                  </h2>
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
@@ -223,7 +229,9 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
                           type="checkbox"
                           className="h-4 w-4 rounded border-neutral-600 bg-neutral-900"
                           checked={form.isActive}
-                          onChange={(e) => updateField('isActive', e.target.checked)}
+                          onChange={(e) =>
+                            updateField('isActive', e.target.checked)
+                          }
                         />
                         <span>Activer l&apos;annonce</span>
                       </label>
@@ -246,7 +254,9 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
 
                 {/* Call to Action */}
                 <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4">
-                  <h2 className="text-lg font-semibold">Call to Action (optionnel)</h2>
+                  <h2 className="text-lg font-semibold">
+                    Call to Action (optionnel)
+                  </h2>
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
@@ -257,7 +267,9 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
                         type="text"
                         className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         value={form.ctaLabel}
-                        onChange={(e) => updateField('ctaLabel', e.target.value)}
+                        onChange={(e) =>
+                          updateField('ctaLabel', e.target.value)
+                        }
                         placeholder="Decouvrir, Voir l'offre..."
                       />
                     </div>
@@ -290,7 +302,9 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
                         type="datetime-local"
                         className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         value={form.startsAt}
-                        onChange={(e) => updateField('startsAt', e.target.value)}
+                        onChange={(e) =>
+                          updateField('startsAt', e.target.value)
+                        }
                       />
                       <p className="text-xs text-neutral-500 mt-1">
                         Laissez vide pour afficher immediatement.
@@ -321,11 +335,14 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
                         min={0}
                         className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         value={form.priority}
-                        onChange={(e) => updateField('priority', e.target.value)}
+                        onChange={(e) =>
+                          updateField('priority', e.target.value)
+                        }
                         placeholder="0"
                       />
                       <p className="text-xs text-neutral-500 mt-1">
-                        Plus le chiffre est eleve, plus l&apos;annonce est prioritaire.
+                        Plus le chiffre est eleve, plus l&apos;annonce est
+                        prioritaire.
                       </p>
                     </div>
                   </div>
@@ -399,17 +416,19 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-white truncate">
-                        {form.title || 'Titre de l\'annonce'}
+                        {form.title || "Titre de l'annonce"}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex flex-wrap gap-2">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      form.isActive
-                        ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/30'
-                        : 'bg-neutral-600 text-neutral-300'
-                    }`}>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                        form.isActive
+                          ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/30'
+                          : 'bg-neutral-600 text-neutral-300'
+                      }`}
+                    >
                       {form.isActive ? 'Actif' : 'Inactif'}
                     </span>
                     {Number(form.priority) > 0 && (
@@ -440,15 +459,24 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
                 <div className="text-xs text-neutral-400 space-y-2">
                   <div className="flex items-start gap-2">
                     <span className="text-neutral-500">•</span>
-                    <p>L&apos;annonce sera affichee en bandeau sur la page d&apos;accueil.</p>
+                    <p>
+                      L&apos;annonce sera affichee en bandeau sur la page
+                      d&apos;accueil.
+                    </p>
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="text-neutral-500">•</span>
-                    <p>Les dates permettent de programmer l&apos;affichage automatiquement.</p>
+                    <p>
+                      Les dates permettent de programmer l&apos;affichage
+                      automatiquement.
+                    </p>
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="text-neutral-500">•</span>
-                    <p>Une priorite elevee affiche l&apos;annonce en premier si plusieurs sont actives.</p>
+                    <p>
+                      Une priorite elevee affiche l&apos;annonce en premier si
+                      plusieurs sont actives.
+                    </p>
                   </div>
                 </div>
               </section>

@@ -1,5 +1,5 @@
 // pages/tournament/[id]/stats.tsx
- 
+
 import { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -91,11 +91,12 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
 
   const stageIds = (stages || []).map((s: any) => s.id);
 
-  const { data: stageTeams, error: stErr } = stageIds.length > 0
-    ? await supabaseAdmin
-        .from('stage_teams')
-        .select(
-          `
+  const { data: stageTeams, error: stErr } =
+    stageIds.length > 0
+      ? await supabaseAdmin
+          .from('stage_teams')
+          .select(
+            `
           team:teams (
             id,
             name,
@@ -103,9 +104,9 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
             logo_url
           )
         `
-        )
-        .in('stage_id', stageIds)
-    : { data: null, error: null };
+          )
+          .in('stage_id', stageIds)
+      : { data: null, error: null };
 
   if (stErr) {
     console.error('stats page stage_teams error:', stErr);

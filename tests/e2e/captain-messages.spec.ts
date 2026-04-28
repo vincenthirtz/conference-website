@@ -62,7 +62,11 @@ test.describe('Captain messages API (/api/player/messages)', () => {
     // Create team A
     const { data: teamA } = await supabaseTestClient!
       .from('teams')
-      .insert({ name: `${PREFIX}-teamA`, captain_id: captainAUserId, is_active: true })
+      .insert({
+        name: `${PREFIX}-teamA`,
+        captain_id: captainAUserId,
+        is_active: true,
+      })
       .select('id')
       .single();
     teamAId = teamA!.id;
@@ -77,7 +81,11 @@ test.describe('Captain messages API (/api/player/messages)', () => {
     // Create team B
     const { data: teamB } = await supabaseTestClient!
       .from('teams')
-      .insert({ name: `${PREFIX}-teamB`, captain_id: captainBUserId, is_active: true })
+      .insert({
+        name: `${PREFIX}-teamB`,
+        captain_id: captainBUserId,
+        is_active: true,
+      })
       .select('id')
       .single();
     teamBId = teamB!.id;
@@ -98,7 +106,8 @@ test.describe('Captain messages API (/api/player/messages)', () => {
     });
 
     // Deterministic conversation ID
-    conversationId = teamAId < teamBId ? `${teamAId}_${teamBId}` : `${teamBId}_${teamAId}`;
+    conversationId =
+      teamAId < teamBId ? `${teamAId}_${teamBId}` : `${teamBId}_${teamAId}`;
   });
 
   test.afterAll(async () => {
@@ -106,7 +115,11 @@ test.describe('Captain messages API (/api/player/messages)', () => {
     // Cleanup messages
     for (const uid of [captainAUserId, captainBUserId, playerUserId]) {
       if (uid) {
-        await supabaseTestClient!.from('demandes').delete().eq('user_id', uid).eq('type', 'captain_message');
+        await supabaseTestClient!
+          .from('demandes')
+          .delete()
+          .eq('user_id', uid)
+          .eq('type', 'captain_message');
       }
     }
     await deleteTeamsByName([`${PREFIX}%`]);
@@ -117,12 +130,16 @@ test.describe('Captain messages API (/api/player/messages)', () => {
 
   // ─── Auth ────────────────────────────────────────────
 
-  test('GET /api/player/messages returns 401 without token', async ({ request }) => {
+  test('GET /api/player/messages returns 401 without token', async ({
+    request,
+  }) => {
     const res = await request.get('/api/player/messages');
     expect(res.status()).toBe(401);
   });
 
-  test('POST /api/player/messages returns 401 without token', async ({ request }) => {
+  test('POST /api/player/messages returns 401 without token', async ({
+    request,
+  }) => {
     const res = await request.post('/api/player/messages', {
       data: { targetTeamId: 'fake', content: 'hello' },
     });
@@ -147,7 +164,9 @@ test.describe('Captain messages API (/api/player/messages)', () => {
 
   // ─── Authorization ──────────────────────────────────
 
-  test('POST returns 403 when non-captain tries to send message', async ({ request }) => {
+  test('POST returns 403 when non-captain tries to send message', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.post('/api/player/messages', {
       headers: { Authorization: `Bearer ${playerToken}` },
@@ -212,11 +231,16 @@ test.describe('Captain messages API (/api/player/messages)', () => {
     expect(body.error).toContain('propre equipe');
   });
 
-  test('POST returns 400 when target team does not exist', async ({ request }) => {
+  test('POST returns 400 when target team does not exist', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.post('/api/player/messages', {
       headers: { Authorization: `Bearer ${captainAToken}` },
-      data: { targetTeamId: '00000000-0000-0000-0000-000000000000', content: 'hello' },
+      data: {
+        targetTeamId: '00000000-0000-0000-0000-000000000000',
+        content: 'hello',
+      },
     });
     expect(res.status()).toBe(400);
     const body = await res.json();
@@ -229,7 +253,10 @@ test.describe('Captain messages API (/api/player/messages)', () => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.post('/api/player/messages', {
       headers: { Authorization: `Bearer ${captainAToken}` },
-      data: { targetTeamId: teamBId, content: 'Salut, dispo pour un scrim ce soir ?' },
+      data: {
+        targetTeamId: teamBId,
+        content: 'Salut, dispo pour un scrim ce soir ?',
+      },
     });
     expect(res.status()).toBe(201);
     const body = await res.json();
@@ -258,7 +285,9 @@ test.describe('Captain messages API (/api/player/messages)', () => {
     expect(conv.otherTeamName).toContain(`${PREFIX}-teamA`);
   });
 
-  test('Captain A also sees the conversation in their inbox', async ({ request }) => {
+  test('Captain A also sees the conversation in their inbox', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.get('/api/player/messages', {
       headers: { Authorization: `Bearer ${captainAToken}` },
@@ -286,7 +315,9 @@ test.describe('Captain messages API (/api/player/messages)', () => {
 
   // ─── Conversation detail ────────────────────────────
 
-  test('GET conversation returns all messages in order', async ({ request }) => {
+  test('GET conversation returns all messages in order', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.get(`/api/player/messages/${conversationId}`, {
       headers: { Authorization: `Bearer ${captainAToken}` },
@@ -310,14 +341,20 @@ test.describe('Captain messages API (/api/player/messages)', () => {
     expect(body.messages[1].senderTeamId).toBe(teamBId);
   });
 
-  test('GET conversation returns 403 for unrelated captain', async ({ request }) => {
+  test('GET conversation returns 403 for unrelated captain', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     // Create a third team to test access control
     const thirdEmail = `test-msg-third-${Date.now()}@test.local`;
     const third = await createTestPlayer(thirdEmail, PASSWORD);
     const { data: teamC } = await supabaseTestClient!
       .from('teams')
-      .insert({ name: `${PREFIX}-teamC`, captain_id: third!.id, is_active: true })
+      .insert({
+        name: `${PREFIX}-teamC`,
+        captain_id: third!.id,
+        is_active: true,
+      })
       .select('id')
       .single();
     await supabaseTestClient!.from('team_members').insert({
@@ -327,10 +364,11 @@ test.describe('Captain messages API (/api/player/messages)', () => {
       battle_tag: 'Third#0001',
     });
 
-    const { data: thirdAuth } = await supabaseTestClient!.auth.signInWithPassword({
-      email: thirdEmail,
-      password: PASSWORD,
-    });
+    const { data: thirdAuth } =
+      await supabaseTestClient!.auth.signInWithPassword({
+        email: thirdEmail,
+        password: PASSWORD,
+      });
 
     const res = await request.get(`/api/player/messages/${conversationId}`, {
       headers: { Authorization: `Bearer ${thirdAuth.session!.access_token}` },
@@ -338,12 +376,17 @@ test.describe('Captain messages API (/api/player/messages)', () => {
     expect(res.status()).toBe(403);
 
     // Cleanup
-    await supabaseTestClient!.from('team_members').delete().eq('team_id', teamC!.id);
+    await supabaseTestClient!
+      .from('team_members')
+      .delete()
+      .eq('team_id', teamC!.id);
     await supabaseTestClient!.from('teams').delete().eq('id', teamC!.id);
     await deleteTestUser(thirdEmail);
   });
 
-  test('GET conversation returns 400 for invalid conversation ID', async ({ request }) => {
+  test('GET conversation returns 400 for invalid conversation ID', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.get('/api/player/messages/invalid-id', {
       headers: { Authorization: `Bearer ${captainAToken}` },
@@ -366,9 +409,12 @@ test.describe('Captain messages API (/api/player/messages)', () => {
     expect(convBefore.unreadCount).toBeGreaterThanOrEqual(1);
 
     // Mark as read
-    const patchRes = await request.patch(`/api/player/messages/${conversationId}`, {
-      headers: { Authorization: `Bearer ${captainAToken}` },
-    });
+    const patchRes = await request.patch(
+      `/api/player/messages/${conversationId}`,
+      {
+        headers: { Authorization: `Bearer ${captainAToken}` },
+      }
+    );
     expect(patchRes.status()).toBe(200);
     const patchBody = await patchRes.json();
     expect(patchBody.success).toBe(true);

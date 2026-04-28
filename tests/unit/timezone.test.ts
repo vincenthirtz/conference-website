@@ -12,7 +12,9 @@ describe('TOURNAMENT_TIMEZONES', () => {
   });
 
   it('includes Europe/Paris', () => {
-    const paris = TOURNAMENT_TIMEZONES.find((tz) => tz.value === 'Europe/Paris');
+    const paris = TOURNAMENT_TIMEZONES.find(
+      (tz) => tz.value === 'Europe/Paris'
+    );
     expect(paris).toBeDefined();
     expect(paris!.label).toContain('Paris');
   });

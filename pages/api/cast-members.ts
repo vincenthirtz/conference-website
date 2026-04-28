@@ -6,29 +6,28 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'cast-members')) return;
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'cast-members'))
+    return;
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   if (!supabaseAdmin) {
-    return res
-      .status(500)
-      .json({ error: 'Database service unavailable.' });
+    return res.status(500).json({ error: 'Database service unavailable.' });
   }
 
   const { data, error } = await supabaseAdmin
     .from('cast_members')
-    .select('id, name, title, description, image_url, twitch_url, city, is_promo, sort_order')
+    .select(
+      'id, name, title, description, image_url, twitch_url, city, is_promo, sort_order'
+    )
     .eq('is_active', true)
     .order('sort_order', { ascending: true });
 
   if (error) {
     console.error('[api/cast-members] error', error);
-    return res
-      .status(500)
-      .json({ error: 'Failed to load cast members.' });
+    return res.status(500).json({ error: 'Failed to load cast members.' });
   }
 
   // Transform to camelCase for frontend consumption
@@ -44,6 +43,9 @@ export default async function handler(
     sortOrder: item.sort_order,
   }));
 
-  res.setHeader('Cache-Control', 'public, s-maxage=900, stale-while-revalidate=300');
+  res.setHeader(
+    'Cache-Control',
+    'public, s-maxage=900, stale-while-revalidate=300'
+  );
   return res.status(200).json({ items });
 }

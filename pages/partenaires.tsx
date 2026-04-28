@@ -68,7 +68,10 @@ const highlights = [
   },
 ];
 
-const categoryMeta: Record<string, { title: string; summary: string; accent: string }> = {
+const categoryMeta: Record<
+  string,
+  { title: string; summary: string; accent: string }
+> = {
   super: {
     title: 'Super partenaire',
     summary:

@@ -35,38 +35,48 @@ type ApiResponse = {
   globals: WebhookRow[];
 };
 
-const CHANNEL_LABELS: Record<ChannelType, { label: string; description: string }> = {
+const CHANNEL_LABELS: Record<
+  ChannelType,
+  { label: string; description: string }
+> = {
   match_announcements: {
     label: 'Annonces de match',
-    description: 'Ping J-15min : code lobby, stream URL, ping des deux équipes (rôles Discord).',
+    description:
+      'Ping J-15min : code lobby, stream URL, ping des deux équipes (rôles Discord).',
   },
   match_results: {
     label: 'Résultats de match',
-    description: 'Embed avec score final + équipe gagnante (et logo) à chaque match terminé.',
+    description:
+      'Embed avec score final + équipe gagnante (et logo) à chaque match terminé.',
   },
   bracket_updates: {
     label: 'Mise à jour bracket',
-    description: 'Annonce de progression : qui avance, prochain round, prochain adversaire.',
+    description:
+      'Annonce de progression : qui avance, prochain round, prochain adversaire.',
   },
   general_announcements: {
     label: 'Annonces générales',
-    description: 'Crosspost automatique des annonces créées dans /admin/announcements.',
+    description:
+      'Crosspost automatique des annonces créées dans /admin/announcements.',
   },
   veto_live: {
     label: 'Veto en direct',
-    description: 'Un message par étape : ban, pick, decider — au fil de l\'eau.',
+    description: "Un message par étape : ban, pick, decider — au fil de l'eau.",
   },
   checkin_reminders: {
     label: 'Rappels check-in',
-    description: 'Rappels T-30min / T-15min avant chaque match + annonce de forfait auto à T-0.',
+    description:
+      'Rappels T-30min / T-15min avant chaque match + annonce de forfait auto à T-0.',
   },
   support_tickets: {
     label: 'Tickets de support',
-    description: 'Signalements (litiges, comportement, technique). Sévérité HAUTE = ping du rôle modération.',
+    description:
+      'Signalements (litiges, comportement, technique). Sévérité HAUTE = ping du rôle modération.',
   },
   mvp_polls: {
     label: 'Sondages MVP',
-    description: 'Sondage Discord natif (24h) pour élire la MVP, posté automatiquement à la fin de chaque match.',
+    description:
+      'Sondage Discord natif (24h) pour élire la MVP, posté automatiquement à la fin de chaque match.',
   },
 };
 
@@ -84,7 +94,10 @@ function DiscordConfigPage(_: StaffProps) {
 
   // Per-channel form state
   const [drafts, setDrafts] = useState<
-    Record<ChannelType, { webhookUrl: string; roleMention: string; isActive: boolean }>
+    Record<
+      ChannelType,
+      { webhookUrl: string; roleMention: string; isActive: boolean }
+    >
   >({
     match_announcements: { webhookUrl: '', roleMention: '', isActive: true },
     match_results: { webhookUrl: '', roleMention: '', isActive: true },
@@ -112,7 +125,9 @@ function DiscordConfigPage(_: StaffProps) {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const res = await fetch(`/api/admin/tournament/${tournamentId}/discord-webhooks`);
+      const res = await fetch(
+        `/api/admin/tournament/${tournamentId}/discord-webhooks`
+      );
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
         throw new Error(j.error || 'Impossible de charger les webhooks');
@@ -152,16 +167,19 @@ function DiscordConfigPage(_: StaffProps) {
 
     setSaving((s) => ({ ...s, [channelType]: true }));
     try {
-      const res = await fetch(`/api/admin/tournament/${tournamentId}/discord-webhooks`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          channelType,
-          webhookUrl: draft.webhookUrl.trim(),
-          roleMention: draft.roleMention.trim() || null,
-          isActive: draft.isActive,
-        }),
-      });
+      const res = await fetch(
+        `/api/admin/tournament/${tournamentId}/discord-webhooks`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            channelType,
+            webhookUrl: draft.webhookUrl.trim(),
+            roleMention: draft.roleMention.trim() || null,
+            isActive: draft.isActive,
+          }),
+        }
+      );
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || 'Échec de la sauvegarde');
       addToast('Webhook enregistré', 'success');
@@ -175,7 +193,10 @@ function DiscordConfigPage(_: StaffProps) {
 
   async function remove(channelType: ChannelType) {
     if (!tournamentId) return;
-    if (!confirm(`Supprimer le webhook "${CHANNEL_LABELS[channelType].label}" ?`)) return;
+    if (
+      !confirm(`Supprimer le webhook "${CHANNEL_LABELS[channelType].label}" ?`)
+    )
+      return;
 
     setSaving((s) => ({ ...s, [channelType]: true }));
     try {
@@ -203,11 +224,14 @@ function DiscordConfigPage(_: StaffProps) {
   async function test(channelType: ChannelType) {
     if (!tournamentId) return;
     try {
-      const res = await fetch(`/api/admin/tournament/${tournamentId}/discord-test`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channelType }),
-      });
+      const res = await fetch(
+        `/api/admin/tournament/${tournamentId}/discord-test`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ channelType }),
+        }
+      );
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || 'Échec du test');
       addToast('Message de test envoyé', 'success');
@@ -217,7 +241,10 @@ function DiscordConfigPage(_: StaffProps) {
   }
 
   function fallbackUrl(channelType: ChannelType): string | null {
-    return data?.globals.find((g) => g.channel_type === channelType)?.webhook_url || null;
+    return (
+      data?.globals.find((g) => g.channel_type === channelType)?.webhook_url ||
+      null
+    );
   }
 
   return (
@@ -233,17 +260,30 @@ function DiscordConfigPage(_: StaffProps) {
             onClick={() => router.push(`/admin/tournament/${tournamentId}`)}
             className="mb-4 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
             </svg>
             Retour au tournoi
           </button>
 
-          <h1 className="text-3xl font-bold tracking-tight mb-1">Webhooks Discord</h1>
+          <h1 className="text-3xl font-bold tracking-tight mb-1">
+            Webhooks Discord
+          </h1>
           <p className="text-sm text-neutral-400 mb-8">
-            Configurez un webhook par type de channel. Si rien n&apos;est configuré pour un type,
-            une éventuelle configuration globale (sans tournoi associé) sera utilisée en
-            fallback. Réservé au rôle <code className="bg-neutral-800 px-1 rounded">admin</code>.
+            Configurez un webhook par type de channel. Si rien n&apos;est
+            configuré pour un type, une éventuelle configuration globale (sans
+            tournoi associé) sera utilisée en fallback. Réservé au rôle{' '}
+            <code className="bg-neutral-800 px-1 rounded">admin</code>.
           </p>
 
           {loading && (
@@ -274,7 +314,9 @@ function DiscordConfigPage(_: StaffProps) {
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div>
                         <h3 className="text-lg font-semibold">{meta.label}</h3>
-                        <p className="text-xs text-neutral-400 mt-1">{meta.description}</p>
+                        <p className="text-xs text-neutral-400 mt-1">
+                          {meta.description}
+                        </p>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {scoped ? (
@@ -331,8 +373,8 @@ function DiscordConfigPage(_: StaffProps) {
 
                     <div className="mb-3">
                       <label className="block text-xs text-neutral-400 mb-1">
-                        Rôle à pinger (optionnel) — ID Discord, &quot;everyone&quot;, ou
-                        &quot;here&quot;
+                        Rôle à pinger (optionnel) — ID Discord,
+                        &quot;everyone&quot;, ou &quot;here&quot;
                       </label>
                       <input
                         type="text"
@@ -348,8 +390,11 @@ function DiscordConfigPage(_: StaffProps) {
                       />
                       <p className="text-xs text-neutral-500 mt-1">
                         Astuce : pour récupérer un ID de rôle Discord, tape{' '}
-                        <code className="bg-neutral-900 px-1 rounded">\@LeRole</code> dans
-                        Discord puis envoie le message — il affichera l&apos;ID brut.
+                        <code className="bg-neutral-900 px-1 rounded">
+                          \@LeRole
+                        </code>{' '}
+                        dans Discord puis envoie le message — il affichera
+                        l&apos;ID brut.
                       </p>
                     </div>
 

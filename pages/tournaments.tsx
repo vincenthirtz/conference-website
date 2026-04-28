@@ -26,7 +26,9 @@ type TournamentsPageProps = {
   tournaments: Tournament[];
 };
 
-export const getStaticProps: GetStaticProps<TournamentsPageProps> = async () => {
+export const getStaticProps: GetStaticProps<
+  TournamentsPageProps
+> = async () => {
   if (!supabaseAdmin) {
     return { props: { tournaments: [] }, revalidate: 60 };
   }
@@ -126,7 +128,11 @@ function TournamentsPage({ tournaments }: TournamentsPageProps) {
               <span>Overwatch</span>
             </div>
 
-            <Heading typeStyle="heading-lg" level="h1" className="text-gradient mb-4">
+            <Heading
+              typeStyle="heading-lg"
+              level="h1"
+              className="text-gradient mb-4"
+            >
               Tous les tournois
             </Heading>
 
@@ -287,7 +293,9 @@ function TournamentCard({ tournament, status }: TournamentCardProps) {
           <div className="absolute bottom-3 left-3">
             <div className="w-12 h-12 rounded-xl bg-black/60 border border-white/20 flex items-center justify-center">
               <span className="text-sm font-bold text-white/80">
-                {(tournament.short_name || tournament.name).slice(0, 3).toUpperCase()}
+                {(tournament.short_name || tournament.name)
+                  .slice(0, 3)
+                  .toUpperCase()}
               </span>
             </div>
           </div>

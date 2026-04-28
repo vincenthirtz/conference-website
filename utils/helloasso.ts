@@ -106,7 +106,7 @@ export async function createCheckoutIntent(
   const body = {
     totalAmount: opts.totalAmount,
     initialAmount: opts.totalAmount,
-    itemName: opts.itemName || 'Don pour l\'association',
+    itemName: opts.itemName || "Don pour l'association",
     backUrl: opts.errorUrl,
     errorUrl: opts.errorUrl,
     returnUrl: opts.returnUrl,

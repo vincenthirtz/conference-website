@@ -18,7 +18,8 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (applyRateLimit(req, res, { max: 30, windowMs: 60_000 }, 'demandes-scrim')) return;
+  if (applyRateLimit(req, res, { max: 30, windowMs: 60_000 }, 'demandes-scrim'))
+    return;
   if (!supabaseAdmin) {
     return res
       .status(500)
@@ -55,9 +56,7 @@ export default async function handler(
 
     if (demandesErr) {
       console.error('[demandes/scrim] GET error:', demandesErr);
-      return res
-        .status(500)
-        .json({ error: 'Failed to load requests.' });
+      return res.status(500).json({ error: 'Failed to load requests.' });
     }
 
     return res.status(200).json({ demandes: demandes || [] });
@@ -75,7 +74,9 @@ export default async function handler(
     const teamId = body.teamId.trim();
     const rawMessage = body.message?.trim() || null;
     if (rawMessage && rawMessage.length > 1000) {
-      return res.status(400).json({ error: 'Message trop long (max 1000 caracteres).' });
+      return res
+        .status(400)
+        .json({ error: 'Message trop long (max 1000 caracteres).' });
     }
     const message = rawMessage?.slice(0, 1000) || null;
 
@@ -187,9 +188,7 @@ export default async function handler(
 
     if (insertErr) {
       console.error('[demandes/scrim] insert error:', insertErr);
-      return res
-        .status(500)
-        .json({ error: 'Failed to create request.' });
+      return res.status(500).json({ error: 'Failed to create request.' });
     }
 
     // Fire-and-forget Discord notification (errors are logged inside).

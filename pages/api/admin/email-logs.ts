@@ -41,7 +41,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   params.set('sort', 'desc');
   if (email && typeof email === 'string') params.set('email', email);
   if (event && typeof event === 'string') params.set('event', event);
-  if (startDate && typeof startDate === 'string') params.set('startDate', startDate);
+  if (startDate && typeof startDate === 'string')
+    params.set('startDate', startDate);
   if (endDate && typeof endDate === 'string') params.set('endDate', endDate);
 
   try {

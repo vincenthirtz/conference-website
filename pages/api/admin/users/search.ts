@@ -15,9 +15,7 @@ type PlayerResult = {
   team_name: string | null;
 };
 
-type SearchResponse =
-  | { players: PlayerResult[] }
-  | { error: string };
+type SearchResponse = { players: PlayerResult[] } | { error: string };
 
 export default withStaffRoute(handler, 'manager');
 
@@ -37,11 +35,15 @@ async function handler(
   const query = typeof q === 'string' ? q.trim() : '';
 
   if (!query || query.length < 2) {
-    return res.status(400).json({ error: 'Query must be at least 2 characters' });
+    return res
+      .status(400)
+      .json({ error: 'Query must be at least 2 characters' });
   }
 
   if (query.length > 100) {
-    return res.status(400).json({ error: 'Query too long (max 100 characters)' });
+    return res
+      .status(400)
+      .json({ error: 'Query too long (max 100 characters)' });
   }
 
   const safeQuery = escapePostgrestValue(query);
@@ -58,15 +60,19 @@ async function handler(
     const seenUserIds = new Set<string>();
 
     // 1) Search by email/display_name in auth.users
-    const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers({
-      perPage: 50,
-    });
+    const { data: authUsers, error: authError } =
+      await supabaseAdmin.auth.admin.listUsers({
+        perPage: 50,
+      });
 
     if (!authError && authUsers?.users) {
       const lowerQuery = query.toLowerCase();
-      const matchingUsers = authUsers.users.filter(u =>
-        u.email?.toLowerCase().includes(lowerQuery) ||
-        (u.user_metadata?.display_name as string)?.toLowerCase().includes(lowerQuery)
+      const matchingUsers = authUsers.users.filter(
+        (u) =>
+          u.email?.toLowerCase().includes(lowerQuery) ||
+          (u.user_metadata?.display_name as string)
+            ?.toLowerCase()
+            .includes(lowerQuery)
       );
 
       for (const user of matchingUsers.slice(0, 20)) {
@@ -126,10 +132,17 @@ async function handler(
 
     // Cap candidates before batch-fetching
     const limitedCandidates = candidates.slice(0, 30);
-    const candidateIds = limitedCandidates.map(c => c.id);
+    const candidateIds = limitedCandidates.map((c) => c.id);
 
     // Batch-fetch team memberships for all candidates in a single query
-    const membershipMap = new Map<string, { battle_tag: string | null; team_id: string | null; team_name: string | null }>();
+    const membershipMap = new Map<
+      string,
+      {
+        battle_tag: string | null;
+        team_id: string | null;
+        team_name: string | null;
+      }
+    >();
     if (candidateIds.length > 0) {
       const { data: allMemberships } = await supabaseAdmin
         .from('team_members')
@@ -150,16 +163,21 @@ async function handler(
     }
 
     // Batch-fetch auth data for candidates missing email (from steps 2 & 3)
-    const needsAuth = limitedCandidates.filter(c => !c.email);
-    const authMap = new Map<string, { email: string | null; display_name: string | null }>();
+    const needsAuth = limitedCandidates.filter((c) => !c.email);
+    const authMap = new Map<
+      string,
+      { email: string | null; display_name: string | null }
+    >();
     await Promise.all(
       needsAuth.map(async (c) => {
         try {
-          const { data: userData } = await supabaseAdmin!.auth.admin.getUserById(c.id);
+          const { data: userData } =
+            await supabaseAdmin!.auth.admin.getUserById(c.id);
           if (userData?.user) {
             authMap.set(c.id, {
               email: userData.user.email || null,
-              display_name: (userData.user.user_metadata?.display_name as string) || null,
+              display_name:
+                (userData.user.user_metadata?.display_name as string) || null,
             });
           }
         } catch {
@@ -169,7 +187,7 @@ async function handler(
     );
 
     // Assemble final results
-    const players: PlayerResult[] = limitedCandidates.map(c => {
+    const players: PlayerResult[] = limitedCandidates.map((c) => {
       const membership = membershipMap.get(c.id);
       const auth = authMap.get(c.id);
       return {

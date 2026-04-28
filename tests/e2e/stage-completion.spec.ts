@@ -20,7 +20,12 @@ test.describe('Stage completion & swiss rounds (direct supabase)', () => {
     const slug = slugify(TOURNAMENT_NAME, { lower: true, strict: true });
     const { data: t } = await supabaseTestClient
       .from('tournaments')
-      .insert({ name: TOURNAMENT_NAME, slug, status: 'running', game: 'Overwatch' })
+      .insert({
+        name: TOURNAMENT_NAME,
+        slug,
+        status: 'running',
+        game: 'Overwatch',
+      })
       .select('id')
       .maybeSingle();
     tournamentId = t!.id;
@@ -74,9 +79,18 @@ test.describe('Stage completion & swiss rounds (direct supabase)', () => {
 
   test.afterAll(async () => {
     if (!supabaseTestClient || !tournamentId) return;
-    await supabaseTestClient.from('matches').delete().eq('tournament_id', tournamentId);
-    await supabaseTestClient.from('stages').delete().eq('tournament_id', tournamentId);
-    await supabaseTestClient.from('tournaments').delete().eq('id', tournamentId);
+    await supabaseTestClient
+      .from('matches')
+      .delete()
+      .eq('tournament_id', tournamentId);
+    await supabaseTestClient
+      .from('stages')
+      .delete()
+      .eq('tournament_id', tournamentId);
+    await supabaseTestClient
+      .from('tournaments')
+      .delete()
+      .eq('id', tournamentId);
     for (const tid of [team1Id, team2Id]) {
       if (tid) await supabaseTestClient.from('teams').delete().eq('id', tid);
     }
@@ -127,11 +141,17 @@ test.describe('Stage completion & swiss rounds (direct supabase)', () => {
 
     expect(matches!.length).toBeGreaterThan(0);
 
-    const currentRound = Math.max(...matches!.map((m: any) => m.round_number ?? 0));
+    const currentRound = Math.max(
+      ...matches!.map((m: any) => m.round_number ?? 0)
+    );
     expect(currentRound).toBe(1);
 
-    const currentRoundMatches = matches!.filter((m: any) => m.round_number === currentRound);
-    const allFinished = currentRoundMatches.every((m: any) => m.status === 'finished');
+    const currentRoundMatches = matches!.filter(
+      (m: any) => m.round_number === currentRound
+    );
+    const allFinished = currentRoundMatches.every(
+      (m: any) => m.status === 'finished'
+    );
     expect(allFinished).toBe(false);
   });
 
@@ -222,18 +242,16 @@ test.describe('Stage completion & swiss rounds (direct supabase)', () => {
     if (!supabaseTestClient || !tournamentId || !stage1Id) return;
 
     // Insert a cancelled match
-    await supabaseTestClient
-      .from('matches')
-      .insert({
-        tournament_id: tournamentId,
-        stage_id: stage1Id,
-        team1_id: team1Id,
-        team2_id: team2Id,
-        round_number: 1,
-        match_format: 'bo3',
-        best_of: 3,
-        status: 'cancelled',
-      });
+    await supabaseTestClient.from('matches').insert({
+      tournament_id: tournamentId,
+      stage_id: stage1Id,
+      team1_id: team1Id,
+      team2_id: team2Id,
+      round_number: 1,
+      match_format: 'bo3',
+      best_of: 3,
+      status: 'cancelled',
+    });
 
     // Query excluding cancelled
     const { data: active } = await supabaseTestClient

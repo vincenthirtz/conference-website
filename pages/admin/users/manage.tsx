@@ -195,7 +195,9 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       );
       addToast('Rôle mis à jour', 'success');
     } catch (err: unknown) {
-      alert((err as Error)?.message || 'Erreur lors de la mise à jour du rôle.');
+      alert(
+        (err as Error)?.message || 'Erreur lors de la mise à jour du rôle.'
+      );
     } finally {
       setUpdating(null);
     }
@@ -326,7 +328,12 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
 
   const resendCredentials = async (user: UserLite) => {
     if (!user.email) return;
-    if (!confirm(`Réinitialiser le mot de passe et envoyer les identifiants à ${user.email} ?`)) return;
+    if (
+      !confirm(
+        `Réinitialiser le mot de passe et envoyer les identifiants à ${user.email} ?`
+      )
+    )
+      return;
 
     setResendingUser(user.id);
     try {
@@ -354,9 +361,14 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
         alert(json.warning);
       }
 
-      addToast(json.warning ? `⚠ ${json.warning}` : `Identifiants envoyés à ${user.email}`, 'success');
+      addToast(
+        json.warning
+          ? `⚠ ${json.warning}`
+          : `Identifiants envoyés à ${user.email}`,
+        'success'
+      );
     } catch (err: unknown) {
-      alert((err as Error)?.message || 'Erreur lors de l\'envoi.');
+      alert((err as Error)?.message || "Erreur lors de l'envoi.");
     } finally {
       setResendingUser(null);
     }
@@ -659,8 +671,18 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                         disabled={resendingUser === u.id || !u.email}
                         className="p-2 rounded-lg text-neutral-400 hover:text-amber-400 hover:bg-neutral-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                          />
                         </svg>
                       </button>
 
@@ -670,8 +692,18 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                         onClick={() => openEditUser(u)}
                         className="p-2 rounded-lg text-neutral-400 hover:text-blue-400 hover:bg-neutral-700 transition-colors"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                          />
                         </svg>
                       </button>
 
@@ -681,8 +713,18 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                         onClick={() => setDeletingUser(u)}
                         className="p-2 rounded-lg text-neutral-400 hover:text-red-400 hover:bg-neutral-700 transition-colors"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
                         </svg>
                       </button>
                     </div>
@@ -750,7 +792,9 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       {editingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 className="text-lg font-semibold mb-2">Modifier l&apos;utilisateur</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              Modifier l&apos;utilisateur
+            </h3>
             <p className="text-sm text-neutral-400 mb-4">
               {editingUser.email || editingUser.id}
             </p>
@@ -817,7 +861,8 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
               </p>
             </div>
             <p className="text-xs text-red-300 mb-4">
-              Cette action est irréversible. Le compte, ses appartenances aux équipes et son accès staff seront supprimés.
+              Cette action est irréversible. Le compte, ses appartenances aux
+              équipes et son accès staff seront supprimés.
             </p>
 
             <div className="flex justify-end gap-2">
@@ -846,7 +891,9 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       {editingBattleTag && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 className="text-lg font-semibold mb-2">Modifier le BattleTag</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              Modifier le BattleTag
+            </h3>
             <p className="text-sm text-neutral-400 mb-4">
               Équipe :{' '}
               <span className="text-white">{editingBattleTag.teamName}</span>

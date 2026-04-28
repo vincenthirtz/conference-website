@@ -13,7 +13,11 @@ export default withStaffRoute(handler, 'manager');
  * API HANDLER PRINCIPAL
  * ---------------------------------------------------------*/
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: StaffContext) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: StaffContext
+) {
   const { matchId } = req.query;
 
   if (!matchId || Array.isArray(matchId) || !isValidUUID(matchId)) {

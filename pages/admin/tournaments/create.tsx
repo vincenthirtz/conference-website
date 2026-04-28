@@ -57,7 +57,9 @@ export const getServerSideProps = withStaffPage('manager');
 
 function AdminTournamentCreatePage({ staff }: Props) {
   const router = useRouter();
-  const [customTemplates, setCustomTemplates] = useState<TournamentTemplate[]>([]);
+  const [customTemplates, setCustomTemplates] = useState<TournamentTemplate[]>(
+    []
+  );
 
   useEffect(() => {
     fetch('/api/admin/tournament-templates')
@@ -98,15 +100,19 @@ function AdminTournamentCreatePage({ staff }: Props) {
     banner_url: '',
   });
 
-  const [selectedTemplate, setSelectedTemplate] = useState<TournamentTemplate | null>(null);
+  const [selectedTemplate, setSelectedTemplate] =
+    useState<TournamentTemplate | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [dateError, setDateError] = useState<string | null>(null);
   const [showDraftBanner, setShowDraftBanner] = useState(false);
 
-  const { draftRestored, lastSaved, clearDraft, restoreDraft } = useAutoSave(form, {
-    key: 'tournament_create',
-  });
+  const { draftRestored, lastSaved, clearDraft, restoreDraft } = useAutoSave(
+    form,
+    {
+      key: 'tournament_create',
+    }
+  );
 
   useEffect(() => {
     if (draftRestored) setShowDraftBanner(true);
@@ -132,7 +138,9 @@ function AdminTournamentCreatePage({ staff }: Props) {
 
     if (form.start_date && form.end_date) {
       if (new Date(form.start_date) >= new Date(form.end_date)) {
-        setDateError('La date de fin doit être postérieure à la date de début.');
+        setDateError(
+          'La date de fin doit être postérieure à la date de début.'
+        );
         setErrorMsg('La date de fin doit être postérieure à la date de début.');
         return;
       }
@@ -204,7 +212,8 @@ function AdminTournamentCreatePage({ staff }: Props) {
       }
     } catch (err: unknown) {
       setErrorMsg(
-        (err as Error)?.message ?? 'Erreur inconnue lors de la création du tournoi'
+        (err as Error)?.message ??
+          'Erreur inconnue lors de la création du tournoi'
       );
       setSubmitting(false);
     }
@@ -247,7 +256,8 @@ function AdminTournamentCreatePage({ staff }: Props) {
                   Nouveau tournoi
                 </h1>
                 <p className="text-neutral-400 text-sm mt-1">
-                  Configure les informations de base, tu pourras affiner les stages / matchs ensuite.
+                  Configure les informations de base, tu pourras affiner les
+                  stages / matchs ensuite.
                 </p>
               </div>
             </div>
@@ -291,7 +301,8 @@ function AdminTournamentCreatePage({ staff }: Props) {
               <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4">
                 <h2 className="text-lg font-semibold">Template de structure</h2>
                 <p className="text-xs text-neutral-400">
-                  Choisis un template pour creer automatiquement les stages du tournoi, ou laisse vide pour les configurer manuellement.
+                  Choisis un template pour creer automatiquement les stages du
+                  tournoi, ou laisse vide pour les configurer manuellement.
                 </p>
 
                 <div className="grid gap-3 md:grid-cols-2">
@@ -344,7 +355,9 @@ function AdminTournamentCreatePage({ staff }: Props) {
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Informations generales */}
                 <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4">
-                  <h2 className="text-lg font-semibold">Informations generales</h2>
+                  <h2 className="text-lg font-semibold">
+                    Informations generales
+                  </h2>
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
@@ -421,7 +434,9 @@ function AdminTournamentCreatePage({ staff }: Props) {
                         type="datetime-local"
                         className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         value={form.start_date}
-                        onChange={(e) => updateField('start_date', e.target.value)}
+                        onChange={(e) =>
+                          updateField('start_date', e.target.value)
+                        }
                       />
                     </div>
 
@@ -452,7 +467,9 @@ function AdminTournamentCreatePage({ staff }: Props) {
                       <select
                         className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         value={form.format_type}
-                        onChange={(e) => updateField('format_type', e.target.value)}
+                        onChange={(e) =>
+                          updateField('format_type', e.target.value)
+                        }
                       >
                         <option value="">(A definir plus tard)</option>
                         <option value="single_elim">Single Elim</option>
@@ -472,7 +489,9 @@ function AdminTournamentCreatePage({ staff }: Props) {
                         min={2}
                         className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         value={form.max_teams}
-                        onChange={(e) => updateField('max_teams', e.target.value)}
+                        onChange={(e) =>
+                          updateField('max_teams', e.target.value)
+                        }
                         placeholder="16"
                       />
                     </div>
@@ -486,7 +505,9 @@ function AdminTournamentCreatePage({ staff }: Props) {
                         min={1}
                         className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         value={form.min_players}
-                        onChange={(e) => updateField('min_players', e.target.value)}
+                        onChange={(e) =>
+                          updateField('min_players', e.target.value)
+                        }
                         placeholder="5"
                       />
                     </div>
@@ -499,7 +520,9 @@ function AdminTournamentCreatePage({ staff }: Props) {
                         min={1}
                         className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         value={form.max_players}
-                        onChange={(e) => updateField('max_players', e.target.value)}
+                        onChange={(e) =>
+                          updateField('max_players', e.target.value)
+                        }
                         placeholder="10"
                       />
                     </div>
@@ -508,7 +531,9 @@ function AdminTournamentCreatePage({ staff }: Props) {
 
                 {/* Visibilite & visuels */}
                 <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4">
-                  <h2 className="text-lg font-semibold">Visibilite & visuels</h2>
+                  <h2 className="text-lg font-semibold">
+                    Visibilite & visuels
+                  </h2>
 
                   <div className="flex flex-col gap-3">
                     <label className="inline-flex items-center gap-3 text-sm cursor-pointer">
@@ -516,7 +541,9 @@ function AdminTournamentCreatePage({ staff }: Props) {
                         type="checkbox"
                         className="h-4 w-4 rounded border-neutral-600 bg-neutral-900"
                         checked={form.is_public}
-                        onChange={(e) => updateField('is_public', e.target.checked)}
+                        onChange={(e) =>
+                          updateField('is_public', e.target.checked)
+                        }
                       />
                       <span>Rendre le tournoi public sur le site</span>
                     </label>
@@ -526,9 +553,13 @@ function AdminTournamentCreatePage({ staff }: Props) {
                         type="checkbox"
                         className="h-4 w-4 rounded border-neutral-600 bg-neutral-900"
                         checked={form.is_featured}
-                        onChange={(e) => updateField('is_featured', e.target.checked)}
+                        onChange={(e) =>
+                          updateField('is_featured', e.target.checked)
+                        }
                       />
-                      <span>Mettre en avant (section &quot;featured&quot;)</span>
+                      <span>
+                        Mettre en avant (section &quot;featured&quot;)
+                      </span>
                     </label>
                   </div>
 
@@ -541,7 +572,9 @@ function AdminTournamentCreatePage({ staff }: Props) {
                         type="text"
                         className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
                         value={form.logo_url}
-                        onChange={(e) => updateField('logo_url', e.target.value)}
+                        onChange={(e) =>
+                          updateField('logo_url', e.target.value)
+                        }
                         placeholder="https://..."
                       />
                     </div>
@@ -553,7 +586,9 @@ function AdminTournamentCreatePage({ staff }: Props) {
                         type="text"
                         className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
                         value={form.banner_url}
-                        onChange={(e) => updateField('banner_url', e.target.value)}
+                        onChange={(e) =>
+                          updateField('banner_url', e.target.value)
+                        }
                         placeholder="https://..."
                       />
                     </div>
@@ -643,7 +678,9 @@ function AdminTournamentCreatePage({ staff }: Props) {
                         {form.name || 'Nom du tournoi'}
                       </p>
                       {form.slug && (
-                        <p className="text-xs text-neutral-400 font-mono">/{form.slug}</p>
+                        <p className="text-xs text-neutral-400 font-mono">
+                          /{form.slug}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -676,24 +713,41 @@ function AdminTournamentCreatePage({ staff }: Props) {
 
               {selectedTemplate && (
                 <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-3">
-                  <h2 className="text-lg font-semibold">Template selectionne</h2>
-                  <p className="text-sm text-neutral-300 font-medium">{selectedTemplate.name}</p>
+                  <h2 className="text-lg font-semibold">
+                    Template selectionne
+                  </h2>
+                  <p className="text-sm text-neutral-300 font-medium">
+                    {selectedTemplate.name}
+                  </p>
                   <div className="space-y-2">
                     {selectedTemplate.stages.map((s, i) => (
                       <div key={i} className="flex items-center gap-2">
                         {i > 0 && (
-                          <svg className="w-3 h-3 text-neutral-600 -mt-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                          <svg
+                            className="w-3 h-3 text-neutral-600 -mt-2"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                            />
                           </svg>
                         )}
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${stageTypeBadge(s.stage_type)}`}>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium border ${stageTypeBadge(s.stage_type)}`}
+                        >
                           {s.name}
                         </span>
                       </div>
                     ))}
                   </div>
                   <p className="text-xs text-neutral-500 mt-2">
-                    Les stages seront crees automatiquement apres la creation du tournoi.
+                    Les stages seront crees automatiquement apres la creation du
+                    tournoi.
                   </p>
                 </section>
               )}
@@ -707,11 +761,16 @@ function AdminTournamentCreatePage({ staff }: Props) {
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="text-neutral-500">•</span>
-                    <p>Tu pourras configurer les stages et matchs apres la creation.</p>
+                    <p>
+                      Tu pourras configurer les stages et matchs apres la
+                      creation.
+                    </p>
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="text-neutral-500">•</span>
-                    <p>Le slug est utilise pour l&apos;URL publique du tournoi.</p>
+                    <p>
+                      Le slug est utilise pour l&apos;URL publique du tournoi.
+                    </p>
                   </div>
                 </div>
               </section>

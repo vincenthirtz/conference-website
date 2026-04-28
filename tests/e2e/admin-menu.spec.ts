@@ -1,8 +1,5 @@
 import { test, expect } from '@playwright/test';
-import {
-  createTestStaff,
-  deleteTestStaff,
-} from '../utils/supabaseTestClient';
+import { createTestStaff, deleteTestStaff } from '../utils/supabaseTestClient';
 
 const password = 'TestPassw0rd!';
 const STAFF_EMAIL = `hirtzvincent+adminmenu@gmail.com`;
@@ -26,7 +23,9 @@ test.describe('Admin menu categories', () => {
     }
   });
 
-  test('Le menu admin affiche la catégorie Gestion partenaires', async ({ page }) => {
+  test('Le menu admin affiche la catégorie Gestion partenaires', async ({
+    page,
+  }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
     // Login

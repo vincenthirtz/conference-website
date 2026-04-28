@@ -131,7 +131,8 @@ export default function NewsSlugPage({
   const metaTitle = title ? `${title} | ${SITE_NAME}` : `News | ${SITE_NAME}`;
   const metaDescription = excerpt || `Actualité ${SITE_NAME} : ${title}`;
   const canonical = slug && BASE_URL ? `${BASE_URL}/news/${slug}` : undefined;
-  const ogImage = toAbsoluteUrl(imageUrl) || toAbsoluteUrl('/img/logos/2025-logo.png');
+  const ogImage =
+    toAbsoluteUrl(imageUrl) || toAbsoluteUrl('/img/logos/2025-logo.png');
   const articlePublishedTime = publishedAt || createdAt || undefined;
   const articleModifiedTime = updatedAt || undefined;
 
@@ -180,10 +181,16 @@ export default function NewsSlugPage({
         {ogImage && <meta property="og:image" content={ogImage} />}
         {ogImage && <meta property="og:image:alt" content={title || 'News'} />}
         {articlePublishedTime && (
-          <meta property="article:published_time" content={articlePublishedTime} />
+          <meta
+            property="article:published_time"
+            content={articlePublishedTime}
+          />
         )}
         {articleModifiedTime && (
-          <meta property="article:modified_time" content={articleModifiedTime} />
+          <meta
+            property="article:modified_time"
+            content={articleModifiedTime}
+          />
         )}
         <meta property="article:author" content={SITE_NAME} />
         {tag && <meta property="article:tag" content={tag} />}
@@ -242,7 +249,9 @@ export default function NewsSlugPage({
             </div>
 
             <div className="mt-8 space-y-4 text-lg leading-relaxed text-gray-100 whitespace-pre-wrap">
-              {content ? linkifyContent(content) : 'Pas de contenu pour cette news.'}
+              {content
+                ? linkifyContent(content)
+                : 'Pas de contenu pour cette news.'}
             </div>
 
             <div className="mt-10">
@@ -381,7 +390,11 @@ function Comments({ newsId }: { newsId: string }) {
               type="text"
               value={captchaAnswer}
               onChange={(e) => setCaptchaAnswer(e.target.value)}
-              placeholder={captchaQuestion ? `Combien font ${captchaQuestion} ?` : 'Chargement...'}
+              placeholder={
+                captchaQuestion
+                  ? `Combien font ${captchaQuestion} ?`
+                  : 'Chargement...'
+              }
               className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/70 focus:border-purple-400/70 transition"
             />
             {/* Honeypot anti-bot */}

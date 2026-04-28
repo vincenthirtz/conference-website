@@ -5,7 +5,10 @@ import slugify from 'slugify';
 const BASE_NAME = `E2E Tournament ${Date.now()}`;
 
 test.describe('Admin tournament CRUD (direct supabase)', () => {
-  test.skip(!supabaseTestClient, 'Supabase service role manquant pour les tournois');
+  test.skip(
+    !supabaseTestClient,
+    'Supabase service role manquant pour les tournois'
+  );
 
   test('Créer, éditer, supprimer un tournoi', async () => {
     if (!supabaseTestClient) return;

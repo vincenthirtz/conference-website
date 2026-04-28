@@ -11,7 +11,11 @@ export type Toast = {
 
 type ToastContextValue = {
   toasts: Toast[];
-  addToast: (message: string, variant?: ToastVariant, duration?: number) => void;
+  addToast: (
+    message: string,
+    variant?: ToastVariant,
+    duration?: number
+  ) => void;
   removeToast: (id: number) => void;
 };
 

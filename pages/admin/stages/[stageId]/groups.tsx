@@ -40,7 +40,9 @@ function GroupLabel({ groupKey }: { groupKey: string }) {
   ];
   const idx = groupKey.charCodeAt(0) % colors.length;
   return (
-    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${colors[idx]}`}>
+    <span
+      className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${colors[idx]}`}
+    >
       Poule {groupKey}
     </span>
   );
@@ -112,7 +114,9 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
         setStageName(stageJson.stage?.name || '');
         setTournamentId(stageJson.stage?.tournament_id || '');
         if (stageJson.stage?.tournament_id) {
-          const tRes = await fetch(`/api/admin/tournament/${stageJson.stage.tournament_id}`);
+          const tRes = await fetch(
+            `/api/admin/tournament/${stageJson.stage.tournament_id}`
+          );
           if (tRes.ok) {
             const tJson = await tRes.json();
             setTournamentName(tJson.tournament?.name || '');
@@ -209,7 +213,9 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
     } else {
       setGroups((prev) => ({
         ...prev,
-        [dragSource]: (prev[dragSource] || []).filter((t) => t.teamId !== dragTeam.teamId),
+        [dragSource]: (prev[dragSource] || []).filter(
+          (t) => t.teamId !== dragTeam.teamId
+        ),
       }));
     }
 
@@ -265,7 +271,8 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const assignments: Array<{ teamId: string; groupKey: string | null }> = [];
+      const assignments: Array<{ teamId: string; groupKey: string | null }> =
+        [];
 
       for (const [groupKey, teams] of Object.entries(groups)) {
         for (const team of teams) {
@@ -325,7 +332,8 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
   }
 
   const groupKeys = Object.keys(groups).sort();
-  const totalTeams = groupKeys.reduce((sum, k) => sum + groups[k].length, 0) + unassigned.length;
+  const totalTeams =
+    groupKeys.reduce((sum, k) => sum + groups[k].length, 0) + unassigned.length;
 
   return (
     <>
@@ -339,11 +347,25 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
           <div className="mb-8">
             <button
               type="button"
-              onClick={() => router.push(stageId ? `/admin/stages/${stageId}` : '/admin/tournaments')}
+              onClick={() =>
+                router.push(
+                  stageId ? `/admin/stages/${stageId}` : '/admin/tournaments'
+                )
+              }
               className="mb-4 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
               </svg>
               Retour à la phase
             </button>
@@ -358,7 +380,8 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
                     Phase : <span className="text-white">{stageName}</span>
                     {tournamentName && (
                       <>
-                        {' '}— Tournoi :{' '}
+                        {' '}
+                        — Tournoi :{' '}
                         <Link
                           href={`/admin/tournament/${tournamentId}`}
                           className="text-blue-400 hover:text-blue-300"
@@ -396,8 +419,16 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
           {/* Messages */}
           {errorMsg && (
             <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
-              <svg className="w-5 h-5 text-red-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              <svg
+                className="w-5 h-5 text-red-400 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
               </svg>
               {errorMsg}
             </div>
@@ -413,30 +444,48 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
               {/* Auto-distribute toolbar */}
               <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
                 <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                  <svg
+                    className="w-5 h-5 text-neutral-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+                    />
                   </svg>
                   Distribution automatique
                 </h2>
 
                 <div className="flex flex-wrap items-end gap-4">
                   <div>
-                    <label className="block text-xs text-neutral-500 mb-1">Nombre de poules</label>
+                    <label className="block text-xs text-neutral-500 mb-1">
+                      Nombre de poules
+                    </label>
                     <input
                       type="number"
                       min={2}
                       max={16}
                       value={numGroups}
-                      onChange={(e) => setNumGroups(parseInt(e.target.value, 10) || 2)}
+                      onChange={(e) =>
+                        setNumGroups(parseInt(e.target.value, 10) || 2)
+                      }
                       className="w-24 px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs text-neutral-500 mb-1">Methode</label>
+                    <label className="block text-xs text-neutral-500 mb-1">
+                      Methode
+                    </label>
                     <select
                       value={distMethod}
-                      onChange={(e) => setDistMethod(e.target.value as 'snake' | 'random')}
+                      onChange={(e) =>
+                        setDistMethod(e.target.value as 'snake' | 'random')
+                      }
                       className="px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     >
                       <option value="snake">Snake (par seed)</option>
@@ -456,8 +505,18 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
                       </>
                     ) : (
                       <>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                          />
                         </svg>
                         Distribuer
                       </>
@@ -468,15 +527,26 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
                     onClick={addGroup}
                     className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-sm font-medium transition-colors flex items-center gap-2"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                      />
                     </svg>
                     Ajouter une poule
                   </button>
                 </div>
 
                 <p className="text-xs text-neutral-500 mt-3">
-                  Glissez-déposez les equipes entre les poules. Cliquez &laquo; Sauvegarder &raquo; pour enregistrer.
+                  Glissez-déposez les equipes entre les poules. Cliquez &laquo;
+                  Sauvegarder &raquo; pour enregistrer.
                 </p>
               </section>
 
@@ -501,8 +571,18 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
                             className="text-red-400 hover:text-red-300 transition-colors"
                             title="Supprimer cette poule"
                           >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
                             </svg>
                           </button>
                         )}
@@ -533,7 +613,9 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
                             />
                           ) : (
                             <div className="w-6 h-6 rounded-full bg-neutral-700 flex items-center justify-center text-xs font-bold text-neutral-400">
-                              {(team.shortName || team.name || '?')[0].toUpperCase()}
+                              {(team.shortName ||
+                                team.name ||
+                                '?')[0].toUpperCase()}
                             </div>
                           )}
                           <span className="text-sm font-medium truncate flex-1">
@@ -580,7 +662,9 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
                       <div
                         key={team.teamId}
                         draggable
-                        onDragStart={() => handleDragStart(team, '__unassigned')}
+                        onDragStart={() =>
+                          handleDragStart(team, '__unassigned')
+                        }
                         onDragEnd={handleDragEnd}
                         className="flex items-center gap-3 px-3 py-2 rounded-lg bg-neutral-800/60 hover:bg-neutral-700/60 cursor-grab active:cursor-grabbing transition-colors border border-transparent hover:border-neutral-600"
                       >
@@ -594,7 +678,9 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
                           />
                         ) : (
                           <div className="w-6 h-6 rounded-full bg-neutral-700 flex items-center justify-center text-xs font-bold text-neutral-400">
-                            {(team.shortName || team.name || '?')[0].toUpperCase()}
+                            {(team.shortName ||
+                              team.name ||
+                              '?')[0].toUpperCase()}
                           </div>
                         )}
                         <span className="text-sm font-medium truncate flex-1">
@@ -613,25 +699,37 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
 
               {/* Générer les matchs round-robin */}
               <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
-                <h2 className="text-lg font-semibold mb-1">Génération des matchs</h2>
+                <h2 className="text-lg font-semibold mb-1">
+                  Génération des matchs
+                </h2>
                 <p className="text-xs text-neutral-400 mb-4">
-                  Crée les matchs round-robin pour chaque poule à partir des assignations actuelles. À faire une seule fois — annuler les matchs avant de regénérer.
+                  Crée les matchs round-robin pour chaque poule à partir des
+                  assignations actuelles. À faire une seule fois — annuler les
+                  matchs avant de regénérer.
                 </p>
 
                 <div className="flex flex-wrap items-end gap-4">
                   <div>
-                    <label className="block text-xs text-neutral-500 mb-1">Rounds (1 = aller, 2 = aller-retour)</label>
+                    <label className="block text-xs text-neutral-500 mb-1">
+                      Rounds (1 = aller, 2 = aller-retour)
+                    </label>
                     <input
                       type="number"
                       min={1}
                       max={4}
                       value={genRounds}
-                      onChange={(e) => setGenRounds(Math.max(1, Math.min(4, Number(e.target.value) || 1)))}
+                      onChange={(e) =>
+                        setGenRounds(
+                          Math.max(1, Math.min(4, Number(e.target.value) || 1))
+                        )
+                      }
                       className="w-32 px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-neutral-500 mb-1">Format de match</label>
+                    <label className="block text-xs text-neutral-500 mb-1">
+                      Format de match
+                    </label>
                     <select
                       value={genMatchFormat}
                       onChange={(e) => setGenMatchFormat(e.target.value)}
@@ -663,7 +761,9 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
               {Object.keys(perGroupStandings).length > 0 && (
                 <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold">Classement par poule</h2>
+                    <h2 className="text-lg font-semibold">
+                      Classement par poule
+                    </h2>
                     <button
                       onClick={fetchStandings}
                       className="text-xs text-neutral-400 hover:text-white"
@@ -672,37 +772,65 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
                     </button>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {Object.keys(perGroupStandings).sort().map((gk) => (
-                      <div key={gk} className="bg-neutral-900/50 border border-neutral-700/50 rounded-xl p-3">
-                        <div className="mb-2"><GroupLabel groupKey={gk} /></div>
-                        <table className="w-full text-xs">
-                          <thead>
-                            <tr className="text-neutral-500 text-left">
-                              <th className="pb-1 font-normal">#</th>
-                              <th className="pb-1 font-normal">Équipe</th>
-                              <th className="pb-1 font-normal text-center">V</th>
-                              <th className="pb-1 font-normal text-center">D</th>
-                              <th className="pb-1 font-normal text-center">N</th>
-                              <th className="pb-1 font-normal text-right">Pts</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {perGroupStandings[gk].map((s) => (
-                              <tr key={s.teamId} className="border-t border-neutral-800">
-                                <td className="py-1 text-neutral-400 font-mono">{s.rank}</td>
-                                <td className="py-1 truncate max-w-[140px]">
-                                  {s.teamName || s.teamId.slice(0, 6)}
-                                </td>
-                                <td className="py-1 text-center text-emerald-300">{s.wins}</td>
-                                <td className="py-1 text-center text-red-300">{s.losses}</td>
-                                <td className="py-1 text-center text-neutral-400">{s.draws}</td>
-                                <td className="py-1 text-right font-semibold">{s.score}</td>
+                    {Object.keys(perGroupStandings)
+                      .sort()
+                      .map((gk) => (
+                        <div
+                          key={gk}
+                          className="bg-neutral-900/50 border border-neutral-700/50 rounded-xl p-3"
+                        >
+                          <div className="mb-2">
+                            <GroupLabel groupKey={gk} />
+                          </div>
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="text-neutral-500 text-left">
+                                <th className="pb-1 font-normal">#</th>
+                                <th className="pb-1 font-normal">Équipe</th>
+                                <th className="pb-1 font-normal text-center">
+                                  V
+                                </th>
+                                <th className="pb-1 font-normal text-center">
+                                  D
+                                </th>
+                                <th className="pb-1 font-normal text-center">
+                                  N
+                                </th>
+                                <th className="pb-1 font-normal text-right">
+                                  Pts
+                                </th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    ))}
+                            </thead>
+                            <tbody>
+                              {perGroupStandings[gk].map((s) => (
+                                <tr
+                                  key={s.teamId}
+                                  className="border-t border-neutral-800"
+                                >
+                                  <td className="py-1 text-neutral-400 font-mono">
+                                    {s.rank}
+                                  </td>
+                                  <td className="py-1 truncate max-w-[140px]">
+                                    {s.teamName || s.teamId.slice(0, 6)}
+                                  </td>
+                                  <td className="py-1 text-center text-emerald-300">
+                                    {s.wins}
+                                  </td>
+                                  <td className="py-1 text-center text-red-300">
+                                    {s.losses}
+                                  </td>
+                                  <td className="py-1 text-center text-neutral-400">
+                                    {s.draws}
+                                  </td>
+                                  <td className="py-1 text-right font-semibold">
+                                    {s.score}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ))}
                   </div>
                 </section>
               )}

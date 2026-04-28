@@ -197,8 +197,7 @@ function computeTeamStats(
     if (!m.winner_team_id) continue;
 
     const winnerId = m.winner_team_id;
-    const loserId =
-      m.team1_id === winnerId ? m.team2_id : m.team1_id;
+    const loserId = m.team1_id === winnerId ? m.team2_id : m.team1_id;
 
     if (winnerId && agg.has(winnerId)) {
       const entry = agg.get(winnerId)!;
@@ -328,7 +327,8 @@ function computeMapStats(games: GameRow[]) {
       mapName,
       gamesPlayed: entry.gamesPlayed,
       totalRounds: entry.totalRounds,
-      avgRounds: entry.gamesPlayed > 0 ? entry.totalRounds / entry.gamesPlayed : 0,
+      avgRounds:
+        entry.gamesPlayed > 0 ? entry.totalRounds / entry.gamesPlayed : 0,
       overtimes: entry.overtimes,
       tiebreakers: entry.tiebreakers,
       usageRate: totalGames > 0 ? entry.gamesPlayed / totalGames : 0,

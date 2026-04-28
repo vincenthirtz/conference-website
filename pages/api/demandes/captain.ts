@@ -12,7 +12,10 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (applyRateLimit(req, res, { max: 10, windowMs: 60_000 }, 'demandes-captain')) return;
+  if (
+    applyRateLimit(req, res, { max: 10, windowMs: 60_000 }, 'demandes-captain')
+  )
+    return;
   if (!supabaseAdmin) {
     return res
       .status(500)
@@ -51,9 +54,7 @@ export default async function handler(
 
     if (demandesErr) {
       console.error('[demandes/captain] GET error:', demandesErr);
-      return res
-        .status(500)
-        .json({ error: 'Failed to load requests.' });
+      return res.status(500).json({ error: 'Failed to load requests.' });
     }
 
     return res.status(200).json({ demandes: demandes || [] });
@@ -101,7 +102,9 @@ export default async function handler(
         .maybeSingle();
 
       if (teamErr || !teamData) {
-        return res.status(400).json({ error: "L'équipe sélectionnée n'existe pas." });
+        return res
+          .status(400)
+          .json({ error: "L'équipe sélectionnée n'existe pas." });
       }
 
       existingTeamName = teamData.name;
@@ -150,9 +153,7 @@ export default async function handler(
 
     if (insertErr) {
       console.error('[demandes/captain] insert error:', insertErr);
-      return res
-        .status(500)
-        .json({ error: 'Failed to create request.' });
+      return res.status(500).json({ error: 'Failed to create request.' });
     }
 
     return res.status(201).json({

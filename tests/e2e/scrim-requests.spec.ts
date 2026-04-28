@@ -41,28 +41,35 @@ test.describe('Scrim requests API (/api/demandes/scrim)', () => {
     playerUserId = player!.id;
 
     // Sign in to get tokens
-    const { data: captainAuth } = await supabaseTestClient!.auth.signInWithPassword({
-      email: CAPTAIN_EMAIL,
-      password: PASSWORD,
-    });
+    const { data: captainAuth } =
+      await supabaseTestClient!.auth.signInWithPassword({
+        email: CAPTAIN_EMAIL,
+        password: PASSWORD,
+      });
     captainToken = captainAuth.session!.access_token;
 
-    const { data: captain2Auth } = await supabaseTestClient!.auth.signInWithPassword({
-      email: CAPTAIN2_EMAIL,
-      password: PASSWORD,
-    });
+    const { data: captain2Auth } =
+      await supabaseTestClient!.auth.signInWithPassword({
+        email: CAPTAIN2_EMAIL,
+        password: PASSWORD,
+      });
     captain2Token = captain2Auth.session!.access_token;
 
-    const { data: playerAuth } = await supabaseTestClient!.auth.signInWithPassword({
-      email: PLAYER_EMAIL,
-      password: PASSWORD,
-    });
+    const { data: playerAuth } =
+      await supabaseTestClient!.auth.signInWithPassword({
+        email: PLAYER_EMAIL,
+        password: PASSWORD,
+      });
     playerToken = playerAuth.session!.access_token;
 
     // Create team A with captain
     const { data: teamA } = await supabaseTestClient!
       .from('teams')
-      .insert({ name: `${PREFIX}-teamA`, captain_id: captainUserId, is_active: true })
+      .insert({
+        name: `${PREFIX}-teamA`,
+        captain_id: captainUserId,
+        is_active: true,
+      })
       .select('id')
       .single();
     teamAId = teamA!.id;
@@ -77,7 +84,11 @@ test.describe('Scrim requests API (/api/demandes/scrim)', () => {
     // Create team B with captain2
     const { data: teamB } = await supabaseTestClient!
       .from('teams')
-      .insert({ name: `${PREFIX}-teamB`, captain_id: captain2UserId, is_active: true })
+      .insert({
+        name: `${PREFIX}-teamB`,
+        captain_id: captain2UserId,
+        is_active: true,
+      })
       .select('id')
       .single();
     teamBId = teamB!.id;
@@ -102,10 +113,16 @@ test.describe('Scrim requests API (/api/demandes/scrim)', () => {
     if (!HAS_SUPABASE) return;
     // Cleanup demandes
     if (teamAId) {
-      await supabaseTestClient!.from('demandes').delete().eq('team_id', teamAId);
+      await supabaseTestClient!
+        .from('demandes')
+        .delete()
+        .eq('team_id', teamAId);
     }
     if (teamBId) {
-      await supabaseTestClient!.from('demandes').delete().eq('team_id', teamBId);
+      await supabaseTestClient!
+        .from('demandes')
+        .delete()
+        .eq('team_id', teamBId);
     }
     // Also clean demandes by user
     for (const uid of [captainUserId, captain2UserId, playerUserId]) {
@@ -196,7 +213,9 @@ test.describe('Scrim requests API (/api/demandes/scrim)', () => {
 
   // ─── Authorization ──────────────────────────────────
 
-  test('POST returns 403 when non-captain tries to send scrim', async ({ request }) => {
+  test('POST returns 403 when non-captain tries to send scrim', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.post('/api/demandes/scrim', {
       headers: { Authorization: `Bearer ${playerToken}` },
@@ -207,7 +226,9 @@ test.describe('Scrim requests API (/api/demandes/scrim)', () => {
     expect(body.error).toContain('capitaine');
   });
 
-  test('POST returns 400 when requesting scrim against own team', async ({ request }) => {
+  test('POST returns 400 when requesting scrim against own team', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.post('/api/demandes/scrim', {
       headers: { Authorization: `Bearer ${captainToken}` },
@@ -218,7 +239,9 @@ test.describe('Scrim requests API (/api/demandes/scrim)', () => {
     expect(body.error).toContain('propre equipe');
   });
 
-  test('POST returns 400 when target team does not exist', async ({ request }) => {
+  test('POST returns 400 when target team does not exist', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.post('/api/demandes/scrim', {
       headers: { Authorization: `Bearer ${captainToken}` },
@@ -266,7 +289,9 @@ test.describe('Scrim requests API (/api/demandes/scrim)', () => {
 
   // ─── GET ────────────────────────────────────────────
 
-  test('GET returns scrim requests for authenticated user', async ({ request }) => {
+  test('GET returns scrim requests for authenticated user', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.get('/api/demandes/scrim', {
       headers: { Authorization: `Bearer ${captainToken}` },
@@ -282,7 +307,9 @@ test.describe('Scrim requests API (/api/demandes/scrim)', () => {
     expect(scrim.team.name).toContain(`${PREFIX}-teamB`);
   });
 
-  test('GET returns empty array for user with no scrims', async ({ request }) => {
+  test('GET returns empty array for user with no scrims', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.get('/api/demandes/scrim', {
       headers: { Authorization: `Bearer ${captain2Token}` },
@@ -294,7 +321,9 @@ test.describe('Scrim requests API (/api/demandes/scrim)', () => {
 
   // ─── Cross-captain scrim ────────────────────────────
 
-  test('captain2 can also create a scrim request to teamA', async ({ request }) => {
+  test('captain2 can also create a scrim request to teamA', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.post('/api/demandes/scrim', {
       headers: { Authorization: `Bearer ${captain2Token}` },

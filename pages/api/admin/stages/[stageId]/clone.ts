@@ -35,11 +35,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
       return res.status(404).json({ error: 'Stage not found' });
     }
 
-    const {
-      includeMatches = false,
-      name,
-      targetTournamentId,
-    } = req.body || {};
+    const { includeMatches = false, name, targetTournamentId } = req.body || {};
 
     const tournamentId = targetTournamentId || source.tournament_id;
 
@@ -142,16 +138,28 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
           });
 
           // Second pass: update bracket links
-          const updates: Array<{ id: string; next_match_win_id: string | null; next_match_lose_id: string | null }> = [];
+          const updates: Array<{
+            id: string;
+            next_match_win_id: string | null;
+            next_match_lose_id: string | null;
+          }> = [];
           for (const m of sourceMatches) {
             const newId = oldToNew.get(m.id);
             if (!newId) continue;
 
-            const newWinId = m.next_match_win_id ? oldToNew.get(m.next_match_win_id) ?? null : null;
-            const newLoseId = m.next_match_lose_id ? oldToNew.get(m.next_match_lose_id) ?? null : null;
+            const newWinId = m.next_match_win_id
+              ? (oldToNew.get(m.next_match_win_id) ?? null)
+              : null;
+            const newLoseId = m.next_match_lose_id
+              ? (oldToNew.get(m.next_match_lose_id) ?? null)
+              : null;
 
             if (newWinId || newLoseId) {
-              updates.push({ id: newId, next_match_win_id: newWinId, next_match_lose_id: newLoseId });
+              updates.push({
+                id: newId,
+                next_match_win_id: newWinId,
+                next_match_lose_id: newLoseId,
+              });
             }
           }
 

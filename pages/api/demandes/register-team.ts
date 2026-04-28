@@ -17,7 +17,10 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (applyRateLimit(req, res, { max: 10, windowMs: 60_000 }, 'demandes-register')) return;
+  if (
+    applyRateLimit(req, res, { max: 10, windowMs: 60_000 }, 'demandes-register')
+  )
+    return;
   if (!supabaseAdmin) {
     return res
       .status(500)
@@ -55,9 +58,7 @@ export default async function handler(
 
     if (demandesErr) {
       console.error('[demandes/register-team] GET error:', demandesErr);
-      return res
-        .status(500)
-        .json({ error: 'Failed to load requests.' });
+      return res.status(500).json({ error: 'Failed to load requests.' });
     }
 
     return res.status(200).json({ demandes: demandes || [] });
@@ -76,7 +77,9 @@ export default async function handler(
     const tournamentId = body.tournamentId.trim();
     const rawMessage = body.message?.trim() || null;
     if (rawMessage && rawMessage.length > 1000) {
-      return res.status(400).json({ error: 'Message trop long (max 1000 caractères).' });
+      return res
+        .status(400)
+        .json({ error: 'Message trop long (max 1000 caractères).' });
     }
     const message = rawMessage?.slice(0, 1000) || null;
 
@@ -114,7 +117,7 @@ export default async function handler(
 
     if (tournament.status !== 'published') {
       return res.status(400).json({
-        error: "Les inscriptions ne sont pas ouvertes pour ce tournoi.",
+        error: 'Les inscriptions ne sont pas ouvertes pour ce tournoi.',
       });
     }
 
@@ -144,7 +147,7 @@ export default async function handler(
 
     if (existingDemande) {
       return res.status(400).json({
-        error: 'Une demande d\'inscription est deja en attente pour ce tournoi.',
+        error: "Une demande d'inscription est deja en attente pour ce tournoi.",
         existingDemandeId: existingDemande.id,
       });
     }

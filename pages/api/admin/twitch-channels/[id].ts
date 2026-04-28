@@ -14,11 +14,11 @@ type TwitchChannelPayload = {
   sortOrder?: number;
 };
 
-async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-twitch-id')) return;
+async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (
+    applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-twitch-id')
+  )
+    return;
   if (!supabaseAdmin) {
     return res
       .status(500)
@@ -40,9 +40,7 @@ async function handler(
 
     if (error) {
       console.error('[admin/twitch-channels] get error', error);
-      return res
-        .status(404)
-        .json({ error: 'Channel not found.' });
+      return res.status(404).json({ error: 'Channel not found.' });
     }
     return res.status(200).json(data);
   }
@@ -53,10 +51,8 @@ async function handler(
 
     if (typeof body.channel === 'string')
       updatePayload.channel = body.channel.trim().toLowerCase();
-    if (typeof body.label === 'string')
-      updatePayload.label = body.label.trim();
-    if ('badge' in body)
-      updatePayload.badge = body.badge?.trim() || null;
+    if (typeof body.label === 'string') updatePayload.label = body.label.trim();
+    if ('badge' in body) updatePayload.badge = body.badge?.trim() || null;
     if ('description' in body)
       updatePayload.description = body.description?.trim() || null;
     if ('backgroundUrl' in body)
@@ -75,29 +71,20 @@ async function handler(
     if (error) {
       console.error('[admin/twitch-channels] update error', error);
       if (error.code === '23505') {
-        return res
-          .status(400)
-          .json({ error: 'This channel already exists.' });
+        return res.status(400).json({ error: 'This channel already exists.' });
       }
-      return res
-        .status(500)
-        .json({ error: 'Failed to update the channel.' });
+      return res.status(500).json({ error: 'Failed to update the channel.' });
     }
 
     return res.status(200).json(data);
   }
 
   if (req.method === 'DELETE') {
-    const { error } = await admin
-      .from('twitch_channels')
-      .delete()
-      .eq('id', id);
+    const { error } = await admin.from('twitch_channels').delete().eq('id', id);
 
     if (error) {
       console.error('[admin/twitch-channels] delete error', error);
-      return res
-        .status(500)
-        .json({ error: 'Failed to delete the channel.' });
+      return res.status(500).json({ error: 'Failed to delete the channel.' });
     }
 
     return res.status(204).end();

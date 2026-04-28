@@ -6,10 +6,7 @@
 import { supabaseAdmin } from '../supabase';
 import { computeSwissStandings } from '../swiss/standings';
 import { defaultSwissScoreConfig } from '../swiss/utils';
-import {
-  getCachedStandings,
-  setCachedStandings,
-} from './standingsCache';
+import { getCachedStandings, setCachedStandings } from './standingsCache';
 import type { SwissMatchResult, SwissScoreConfig } from '../../types/swiss';
 
 export type StageStanding = {
@@ -75,7 +72,7 @@ export async function computeStageStandings(
   const stageTeams: StageTeamRow[] = (stageTeamsData || []).map((row: any) => ({
     team_id: row.team_id,
     seed: row.seed,
-    team: Array.isArray(row.team) ? row.team[0] ?? null : row.team ?? null,
+    team: Array.isArray(row.team) ? (row.team[0] ?? null) : (row.team ?? null),
   }));
 
   if (stageTeams.length === 0) {
@@ -173,7 +170,7 @@ export async function computeGroupedStandings(
   const stageTeams: StageTeamRow[] = (stageTeamsData || []).map((row: any) => ({
     team_id: row.team_id,
     seed: row.seed,
-    team: Array.isArray(row.team) ? row.team[0] ?? null : row.team ?? null,
+    team: Array.isArray(row.team) ? (row.team[0] ?? null) : (row.team ?? null),
   }));
 
   const { data: matchesData } = await supabaseAdmin
@@ -443,17 +440,13 @@ export function computeBracketStandings(
     if (!m.team1_id) continue;
 
     if (m.winner_team_id) {
-      const loserId =
-        m.winner_team_id === m.team1_id ? m.team2_id : m.team1_id;
+      const loserId = m.winner_team_id === m.team1_id ? m.team2_id : m.team1_id;
 
       const winRound = m.round_number ?? 0;
       const prev = lastWinRound.get(m.winner_team_id) ?? 0;
       if (winRound > prev) lastWinRound.set(m.winner_team_id, winRound);
 
-      teamWins.set(
-        m.winner_team_id,
-        (teamWins.get(m.winner_team_id) ?? 0) + 1
-      );
+      teamWins.set(m.winner_team_id, (teamWins.get(m.winner_team_id) ?? 0) + 1);
       if (loserId) {
         teamLosses.set(loserId, (teamLosses.get(loserId) ?? 0) + 1);
       }

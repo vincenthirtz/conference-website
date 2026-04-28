@@ -15,7 +15,15 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (applyRateLimit(req, res, { max: 3, windowMs: 60_000 }, 'player-delete-account')) return;
+  if (
+    applyRateLimit(
+      req,
+      res,
+      { max: 3, windowMs: 60_000 },
+      'player-delete-account'
+    )
+  )
+    return;
 
   if (!supabaseAdmin) {
     return res.status(503).json({ error: 'Service unavailable.' });
@@ -58,23 +66,14 @@ export default async function handler(
 
   // Remove staff entry if exists (caster, manager, admin)
   if (staffEntry) {
-    await supabaseAdmin
-      .from('staff')
-      .delete()
-      .eq('auth_user_id', userId);
+    await supabaseAdmin.from('staff').delete().eq('auth_user_id', userId);
   }
 
   // Remove team memberships
-  await supabaseAdmin
-    .from('team_members')
-    .delete()
-    .eq('user_id', userId);
+  await supabaseAdmin.from('team_members').delete().eq('user_id', userId);
 
   // Remove demandes
-  await supabaseAdmin
-    .from('demandes')
-    .delete()
-    .eq('user_id', userId);
+  await supabaseAdmin.from('demandes').delete().eq('user_id', userId);
 
   // Send account deleted email (non-blocking)
   if (user.email) {
@@ -89,7 +88,9 @@ export default async function handler(
 
   if (deleteErr) {
     console.error('[player/delete-account] delete error:', deleteErr);
-    return res.status(500).json({ error: 'Erreur lors de la suppression du compte.' });
+    return res
+      .status(500)
+      .json({ error: 'Erreur lors de la suppression du compte.' });
   }
 
   return res.status(200).json({ success: true });

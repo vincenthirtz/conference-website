@@ -403,10 +403,7 @@ test.describe('Adherent payment history (supabase)', () => {
         .eq('id', payment.id);
     }
     if (adherent?.id) {
-      await supabaseTestClient
-        .from('adherents')
-        .delete()
-        .eq('id', adherent.id);
+      await supabaseTestClient.from('adherents').delete().eq('id', adherent.id);
     }
   });
 
@@ -471,10 +468,7 @@ test.describe('Adherent payment history (supabase)', () => {
       await supabaseTestClient.from('adherent_payments').delete().eq('id', id);
     }
     if (adherent?.id) {
-      await supabaseTestClient
-        .from('adherents')
-        .delete()
-        .eq('id', adherent.id);
+      await supabaseTestClient.from('adherents').delete().eq('id', adherent.id);
     }
   });
 });

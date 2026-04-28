@@ -60,15 +60,23 @@ export function generateChallenge(): { token: string; question: string } {
 
   // Payload: answer|issuedAt
   const payload = `${answer}|${issuedAt}`;
-  const hmac = crypto.createHmac('sha256', CAPTCHA_SECRET).update(payload).digest('hex');
+  const hmac = crypto
+    .createHmac('sha256', CAPTCHA_SECRET)
+    .update(payload)
+    .digest('hex');
 
   // Token encodes the payload + signature so verification is stateless
-  const token = Buffer.from(JSON.stringify({ answer, issuedAt, hmac })).toString('base64url');
+  const token = Buffer.from(
+    JSON.stringify({ answer, issuedAt, hmac })
+  ).toString('base64url');
 
   return { token, question };
 }
 
-export function verifyCaptcha(token: string, userAnswer: string): { valid: boolean; error?: string } {
+export function verifyCaptcha(
+  token: string,
+  userAnswer: string
+): { valid: boolean; error?: string } {
   if (!token || !userAnswer) {
     return { valid: false, error: 'Captcha manquant' };
   }

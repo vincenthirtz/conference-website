@@ -45,11 +45,11 @@ tests/e2e/          → Tests Playwright
 
 ## Clients Supabase
 
-| Client | Usage | Fichier |
-|--------|-------|---------|
-| `supabaseClient` | Client-side (browser) | `utils/supabase.ts` |
-| `getServerClient(req, res)` | SSR / API routes (cookies) | `utils/supabase.ts` |
-| `supabaseAdmin` | Admin (bypass RLS, service role) | `utils/supabase.ts` |
+| Client                      | Usage                            | Fichier             |
+| --------------------------- | -------------------------------- | ------------------- |
+| `supabaseClient`            | Client-side (browser)            | `utils/supabase.ts` |
+| `getServerClient(req, res)` | SSR / API routes (cookies)       | `utils/supabase.ts` |
+| `supabaseAdmin`             | Admin (bypass RLS, service role) | `utils/supabase.ts` |
 
 ## Patterns clés
 

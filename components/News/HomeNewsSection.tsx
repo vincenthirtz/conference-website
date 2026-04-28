@@ -30,7 +30,9 @@ type HomeNewsSectionProps = {
   initialNews?: HomeNewsItem[];
 };
 
-function HomeNewsSection({ initialNews = [] }: HomeNewsSectionProps): JSX.Element {
+function HomeNewsSection({
+  initialNews = [],
+}: HomeNewsSectionProps): JSX.Element {
   const [selectedTag, setSelectedTag] = useState<string>('all');
 
   const availableTags = useMemo(() => {
@@ -56,7 +58,7 @@ function HomeNewsSection({ initialNews = [] }: HomeNewsSectionProps): JSX.Elemen
           <Paragraph textColor="text-gray-200">
             {selectedTag === 'all'
               ? 'Aucune news pour le moment. Revenez bientôt !'
-              : "Aucune news pour cette catégorie pour le moment."}
+              : 'Aucune news pour cette catégorie pour le moment.'}
           </Paragraph>
         </div>
       );

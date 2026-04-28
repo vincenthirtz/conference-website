@@ -35,16 +35,18 @@ test.describe('Team join requests API', () => {
     playerUserId = player!.id;
 
     // Sign in to get tokens
-    const { data: captainAuth } = await supabaseTestClient!.auth.signInWithPassword({
-      email: CAPTAIN_EMAIL,
-      password: PASSWORD,
-    });
+    const { data: captainAuth } =
+      await supabaseTestClient!.auth.signInWithPassword({
+        email: CAPTAIN_EMAIL,
+        password: PASSWORD,
+      });
     captainToken = captainAuth.session!.access_token;
 
-    const { data: playerAuth } = await supabaseTestClient!.auth.signInWithPassword({
-      email: PLAYER_EMAIL,
-      password: PASSWORD,
-    });
+    const { data: playerAuth } =
+      await supabaseTestClient!.auth.signInWithPassword({
+        email: PLAYER_EMAIL,
+        password: PASSWORD,
+      });
     playerToken = playerAuth.session!.access_token;
 
     // Create a team with captain, is_joinable = false by default
@@ -78,12 +80,16 @@ test.describe('Team join requests API', () => {
 
   // ─── POST /api/teams/toggle-joinable ──────────────────
 
-  test('POST /api/teams/toggle-joinable — 401 sans auth', async ({ request }) => {
+  test('POST /api/teams/toggle-joinable — 401 sans auth', async ({
+    request,
+  }) => {
     const res = await request.post('/api/teams/toggle-joinable');
     expect(res.status()).toBe(401);
   });
 
-  test('POST /api/teams/toggle-joinable — 403 si pas capitaine', async ({ request }) => {
+  test('POST /api/teams/toggle-joinable — 403 si pas capitaine', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.post('/api/teams/toggle-joinable', {
       headers: { Authorization: `Bearer ${playerToken}` },
@@ -91,7 +97,9 @@ test.describe('Team join requests API', () => {
     expect(res.status()).toBe(403);
   });
 
-  test('POST /api/teams/toggle-joinable — active le recrutement', async ({ request }) => {
+  test('POST /api/teams/toggle-joinable — active le recrutement', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.post('/api/teams/toggle-joinable', {
       headers: {
@@ -107,7 +115,9 @@ test.describe('Team join requests API', () => {
 
   // ─── GET /api/teams?joinable=1 ───────────────────────
 
-  test('GET /api/teams?joinable=1 — retourne les equipes rejoignables', async ({ request }) => {
+  test('GET /api/teams?joinable=1 — retourne les equipes rejoignables', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.get(`/api/teams?joinable=1&search=${PREFIX}`);
     expect(res.status()).toBe(200);
@@ -123,7 +133,9 @@ test.describe('Team join requests API', () => {
     expect(res.status()).toBe(401);
   });
 
-  test('POST /api/demandes/join — 400 si equipe non rejoignable', async ({ request }) => {
+  test('POST /api/demandes/join — 400 si equipe non rejoignable', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
 
     // Disable joinable first
@@ -156,7 +168,9 @@ test.describe('Team join requests API', () => {
     });
   });
 
-  test('POST /api/demandes/join — cree une demande avec role', async ({ request }) => {
+  test('POST /api/demandes/join — cree une demande avec role', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.post('/api/demandes/join', {
       headers: {
@@ -177,7 +191,9 @@ test.describe('Team join requests API', () => {
     expect(body.demande.payload.desired_role).toBe('substitute');
   });
 
-  test('POST /api/demandes/join — 400 si demande deja en attente', async ({ request }) => {
+  test('POST /api/demandes/join — 400 si demande deja en attente', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.post('/api/demandes/join', {
       headers: {
@@ -198,7 +214,9 @@ test.describe('Team join requests API', () => {
     expect(res.status()).toBe(401);
   });
 
-  test('GET /api/teams/join-requests — 403 si pas capitaine', async ({ request }) => {
+  test('GET /api/teams/join-requests — 403 si pas capitaine', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.get('/api/teams/join-requests', {
       headers: { Authorization: `Bearer ${playerToken}` },
@@ -206,7 +224,9 @@ test.describe('Team join requests API', () => {
     expect(res.status()).toBe(403);
   });
 
-  test('GET /api/teams/join-requests — liste les demandes pending', async ({ request }) => {
+  test('GET /api/teams/join-requests — liste les demandes pending', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.get('/api/teams/join-requests', {
       headers: { Authorization: `Bearer ${captainToken}` },
@@ -220,7 +240,9 @@ test.describe('Team join requests API', () => {
 
   // ─── POST /api/teams/join-requests (approve/reject) ──
 
-  test('POST /api/teams/join-requests — 403 si pas capitaine', async ({ request }) => {
+  test('POST /api/teams/join-requests — 403 si pas capitaine', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.post('/api/teams/join-requests', {
       headers: {
@@ -232,7 +254,9 @@ test.describe('Team join requests API', () => {
     expect(res.status()).toBe(403);
   });
 
-  test('POST /api/teams/join-requests — 400 action invalide', async ({ request }) => {
+  test('POST /api/teams/join-requests — 400 action invalide', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.post('/api/teams/join-requests', {
       headers: {
@@ -244,7 +268,9 @@ test.describe('Team join requests API', () => {
     expect(res.status()).toBe(400);
   });
 
-  test('POST /api/teams/join-requests — approve ajoute le membre', async ({ request }) => {
+  test('POST /api/teams/join-requests — approve ajoute le membre', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
 
     // Get pending request ID
@@ -288,7 +314,9 @@ test.describe('Team join requests API', () => {
 
   // ─── POST /api/teams/toggle-joinable — desactive ─────
 
-  test('POST /api/teams/toggle-joinable — desactive le recrutement', async ({ request }) => {
+  test('POST /api/teams/toggle-joinable — desactive le recrutement', async ({
+    request,
+  }) => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.post('/api/teams/toggle-joinable', {
       headers: {

@@ -68,9 +68,18 @@ test.describe.serial('Admin workflows E2E (API)', () => {
 
     // Nettoyer les matchs, stages, tournament_maps, tournois, équipes
     for (const tid of createdTournamentIds) {
-      await supabaseTestClient.from('matches').delete().eq('tournament_id', tid);
-      await supabaseTestClient.from('tournament_stages').delete().eq('tournament_id', tid);
-      await supabaseTestClient.from('tournament_maps').delete().eq('tournament_id', tid);
+      await supabaseTestClient
+        .from('matches')
+        .delete()
+        .eq('tournament_id', tid);
+      await supabaseTestClient
+        .from('tournament_stages')
+        .delete()
+        .eq('tournament_id', tid);
+      await supabaseTestClient
+        .from('tournament_maps')
+        .delete()
+        .eq('tournament_id', tid);
       await supabaseTestClient.from('tournaments').delete().eq('id', tid);
     }
     for (const teamId of createdTeamIds) {
@@ -249,17 +258,14 @@ test.describe.serial('Admin workflows E2E (API)', () => {
     test('PUT score met à jour le match et calcule le winner', async ({
       request,
     }) => {
-      const res = await request.put(
-        `/api/admin/matches/${scoreTestMatchId}`,
-        {
-          headers: { Authorization: `Bearer ${staffToken}` },
-          data: {
-            mode: 'score',
-            team1Score: 2,
-            team2Score: 1,
-          },
-        }
-      );
+      const res = await request.put(`/api/admin/matches/${scoreTestMatchId}`, {
+        headers: { Authorization: `Bearer ${staffToken}` },
+        data: {
+          mode: 'score',
+          team1Score: 2,
+          team2Score: 1,
+        },
+      });
 
       expect(res.status()).toBe(200);
       const body = await res.json();
@@ -271,56 +277,44 @@ test.describe.serial('Admin workflows E2E (API)', () => {
     });
 
     test('PUT score rejette des scores non-entiers', async ({ request }) => {
-      const res = await request.put(
-        `/api/admin/matches/${scoreTestMatchId}`,
-        {
-          headers: { Authorization: `Bearer ${staffToken}` },
-          data: {
-            mode: 'score',
-            team1Score: 1.5,
-            team2Score: 0,
-          },
-        }
-      );
+      const res = await request.put(`/api/admin/matches/${scoreTestMatchId}`, {
+        headers: { Authorization: `Bearer ${staffToken}` },
+        data: {
+          mode: 'score',
+          team1Score: 1.5,
+          team2Score: 0,
+        },
+      });
 
       expect(res.status()).toBe(400);
     });
 
     test('PUT score rejette des scores négatifs', async ({ request }) => {
-      const res = await request.put(
-        `/api/admin/matches/${scoreTestMatchId}`,
-        {
-          headers: { Authorization: `Bearer ${staffToken}` },
-          data: {
-            mode: 'score',
-            team1Score: -1,
-            team2Score: 2,
-          },
-        }
-      );
+      const res = await request.put(`/api/admin/matches/${scoreTestMatchId}`, {
+        headers: { Authorization: `Bearer ${staffToken}` },
+        data: {
+          mode: 'score',
+          team1Score: -1,
+          team2Score: 2,
+        },
+      });
 
       expect(res.status()).toBe(400);
     });
 
     test('PUT score rejette un body sans scores', async ({ request }) => {
-      const res = await request.put(
-        `/api/admin/matches/${scoreTestMatchId}`,
-        {
-          headers: { Authorization: `Bearer ${staffToken}` },
-          data: { mode: 'score' },
-        }
-      );
+      const res = await request.put(`/api/admin/matches/${scoreTestMatchId}`, {
+        headers: { Authorization: `Bearer ${staffToken}` },
+        data: { mode: 'score' },
+      });
 
       expect(res.status()).toBe(400);
     });
 
     test('GET match retourne le détail après scoring', async ({ request }) => {
-      const res = await request.get(
-        `/api/admin/matches/${scoreTestMatchId}`,
-        {
-          headers: { Authorization: `Bearer ${staffToken}` },
-        }
-      );
+      const res = await request.get(`/api/admin/matches/${scoreTestMatchId}`, {
+        headers: { Authorization: `Bearer ${staffToken}` },
+      });
 
       expect(res.status()).toBe(200);
       const body = await res.json();
@@ -333,17 +327,14 @@ test.describe.serial('Admin workflows E2E (API)', () => {
     test('PUT meta update modifie les champs planification', async ({
       request,
     }) => {
-      const res = await request.put(
-        `/api/admin/matches/${scoreTestMatchId}`,
-        {
-          headers: { Authorization: `Bearer ${staffToken}` },
-          data: {
-            mode: 'meta',
-            scheduled_at: '2026-06-15T14:00:00Z',
-            stream_url: 'https://twitch.tv/test',
-          },
-        }
-      );
+      const res = await request.put(`/api/admin/matches/${scoreTestMatchId}`, {
+        headers: { Authorization: `Bearer ${staffToken}` },
+        data: {
+          mode: 'meta',
+          scheduled_at: '2026-06-15T14:00:00Z',
+          stream_url: 'https://twitch.tv/test',
+        },
+      });
 
       expect(res.status()).toBe(200);
       const body = await res.json();
@@ -457,8 +448,16 @@ test.describe.serial('Admin workflows E2E (API)', () => {
           data: {
             action: 'save',
             matches: [
-              { id: semis[0].id, team1_id: bracketTeamIds[0], team2_id: bracketTeamIds[1] },
-              { id: semis[1].id, team1_id: bracketTeamIds[2], team2_id: bracketTeamIds[3] },
+              {
+                id: semis[0].id,
+                team1_id: bracketTeamIds[0],
+                team2_id: bracketTeamIds[1],
+              },
+              {
+                id: semis[1].id,
+                team1_id: bracketTeamIds[2],
+                team2_id: bracketTeamIds[3],
+              },
             ],
           },
         }

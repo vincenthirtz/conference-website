@@ -28,7 +28,10 @@ function Header(): JSX.Element {
                 </Heading>
               </div>
               <div className="w-full max-w-[640px] px-4 text-center">
-                <Paragraph className="mt-[16px] text-lg" textColor="text-gray-300">
+                <Paragraph
+                  className="mt-[16px] text-lg"
+                  textColor="text-gray-300"
+                >
                   Le tournoi Overwatch 100&nbsp;% féminin et francophone.
                   <br />
                   <span className="text-white font-medium">

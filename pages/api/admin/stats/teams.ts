@@ -145,9 +145,7 @@ async function handler(
 
   if (error) {
     console.error('[/api/admin/stats/teams] fetch error', error);
-    return res
-      .status(500)
-      .json({ error: 'Failed to load team stats.' });
+    return res.status(500).json({ error: 'Failed to load team stats.' });
   }
 
   const stats: TeamStatsRow[] = (data || []).map((row: any) => ({

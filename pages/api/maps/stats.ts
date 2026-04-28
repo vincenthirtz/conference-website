@@ -93,16 +93,22 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'map-stats')) return;
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'map-stats'))
+    return;
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const { tournamentId, minGames } = req.query;
 
-  if (!tournamentId || Array.isArray(tournamentId) || !isValidUUID(tournamentId)) {
+  if (
+    !tournamentId ||
+    Array.isArray(tournamentId) ||
+    !isValidUUID(tournamentId)
+  ) {
     return res.status(400).json({
-      error: "Query parameter 'tournamentId' is required and must be a valid UUID",
+      error:
+        "Query parameter 'tournamentId' is required and must be a valid UUID",
     });
   }
 
@@ -116,7 +122,9 @@ export default async function handler(
     // 1) Récupérer les matches du tournoi (hors annulés, hors BYE)
     const { data: matchesData, error: mErr } = await supabaseAdmin
       .from('matches')
-      .select('id, tournament_id, status, is_bye, team1_id, team2_id, winner_team_id')
+      .select(
+        'id, tournament_id, status, is_bye, team1_id, team2_id, winner_team_id'
+      )
       .eq('tournament_id', tournamentId)
       .neq('status', 'cancelled');
 
@@ -198,7 +206,13 @@ export default async function handler(
     matches.forEach((m) => matchById.set(m.id, m));
 
     // 6) Calcul des stats par map
-    const stats = computeMapStats(games, vetos, totalVetoMatches, matchById, teamNames);
+    const stats = computeMapStats(
+      games,
+      vetos,
+      totalVetoMatches,
+      matchById,
+      teamNames
+    );
     const totalGames = stats.reduce((sum, m) => sum + m.gamesPlayed, 0);
 
     // 7) Calcul du taux d'utilisation + filtres
@@ -225,7 +239,9 @@ export default async function handler(
     }
 
     // 8) Never-played maps: maps in the tournament pool with 0 games
-    const playedMapNames = new Set(stats.filter((s) => s.gamesPlayed > 0).map((s) => s.mapName));
+    const playedMapNames = new Set(
+      stats.filter((s) => s.gamesPlayed > 0).map((s) => s.mapName)
+    );
     let neverPlayed: string[] = [];
     {
       const { data: poolData } = await supabaseAdmin
@@ -254,7 +270,10 @@ export default async function handler(
       teamTendencies,
     };
 
-    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=120');
+    res.setHeader(
+      'Cache-Control',
+      'public, s-maxage=300, stale-while-revalidate=120'
+    );
     return res.status(200).json(response);
   } catch (err: unknown) {
     console.error('[/api/maps/stats] internal error:', err);
@@ -326,9 +345,7 @@ function computeMapStats(
       if (g.winner_team_id) {
         winnerId = g.winner_team_id;
         loserId =
-          g.winner_team_id === match.team1_id
-            ? match.team2_id
-            : match.team1_id;
+          g.winner_team_id === match.team1_id ? match.team2_id : match.team1_id;
       } else if (s1 !== s2) {
         winnerId = s1 > s2 ? match.team1_id : match.team2_id;
         loserId = s1 > s2 ? match.team2_id : match.team1_id;
@@ -343,7 +360,11 @@ function computeMapStats(
           [loserId, false],
         ] as [string | null, boolean][]) {
           if (!teamId) continue;
-          const ta = mapTeams.get(teamId) || { gamesPlayed: 0, wins: 0, losses: 0 };
+          const ta = mapTeams.get(teamId) || {
+            gamesPlayed: 0,
+            wins: 0,
+            losses: 0,
+          };
           ta.gamesPlayed += 1;
           if (isWin) ta.wins += 1;
           else ta.losses += 1;
@@ -378,7 +399,8 @@ function computeMapStats(
     const ge = gameAgg.get(mapName);
     const ve = vetoAgg.get(mapName);
     const gamesPlayed = ge?.games ?? 0;
-    const avgRounds = gamesPlayed > 0 ? (ge?.totalRounds ?? 0) / gamesPlayed : 0;
+    const avgRounds =
+      gamesPlayed > 0 ? (ge?.totalRounds ?? 0) / gamesPlayed : 0;
     const avgDuration =
       ge && ge.durationCount > 0
         ? Math.round(ge.totalDuration / ge.durationCount)

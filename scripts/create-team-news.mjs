@@ -76,20 +76,26 @@ console.log(`Tournament: ${tournament.name}`);
 
 // 3. Create news
 const newsSlug = `tournament-${tournament.id}-team-${teamId}-${Date.now().toString(36)}`;
-const { data: news, error: newsErr } = await supabase.from('news').insert({
-  title: `${team.name} rejoint le tournoi ${tournament.name}`,
-  slug: newsSlug,
-  tag: 'tournaments',
-  excerpt: `${team.name} s'est inscrite au tournoi ${tournament.name}.`,
-  content: `L'équipe ${team.name} est désormais inscrite au tournoi ${tournament.name}. Bonne chance !`,
-  image_url: team.logo_url ?? null,
-  status: 'published',
-  published_at: new Date().toISOString(),
-}).select('id, title, slug').single();
+const { data: news, error: newsErr } = await supabase
+  .from('news')
+  .insert({
+    title: `${team.name} rejoint le tournoi ${tournament.name}`,
+    slug: newsSlug,
+    tag: 'tournaments',
+    excerpt: `${team.name} s'est inscrite au tournoi ${tournament.name}.`,
+    content: `L'équipe ${team.name} est désormais inscrite au tournoi ${tournament.name}. Bonne chance !`,
+    image_url: team.logo_url ?? null,
+    status: 'published',
+    published_at: new Date().toISOString(),
+  })
+  .select('id, title, slug')
+  .single();
 
 if (newsErr) {
   console.error('Failed to create news:', newsErr.message);
   process.exit(1);
 }
 
-console.log(`News created: "${news.title}" (id: ${news.id}, slug: ${news.slug})`);
+console.log(
+  `News created: "${news.title}" (id: ${news.id}, slug: ${news.slug})`
+);

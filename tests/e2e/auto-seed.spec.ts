@@ -137,10 +137,34 @@ test.describe.serial('Auto-seed E2E (API)', () => {
     // Créer des matchs terminés dans le source stage pour générer un classement
     // Team1 bat Team2, Team3 bat Team4, Team1 bat Team3 → classement : 1,3,2,4
     const sourceMatches = [
-      { team1_id: teamIds[0], team2_id: teamIds[1], t1s: 2, t2s: 0, winner: teamIds[0] },
-      { team1_id: teamIds[2], team2_id: teamIds[3], t1s: 2, t2s: 1, winner: teamIds[2] },
-      { team1_id: teamIds[0], team2_id: teamIds[2], t1s: 2, t2s: 0, winner: teamIds[0] },
-      { team1_id: teamIds[1], team2_id: teamIds[3], t1s: 2, t2s: 1, winner: teamIds[1] },
+      {
+        team1_id: teamIds[0],
+        team2_id: teamIds[1],
+        t1s: 2,
+        t2s: 0,
+        winner: teamIds[0],
+      },
+      {
+        team1_id: teamIds[2],
+        team2_id: teamIds[3],
+        t1s: 2,
+        t2s: 1,
+        winner: teamIds[2],
+      },
+      {
+        team1_id: teamIds[0],
+        team2_id: teamIds[2],
+        t1s: 2,
+        t2s: 0,
+        winner: teamIds[0],
+      },
+      {
+        team1_id: teamIds[1],
+        team2_id: teamIds[3],
+        t1s: 2,
+        t2s: 1,
+        winner: teamIds[1],
+      },
     ];
 
     for (const m of sourceMatches) {
@@ -210,17 +234,26 @@ test.describe.serial('Auto-seed E2E (API)', () => {
 
     for (const tid of [tournamentId, otherTournamentId]) {
       if (!tid) continue;
-      await supabaseTestClient.from('stage_teams').delete().in(
-        'stage_id',
-        (
-          await supabaseTestClient
-            .from('tournament_stages')
-            .select('id')
-            .eq('tournament_id', tid)
-        ).data?.map((s: any) => s.id) || []
-      );
-      await supabaseTestClient.from('matches').delete().eq('tournament_id', tid);
-      await supabaseTestClient.from('tournament_stages').delete().eq('tournament_id', tid);
+      await supabaseTestClient
+        .from('stage_teams')
+        .delete()
+        .in(
+          'stage_id',
+          (
+            await supabaseTestClient
+              .from('tournament_stages')
+              .select('id')
+              .eq('tournament_id', tid)
+          ).data?.map((s: any) => s.id) || []
+        );
+      await supabaseTestClient
+        .from('matches')
+        .delete()
+        .eq('tournament_id', tid);
+      await supabaseTestClient
+        .from('tournament_stages')
+        .delete()
+        .eq('tournament_id', tid);
       await supabaseTestClient.from('tournaments').delete().eq('id', tid);
     }
 
@@ -257,19 +290,20 @@ test.describe.serial('Auto-seed E2E (API)', () => {
       expect(body.error).toContain('sourceStageId');
     });
 
-    test('POST avec un stageId cible inexistant renvoie 404', async ({ request }) => {
+    test('POST avec un stageId cible inexistant renvoie 404', async ({
+      request,
+    }) => {
       const fakeId = '00000000-0000-0000-0000-000000000000';
-      const res = await request.post(
-        `/api/admin/stages/${fakeId}/auto-seed`,
-        {
-          headers: { Authorization: `Bearer ${staffToken}` },
-          data: { sourceStageId },
-        }
-      );
+      const res = await request.post(`/api/admin/stages/${fakeId}/auto-seed`, {
+        headers: { Authorization: `Bearer ${staffToken}` },
+        data: { sourceStageId },
+      });
       expect(res.status()).toBe(404);
     });
 
-    test('POST avec un sourceStageId inexistant renvoie 404', async ({ request }) => {
+    test('POST avec un sourceStageId inexistant renvoie 404', async ({
+      request,
+    }) => {
       const fakeId = '00000000-0000-0000-0000-000000000000';
       const res = await request.post(
         `/api/admin/stages/${targetStageId}/auto-seed`,
@@ -295,7 +329,9 @@ test.describe.serial('Auto-seed E2E (API)', () => {
       expect(body.error).toContain('bracket');
     });
 
-    test('POST avec stages de tournois différents renvoie 400', async ({ request }) => {
+    test('POST avec stages de tournois différents renvoie 400', async ({
+      request,
+    }) => {
       const res = await request.post(
         `/api/admin/stages/${targetStageId}/auto-seed`,
         {
@@ -330,7 +366,9 @@ test.describe.serial('Auto-seed E2E (API)', () => {
    * ========================================================*/
 
   test.describe('3 — Seeding standard', () => {
-    test('POST auto-seed standard peuple le bracket R1', async ({ request }) => {
+    test('POST auto-seed standard peuple le bracket R1', async ({
+      request,
+    }) => {
       const res = await request.post(
         `/api/admin/stages/${targetStageId}/auto-seed`,
         {
@@ -421,7 +459,8 @@ test.describe.serial('Auto-seed E2E (API)', () => {
         for (const m of matches!) {
           const matchTeams = [m.team1_id, m.team2_id];
           const bothInMatch =
-            matchTeams.includes(seed1TeamId) && matchTeams.includes(seed2TeamId);
+            matchTeams.includes(seed1TeamId) &&
+            matchTeams.includes(seed2TeamId);
           expect(bothInMatch).toBe(false);
         }
       }
@@ -468,7 +507,7 @@ test.describe.serial('Auto-seed E2E (API)', () => {
       }
     });
 
-    test('POST auto-seed sequential assigne les équipes dans l\'ordre', async ({
+    test("POST auto-seed sequential assigne les équipes dans l'ordre", async ({
       request,
     }) => {
       const res = await request.post(

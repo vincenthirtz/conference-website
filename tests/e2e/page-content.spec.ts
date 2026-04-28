@@ -49,9 +49,9 @@ test.describe('Homepage content', () => {
 
   test('has working navigation links', async ({ page }) => {
     await page.goto('/');
-    await expect(
-      page.getByRole('link', { name: /connexion/i })
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('link', { name: /connexion/i })).toBeVisible({
+      timeout: 10000,
+    });
 
     // Check for main nav links
     const navLinks = page.locator('a[href]');
@@ -64,7 +64,9 @@ test.describe('Contact page', () => {
   test('has a contact form', async ({ page }) => {
     await page.goto('/contact');
     // Should have form inputs
-    await expect(page.locator('input[type="email"], input[name="email"]')).toBeVisible({
+    await expect(
+      page.locator('input[type="email"], input[name="email"]')
+    ).toBeVisible({
       timeout: 10000,
     });
   });
@@ -144,10 +146,9 @@ test.describe('Accessibility basics', () => {
     for (let i = 0; i < Math.min(count, 10); i++) {
       const alt = await images.nth(i).getAttribute('alt');
       // Alt can be empty string (decorative) but should exist
-      expect(
-        alt !== null,
-        `Image ${i} should have an alt attribute`
-      ).toBe(true);
+      expect(alt !== null, `Image ${i} should have an alt attribute`).toBe(
+        true
+      );
     }
   });
 });

@@ -4,7 +4,11 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { parsePagination, sanitizeSearch, escapePostgrestValue } from '@/utils/apiHelpers';
+import {
+  parsePagination,
+  sanitizeSearch,
+  escapePostgrestValue,
+} from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 
 export type PublicTeam = {
@@ -32,17 +36,23 @@ export default async function handler(
   }
 
   try {
-    const { limit: limitNum, offset: offsetNum } = parsePagination(req, { limit: 100 });
+    const { limit: limitNum, offset: offsetNum } = parsePagination(req, {
+      limit: 100,
+    });
     const search = sanitizeSearch(req.query.search);
 
     const joinable = req.query.joinable;
-    const country = typeof req.query.country === 'string' ? req.query.country.trim() : '';
+    const country =
+      typeof req.query.country === 'string' ? req.query.country.trim() : '';
 
     let query = supabaseAdmin
       .from('teams')
-      .select('id, name, short_name, logo_url, country, is_joinable, team_members(count)', {
-        count: 'exact',
-      });
+      .select(
+        'id, name, short_name, logo_url, country, is_joinable, team_members(count)',
+        {
+          count: 'exact',
+        }
+      );
 
     // Filter by joinable status
     if (joinable === '1' || joinable === 'true') {
@@ -82,7 +92,10 @@ export default async function handler(
       is_joinable: t.is_joinable ?? false,
     }));
 
-    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=120');
+    res.setHeader(
+      'Cache-Control',
+      'public, s-maxage=300, stale-while-revalidate=120'
+    );
     return res.status(200).json({
       teams,
       total: typeof count === 'number' ? count : null,

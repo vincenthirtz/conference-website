@@ -80,7 +80,8 @@ async function handleGet(id: string, res: NextApiResponse) {
   // Récupérer les membres de l'équipe
   const { data: membersData, error: membersError } = await supabaseAdmin
     .from('team_members')
-    .select(`
+    .select(
+      `
       id,
       user_id,
       role,
@@ -90,7 +91,8 @@ async function handleGet(id: string, res: NextApiResponse) {
         display_name,
         email
       )
-    `)
+    `
+    )
     .eq('team_id', id);
 
   if (membersError) {
@@ -159,35 +161,57 @@ async function handlePut(
   // --- Validation des champs ---
 
   // Nom non vide
-  if ('name' in body && (typeof body.name !== 'string' || body.name.trim().length === 0)) {
+  if (
+    'name' in body &&
+    (typeof body.name !== 'string' || body.name.trim().length === 0)
+  ) {
     return res.status(400).json({ error: 'Team name cannot be empty' });
   }
 
   // short_name non vide si fourni
-  if ('short_name' in body && body.short_name !== null && (typeof body.short_name !== 'string' || body.short_name.trim().length === 0)) {
+  if (
+    'short_name' in body &&
+    body.short_name !== null &&
+    (typeof body.short_name !== 'string' || body.short_name.trim().length === 0)
+  ) {
     return res.status(400).json({ error: 'short_name cannot be empty' });
   }
 
   // discord_role_id: numeric string (Discord snowflake ID) or null
-  if ('discord_role_id' in updatePayload && updatePayload.discord_role_id != null) {
+  if (
+    'discord_role_id' in updatePayload &&
+    updatePayload.discord_role_id != null
+  ) {
     const v = updatePayload.discord_role_id;
     if (typeof v !== 'string' || !/^\d{17,20}$/.test(v.trim())) {
       return res.status(400).json({
-        error: 'discord_role_id doit être un ID Discord (17 à 20 chiffres) ou null',
+        error:
+          'discord_role_id doit être un ID Discord (17 à 20 chiffres) ou null',
       });
     }
     updatePayload.discord_role_id = v.trim();
   }
 
   // Sanitize URL fields (reject javascript:, data: etc.)
-  const urlFields = ['logo_url', 'banner_url', 'website', 'twitter', 'discord'] as const;
+  const urlFields = [
+    'logo_url',
+    'banner_url',
+    'website',
+    'twitter',
+    'discord',
+  ] as const;
   for (const field of urlFields) {
-    if (field in updatePayload && updatePayload[field as keyof TeamRow] != null) {
+    if (
+      field in updatePayload &&
+      updatePayload[field as keyof TeamRow] != null
+    ) {
       const val = updatePayload[field as keyof TeamRow];
       if (typeof val === 'string' && val !== '') {
         const safe = sanitizeUrl(val);
         if (!safe) {
-          return res.status(400).json({ error: `${field} must be a valid http(s) URL` });
+          return res
+            .status(400)
+            .json({ error: `${field} must be a valid http(s) URL` });
         }
         (updatePayload as any)[field] = safe;
       }
@@ -274,7 +298,10 @@ async function handleDelete(
       .delete()
       .eq('team_id', id);
     if (demandesErr) {
-      console.error('admin hard delete team — demandes cleanup error:', demandesErr);
+      console.error(
+        'admin hard delete team — demandes cleanup error:',
+        demandesErr
+      );
     }
 
     const { error: stageTeamsErr } = await supabaseAdmin
@@ -282,7 +309,10 @@ async function handleDelete(
       .delete()
       .eq('team_id', id);
     if (stageTeamsErr) {
-      console.error('admin hard delete team — stage_teams cleanup error:', stageTeamsErr);
+      console.error(
+        'admin hard delete team — stage_teams cleanup error:',
+        stageTeamsErr
+      );
     }
 
     const { error: membersErr } = await supabaseAdmin
@@ -290,7 +320,10 @@ async function handleDelete(
       .delete()
       .eq('team_id', id);
     if (membersErr) {
-      console.error('admin hard delete team — team_members cleanup error:', membersErr);
+      console.error(
+        'admin hard delete team — team_members cleanup error:',
+        membersErr
+      );
     }
 
     const { error } = await supabaseAdmin.from('teams').delete().eq('id', id);

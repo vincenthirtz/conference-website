@@ -21,7 +21,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Database service unavailable (missing service role).' });
+    return res
+      .status(500)
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
 
   const id = String(stageId);
@@ -51,14 +53,24 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     const allMatches = matches || [];
     const totalMatches = allMatches.length;
-    const finishedMatches = allMatches.filter((m) => m.status === 'finished').length;
-    const pendingMatches = allMatches.filter((m) => m.status === 'pending').length;
-    const ongoingMatches = allMatches.filter((m) => m.status === 'ongoing').length;
+    const finishedMatches = allMatches.filter(
+      (m) => m.status === 'finished'
+    ).length;
+    const pendingMatches = allMatches.filter(
+      (m) => m.status === 'pending'
+    ).length;
+    const ongoingMatches = allMatches.filter(
+      (m) => m.status === 'ongoing'
+    ).length;
 
     const isComplete = totalMatches > 0 && finishedMatches === totalMatches;
 
     // Find the next stage by order_index
-    let nextStage: { id: string; name: string; stage_type: string | null } | null = null;
+    let nextStage: {
+      id: string;
+      name: string;
+      stage_type: string | null;
+    } | null = null;
 
     if (stage.order_index !== null) {
       const { data: nextStageData } = await supabaseAdmin
@@ -99,7 +111,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       advancementRules: hasAutoAdvancement ? advancementRules : undefined,
     });
   } catch (err: unknown) {
-    console.error('[/api/admin/stages/[stageId]/completion-status] error:', err);
+    console.error(
+      '[/api/admin/stages/[stageId]/completion-status] error:',
+      err
+    );
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

@@ -1,5 +1,5 @@
 // pages/team/[slug]/stats.tsx
- 
+
 import { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';

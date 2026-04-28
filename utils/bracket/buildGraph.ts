@@ -190,7 +190,9 @@ export type BracketValidationResult = {
  * - Détecte les matchs orphelins (aucun lien entrant ni sortant)
  * - Détecte les matchs déconnectés (non atteignables depuis les roots)
  */
-export function validateBracketGraph(graph: BracketGraph): BracketValidationResult {
+export function validateBracketGraph(
+  graph: BracketGraph
+): BracketValidationResult {
   const cycleMatchIds: string[] = [];
   const orphanMatchIds: string[] = [];
   const disconnectedMatchIds: string[] = [];
@@ -203,7 +205,9 @@ export function validateBracketGraph(graph: BracketGraph): BracketValidationResu
   }
 
   // 2) Détection de cycles via DFS avec 3 couleurs (white/gray/black)
-  const WHITE = 0, GRAY = 1, BLACK = 2;
+  const WHITE = 0,
+    GRAY = 1,
+    BLACK = 2;
   const color: Record<string, number> = {};
   for (const id of Object.keys(graph.nodes)) {
     color[id] = WHITE;
@@ -270,7 +274,10 @@ export function validateBracketGraph(graph: BracketGraph): BracketValidationResu
   }
 
   return {
-    valid: cycleMatchIds.length === 0 && orphanMatchIds.length === 0 && disconnectedMatchIds.length === 0,
+    valid:
+      cycleMatchIds.length === 0 &&
+      orphanMatchIds.length === 0 &&
+      disconnectedMatchIds.length === 0,
     cycleMatchIds,
     orphanMatchIds,
     disconnectedMatchIds,

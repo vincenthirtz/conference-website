@@ -10,9 +10,7 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { TOURNAMENT_TEMPLATES } from '@/config/tournament-templates';
 
-type ApiResponse =
-  | { stages: any[] }
-  | { error: string };
+type ApiResponse = { stages: any[] } | { error: string };
 
 export default withStaffRoute(handler, 'manager');
 
@@ -31,7 +29,9 @@ async function handler(
   }
 
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Database service unavailable (missing service role).' });
+    return res
+      .status(500)
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
 
   const tournamentId = String(id);
@@ -58,12 +58,16 @@ async function handler(
           if (Array.isArray(custom)) {
             template = custom.find((t: any) => t.id === templateId);
           }
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
     }
 
     if (!template) {
-      return res.status(400).json({ error: `Template "${templateId}" not found` });
+      return res
+        .status(400)
+        .json({ error: `Template "${templateId}" not found` });
     }
 
     // Verify tournament exists
@@ -88,7 +92,8 @@ async function handler(
 
     if (hasExisting && !append) {
       return res.status(400).json({
-        error: 'Ce tournoi a deja des stages. Supprimez-les avant d\'appliquer un template, ou utilisez le mode "append".',
+        error:
+          'Ce tournoi a deja des stages. Supprimez-les avant d\'appliquer un template, ou utilisez le mode "append".',
       });
     }
 
@@ -122,7 +127,9 @@ async function handler(
 
     if (insertErr || !createdStages) {
       console.error('apply-template insert stages error:', insertErr);
-      return res.status(500).json({ error: 'Failed to create stages from template' });
+      return res
+        .status(500)
+        .json({ error: 'Failed to create stages from template' });
     }
 
     // Log staff action

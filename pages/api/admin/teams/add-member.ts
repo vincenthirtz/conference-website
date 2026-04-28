@@ -46,9 +46,7 @@ async function handler(
     const trimmed = (tag || '').trim();
     const re = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
     if (!re.test(trimmed)) {
-      throw new Error(
-        "BattleTag required (format Name#0000)"
-      );
+      throw new Error('BattleTag required (format Name#0000)');
     }
     return trimmed;
   };
@@ -104,16 +102,17 @@ async function handler(
     }
 
     // Check max_players limit across all tournaments the team is registered in
-    const [{ count: currentMemberCount }, { data: teamTournaments }] = await Promise.all([
-      supabaseAdmin
-        .from('team_members')
-        .select('*', { count: 'exact', head: true })
-        .eq('team_id', teamId),
-      supabaseAdmin
-        .from('tournament_teams')
-        .select('tournament_id, tournaments!inner(max_players)')
-        .eq('team_id', teamId),
-    ]);
+    const [{ count: currentMemberCount }, { data: teamTournaments }] =
+      await Promise.all([
+        supabaseAdmin
+          .from('team_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('team_id', teamId),
+        supabaseAdmin
+          .from('tournament_teams')
+          .select('tournament_id, tournaments!inner(max_players)')
+          .eq('team_id', teamId),
+      ]);
 
     if (teamTournaments && teamTournaments.length > 0) {
       for (const tt of teamTournaments) {
@@ -185,7 +184,10 @@ async function handler(
         published_at: new Date().toISOString(),
       });
     } catch (newsErr) {
-      console.error('[/api/admin/teams/add-member] create news error:', newsErr);
+      console.error(
+        '[/api/admin/teams/add-member] create news error:',
+        newsErr
+      );
     }
 
     return res.status(200).json({

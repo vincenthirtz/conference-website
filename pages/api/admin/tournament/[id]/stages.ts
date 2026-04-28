@@ -33,10 +33,7 @@ type Stage = {
   updated_at: string | null;
 };
 
-type ApiResponse =
-  | { stages: Stage[] }
-  | { stage: Stage }
-  | { error: string };
+type ApiResponse = { stages: Stage[] } | { stage: Stage } | { error: string };
 
 export default withStaffRoute(handler, 'manager');
 
@@ -77,7 +74,9 @@ async function handleGet(
   res: NextApiResponse<ApiResponse>
 ) {
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Database service unavailable (missing service role).' });
+    return res
+      .status(500)
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
 
   const { data, error } = await supabaseAdmin
@@ -103,7 +102,9 @@ async function handlePost(
   ctx: any
 ) {
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Database service unavailable (missing service role).' });
+    return res
+      .status(500)
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
 
   const {
@@ -124,7 +125,12 @@ async function handlePost(
 
   // Validation du stage_type
   const VALID_STAGE_TYPES: StageType[] = [
-    'group', 'bracket', 'swiss', 'round_robin', 'showmatch', 'other',
+    'group',
+    'bracket',
+    'swiss',
+    'round_robin',
+    'showmatch',
+    'other',
   ];
   if (stage_type && !VALID_STAGE_TYPES.includes(stage_type)) {
     return res.status(400).json({
@@ -142,13 +148,21 @@ async function handlePost(
 
   // Cohérence des dates : start_date < end_date
   if (start_date && end_date && new Date(start_date) >= new Date(end_date)) {
-    return res.status(400).json({ error: 'start_date must be before end_date' });
+    return res
+      .status(400)
+      .json({ error: 'start_date must be before end_date' });
   }
 
   // Validation de order_index
   if (order_index !== undefined && order_index !== null) {
-    if (typeof order_index !== 'number' || !Number.isInteger(order_index) || order_index < 0) {
-      return res.status(400).json({ error: 'order_index must be an integer >= 0' });
+    if (
+      typeof order_index !== 'number' ||
+      !Number.isInteger(order_index) ||
+      order_index < 0
+    ) {
+      return res
+        .status(400)
+        .json({ error: 'order_index must be an integer >= 0' });
     }
   }
 
@@ -248,22 +262,34 @@ async function handlePatch(
   ctx: any
 ) {
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Database service unavailable (missing service role).' });
+    return res
+      .status(500)
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
 
   const { stages } = req.body || {};
 
   if (!Array.isArray(stages) || stages.length === 0) {
-    return res.status(400).json({ error: 'stages must be a non-empty array of { id, order_index }' });
+    return res.status(400).json({
+      error: 'stages must be a non-empty array of { id, order_index }',
+    });
   }
 
   // Validate each entry
   for (const entry of stages) {
     if (!entry.id || typeof entry.id !== 'string') {
-      return res.status(400).json({ error: 'Each stage entry must have a valid id' });
+      return res
+        .status(400)
+        .json({ error: 'Each stage entry must have a valid id' });
     }
-    if (typeof entry.order_index !== 'number' || !Number.isInteger(entry.order_index) || entry.order_index < 0) {
-      return res.status(400).json({ error: 'Each stage entry must have an integer order_index >= 0' });
+    if (
+      typeof entry.order_index !== 'number' ||
+      !Number.isInteger(entry.order_index) ||
+      entry.order_index < 0
+    ) {
+      return res.status(400).json({
+        error: 'Each stage entry must have an integer order_index >= 0',
+      });
     }
   }
 

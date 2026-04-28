@@ -14,7 +14,12 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { computeStageStandings } from '@/utils/stages/standings';
 import { isValidUUID } from '@/utils/apiHelpers';
 
-type SeededSlot = { matchId: string; slot: 1 | 2; teamId: string; seed: number };
+type SeededSlot = {
+  matchId: string;
+  slot: 1 | 2;
+  teamId: string;
+  seed: number;
+};
 
 type ApiResponse =
   | { seeded: SeededSlot[]; totalMatches: number }
@@ -37,7 +42,9 @@ async function handler(
   }
 
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Database service unavailable (missing service role).' });
+    return res
+      .status(500)
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
 
   const targetStageId = String(stageId);
@@ -60,7 +67,9 @@ async function handler(
     }
 
     if (targetStage.stage_type !== 'bracket') {
-      return res.status(400).json({ error: 'Target stage must be a bracket stage' });
+      return res
+        .status(400)
+        .json({ error: 'Target stage must be a bracket stage' });
     }
 
     // Verify source stage exists in same tournament
@@ -87,7 +96,9 @@ async function handler(
     );
 
     if (standings.length === 0) {
-      return res.status(400).json({ error: 'Aucun classement disponible pour le stage source.' });
+      return res
+        .status(400)
+        .json({ error: 'Aucun classement disponible pour le stage source.' });
     }
 
     // Get round 1 matches of the target bracket (ordered by creation for positional consistency)
@@ -104,7 +115,8 @@ async function handler(
 
     if (!bracketMatches || bracketMatches.length === 0) {
       return res.status(400).json({
-        error: 'Aucun match de round 1 dans le bracket cible. Generez le bracket d\'abord.',
+        error:
+          "Aucun match de round 1 dans le bracket cible. Generez le bracket d'abord.",
       });
     }
 
@@ -112,7 +124,10 @@ async function handler(
     const teamsToSeed = standings.slice(0, totalSlots);
 
     // Build seeding order based on pattern
-    const seedOrder = buildSeedOrder(bracketMatches.length, seedingPattern as 'standard' | 'sequential');
+    const seedOrder = buildSeedOrder(
+      bracketMatches.length,
+      seedingPattern as 'standard' | 'sequential'
+    );
 
     // Assign teams to match slots
     const updates: SeededSlot[] = [];

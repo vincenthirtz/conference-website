@@ -88,15 +88,14 @@ function ActualitesPage({ patchNotes, news }: ActualitesProps) {
   const [activeTab, setActiveTab] = useState<'all' | 'patch' | 'news'>('all');
 
   const renderPatchNoteCard = (note: PatchNote) => {
-    const groupedHeroes = note.heroes?.reduce<Record<string, typeof note.heroes>>(
-      (acc, hero) => {
-        const key = hero.category || 'Autres';
-        if (!acc[key]) acc[key] = [];
-        acc[key].push(hero);
-        return acc;
-      },
-      {}
-    );
+    const groupedHeroes = note.heroes?.reduce<
+      Record<string, typeof note.heroes>
+    >((acc, hero) => {
+      const key = hero.category || 'Autres';
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(hero);
+      return acc;
+    }, {});
 
     return (
       <Link
@@ -155,7 +154,9 @@ function ActualitesPage({ patchNotes, news }: ActualitesProps) {
 
           <div className="mt-auto pt-4 flex items-center gap-2 text-sm text-orange-300 group-hover:text-orange-200 transition">
             <span>Lire les détails</span>
-            <span className="transition transform group-hover:translate-x-1">→</span>
+            <span className="transition transform group-hover:translate-x-1">
+              →
+            </span>
           </div>
         </div>
       </Link>
@@ -200,14 +201,20 @@ function ActualitesPage({ patchNotes, news }: ActualitesProps) {
         )}
         <div className="mt-auto pt-4 flex items-center gap-2 text-sm text-blue-300 group-hover:text-blue-200 transition">
           <span>Lire l&apos;article</span>
-          <span className="transition transform group-hover:translate-x-1">→</span>
+          <span className="transition transform group-hover:translate-x-1">
+            →
+          </span>
         </div>
       </div>
     </Link>
   );
 
   const allItems = [
-    ...patchNotes.map((p) => ({ type: 'patch' as const, data: p, date: p.date })),
+    ...patchNotes.map((p) => ({
+      type: 'patch' as const,
+      data: p,
+      date: p.date,
+    })),
     ...news.map((n) => ({ type: 'news' as const, data: n, date: n.date })),
   ];
 
@@ -227,7 +234,11 @@ function ActualitesPage({ patchNotes, news }: ActualitesProps) {
             <div className="inline-block text-lg text-white font-semibold border-b-2 border-blue-400 mb-4">
               Actualités
             </div>
-            <Heading typeStyle="heading-lg" level="h1" className="text-gradient">
+            <Heading
+              typeStyle="heading-lg"
+              level="h1"
+              className="text-gradient"
+            >
               Actualités Overwatch
             </Heading>
             <div className="max-w-2xl mx-auto mt-4">

@@ -12,7 +12,8 @@ export default function DiscordMemberRedirect() {
       try {
         // Validate redirect target to prevent open redirects
         const rawNext = (router.query.next as string) || '/';
-        const next = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/';
+        const next =
+          rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/';
         const code = router.query.code as string | undefined;
         const state = router.query.state as string | undefined;
 
@@ -84,9 +85,7 @@ export default function DiscordMemberRedirect() {
         <div className="text-sm text-gray-400">
           Merci de patienter pendant la finalisation de la connexion.
         </div>
-        {error && (
-          <div className="text-sm text-red-300 mt-2">{error}</div>
-        )}
+        {error && <div className="text-sm text-red-300 mt-2">{error}</div>}
       </div>
     </div>
   );

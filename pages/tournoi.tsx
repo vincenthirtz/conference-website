@@ -553,14 +553,14 @@ function Tournoi() {
                       <td className="py-2 text-gray-300 tabular-nums">
                         {idx + 1}
                       </td>
-                    <td className="py-2">
-                      <TeamBadge
-                        team={ensureTeamShape(
-                          teams.find((t) => t.name === r.name),
-                          r.name
-                        )}
-                      />
-                    </td>
+                      <td className="py-2">
+                        <TeamBadge
+                          team={ensureTeamShape(
+                            teams.find((t) => t.name === r.name),
+                            r.name
+                          )}
+                        />
+                      </td>
                       <td className="py-2 tabular-nums text-gray-200">
                         {r.mp}
                       </td>

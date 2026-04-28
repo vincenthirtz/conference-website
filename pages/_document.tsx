@@ -9,7 +9,9 @@ interface MyDocumentProps extends DocumentInitialProps {
 export default class MyDocument extends Document<MyDocumentProps> {
   static async getInitialProps(ctx: DocumentContext): Promise<MyDocumentProps> {
     const initialProps = await Document.getInitialProps(ctx);
-    const nonce = (ctx.req?.headers as Record<string, string | undefined>)?.['x-nonce'] ?? '';
+    const nonce =
+      (ctx.req?.headers as Record<string, string | undefined>)?.['x-nonce'] ??
+      '';
     return { ...initialProps, nonce };
   }
 
@@ -38,13 +40,30 @@ export default class MyDocument extends Document<MyDocumentProps> {
           />
 
           {/* Apple touch icon and web app meta */}
-          <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-          <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-          <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+          <link
+            rel="apple-touch-icon"
+            sizes="180x180"
+            href="/apple-touch-icon.png"
+          />
+          <link
+            rel="icon"
+            type="image/png"
+            sizes="32x32"
+            href="/favicon-32x32.png"
+          />
+          <link
+            rel="icon"
+            type="image/png"
+            sizes="16x16"
+            href="/favicon-16x16.png"
+          />
           <link rel="manifest" href="/site.webmanifest" />
 
           {/* Additional SEO meta tags */}
-          <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+          <meta
+            name="robots"
+            content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
+          />
           <meta name="googlebot" content="index, follow" />
           <meta name="author" content="OW Women's Cup" />
           <meta name="publisher" content="OW Women's Cup" />

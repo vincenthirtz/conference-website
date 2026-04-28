@@ -75,7 +75,9 @@ function AdminAnnouncementsPage({
 
   const [searchInput, setSearchInput] = useState(search);
   const [errorMsg, setErrorMsg] = useState<string | null>(ssrError);
-  const [deleteTarget, setDeleteTarget] = useState<AnnouncementRow | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AnnouncementRow | null>(
+    null
+  );
   const [deleting, setDeleting] = useState(false);
   const loading = false;
 
@@ -359,10 +361,7 @@ function AdminAnnouncementsPage({
               type="button"
               disabled={offset === 0}
               onClick={() =>
-                setFilter(
-                  'offset',
-                  String(Math.max(0, offset - limit)) || null
-                )
+                setFilter('offset', String(Math.max(0, offset - limit)) || null)
               }
               className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
@@ -423,7 +422,10 @@ function AdminAnnouncementsPage({
         >
           <p className="text-sm text-neutral-300 bg-neutral-900/50 rounded-xl p-3">
             Supprimer l&apos;annonce{' '}
-            <span className="font-semibold text-white">{deleteTarget.title}</span> ?
+            <span className="font-semibold text-white">
+              {deleteTarget.title}
+            </span>{' '}
+            ?
           </p>
         </DeleteConfirmModal>
       )}
@@ -462,7 +464,11 @@ export const getServerSideProps = withStaffPage('admin', async (ctx) => {
 
   if (error) {
     console.error('admin announcements SSR error:', error);
-    return { announcements: [], total: 0, errorMsg: 'Erreur lors du chargement' };
+    return {
+      announcements: [],
+      total: 0,
+      errorMsg: 'Erreur lors du chargement',
+    };
   }
 
   return {

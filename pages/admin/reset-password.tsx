@@ -21,7 +21,8 @@ export default function AdminResetPasswordPage() {
       // 1) PKCE flow : Supabase envoie ?code=xxx dans la query string
       const code = router.query.code as string | undefined;
       if (code) {
-        const { error } = await supabaseClient.auth.exchangeCodeForSession(code);
+        const { error } =
+          await supabaseClient.auth.exchangeCodeForSession(code);
         if (error) {
           setErrorMsg(
             error.message ||
@@ -72,7 +73,9 @@ export default function AdminResetPasswordPage() {
     setErrorMsg(null);
 
     if (!sessionReady) {
-      setErrorMsg('Session de récupération non prête, réessaie dans un instant.');
+      setErrorMsg(
+        'Session de récupération non prête, réessaie dans un instant.'
+      );
       return;
     }
 

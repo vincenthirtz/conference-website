@@ -37,7 +37,9 @@ async function expectPageLoaded(page: import('@playwright/test').Page) {
   expect(page.url()).not.toContain('/500');
 
   // No Next.js error overlay
-  const errorOverlay = page.locator('#__next-build-error, [data-nextjs-dialog]');
+  const errorOverlay = page.locator(
+    '#__next-build-error, [data-nextjs-dialog]'
+  );
   await expect(errorOverlay).toHaveCount(0);
 }
 
@@ -65,7 +67,9 @@ test.describe.serial('Admin pages — Test Coach', () => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     await loginAsCoach(page);
 
-    await expect(page.getByRole('heading', { name: 'Mon profil', exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.getByRole('heading', { name: 'Mon profil', exact: true })
+    ).toBeVisible({ timeout: 10000 });
     await expectPageLoaded(page);
   });
 
@@ -81,11 +85,16 @@ test.describe.serial('Admin pages — Test Coach', () => {
 
     // Should show tournaments heading or list
     await expect(
-      page.getByRole('heading').filter({ hasText: /tournoi/i }).first()
+      page
+        .getByRole('heading')
+        .filter({ hasText: /tournoi/i })
+        .first()
     ).toBeVisible({ timeout: 10000 });
   });
 
-  test('Page creation tournoi (GET /admin/tournaments/create)', async ({ page }) => {
+  test('Page creation tournoi (GET /admin/tournaments/create)', async ({
+    page,
+  }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     await loginAsCoach(page);
 
@@ -127,7 +136,9 @@ test.describe.serial('Admin pages — Test Coach', () => {
     await expectPageLoaded(page);
   });
 
-  test('Page ajouter membre equipe (GET /admin/teams/add-member)', async ({ page }) => {
+  test('Page ajouter membre equipe (GET /admin/teams/add-member)', async ({
+    page,
+  }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     await loginAsCoach(page);
 
@@ -156,7 +167,9 @@ test.describe.serial('Admin pages — Test Coach', () => {
     await expectPageLoaded(page);
   });
 
-  test('Page nouveau partenaire (GET /admin/partners/new)', async ({ page }) => {
+  test('Page nouveau partenaire (GET /admin/partners/new)', async ({
+    page,
+  }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     await loginAsCoach(page);
 
@@ -165,7 +178,9 @@ test.describe.serial('Admin pages — Test Coach', () => {
     await expectPageLoaded(page);
   });
 
-  test('Page demandes partenariat (GET /admin/partnership-requests)', async ({ page }) => {
+  test('Page demandes partenariat (GET /admin/partnership-requests)', async ({
+    page,
+  }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     await loginAsCoach(page);
 
@@ -185,7 +200,9 @@ test.describe.serial('Admin pages — Test Coach', () => {
     await expectPageLoaded(page);
   });
 
-  test('Page nouvelle annonce (GET /admin/announcements/new)', async ({ page }) => {
+  test('Page nouvelle annonce (GET /admin/announcements/new)', async ({
+    page,
+  }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     await loginAsCoach(page);
 
@@ -225,7 +242,9 @@ test.describe.serial('Admin pages — Test Coach', () => {
     await expectPageLoaded(page);
   });
 
-  test('Page nouvelle chaine Twitch (GET /admin/twitch-channels/new)', async ({ page }) => {
+  test('Page nouvelle chaine Twitch (GET /admin/twitch-channels/new)', async ({
+    page,
+  }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     await loginAsCoach(page);
 
@@ -245,7 +264,9 @@ test.describe.serial('Admin pages — Test Coach', () => {
     await expectPageLoaded(page);
   });
 
-  test('Page nouvelle casteuse (GET /admin/cast-members/new)', async ({ page }) => {
+  test('Page nouvelle casteuse (GET /admin/cast-members/new)', async ({
+    page,
+  }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     await loginAsCoach(page);
 
@@ -325,7 +346,9 @@ test.describe.serial('Admin pages — Test Coach', () => {
 
   // ─── Configuration ─────────────────────────────────────────────
 
-  test('Page parametres du site (GET /admin/site-settings)', async ({ page }) => {
+  test('Page parametres du site (GET /admin/site-settings)', async ({
+    page,
+  }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     await loginAsCoach(page);
 
@@ -334,7 +357,9 @@ test.describe.serial('Admin pages — Test Coach', () => {
     await expectPageLoaded(page);
   });
 
-  test('Page gestion utilisateurs (GET /admin/users/manage)', async ({ page }) => {
+  test('Page gestion utilisateurs (GET /admin/users/manage)', async ({
+    page,
+  }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     await loginAsCoach(page);
 
@@ -363,7 +388,9 @@ test.describe.serial('Admin pages — Test Coach', () => {
     await expectPageLoaded(page);
   });
 
-  test('Page simulateur tournoi (GET /admin/tournament-simulator)', async ({ page }) => {
+  test('Page simulateur tournoi (GET /admin/tournament-simulator)', async ({
+    page,
+  }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     await loginAsCoach(page);
 
@@ -372,7 +399,9 @@ test.describe.serial('Admin pages — Test Coach', () => {
     await expectPageLoaded(page);
   });
 
-  test('Page templates tournoi (GET /admin/tournament-templates)', async ({ page }) => {
+  test('Page templates tournoi (GET /admin/tournament-templates)', async ({
+    page,
+  }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     await loginAsCoach(page);
 
@@ -383,7 +412,9 @@ test.describe.serial('Admin pages — Test Coach', () => {
 
   // ─── Auth pages ─────────────────────────────────────────────────
 
-  test('Page forgot password (GET /admin/forgot-password)', async ({ page }) => {
+  test('Page forgot password (GET /admin/forgot-password)', async ({
+    page,
+  }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
     // No login needed — public page
@@ -418,7 +449,9 @@ test.describe.serial('Admin pages — Test Coach', () => {
     expect(page.url()).toContain('/admin/login');
   });
 
-  test('Session perdue apres deconnexion — acces admin redirige vers login', async ({ page }) => {
+  test('Session perdue apres deconnexion — acces admin redirige vers login', async ({
+    page,
+  }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
     // Try accessing admin without being logged in

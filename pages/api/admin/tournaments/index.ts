@@ -63,7 +63,9 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
   const { status, orderBy, orderDir, includeTotal, dateFrom, dateTo } =
     req.query;
 
-  const { limit: limitNum, offset: offsetNum } = parsePagination(req, { limit: 50 });
+  const { limit: limitNum, offset: offsetNum } = parsePagination(req, {
+    limit: 50,
+  });
   const search = sanitizeSearch(req.query.search);
 
   const orderByParam = Array.isArray(orderBy) ? orderBy[0] : orderBy;
@@ -89,7 +91,8 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
   `;
 
   let query = supabaseAdmin!.from('tournaments').select(selectColumns, {
-    count: includeTotal === '1' || includeTotal === 'true' ? 'exact' : undefined,
+    count:
+      includeTotal === '1' || includeTotal === 'true' ? 'exact' : undefined,
   });
 
   if (status && !Array.isArray(status)) {
@@ -167,14 +170,26 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: any) {
   if (body.end_date && isNaN(Date.parse(body.end_date))) {
     return res.status(400).json({ error: 'end_date is not a valid date' });
   }
-  if (body.start_date && body.end_date && new Date(body.start_date) >= new Date(body.end_date)) {
-    return res.status(400).json({ error: 'start_date must be before end_date' });
+  if (
+    body.start_date &&
+    body.end_date &&
+    new Date(body.start_date) >= new Date(body.end_date)
+  ) {
+    return res
+      .status(400)
+      .json({ error: 'start_date must be before end_date' });
   }
 
   // Validation max_teams
   if (body.max_teams !== undefined && body.max_teams !== null) {
-    if (typeof body.max_teams !== 'number' || !Number.isInteger(body.max_teams) || body.max_teams < 1) {
-      return res.status(400).json({ error: 'max_teams must be an integer >= 1' });
+    if (
+      typeof body.max_teams !== 'number' ||
+      !Number.isInteger(body.max_teams) ||
+      body.max_teams < 1
+    ) {
+      return res
+        .status(400)
+        .json({ error: 'max_teams must be an integer >= 1' });
     }
   }
 

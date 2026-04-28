@@ -16,8 +16,7 @@ const BackToTopButton = dynamic(
   { ssr: false }
 );
 const CookieBanner = dynamic(
-  () =>
-    import('@/components/CookieBanner').then((mod) => mod.CookieBanner),
+  () => import('@/components/CookieBanner').then((mod) => mod.CookieBanner),
   { ssr: false }
 );
 const FloatingSocials = dynamic(

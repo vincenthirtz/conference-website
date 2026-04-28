@@ -91,9 +91,7 @@ describe('computeBracketLayout', () => {
     expect(new Set(qfRows).size).toBe(4); // all unique
 
     // SFs should have row indices 0-1
-    const sfRows = ['sf1', 'sf2'].map(
-      (id) => layout.positions[id].rowIndex
-    );
+    const sfRows = ['sf1', 'sf2'].map((id) => layout.positions[id].rowIndex);
     expect(new Set(sfRows).size).toBe(2);
   });
 
@@ -144,8 +142,7 @@ describe('computeBracketLayout', () => {
 
     // Edge wb1→lb1 should NOT exist (different sideGroupKey)
     const crossEdges = layout.edges.filter(
-      (e) =>
-        e.from.sideGroupKey !== e.to.sideGroupKey
+      (e) => e.from.sideGroupKey !== e.to.sideGroupKey
     );
     expect(crossEdges).toHaveLength(0);
   });

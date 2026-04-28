@@ -78,7 +78,8 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'team-stats')) return;
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'team-stats'))
+    return;
   const { id } = req.query;
 
   if (!id || Array.isArray(id) || !isValidUUID(id)) {
@@ -163,7 +164,10 @@ export default async function handler(
       matchesPlayed,
     };
 
-    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=120');
+    res.setHeader(
+      'Cache-Control',
+      'public, s-maxage=300, stale-while-revalidate=120'
+    );
     return res.status(200).json(response);
   } catch (err: unknown) {
     console.error('[/api/team/[id]/stats] internal error:', err);

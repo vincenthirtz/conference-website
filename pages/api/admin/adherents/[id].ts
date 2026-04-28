@@ -20,10 +20,23 @@ type AdherentPayload = {
   paymentStatus?: 'pending' | 'partial' | 'paid' | 'exempt' | 'overdue';
   paymentAmount?: number;
   paymentDate?: string;
-  paymentMethod?: 'cash' | 'check' | 'transfer' | 'card' | 'helloasso' | 'other' | null;
+  paymentMethod?:
+    | 'cash'
+    | 'check'
+    | 'transfer'
+    | 'card'
+    | 'helloasso'
+    | 'other'
+    | null;
   paymentReference?: string;
   isActive?: boolean;
-  role?: 'member' | 'volunteer' | 'board' | 'president' | 'treasurer' | 'secretary';
+  role?:
+    | 'member'
+    | 'volunteer'
+    | 'board'
+    | 'president'
+    | 'treasurer'
+    | 'secretary';
   notes?: string;
 };
 
@@ -32,7 +45,15 @@ async function handler(
   res: NextApiResponse,
   ctx: StaffContext
 ) {
-  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-adherents-id')) return;
+  if (
+    applyRateLimit(
+      req,
+      res,
+      { max: 60, windowMs: 60_000 },
+      'admin-adherents-id'
+    )
+  )
+    return;
   if (!supabaseAdmin) {
     return res
       .status(500)
@@ -72,7 +93,8 @@ async function handler(
     const body = req.body as AdherentPayload;
     const updates: Record<string, unknown> = {};
 
-    if (body.firstName !== undefined) updates.first_name = body.firstName.trim();
+    if (body.firstName !== undefined)
+      updates.first_name = body.firstName.trim();
     if (body.lastName !== undefined) updates.last_name = body.lastName.trim();
     if (body.email !== undefined) {
       const newEmail = body.email.toLowerCase().trim();
@@ -92,18 +114,27 @@ async function handler(
       updates.email = newEmail;
     }
     if (body.phone !== undefined) updates.phone = body.phone?.trim() || null;
-    if (body.birthDate !== undefined) updates.birth_date = body.birthDate || null;
-    if (body.address !== undefined) updates.address = body.address?.trim() || null;
+    if (body.birthDate !== undefined)
+      updates.birth_date = body.birthDate || null;
+    if (body.address !== undefined)
+      updates.address = body.address?.trim() || null;
     if (body.city !== undefined) updates.city = body.city?.trim() || null;
-    if (body.postalCode !== undefined) updates.postal_code = body.postalCode?.trim() || null;
-    if (body.country !== undefined) updates.country = body.country?.trim() || 'France';
+    if (body.postalCode !== undefined)
+      updates.postal_code = body.postalCode?.trim() || null;
+    if (body.country !== undefined)
+      updates.country = body.country?.trim() || 'France';
     if (body.joinDate !== undefined) updates.join_date = body.joinDate;
     if (body.currentYear !== undefined) updates.current_year = body.currentYear;
-    if (body.paymentStatus !== undefined) updates.payment_status = body.paymentStatus;
-    if (body.paymentAmount !== undefined) updates.payment_amount = body.paymentAmount;
-    if (body.paymentDate !== undefined) updates.payment_date = body.paymentDate || null;
-    if (body.paymentMethod !== undefined) updates.payment_method = body.paymentMethod || null;
-    if (body.paymentReference !== undefined) updates.payment_reference = body.paymentReference?.trim() || null;
+    if (body.paymentStatus !== undefined)
+      updates.payment_status = body.paymentStatus;
+    if (body.paymentAmount !== undefined)
+      updates.payment_amount = body.paymentAmount;
+    if (body.paymentDate !== undefined)
+      updates.payment_date = body.paymentDate || null;
+    if (body.paymentMethod !== undefined)
+      updates.payment_method = body.paymentMethod || null;
+    if (body.paymentReference !== undefined)
+      updates.payment_reference = body.paymentReference?.trim() || null;
     if (body.isActive !== undefined) updates.is_active = body.isActive;
     if (body.role !== undefined) updates.role = body.role;
     if (body.notes !== undefined) updates.notes = body.notes?.trim() || null;
@@ -123,9 +154,7 @@ async function handler(
 
     if (error) {
       console.error('[admin/adherents] update error', error);
-      return res
-        .status(500)
-        .json({ error: 'Failed to update the member.' });
+      return res.status(500).json({ error: 'Failed to update the member.' });
     }
 
     if (!data) {
@@ -165,9 +194,7 @@ async function handler(
 
     if (error) {
       console.error('[admin/adherents] delete error', error);
-      return res
-        .status(500)
-        .json({ error: 'Failed to delete the member.' });
+      return res.status(500).json({ error: 'Failed to delete the member.' });
     }
 
     if (ctx.staff?.id) {

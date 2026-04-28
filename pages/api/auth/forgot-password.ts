@@ -15,9 +15,7 @@ const SITE_URL =
 
 const DEFAULT_REDIRECT_PATH = '/admin/reset-password';
 
-const ALLOWED_REDIRECT_PATHS = new Set([
-  '/admin/reset-password',
-]);
+const ALLOWED_REDIRECT_PATHS = new Set(['/admin/reset-password']);
 
 function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -41,7 +39,12 @@ export default async function handler(
   }
 
   if (
-    applyRateLimit(req, res, { max: 5, windowMs: 60 * 60_000 }, 'forgot-password')
+    applyRateLimit(
+      req,
+      res,
+      { max: 5, windowMs: 60 * 60_000 },
+      'forgot-password'
+    )
   ) {
     return;
   }
@@ -63,7 +66,7 @@ export default async function handler(
   const ok = {
     success: true,
     message:
-      'Si un compte existe avec cet email, un lien de réinitialisation vient d\'être envoyé.',
+      "Si un compte existe avec cet email, un lien de réinitialisation vient d'être envoyé.",
   };
 
   const { data, error } = await supabaseAdmin.auth.admin.generateLink({

@@ -60,7 +60,15 @@ export default async function handler(
   }
 
   // Rate limiting: 5 team creations per hour
-  if (applyRateLimit(req, res, { max: 5, windowMs: 60 * 60 * 1000 }, 'create-team')) return;
+  if (
+    applyRateLimit(
+      req,
+      res,
+      { max: 5, windowMs: 60 * 60 * 1000 },
+      'create-team'
+    )
+  )
+    return;
 
   if (!supabaseAdmin) {
     return res.status(503).json({ error: 'Service unavailable.' });
@@ -70,23 +78,35 @@ export default async function handler(
   const name = (body.name || '').trim();
 
   if (!name || name.length < 2) {
-    return res.status(400).json({ error: 'Le nom doit faire au moins 2 caractères.' });
+    return res
+      .status(400)
+      .json({ error: 'Le nom doit faire au moins 2 caractères.' });
   }
   if (name.length > 100) {
-    return res.status(400).json({ error: 'Le nom ne peut pas dépasser 100 caractères.' });
+    return res
+      .status(400)
+      .json({ error: 'Le nom ne peut pas dépasser 100 caractères.' });
   }
 
   const description = body.description?.toString().trim() || null;
   if (description && description.length > 2000) {
-    return res.status(400).json({ error: 'La description ne peut pas dépasser 2000 caractères.' });
+    return res
+      .status(400)
+      .json({ error: 'La description ne peut pas dépasser 2000 caractères.' });
   }
 
   // Valider les URLs
-  const urlFields = { logo_url: body.logo_url, website: body.website, discord: body.discord };
+  const urlFields = {
+    logo_url: body.logo_url,
+    website: body.website,
+    discord: body.discord,
+  };
   for (const [field, val] of Object.entries(urlFields)) {
     if (val && typeof val === 'string' && val.trim()) {
       if (!sanitizeUrl(val)) {
-        return res.status(400).json({ error: `${field} doit être une URL http(s) valide.` });
+        return res
+          .status(400)
+          .json({ error: `${field} doit être une URL http(s) valide.` });
       }
     }
   }
@@ -121,7 +141,12 @@ export default async function handler(
       .json({ error: 'Provide a member to set as captain' });
   }
 
-  let memberRecords: { user_id: string; role: string; captain: boolean; battle_tag: string }[] = [];
+  let memberRecords: {
+    user_id: string;
+    role: string;
+    captain: boolean;
+    battle_tag: string;
+  }[] = [];
   let usersEmailMap: Map<string, string> | null = null;
   const ensureUsersEmailMap = async () => {
     if (usersEmailMap) return usersEmailMap;
@@ -134,7 +159,7 @@ export default async function handler(
     const re = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
     if (!re.test(trimmed)) {
       throw new Error(
-        "Invalid BattleTag. Expected format: Name#0000 (alphanumeric + # + 3 to 6 digits)."
+        'Invalid BattleTag. Expected format: Name#0000 (alphanumeric + # + 3 to 6 digits).'
       );
     }
     return trimmed;
@@ -145,7 +170,9 @@ export default async function handler(
     const resolvedRole = validateRole(body.member_role);
     const memberBattleTag = body.member_battle_tag?.trim() || '';
     if (!memberBattleTag) {
-      return res.status(400).json({ error: 'BattleTag required for the member.' });
+      return res
+        .status(400)
+        .json({ error: 'BattleTag required for the member.' });
     }
     if (memberUserId) {
       try {
@@ -156,7 +183,9 @@ export default async function handler(
           battle_tag: validateBattleTag(memberBattleTag),
         });
       } catch (err: unknown) {
-        return res.status(400).json({ error: (err as Error)?.message || 'Invalid BattleTag' });
+        return res
+          .status(400)
+          .json({ error: (err as Error)?.message || 'Invalid BattleTag' });
       }
     } else if (memberEmail) {
       try {
@@ -175,7 +204,8 @@ export default async function handler(
         });
       } catch (err: unknown) {
         const message =
-          (err as Error)?.message || 'User lookup failed for the provided email';
+          (err as Error)?.message ||
+          'User lookup failed for the provided email';
         return res.status(500).json({ error: message });
       }
     }
@@ -197,7 +227,9 @@ export default async function handler(
             battle_tag: validateBattleTag(m.battle_tag),
           });
         } catch (err: unknown) {
-          return res.status(400).json({ error: (err as Error)?.message || 'Invalid BattleTag' });
+          return res
+            .status(400)
+            .json({ error: (err as Error)?.message || 'Invalid BattleTag' });
         }
         continue;
       }
@@ -373,7 +405,10 @@ export default async function handler(
   }
 
   // Auto-register team to tournament if tournament_id provided
-  let tournamentRegistration: { tournament_name: string; stages_count: number } | null = null;
+  let tournamentRegistration: {
+    tournament_name: string;
+    stages_count: number;
+  } | null = null;
   const tournamentId = body.tournament_id?.toString().trim() || null;
 
   if (tournamentId) {
@@ -388,7 +423,10 @@ export default async function handler(
       if (tournament && tournament.status === 'published') {
         // Check max_teams limit
         let canRegister = true;
-        if (tournament.min_players && insertedMembers.length < tournament.min_players) {
+        if (
+          tournament.min_players &&
+          insertedMembers.length < tournament.min_players
+        ) {
           canRegister = false;
         }
         if (tournament.max_teams) {
@@ -397,7 +435,9 @@ export default async function handler(
             .select('team_id, tournament_stages!inner(tournament_id)')
             .eq('tournament_stages.tournament_id', tournamentId);
 
-          const uniqueTeams = new Set(existingTeams?.map(t => t.team_id) || []);
+          const uniqueTeams = new Set(
+            existingTeams?.map((t) => t.team_id) || []
+          );
           if (uniqueTeams.size >= tournament.max_teams) {
             canRegister = false;
           }
@@ -411,7 +451,7 @@ export default async function handler(
             .eq('tournament_id', tournamentId);
 
           if (stages && stages.length > 0) {
-            const insertData = stages.map(s => ({
+            const insertData = stages.map((s) => ({
               stage_id: s.id,
               team_id: createdTeam.id,
             }));
@@ -426,7 +466,10 @@ export default async function handler(
                 stages_count: stages.length,
               };
             } else {
-              console.error('[create-with-member] tournament registration error:', regError);
+              console.error(
+                '[create-with-member] tournament registration error:',
+                regError
+              );
             }
           }
         }
@@ -441,9 +484,13 @@ export default async function handler(
   if (insertedMembers.length) infoParts.push('Équipe créée et membres ajoutés');
   else infoParts.push('Équipe créée');
   if (tournamentRegistration) {
-    infoParts.push(`inscrite au tournoi "${tournamentRegistration.tournament_name}"`);
+    infoParts.push(
+      `inscrite au tournoi "${tournamentRegistration.tournament_name}"`
+    );
   } else if (tournamentId) {
-    infoParts.push('L\'inscription au tournoi n\'a pas pu être effectuée (nombre de joueurs insuffisant ou tournoi complet). Vous pourrez vous inscrire plus tard.');
+    infoParts.push(
+      "L'inscription au tournoi n'a pas pu être effectuée (nombre de joueurs insuffisant ou tournoi complet). Vous pourrez vous inscrire plus tard."
+    );
   }
 
   return res.status(201).json({
@@ -453,4 +500,3 @@ export default async function handler(
     info: infoParts.join(' — '),
   });
 }
-

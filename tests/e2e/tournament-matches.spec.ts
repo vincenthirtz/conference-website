@@ -20,7 +20,12 @@ test.describe('Tournament matches CRUD (direct supabase)', () => {
     const slug = slugify(TOURNAMENT_NAME, { lower: true, strict: true });
     const { data: t } = await supabaseTestClient
       .from('tournaments')
-      .insert({ name: TOURNAMENT_NAME, slug, status: 'running', game: 'Overwatch' })
+      .insert({
+        name: TOURNAMENT_NAME,
+        slug,
+        status: 'running',
+        game: 'Overwatch',
+      })
       .select('id')
       .maybeSingle();
     tournamentId = t!.id;
@@ -58,11 +63,22 @@ test.describe('Tournament matches CRUD (direct supabase)', () => {
 
   test.afterAll(async () => {
     if (!supabaseTestClient || !tournamentId) return;
-    await supabaseTestClient.from('matches').delete().eq('tournament_id', tournamentId);
-    await supabaseTestClient.from('stages').delete().eq('tournament_id', tournamentId);
-    await supabaseTestClient.from('tournaments').delete().eq('id', tournamentId);
-    if (team1Id) await supabaseTestClient.from('teams').delete().eq('id', team1Id);
-    if (team2Id) await supabaseTestClient.from('teams').delete().eq('id', team2Id);
+    await supabaseTestClient
+      .from('matches')
+      .delete()
+      .eq('tournament_id', tournamentId);
+    await supabaseTestClient
+      .from('stages')
+      .delete()
+      .eq('tournament_id', tournamentId);
+    await supabaseTestClient
+      .from('tournaments')
+      .delete()
+      .eq('id', tournamentId);
+    if (team1Id)
+      await supabaseTestClient.from('teams').delete().eq('id', team1Id);
+    if (team2Id)
+      await supabaseTestClient.from('teams').delete().eq('id', team2Id);
   });
 
   test('Créer un match BO3', async () => {
@@ -118,7 +134,7 @@ test.describe('Tournament matches CRUD (direct supabase)', () => {
     expect(data!.round_name).toBe('Finale');
   });
 
-  test('Mettre à jour le score d\'un match', async () => {
+  test("Mettre à jour le score d'un match", async () => {
     if (!supabaseTestClient || !tournamentId) return;
 
     const { data: match } = await supabaseTestClient

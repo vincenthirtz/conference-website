@@ -25,7 +25,8 @@ type ChannelType = (typeof VALID_CHANNEL_TYPES)[number];
 
 function isValidChannelType(v: unknown): v is ChannelType {
   return (
-    typeof v === 'string' && (VALID_CHANNEL_TYPES as readonly string[]).includes(v)
+    typeof v === 'string' &&
+    (VALID_CHANNEL_TYPES as readonly string[]).includes(v)
   );
 }
 
@@ -88,7 +89,9 @@ async function handleGet(tournamentId: string, res: NextApiResponse) {
     return res.status(500).json({ error: 'Failed to load webhooks' });
   }
 
-  const scoped = (data || []).filter((w: any) => w.tournament_id === tournamentId);
+  const scoped = (data || []).filter(
+    (w: any) => w.tournament_id === tournamentId
+  );
   const globals = (data || []).filter((w: any) => w.tournament_id === null);
 
   return res.status(200).json({
@@ -115,7 +118,8 @@ async function handlePut(
   const cleanUrl = sanitizeWebhookUrl(webhookUrl);
   if (!cleanUrl) {
     return res.status(400).json({
-      error: 'webhookUrl must be a valid https://discord.com/api/webhooks/... URL',
+      error:
+        'webhookUrl must be a valid https://discord.com/api/webhooks/... URL',
     });
   }
 
@@ -178,7 +182,10 @@ async function handlePut(
       entity_type: 'tournament',
       entity_id: tournamentId,
       tournament_id: tournamentId,
-      payload: { channel_type: channelType, has_role_mention: !!cleanRoleMention },
+      payload: {
+        channel_type: channelType,
+        has_role_mention: !!cleanRoleMention,
+      },
     });
   }
 

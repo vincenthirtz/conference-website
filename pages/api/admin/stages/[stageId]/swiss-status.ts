@@ -20,7 +20,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Database service unavailable (missing service role).' });
+    return res
+      .status(500)
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
 
   const id = String(stageId);
@@ -39,14 +41,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     if (stage.stage_type !== 'swiss') {
       return res.status(400).json({
-        error: "This endpoint is only for swiss stages.",
+        error: 'This endpoint is only for swiss stages.',
       });
     }
 
     // Fetch all non-cancelled matches (with team & winner info for threshold tracking)
     const { data: matches, error: matchErr } = await supabaseAdmin
       .from('matches')
-      .select('id, round_number, status, is_bye, team1_id, team2_id, winner_team_id')
+      .select(
+        'id, round_number, status, is_bye, team1_id, team2_id, winner_team_id'
+      )
       .eq('stage_id', id)
       .neq('status', 'cancelled');
 
@@ -81,15 +85,25 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       (m: any) => m.round_number === currentRound
     );
 
-    const finished = currentRoundMatches.filter((m: any) => m.status === 'finished').length;
-    const pending = currentRoundMatches.filter((m: any) => m.status === 'pending').length;
-    const ongoing = currentRoundMatches.filter((m: any) => m.status === 'ongoing').length;
+    const finished = currentRoundMatches.filter(
+      (m: any) => m.status === 'finished'
+    ).length;
+    const pending = currentRoundMatches.filter(
+      (m: any) => m.status === 'pending'
+    ).length;
+    const ongoing = currentRoundMatches.filter(
+      (m: any) => m.status === 'ongoing'
+    ).length;
 
     const allCurrentRoundFinished =
-      currentRound > 0 && currentRoundMatches.length > 0 && finished === currentRoundMatches.length;
+      currentRound > 0 &&
+      currentRoundMatches.length > 0 &&
+      finished === currentRoundMatches.length;
 
     // Compute W/L per team from finished matches for threshold tracking
-    const finishedMatchList = allMatches.filter((m: any) => m.status === 'finished');
+    const finishedMatchList = allMatches.filter(
+      (m: any) => m.status === 'finished'
+    );
     const winsMap = new Map<string, number>();
     const lossesMap = new Map<string, number>();
 
@@ -118,7 +132,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const allTeamIds = (stageTeams || []).map((st: any) => st.team_id);
 
     // Identify eliminated teams (with guard to keep >= 2 active)
-    type EliminatedInfo = { teamId: string; reason: string; wins: number; losses: number };
+    type EliminatedInfo = {
+      teamId: string;
+      reason: string;
+      wins: number;
+      losses: number;
+    };
     const eliminated: EliminatedInfo[] = [];
     const eliminatedSet = new Set<string>();
 
@@ -134,12 +153,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     // Phase 2 : loss_threshold avec garde-fou >= 2 actifs
     if (lossThreshold !== null) {
-      const lossCandidates: { teamId: string; wins: number; losses: number }[] = [];
+      const lossCandidates: { teamId: string; wins: number; losses: number }[] =
+        [];
       for (const teamId of allTeamIds) {
         if (eliminatedSet.has(teamId)) continue;
         const losses = lossesMap.get(teamId) ?? 0;
         if (losses >= lossThreshold) {
-          lossCandidates.push({ teamId, wins: winsMap.get(teamId) ?? 0, losses });
+          lossCandidates.push({
+            teamId,
+            wins: winsMap.get(teamId) ?? 0,
+            losses,
+          });
         }
       }
 
@@ -148,9 +172,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
       // Éliminer par nombre de défaites décroissant, dans la limite du garde-fou
       lossCandidates.sort((a, b) => b.losses - a.losses);
-      const toElim = lossCandidates.slice(0, Math.min(lossCandidates.length, maxEliminations));
+      const toElim = lossCandidates.slice(
+        0,
+        Math.min(lossCandidates.length, maxEliminations)
+      );
       for (const c of toElim) {
-        eliminated.push({ teamId: c.teamId, reason: 'loss_threshold', wins: c.wins, losses: c.losses });
+        eliminated.push({
+          teamId: c.teamId,
+          reason: 'loss_threshold',
+          wins: c.wins,
+          losses: c.losses,
+        });
         eliminatedSet.add(c.teamId);
       }
     }
@@ -159,7 +191,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     // Stage completion: round limit reached OR all teams eliminated (≤1 active)
     const roundLimitReached =
-      totalRounds !== null && currentRound >= totalRounds && allCurrentRoundFinished;
+      totalRounds !== null &&
+      currentRound >= totalRounds &&
+      allCurrentRoundFinished;
     const allEliminated = allCurrentRoundFinished && activeCount <= 1;
     const isComplete = roundLimitReached || allEliminated;
 

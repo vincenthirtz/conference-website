@@ -36,7 +36,8 @@ function ActualitesPreviewSection(): JSX.Element {
     fetch('/api/site-settings?key=mixte_tournament_id')
       .then((r) => r.json())
       .then((data) => {
-        const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const UUID_RE =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         if (data.value && UUID_RE.test(data.value)) {
           fetch(`/api/tournaments?id=${data.value}`)
             .then((r) => r.json())
@@ -109,10 +110,7 @@ function ActualitesPreviewSection(): JSX.Element {
             Annulé
           </span>
 
-          <Heading
-            typeStyle="heading-md"
-            className="text-gradient text-center"
-          >
+          <Heading typeStyle="heading-md" className="text-gradient text-center">
             Tournoi Mixte
           </Heading>
 
@@ -122,8 +120,9 @@ function ActualitesPreviewSection(): JSX.Element {
               className="mt-2"
               textColor="text-gray-200"
             >
-              Tournoi mixte hommes/femmes pour lancer la saison comp&eacute;titive.
-              Un avant-go&ucirc;t de ce qui vous attend en octobre&nbsp;!
+              Tournoi mixte hommes/femmes pour lancer la saison
+              comp&eacute;titive. Un avant-go&ucirc;t de ce qui vous attend en
+              octobre&nbsp;!
             </Paragraph>
           </div>
 
@@ -141,18 +140,24 @@ function ActualitesPreviewSection(): JSX.Element {
                 {teamCount !== null ? teamCount : '–'}
               </div>
               <div className="text-xs text-blue-300/80 mt-1">
-                {teamCount !== null && teamCount > 1 ? 'Équipes inscrites' : 'Équipe inscrite'}
+                {teamCount !== null && teamCount > 1
+                  ? 'Équipes inscrites'
+                  : 'Équipe inscrite'}
               </div>
             </div>
             <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
               <div className="text-2xl font-bold text-white">Saison 2026</div>
-              <div className="text-xs text-neutral-400 mt-1">Coup d&apos;envoi</div>
+              <div className="text-xs text-neutral-400 mt-1">
+                Coup d&apos;envoi
+              </div>
             </div>
           </div>
 
           {/* Cast Mixte */}
           <div className="flex items-center gap-6 mt-4">
-            <span className="text-sm font-semibold text-neutral-400 uppercase tracking-wider">Cast</span>
+            <span className="text-sm font-semibold text-neutral-400 uppercase tracking-wider">
+              Cast
+            </span>
             <div className="flex gap-4">
               <a
                 href="https://www.twitch.tv/eiaeltv"
@@ -160,7 +165,13 @@ function ActualitesPreviewSection(): JSX.Element {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/20 transition text-purple-300 text-sm font-medium"
               >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>
+                <svg
+                  className="w-4 h-4"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" />
+                </svg>
                 eiaeltv
               </a>
               <a
@@ -169,7 +180,13 @@ function ActualitesPreviewSection(): JSX.Element {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/20 transition text-purple-300 text-sm font-medium"
               >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>
+                <svg
+                  className="w-4 h-4"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" />
+                </svg>
                 cheikh_daniels
               </a>
             </div>
@@ -181,7 +198,15 @@ function ActualitesPreviewSection(): JSX.Element {
               disabled
               className="flex items-center gap-3 px-8 py-3.5 rounded-xl bg-neutral-700/50 text-neutral-400 font-semibold text-base cursor-not-allowed opacity-60"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
                 <circle cx="9" cy="7" r="4" />
                 <line x1="19" y1="8" x2="19" y2="14" />
@@ -194,7 +219,15 @@ function ActualitesPreviewSection(): JSX.Element {
               disabled
               className="flex items-center gap-3 px-8 py-3.5 rounded-xl bg-neutral-700/50 text-neutral-400 font-semibold text-base cursor-not-allowed opacity-60"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                 <line x1="16" y1="2" x2="16" y2="6" />
                 <line x1="8" y1="2" x2="8" y2="6" />
@@ -208,7 +241,15 @@ function ActualitesPreviewSection(): JSX.Element {
               rel="noopener noreferrer"
               className="group flex items-center gap-3 px-8 py-3.5 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-400 hover:to-purple-500 text-white font-semibold text-base shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-300 hover:scale-105"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                 <polyline points="14 2 14 8 20 8" />
                 <line x1="16" y1="13" x2="8" y2="13" />

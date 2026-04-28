@@ -93,7 +93,9 @@ function PartnershipRequestPage() {
 
       setSuccess(true);
     } catch (err: unknown) {
-      setError((err as Error).message || "Une erreur est survenue lors de l'envoi.");
+      setError(
+        (err as Error).message || "Une erreur est survenue lors de l'envoi."
+      );
     } finally {
       setSending(false);
     }
@@ -293,7 +295,9 @@ function PartnershipRequestPage() {
                 onChange={(e) => updateField('budgetRange', e.target.value)}
                 className="w-full px-4 py-3 rounded-xl bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
               >
-                <option value="">Sélectionnez une fourchette (optionnel)</option>
+                <option value="">
+                  Sélectionnez une fourchette (optionnel)
+                </option>
                 {budgetOptions.map((option) => (
                   <option key={option} value={option}>
                     {option}

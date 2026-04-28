@@ -46,6 +46,7 @@ This is a **Next.js 16** conference/tournament website using the **Pages Router*
 ### Authentication & Authorization
 
 Uses Supabase Auth with a custom staff system:
+
 - `getServerClient(req, res)` - Server-side Supabase client with cookie handling
 - `supabaseAdmin` - Admin client with service role (bypasses RLS)
 - Staff roles hierarchy: `owner > admin > manager > caster`
@@ -66,6 +67,7 @@ This is a zero-dependency project. Never add packages to dependencies or devDepe
 ## Commit Convention
 
 This project follows Conventional Commits:
+
 - `fix:` - Bug fixes (triggers PATCH release)
 - `feat:` - New features (triggers MINOR release)
 - `docs:` - Documentation only
@@ -92,6 +94,7 @@ When using sed in zsh for multi-line insertions, prefer using a temp file approa
 ## Environment Variables
 
 Required in `.env.local`:
+
 - `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anonymous key
 - `SUPABASE_SERVICE_ROLE_KEY` or `NEXT_SUPABASE_SERVICE_ROLE_KEY` - For admin operations

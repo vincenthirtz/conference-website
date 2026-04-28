@@ -40,7 +40,12 @@ export default async function handler(
 
   // Rate limit: 5 submissions per hour per IP
   if (
-    applyRateLimit(req, res, { max: 5, windowMs: 60 * 60_000 }, 'support-ticket')
+    applyRateLimit(
+      req,
+      res,
+      { max: 5, windowMs: 60 * 60_000 },
+      'support-ticket'
+    )
   ) {
     return;
   }
@@ -84,13 +89,21 @@ export default async function handler(
     });
   }
   if (message.length > 5000) {
-    return res.status(400).json({ error: 'Message trop long (max 5000 caractères)' });
+    return res
+      .status(400)
+      .json({ error: 'Message trop long (max 5000 caractères)' });
   }
-  if (subject !== undefined && subject !== null && typeof subject !== 'string') {
+  if (
+    subject !== undefined &&
+    subject !== null &&
+    typeof subject !== 'string'
+  ) {
     return res.status(400).json({ error: 'Sujet invalide' });
   }
   if (subject && subject.length > 200) {
-    return res.status(400).json({ error: 'Sujet trop long (max 200 caractères)' });
+    return res
+      .status(400)
+      .json({ error: 'Sujet trop long (max 200 caractères)' });
   }
 
   let validTournamentId: string | null = null;
@@ -103,7 +116,9 @@ export default async function handler(
 
   const anon = isAnonymous === true;
   const cleanName =
-    !anon && typeof name === 'string' ? name.trim().slice(0, 100) || null : null;
+    !anon && typeof name === 'string'
+      ? name.trim().slice(0, 100) || null
+      : null;
   const cleanEmail =
     !anon && typeof email === 'string' && isValidEmail(email.trim())
       ? email.trim().toLowerCase()
@@ -112,7 +127,8 @@ export default async function handler(
   // If non-anonymous, we strongly encourage an email so we can follow up
   if (!anon && !cleanEmail) {
     return res.status(400).json({
-      error: 'Email requis pour les signalements non anonymes (ou cochez "rester anonyme")',
+      error:
+        'Email requis pour les signalements non anonymes (ou cochez "rester anonyme")',
     });
   }
 

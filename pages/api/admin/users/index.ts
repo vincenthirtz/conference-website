@@ -54,9 +54,7 @@ async function handler(
 
     if (error || !data?.user?.id) {
       console.error('[/api/admin/users] createUser error:', error);
-      return res
-        .status(500)
-        .json({ error: 'Failed to create user' });
+      return res.status(500).json({ error: 'Failed to create user' });
     }
 
     // Send password by email only — never expose it in the API response
@@ -75,9 +73,7 @@ async function handler(
     });
   } catch (err: unknown) {
     console.error('[/api/admin/users] internal error:', err);
-    return res
-      .status(500)
-      .json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }
 

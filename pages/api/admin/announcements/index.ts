@@ -22,11 +22,16 @@ function toISO(value?: string | null) {
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
-async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-announcements')) return;
+async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (
+    applyRateLimit(
+      req,
+      res,
+      { max: 60, windowMs: 60_000 },
+      'admin-announcements'
+    )
+  )
+    return;
   if (!supabaseAdmin) {
     return res
       .status(500)
@@ -52,9 +57,7 @@ async function handler(
 
     if (error) {
       console.error('[admin/announcements] list error', error);
-      return res
-        .status(500)
-        .json({ error: 'Failed to load announcements.' });
+      return res.status(500).json({ error: 'Failed to load announcements.' });
     }
 
     return res.status(200).json({ items: data ?? [] });
@@ -63,9 +66,7 @@ async function handler(
   if (req.method === 'POST') {
     const body = req.body as AnnouncementPayload;
     if (!body.title || !body.message) {
-      return res
-        .status(400)
-        .json({ error: 'Title and message are required.' });
+      return res.status(400).json({ error: 'Title and message are required.' });
     }
 
     const insertPayload = {
@@ -74,9 +75,7 @@ async function handler(
       cta_label: body.ctaLabel?.trim() || null,
       cta_url: sanitizeUrl(body.ctaUrl),
       is_active: body.isActive ?? true,
-      priority: Number.isFinite(body.priority)
-        ? Number(body.priority)
-        : 0,
+      priority: Number.isFinite(body.priority) ? Number(body.priority) : 0,
       starts_at: toISO(body.startsAt),
       ends_at: toISO(body.endsAt),
     };
@@ -91,7 +90,7 @@ async function handler(
       console.error('[admin/announcements] create error', error);
       return res
         .status(500)
-        .json({ error: "Failed to create the announcement." });
+        .json({ error: 'Failed to create the announcement.' });
     }
 
     if (data?.is_active) {
@@ -101,9 +100,7 @@ async function handler(
         message: data.message,
         ctaLabel: data.cta_label ?? null,
         ctaUrl: data.cta_url ?? null,
-      }).catch((e) =>
-        console.error('[discord] notifyAnnouncement error:', e)
-      );
+      }).catch((e) => console.error('[discord] notifyAnnouncement error:', e));
     }
 
     return res.status(201).json(data);

@@ -26,7 +26,9 @@ export default class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center text-white">
-          <h2 className="text-2xl font-bold">Quelque chose s&apos;est mal passé</h2>
+          <h2 className="text-2xl font-bold">
+            Quelque chose s&apos;est mal passé
+          </h2>
           <p className="mt-3 text-gray-400">
             Une erreur inattendue est survenue. Essaie de recharger la page.
           </p>

@@ -71,7 +71,9 @@ async function handleGet(
   // Récupérer les stage_teams avec infos équipe
   const { data: teams, error: teamsErr } = await supabaseAdmin
     .from('stage_teams')
-    .select('stage_id, team_id, seed, is_substitute, notes, team:team_id(id, name, short_name, logo_url)')
+    .select(
+      'stage_id, team_id, seed, is_substitute, notes, team:team_id(id, name, short_name, logo_url)'
+    )
     .eq('stage_id', stageId)
     .order('seed', { ascending: true, nullsFirst: false });
 
@@ -126,10 +128,7 @@ async function handlePost(
       .select('id, min_players')
       .eq('id', stage.tournament_id)
       .maybeSingle(),
-    supabaseAdmin
-      .from('team_members')
-      .select('user_id')
-      .eq('team_id', teamId),
+    supabaseAdmin.from('team_members').select('user_id').eq('team_id', teamId),
   ]);
 
   const tournament = tournamentRes.data;
@@ -156,7 +155,9 @@ async function handlePost(
         .select('id')
         .eq('tournament_id', stage.tournament_id);
 
-      const stageIds = (tournamentStages || []).map((s: { id: string }) => s.id);
+      const stageIds = (tournamentStages || []).map(
+        (s: { id: string }) => s.id
+      );
 
       if (stageIds.length > 0) {
         // Get all teams already registered in any stage of this tournament
@@ -167,7 +168,11 @@ async function handlePost(
           .neq('team_id', teamId);
 
         const otherTeamIds = [
-          ...new Set((registeredStageTeams || []).map((st: { team_id: string }) => st.team_id)),
+          ...new Set(
+            (registeredStageTeams || []).map(
+              (st: { team_id: string }) => st.team_id
+            )
+          ),
         ];
 
         if (otherTeamIds.length > 0) {
@@ -180,7 +185,9 @@ async function handlePost(
 
           if (duplicateMembers && duplicateMembers.length > 0) {
             const duplicates = duplicateMembers.map((d: any) => {
-              const teamName = Array.isArray(d.teams) ? d.teams[0]?.name : d.teams?.name;
+              const teamName = Array.isArray(d.teams)
+                ? d.teams[0]?.name
+                : d.teams?.name;
               return `user_id=${d.user_id} (équipe: ${teamName || d.team_id})`;
             });
             warnings.push(
@@ -255,15 +262,23 @@ async function handlePatch(
 
   // Mode bulk
   if (Array.isArray(seeds)) {
-    const results: Array<{ teamId: string; success: boolean; error?: string }> = [];
+    const results: Array<{ teamId: string; success: boolean; error?: string }> =
+      [];
 
     for (const entry of seeds) {
       if (!entry.teamId || typeof entry.teamId !== 'string') {
-        results.push({ teamId: entry.teamId, success: false, error: 'Invalid teamId' });
+        results.push({
+          teamId: entry.teamId,
+          success: false,
+          error: 'Invalid teamId',
+        });
         continue;
       }
 
-      const seedVal = entry.seed === null || entry.seed === undefined ? null : Number(entry.seed);
+      const seedVal =
+        entry.seed === null || entry.seed === undefined
+          ? null
+          : Number(entry.seed);
 
       const { error: updErr } = await supabaseAdmin
         .from('stage_teams')
@@ -272,7 +287,11 @@ async function handlePatch(
         .eq('team_id', entry.teamId);
 
       if (updErr) {
-        results.push({ teamId: entry.teamId, success: false, error: updErr.message });
+        results.push({
+          teamId: entry.teamId,
+          success: false,
+          error: updErr.message,
+        });
       } else {
         results.push({ teamId: entry.teamId, success: true });
       }
@@ -353,11 +372,12 @@ async function handleDelete(
   }
 
   // Resolve list of team IDs to remove
-  const idsToRemove: string[] = Array.isArray(teamIds) && teamIds.length > 0
-    ? teamIds
-    : teamId && typeof teamId === 'string'
-      ? [teamId]
-      : [];
+  const idsToRemove: string[] =
+    Array.isArray(teamIds) && teamIds.length > 0
+      ? teamIds
+      : teamId && typeof teamId === 'string'
+        ? [teamId]
+        : [];
 
   if (idsToRemove.length === 0) {
     return res.status(400).json({ error: 'Missing teamId or teamIds' });

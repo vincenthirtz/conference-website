@@ -17,7 +17,8 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (applyRateLimit(req, res, { max: 10, windowMs: 60_000 }, 'demandes-join')) return;
+  if (applyRateLimit(req, res, { max: 10, windowMs: 60_000 }, 'demandes-join'))
+    return;
   if (!supabaseAdmin) {
     return res
       .status(500)
@@ -56,9 +57,7 @@ export default async function handler(
 
     if (demandesErr) {
       console.error('[demandes/join] GET error:', demandesErr);
-      return res
-        .status(500)
-        .json({ error: 'Failed to load requests.' });
+      return res.status(500).json({ error: 'Failed to load requests.' });
     }
 
     return res.status(200).json({ demandes: demandes || [] });
@@ -76,7 +75,9 @@ export default async function handler(
     const teamId = body.teamId.trim();
     const rawMessage = body.message?.trim() || null;
     if (rawMessage && rawMessage.length > 1000) {
-      return res.status(400).json({ error: 'Message trop long (max 1000 caractères).' });
+      return res
+        .status(400)
+        .json({ error: 'Message trop long (max 1000 caractères).' });
     }
     const message = rawMessage?.slice(0, 1000) || null;
 
@@ -89,11 +90,15 @@ export default async function handler(
       .maybeSingle();
 
     if (teamErr || !teamData) {
-      return res.status(400).json({ error: "L'equipe selectionnee n'existe pas." });
+      return res
+        .status(400)
+        .json({ error: "L'equipe selectionnee n'existe pas." });
     }
 
     if (!teamData.is_joinable) {
-      return res.status(400).json({ error: "Cette equipe n'accepte pas les demandes pour le moment." });
+      return res.status(400).json({
+        error: "Cette equipe n'accepte pas les demandes pour le moment.",
+      });
     }
 
     // Verifier si l'utilisateur est deja membre d'une equipe
@@ -109,7 +114,8 @@ export default async function handler(
 
     if (existingMember) {
       return res.status(400).json({
-        error: 'Tu es deja membre d\'une equipe. Quitte-la d\'abord pour en rejoindre une autre.',
+        error:
+          "Tu es deja membre d'une equipe. Quitte-la d'abord pour en rejoindre une autre.",
       });
     }
 
@@ -135,7 +141,8 @@ export default async function handler(
         });
       }
       return res.status(400).json({
-        error: 'Tu as deja une demande en attente pour une autre equipe. Annule-la d\'abord.',
+        error:
+          "Tu as deja une demande en attente pour une autre equipe. Annule-la d'abord.",
         existingDemandeId: existingDemande.id,
       });
     }
@@ -143,9 +150,11 @@ export default async function handler(
     // Valider le role souhaite
     const rawRole = body.desiredRole?.trim().toLowerCase();
     const desiredRole =
-      rawRole === 'substitute' ? 'substitute' :
-      rawRole === 'coach' ? 'coach' :
-      'player';
+      rawRole === 'substitute'
+        ? 'substitute'
+        : rawRole === 'coach'
+          ? 'coach'
+          : 'player';
 
     // Construire le payload
     const payload: Record<string, any> = {
@@ -176,9 +185,7 @@ export default async function handler(
 
     if (insertErr) {
       console.error('[demandes/join] insert error:', insertErr);
-      return res
-        .status(500)
-        .json({ error: 'Failed to create request.' });
+      return res.status(500).json({ error: 'Failed to create request.' });
     }
 
     return res.status(201).json({

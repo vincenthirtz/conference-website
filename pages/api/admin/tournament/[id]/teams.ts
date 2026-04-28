@@ -64,7 +64,9 @@ async function handleGet(
   res: NextApiResponse<ApiResponse>
 ) {
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Database service unavailable (missing service role).' });
+    return res
+      .status(500)
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
 
   const { data, error } = await supabaseAdmin
@@ -104,7 +106,9 @@ async function handlePost(
   ctx: any
 ) {
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Database service unavailable (missing service role).' });
+    return res
+      .status(500)
+      .json({ error: 'Database service unavailable (missing service role).' });
   }
 
   const { team_id, seed, status } = req.body || {};
@@ -149,7 +153,7 @@ async function handlePost(
 
     if ((playerCount || 0) < tournament.min_players) {
       return res.status(400).json({
-        error: `Team must have at least ${tournament.min_players} player(s) to register. Current: ${playerCount || 0} member(s).`
+        error: `Team must have at least ${tournament.min_players} player(s) to register. Current: ${playerCount || 0} member(s).`,
       });
     }
   }
@@ -163,7 +167,9 @@ async function handlePost(
     .maybeSingle();
 
   if (existing) {
-    return res.status(400).json({ error: 'Team already registered in this tournament' });
+    return res
+      .status(400)
+      .json({ error: 'Team already registered in this tournament' });
   }
 
   // Vérifier le nombre max d'équipes si défini
@@ -174,7 +180,9 @@ async function handlePost(
       .eq('tournament_id', tournamentId);
 
     if (count && count >= tournament.max_teams) {
-      return res.status(400).json({ error: 'Tournament has reached maximum team capacity' });
+      return res
+        .status(400)
+        .json({ error: 'Tournament has reached maximum team capacity' });
     }
   }
 

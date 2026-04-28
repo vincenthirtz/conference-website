@@ -330,7 +330,10 @@ function AdminDemandeDetailPage() {
                 )}
               </div>
               <div className="text-right text-xs text-neutral-500">
-                <div>ID&nbsp;: <code className="text-neutral-400">{demande.id}</code></div>
+                <div>
+                  ID&nbsp;:{' '}
+                  <code className="text-neutral-400">{demande.id}</code>
+                </div>
                 <div className="mt-1">
                   Créée le {formatDateTime(demande.created_at)}
                 </div>
@@ -357,19 +360,27 @@ function AdminDemandeDetailPage() {
                 </h3>
                 <div className="space-y-1 text-sm">
                   <div className="text-base font-semibold">
-                    {demande.user.display_name || demande.user.email || demande.user.id}
+                    {demande.user.display_name ||
+                      demande.user.email ||
+                      demande.user.id}
                   </div>
                   {demande.user.email && (
                     <div className="text-neutral-400">{demande.user.email}</div>
                   )}
                   {demande.user.battle_tag && (
                     <div className="text-neutral-400">
-                      BattleTag&nbsp;: <span className="text-neutral-200">{demande.user.battle_tag}</span>
+                      BattleTag&nbsp;:{' '}
+                      <span className="text-neutral-200">
+                        {demande.user.battle_tag}
+                      </span>
                     </div>
                   )}
                   {demande.user.discord && (
                     <div className="text-neutral-400">
-                      Discord&nbsp;: <span className="text-neutral-200">{demande.user.discord}</span>
+                      Discord&nbsp;:{' '}
+                      <span className="text-neutral-200">
+                        {demande.user.discord}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -400,7 +411,9 @@ function AdminDemandeDetailPage() {
                       {demande.team.name}
                     </Link>
                     {demande.team.short_name && (
-                      <div className="text-sm text-neutral-400">{demande.team.short_name}</div>
+                      <div className="text-sm text-neutral-400">
+                        {demande.team.short_name}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -437,7 +450,9 @@ function AdminDemandeDetailPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 {payload.from_team_name && (
                   <div>
-                    <div className="text-neutral-500 text-xs">Équipe demandeuse</div>
+                    <div className="text-neutral-500 text-xs">
+                      Équipe demandeuse
+                    </div>
                     <div className="font-medium">{payload.from_team_name}</div>
                   </div>
                 )}
@@ -451,7 +466,9 @@ function AdminDemandeDetailPage() {
                 )}
                 {payload.preferred_date && (
                   <div className="sm:col-span-2">
-                    <div className="text-neutral-500 text-xs">Date souhaitée</div>
+                    <div className="text-neutral-500 text-xs">
+                      Date souhaitée
+                    </div>
                     <div className="font-medium">
                       {formatDate(payload.preferred_date)}
                     </div>
@@ -469,13 +486,17 @@ function AdminDemandeDetailPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 {payload.team_name && (
                   <div>
-                    <div className="text-neutral-500 text-xs">Nom d&apos;équipe</div>
+                    <div className="text-neutral-500 text-xs">
+                      Nom d&apos;équipe
+                    </div>
                     <div className="font-medium">{payload.team_name}</div>
                   </div>
                 )}
                 {payload.user_email && (
                   <div>
-                    <div className="text-neutral-500 text-xs">Email contact</div>
+                    <div className="text-neutral-500 text-xs">
+                      Email contact
+                    </div>
                     <div className="font-medium">{payload.user_email}</div>
                   </div>
                 )}
@@ -610,7 +631,8 @@ function AdminDemandeDetailPage() {
                 Cette demande a été traitée
                 {demande.handled_by?.display_name && (
                   <>
-                    {' '}par{' '}
+                    {' '}
+                    par{' '}
                     <span className="text-neutral-200 font-medium">
                       {demande.handled_by.display_name}
                     </span>

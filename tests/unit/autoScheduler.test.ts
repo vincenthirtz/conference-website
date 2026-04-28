@@ -21,7 +21,9 @@ function makeMatch(
   };
 }
 
-function makeConfig(overrides: Partial<AutoSchedulerConfig> = {}): AutoSchedulerConfig {
+function makeConfig(
+  overrides: Partial<AutoSchedulerConfig> = {}
+): AutoSchedulerConfig {
   return {
     windows: [makeDayWindow('2026-03-10', '10:00', '22:00')],
     estimatedDurationsMinutes: { bo1: 20, bo3: 45, bo5: 70 },
@@ -34,7 +36,10 @@ function makeConfig(overrides: Partial<AutoSchedulerConfig> = {}): AutoScheduler
 describe('autoScheduleMatches', () => {
   it('returns all unscheduled when no windows', () => {
     const matches = [makeMatch('m1'), makeMatch('m2')];
-    const result = autoScheduleMatches(matches, { ...makeConfig(), windows: [] });
+    const result = autoScheduleMatches(matches, {
+      ...makeConfig(),
+      windows: [],
+    });
 
     expect(result.scheduled).toHaveLength(0);
     expect(result.unscheduledMatchIds).toEqual(['m1', 'm2']);

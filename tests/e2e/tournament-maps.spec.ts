@@ -15,7 +15,12 @@ test.describe('Tournament map pool CRUD (direct supabase)', () => {
     const slug = slugify(TOURNAMENT_NAME, { lower: true, strict: true });
     const { data, error } = await supabaseTestClient
       .from('tournaments')
-      .insert({ name: TOURNAMENT_NAME, slug, status: 'draft', game: 'Overwatch' })
+      .insert({
+        name: TOURNAMENT_NAME,
+        slug,
+        status: 'draft',
+        game: 'Overwatch',
+      })
       .select('id')
       .maybeSingle();
     expect(error).toBeNull();
@@ -24,8 +29,14 @@ test.describe('Tournament map pool CRUD (direct supabase)', () => {
 
   test.afterAll(async () => {
     if (!supabaseTestClient || !tournamentId) return;
-    await supabaseTestClient.from('tournament_maps').delete().eq('tournament_id', tournamentId);
-    await supabaseTestClient.from('tournaments').delete().eq('id', tournamentId);
+    await supabaseTestClient
+      .from('tournament_maps')
+      .delete()
+      .eq('tournament_id', tournamentId);
+    await supabaseTestClient
+      .from('tournaments')
+      .delete()
+      .eq('id', tournamentId);
   });
 
   test('Ajouter une map au pool', async () => {
@@ -71,14 +82,18 @@ test.describe('Tournament map pool CRUD (direct supabase)', () => {
 
     const mapsToAdd = [
       { map_name: 'Ilios', map_type: 'control', order_index: 1 },
-      { map_name: 'King\'s Row', map_type: 'hybrid', order_index: 2 },
+      { map_name: "King's Row", map_type: 'hybrid', order_index: 2 },
       { map_name: 'Dorado', map_type: 'escort', order_index: 3 },
       { map_name: 'Colosseo', map_type: 'push', order_index: 4 },
     ];
 
-    const { error } = await supabaseTestClient
-      .from('tournament_maps')
-      .insert(mapsToAdd.map((m) => ({ ...m, tournament_id: tournamentId, enabled: true })));
+    const { error } = await supabaseTestClient.from('tournament_maps').insert(
+      mapsToAdd.map((m) => ({
+        ...m,
+        tournament_id: tournamentId,
+        enabled: true,
+      }))
+    );
 
     expect(error).toBeNull();
 
@@ -174,7 +189,9 @@ test.describe('Tournament map pool CRUD (direct supabase)', () => {
       .select('map_name')
       .eq('tournament_id', tournamentId);
 
-    expect(remaining!.find((m: any) => m.map_name === 'Havana')).toBeUndefined();
+    expect(
+      remaining!.find((m: any) => m.map_name === 'Havana')
+    ).toBeUndefined();
   });
 
   test('Remplacer tout le pool (PUT behavior)', async () => {
@@ -193,9 +210,13 @@ test.describe('Tournament map pool CRUD (direct supabase)', () => {
       { map_name: 'Eichenwalde', map_type: 'hybrid', order_index: 2 },
     ];
 
-    const { error } = await supabaseTestClient
-      .from('tournament_maps')
-      .insert(newPool.map((m) => ({ ...m, tournament_id: tournamentId, enabled: true })));
+    const { error } = await supabaseTestClient.from('tournament_maps').insert(
+      newPool.map((m) => ({
+        ...m,
+        tournament_id: tournamentId,
+        enabled: true,
+      }))
+    );
 
     expect(error).toBeNull();
 

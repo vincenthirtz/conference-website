@@ -104,7 +104,8 @@ const faqs: Faq[] = [
       'Une seule capitaine officielle à la fois. C’est elle qui reçoit les check-ins de match, les notifications staff et les messages des autres équipes. La passation se fait à n’importe quel moment via le dashboard.',
   },
   {
-    question: 'Que se passe-t-il si je ne réponds pas à temps à un scrim ou à un check-in ?',
+    question:
+      'Que se passe-t-il si je ne réponds pas à temps à un scrim ou à un check-in ?',
     answer:
       'Les check-ins de match ont une fenêtre stricte (~1h avant le coup d’envoi) — sans validation, l’équipe est déclarée forfait. Les scrims n’ont pas de pénalité, mais un refus rapide aide la communauté à s’organiser.',
   },

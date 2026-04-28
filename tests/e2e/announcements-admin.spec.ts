@@ -32,7 +32,10 @@ test.describe('Admin announcements pages (sans auth)', () => {
 });
 
 test.describe('Admin announcements CRUD (supabase)', () => {
-  test.skip(!supabaseTestClient, 'Supabase service role manquant pour les annonces');
+  test.skip(
+    !supabaseTestClient,
+    'Supabase service role manquant pour les annonces'
+  );
 
   test('Créer, modifier, supprimer une annonce', async ({ request }) => {
     if (!supabaseTestClient) return;

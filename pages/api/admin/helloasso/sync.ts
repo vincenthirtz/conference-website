@@ -25,14 +25,23 @@ async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (applyRateLimit(req, res, { max: 5, windowMs: 60_000 }, 'admin-helloasso-sync')) return;
+  if (
+    applyRateLimit(
+      req,
+      res,
+      { max: 5, windowMs: 60_000 },
+      'admin-helloasso-sync'
+    )
+  )
+    return;
 
   if (!supabaseAdmin) {
     return res.status(500).json({ error: 'Database service unavailable.' });
   }
   const admin = supabaseAdmin;
 
-  let formSlug = typeof req.query.formSlug === 'string' ? req.query.formSlug : '';
+  let formSlug =
+    typeof req.query.formSlug === 'string' ? req.query.formSlug : '';
 
   try {
     // Auto-detect membership form
@@ -41,7 +50,7 @@ async function handler(
       const membershipForm = forms.find((f) => f.formType === 'Membership');
       if (!membershipForm) {
         return res.status(404).json({
-          error: 'Aucun formulaire d\'adhésion trouvé sur HelloAsso.',
+          error: "Aucun formulaire d'adhésion trouvé sur HelloAsso.",
         });
       }
       formSlug = membershipForm.formSlug;
@@ -72,7 +81,9 @@ async function handler(
           firstName: item.user?.firstName || item.payer?.firstName || '',
           lastName: item.user?.lastName || item.payer?.lastName || '',
           amount: item.amount / 100,
-          date: item.order?.date?.split('T')[0] || new Date().toISOString().split('T')[0],
+          date:
+            item.order?.date?.split('T')[0] ||
+            new Date().toISOString().split('T')[0],
           helloassoId: item.id,
         });
       }
@@ -87,9 +98,7 @@ async function handler(
       .select('id, email, payment_reference')
       .in('email', emails);
 
-    const existingMap = new Map(
-      (existing ?? []).map((a) => [a.email, a])
-    );
+    const existingMap = new Map((existing ?? []).map((a) => [a.email, a]));
 
     let created = 0;
     let updated = 0;
@@ -146,7 +155,11 @@ async function handler(
         if (!error) {
           created++;
           // Add to map so duplicates within the batch are skipped
-          existingMap.set(m.email, { id: '', email: m.email, payment_reference: haRef });
+          existingMap.set(m.email, {
+            id: '',
+            email: m.email,
+            payment_reference: haRef,
+          });
         }
       }
     }

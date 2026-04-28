@@ -40,7 +40,7 @@ const modeDetails = [
   {
     mode: 'Hybride (Assaut/ Escorte)',
     rules:
-      "Att/Def : capture du point A puis escorte du convoi. Victoire \u00e0 la meilleure progression; overtime si la progression est contest\u00e9e.",
+      'Att/Def : capture du point A puis escorte du convoi. Victoire \u00e0 la meilleure progression; overtime si la progression est contest\u00e9e.',
   },
   {
     mode: 'Escorte (Escort)',
@@ -69,7 +69,8 @@ const references = [
     href: 'https://overwatch.blizzard.com/fr-fr/news/patch-notes/',
   },
   {
-    label: 'Param\u00e8tres \u00ab R\u00e8gles de comp\u00e9tition \u00bb (guide officiel)',
+    label:
+      'Param\u00e8tres \u00ab R\u00e8gles de comp\u00e9tition \u00bb (guide officiel)',
     href: 'https://overwatch.blizzard.com/fr-fr/news/23997317/',
   },
 ];
@@ -91,9 +92,10 @@ function RulesPage() {
             R&egrave;gles officielles Overwatch
           </h1>
           <p className="mx-auto mt-4 max-w-3xl text-lg text-gray-200">
-            R&eacute;sum&eacute; des param&egrave;tres comp&eacute;titifs Overwatch utilis&eacute;s pour l&apos;OW
-            Women&apos;s Cup. Toute l&apos;organisation se base sur les r&egrave;gles
-            officielles Blizzard, adapt&eacute;es au format du tournoi.
+            R&eacute;sum&eacute; des param&egrave;tres comp&eacute;titifs
+            Overwatch utilis&eacute;s pour l&apos;OW Women&apos;s Cup. Toute
+            l&apos;organisation se base sur les r&egrave;gles officielles
+            Blizzard, adapt&eacute;es au format du tournoi.
           </p>
         </div>
       </div>
@@ -152,8 +154,9 @@ function RulesPage() {
               </h3>
             </div>
             <p className="text-sm text-gray-200">
-              S&apos;applique avec le pr&eacute;r&eacute;glage &laquo; R&egrave;gles de comp&eacute;tition &raquo; dans les
-              salons personnalis&eacute;s.
+              S&apos;applique avec le pr&eacute;r&eacute;glage &laquo;
+              R&egrave;gles de comp&eacute;tition &raquo; dans les salons
+              personnalis&eacute;s.
             </p>
           </div>
 
@@ -179,8 +182,8 @@ function RulesPage() {
             </p>
             <h3 className="text-2xl font-bold text-white">Sources Blizzard</h3>
             <p className="text-sm text-gray-300">
-              Consultez les documents officiels pour les mises &agrave; jour de r&egrave;gles,
-              de maps ou de patchs.
+              Consultez les documents officiels pour les mises &agrave; jour de
+              r&egrave;gles, de maps ou de patchs.
             </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">

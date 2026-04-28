@@ -23,7 +23,12 @@ test.describe('Game-level tracking & map stats', () => {
     const slug = slugify(TOURNAMENT_NAME, { lower: true, strict: true });
     const { data: t, error: tErr } = await supabaseTestClient
       .from('tournaments')
-      .insert({ name: TOURNAMENT_NAME, slug, status: 'running', game: 'Overwatch' })
+      .insert({
+        name: TOURNAMENT_NAME,
+        slug,
+        status: 'running',
+        game: 'Overwatch',
+      })
       .select('id')
       .maybeSingle();
     if (tErr) throw new Error(`Tournament insert failed: ${tErr.message}`);
@@ -63,8 +68,13 @@ test.describe('Game-level tracking & map stats', () => {
 
     // Create map pool (7 maps for BO3 veto)
     const maps = [
-      'Busan', 'Ilios', "King's Row", 'Dorado',
-      'Colosseo', 'Nepal', 'Route 66',
+      'Busan',
+      'Ilios',
+      "King's Row",
+      'Dorado',
+      'Colosseo',
+      'Nepal',
+      'Route 66',
     ];
     await supabaseTestClient.from('tournament_maps').insert(
       maps.map((name, i) => ({
@@ -82,13 +92,27 @@ test.describe('Game-level tracking & map stats', () => {
     // Clean up in dependency order
     if (matchId) {
       await supabaseTestClient.from('games').delete().eq('match_id', matchId);
-      await supabaseTestClient.from('match_map_vetos').delete().eq('match_id', matchId);
+      await supabaseTestClient
+        .from('match_map_vetos')
+        .delete()
+        .eq('match_id', matchId);
     }
-    await supabaseTestClient.from('matches').delete().eq('tournament_id', tournamentId);
-    await supabaseTestClient.from('tournament_maps').delete().eq('tournament_id', tournamentId);
-    await supabaseTestClient.from('tournaments').delete().eq('id', tournamentId);
-    if (team1Id) await supabaseTestClient.from('teams').delete().eq('id', team1Id);
-    if (team2Id) await supabaseTestClient.from('teams').delete().eq('id', team2Id);
+    await supabaseTestClient
+      .from('matches')
+      .delete()
+      .eq('tournament_id', tournamentId);
+    await supabaseTestClient
+      .from('tournament_maps')
+      .delete()
+      .eq('tournament_id', tournamentId);
+    await supabaseTestClient
+      .from('tournaments')
+      .delete()
+      .eq('id', tournamentId);
+    if (team1Id)
+      await supabaseTestClient.from('teams').delete().eq('id', team1Id);
+    if (team2Id)
+      await supabaseTestClient.from('teams').delete().eq('id', team2Id);
   });
 
   /* -------------------------------------------------------
@@ -230,7 +254,12 @@ test.describe('Game-level tracking & map stats', () => {
       { step_number: 1, action: 'ban', team_id: team1Id, map_name: 'Ilios' },
       { step_number: 2, action: 'ban', team_id: team2Id, map_name: 'Dorado' },
       { step_number: 3, action: 'pick', team_id: team1Id, map_name: 'Busan' },
-      { step_number: 4, action: 'pick', team_id: team2Id, map_name: "King's Row" },
+      {
+        step_number: 4,
+        action: 'pick',
+        team_id: team2Id,
+        map_name: "King's Row",
+      },
       { step_number: 5, action: 'ban', team_id: team1Id, map_name: 'Colosseo' },
       { step_number: 6, action: 'ban', team_id: team2Id, map_name: 'Route 66' },
       { step_number: 7, action: 'decider', team_id: null, map_name: 'Nepal' },
@@ -285,10 +314,14 @@ test.describe('Game-level tracking & map stats', () => {
    * 4) Map stats API: neverPlayed & teamTendencies
    * ------------------------------------------------------*/
 
-  test('GET /api/maps/stats retourne neverPlayed et teamTendencies', async ({ request }) => {
+  test('GET /api/maps/stats retourne neverPlayed et teamTendencies', async ({
+    request,
+  }) => {
     if (!tournamentId) return;
 
-    const res = await request.get(`/api/maps/stats?tournamentId=${tournamentId}`);
+    const res = await request.get(
+      `/api/maps/stats?tournamentId=${tournamentId}`
+    );
     expect(res.status()).toBe(200);
 
     const json = await res.json();
@@ -301,10 +334,14 @@ test.describe('Game-level tracking & map stats', () => {
     expect(Array.isArray(json.teamTendencies)).toBe(true);
   });
 
-  test('neverPlayed contient les maps du pool jamais jouées', async ({ request }) => {
+  test('neverPlayed contient les maps du pool jamais jouées', async ({
+    request,
+  }) => {
     if (!tournamentId) return;
 
-    const res = await request.get(`/api/maps/stats?tournamentId=${tournamentId}&minGames=0`);
+    const res = await request.get(
+      `/api/maps/stats?tournamentId=${tournamentId}&minGames=0`
+    );
     const json = await res.json();
 
     // Played maps: Busan, King's Row, Nepal
@@ -322,10 +359,14 @@ test.describe('Game-level tracking & map stats', () => {
     expect(json.neverPlayed).not.toContain("King's Row");
   });
 
-  test('teamTendencies reflète les bans/picks par équipe', async ({ request }) => {
+  test('teamTendencies reflète les bans/picks par équipe', async ({
+    request,
+  }) => {
     if (!tournamentId) return;
 
-    const res = await request.get(`/api/maps/stats?tournamentId=${tournamentId}&minGames=0`);
+    const res = await request.get(
+      `/api/maps/stats?tournamentId=${tournamentId}&minGames=0`
+    );
     const json = await res.json();
 
     const tendencies = json.teamTendencies as any[];
@@ -338,7 +379,10 @@ test.describe('Game-level tracking & map stats', () => {
 
     // Team 1 banned Ilios + Colosseo, picked Busan
     expect(t1.bans.length).toBe(2);
-    expect(t1.bans.map((b: any) => b.mapName).sort()).toEqual(['Colosseo', 'Ilios']);
+    expect(t1.bans.map((b: any) => b.mapName).sort()).toEqual([
+      'Colosseo',
+      'Ilios',
+    ]);
     expect(t1.picks.length).toBe(1);
     expect(t1.picks[0].mapName).toBe('Busan');
 
@@ -347,14 +391,21 @@ test.describe('Game-level tracking & map stats', () => {
     expect(t2).toBeTruthy();
 
     // Team 2 banned Dorado + Route 66, picked King's Row
-    expect(t2.bans.map((b: any) => b.mapName).sort()).toEqual(['Dorado', 'Route 66']);
+    expect(t2.bans.map((b: any) => b.mapName).sort()).toEqual([
+      'Dorado',
+      'Route 66',
+    ]);
     expect(t2.picks[0].mapName).toBe("King's Row");
   });
 
-  test('maps stats contiennent avgDuration et veto rates', async ({ request }) => {
+  test('maps stats contiennent avgDuration et veto rates', async ({
+    request,
+  }) => {
     if (!tournamentId) return;
 
-    const res = await request.get(`/api/maps/stats?tournamentId=${tournamentId}&minGames=0`);
+    const res = await request.get(
+      `/api/maps/stats?tournamentId=${tournamentId}&minGames=0`
+    );
     const json = await res.json();
 
     const busan = json.maps.find((m: any) => m.mapName === 'Busan');
@@ -382,7 +433,9 @@ test.describe('Game-level tracking & map stats', () => {
   test('teamWinrates utilise winner_team_id', async ({ request }) => {
     if (!tournamentId) return;
 
-    const res = await request.get(`/api/maps/stats?tournamentId=${tournamentId}&minGames=0`);
+    const res = await request.get(
+      `/api/maps/stats?tournamentId=${tournamentId}&minGames=0`
+    );
     const json = await res.json();
 
     const busan = json.maps.find((m: any) => m.mapName === 'Busan');
@@ -399,7 +452,9 @@ test.describe('Game-level tracking & map stats', () => {
    * 5) Team stats API includes avgDuration
    * ------------------------------------------------------*/
 
-  test('GET /api/team/[id]/stats retourne avgDuration par map', async ({ request }) => {
+  test('GET /api/team/[id]/stats retourne avgDuration par map', async ({
+    request,
+  }) => {
     if (!team1Id) return;
 
     const res = await request.get(`/api/team/${team1Id}/stats`);
@@ -448,9 +503,13 @@ test.describe('Game-level tracking & map stats', () => {
    * 6) Edge cases
    * ------------------------------------------------------*/
 
-  test('GET /api/maps/stats avec tournoi vide retourne neverPlayed vide', async ({ request }) => {
+  test('GET /api/maps/stats avec tournoi vide retourne neverPlayed vide', async ({
+    request,
+  }) => {
     const fakeTournamentId = '00000000-0000-0000-0000-000000000000';
-    const res = await request.get(`/api/maps/stats?tournamentId=${fakeTournamentId}`);
+    const res = await request.get(
+      `/api/maps/stats?tournamentId=${fakeTournamentId}`
+    );
     expect(res.status()).toBe(200);
 
     const json = await res.json();
@@ -460,7 +519,9 @@ test.describe('Game-level tracking & map stats', () => {
     expect(json.teamTendencies).toEqual([]);
   });
 
-  test('GET /api/team/[id]/stats pour équipe inexistante retourne 404', async ({ request }) => {
+  test('GET /api/team/[id]/stats pour équipe inexistante retourne 404', async ({
+    request,
+  }) => {
     const fakeTeamId = '00000000-0000-0000-0000-000000000000';
     const res = await request.get(`/api/team/${fakeTeamId}/stats`);
     expect(res.status()).toBe(404);

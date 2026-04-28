@@ -80,7 +80,8 @@ async function handler(
 
     if (stage.stage_type !== 'group' && stage.stage_type !== 'round_robin') {
       return res.status(400).json({
-        error: "Cet endpoint ne supporte que les stages 'group' ou 'round_robin'.",
+        error:
+          "Cet endpoint ne supporte que les stages 'group' ou 'round_robin'.",
       });
     }
 
@@ -88,7 +89,8 @@ async function handler(
     const groupAssignments: Record<string, string[]> =
       stage.settings?.group_assignments || {};
     const groupKeys = Object.keys(groupAssignments).filter(
-      (k) => Array.isArray(groupAssignments[k]) && groupAssignments[k].length >= 2
+      (k) =>
+        Array.isArray(groupAssignments[k]) && groupAssignments[k].length >= 2
     );
 
     if (groupKeys.length === 0) {
@@ -107,7 +109,9 @@ async function handler(
         .neq('status', 'cancelled');
 
       if (existErr) {
-        return res.status(500).json({ error: 'Failed to check existing matches' });
+        return res
+          .status(500)
+          .json({ error: 'Failed to check existing matches' });
       }
 
       if (existingMatches && existingMatches.length > 0) {

@@ -16,11 +16,16 @@ type CastMemberPayload = {
   sortOrder?: number;
 };
 
-async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-cast-members')) return;
+async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (
+    applyRateLimit(
+      req,
+      res,
+      { max: 60, windowMs: 60_000 },
+      'admin-cast-members'
+    )
+  )
+    return;
   if (!supabaseAdmin) {
     return res
       .status(500)
@@ -47,9 +52,7 @@ async function handler(
 
     if (error) {
       console.error('[admin/cast-members] list error', error);
-      return res
-        .status(500)
-        .json({ error: 'Failed to load cast members.' });
+      return res.status(500).json({ error: 'Failed to load cast members.' });
     }
 
     return res.status(200).json({ items: data ?? [] });
@@ -58,9 +61,7 @@ async function handler(
   if (req.method === 'POST') {
     const body = req.body as CastMemberPayload;
     if (!body.name) {
-      return res
-        .status(400)
-        .json({ error: 'Name is required.' });
+      return res.status(400).json({ error: 'Name is required.' });
     }
 
     // Récupérer le prochain sort_order
