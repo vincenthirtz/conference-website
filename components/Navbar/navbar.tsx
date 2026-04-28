@@ -821,6 +821,37 @@ function AdminTopBar({
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [openSubMenu, setOpenSubMenu] = useState<string | null>(null);
   const menuAreaRef = useRef<HTMLDivElement>(null);
+
+  // Poll alerts summary every 90s for the "Tournoi en cours" badge.
+  const [alertsCount, setAlertsCount] = useState<number | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    async function poll() {
+      try {
+        const res = await fetch('/api/admin/alerts-summary');
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!cancelled && typeof json?.total === 'number') {
+          setAlertsCount(json.total);
+        }
+      } catch {
+        // silent — pas d'incidence sur l'UX si ça plante
+      }
+    }
+    poll();
+    const interval = setInterval(() => {
+      if (
+        typeof document !== 'undefined' &&
+        document.visibilityState !== 'visible'
+      )
+        return;
+      poll();
+    }, 90_000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
   useEffect(() => {
     if (!openMenu) return;
     const handleClickOutside = (e: MouseEvent) => {
@@ -969,15 +1000,34 @@ function AdminTopBar({
             )}
           </div>
           <div className="w-px h-5 bg-neutral-800" />
-          {singleLinks.map((link) => (
-            <Link
-              key={link.ref}
-              href={link.ref}
-              className="px-3 py-1.5 rounded-lg text-[12px] font-medium text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors"
-            >
-              {link.title}
-            </Link>
-          ))}
+          {singleLinks.map((link) => {
+            const isCurrentTournament = link.ref === '/admin/tournoi-en-cours';
+            const showBadge =
+              isCurrentTournament &&
+              typeof alertsCount === 'number' &&
+              alertsCount > 0;
+            return (
+              <Link
+                key={link.ref}
+                href={link.ref}
+                className="px-3 py-1.5 rounded-lg text-[12px] font-medium text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors inline-flex items-center gap-1.5"
+              >
+                {link.title}
+                {showBadge && (
+                  <span
+                    title={`${alertsCount} alerte${alertsCount! > 1 ? 's' : ''} active${alertsCount! > 1 ? 's' : ''}`}
+                    className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold leading-none ${
+                      alertsCount! >= 5
+                        ? 'bg-red-500 text-white'
+                        : 'bg-amber-500 text-neutral-950'
+                    }`}
+                  >
+                    {alertsCount! > 99 ? '99+' : alertsCount}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
           {categories.map((cat) => (
             <div key={cat.title} className="relative">
               <button

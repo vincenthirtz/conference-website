@@ -16,114 +16,10 @@ import ActionableAlert from '@/components/admin/dashboard/ActionableAlert';
 import WidgetCard from '@/components/admin/dashboard/WidgetCard';
 import StageProgressBar from '@/components/admin/dashboard/StageProgressBar';
 import UpcomingMatchRow from '@/components/admin/dashboard/UpcomingMatchRow';
-
-/* -----------------------------------------------------------
- * Types (mirror du payload de /api/admin/tournament/[id]/dashboard)
- * ---------------------------------------------------------*/
-
-type StageProgress = {
-  id: string;
-  name: string;
-  stage_type: string | null;
-  order_index: number | null;
-  is_active: boolean;
-  totalMatches: number;
-  finishedMatches: number;
-  pendingMatches: number;
-  ongoingMatches: number;
-  cancelledMatches: number;
-  teamsCount: number;
-};
-
-type UpcomingMatch = {
-  id: string;
-  stage_id: string | null;
-  stage_name: string | null;
-  round_number: number | null;
-  round_name: string | null;
-  scheduled_at: string | null;
-  team1_name: string | null;
-  team2_name: string | null;
-  stream_url: string | null;
-};
-
-type DisputedMatch = {
-  id: string;
-  team1Name: string | null;
-  team2Name: string | null;
-  reason: string | null;
-  openedAt: string | null;
-};
-
-type LiveMatch = {
-  id: string;
-  team1Name: string | null;
-  team2Name: string | null;
-  team1Score: number | null;
-  team2Score: number | null;
-  streamUrl: string | null;
-  scheduledAt: string | null;
-  roundName: string | null;
-  stageName: string | null;
-};
-
-type StageReady = { stageId: string; stageName: string };
-
-type StatusGuard = {
-  status: string;
-  label: string;
-  allowed: boolean;
-  reason?: string;
-};
-
-type DashboardData = {
-  tournament: {
-    id: string;
-    name: string;
-    status: string | null;
-    start_date: string | null;
-    end_date: string | null;
-    timezone: string | null;
-    format: string | null;
-    min_players: number | null;
-    roster_locked_at: string | null;
-  };
-  summary: {
-    totalTeams: number;
-    totalMatches: number;
-    finishedMatches: number;
-    pendingMatches: number;
-    ongoingMatches: number;
-    completionPercent: number;
-    eliminatedTeams: number;
-    activeTeams: number;
-  };
-  stages: StageProgress[];
-  upcomingMatches: UpcomingMatch[];
-  alerts: { type: 'warning' | 'info' | 'error'; message: string }[];
-  signals: {
-    disputesOpen: { count: number; matches: DisputedMatch[] };
-    checkinNext24h: {
-      upcoming: number;
-      bothCheckedIn: number;
-      oneSide: number;
-      missing: number;
-      forfeited: number;
-    };
-    conflictsCount: number;
-    pendingTeamsCount: number;
-    rosterLockProximity: {
-      lockedAt: string | null;
-      hoursLeft: number | null;
-      teamsBelowMin: number;
-    };
-    supportHighOpen: number;
-    activeMvpPolls: number;
-    stagesReadyToAdvance: StageReady[];
-    liveMatches: LiveMatch[];
-  };
-  guards: { current_status: string; guards: StatusGuard[] };
-};
+import {
+  fetchDashboardData,
+  type DashboardData,
+} from '@/utils/dashboard/buildTournamentDashboard';
 
 /* -----------------------------------------------------------
  * Constantes UI
@@ -284,18 +180,42 @@ function jDayLabel(iso: string | null, now: Date): string | null {
  * Page
  * ---------------------------------------------------------*/
 
-export const getServerSideProps = withStaffPage('manager');
+type SsrProps = {
+  initialData: DashboardData | null;
+  initialError: string | null;
+};
 
-function MegaDashboardPage(_: StaffProps) {
+export const getServerSideProps = withStaffPage<SsrProps>(
+  'manager',
+  async (ctx) => {
+    const rawId = ctx.params?.id ?? ctx.query.id;
+    const id = Array.isArray(rawId) ? rawId[0] : rawId;
+    if (!id)
+      return { initialData: null, initialError: 'Invalid tournament id' };
+
+    const result = await fetchDashboardData(String(id));
+    if (!result.ok) {
+      return { initialData: null, initialError: result.error };
+    }
+    return { initialData: result.data, initialError: null };
+  }
+);
+
+type Props = StaffProps & SsrProps;
+
+function MegaDashboardPage({ initialData, initialError }: Props) {
   const router = useRouter();
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;
 
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null);
+  const [loading, setLoading] = useState(initialData == null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(initialError);
+  const [data, setData] = useState<DashboardData | null>(initialData);
+  const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(
+    initialData ? new Date() : null
+  );
   const [stale, setStale] = useState(false);
+  const [nowMs, setNowMs] = useState(() => Date.now());
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchDashboard = useCallback(async () => {
@@ -321,11 +241,8 @@ function MegaDashboardPage(_: StaffProps) {
     }
   }, [tournamentId]);
 
-  // Initial + auto-refresh (pause si onglet caché)
-  useEffect(() => {
-    fetchDashboard();
-  }, [fetchDashboard]);
-
+  // Auto-refresh (pause si onglet caché). Pas de fetch initial : SSR a déjà
+  // chargé les données via getServerSideProps.
   useEffect(() => {
     function tick() {
       if (
@@ -341,10 +258,48 @@ function MegaDashboardPage(_: StaffProps) {
     };
   }, [fetchDashboard]);
 
+  // Tick "now" toutes les 60s pour le compteur roster-lock et la fraîcheur de l'ETA.
+  useEffect(() => {
+    const t = setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+
   const t = data?.tournament;
   const s = data?.summary;
   const sig = data?.signals;
-  const now = new Date();
+  const now = new Date(nowMs);
+
+  // Live roster lock countdown : recalculé à chaque tick de `nowMs` (60s).
+  // Permet d'afficher minutes restantes quand on passe sous l'heure.
+  const liveRosterLock = (() => {
+    const lockedAt = t?.roster_locked_at;
+    if (!lockedAt) return null;
+    const diffMs = new Date(lockedAt).getTime() - nowMs;
+    if (diffMs <= 0) return { passed: true, label: 'verrouillé' };
+    const minutes = Math.ceil(diffMs / 60_000);
+    if (minutes < 60) return { passed: false, label: `${minutes} min` };
+    const hours = Math.ceil(diffMs / 3_600_000);
+    if (hours < 48) return { passed: false, label: `${hours}h` };
+    const days = Math.floor(diffMs / (24 * 3_600_000));
+    return { passed: false, label: `${days}j` };
+  })();
+
+  // ETA fin du tournoi : on recalcule l'écart depuis maintenant pour avoir
+  // un libellé qui se rafraîchit (ex : "dans 2h" → "dans 1h" sans nouveau fetch).
+  const liveEta = (() => {
+    const etaIso = sig?.velocity.etaIso;
+    if (!etaIso) return null;
+    const diffMs = new Date(etaIso).getTime() - nowMs;
+    if (diffMs <= 0) return { label: 'imminent', iso: etaIso };
+    const hours = Math.round(diffMs / 3_600_000);
+    if (hours < 1) {
+      const minutes = Math.round(diffMs / 60_000);
+      return { label: `dans ${minutes} min`, iso: etaIso };
+    }
+    if (hours < 36) return { label: `dans ${hours}h`, iso: etaIso };
+    const days = Math.round(hours / 24);
+    return { label: `dans ${days}j`, iso: etaIso };
+  })();
 
   // Prochain match à venir (pour J-X header)
   const nextScheduled = data?.upcomingMatches.find(
@@ -498,7 +453,7 @@ function MegaDashboardPage(_: StaffProps) {
           {data && t && s && sig && (
             <>
               {/* ─── KPIs ───────────────────────────────────────────── */}
-              <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+              <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
                 <StatCard
                   label="Équipes"
                   value={`${s.activeTeams}/${s.totalTeams}`}
@@ -527,12 +482,36 @@ function MegaDashboardPage(_: StaffProps) {
                   accent="blue"
                 />
                 <StatCard
-                  label="Format"
-                  value={t.format ? t.format.toUpperCase() : '—'}
-                  hint={
-                    t.min_players ? `Min ${t.min_players} joueurs` : undefined
+                  label="Cadence"
+                  value={
+                    sig.velocity.matchesPerHour > 0
+                      ? `${sig.velocity.matchesPerHour}/h`
+                      : '—'
                   }
-                  accent="purple"
+                  hint={
+                    sig.velocity.finishedInWindow > 0
+                      ? `${sig.velocity.finishedInWindow} finis sur ${sig.velocity.windowHours}h`
+                      : "Pas d'activité récente"
+                  }
+                  accent={sig.velocity.matchesPerHour > 0 ? 'emerald' : 'gray'}
+                />
+                <StatCard
+                  label="ETA fin"
+                  value={
+                    liveEta?.label ??
+                    (sig.velocity.remainingMatches === 0 ? 'Terminé' : '—')
+                  }
+                  hint={
+                    liveEta?.iso
+                      ? formatDateTimeTz(liveEta.iso, t.timezone, {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        })
+                      : sig.velocity.remainingMatches === 0
+                        ? 'Tous les matchs sont joués'
+                        : 'Cadence trop faible pour estimer'
+                  }
+                  accent={liveEta ? 'purple' : 'gray'}
                 />
                 <StatCard
                   label="Démarrage"
@@ -600,14 +579,14 @@ function MegaDashboardPage(_: StaffProps) {
                     cta={{ label: 'Ouvrir', href: '/admin/support' }}
                   />
                 )}
-                {sig.rosterLockProximity.lockedAt &&
+                {liveRosterLock &&
+                  !liveRosterLock.passed &&
                   sig.rosterLockProximity.hoursLeft !== null &&
-                  sig.rosterLockProximity.hoursLeft <= 24 &&
-                  sig.rosterLockProximity.hoursLeft > 0 && (
+                  sig.rosterLockProximity.hoursLeft <= 24 && (
                     <ActionableAlert
                       severity="warning"
                       icon={<span>🔒</span>}
-                      title={`Roster lock dans ${sig.rosterLockProximity.hoursLeft}h`}
+                      title={`Roster lock dans ${liveRosterLock.label}`}
                       message={
                         sig.rosterLockProximity.teamsBelowMin > 0
                           ? `${sig.rosterLockProximity.teamsBelowMin} équipe(s) sous le minimum de joueurs.`
@@ -845,6 +824,64 @@ function MegaDashboardPage(_: StaffProps) {
                           </div>
                         </div>
                       </div>
+                    )}
+                  </WidgetCard>
+
+                  <WidgetCard
+                    title="Activité staff récente"
+                    badge={sig.recentActivity.length}
+                    ctaHref={`/admin/tournament/${tournamentId}/history`}
+                    ctaLabel="Tout l'historique"
+                  >
+                    {sig.recentActivity.length === 0 ? (
+                      <p className="text-sm text-gray-500">
+                        Aucune action staff sur ce tournoi.
+                      </p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {sig.recentActivity.map((row) => {
+                          const ageMs =
+                            nowMs - new Date(row.createdAt).getTime();
+                          const ageLabel =
+                            ageMs < 60_000
+                              ? "à l'instant"
+                              : ageMs < 3_600_000
+                                ? `il y a ${Math.floor(ageMs / 60_000)} min`
+                                : ageMs < 86_400_000
+                                  ? `il y a ${Math.floor(ageMs / 3_600_000)}h`
+                                  : `il y a ${Math.floor(ageMs / 86_400_000)}j`;
+                          return (
+                            <li
+                              key={row.id}
+                              className="flex items-start gap-2 rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-xs text-white">
+                                  <span className="font-medium text-purple-300">
+                                    {row.staffName ?? 'Staff'}
+                                  </span>
+                                  <span className="mx-1.5 text-gray-500">
+                                    ·
+                                  </span>
+                                  <span>{row.readableAction}</span>
+                                  {row.entityType && (
+                                    <span className="ml-1.5 text-gray-500">
+                                      ({row.entityType}
+                                      {row.entityId
+                                        ? ` ${row.entityId.slice(0, 8)}`
+                                        : ''}
+                                      )
+                                    </span>
+                                  )}
+                                </p>
+                              </div>
+                              <span className="shrink-0 text-[10px] text-gray-500">
+                                {ageLabel}
+                              </span>
+                            </li>
+                          );
+                        })}
+                      </ul>
                     )}
                   </WidgetCard>
                 </div>
