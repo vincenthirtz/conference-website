@@ -88,16 +88,32 @@ function AdminTeamsListPage({
   const [bulkAction, setBulkAction] = useState<string>('');
   const [assignTournamentId, setAssignTournamentId] = useState('');
 
-  // CSV import modal
-  const [showCsvModal, setShowCsvModal] = useState(false);
+  // Import modal (CSV + platform integrations)
+  type ImportTab = 'csv' | 'toornament' | 'challonge' | 'startgg';
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<ImportTab>('csv');
   const [csvText, setCsvText] = useState('');
-  const [csvTournamentId, setCsvTournamentId] = useState('');
-  const [csvImporting, setCsvImporting] = useState(false);
-  const [csvResult, setCsvResult] = useState<{
+  const [platformRef, setPlatformRef] = useState('');
+  const [importTournamentId, setImportTournamentId] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{
     created: number;
     skipped: number;
     errors: { row: number; message: string }[];
   } | null>(null);
+
+  // API keys config sub-modal
+  const [showApiKeysModal, setShowApiKeysModal] = useState(false);
+  const [apiKeys, setApiKeys] = useState<{
+    toornament: string;
+    challonge: string;
+    startgg: string;
+  }>({ toornament: '', challonge: '', startgg: '' });
+  const [apiKeysLoading, setApiKeysLoading] = useState(false);
+  const [apiKeysSaving, setApiKeysSaving] = useState(false);
+  const [revealedKey, setRevealedKey] = useState<keyof typeof apiKeys | null>(
+    null
+  );
 
   // Local search input (synced to URL on submit)
   const [searchInput, setSearchInput] = useState(search);
@@ -182,7 +198,10 @@ function AdminTeamsListPage({
         deactivate: 'desactivee(s)',
         assign: 'assignee(s)',
       };
-      addToast(`${json.count} equipe(s) ${labels[bulkAction] || bulkAction}.`, 'success');
+      addToast(
+        `${json.count} equipe(s) ${labels[bulkAction] || bulkAction}.`,
+        'success'
+      );
       setSelected(new Set());
       setBulkAction('');
       fetchTeams();
@@ -193,22 +212,42 @@ function AdminTeamsListPage({
     }
   }
 
-  // CSV import
-  async function handleCsvImport() {
-    if (!csvText.trim()) return;
-    setCsvImporting(true);
-    setCsvResult(null);
+  // Import (CSV ou plateforme)
+  async function handleImport() {
+    setImporting(true);
+    setImportResult(null);
     setErrorMsg(null);
 
     try {
-      const res = await fetch('/api/admin/teams/import-csv', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          csv: csvText,
-          tournamentId: csvTournamentId || undefined,
-        }),
-      });
+      let res: Response;
+      if (activeTab === 'csv') {
+        if (!csvText.trim()) {
+          setImporting(false);
+          return;
+        }
+        res = await fetch('/api/admin/teams/import-csv', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            csv: csvText,
+            tournamentId: importTournamentId || undefined,
+          }),
+        });
+      } else {
+        if (!platformRef.trim()) {
+          setImporting(false);
+          return;
+        }
+        res = await fetch('/api/admin/teams/import-platform', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            source: activeTab,
+            sourceRef: platformRef,
+            tournamentId: importTournamentId || undefined,
+          }),
+        });
+      }
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -216,12 +255,12 @@ function AdminTeamsListPage({
       }
 
       const json = await res.json();
-      setCsvResult(json);
+      setImportResult(json);
       if (json.created > 0) fetchTeams();
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? 'Erreur import');
     } finally {
-      setCsvImporting(false);
+      setImporting(false);
     }
   }
 
@@ -233,6 +272,75 @@ function AdminTeamsListPage({
       setCsvText((ev.target?.result as string) || '');
     };
     reader.readAsText(file);
+  }
+
+  // API keys config
+  async function loadApiKeys() {
+    setApiKeysLoading(true);
+    try {
+      const keys = [
+        'toornament_api_key',
+        'challonge_api_key',
+        'startgg_api_key',
+      ];
+      const fetched = await Promise.all(
+        keys.map((k) =>
+          fetch(`/api/admin/site-settings/${k}`)
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null)
+        )
+      );
+      setApiKeys({
+        toornament: fetched[0]?.value ?? '',
+        challonge: fetched[1]?.value ?? '',
+        startgg: fetched[2]?.value ?? '',
+      });
+    } finally {
+      setApiKeysLoading(false);
+    }
+  }
+
+  async function saveApiKeys() {
+    setApiKeysSaving(true);
+    setErrorMsg(null);
+    try {
+      const entries: { key: string; value: string; description: string }[] = [
+        {
+          key: 'toornament_api_key',
+          value: apiKeys.toornament,
+          description:
+            "Clé API Toornament Viewer (X-Api-Key) pour import d'équipes.",
+        },
+        {
+          key: 'challonge_api_key',
+          value: apiKeys.challonge,
+          description: "Clé API Challonge v1 pour import d'équipes.",
+        },
+        {
+          key: 'startgg_api_key',
+          value: apiKeys.startgg,
+          description: "Token start.gg (Bearer) pour import d'équipes.",
+        },
+      ];
+
+      for (const entry of entries) {
+        const res = await fetch('/api/admin/site-settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(entry),
+        });
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({}));
+          throw new Error(json.error || `Échec sauvegarde ${entry.key}`);
+        }
+      }
+      addToast('Clés API enregistrées.', 'success');
+      setShowApiKeysModal(false);
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur sauvegarde clés');
+    } finally {
+      setApiKeysSaving(false);
+    }
   }
 
   return (
@@ -260,20 +368,45 @@ function AdminTeamsListPage({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => { setShowCsvModal(true); setCsvResult(null); setCsvText(''); }}
+                  onClick={() => {
+                    setShowImportModal(true);
+                    setImportResult(null);
+                    setCsvText('');
+                    setPlatformRef('');
+                  }}
                   className="px-4 py-2.5 rounded-xl border border-neutral-600 hover:bg-neutral-800 text-sm font-medium transition-colors flex items-center gap-2"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                    />
                   </svg>
-                  Import CSV
+                  Importer
                 </button>
                 <Link
                   href="/admin/teams/new"
                   className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors flex items-center gap-2"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4v16m8-8H4"
+                    />
                   </svg>
                   Nouvelle equipe
                 </Link>
@@ -348,7 +481,10 @@ function AdminTeamsListPage({
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={activeFilter}
                   onChange={(e) => {
-                    setFilters({ isActive: e.target.value || null, offset: null });
+                    setFilters({
+                      isActive: e.target.value || null,
+                      offset: null,
+                    });
                   }}
                 >
                   <option value="">Toutes</option>
@@ -366,7 +502,10 @@ function AdminTeamsListPage({
                   value={tournamentFilter}
                   onFocus={loadTournaments}
                   onChange={(e) => {
-                    setFilters({ tournamentId: e.target.value || null, offset: null });
+                    setFilters({
+                      tournamentId: e.target.value || null,
+                      offset: null,
+                    });
                   }}
                 >
                   <option value="">Tous les tournois</option>
@@ -404,7 +543,8 @@ function AdminTeamsListPage({
           {selected.size > 0 && (
             <div className="mb-4 flex flex-col sm:flex-row sm:items-center gap-3 bg-blue-900/30 border border-blue-500/30 rounded-xl px-4 py-3 flex-wrap">
               <span className="text-sm font-medium">
-                {selected.size} equipe{selected.size > 1 ? 's' : ''} selectionnee{selected.size > 1 ? 's' : ''}
+                {selected.size} equipe{selected.size > 1 ? 's' : ''}{' '}
+                selectionnee{selected.size > 1 ? 's' : ''}
               </span>
               <div className="flex-1" />
               <select
@@ -427,21 +567,30 @@ function AdminTeamsListPage({
                 >
                   <option value="">Choisir un tournoi...</option>
                   {tournamentOptions.map((t) => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
                   ))}
                 </select>
               )}
               <button
                 type="button"
                 onClick={handleBulkAction}
-                disabled={bulkProcessing || !bulkAction || (bulkAction === 'assign' && !assignTournamentId)}
+                disabled={
+                  bulkProcessing ||
+                  !bulkAction ||
+                  (bulkAction === 'assign' && !assignTournamentId)
+                }
                 className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50"
               >
                 {bulkProcessing ? 'Traitement...' : 'Appliquer'}
               </button>
               <button
                 type="button"
-                onClick={() => { setSelected(new Set()); setBulkAction(''); }}
+                onClick={() => {
+                  setSelected(new Set());
+                  setBulkAction('');
+                }}
                 className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm transition-colors"
               >
                 Annuler
@@ -623,7 +772,9 @@ function AdminTeamsListPage({
             <button
               type="button"
               disabled={offset === 0 || loading}
-              onClick={() => setFilter('offset', String(Math.max(0, offset - LIMIT)) || null)}
+              onClick={() =>
+                setFilter('offset', String(Math.max(0, offset - LIMIT)) || null)
+              }
               className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <svg
@@ -704,7 +855,10 @@ function AdminTeamsListPage({
 
             <p className="text-sm text-neutral-300 mb-4 bg-neutral-900/50 rounded-xl p-3">
               Cela désactive l&apos;équipe (suppression soft). Continuer pour{' '}
-              <span className="font-semibold text-white">{deleteTarget.name}</span> ?
+              <span className="font-semibold text-white">
+                {deleteTarget.name}
+              </span>{' '}
+              ?
             </p>
 
             {errorMsg && (
@@ -763,90 +917,246 @@ function AdminTeamsListPage({
           </div>
         </div>
       )}
-      {/* CSV Import Modal */}
-      {showCsvModal && (
+      {/* Import Modal (CSV + plateformes) */}
+      {showImportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Import CSV d&apos;equipes</h3>
-              <button
-                type="button"
-                onClick={() => setShowCsvModal(false)}
-                className="p-1 rounded-lg hover:bg-neutral-700 transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+              <h3 className="text-lg font-semibold">Importer des équipes</h3>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowApiKeysModal(true);
+                    loadApiKeys();
+                  }}
+                  title="Configurer les clés API"
+                  className="p-1.5 rounded-lg hover:bg-neutral-700 transition-colors"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowImportModal(false)}
+                  className="p-1.5 rounded-lg hover:bg-neutral-700 transition-colors"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
             </div>
 
-            <p className="text-sm text-neutral-400 mb-4">
-              Format attendu : <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">name,short_name,country,joueurs</code>
-              <br />
-              Les joueurs sont separes par <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">;</code> (battle_tags).
-              La premiere ligne est l&apos;en-tete.
-            </p>
-
-            {/* File input */}
-            <div className="mb-4">
-              <label className="block text-sm text-neutral-400 mb-1">
-                Fichier CSV (ou coller ci-dessous)
-              </label>
-              <input
-                type="file"
-                accept=".csv,.txt,.tsv"
-                onChange={handleCsvFile}
-                className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-neutral-700 file:text-white hover:file:bg-neutral-600 file:cursor-pointer"
-              />
+            {/* Tabs */}
+            <div className="flex gap-1 mb-5 border-b border-neutral-700">
+              {(
+                [
+                  ['csv', 'CSV'],
+                  ['toornament', 'Toornament'],
+                  ['challonge', 'Challonge'],
+                  ['startgg', 'start.gg'],
+                ] as [ImportTab, string][]
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => {
+                    setActiveTab(key);
+                    setImportResult(null);
+                  }}
+                  className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                    activeTab === key
+                      ? 'border-blue-500 text-white'
+                      : 'border-transparent text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
 
-            {/* Textarea */}
-            <div className="mb-4">
-              <label className="block text-sm text-neutral-400 mb-1">
-                Contenu CSV
-              </label>
-              <textarea
-                className="w-full h-40 px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
-                placeholder={`name,short_name,country,joueurs\nTeam Alpha,TA,FR,Player1#1234;Player2#5678\nTeam Beta,TB,BE,Player3#9999`}
-                value={csvText}
-                onChange={(e) => setCsvText(e.target.value)}
-              />
-            </div>
+            {/* CSV tab */}
+            {activeTab === 'csv' && (
+              <>
+                <p className="text-sm text-neutral-400 mb-4">
+                  Format attendu :{' '}
+                  <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
+                    name,short_name,country,joueurs
+                  </code>
+                  <br />
+                  Les joueurs sont séparés par{' '}
+                  <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
+                    ;
+                  </code>{' '}
+                  (battle_tags). La première ligne est l&apos;en-tête.
+                </p>
 
-            {/* Optional tournament */}
+                <div className="mb-4">
+                  <label className="block text-sm text-neutral-400 mb-1">
+                    Fichier CSV (ou coller ci-dessous)
+                  </label>
+                  <input
+                    type="file"
+                    accept=".csv,.txt,.tsv"
+                    onChange={handleCsvFile}
+                    className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-neutral-700 file:text-white hover:file:bg-neutral-600 file:cursor-pointer"
+                  />
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm text-neutral-400 mb-1">
+                    Contenu CSV
+                  </label>
+                  <textarea
+                    className="w-full h-40 px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
+                    placeholder={`name,short_name,country,joueurs\nTeam Alpha,TA,FR,Player1#1234;Player2#5678\nTeam Beta,TB,BE,Player3#9999`}
+                    value={csvText}
+                    onChange={(e) => setCsvText(e.target.value)}
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Platform tabs */}
+            {activeTab !== 'csv' && (
+              <>
+                <p className="text-sm text-neutral-400 mb-4">
+                  {activeTab === 'toornament' && (
+                    <>
+                      Colle l&apos;URL Toornament du tournoi ou son ID
+                      numérique. Ex&nbsp;:{' '}
+                      <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
+                        https://www.toornament.com/tournaments/12345/
+                      </code>{' '}
+                      ou{' '}
+                      <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
+                        12345
+                      </code>
+                      .
+                    </>
+                  )}
+                  {activeTab === 'challonge' && (
+                    <>
+                      Colle l&apos;URL Challonge ou le slug. Ex&nbsp;:{' '}
+                      <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
+                        https://challonge.com/mon-tournoi
+                      </code>{' '}
+                      ou{' '}
+                      <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
+                        mon-tournoi
+                      </code>
+                      .
+                    </>
+                  )}
+                  {activeTab === 'startgg' && (
+                    <>
+                      Colle l&apos;URL d&apos;event start.gg ou son slug
+                      complet. Ex&nbsp;:{' '}
+                      <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
+                        https://www.start.gg/tournament/genesis-9/event/melee-singles
+                      </code>
+                      .
+                    </>
+                  )}
+                  <br />
+                  Une clé API doit être configurée (icône{' '}
+                  <span className="inline-block">⚙️</span> en haut).
+                </p>
+
+                <div className="mb-4">
+                  <label className="block text-sm text-neutral-400 mb-1">
+                    URL ou identifiant
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    placeholder={
+                      activeTab === 'toornament'
+                        ? 'https://www.toornament.com/tournaments/...'
+                        : activeTab === 'challonge'
+                          ? 'https://challonge.com/...'
+                          : 'https://www.start.gg/tournament/.../event/...'
+                    }
+                    value={platformRef}
+                    onChange={(e) => setPlatformRef(e.target.value)}
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Tournoi cible (commun) */}
             <div className="mb-4">
               <label className="block text-sm text-neutral-400 mb-1">
                 Inscrire au tournoi (optionnel)
               </label>
               <select
                 className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 text-sm"
-                value={csvTournamentId}
+                value={importTournamentId}
                 onFocus={loadTournaments}
-                onChange={(e) => setCsvTournamentId(e.target.value)}
+                onChange={(e) => setImportTournamentId(e.target.value)}
               >
                 <option value="">Aucun</option>
                 {tournamentOptions.map((t) => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
                 ))}
               </select>
             </div>
 
-            {/* Result */}
-            {csvResult && (
+            {/* Result (commun) */}
+            {importResult && (
               <div className="mb-4 rounded-xl bg-neutral-900/50 border border-neutral-700 p-4 text-sm">
                 <div className="flex gap-4 mb-2">
-                  <span className="text-emerald-400">{csvResult.created} creee(s)</span>
-                  {csvResult.skipped > 0 && (
-                    <span className="text-amber-400">{csvResult.skipped} doublon(s)</span>
+                  <span className="text-emerald-400">
+                    {importResult.created} créée(s)
+                  </span>
+                  {importResult.skipped > 0 && (
+                    <span className="text-amber-400">
+                      {importResult.skipped} doublon(s)
+                    </span>
                   )}
-                  {csvResult.errors.length > 0 && (
-                    <span className="text-red-400">{csvResult.errors.length} erreur(s)</span>
+                  {importResult.errors.length > 0 && (
+                    <span className="text-red-400">
+                      {importResult.errors.length} erreur(s)
+                    </span>
                   )}
                 </div>
-                {csvResult.errors.length > 0 && (
+                {importResult.errors.length > 0 && (
                   <ul className="text-xs text-red-300 space-y-1 max-h-32 overflow-y-auto">
-                    {csvResult.errors.map((e, i) => (
-                      <li key={i}>Ligne {e.row}: {e.message}</li>
+                    {importResult.errors.map((e, i) => (
+                      <li key={i}>
+                        {e.row > 0 ? `Ligne ${e.row}: ` : ''}
+                        {e.message}
+                      </li>
                     ))}
                   </ul>
                 )}
@@ -856,24 +1166,133 @@ function AdminTeamsListPage({
             <div className="flex justify-end gap-3">
               <button
                 type="button"
-                onClick={() => setShowCsvModal(false)}
+                onClick={() => setShowImportModal(false)}
                 className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
               >
                 Fermer
               </button>
               <button
                 type="button"
-                onClick={handleCsvImport}
-                disabled={csvImporting || !csvText.trim()}
+                onClick={handleImport}
+                disabled={
+                  importing ||
+                  (activeTab === 'csv' ? !csvText.trim() : !platformRef.trim())
+                }
                 className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-2"
               >
-                {csvImporting ? (
+                {importing ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     Import en cours...
                   </>
                 ) : (
                   'Importer'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* API keys config sub-modal */}
+      {showApiKeysModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Clés API d&apos;import</h3>
+              <button
+                type="button"
+                onClick={() => setShowApiKeysModal(false)}
+                className="p-1.5 rounded-lg hover:bg-neutral-700 transition-colors"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <p className="text-xs text-amber-300/80 mb-4">
+              ⚠️ Ces clés sont stockées en clair dans{' '}
+              <code className="bg-neutral-900 px-1 rounded">site_settings</code>
+              . Utilise des tokens dédiés à l&apos;import et révoque-les côté
+              plateforme si compromis.
+            </p>
+
+            {apiKeysLoading ? (
+              <p className="text-sm text-neutral-400">Chargement...</p>
+            ) : (
+              <div className="space-y-4">
+                {(['toornament', 'challonge', 'startgg'] as const).map((k) => {
+                  const labels: Record<typeof k, string> = {
+                    toornament: 'Toornament (X-Api-Key)',
+                    challonge: 'Challonge (api_key)',
+                    startgg: 'start.gg (Bearer token)',
+                  };
+                  const isRevealed = revealedKey === k;
+                  return (
+                    <div key={k}>
+                      <label className="block text-sm text-neutral-400 mb-1">
+                        {labels[k]}
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type={isRevealed ? 'text' : 'password'}
+                          className="flex-1 px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
+                          value={apiKeys[k]}
+                          onChange={(e) =>
+                            setApiKeys((prev) => ({
+                              ...prev,
+                              [k]: e.target.value,
+                            }))
+                          }
+                          autoComplete="off"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setRevealedKey(isRevealed ? null : k)}
+                          className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-xs font-medium transition-colors"
+                        >
+                          {isRevealed ? 'Masquer' : 'Voir'}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => setShowApiKeysModal(false)}
+                disabled={apiKeysSaving}
+                className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={saveApiKeys}
+                disabled={apiKeysSaving || apiKeysLoading}
+                className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {apiKeysSaving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Enregistrement...
+                  </>
+                ) : (
+                  'Enregistrer'
                 )}
               </button>
             </div>

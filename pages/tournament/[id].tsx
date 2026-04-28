@@ -471,7 +471,7 @@ export default function TournamentPage({
               <InfoCard title="Règles des horaires" content={tournament.schedule_rules} accent="emerald" />
             )}
             {tournament.format_details && (
-              <InfoCard title="Format du tournoi" content={tournament.format_details} accent="pink" />
+              <InfoCard title="Détails du format" content={tournament.format_details} accent="pink" />
             )}
           </section>
         )}
