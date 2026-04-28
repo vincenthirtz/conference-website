@@ -580,6 +580,38 @@ export function sendPartnershipConfirmationEmail(opts: {
 }
 
 /**
+ * Password reset email — sent in place of the native Supabase reset email
+ * so we control the design. The action link is generated server-side via
+ * `supabaseAdmin.auth.admin.generateLink({ type: 'recovery' })`.
+ */
+export function sendPasswordResetEmail(opts: {
+  to: string;
+  actionLink: string;
+}): Promise<SendEmailResult> {
+  return sendEmail({
+    to: opts.to,
+    subject: 'Réinitialisation de votre mot de passe — OW Women\'s Cup',
+    tags: ['password-reset'],
+    html: emailLayout(`
+      ${gradientBar()}
+      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Réinitialiser votre mot de passe</h1>
+      <p style="margin:0 0 16px;font-size:15px;color:#C6BED9;line-height:1.6;">
+        Vous avez demandé à réinitialiser votre mot de passe. Cliquez sur le bouton
+        ci-dessous pour définir un nouveau mot de passe.
+      </p>
+      <p style="margin:0 0 20px;font-size:13px;color:#e74694;line-height:1.5;background:rgba(231,70,148,0.08);border:1px solid rgba(231,70,148,0.15);border-radius:8px;padding:10px 14px;">
+        Ce lien est valable une heure. Si vous n&apos;êtes pas à l&apos;origine de cette
+        demande, ignorez simplement cet email.
+      </p>
+      ${ctaButton(opts.actionLink, 'Définir un nouveau mot de passe')}
+      <p style="margin:24px 0 0;font-size:12px;color:#675788;line-height:1.5;text-align:center;">
+        Lien direct&nbsp;: <a href="${opts.actionLink}" style="color:#9081B0;word-break:break-all;">${escapeHtml(opts.actionLink)}</a>
+      </p>
+    `),
+  });
+}
+
+/**
  * Staff notification for support tickets that bypass the reporter
  * confirmation flow: anonymous tickets and HIGH-severity tickets.
  */

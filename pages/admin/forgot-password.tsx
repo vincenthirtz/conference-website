@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import { supabaseClient } from '@/utils/supabase';
 import { useToast } from '@/components/Toast';
 
 export default function AdminForgotPasswordPage() {
@@ -18,26 +17,26 @@ export default function AdminForgotPasswordPage() {
     try {
       if (!email.trim()) throw new Error('Merci de renseigner ton email.');
 
-      const redirectTo =
-        typeof window !== 'undefined'
-          ? `${window.location.origin}/admin/reset-password`
-          : undefined;
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          redirectPath: '/admin/reset-password',
+        }),
+      });
 
-      const { error } = await supabaseClient.auth.resetPasswordForEmail(
-        email.trim(),
-        {
-          redirectTo,
-        }
-      );
+      const json = await res.json().catch(() => ({}));
 
-      if (error) {
+      if (!res.ok) {
         throw new Error(
-          error.message || "Impossible d'envoyer l'email de réinitialisation."
+          json?.error || "Impossible d'envoyer l'email de réinitialisation."
         );
       }
 
       addToast(
-        'Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.',
+        json?.message ||
+          'Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.',
         'success'
       );
     } catch (err: unknown) {
