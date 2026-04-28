@@ -34,6 +34,11 @@ export type StaffLogAction =
   | 'delete_discord_webhook'
   | 'update_support_ticket'
   | 'import_mvp'
+  | 'open_match_dispute'
+  | 'resolve_match_dispute'
+  | 'cancel_match_dispute'
+  | 'auto_advance_stage'
+  | 'generate_group_matches'
   | 'other';
 
 export type StaffLog = {

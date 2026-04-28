@@ -80,6 +80,12 @@ async function handleGet(
     next_match_win_slot,
     next_match_lose_id,
     next_match_lose_slot,
+    dispute_reason,
+    dispute_opened_by,
+    dispute_opened_at,
+    dispute_resolution,
+    dispute_resolved_by,
+    dispute_resolved_at,
     team1:team1_id(id, name, short_name, logo_url),
     team2:team2_id(id, name, short_name, logo_url),
     stage:stage_id(id, name, stage_type, is_active),
@@ -197,8 +203,16 @@ async function handlePut(
       }
     }
 
-    const VALID_MATCH_STATUSES = ['pending', 'ongoing', 'finished', 'cancelled', 'postponed', 'disputed', 'walkover'];
+    const VALID_MATCH_STATUSES = ['pending', 'ongoing', 'finished', 'cancelled', 'postponed', 'walkover'];
     if (status !== undefined && !VALID_MATCH_STATUSES.includes(status)) {
+      // Le passage en 'disputed' DOIT passer par /api/admin/matches/[matchId]/dispute
+      // pour garantir la saisie d'une raison + de l'auteur. On rejette ici.
+      if (status === 'disputed') {
+        return res.status(400).json({
+          error: 'Use POST /api/admin/matches/[matchId]/dispute to open a dispute.',
+          code: 'USE_DISPUTE_ENDPOINT',
+        });
+      }
       return res.status(400).json({
         error: `Invalid status. Allowed values: ${VALID_MATCH_STATUSES.join(', ')}`,
       });
@@ -262,12 +276,28 @@ async function handlePut(
   updatePayload.updated_at = new Date().toISOString();
 
   // Validation des champs meta
-  const VALID_MATCH_STATUSES_META = ['pending', 'ongoing', 'finished', 'cancelled', 'postponed', 'disputed', 'walkover'];
-  if ('status' in updatePayload && !VALID_MATCH_STATUSES_META.includes(updatePayload.status)) {
-    return res.status(400).json({
-      error: `Invalid status. Allowed values: ${VALID_MATCH_STATUSES_META.join(', ')}`,
-    });
+  const VALID_MATCH_STATUSES_META = ['pending', 'ongoing', 'finished', 'cancelled', 'postponed', 'walkover'];
+  if ('status' in updatePayload) {
+    if (updatePayload.status === 'disputed') {
+      return res.status(400).json({
+        error: 'Use POST /api/admin/matches/[matchId]/dispute to open a dispute.',
+        code: 'USE_DISPUTE_ENDPOINT',
+      });
+    }
+    if (!VALID_MATCH_STATUSES_META.includes(updatePayload.status)) {
+      return res.status(400).json({
+        error: `Invalid status. Allowed values: ${VALID_MATCH_STATUSES_META.join(', ')}`,
+      });
+    }
   }
+
+  // En mode meta : si le match est en dispute, on n'autorise pas non plus
+  // les mises a jour de score/winner via le whitelist. Sortir de dispute passe
+  // forcement par l'endpoint /dispute.
+  // (le whitelist meta n'inclut pas team1_score / team2_score / winner_team_id,
+  // donc en pratique ce sont surtout planning/notes/lobby qui sont permis ici.
+  // On permet ces mises a jour meme en dispute pour que le staff puisse
+  // continuer a planifier / annoter pendant qu'une dispute est ouverte.)
 
   const VALID_BRACKET_SIDES = ['wb', 'lb', 'final', 'none'];
   if ('bracket_side' in updatePayload && updatePayload.bracket_side !== null && !VALID_BRACKET_SIDES.includes(updatePayload.bracket_side)) {

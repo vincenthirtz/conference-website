@@ -11,6 +11,7 @@ import {
 import { sendTeamJoinEmail } from '@/utils/email';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID, validateRole } from '@/utils/apiHelpers';
+import { isTeamRosterLocked, rosterLockErrorMessage } from '@/utils/teams/rosterLock';
 
 type TeamMemberRow = {
   id: string;
@@ -76,7 +77,19 @@ async function handler(
 
   // POST - Ajouter un membre
   if (req.method === 'POST') {
-    const { userId, email, role, battleTag, setCaptain, isSubstitute } = req.body || {};
+    const { userId, email, role, battleTag, setCaptain, isSubstitute, force } = req.body || {};
+
+    // Garde roster lock : refus si l'equipe est inscrite a un tournoi avec
+    // roster_locked_at <= now() (sauf flag force=true).
+    if (force !== true) {
+      const lockStatus = await isTeamRosterLocked(String(teamId));
+      if (lockStatus.locked) {
+        return res.status(409).json({
+          error: rosterLockErrorMessage(lockStatus),
+          code: 'ROSTER_LOCKED',
+        } as any);
+      }
+    }
 
     let resolvedUserId =
       typeof userId === 'string' && userId.trim().length > 0 ? userId.trim() : '';
@@ -199,10 +212,28 @@ async function handler(
 
   // PATCH - Modifier un membre ou échanger deux membres (swap)
   if (req.method === 'PATCH') {
-    const { memberId, role, battleTag, isSubstitute, swapWithMemberId } = req.body || {};
+    const { memberId, role, battleTag, isSubstitute, swapWithMemberId, force } = req.body || {};
 
     if (!memberId || typeof memberId !== 'string') {
       return res.status(400).json({ error: 'memberId is required' });
+    }
+
+    // Garde roster lock : on bloque toute mutation (sauf force=true). On laisse
+    // passer un PATCH qui ne change que le BattleTag : c'est une correction de typo,
+    // pas un mouvement de roster. battleTag != reorganisation d'effectif.
+    const onlyBattleTagChange =
+      typeof battleTag === 'string' &&
+      role === undefined &&
+      isSubstitute === undefined &&
+      !swapWithMemberId;
+    if (force !== true && !onlyBattleTagChange) {
+      const lockStatus = await isTeamRosterLocked(String(teamId));
+      if (lockStatus.locked) {
+        return res.status(409).json({
+          error: rosterLockErrorMessage(lockStatus),
+          code: 'ROSTER_LOCKED',
+        } as any);
+      }
     }
 
     // Swap: exchange is_substitute between two members
@@ -316,10 +347,20 @@ async function handler(
 
   // DELETE - Supprimer un membre
   if (req.method === 'DELETE') {
-    const { memberId } = req.body || {};
+    const { memberId, force } = req.body || {};
 
     if (!memberId || typeof memberId !== 'string') {
       return res.status(400).json({ error: 'memberId is required' });
+    }
+
+    if (force !== true) {
+      const lockStatus = await isTeamRosterLocked(String(teamId));
+      if (lockStatus.locked) {
+        return res.status(409).json({
+          error: rosterLockErrorMessage(lockStatus),
+          code: 'ROSTER_LOCKED',
+        } as any);
+      }
     }
 
     try {

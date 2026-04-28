@@ -12,6 +12,7 @@ import type { PropagationSnapshot } from '../bracket/propagate';
 import { logStaffAction } from '../staffLogs';
 import { computeRequiredWins } from './computeRequiredWins';
 import { invalidateStandingsCache } from '../stages/standingsCache';
+import { tryAutoAdvanceFromMatch } from '../stages/autoAdvance';
 import { notifyMatchResult, notifyBracketUpdate, postMvpPoll } from '../discord';
 import type { PropagationResult } from '../../types/bracket';
 import type {
@@ -98,6 +99,16 @@ export async function applyMatchScore(
         'Impossible de modifier le score : le tournoi est terminé (status=completed). Réouvrez le tournoi pour effectuer des modifications.'
       );
     }
+  }
+
+  // 1b-bis) Bloquer toute modification de score tant qu'une dispute est ouverte.
+  // Le seul chemin legitime pour repasser sur un match en dispute est l'API
+  // /api/admin/matches/[matchId]/dispute (PATCH), qui retire d'abord le status
+  // 'disputed' avant d'appeler applyMatchScore.
+  if (match.status === 'disputed') {
+    throw new Error(
+      'Impossible de modifier ce match : il est en dispute. Resolvez la dispute via la page admin avant de modifier le score.'
+    );
   }
 
   // 1c) Gestion du forfait : auto-calcul score + winner
@@ -363,6 +374,19 @@ export async function applyMatchScore(
         team1Id: match.team1_id ?? null,
         team2Id: match.team2_id ?? null,
       }).catch((e: unknown) => console.error('[discord] mvp poll error:', e));
+    }
+
+    // Auto-advance: si tous les matchs du stage source sont termines et que
+    // advancement_rules est configure, on inscrit automatiquement les top N
+    // dans le stage cible. Idempotent (cf. utils/stages/autoAdvance.ts).
+    // Fire-and-forget : ne doit pas bloquer la reponse au client.
+    if (match.stage_id) {
+      void tryAutoAdvanceFromMatch({
+        stageId: match.stage_id,
+        staffId: staffId ?? null,
+      }).catch((e: unknown) =>
+        console.error('[autoAdvance] error:', e)
+      );
     }
   }
 

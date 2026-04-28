@@ -71,6 +71,25 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
   const [dragTeam, setDragTeam] = useState<TeamInfo | null>(null);
   const [dragSource, setDragSource] = useState<string | null>(null); // group key or '__unassigned'
 
+  // Match generation
+  const [genRounds, setGenRounds] = useState(1);
+  const [genMatchFormat, setGenMatchFormat] = useState('bo3');
+  const [generating, setGenerating] = useState(false);
+
+  // Per-group standings
+  type GroupStanding = {
+    teamId: string;
+    teamName: string | null;
+    rank: number;
+    wins: number;
+    losses: number;
+    draws: number;
+    score: number;
+  };
+  const [perGroupStandings, setPerGroupStandings] = useState<
+    Record<string, GroupStanding[]>
+  >({});
+
   const fetchGroups = useCallback(async () => {
     if (!stageId) return;
     setLoading(true);
@@ -110,6 +129,60 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
   useEffect(() => {
     if (stageId) fetchGroups();
   }, [stageId, fetchGroups]);
+
+  const fetchStandings = useCallback(async () => {
+    if (!stageId) return;
+    try {
+      const res = await fetch(`/api/admin/stages/${stageId}/standings`);
+      if (!res.ok) return;
+      const json = await res.json();
+      if (json.grouped?.groups) {
+        setPerGroupStandings(json.grouped.groups);
+      }
+    } catch {
+      // best-effort, no toast
+    }
+  }, [stageId]);
+
+  useEffect(() => {
+    if (stageId) fetchStandings();
+  }, [stageId, fetchStandings]);
+
+  async function handleGenerateMatches() {
+    if (!stageId) return;
+    if (
+      !confirm(
+        `Générer les matchs round-robin pour toutes les poules (${genRounds} round(s), ${genMatchFormat}) ?`
+      )
+    )
+      return;
+    setGenerating(true);
+    setErrorMsg(null);
+    try {
+      const res = await fetch(
+        `/api/admin/stages/${stageId}/generate-group-matches`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            rounds: genRounds,
+            matchFormat: genMatchFormat,
+          }),
+        }
+      );
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'Erreur génération');
+      addToast(
+        `${json.createdMatchIds?.length ?? 0} matchs créés sur ${json.groupCount ?? 0} poule(s)`,
+        'success'
+      );
+      await fetchStandings();
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur génération');
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   // Drag handlers
   function handleDragStart(team: TeamInfo, source: string) {
@@ -537,6 +610,102 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
                   </div>
                 </section>
               </div>
+
+              {/* Générer les matchs round-robin */}
+              <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
+                <h2 className="text-lg font-semibold mb-1">Génération des matchs</h2>
+                <p className="text-xs text-neutral-400 mb-4">
+                  Crée les matchs round-robin pour chaque poule à partir des assignations actuelles. À faire une seule fois — annuler les matchs avant de regénérer.
+                </p>
+
+                <div className="flex flex-wrap items-end gap-4">
+                  <div>
+                    <label className="block text-xs text-neutral-500 mb-1">Rounds (1 = aller, 2 = aller-retour)</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={4}
+                      value={genRounds}
+                      onChange={(e) => setGenRounds(Math.max(1, Math.min(4, Number(e.target.value) || 1)))}
+                      className="w-32 px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-neutral-500 mb-1">Format de match</label>
+                    <select
+                      value={genMatchFormat}
+                      onChange={(e) => setGenMatchFormat(e.target.value)}
+                      className="px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-700 text-sm"
+                    >
+                      <option value="bo1">Bo1</option>
+                      <option value="bo3">Bo3</option>
+                      <option value="bo5">Bo5</option>
+                    </select>
+                  </div>
+                  <button
+                    onClick={handleGenerateMatches}
+                    disabled={generating || groupKeys.length === 0}
+                    className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {generating ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Génération...
+                      </>
+                    ) : (
+                      'Générer les matchs'
+                    )}
+                  </button>
+                </div>
+              </section>
+
+              {/* Standings par poule (lecture seule) */}
+              {Object.keys(perGroupStandings).length > 0 && (
+                <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold">Classement par poule</h2>
+                    <button
+                      onClick={fetchStandings}
+                      className="text-xs text-neutral-400 hover:text-white"
+                    >
+                      Rafraîchir
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {Object.keys(perGroupStandings).sort().map((gk) => (
+                      <div key={gk} className="bg-neutral-900/50 border border-neutral-700/50 rounded-xl p-3">
+                        <div className="mb-2"><GroupLabel groupKey={gk} /></div>
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="text-neutral-500 text-left">
+                              <th className="pb-1 font-normal">#</th>
+                              <th className="pb-1 font-normal">Équipe</th>
+                              <th className="pb-1 font-normal text-center">V</th>
+                              <th className="pb-1 font-normal text-center">D</th>
+                              <th className="pb-1 font-normal text-center">N</th>
+                              <th className="pb-1 font-normal text-right">Pts</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {perGroupStandings[gk].map((s) => (
+                              <tr key={s.teamId} className="border-t border-neutral-800">
+                                <td className="py-1 text-neutral-400 font-mono">{s.rank}</td>
+                                <td className="py-1 truncate max-w-[140px]">
+                                  {s.teamName || s.teamId.slice(0, 6)}
+                                </td>
+                                <td className="py-1 text-center text-emerald-300">{s.wins}</td>
+                                <td className="py-1 text-center text-red-300">{s.losses}</td>
+                                <td className="py-1 text-center text-neutral-400">{s.draws}</td>
+                                <td className="py-1 text-right font-semibold">{s.score}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
             </div>
           )}
         </div>

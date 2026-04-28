@@ -38,6 +38,16 @@ export async function propagateBracketForMatch(
     };
   }
 
+  // Si match en dispute, on ne propage rien tant que la dispute n'est pas tranchee.
+  // C'est la garantie que le bracket aval ne sera pas pollue par un score conteste.
+  if (match.status === 'disputed') {
+    return {
+      matchId,
+      winnerTeamId: null,
+      loserTeamId: null,
+    };
+  }
+
   // Calcul du winner/loser (synchrone, sans tiebreaker)
   let { winnerTeamId, loserTeamId } = computeWinnerLoserFromMatch(match);
 

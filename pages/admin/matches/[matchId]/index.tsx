@@ -60,6 +60,12 @@ type MatchRow = {
   notes: string | null;
   next_match_win_id: string | null;
   next_match_lose_id: string | null;
+  dispute_reason: string | null;
+  dispute_opened_by: string | null;
+  dispute_opened_at: string | null;
+  dispute_resolution: string | null;
+  dispute_resolved_by: string | null;
+  dispute_resolved_at: string | null;
   team1?: TeamMini | null;
   team2?: TeamMini | null;
   stage?: StageMini | null;
@@ -79,6 +85,12 @@ function statusColor(status: MatchStatus) {
       return 'bg-emerald-600/80 text-white';
     case 'cancelled':
       return 'bg-red-700/80 text-white';
+    case 'disputed':
+      return 'bg-orange-600/90 text-white';
+    case 'walkover':
+      return 'bg-purple-600/80 text-white';
+    case 'postponed':
+      return 'bg-sky-700/80 text-white';
     default:
       return 'bg-neutral-700 text-neutral-100';
   }
@@ -94,6 +106,12 @@ function statusLabel(status: MatchStatus) {
       return 'Terminé';
     case 'cancelled':
       return 'Annulé';
+    case 'disputed':
+      return 'En dispute';
+    case 'walkover':
+      return 'Forfait';
+    case 'postponed':
+      return 'Reporté';
     default:
       return status || '—';
   }
@@ -125,11 +143,108 @@ function MatchViewPage(_: StaffProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [match, setMatch] = useState<MatchRow | null>(null);
 
+  // Dispute modals
+  const [showOpenDispute, setShowOpenDispute] = useState(false);
+  const [disputeReason, setDisputeReason] = useState('');
+  const [showResolveDispute, setShowResolveDispute] = useState(false);
+  const [resolveText, setResolveText] = useState('');
+  const [resolveResumeStatus, setResolveResumeStatus] = useState<MatchStatus>('finished');
+  const [resolveTeam1Score, setResolveTeam1Score] = useState<string>('');
+  const [resolveTeam2Score, setResolveTeam2Score] = useState<string>('');
+  const [disputeBusy, setDisputeBusy] = useState(false);
+  const [disputeMsg, setDisputeMsg] = useState<string | null>(null);
+
   useEffect(() => {
     if (!matchIdStr) return;
     fetchMatch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchIdStr]);
+
+  async function openDispute() {
+    if (!matchIdStr) return;
+    if (disputeReason.trim().length === 0) {
+      setDisputeMsg('Saisis une raison.');
+      return;
+    }
+    setDisputeBusy(true);
+    setDisputeMsg(null);
+    try {
+      const res = await fetch(`/api/admin/matches/${matchIdStr}/dispute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: disputeReason.trim() }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'Erreur ouverture dispute');
+      setShowOpenDispute(false);
+      setDisputeReason('');
+      await fetchMatch();
+    } catch (e: unknown) {
+      setDisputeMsg((e as Error).message || 'Erreur ouverture dispute');
+    } finally {
+      setDisputeBusy(false);
+    }
+  }
+
+  async function resolveDispute() {
+    if (!matchIdStr) return;
+    if (resolveText.trim().length === 0) {
+      setDisputeMsg('Saisis une décision.');
+      return;
+    }
+    setDisputeBusy(true);
+    setDisputeMsg(null);
+    try {
+      const body: Record<string, unknown> = {
+        resolution: resolveText.trim(),
+        resumeStatus: resolveResumeStatus,
+      };
+      if (
+        (resolveResumeStatus === 'finished' || resolveResumeStatus === 'walkover') &&
+        resolveTeam1Score !== '' &&
+        resolveTeam2Score !== ''
+      ) {
+        body.team1Score = Number(resolveTeam1Score);
+        body.team2Score = Number(resolveTeam2Score);
+      }
+      const res = await fetch(`/api/admin/matches/${matchIdStr}/dispute`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'Erreur résolution');
+      setShowResolveDispute(false);
+      setResolveText('');
+      setResolveTeam1Score('');
+      setResolveTeam2Score('');
+      await fetchMatch();
+    } catch (e: unknown) {
+      setDisputeMsg((e as Error).message || 'Erreur résolution');
+    } finally {
+      setDisputeBusy(false);
+    }
+  }
+
+  async function cancelDispute() {
+    if (!matchIdStr) return;
+    if (!confirm('Annuler cette dispute (sans décision) ? Le motif sera effacé.')) return;
+    setDisputeBusy(true);
+    setDisputeMsg(null);
+    try {
+      const res = await fetch(
+        `/api/admin/matches/${matchIdStr}/dispute?resumeStatus=pending`,
+        { method: 'DELETE' }
+      );
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'Erreur annulation');
+      await fetchMatch();
+    } catch (e: unknown) {
+      setDisputeMsg((e as Error).message || 'Erreur annulation');
+    } finally {
+      setDisputeBusy(false);
+    }
+  }
 
   async function fetchMatch() {
     setLoading(true);
@@ -189,6 +304,43 @@ function MatchViewPage(_: StaffProps) {
               >
                 Éditer
               </Link>
+              {match && match.status === 'disputed' ? (
+                <>
+                  <button
+                    onClick={() => {
+                      setResolveText('');
+                      setResolveResumeStatus('finished');
+                      setResolveTeam1Score(String(match.team1_score ?? 0));
+                      setResolveTeam2Score(String(match.team2_score ?? 0));
+                      setDisputeMsg(null);
+                      setShowResolveDispute(true);
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-600/80 border border-emerald-400/40 text-sm hover:bg-emerald-500"
+                  >
+                    Résoudre la dispute
+                  </button>
+                  <button
+                    onClick={cancelDispute}
+                    disabled={disputeBusy}
+                    className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/15 text-sm hover:bg-white/15 disabled:opacity-50"
+                  >
+                    Annuler la dispute
+                  </button>
+                </>
+              ) : (
+                match && match.status !== 'cancelled' && (
+                  <button
+                    onClick={() => {
+                      setDisputeReason('');
+                      setDisputeMsg(null);
+                      setShowOpenDispute(true);
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-orange-600/80 border border-orange-400/40 text-sm hover:bg-orange-500"
+                  >
+                    Ouvrir une dispute
+                  </button>
+                )
+              )}
               <button
                 onClick={() => fetchMatch()}
                 className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm hover:bg-white/10"
@@ -212,6 +364,52 @@ function MatchViewPage(_: StaffProps) {
 
           {match && !loading && (
             <div className="space-y-6">
+              {(match.status === 'disputed' || match.dispute_reason) && (
+                <div
+                  className={`p-4 rounded-xl border ${
+                    match.status === 'disputed'
+                      ? 'bg-orange-900/30 border-orange-500/40'
+                      : 'bg-white/5 border-white/10'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-4 mb-2">
+                    <h2 className="text-lg font-semibold">
+                      {match.status === 'disputed' ? 'Dispute en cours' : 'Dispute résolue'}
+                    </h2>
+                    {match.dispute_opened_at && (
+                      <span className="text-xs text-gray-300">
+                        Ouverte : {formatDateTime(match.dispute_opened_at)}
+                      </span>
+                    )}
+                  </div>
+                  {match.dispute_reason && (
+                    <div className="mb-3">
+                      <p className="text-xs uppercase tracking-[0.16em] text-gray-400">Motif</p>
+                      <p className="text-sm text-gray-100 whitespace-pre-wrap">
+                        {match.dispute_reason}
+                      </p>
+                    </div>
+                  )}
+                  {match.dispute_resolution && (
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.16em] text-gray-400">
+                        Décision
+                        {match.dispute_resolved_at &&
+                          ` · ${formatDateTime(match.dispute_resolved_at)}`}
+                      </p>
+                      <p className="text-sm text-gray-100 whitespace-pre-wrap">
+                        {match.dispute_resolution}
+                      </p>
+                    </div>
+                  )}
+                  {match.status === 'disputed' && (
+                    <p className="text-xs text-orange-200 mt-3">
+                      Tant que cette dispute est ouverte, le score ne peut pas être modifié et la propagation bracket est bloquée.
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="p-4 rounded-xl bg-white/5 border border-white/10">
                   <p className="text-xs uppercase tracking-[0.16em] text-gray-400">
@@ -334,6 +532,128 @@ function MatchViewPage(_: StaffProps) {
           )}
         </div>
       </div>
+
+      {showOpenDispute && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-neutral-900 border border-neutral-700 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
+            <h3 className="text-lg font-semibold mb-1">Ouvrir une dispute</h3>
+            <p className="text-xs text-neutral-400 mb-4">
+              Le match passera en statut « disputed ». Tant qu&apos;il y est, le score ne peut pas être modifié et la propagation bracket est bloquée.
+            </p>
+            <label className="block text-sm mb-1 text-neutral-300">Motif</label>
+            <textarea
+              value={disputeReason}
+              onChange={(e) => setDisputeReason(e.target.value)}
+              rows={5}
+              maxLength={2000}
+              placeholder="Ex : score contesté par l'équipe X, capture d'écran fournie..."
+              className="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-700 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+            />
+            {disputeMsg && (
+              <p className="text-sm text-red-300 mt-2">{disputeMsg}</p>
+            )}
+            <div className="flex justify-end gap-2 mt-4">
+              <button
+                onClick={() => setShowOpenDispute(false)}
+                disabled={disputeBusy}
+                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium disabled:opacity-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={openDispute}
+                disabled={disputeBusy || disputeReason.trim().length === 0}
+                className="px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-500 text-sm font-medium disabled:opacity-50"
+              >
+                {disputeBusy ? 'Ouverture...' : 'Ouvrir la dispute'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showResolveDispute && match && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-neutral-900 border border-neutral-700 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
+            <h3 className="text-lg font-semibold mb-1">Résoudre la dispute</h3>
+            <p className="text-xs text-neutral-400 mb-4">
+              Saisis la décision finale. Tu peux corriger le score si nécessaire — la propagation bracket sera relancée automatiquement.
+            </p>
+
+            <label className="block text-sm mb-1 text-neutral-300">Décision</label>
+            <textarea
+              value={resolveText}
+              onChange={(e) => setResolveText(e.target.value)}
+              rows={4}
+              maxLength={2000}
+              placeholder="Ex : score corrigé en 2-1, screenshot validé, etc."
+              className="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 mb-3"
+            />
+
+            <label className="block text-sm mb-1 text-neutral-300">Statut après résolution</label>
+            <select
+              value={resolveResumeStatus}
+              onChange={(e) => setResolveResumeStatus(e.target.value as MatchStatus)}
+              className="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-700 text-sm mb-3"
+            >
+              <option value="finished">Terminé (avec score)</option>
+              <option value="walkover">Forfait</option>
+              <option value="ongoing">En cours</option>
+              <option value="pending">À venir</option>
+            </select>
+
+            {(resolveResumeStatus === 'finished' || resolveResumeStatus === 'walkover') && (
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <div>
+                  <label className="block text-xs mb-1 text-neutral-400">
+                    Score {match.team1?.short_name || match.team1?.name || 'Équipe 1'}
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={resolveTeam1Score}
+                    onChange={(e) => setResolveTeam1Score(e.target.value)}
+                    className="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-700 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs mb-1 text-neutral-400">
+                    Score {match.team2?.short_name || match.team2?.name || 'Équipe 2'}
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={resolveTeam2Score}
+                    onChange={(e) => setResolveTeam2Score(e.target.value)}
+                    className="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-700 text-sm"
+                  />
+                </div>
+              </div>
+            )}
+
+            {disputeMsg && (
+              <p className="text-sm text-red-300 mt-2">{disputeMsg}</p>
+            )}
+
+            <div className="flex justify-end gap-2 mt-4">
+              <button
+                onClick={() => setShowResolveDispute(false)}
+                disabled={disputeBusy}
+                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium disabled:opacity-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={resolveDispute}
+                disabled={disputeBusy || resolveText.trim().length === 0}
+                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm font-medium disabled:opacity-50"
+              >
+                {disputeBusy ? 'Résolution...' : 'Appliquer la décision'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -30,11 +30,16 @@ const bracketSettingsSchema = z
   .passthrough();
 
 /** Advancement rules (shared across stage types) */
+// On accepte advance_top OU advance_per_group (au moins l'un des deux).
 const advancementRulesSchema = z
   .object({
-    advance_top: z.number().int().min(1).max(128),
+    advance_top: z.number().int().min(1).max(128).optional(),
+    advance_per_group: z.number().int().min(1).max(32).optional(),
     target_stage_id: z.string().uuid(),
     seed_by: z.enum(['standings', 'manual', 'none']).optional(),
+  })
+  .refine((v) => v.advance_top !== undefined || v.advance_per_group !== undefined, {
+    message: 'advance_top or advance_per_group is required',
   })
   .optional();
 

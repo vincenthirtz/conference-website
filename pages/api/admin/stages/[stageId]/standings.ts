@@ -5,12 +5,23 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
-import { computeStageStandings } from '@/utils/stages/standings';
-import type { StageStanding } from '@/utils/stages/standings';
+import {
+  computeStageStandings,
+  computeGroupedStandings,
+} from '@/utils/stages/standings';
+import type {
+  StageStanding,
+  GroupedStandings,
+} from '@/utils/stages/standings';
 import { isValidUUID } from '@/utils/apiHelpers';
 
 type ApiResponse =
-  | { stageId: string; stageType: string; standings: StageStanding[] }
+  | {
+      stageId: string;
+      stageType: string;
+      standings: StageStanding[];
+      grouped?: GroupedStandings;
+    }
   | { error: string };
 
 export default withStaffRoute(handler, 'manager');
@@ -50,6 +61,16 @@ async function handler(
 
     const stageType = stage.stage_type || 'other';
     const standings = await computeStageStandings(id, stageType);
+
+    // Pour les stages 'group', on retourne aussi un decoupage par poule
+    let grouped: GroupedStandings | undefined;
+    if (stageType === 'group') {
+      try {
+        grouped = await computeGroupedStandings(id);
+      } catch (e) {
+        console.error('grouped standings error:', e);
+      }
+    }
 
     if (exportFormat === 'csv') {
       const header = [
@@ -117,6 +138,7 @@ async function handler(
       stageId: id,
       stageType,
       standings,
+      ...(grouped ? { grouped } : {}),
     });
   } catch (err: unknown) {
     console.error('[/api/admin/stages/[stageId]/standings] error:', err);

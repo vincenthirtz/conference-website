@@ -5,7 +5,9 @@
 import { useState, useEffect } from 'react';
 
 export type AdvancementRules = {
-  advance_top: number;
+  advance_top?: number;
+  /** Top N par groupe (uniquement pertinent pour les stages 'group') */
+  advance_per_group?: number;
   target_stage_id: string;
   seed_by?: 'standings' | 'manual' | 'none';
 };
@@ -19,6 +21,11 @@ type Props = {
   onChange: (rules: AdvancementRules | null) => void;
   /** Désactiver les inputs (pendant un save, par ex.) */
   disabled?: boolean;
+  /**
+   * Type du stage source. Si 'group', le mode 'per_group' devient disponible
+   * (top N par poule).
+   */
+  sourceStageType?: string | null;
 };
 
 const SEED_BY_OPTIONS: { value: AdvancementRules['seed_by']; label: string }[] = [
@@ -27,14 +34,26 @@ const SEED_BY_OPTIONS: { value: AdvancementRules['seed_by']; label: string }[] =
   { value: 'none', label: 'Sans seed' },
 ];
 
+type Mode = 'top_n' | 'per_group';
+
 export default function AdvancementRulesEditor({
   value,
   availableStages,
   onChange,
   disabled = false,
+  sourceStageType,
 }: Props) {
+  const isGroup = sourceStageType === 'group';
+
+  const initialMode: Mode =
+    value?.advance_per_group !== undefined ? 'per_group' : 'top_n';
+
   const [enabled, setEnabled] = useState(!!value);
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [advanceTop, setAdvanceTop] = useState(value?.advance_top ?? 4);
+  const [advancePerGroup, setAdvancePerGroup] = useState(
+    value?.advance_per_group ?? 2
+  );
   const [targetStageId, setTargetStageId] = useState(value?.target_stage_id ?? '');
   const [seedBy, setSeedBy] = useState<AdvancementRules['seed_by']>(value?.seed_by ?? 'standings');
 
@@ -42,7 +61,12 @@ export default function AdvancementRulesEditor({
   useEffect(() => {
     if (value) {
       setEnabled(true);
-      setAdvanceTop(value.advance_top);
+      const nextMode: Mode =
+        value.advance_per_group !== undefined ? 'per_group' : 'top_n';
+      setMode(nextMode);
+      if (value.advance_top !== undefined) setAdvanceTop(value.advance_top);
+      if (value.advance_per_group !== undefined)
+        setAdvancePerGroup(value.advance_per_group);
       setTargetStageId(value.target_stage_id);
       setSeedBy(value.seed_by ?? 'standings');
     } else {
@@ -52,16 +76,31 @@ export default function AdvancementRulesEditor({
 
   function emitChange(
     nextEnabled: boolean,
+    nextMode: Mode,
     nextTop: number,
+    nextPerGroup: number,
     nextTarget: string,
     nextSeedBy: AdvancementRules['seed_by']
   ) {
-    if (!nextEnabled) {
+    if (!nextEnabled || !nextTarget) {
       onChange(null);
       return;
     }
-    if (!nextTarget || nextTop < 1) {
-      // Partial state — don't emit until valid
+
+    if (nextMode === 'per_group') {
+      if (nextPerGroup < 1) {
+        onChange(null);
+        return;
+      }
+      onChange({
+        advance_per_group: nextPerGroup,
+        target_stage_id: nextTarget,
+        seed_by: nextSeedBy,
+      });
+      return;
+    }
+
+    if (nextTop < 1) {
       onChange(null);
       return;
     }
@@ -74,22 +113,32 @@ export default function AdvancementRulesEditor({
 
   function handleToggle(nextEnabled: boolean) {
     setEnabled(nextEnabled);
-    emitChange(nextEnabled, advanceTop, targetStageId, seedBy);
+    emitChange(nextEnabled, mode, advanceTop, advancePerGroup, targetStageId, seedBy);
+  }
+
+  function handleModeChange(nextMode: Mode) {
+    setMode(nextMode);
+    emitChange(enabled, nextMode, advanceTop, advancePerGroup, targetStageId, seedBy);
   }
 
   function handleTopChange(v: number) {
     setAdvanceTop(v);
-    emitChange(enabled, v, targetStageId, seedBy);
+    emitChange(enabled, mode, v, advancePerGroup, targetStageId, seedBy);
+  }
+
+  function handlePerGroupChange(v: number) {
+    setAdvancePerGroup(v);
+    emitChange(enabled, mode, advanceTop, v, targetStageId, seedBy);
   }
 
   function handleTargetChange(v: string) {
     setTargetStageId(v);
-    emitChange(enabled, advanceTop, v, seedBy);
+    emitChange(enabled, mode, advanceTop, advancePerGroup, v, seedBy);
   }
 
   function handleSeedByChange(v: AdvancementRules['seed_by']) {
     setSeedBy(v);
-    emitChange(enabled, advanceTop, targetStageId, v);
+    emitChange(enabled, mode, advanceTop, advancePerGroup, targetStageId, v);
   }
 
   return (
@@ -137,24 +186,81 @@ export default function AdvancementRulesEditor({
             )}
           </div>
 
-          {/* Advance top N */}
-          <div>
-            <label className="block text-sm mb-1 text-neutral-300">
-              Nombre d&apos;equipes qui avancent
-            </label>
-            <input
-              type="number"
-              min={1}
-              max={128}
-              className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={advanceTop}
-              onChange={(e) => handleTopChange(Math.max(1, Number(e.target.value) || 1))}
-              disabled={disabled}
-            />
-            <p className="text-xs text-neutral-500 mt-1">
-              Les N premieres equipes du classement seront avancees vers la phase cible.
-            </p>
-          </div>
+          {/* Mode (uniquement utile pour les stages 'group') */}
+          {isGroup && (
+            <div>
+              <label className="block text-sm mb-1 text-neutral-300">
+                Mode d&apos;avancement
+              </label>
+              <div className="flex flex-col gap-2">
+                <label className="flex items-center gap-2 text-sm text-neutral-300 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="advance_mode"
+                    value="top_n"
+                    checked={mode === 'top_n'}
+                    onChange={() => handleModeChange('top_n')}
+                    disabled={disabled}
+                    className="border-neutral-600 bg-neutral-700 text-blue-500 focus:ring-blue-500"
+                  />
+                  Top N global (toutes poules confondues)
+                </label>
+                <label className="flex items-center gap-2 text-sm text-neutral-300 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="advance_mode"
+                    value="per_group"
+                    checked={mode === 'per_group'}
+                    onChange={() => handleModeChange('per_group')}
+                    disabled={disabled}
+                    className="border-neutral-600 bg-neutral-700 text-blue-500 focus:ring-blue-500"
+                  />
+                  Top N par poule (recommandé pour group stage)
+                </label>
+              </div>
+            </div>
+          )}
+
+          {/* Advance top N (par groupe ou global) */}
+          {mode === 'per_group' ? (
+            <div>
+              <label className="block text-sm mb-1 text-neutral-300">
+                Nombre d&apos;équipes qui avancent par poule
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={32}
+                className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={advancePerGroup}
+                onChange={(e) =>
+                  handlePerGroupChange(Math.max(1, Number(e.target.value) || 1))
+                }
+                disabled={disabled}
+              />
+              <p className="text-xs text-neutral-500 mt-1">
+                Les N premières équipes de <strong>chaque</strong> poule seront avancées.
+              </p>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm mb-1 text-neutral-300">
+                Nombre d&apos;équipes qui avancent
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={128}
+                className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={advanceTop}
+                onChange={(e) => handleTopChange(Math.max(1, Number(e.target.value) || 1))}
+                disabled={disabled}
+              />
+              <p className="text-xs text-neutral-500 mt-1">
+                Les N premières équipes du classement seront avancées vers la phase cible.
+              </p>
+            </div>
+          )}
 
           {/* Seed mode */}
           <div>

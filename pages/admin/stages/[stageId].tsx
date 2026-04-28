@@ -1157,6 +1157,7 @@ function AdminStagePage({ staff }: StaffProps) {
                       availableStages={advancementSiblingStages}
                       onChange={setAdvancementRulesDraft}
                       disabled={advancementSaving}
+                      sourceStageType={stage?.stage_type ?? null}
                     />
 
                     <div className="mt-4 flex justify-end">

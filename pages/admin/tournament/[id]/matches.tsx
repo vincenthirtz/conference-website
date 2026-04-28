@@ -828,6 +828,17 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                 </svg>
                 Import CSV
               </button>
+
+              <Link
+                href={`/admin/tournament/${id}/bulk-ops`}
+                className="px-4 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700"
+                title="Décaler un round, réassigner des matchs entre phases"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+                Opérations groupées
+              </Link>
             </div>
           </div>
 

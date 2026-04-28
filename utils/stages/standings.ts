@@ -21,6 +21,15 @@ export type StageStanding = {
   draws: number;
   score: number;
   seed: number | null;
+  /** Cle de poule, uniquement renseignee pour les stages de type "group" */
+  groupKey?: string | null;
+};
+
+export type GroupedStandings = {
+  /** Cle = group_key (ex: "A", "B"...) */
+  groups: Record<string, StageStanding[]>;
+  /** Equipes sans assignation de poule (ne devrait pas arriver) */
+  unassigned: StageStanding[];
 };
 
 type DbMatch = {
@@ -125,6 +134,119 @@ export async function computeStageStandings(
           seed: st.seed,
         }));
   }
+}
+
+/**
+ * Calcule les standings d'un stage de type "group" en separant par poule.
+ * Chaque groupe est classe independamment (W/L/points/scoreDiff).
+ *
+ * Renvoie aussi `unassigned` pour les equipes presentes dans stage_teams mais
+ * pas dans group_assignments (cas degrade — devrait etre vide en prod).
+ */
+export async function computeGroupedStandings(
+  stageId: string
+): Promise<GroupedStandings> {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase admin client not available');
+  }
+
+  // 1) Charger le stage pour recuperer group_assignments
+  const { data: stage, error: stageErr } = await supabaseAdmin
+    .from('tournament_stages')
+    .select('id, stage_type, settings')
+    .eq('id', stageId)
+    .maybeSingle();
+
+  if (stageErr || !stage) {
+    throw new Error(`Stage ${stageId} not found`);
+  }
+
+  const groupAssignments: Record<string, string[]> =
+    stage.settings?.group_assignments || {};
+
+  // 2) Charger les stage_teams + matchs
+  const { data: stageTeamsData } = await supabaseAdmin
+    .from('stage_teams')
+    .select('team_id, seed, team:teams(id, name, short_name)')
+    .eq('stage_id', stageId);
+
+  const stageTeams: StageTeamRow[] = (stageTeamsData || []).map((row: any) => ({
+    team_id: row.team_id,
+    seed: row.seed,
+    team: Array.isArray(row.team) ? row.team[0] ?? null : row.team ?? null,
+  }));
+
+  const { data: matchesData } = await supabaseAdmin
+    .from('matches')
+    .select(
+      'id, status, is_bye, round_number, team1_id, team2_id, winner_team_id, team1_score, team2_score, group_key'
+    )
+    .eq('stage_id', stageId)
+    .neq('status', 'cancelled');
+
+  type GroupedMatchRow = DbMatch & { group_key: string | null };
+  const matches = (matchesData || []) as GroupedMatchRow[];
+  const finishedMatches = matches.filter((m) => m.status === 'finished');
+
+  // 3) Index group_key par equipe (depuis settings)
+  const teamToGroup = new Map<string, string>();
+  for (const [gk, ids] of Object.entries(groupAssignments)) {
+    for (const tid of ids) teamToGroup.set(tid, gk);
+  }
+  // Fallback : utiliser le group_key des matchs si settings vide
+  if (teamToGroup.size === 0) {
+    for (const m of matches) {
+      if (!m.group_key) continue;
+      if (m.team1_id && !teamToGroup.has(m.team1_id))
+        teamToGroup.set(m.team1_id, m.group_key);
+      if (m.team2_id && !teamToGroup.has(m.team2_id))
+        teamToGroup.set(m.team2_id, m.group_key);
+    }
+  }
+
+  // 4) Splitter equipes + matchs par groupe
+  const teamsByGroup = new Map<string, StageTeamRow[]>();
+  const unassignedTeams: StageTeamRow[] = [];
+
+  for (const st of stageTeams) {
+    const gk = teamToGroup.get(st.team_id);
+    if (gk) {
+      if (!teamsByGroup.has(gk)) teamsByGroup.set(gk, []);
+      teamsByGroup.get(gk)!.push(st);
+    } else {
+      unassignedTeams.push(st);
+    }
+  }
+
+  const matchesByGroup = new Map<string, DbMatch[]>();
+  for (const m of finishedMatches) {
+    const gk =
+      m.group_key ||
+      (m.team1_id && teamToGroup.get(m.team1_id)) ||
+      (m.team2_id && teamToGroup.get(m.team2_id)) ||
+      null;
+    if (!gk) continue;
+    if (!matchesByGroup.has(gk)) matchesByGroup.set(gk, []);
+    matchesByGroup.get(gk)!.push(m);
+  }
+
+  // 5) Calculer chaque groupe via computeGroupStandings (deja existant)
+  const groups: Record<string, StageStanding[]> = {};
+  for (const [gk, teams] of teamsByGroup) {
+    const groupMatches = matchesByGroup.get(gk) || [];
+    const standings = computeGroupStandings(teams, groupMatches);
+    groups[gk] = standings.map((s) => ({ ...s, groupKey: gk }));
+  }
+
+  const unassigned: StageStanding[] =
+    unassignedTeams.length > 0
+      ? computeGroupStandings(unassignedTeams, []).map((s) => ({
+          ...s,
+          groupKey: null,
+        }))
+      : [];
+
+  return { groups, unassigned };
 }
 
 /* -----------------------------------------------------------

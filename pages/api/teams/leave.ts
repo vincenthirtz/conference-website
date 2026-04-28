@@ -5,6 +5,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { isTeamRosterLocked, rosterLockErrorMessage } from '@/utils/teams/rosterLock';
 
 export default async function handler(
   req: NextApiRequest,
@@ -67,6 +68,15 @@ export default async function handler(
     return res.status(403).json({
       error:
         'Le capitaine ne peut pas quitter l\'équipe. Transfère le rôle de capitaine à un autre membre d\'abord.',
+    });
+  }
+
+  // Garde roster lock : un membre ne peut pas non plus quitter une equipe avec
+  // roster verrouille. L'admin peut forcer via l'API admin.
+  const lockStatus = await isTeamRosterLocked(membership.team_id);
+  if (lockStatus.locked) {
+    return res.status(409).json({
+      error: rosterLockErrorMessage(lockStatus),
     });
   }
 

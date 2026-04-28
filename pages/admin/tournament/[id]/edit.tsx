@@ -39,6 +39,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
     status: string;
     start_date: string;
     end_date: string;
+    roster_locked_at: string;
     timezone: string;
     format_type: string;
     max_teams: string;
@@ -60,6 +61,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
     status: 'draft',
     start_date: '',
     end_date: '',
+    roster_locked_at: '',
     timezone: 'Europe/Paris',
     format_type: '',
     max_teams: '',
@@ -159,6 +161,9 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
         status: t.status || 'draft',
         start_date: t.start_date ? toLocalInputValue(t.start_date) : '',
         end_date: t.end_date ? toLocalInputValue(t.end_date) : '',
+        roster_locked_at: (t as any).roster_locked_at
+          ? toLocalInputValue((t as any).roster_locked_at)
+          : '',
         timezone: t.timezone || 'Europe/Paris',
         format_type: t.format_type || '',
         max_teams: t.max_teams ? String(t.max_teams) : '',
@@ -231,6 +236,9 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
         ? new Date(form.start_date).toISOString()
         : null,
       end_date: form.end_date ? new Date(form.end_date).toISOString() : null,
+      roster_locked_at: form.roster_locked_at
+        ? new Date(form.roster_locked_at).toISOString()
+        : null,
       timezone: form.timezone || null,
       format_type: form.format_type || null,
       max_teams: form.max_teams ? Number(form.max_teams) : null,
@@ -487,6 +495,23 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
                         {dateError && (
                           <p className="text-xs text-red-400 mt-1">{dateError}</p>
                         )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm mb-1 text-neutral-300">
+                          Verrouillage roster
+                        </label>
+                        <input
+                          type="datetime-local"
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={form.roster_locked_at}
+                          onChange={(e) =>
+                            updateField('roster_locked_at', e.target.value)
+                          }
+                        />
+                        <p className="text-xs text-neutral-500 mt-1">
+                          Au-delà de cette date, les équipes inscrites ne peuvent plus modifier leur roster (ajout, suppression, swap). Vide = pas de verrou.
+                        </p>
                       </div>
 
                       <div>

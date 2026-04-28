@@ -128,6 +128,7 @@ async function handlePatch(
       game,
       start_date,
       end_date,
+      roster_locked_at,
       timezone,
       format_type,
       max_teams,
@@ -185,6 +186,16 @@ async function handlePatch(
     }
     if (end_date !== undefined && end_date !== null && isNaN(Date.parse(end_date))) {
       return res.status(400).json({ error: 'end_date is not a valid date' });
+    }
+
+    if (
+      roster_locked_at !== undefined &&
+      roster_locked_at !== null &&
+      isNaN(Date.parse(roster_locked_at))
+    ) {
+      return res
+        .status(400)
+        .json({ error: 'roster_locked_at is not a valid date' });
     }
 
     // Cohérence des dates : start_date < end_date
@@ -250,6 +261,7 @@ async function handlePatch(
     if (game !== undefined) updatePayload.game = game;
     if (start_date !== undefined) updatePayload.start_date = start_date;
     if (end_date !== undefined) updatePayload.end_date = end_date;
+    if (roster_locked_at !== undefined) updatePayload.roster_locked_at = roster_locked_at;
     if (timezone !== undefined) updatePayload.timezone = timezone;
     if (format_type !== undefined) updatePayload.format_type = format_type;
     if (max_teams !== undefined) updatePayload.max_teams = max_teams;

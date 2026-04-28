@@ -178,6 +178,11 @@ export function formatStaffLog(log: StaffLog) {
     delete_discord_webhook: 'Webhook Discord supprimé',
     update_support_ticket: 'Ticket support modifié',
     import_mvp: 'MVP importé',
+    open_match_dispute: 'Ouverture dispute match',
+    resolve_match_dispute: 'Résolution dispute match',
+    cancel_match_dispute: 'Annulation dispute match',
+    auto_advance_stage: 'Avancement automatique phase',
+    generate_group_matches: 'Génération matchs de poule',
     other: 'Action staff',
   };
 

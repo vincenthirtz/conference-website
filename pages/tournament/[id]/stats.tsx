@@ -265,6 +265,14 @@ export default function TournamentStatsPage({ tournament, teamStats }: Props) {
                   Top maps
                 </Button>
               </Link>
+              <Link href={`/tournament/${tournament.id}/mvp`}>
+                <Button
+                  type="button"
+                  className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-yellow-400"
+                >
+                  MVP
+                </Button>
+              </Link>
               <Link href={`/tournament/${tournament.id}/bracket`}>
                 <Button
                   type="button"

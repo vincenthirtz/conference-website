@@ -10,6 +10,7 @@ import {
 import { sendTeamJoinEmail } from '@/utils/email';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { validateRole } from '@/utils/apiHelpers';
+import { isTeamRosterLocked, rosterLockErrorMessage } from '@/utils/teams/rosterLock';
 
 type AddMemberResponse =
   | {
@@ -54,6 +55,14 @@ export default async function handler(
 
   if (!captainTeam) {
     return res.status(403).json({ error: 'You must be a team captain' });
+  }
+
+  // Garde roster lock : un capitaine ne peut PAS forcer le verrouillage.
+  const lockStatus = await isTeamRosterLocked(captainTeam.id);
+  if (lockStatus.locked) {
+    return res.status(409).json({
+      error: rosterLockErrorMessage(lockStatus),
+    } as any);
   }
 
   const { userId, email, role, battleTag } = req.body || {};

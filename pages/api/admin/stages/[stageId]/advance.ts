@@ -5,13 +5,19 @@
 // Mode auto   : { auto: true }
 //   → lit advancement_rules depuis settings du stage :
 //     { advance_top: N, target_stage_id: "uuid", seed_by: "standings" | "manual" | "none" }
-//   → récupère le classement, filtre les N premiers, les inscrit dans le stage cible
+//     OU
+//     { advance_per_group: N, target_stage_id: "uuid", seed_by: ... }
+//   → mode top_n : prend les N premiers du classement global
+//   → mode per_group : prend les N premiers de CHAQUE poule (stage type 'group')
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
-import { computeStageStandings } from '@/utils/stages/standings';
+import {
+  computeStageStandings,
+  computeGroupedStandings,
+} from '@/utils/stages/standings';
 import { isValidUUID } from '@/utils/apiHelpers';
 
 type AdvancedTeam = { teamId: string; seed: number | null };
@@ -69,25 +75,41 @@ async function handler(
       isAutoMode = true;
       const rules = sourceStage.settings?.advancement_rules;
 
-      if (!rules || !rules.advance_top || !rules.target_stage_id) {
+      const hasTopN =
+        rules && typeof rules.advance_top === 'number' && rules.advance_top > 0;
+      const hasPerGroup =
+        rules &&
+        typeof rules.advance_per_group === 'number' &&
+        rules.advance_per_group > 0;
+
+      if (!rules || !rules.target_stage_id || (!hasTopN && !hasPerGroup)) {
         return res.status(400).json({
           error:
             'Mode auto : advancement_rules manquant dans les settings du stage. ' +
-            'Requis : { advance_top, target_stage_id, seed_by? }',
+            'Requis : { target_stage_id, advance_top OU advance_per_group, seed_by? }',
         });
       }
 
       targetStageId = rules.target_stage_id;
       finalSeedMode = rules.seed_by || 'standings';
 
-      // Compute standings and take top N
-      const standings = await computeStageStandings(
-        sourceStageId,
-        sourceStage.stage_type || 'other'
-      );
-
-      const advanceTop = Number(rules.advance_top);
-      teamIds = standings.slice(0, advanceTop).map((s) => s.teamId);
+      if (hasPerGroup && sourceStage.stage_type === 'group') {
+        // Top N par poule
+        const grouped = await computeGroupedStandings(sourceStageId);
+        const perGroup = Number(rules.advance_per_group);
+        teamIds = [];
+        for (const ids of Object.values(grouped.groups)) {
+          teamIds.push(...ids.slice(0, perGroup).map((s) => s.teamId));
+        }
+      } else {
+        // Top N global
+        const standings = await computeStageStandings(
+          sourceStageId,
+          sourceStage.stage_type || 'other'
+        );
+        const advanceTop = Number(rules.advance_top);
+        teamIds = standings.slice(0, advanceTop).map((s) => s.teamId);
+      }
 
       if (teamIds.length === 0) {
         return res.status(400).json({

@@ -44,6 +44,7 @@ export type Tournament = {
   status: TournamentStatus | string | null;
   start_date: string | null;
   end_date: string | null;
+  roster_locked_at: string | null;
   timezone: string | null;
   format_type: FormatType | string | null;
   max_teams: number | null;
@@ -167,6 +168,12 @@ export type Match = {
   next_match_win_slot: 1 | 2 | null;
   next_match_lose_id: string | null;
   next_match_lose_slot: 1 | 2 | null;
+  dispute_reason: string | null;
+  dispute_opened_by: string | null;
+  dispute_opened_at: string | null;
+  dispute_resolution: string | null;
+  dispute_resolved_by: string | null;
+  dispute_resolved_at: string | null;
   updated_at: string | null;
 };
 
