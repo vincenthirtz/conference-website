@@ -14,6 +14,7 @@ const siteSections: SiteSection[] = [
     links: [
       { label: 'Accueil', href: '/' },
       { label: "L'association", href: '/association' },
+      { label: '\u00c0 propos', href: '/about' },
       { label: 'Partenaires', href: '/partenaires' },
       { label: 'Tournoi 2025', href: '/tournoi' },
       { label: 'Timeline 2026', href: '/timeline-2026' },
@@ -35,8 +36,12 @@ const siteSections: SiteSection[] = [
     description: 'Inscription, \u00e9quipes et \u00e9changes avec le staff.',
     links: [
       { label: 'Inscription staff / joueur', href: '/register' },
+      { label: 'Inscription tournoi f\u00e9minin 2026', href: '/inscription-2026' },
       { label: 'Cr\u00e9er une \u00e9quipe', href: '/team/create' },
+      { label: 'Espace joueur', href: '/player' },
+      { label: 'Devenir partenaire', href: '/partenaires/demande' },
       { label: 'Contact', href: '/contact' },
+      { label: 'Signalement / Support', href: '/support' },
       { label: 'Faire un don', href: '/don' },
     ],
   },
