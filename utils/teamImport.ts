@@ -39,7 +39,7 @@ export type ImportTeamsOptions = {
   staffId?: string | null;
 };
 
-function slugify(name: string): string {
+export function slugify(name: string): string {
   return name
     .toLowerCase()
     .normalize('NFD')

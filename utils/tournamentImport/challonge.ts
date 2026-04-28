@@ -39,12 +39,17 @@ export function parseChallongeRef(input: string): string {
   try {
     const url = new URL(trimmed);
     if (url.hostname.endsWith('challonge.com')) {
-      const subdomain = url.hostname.replace('.challonge.com', '');
       const path = url.pathname.replace(/^\/+|\/+$/g, '');
-      if (subdomain && subdomain !== 'challonge' && subdomain !== 'www') {
-        return `${subdomain}-${path}`;
+      // Root domain (challonge.com or www.challonge.com) — slug is the path.
+      if (
+        url.hostname === 'challonge.com' ||
+        url.hostname === 'www.challonge.com'
+      ) {
+        return path;
       }
-      return path;
+      // Community tournament on a subdomain — Challonge expects "<sub>-<slug>".
+      const subdomain = url.hostname.replace('.challonge.com', '');
+      return `${subdomain}-${path}`;
     }
   } catch {
     // not a URL, treat as id/slug
