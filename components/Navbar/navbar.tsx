@@ -325,28 +325,6 @@ function Navbar(): JSX.Element {
       ],
     },
     {
-      title: 'Gestion partenaires',
-      ref: '',
-      minRole: 'admin',
-      children: [
-        {
-          title: 'Partenaires – liste',
-          ref: '/admin/partners',
-          minRole: 'admin',
-        },
-        {
-          title: 'Ajouter un partenaire',
-          ref: '/admin/partners/new',
-          minRole: 'admin',
-        },
-        {
-          title: 'Demandes de partenariat',
-          ref: '/admin/partnership-requests',
-          minRole: 'admin',
-        },
-      ],
-    },
-    {
       title: 'Contenu',
       ref: '',
       minRole: 'manager',
@@ -416,6 +394,28 @@ function Navbar(): JSX.Element {
           ],
         },
         {
+          title: 'Partenaires',
+          ref: '',
+          minRole: 'admin',
+          children: [
+            {
+              title: 'Partenaires – liste',
+              ref: '/admin/partners',
+              minRole: 'admin',
+            },
+            {
+              title: 'Ajouter un partenaire',
+              ref: '/admin/partners/new',
+              minRole: 'admin',
+            },
+            {
+              title: 'Demandes de partenariat',
+              ref: '/admin/partnership-requests',
+              minRole: 'admin',
+            },
+          ],
+        },
+        {
           title: 'Commentaires',
           ref: '/admin/comments',
           minRole: 'manager',
@@ -424,23 +424,6 @@ function Navbar(): JSX.Element {
           title: 'Tickets de support',
           ref: '/admin/support',
           minRole: 'manager',
-        },
-      ],
-    },
-    {
-      title: 'Gestion adhérents',
-      ref: '',
-      minRole: 'admin',
-      children: [
-        {
-          title: 'Liste des adhérents',
-          ref: '/admin/adherents',
-          minRole: 'admin',
-        },
-        {
-          title: 'Ajouter un adhérent',
-          ref: '/admin/adherents/new',
-          minRole: 'admin',
         },
       ],
     },
@@ -478,6 +461,23 @@ function Navbar(): JSX.Element {
           title: 'Créer un utilisateur',
           ref: '/admin/users/new',
           minRole: 'admin',
+        },
+        {
+          title: 'Adhérents',
+          ref: '',
+          minRole: 'admin',
+          children: [
+            {
+              title: 'Liste des adhérents',
+              ref: '/admin/adherents',
+              minRole: 'admin',
+            },
+            {
+              title: 'Ajouter un adhérent',
+              ref: '/admin/adherents/new',
+              minRole: 'admin',
+            },
+          ],
         },
       ],
     },
