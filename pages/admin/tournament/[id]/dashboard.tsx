@@ -19,6 +19,8 @@ import UpcomingMatchRow from '@/components/admin/dashboard/UpcomingMatchRow';
 import ScoreEntryModal from '@/components/admin/dashboard/ScoreEntryModal';
 import DisputeResolveModal from '@/components/admin/dashboard/DisputeResolveModal';
 import ConfirmAdvanceModal from '@/components/admin/dashboard/ConfirmAdvanceModal';
+import SupportTicketsDonut from '@/components/admin/dashboard/SupportTicketsDonut';
+import DiscordHealthGrid from '@/components/admin/dashboard/DiscordHealthGrid';
 import {
   fetchDashboardData,
   type DashboardData,
@@ -704,6 +706,34 @@ function MegaDashboardPage({ initialData, initialError }: Props) {
                     }}
                   />
                 )}
+                {sig.cronCheckin.isStale && (
+                  <ActionableAlert
+                    severity="critical"
+                    icon={<span>⏰</span>}
+                    title="Cron check-in en panne"
+                    message={
+                      sig.cronCheckin.lastRunAt
+                        ? `Dernier passage il y a ${sig.cronCheckin.minutesSince} min. Les rappels et auto-forfaits ne tournent plus.`
+                        : "Le cron n'a jamais pu écrire de heartbeat. Vérifie la configuration Netlify Scheduled Functions et CRON_SECRET."
+                    }
+                    cta={{
+                      label: 'Check-in',
+                      href: `/admin/tournament/${tournamentId}/checkin`,
+                    }}
+                  />
+                )}
+                {sig.discordHealth.missingExpectedCount > 0 && (
+                  <ActionableAlert
+                    severity="warning"
+                    icon={<span>🔔</span>}
+                    title={`${sig.discordHealth.missingExpectedCount} canal/canaux Discord manquant${sig.discordHealth.missingExpectedCount > 1 ? 's' : ''}`}
+                    message="Au moins un canal sans webhook actif alors qu'on attend du trafic dessus."
+                    cta={{
+                      label: 'Discord',
+                      href: `/admin/tournament/${tournamentId}/discord`,
+                    }}
+                  />
+                )}
                 {/* Alertes "génériques" héritées de l'ancien dashboard */}
                 {data.alerts.map((a, i) => (
                   <ActionableAlert
@@ -801,6 +831,7 @@ function MegaDashboardPage({ initialData, initialError }: Props) {
                             ongoingMatches={st.ongoingMatches}
                             isActive={st.is_active}
                             teamsCount={st.teamsCount}
+                            hourlyBuckets={st.hourlyBuckets}
                             isReadyToAdvance={readyStageIds.has(st.id)}
                             onAdvance={
                               readyStageIds.has(st.id)
@@ -961,6 +992,80 @@ function MegaDashboardPage({ initialData, initialError }: Props) {
                         })}
                       </ul>
                     )}
+                  </WidgetCard>
+
+                  <WidgetCard
+                    title="Tickets support"
+                    badge={
+                      sig.tickets.totalOpen > 0
+                        ? sig.tickets.totalOpen
+                        : undefined
+                    }
+                    ctaHref={`/admin/support?tournament_id=${tournamentId}&status=open`}
+                    ctaLabel="Ouvrir"
+                  >
+                    <SupportTicketsDonut tickets={sig.tickets} />
+                  </WidgetCard>
+
+                  <WidgetCard
+                    title="Webhooks Discord"
+                    badge={
+                      sig.discordHealth.configuredCount > 0
+                        ? `${sig.discordHealth.configuredCount}/${sig.discordHealth.channels.length}`
+                        : undefined
+                    }
+                    ctaHref={`/admin/tournament/${tournamentId}/discord`}
+                    ctaLabel="Configurer"
+                  >
+                    <DiscordHealthGrid
+                      health={sig.discordHealth}
+                      nowMs={nowMs}
+                    />
+                  </WidgetCard>
+
+                  <WidgetCard
+                    title="Cron check-in"
+                    badge={
+                      sig.cronCheckin.isStale
+                        ? '⚠'
+                        : sig.cronCheckin.lastRunAt
+                          ? 'OK'
+                          : undefined
+                    }
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p
+                          className={`text-sm font-semibold ${
+                            sig.cronCheckin.isStale
+                              ? 'text-red-300'
+                              : sig.cronCheckin.lastRunAt
+                                ? 'text-emerald-300'
+                                : 'text-gray-400'
+                          }`}
+                        >
+                          {sig.cronCheckin.lastRunAt
+                            ? sig.cronCheckin.minutesSince === 0
+                              ? "À l'instant"
+                              : sig.cronCheckin.minutesSince! < 60
+                                ? `il y a ${sig.cronCheckin.minutesSince} min`
+                                : `il y a ${Math.floor(sig.cronCheckin.minutesSince! / 60)}h`
+                            : 'Jamais lancé'}
+                        </p>
+                        <p className="mt-0.5 text-[10px] text-gray-500">
+                          {sig.cronCheckin.isStale
+                            ? '> 60 min sans heartbeat — emails / forfaits suspendus'
+                            : 'Heartbeat OK (cron toutes les 5 min, seuil 60 min)'}
+                        </p>
+                      </div>
+                      {sig.cronCheckin.lastRunAt && (
+                        <span className="text-[10px] text-gray-500 tabular-nums">
+                          {new Date(
+                            sig.cronCheckin.lastRunAt
+                          ).toLocaleTimeString('fr-FR')}
+                        </span>
+                      )}
+                    </div>
                   </WidgetCard>
                 </div>
 

@@ -2,6 +2,7 @@
 // Petite barre de progression pour une phase (finished/total) avec label.
 
 import Link from 'next/link';
+import Sparkline from './Sparkline';
 
 const STAGE_TYPE_LABEL: Record<string, string> = {
   group: 'Poule',
@@ -24,6 +25,8 @@ type Props = {
   teamsCount: number;
   isReadyToAdvance?: boolean;
   onAdvance?: () => void;
+  /** Buckets horaires sur les 12 dernières heures (matchs finis/h). */
+  hourlyBuckets?: number[];
 };
 
 export default function StageProgressBar({
@@ -38,6 +41,7 @@ export default function StageProgressBar({
   teamsCount,
   isReadyToAdvance,
   onAdvance,
+  hourlyBuckets,
 }: Props) {
   const percent =
     totalMatches > 0 ? Math.round((finishedMatches / totalMatches) * 100) : 0;
@@ -106,12 +110,38 @@ export default function StageProgressBar({
           style={{ width: `${percent}%` }}
         />
       </div>
-      {remaining > 0 && (
-        <p className="mt-1 text-[10px] text-gray-500">
-          {remaining} match{remaining > 1 ? 's' : ''} restant
-          {remaining > 1 ? 's' : ''}
-        </p>
-      )}
+      <div className="mt-1.5 flex items-end justify-between gap-2">
+        {remaining > 0 ? (
+          <p className="text-[10px] text-gray-500">
+            {remaining} match{remaining > 1 ? 's' : ''} restant
+            {remaining > 1 ? 's' : ''}
+          </p>
+        ) : (
+          <span />
+        )}
+        {hourlyBuckets && hourlyBuckets.some((v) => v > 0) && (
+          <div
+            className="flex items-center gap-1.5"
+            title={`Cadence sur 12h : ${hourlyBuckets.join(', ')}`}
+          >
+            <span className="text-[9px] uppercase tracking-wider text-gray-500">
+              12h
+            </span>
+            <Sparkline
+              values={hourlyBuckets}
+              width={72}
+              height={20}
+              className={
+                percent === 100
+                  ? 'text-emerald-300'
+                  : percent >= 50
+                    ? 'text-blue-300'
+                    : 'text-purple-300'
+              }
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

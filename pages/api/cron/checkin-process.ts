@@ -7,6 +7,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { processCheckinForUpcomingMatches } from '@/utils/checkin';
+import { supabaseAdmin } from '@/utils/supabase';
 
 export const config = {
   api: {
@@ -54,6 +55,26 @@ export default async function handler(
       summary.acted,
       summary.errors
     );
+
+    // Heartbeat : on note la dernière exécution dans site_settings pour que
+    // le mega-dashboard puisse afficher "il y a X min" et alerter si > 60 min.
+    if (supabaseAdmin) {
+      try {
+        const nowIso = new Date().toISOString();
+        await supabaseAdmin.from('site_settings').upsert(
+          {
+            key: 'last_cron_checkin_at',
+            value: nowIso,
+            description:
+              'ISO timestamp du dernier passage du cron /api/cron/checkin-process (heartbeat dashboard).',
+          },
+          { onConflict: 'key' }
+        );
+      } catch (e) {
+        console.error('[cron/checkin] heartbeat write error:', e);
+      }
+    }
+
     return res.status(200).json({
       success: true,
       ...summary,

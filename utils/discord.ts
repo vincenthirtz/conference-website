@@ -82,6 +82,30 @@ const COLORS = {
  * Low-level POST
  * ---------------------------------------------------------*/
 
+/**
+ * Met à jour le statut du dernier POST côté discord_webhooks. Best-effort :
+ * si la migration database/discord_webhook_last_post.sql n'est pas appliquée,
+ * l'erreur est silencieuse (la fonctionnalité "stale" du dashboard se dégrade
+ * en "config-only" sans empêcher le POST principal).
+ */
+async function trackWebhookPost(
+  webhookUrl: string,
+  status: 'ok' | 'failed'
+): Promise<void> {
+  if (!webhookUrl || !supabaseAdmin) return;
+  try {
+    await supabaseAdmin
+      .from('discord_webhooks')
+      .update({
+        last_post_at: new Date().toISOString(),
+        last_post_status: status,
+      })
+      .eq('webhook_url', webhookUrl);
+  } catch {
+    // Migration non appliquée ou autre erreur — on ne bloque jamais le POST principal.
+  }
+}
+
 export async function postToDiscordWebhook(
   webhookUrl: string,
   payload: DiscordWebhookPayload
@@ -100,9 +124,13 @@ export async function postToDiscordWebhook(
         res.status,
         text.slice(0, 300)
       );
+      void trackWebhookPost(webhookUrl, 'failed');
+    } else {
+      void trackWebhookPost(webhookUrl, 'ok');
     }
   } catch (e) {
     console.error('[discord] webhook POST error:', e);
+    void trackWebhookPost(webhookUrl, 'failed');
   }
 }
 
@@ -132,7 +160,10 @@ async function resolveWebhook(
       .maybeSingle();
 
     if (scoped?.webhook_url) {
-      return { url: scoped.webhook_url, roleMention: scoped.role_mention ?? null };
+      return {
+        url: scoped.webhook_url,
+        roleMention: scoped.role_mention ?? null,
+      };
     }
   }
 
@@ -146,7 +177,10 @@ async function resolveWebhook(
     .maybeSingle();
 
   if (global?.webhook_url) {
-    return { url: global.webhook_url, roleMention: global.role_mention ?? null };
+    return {
+      url: global.webhook_url,
+      roleMention: global.role_mention ?? null,
+    };
   }
 
   return null;
@@ -168,7 +202,10 @@ function formatRoleMention(roleMention: string | null | undefined): string {
   return trimmed;
 }
 
-function teamRolePing(discordRoleId: string | null | undefined, fallbackName: string): string {
+function teamRolePing(
+  discordRoleId: string | null | undefined,
+  fallbackName: string
+): string {
   if (discordRoleId && /^\d+$/.test(discordRoleId.trim())) {
     return `<@&${discordRoleId.trim()}>`;
   }
@@ -188,7 +225,12 @@ function buildAllowedMentions(
 
   if (channelMention) {
     const m = channelMention.trim();
-    if (m === 'everyone' || m === '@everyone' || m === 'here' || m === '@here') {
+    if (
+      m === 'everyone' ||
+      m === '@everyone' ||
+      m === 'here' ||
+      m === '@here'
+    ) {
       parse.push('everyone');
     } else if (/^\d+$/.test(m)) {
       roles.add(m);
@@ -291,8 +333,16 @@ export type MatchStartingNotification = {
   tournamentName?: string | null;
   matchId: string;
   roundName?: string | null;
-  team1: { name: string; logoUrl?: string | null; discordRoleId?: string | null };
-  team2: { name: string; logoUrl?: string | null; discordRoleId?: string | null };
+  team1: {
+    name: string;
+    logoUrl?: string | null;
+    discordRoleId?: string | null;
+  };
+  team2: {
+    name: string;
+    logoUrl?: string | null;
+    discordRoleId?: string | null;
+  };
   lobbyCode?: string | null;
   streamUrl?: string | null;
   scheduledAt?: string | null;
@@ -311,7 +361,11 @@ export async function notifyMatchStarting(
 
   const fields: DiscordEmbedField[] = [];
   if (data.matchFormat) {
-    fields.push({ name: 'Format', value: data.matchFormat.toUpperCase(), inline: true });
+    fields.push({
+      name: 'Format',
+      value: data.matchFormat.toUpperCase(),
+      inline: true,
+    });
   }
   if (data.roundName) {
     fields.push({ name: 'Round', value: data.roundName, inline: true });
@@ -321,7 +375,11 @@ export async function notifyMatchStarting(
     fields.push({ name: 'Programmé', value: dateLabel, inline: true });
   }
   if (data.lobbyCode) {
-    fields.push({ name: 'Code lobby', value: `\`${data.lobbyCode}\``, inline: true });
+    fields.push({
+      name: 'Code lobby',
+      value: `\`${data.lobbyCode}\``,
+      inline: true,
+    });
   }
   if (data.streamUrl) {
     fields.push({ name: 'Stream', value: data.streamUrl, inline: false });
@@ -423,7 +481,9 @@ export async function notifyMatchResult(
         color: COLORS.matchResult,
         fields,
         timestamp: new Date().toISOString(),
-        footer: { text: data.tournamentName || `Match ${data.matchId.slice(0, 8)}` },
+        footer: {
+          text: data.tournamentName || `Match ${data.matchId.slice(0, 8)}`,
+        },
         ...(winnerLogo ? { thumbnail: { url: winnerLogo } } : {}),
       },
     ],
@@ -452,13 +512,25 @@ export async function notifyBracketUpdate(
 
   const fields: DiscordEmbedField[] = [];
   if (data.loserName) {
-    fields.push({ name: 'Éliminée / battue', value: data.loserName, inline: true });
+    fields.push({
+      name: 'Éliminée / battue',
+      value: data.loserName,
+      inline: true,
+    });
   }
   if (data.nextRoundName) {
-    fields.push({ name: 'Prochain round', value: data.nextRoundName, inline: true });
+    fields.push({
+      name: 'Prochain round',
+      value: data.nextRoundName,
+      inline: true,
+    });
   }
   if (data.nextOpponentName) {
-    fields.push({ name: 'Prochain adversaire', value: data.nextOpponentName, inline: false });
+    fields.push({
+      name: 'Prochain adversaire',
+      value: data.nextOpponentName,
+      inline: false,
+    });
   }
 
   const channelPing = formatRoleMention(cfg.roleMention);
@@ -495,7 +567,10 @@ export type AnnouncementCrosspost = {
 export async function notifyAnnouncement(
   data: AnnouncementCrosspost
 ): Promise<void> {
-  const cfg = await resolveWebhook(data.tournamentId ?? null, 'general_announcements');
+  const cfg = await resolveWebhook(
+    data.tournamentId ?? null,
+    'general_announcements'
+  );
   if (!cfg) return;
 
   const description = data.message.slice(0, 2000);
@@ -613,7 +688,10 @@ export async function notifyCheckinForfeit(
   const cfg = await resolveWebhook(data.tournamentId, 'checkin_reminders');
   if (!cfg) return;
 
-  const teamPing = teamRolePing(data.forfeitedTeamRoleId, data.forfeitedTeamName);
+  const teamPing = teamRolePing(
+    data.forfeitedTeamRoleId,
+    data.forfeitedTeamName
+  );
   const channelPing = formatRoleMention(cfg.roleMention);
 
   await postToDiscordWebhook(cfg.url, {
@@ -628,7 +706,9 @@ export async function notifyCheckinForfeit(
         footer: { text: `Match ${data.matchId.slice(0, 8)}` },
       },
     ],
-    allowed_mentions: buildAllowedMentions(cfg.roleMention, [data.forfeitedTeamRoleId]),
+    allowed_mentions: buildAllowedMentions(cfg.roleMention, [
+      data.forfeitedTeamRoleId,
+    ]),
   });
 }
 
@@ -743,7 +823,11 @@ export async function notifySupportTicket(
   ];
 
   if (data.subject) {
-    fields.push({ name: 'Sujet', value: data.subject.slice(0, 256), inline: false });
+    fields.push({
+      name: 'Sujet',
+      value: data.subject.slice(0, 256),
+      inline: false,
+    });
   }
 
   // Truncate message at 1500 chars (embed description limit is 4096 but we keep it readable)
@@ -792,7 +876,11 @@ export async function notifySupportTicket(
       messageId = body?.id ?? null;
     } else {
       const text = await res.text().catch(() => '');
-      console.error('[discord] support ticket POST failed:', res.status, text.slice(0, 300));
+      console.error(
+        '[discord] support ticket POST failed:',
+        res.status,
+        text.slice(0, 300)
+      );
     }
   } catch (e) {
     console.error('[discord] support ticket POST error:', e);
@@ -875,7 +963,11 @@ export async function postMvpPoll(
 
     if (!res.ok) {
       const text = await res.text().catch(() => '');
-      console.error('[discord] mvp poll POST failed:', res.status, text.slice(0, 300));
+      console.error(
+        '[discord] mvp poll POST failed:',
+        res.status,
+        text.slice(0, 300)
+      );
       return { messageId: null, posted: false };
     }
 

@@ -24,6 +24,8 @@ export type StageProgress = {
   ongoingMatches: number;
   cancelledMatches: number;
   teamsCount: number;
+  /** Cadence : matches terminés par tranche d'1h sur les dernières 12h (du plus ancien au plus récent). */
+  hourlyBuckets: number[];
 };
 
 export type UpcomingMatch = {
@@ -108,6 +110,48 @@ export type RecentActivity = {
   createdAt: string;
 };
 
+export type TicketsBreakdown = {
+  /** Total tickets ouverts pour ce tournoi. */
+  totalOpen: number;
+  byCategory: {
+    dispute: number;
+    behavior: number;
+    technical: number;
+    other: number;
+  };
+  /** Décompose par sévérité — utilisé pour la couleur de chaque tranche. */
+  bySeverity: { low: number; medium: number; high: number };
+};
+
+export type DiscordWebhookStatus = {
+  channelType: string;
+  configured: boolean;
+  active: boolean;
+  /** Présent uniquement si la migration database/discord_webhook_last_post.sql est appliquée. */
+  lastPostAt: string | null;
+  lastPostStatus: 'ok' | 'failed' | null;
+  /** "stale" = un webhook actif qui n'a pas posté depuis > 4h alors qu'on attend du trafic. */
+  isStale: boolean;
+};
+
+export type DiscordHealth = {
+  /** Données par channel_type, scoped au tournoi (avec fallback global webhook). */
+  channels: DiscordWebhookStatus[];
+  /** Combien de channels sont configurés et actifs. */
+  configuredCount: number;
+  /** Combien de channels manquent une config alors qu'on attend du trafic. */
+  missingExpectedCount: number;
+};
+
+export type CronCheckinHeartbeat = {
+  /** ISO timestamp du dernier passage du cron, ou null si jamais lancé / heartbeat manquant. */
+  lastRunAt: string | null;
+  /** Minutes depuis le dernier passage. null si jamais lancé. */
+  minutesSince: number | null;
+  /** true si > 60 min ou jamais lancé alors qu'on a des matchs imminents (next 24h). */
+  isStale: boolean;
+};
+
 export type DashboardSignals = {
   disputesOpen: { count: number; matches: DisputedMatch[] };
   checkinNext24h: {
@@ -132,6 +176,9 @@ export type DashboardSignals = {
   liveMatches: LiveMatch[];
   velocity: Velocity;
   recentActivity: RecentActivity[];
+  tickets: TicketsBreakdown;
+  discordHealth: DiscordHealth;
+  cronCheckin: CronCheckinHeartbeat;
 };
 
 export type DashboardData = {
@@ -321,9 +368,25 @@ export async function fetchDashboardData(
       }
     }
 
-    // Stage progress
+    // Stage progress (avec sparkline 12h)
+    const SPARKLINE_HOURS = 12;
+    const sparklineNowMs = Date.now();
+    const sparklineStartMs = sparklineNowMs - SPARKLINE_HOURS * 3_600_000;
+
     const stageProgress: StageProgress[] = stages.map((s) => {
       const stageMatches = matches.filter((m) => m.stage_id === s.id);
+      // Buckets : index 0 = heure la plus ancienne, index 11 = dernière heure pleine
+      const buckets = new Array(SPARKLINE_HOURS).fill(0) as number[];
+      for (const m of stageMatches) {
+        if (m.status !== 'finished' || !m.completed_at) continue;
+        const ts = new Date(m.completed_at).getTime();
+        if (ts < sparklineStartMs || ts > sparklineNowMs) continue;
+        const idx = Math.min(
+          SPARKLINE_HOURS - 1,
+          Math.floor((ts - sparklineStartMs) / 3_600_000)
+        );
+        buckets[idx]++;
+      }
       return {
         id: s.id,
         name: s.name,
@@ -340,6 +403,7 @@ export async function fetchDashboardData(
         cancelledMatches: stageMatches.filter((m) => m.status === 'cancelled')
           .length,
         teamsCount: stageTeamCounts.get(s.id) ?? 0,
+        hourlyBuckets: buckets,
       };
     });
 
@@ -481,6 +545,9 @@ export async function fetchDashboardData(
       activeMvpPollsRes,
       teamMembersCountRes,
       recentLogsRes,
+      ticketsBreakdownRes,
+      discordWebhooksRes,
+      cronHeartbeatRes,
     ] = await Promise.all([
       supabaseAdmin
         .from('tournament_teams')
@@ -516,6 +583,25 @@ export async function fetchDashboardData(
         .eq('tournament_id', tournamentId)
         .order('created_at', { ascending: false })
         .limit(10),
+      // Tickets ouverts pour le donut (catégorie + sévérité)
+      supabaseAdmin
+        .from('support_tickets')
+        .select('category, severity')
+        .eq('tournament_id', tournamentId)
+        .eq('status', 'open'),
+      // Discord webhooks scoped au tournoi + globals (fallback)
+      // On tente de lire last_post_at / last_post_status si la migration database/discord_webhook_last_post.sql
+      // est appliquée ; sinon on dégrade gracieusement (PGRST204).
+      supabaseAdmin
+        .from('discord_webhooks')
+        .select('*')
+        .or(`tournament_id.eq.${tournamentId},tournament_id.is.null`),
+      // Heartbeat du cron checkin (clé site_settings : last_cron_checkin_at)
+      supabaseAdmin
+        .from('site_settings')
+        .select('value, updated_at')
+        .eq('key', 'last_cron_checkin_at')
+        .maybeSingle(),
     ]);
 
     // Disputes
@@ -817,6 +903,140 @@ export async function fetchDashboardData(
       }
     );
 
+    /* -----------------------------------------------------------
+     * Tickets breakdown (donut)
+     * ---------------------------------------------------------*/
+
+    const ticketRows = (ticketsBreakdownRes.data ?? []) as {
+      category: 'dispute' | 'behavior' | 'technical' | 'other';
+      severity: 'low' | 'medium' | 'high';
+    }[];
+    const tickets: TicketsBreakdown = {
+      totalOpen: ticketRows.length,
+      byCategory: { dispute: 0, behavior: 0, technical: 0, other: 0 },
+      bySeverity: { low: 0, medium: 0, high: 0 },
+    };
+    for (const t of ticketRows) {
+      if (t.category && t.category in tickets.byCategory) {
+        tickets.byCategory[t.category]++;
+      }
+      if (t.severity && t.severity in tickets.bySeverity) {
+        tickets.bySeverity[t.severity]++;
+      }
+    }
+
+    /* -----------------------------------------------------------
+     * Discord webhook health
+     * ---------------------------------------------------------*/
+
+    const VALID_DISCORD_CHANNELS = [
+      'match_announcements',
+      'match_results',
+      'bracket_updates',
+      'general_announcements',
+      'veto_live',
+      'checkin_reminders',
+      'support_tickets',
+      'mvp_polls',
+    ] as const;
+
+    const webhookRows = (discordWebhooksRes.data ?? []) as {
+      tournament_id: string | null;
+      channel_type: string;
+      is_active: boolean | null;
+      last_post_at?: string | null;
+      last_post_status?: 'ok' | 'failed' | null;
+    }[];
+
+    // Quels channels devrait-on attendre du trafic dessus ?
+    const expectsTraffic = (channel: string): boolean => {
+      switch (channel) {
+        case 'match_results':
+          return finishedMatches > 0;
+        case 'match_announcements':
+        case 'bracket_updates':
+          return ongoingMatches > 0 || finishedMatches > 0;
+        case 'checkin_reminders':
+          return checkin24h.upcoming > 0;
+        case 'mvp_polls':
+          return finishedMatches > 0;
+        default:
+          return false; // veto/support/general → on ne flag pas comme stale
+      }
+    };
+
+    const STALE_HOURS = 4;
+    const channels: DiscordWebhookStatus[] = VALID_DISCORD_CHANNELS.map(
+      (channelType) => {
+        // Préfère le webhook scoped au tournoi, sinon le global, sinon non configuré
+        const scoped = webhookRows.find(
+          (w) =>
+            w.channel_type === channelType && w.tournament_id === tournamentId
+        );
+        const global = webhookRows.find(
+          (w) => w.channel_type === channelType && w.tournament_id === null
+        );
+        const row = scoped ?? global;
+
+        const lastPostAt = row?.last_post_at ?? null;
+        const lastPostStatus = row?.last_post_status ?? null;
+        const active = !!row?.is_active;
+
+        let isStale = false;
+        if (active && expectsTraffic(channelType)) {
+          if (!lastPostAt) {
+            // On ne peut pas affirmer "stale" sans la migration appliquée — on reste discret.
+            isStale = false;
+          } else {
+            const ageMs = NOW_MS - new Date(lastPostAt).getTime();
+            isStale = ageMs > STALE_HOURS * 3_600_000;
+          }
+        }
+
+        return {
+          channelType,
+          configured: !!row,
+          active,
+          lastPostAt,
+          lastPostStatus,
+          isStale,
+        };
+      }
+    );
+
+    const discordHealth: DiscordHealth = {
+      channels,
+      configuredCount: channels.filter((c) => c.configured && c.active).length,
+      missingExpectedCount: channels.filter(
+        (c) => expectsTraffic(c.channelType) && (!c.configured || !c.active)
+      ).length,
+    };
+
+    /* -----------------------------------------------------------
+     * Cron checkin heartbeat
+     * ---------------------------------------------------------*/
+
+    const heartbeatRow = cronHeartbeatRes.data as {
+      value: string | null;
+      updated_at: string | null;
+    } | null;
+    const heartbeatIso =
+      heartbeatRow?.value ?? heartbeatRow?.updated_at ?? null;
+    let cronMinutesSince: number | null = null;
+    if (heartbeatIso) {
+      const ageMs = NOW_MS - new Date(heartbeatIso).getTime();
+      cronMinutesSince = Math.max(0, Math.floor(ageMs / 60_000));
+    }
+    // Stale si le cron ne s'est pas exécuté depuis > 60 min ET on a des matchs imminents.
+    // Si jamais lancé mais qu'on n'a aucun match à venir, ce n'est pas critique.
+    const cronCheckin: CronCheckinHeartbeat = {
+      lastRunAt: heartbeatIso,
+      minutesSince: cronMinutesSince,
+      isStale:
+        checkin24h.upcoming > 0 &&
+        (cronMinutesSince === null || cronMinutesSince > 60),
+    };
+
     const signals: DashboardSignals = {
       disputesOpen: { count: disputedRows.length, matches: disputedMatches },
       checkinNext24h: checkin24h,
@@ -830,6 +1050,9 @@ export async function fetchDashboardData(
       liveMatches,
       velocity,
       recentActivity,
+      tickets,
+      discordHealth,
+      cronCheckin,
     };
 
     const data: DashboardData = {

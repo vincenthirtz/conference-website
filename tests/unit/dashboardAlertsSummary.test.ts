@@ -65,6 +65,17 @@ function makeData(
         etaIso: null,
       },
       recentActivity: [],
+      tickets: {
+        totalOpen: 0,
+        byCategory: { dispute: 0, behavior: 0, technical: 0, other: 0 },
+        bySeverity: { low: 0, medium: 0, high: 0 },
+      },
+      discordHealth: {
+        channels: [],
+        configuredCount: 0,
+        missingExpectedCount: 0,
+      },
+      cronCheckin: { lastRunAt: null, minutesSince: null, isStale: false },
       ...overrides,
     },
     guards: { current_status: 'running', guards: [] },
