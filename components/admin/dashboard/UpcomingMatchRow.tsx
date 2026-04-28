@@ -15,6 +15,21 @@ type Props = {
   stageName?: string | null;
   /** Variant visuelle : neutral (default), live, dispute */
   variant?: 'neutral' | 'live' | 'dispute';
+  /** Carte en cours (variant=live uniquement). */
+  currentMap?: { name: string; type: string | null; index: number } | null;
+  /** Format BO du match (utilisé pour l'index "carte X / total"). */
+  matchFormat?: string | null;
+  /** CTA "Saisir score" inline. Si fourni, remplace la navigation. */
+  onScoreClick?: () => void;
+  /** CTA "Résoudre" inline pour les disputes. */
+  onResolveClick?: () => void;
+};
+
+const FORMAT_TOTAL_MAPS: Record<string, number> = {
+  bo1: 1,
+  bo3: 3,
+  bo5: 5,
+  bo7: 7,
 };
 
 function formatTime(iso: string | null): string {
@@ -68,6 +83,10 @@ export default function UpcomingMatchRow({
   roundName,
   stageName,
   variant = 'neutral',
+  currentMap,
+  matchFormat,
+  onScoreClick,
+  onResolveClick,
 }: Props) {
   const dayShort = formatDayShort(scheduledAt);
   const time = formatTime(scheduledAt);
@@ -106,10 +125,28 @@ export default function UpcomingMatchRow({
             <span className="mx-2 text-gray-500">vs</span>
           )}
           <span className="font-medium">{team2Name ?? '—'}</span>
+          {variant === 'live' && currentMap && (
+            <>
+              <span className="mx-1.5 text-gray-600">·</span>
+              <span className="text-[11px] font-medium text-rose-200">
+                Map {currentMap.index}
+                {matchFormat && FORMAT_TOTAL_MAPS[matchFormat.toLowerCase()]
+                  ? `/${FORMAT_TOTAL_MAPS[matchFormat.toLowerCase()]}`
+                  : ''}
+                {' : '}
+                {currentMap.name}
+              </span>
+            </>
+          )}
         </p>
         {(roundName || stageName) && (
           <p className="truncate text-[10px] text-gray-500">
             {[stageName, roundName].filter(Boolean).join(' · ')}
+            {variant === 'live' && currentMap?.type && (
+              <span className="ml-1.5 rounded-full bg-rose-500/15 px-1.5 py-0 text-[9px] uppercase tracking-wider text-rose-300">
+                {currentMap.type}
+              </span>
+            )}
           </p>
         )}
       </div>
@@ -124,6 +161,24 @@ export default function UpcomingMatchRow({
           >
             Stream
           </a>
+        )}
+        {onResolveClick && (
+          <button
+            type="button"
+            onClick={onResolveClick}
+            className="rounded-md bg-emerald-500/15 px-2 py-1 text-[10px] font-medium text-emerald-200 hover:bg-emerald-500/25"
+          >
+            Résoudre
+          </button>
+        )}
+        {onScoreClick && (
+          <button
+            type="button"
+            onClick={onScoreClick}
+            className="rounded-md bg-blue-500/15 px-2 py-1 text-[10px] font-medium text-blue-200 hover:bg-blue-500/25"
+          >
+            Saisir score
+          </button>
         )}
         <Link
           href={`/admin/matches/${matchId}`}

@@ -46,6 +46,7 @@ function makeData(
         forfeited: 0,
       },
       conflictsCount: 0,
+      conflictsList: [],
       pendingTeamsCount: 0,
       rosterLockProximity: {
         lockedAt: null,

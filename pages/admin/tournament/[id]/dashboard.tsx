@@ -16,6 +16,9 @@ import ActionableAlert from '@/components/admin/dashboard/ActionableAlert';
 import WidgetCard from '@/components/admin/dashboard/WidgetCard';
 import StageProgressBar from '@/components/admin/dashboard/StageProgressBar';
 import UpcomingMatchRow from '@/components/admin/dashboard/UpcomingMatchRow';
+import ScoreEntryModal from '@/components/admin/dashboard/ScoreEntryModal';
+import DisputeResolveModal from '@/components/admin/dashboard/DisputeResolveModal';
+import ConfirmAdvanceModal from '@/components/admin/dashboard/ConfirmAdvanceModal';
 import {
   fetchDashboardData,
   type DashboardData,
@@ -217,6 +220,24 @@ function MegaDashboardPage({ initialData, initialError }: Props) {
   const [stale, setStale] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Modales d'actions inline
+  type MatchTarget = {
+    id: string;
+    team1Name: string | null;
+    team2Name: string | null;
+    team1Score?: number | null;
+    team2Score?: number | null;
+    matchFormat?: string | null;
+  };
+  const [scoreTarget, setScoreTarget] = useState<MatchTarget | null>(null);
+  const [disputeTarget, setDisputeTarget] = useState<
+    (MatchTarget & { reason: string | null }) | null
+  >(null);
+  const [advanceTarget, setAdvanceTarget] = useState<{
+    stageId: string;
+    stageName: string;
+  } | null>(null);
 
   const fetchDashboard = useCallback(async () => {
     if (!tournamentId) return;
@@ -546,16 +567,64 @@ function MegaDashboardPage({ initialData, initialError }: Props) {
                   />
                 )}
                 {sig.conflictsCount > 0 && (
-                  <ActionableAlert
-                    severity="warning"
-                    icon={<span>🚨</span>}
-                    title={`${sig.conflictsCount} conflit${sig.conflictsCount > 1 ? 's' : ''} de planning`}
-                    message="Une équipe est planifiée sur deux matchs qui se chevauchent."
-                    cta={{
-                      label: 'Voir',
-                      href: `/admin/tournament/${tournamentId}`,
-                    }}
-                  />
+                  <div className="group relative">
+                    <ActionableAlert
+                      severity="warning"
+                      icon={<span>🚨</span>}
+                      title={`${sig.conflictsCount} conflit${sig.conflictsCount > 1 ? 's' : ''} de planning`}
+                      message="Survolez pour voir le détail. Une équipe est planifiée sur deux matchs qui se chevauchent."
+                      cta={{
+                        label: 'Voir',
+                        href: `/admin/tournament/${tournamentId}`,
+                      }}
+                    />
+                    {sig.conflictsList.length > 0 && (
+                      <div className="invisible absolute left-0 right-0 top-full z-30 mt-1 rounded-xl border border-amber-500/30 bg-neutral-900/98 p-3 shadow-2xl backdrop-blur-sm group-hover:visible">
+                        <p className="mb-2 text-[10px] uppercase tracking-widest text-amber-300">
+                          Détail{' '}
+                          {sig.conflictsCount > sig.conflictsList.length
+                            ? `(${sig.conflictsList.length} sur ${sig.conflictsCount})`
+                            : ''}
+                        </p>
+                        <ul className="space-y-1.5 text-xs">
+                          {sig.conflictsList.map((c, i) => {
+                            const fmtTime = (iso: string) => {
+                              try {
+                                return new Date(iso).toLocaleTimeString(
+                                  'fr-FR',
+                                  {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    timeZone: 'Europe/Paris',
+                                  }
+                                );
+                              } catch {
+                                return iso;
+                              }
+                            };
+                            return (
+                              <li
+                                key={i}
+                                className="flex items-start gap-2 rounded-md bg-amber-500/5 p-1.5"
+                              >
+                                <span className="font-semibold text-amber-200">
+                                  {c.teamName ?? c.teamId.slice(0, 8)}
+                                </span>
+                                <span className="text-neutral-400">
+                                  : match {fmtTime(c.matchAScheduledAt)}
+                                  {' ↔ '}
+                                  {fmtTime(c.matchBScheduledAt)}
+                                </span>
+                                <span className="ml-auto rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-medium text-amber-200 tabular-nums">
+                                  ↔ {c.overlapMinutes}min
+                                </span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
                 )}
                 {sig.checkinNext24h.missing > 0 &&
                   sig.checkinNext24h.upcoming > 0 && (
@@ -733,6 +802,15 @@ function MegaDashboardPage({ initialData, initialError }: Props) {
                             isActive={st.is_active}
                             teamsCount={st.teamsCount}
                             isReadyToAdvance={readyStageIds.has(st.id)}
+                            onAdvance={
+                              readyStageIds.has(st.id)
+                                ? () =>
+                                    setAdvanceTarget({
+                                      stageId: st.id,
+                                      stageName: st.name,
+                                    })
+                                : undefined
+                            }
                           />
                         ))}
                       </div>
@@ -912,6 +990,18 @@ function MegaDashboardPage({ initialData, initialError }: Props) {
                             roundName={m.roundName}
                             stageName={m.stageName}
                             variant="live"
+                            currentMap={m.currentMap}
+                            matchFormat={m.matchFormat}
+                            onScoreClick={() =>
+                              setScoreTarget({
+                                id: m.id,
+                                team1Name: m.team1Name,
+                                team2Name: m.team2Name,
+                                team1Score: m.team1Score,
+                                team2Score: m.team2Score,
+                                matchFormat: m.matchFormat,
+                              })
+                            }
                           />
                         ))}
                       </div>
@@ -940,6 +1030,13 @@ function MegaDashboardPage({ initialData, initialError }: Props) {
                             streamUrl={m.stream_url}
                             roundName={m.round_name}
                             stageName={m.stage_name}
+                            onScoreClick={() =>
+                              setScoreTarget({
+                                id: m.id,
+                                team1Name: m.team1_name,
+                                team2Name: m.team2_name,
+                              })
+                            }
                           />
                         ))}
                       </div>
@@ -963,6 +1060,14 @@ function MegaDashboardPage({ initialData, initialError }: Props) {
                             scheduledAt={m.openedAt}
                             roundName={m.reason ? m.reason.slice(0, 60) : null}
                             variant="dispute"
+                            onResolveClick={() =>
+                              setDisputeTarget({
+                                id: m.id,
+                                team1Name: m.team1Name,
+                                team2Name: m.team2Name,
+                                reason: m.reason,
+                              })
+                            }
                           />
                         ))}
                       </div>
@@ -999,6 +1104,37 @@ function MegaDashboardPage({ initialData, initialError }: Props) {
           )}
         </div>
       </div>
+
+      {/* ─── Modales d'actions inline ───────────────────────────────── */}
+      <ScoreEntryModal
+        open={!!scoreTarget}
+        matchId={scoreTarget?.id ?? ''}
+        team1Name={scoreTarget?.team1Name ?? null}
+        team2Name={scoreTarget?.team2Name ?? null}
+        initialTeam1Score={scoreTarget?.team1Score ?? null}
+        initialTeam2Score={scoreTarget?.team2Score ?? null}
+        matchFormat={scoreTarget?.matchFormat ?? null}
+        onClose={() => setScoreTarget(null)}
+        onSuccess={fetchDashboard}
+      />
+      <DisputeResolveModal
+        open={!!disputeTarget}
+        matchId={disputeTarget?.id ?? ''}
+        team1Name={disputeTarget?.team1Name ?? null}
+        team2Name={disputeTarget?.team2Name ?? null}
+        reason={disputeTarget?.reason ?? null}
+        initialTeam1Score={disputeTarget?.team1Score ?? null}
+        initialTeam2Score={disputeTarget?.team2Score ?? null}
+        onClose={() => setDisputeTarget(null)}
+        onSuccess={fetchDashboard}
+      />
+      <ConfirmAdvanceModal
+        open={!!advanceTarget}
+        stageId={advanceTarget?.stageId ?? ''}
+        stageName={advanceTarget?.stageName ?? ''}
+        onClose={() => setAdvanceTarget(null)}
+        onSuccess={fetchDashboard}
+      />
     </>
   );
 }

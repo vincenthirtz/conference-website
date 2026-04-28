@@ -1,0 +1,106 @@
+// components/admin/dashboard/ConfirmAdvanceModal.tsx
+// Modale de confirmation pour avancer auto les équipes d'une phase.
+// Appelle POST /api/admin/stages/[stageId]/advance avec { auto: true }.
+
+import { useState } from 'react';
+
+type Props = {
+  open: boolean;
+  stageId: string;
+  stageName: string;
+  onClose: () => void;
+  onSuccess?: (advancedCount: number) => void;
+};
+
+export default function ConfirmAdvanceModal({
+  open,
+  stageId,
+  stageName,
+  onClose,
+  onSuccess,
+}: Props) {
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!open) return null;
+
+  async function submit() {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/stages/${stageId}/advance`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ auto: true }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || "Échec de l'avancement");
+      }
+      const json = await res.json();
+      const count = Array.isArray(json.advanced) ? json.advanced.length : 0;
+      onSuccess?.(count);
+      onClose();
+    } catch (e: unknown) {
+      setError((e as Error)?.message ?? 'Erreur inattendue');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl border border-neutral-700 bg-neutral-900 p-6 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-lg font-semibold text-white">Avancer la phase</h3>
+        <p className="mt-2 text-sm text-neutral-300">
+          La phase <span className="font-semibold text-white">{stageName}</span>{' '}
+          va être avancée automatiquement selon les règles configurées (
+          <code className="rounded bg-neutral-800 px-1 text-xs">
+            advancement_rules
+          </code>
+          ).
+        </p>
+        <p className="mt-2 text-xs text-neutral-500">
+          Les équipes éligibles seront ajoutées à la phase cible et la phase
+          source sera désactivée. Cette action est <strong>idempotente</strong>{' '}
+          mais le nettoyage manuel reste à votre charge si vous souhaitez
+          annuler.
+        </p>
+
+        {error && (
+          <p className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 p-2 text-xs text-red-200">
+            {error}
+          </p>
+        )}
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg bg-neutral-800 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-neutral-700"
+            disabled={submitting}
+          >
+            Annuler
+          </button>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={submitting}
+            className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {submitting && (
+              <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+            )}
+            🚀 Avancer maintenant
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -23,6 +23,7 @@ type Props = {
   isActive: boolean;
   teamsCount: number;
   isReadyToAdvance?: boolean;
+  onAdvance?: () => void;
 };
 
 export default function StageProgressBar({
@@ -36,6 +37,7 @@ export default function StageProgressBar({
   isActive,
   teamsCount,
   isReadyToAdvance,
+  onAdvance,
 }: Props) {
   const percent =
     totalMatches > 0 ? Math.round((finishedMatches / totalMatches) * 100) : 0;
@@ -74,6 +76,16 @@ export default function StageProgressBar({
           <span className="text-xs tabular-nums text-gray-300">
             {finishedMatches}/{totalMatches}
           </span>
+          {isReadyToAdvance && onAdvance && (
+            <button
+              type="button"
+              onClick={onAdvance}
+              className="rounded-md border border-emerald-400/40 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-200 transition-colors hover:bg-emerald-500/25"
+              title="Avancer automatiquement les équipes vers la phase suivante"
+            >
+              🚀 Avancer
+            </button>
+          )}
           <Link
             href={`/admin/tournament/${tournamentId}/matches?stage=${stageId}`}
             className="text-[10px] text-purple-300 hover:text-purple-200"

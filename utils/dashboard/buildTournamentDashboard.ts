@@ -61,6 +61,19 @@ export type LiveMatch = {
   scheduledAt: string | null;
   roundName: string | null;
   stageName: string | null;
+  matchFormat: string | null;
+  /** Carte en cours (déduite des picks veto à l'index team1Score+team2Score). */
+  currentMap: { name: string; type: string | null; index: number } | null;
+};
+
+export type ConflictDetail = {
+  teamId: string;
+  teamName: string | null;
+  matchAId: string;
+  matchAScheduledAt: string;
+  matchBId: string;
+  matchBScheduledAt: string;
+  overlapMinutes: number;
 };
 
 export type StageReady = { stageId: string; stageName: string };
@@ -105,6 +118,8 @@ export type DashboardSignals = {
     forfeited: number;
   };
   conflictsCount: number;
+  /** Top 5 des conflits détaillés pour le tooltip. */
+  conflictsList: ConflictDetail[];
   pendingTeamsCount: number;
   rosterLockProximity: {
     lockedAt: string | null;
@@ -515,19 +530,56 @@ export async function fetchDashboardData(
         openedAt: m.dispute_opened_at ?? null,
       }));
 
-    // Live matches
+    // Live matches — enrichis avec la map en cours (déduit des picks veto)
     const liveMatchesRows = matches.filter((m) => m.status === 'ongoing');
-    const liveMatches: LiveMatch[] = liveMatchesRows.map((m) => ({
-      id: m.id,
-      team1Name: m.team1_id ? (teamNameMap.get(m.team1_id) ?? null) : null,
-      team2Name: m.team2_id ? (teamNameMap.get(m.team2_id) ?? null) : null,
-      team1Score: m.team1_score ?? null,
-      team2Score: m.team2_score ?? null,
-      streamUrl: m.stream_url ?? null,
-      scheduledAt: m.scheduled_at ?? null,
-      roundName: m.round_name ?? null,
-      stageName: m.stage_id ? (stageNameMap.get(m.stage_id) ?? null) : null,
-    }));
+    const liveMatchPicks = new Map<
+      string,
+      { mapName: string; mapType: string | null; stepNumber: number }[]
+    >();
+    if (liveMatchesRows.length > 0) {
+      const liveIds = liveMatchesRows.map((m) => m.id);
+      const { data: vetoSteps } = await supabaseAdmin
+        .from('match_map_vetos')
+        .select('match_id, action, map_name, map_type, step_number')
+        .in('match_id', liveIds)
+        .in('action', ['pick', 'decider'])
+        .order('step_number', { ascending: true });
+      for (const step of vetoSteps || []) {
+        const arr = liveMatchPicks.get(step.match_id) ?? [];
+        arr.push({
+          mapName: step.map_name,
+          mapType: step.map_type ?? null,
+          stepNumber: step.step_number,
+        });
+        liveMatchPicks.set(step.match_id, arr);
+      }
+    }
+    const liveMatches: LiveMatch[] = liveMatchesRows.map((m) => {
+      const picks = liveMatchPicks.get(m.id) ?? [];
+      // La carte en cours = pick à l'index (team1Score + team2Score). Si l'index
+      // dépasse les picks disponibles, le veto n'est pas (encore) finalisé.
+      const playedCount = (m.team1_score ?? 0) + (m.team2_score ?? 0);
+      const currentPick = picks[playedCount] ?? null;
+      return {
+        id: m.id,
+        team1Name: m.team1_id ? (teamNameMap.get(m.team1_id) ?? null) : null,
+        team2Name: m.team2_id ? (teamNameMap.get(m.team2_id) ?? null) : null,
+        team1Score: m.team1_score ?? null,
+        team2Score: m.team2_score ?? null,
+        streamUrl: m.stream_url ?? null,
+        scheduledAt: m.scheduled_at ?? null,
+        roundName: m.round_name ?? null,
+        stageName: m.stage_id ? (stageNameMap.get(m.stage_id) ?? null) : null,
+        matchFormat: m.match_format ?? null,
+        currentMap: currentPick
+          ? {
+              name: currentPick.mapName,
+              type: currentPick.mapType,
+              index: playedCount + 1,
+            }
+          : null,
+      };
+    });
 
     // Check-in 24h
     const checkin24h = {
@@ -556,7 +608,7 @@ export async function fetchDashboardData(
       else checkin24h.missing++;
     }
 
-    // Conflits
+    // Conflits — on calcule le count + une short-list (top 5) pour le tooltip
     const teamMatchSlots = new Map<
       string,
       { id: string; start: number; end: number }[]
@@ -575,10 +627,40 @@ export async function fetchDashboardData(
       }
     }
     let conflictsCount = 0;
-    for (const slots of teamMatchSlots.values()) {
+    const conflictsList: ConflictDetail[] = [];
+    for (const [teamId, slots] of teamMatchSlots) {
       slots.sort((a, b) => a.start - b.start);
       for (let i = 0; i < slots.length - 1; i++) {
-        if (slots[i].end > slots[i + 1].start) conflictsCount++;
+        if (slots[i].end > slots[i + 1].start) {
+          conflictsCount++;
+          if (conflictsList.length < 5) {
+            const overlapMs = slots[i].end - slots[i + 1].start;
+            conflictsList.push({
+              teamId,
+              teamName: teamNameMap.get(teamId) ?? null,
+              matchAId: slots[i].id,
+              matchAScheduledAt: new Date(slots[i].start).toISOString(),
+              matchBId: slots[i + 1].id,
+              matchBScheduledAt: new Date(slots[i + 1].start).toISOString(),
+              overlapMinutes: Math.max(1, Math.round(overlapMs / 60_000)),
+            });
+          }
+        }
+      }
+    }
+    // Pour les conflits sans nom d'équipe, on essaye de combler
+    const missingConflictTeamIds = conflictsList
+      .filter((c) => !c.teamName)
+      .map((c) => c.teamId);
+    if (missingConflictTeamIds.length > 0) {
+      const { data: extraTeams } = await supabaseAdmin
+        .from('teams')
+        .select('id, name')
+        .in('id', missingConflictTeamIds);
+      const extraMap = new Map<string, string>();
+      for (const t of extraTeams || []) extraMap.set(t.id, t.name);
+      for (const c of conflictsList) {
+        if (!c.teamName) c.teamName = extraMap.get(c.teamId) ?? null;
       }
     }
 
@@ -739,6 +821,7 @@ export async function fetchDashboardData(
       disputesOpen: { count: disputedRows.length, matches: disputedMatches },
       checkinNext24h: checkin24h,
       conflictsCount,
+      conflictsList,
       pendingTeamsCount: pendingTeamsCountRes.count ?? 0,
       rosterLockProximity,
       supportHighOpen: supportHighRes.count ?? 0,
