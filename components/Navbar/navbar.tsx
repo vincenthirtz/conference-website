@@ -19,6 +19,7 @@ import {
 
 const NAV_HEIGHT = 75;
 const ADMIN_BAR_HEIGHT = 44;
+const STAFF_CACHE_TTL = 2 * 60 * 1000; // 2 minutes
 
 function Navbar(): JSX.Element {
   const router = useRouter();
@@ -140,7 +141,6 @@ function Navbar(): JSX.Element {
   // Cache TTL + dedup : évite les appels redondants à /api/admin/me
   // lors de navigations rapides entre pages admin.
   // ----------------------------------------------------
-  const STAFF_CACHE_TTL = 2 * 60 * 1000; // 2 minutes
   const inflight = useRef<Promise<void> | null>(null);
 
   const checkStaff = useCallback(
