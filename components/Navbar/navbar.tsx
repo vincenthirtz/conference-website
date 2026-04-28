@@ -42,21 +42,29 @@ function Navbar(): JSX.Element {
     try {
       const cached = sessionStorage.getItem('staff_cache');
       return cached ? JSON.parse(cached).isStaff === true : false;
-    } catch { return false; }
+    } catch {
+      return false;
+    }
   });
   const [staffName, setStaffName] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
     try {
       const cached = sessionStorage.getItem('staff_cache');
-      return cached ? JSON.parse(cached).staffName ?? null : null;
-    } catch { return null; }
+      return cached ? (JSON.parse(cached).staffName ?? null) : null;
+    } catch {
+      return null;
+    }
   });
   const [staffRole, setStaffRole] = useState<StaffRole | null>(() => {
     if (typeof window === 'undefined') return null;
     try {
       const cached = sessionStorage.getItem('staff_cache');
-      return cached ? (JSON.parse(cached).staffRole as StaffRole) ?? null : null;
-    } catch { return null; }
+      return cached
+        ? ((JSON.parse(cached).staffRole as StaffRole) ?? null)
+        : null;
+    } catch {
+      return null;
+    }
   });
   const [adminMenuOpen, setAdminMenuOpen] = useState(false);
 
@@ -135,87 +143,106 @@ function Navbar(): JSX.Element {
   const STAFF_CACHE_TTL = 2 * 60 * 1000; // 2 minutes
   const inflight = useRef<Promise<void> | null>(null);
 
-  const checkStaff = useCallback(async (accessToken?: string | null, forceRefresh = false) => {
-    // Si le cache est frais et qu'on ne force pas le refresh, on skip le fetch
-    if (!forceRefresh) {
-      try {
-        const raw = sessionStorage.getItem('staff_cache');
-        if (raw) {
-          const cached = JSON.parse(raw);
-          if (cached.ts && Date.now() - cached.ts < STAFF_CACHE_TTL) {
-            setIsStaff(cached.isStaff === true);
-            setStaffName(cached.staffName ?? null);
-            setStaffRole(cached.staffRole ?? null);
-            setAdminLoading(false);
+  const checkStaff = useCallback(
+    async (accessToken?: string | null, forceRefresh = false) => {
+      // Si le cache est frais et qu'on ne force pas le refresh, on skip le fetch
+      if (!forceRefresh) {
+        try {
+          const raw = sessionStorage.getItem('staff_cache');
+          if (raw) {
+            const cached = JSON.parse(raw);
+            if (cached.ts && Date.now() - cached.ts < STAFF_CACHE_TTL) {
+              setIsStaff(cached.isStaff === true);
+              setStaffName(cached.staffName ?? null);
+              setStaffRole(cached.staffRole ?? null);
+              setAdminLoading(false);
+              return;
+            }
+          }
+        } catch {}
+      }
+
+      // Deduplicate concurrent calls: if a fetch is already in-flight, wait for it
+      if (inflight.current) {
+        await inflight.current;
+        return;
+      }
+
+      const run = async () => {
+        if (!sessionStorage.getItem('staff_cache')) setAdminLoading(true);
+        try {
+          let token = accessToken ?? null;
+
+          if (!token) {
+            const {
+              data: { session },
+            } = await supabaseClient.auth.getSession();
+            token = session?.access_token ?? null;
+          }
+
+          if (!token) {
+            setIsStaff(false);
+            setStaffName(null);
+            setStaffRole(null);
+            try {
+              sessionStorage.removeItem('staff_cache');
+            } catch {}
             return;
           }
-        }
-      } catch {}
-    }
 
-    // Deduplicate concurrent calls: if a fetch is already in-flight, wait for it
-    if (inflight.current) {
+          const res = await fetch('/api/admin/me', {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          const me = await res.json().catch(() => null);
+
+          if (!res.ok || me?.error || !me?.role) {
+            setIsStaff(false);
+            setStaffName(null);
+            setStaffRole(null);
+            try {
+              sessionStorage.removeItem('staff_cache');
+            } catch {}
+            return;
+          }
+
+          const name = me.display_name || me.email || 'Staff';
+          const role = me.role as StaffRole;
+          setIsStaff(true);
+          setStaffRole(role);
+          setStaffName(name);
+          try {
+            sessionStorage.setItem(
+              'staff_cache',
+              JSON.stringify({
+                isStaff: true,
+                staffName: name,
+                staffRole: role,
+                ts: Date.now(),
+              })
+            );
+          } catch {}
+        } catch (e) {
+          console.error('Navbar staff check error:', e);
+          setIsStaff(false);
+          setStaffName(null);
+          setStaffRole(null);
+          try {
+            sessionStorage.removeItem('staff_cache');
+          } catch {}
+        } finally {
+          setAdminLoading(false);
+        }
+      };
+
+      inflight.current = run();
       await inflight.current;
-      return;
-    }
-
-    const run = async () => {
-      if (!sessionStorage.getItem('staff_cache')) setAdminLoading(true);
-      try {
-        let token = accessToken ?? null;
-
-        if (!token) {
-          const {
-            data: { session },
-          } = await supabaseClient.auth.getSession();
-          token = session?.access_token ?? null;
-        }
-
-        if (!token) {
-          setIsStaff(false);
-          setStaffName(null);
-          setStaffRole(null);
-          try { sessionStorage.removeItem('staff_cache'); } catch {}
-          return;
-        }
-
-        const res = await fetch('/api/admin/me', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        const me = await res.json().catch(() => null);
-
-        if (!res.ok || me?.error || !me?.role) {
-          setIsStaff(false);
-          setStaffName(null);
-          setStaffRole(null);
-          try { sessionStorage.removeItem('staff_cache'); } catch {}
-          return;
-        }
-
-        const name = me.display_name || me.email || 'Staff';
-        const role = me.role as StaffRole;
-        setIsStaff(true);
-        setStaffRole(role);
-        setStaffName(name);
-        try { sessionStorage.setItem('staff_cache', JSON.stringify({ isStaff: true, staffName: name, staffRole: role, ts: Date.now() })); } catch {}
-      } catch (e) {
-        console.error('Navbar staff check error:', e);
-        setIsStaff(false);
-        setStaffName(null);
-        setStaffRole(null);
-        try { sessionStorage.removeItem('staff_cache'); } catch {}
-      } finally {
-        setAdminLoading(false);
-      }
-    };
-
-    inflight.current = run();
-    await inflight.current;
-    inflight.current = null;
-  }, []);
+      inflight.current = null;
+    },
+    []
+  );
 
   useEffect(() => {
     checkStaff();
@@ -237,6 +264,11 @@ function Navbar(): JSX.Element {
   // Liens du menu Admin (partagés avec NavDrop)
   const adminLinks: AdminLink[] = [
     { title: 'Dashboard', ref: '/admin', minRole: 'caster' },
+    {
+      title: 'Tournoi en cours',
+      ref: '/admin/tournoi-en-cours',
+      minRole: 'caster',
+    },
     {
       title: 'Tournois',
       ref: '',
@@ -485,7 +517,9 @@ function Navbar(): JSX.Element {
     setIsStaff(false);
     setStaffRole(null);
     setStaffName(null);
-    try { sessionStorage.removeItem('staff_cache'); } catch {}
+    try {
+      sessionStorage.removeItem('staff_cache');
+    } catch {}
     router.push('/admin/logout');
   };
 
@@ -634,7 +668,11 @@ function Navbar(): JSX.Element {
                             <Link
                               href={link.ref ?? '#'}
                               className="whitespace-nowrap"
-                              aria-current={router.pathname === link.ref ? 'page' : undefined}
+                              aria-current={
+                                router.pathname === link.ref
+                                  ? 'page'
+                                  : undefined
+                              }
                             >
                               {link.title}
                             </Link>
@@ -826,10 +864,14 @@ function AdminTopBar({
 
   // Public links for "Site" dropdown
   const publicLinks: { title: string; ref: string }[] = [];
-  for (const link of (linksConfig as LinkItem[])) {
+  for (const link of linksConfig as LinkItem[]) {
     if (link.subMenu) {
       for (const sub of link.subMenu) {
-        if (sub.ref) publicLinks.push({ title: `${link.title} – ${sub.title}`, ref: sub.ref });
+        if (sub.ref)
+          publicLinks.push({
+            title: `${link.title} – ${sub.title}`,
+            ref: sub.ref,
+          });
       }
     } else if (link.ref) {
       publicLinks.push({ title: link.title, ref: link.ref });
@@ -900,7 +942,12 @@ function AdminTopBar({
                 stroke="currentColor"
                 viewBox="0 0 24 24"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
               </svg>
             </button>
             {openMenu === '__site__' && (
@@ -910,7 +957,10 @@ function AdminTopBar({
                     key={pl.ref}
                     href={pl.ref}
                     className="block px-4 py-2.5 text-[13px] text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors"
-                    onClick={() => { setOpenMenu(null); setOpenSubMenu(null); }}
+                    onClick={() => {
+                      setOpenMenu(null);
+                      setOpenSubMenu(null);
+                    }}
                   >
                     {pl.title}
                   </Link>

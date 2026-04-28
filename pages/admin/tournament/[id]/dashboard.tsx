@@ -1,13 +1,25 @@
 // pages/admin/tournament/[id]/dashboard.tsx
-// Vue synthetique de la progression d'un tournoi.
+// Mega-dashboard "Centre de contrôle" du tournoi.
+// Remplace l'ancienne vue lecture-seule par un hub actionnable :
+// KPIs, alertes priorisées, status workflow, phases, équipes,
+// matchs en cours / à venir / disputes, check-in du jour, accès rapide aux 15 sous-pages.
 
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import type { StaffProps } from '@/types/admin';
 import { formatDateTimeTz } from '@/utils/timezone';
+import StatCard from '@/components/admin/dashboard/StatCard';
+import ActionableAlert from '@/components/admin/dashboard/ActionableAlert';
+import WidgetCard from '@/components/admin/dashboard/WidgetCard';
+import StageProgressBar from '@/components/admin/dashboard/StageProgressBar';
+import UpcomingMatchRow from '@/components/admin/dashboard/UpcomingMatchRow';
+
+/* -----------------------------------------------------------
+ * Types (mirror du payload de /api/admin/tournament/[id]/dashboard)
+ * ---------------------------------------------------------*/
 
 type StageProgress = {
   id: string;
@@ -35,9 +47,33 @@ type UpcomingMatch = {
   stream_url: string | null;
 };
 
-type Alert = {
-  type: 'warning' | 'info' | 'error';
-  message: string;
+type DisputedMatch = {
+  id: string;
+  team1Name: string | null;
+  team2Name: string | null;
+  reason: string | null;
+  openedAt: string | null;
+};
+
+type LiveMatch = {
+  id: string;
+  team1Name: string | null;
+  team2Name: string | null;
+  team1Score: number | null;
+  team2Score: number | null;
+  streamUrl: string | null;
+  scheduledAt: string | null;
+  roundName: string | null;
+  stageName: string | null;
+};
+
+type StageReady = { stageId: string; stageName: string };
+
+type StatusGuard = {
+  status: string;
+  label: string;
+  allowed: boolean;
+  reason?: string;
 };
 
 type DashboardData = {
@@ -48,6 +84,9 @@ type DashboardData = {
     start_date: string | null;
     end_date: string | null;
     timezone: string | null;
+    format: string | null;
+    min_players: number | null;
+    roster_locked_at: string | null;
   };
   summary: {
     totalTeams: number;
@@ -61,25 +100,193 @@ type DashboardData = {
   };
   stages: StageProgress[];
   upcomingMatches: UpcomingMatch[];
-  alerts: Alert[];
+  alerts: { type: 'warning' | 'info' | 'error'; message: string }[];
+  signals: {
+    disputesOpen: { count: number; matches: DisputedMatch[] };
+    checkinNext24h: {
+      upcoming: number;
+      bothCheckedIn: number;
+      oneSide: number;
+      missing: number;
+      forfeited: number;
+    };
+    conflictsCount: number;
+    pendingTeamsCount: number;
+    rosterLockProximity: {
+      lockedAt: string | null;
+      hoursLeft: number | null;
+      teamsBelowMin: number;
+    };
+    supportHighOpen: number;
+    activeMvpPolls: number;
+    stagesReadyToAdvance: StageReady[];
+    liveMatches: LiveMatch[];
+  };
+  guards: { current_status: string; guards: StatusGuard[] };
 };
 
-export const getServerSideProps = withStaffPage('manager');
+/* -----------------------------------------------------------
+ * Constantes UI
+ * ---------------------------------------------------------*/
 
-// formatDateTime is now handled via formatDateTimeTz from the timezone utility
+const REFRESH_INTERVAL_MS = 30_000;
 
-function stageTypeLabel(type: string | null) {
-  switch (type) {
-    case 'group': return 'Poule';
-    case 'bracket': return 'Bracket';
-    case 'swiss': return 'Swiss';
-    case 'round_robin': return 'Round Robin';
-    case 'showmatch': return 'Showmatch';
-    default: return 'Autre';
+const STATUS_PILL_STYLE: Record<string, string> = {
+  draft: 'bg-gray-500/20 text-gray-300 border-gray-500/30',
+  published: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+  running: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+  completed: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+  archived: 'bg-neutral-500/20 text-neutral-400 border-neutral-500/30',
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  draft: 'Brouillon',
+  published: 'Publié',
+  running: 'En cours',
+  completed: 'Terminé',
+  archived: 'Archivé',
+};
+
+/* -----------------------------------------------------------
+ * Quick access grid des 15 sous-pages
+ * ---------------------------------------------------------*/
+
+type QuickLink = {
+  label: string;
+  href: (id: string) => string;
+  icon: string;
+  description: string;
+  role?: 'manager' | 'admin';
+};
+
+const QUICK_LINKS: QuickLink[] = [
+  {
+    label: 'Phases',
+    icon: '🧱',
+    href: (id) => `/admin/tournament/${id}/stages`,
+    description: 'Configurer poules, brackets, swiss',
+  },
+  {
+    label: 'Matchs',
+    icon: '🎯',
+    href: (id) => `/admin/tournament/${id}/matches`,
+    description: 'Liste, filtres, scoring',
+  },
+  {
+    label: 'Bracket',
+    icon: '🏆',
+    href: (id) => `/admin/tournament/${id}/bracket`,
+    description: 'Générer un bracket simple/double',
+  },
+  {
+    label: 'Bracket Builder',
+    icon: '🛠️',
+    href: (id) => `/admin/tournament/${id}/bracket-builder`,
+    description: 'Drag-drop visuel + planning',
+  },
+  {
+    label: 'Maps',
+    icon: '🗺️',
+    href: (id) => `/admin/tournament/${id}/maps`,
+    description: 'Pool de cartes',
+  },
+  {
+    label: 'Map Draw',
+    icon: '🎲',
+    href: (id) => `/admin/tournament/${id}/map-draw`,
+    description: 'Tirage aléatoire BO3/BO5',
+  },
+  {
+    label: 'Veto',
+    icon: '🚫',
+    href: (id) => `/admin/tournament/${id}/veto`,
+    description: 'Pick/ban par match',
+  },
+  {
+    label: 'Check-in',
+    icon: '✅',
+    href: (id) => `/admin/tournament/${id}/checkin`,
+    description: 'État check-in par match',
+  },
+  {
+    label: 'Bulk ops',
+    icon: '⚡',
+    href: (id) => `/admin/tournament/${id}/bulk-ops`,
+    description: 'Décaler / réassigner en masse',
+  },
+  {
+    label: 'Stats',
+    icon: '📊',
+    href: (id) => `/admin/tournament/${id}/stats`,
+    description: 'Winrates, maps, OT',
+  },
+  {
+    label: 'Discord',
+    icon: '🔔',
+    href: (id) => `/admin/tournament/${id}/discord`,
+    description: 'Webhooks par canal',
+    role: 'admin',
+  },
+  {
+    label: 'History',
+    icon: '📜',
+    href: (id) => `/admin/tournament/${id}/history`,
+    description: 'Audit log staff',
+  },
+  {
+    label: 'Édition',
+    icon: '✏️',
+    href: (id) => `/admin/tournament/${id}/edit`,
+    description: 'Méta, dates, roster lock',
+  },
+  {
+    label: 'Tickets support',
+    icon: '🛂',
+    href: () => `/admin/support`,
+    description: 'Disputes / signalements',
+  },
+  {
+    label: 'Templates',
+    icon: '🧬',
+    href: () => `/admin/tournament-templates`,
+    description: 'Modèles de tournois',
+    role: 'admin',
+  },
+  {
+    label: 'Simulateur',
+    icon: '🧪',
+    href: () => `/admin/tournament-simulator`,
+    description: 'Monte-Carlo & projections',
+    role: 'admin',
+  },
+];
+
+/* -----------------------------------------------------------
+ * Helpers
+ * ---------------------------------------------------------*/
+
+function jDayLabel(iso: string | null, now: Date): string | null {
+  if (!iso) return null;
+  try {
+    const target = new Date(iso);
+    const diffMs = target.getTime() - now.getTime();
+    if (diffMs <= 0) return null;
+    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    if (days >= 1) return `J-${days}`;
+    const hours = Math.ceil(diffMs / (1000 * 60 * 60));
+    return `${hours}h`;
+  } catch {
+    return null;
   }
 }
 
-function DashboardPage(_: StaffProps) {
+/* -----------------------------------------------------------
+ * Page
+ * ---------------------------------------------------------*/
+
+export const getServerSideProps = withStaffPage('manager');
+
+function MegaDashboardPage(_: StaffProps) {
   const router = useRouter();
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;
@@ -87,282 +294,671 @@ function DashboardPage(_: StaffProps) {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [data, setData] = useState<DashboardData | null>(null);
+  const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null);
+  const [stale, setStale] = useState(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchDashboard = useCallback(async () => {
     if (!tournamentId) return;
-    setLoading(true);
-    setErrorMsg(null);
-
     try {
-      const res = await fetch(`/api/admin/tournament/${tournamentId}/dashboard`);
+      const res = await fetch(
+        `/api/admin/tournament/${tournamentId}/dashboard`
+      );
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         throw new Error(json.error || 'Impossible de charger le dashboard');
       }
       setData(await res.json());
+      setLastFetchedAt(new Date());
+      setStale(false);
+      setErrorMsg(null);
     } catch (err: unknown) {
+      // Garde le snapshot précédent et passe en mode stale.
+      setStale(true);
       setErrorMsg((err as Error)?.message || 'Erreur de chargement');
     } finally {
       setLoading(false);
     }
   }, [tournamentId]);
 
+  // Initial + auto-refresh (pause si onglet caché)
   useEffect(() => {
     fetchDashboard();
   }, [fetchDashboard]);
 
+  useEffect(() => {
+    function tick() {
+      if (
+        typeof document !== 'undefined' &&
+        document.visibilityState !== 'visible'
+      )
+        return;
+      fetchDashboard();
+    }
+    intervalRef.current = setInterval(tick, REFRESH_INTERVAL_MS);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [fetchDashboard]);
+
+  const t = data?.tournament;
   const s = data?.summary;
+  const sig = data?.signals;
+  const now = new Date();
+
+  // Prochain match à venir (pour J-X header)
+  const nextScheduled = data?.upcomingMatches.find(
+    (m) => m.scheduled_at
+  )?.scheduled_at;
+  const jDayHeader =
+    jDayLabel(nextScheduled ?? null, now) ??
+    jDayLabel(t?.start_date ?? null, now) ??
+    null;
+
+  // Quels stages sont prêts à advance ?
+  const readyStageIds = new Set(
+    sig?.stagesReadyToAdvance.map((s) => s.stageId) ?? []
+  );
 
   return (
     <>
       <Head>
-        <title>Admin - Dashboard tournoi</title>
+        <title>Centre de contrôle — {t?.name ?? 'Tournoi'}</title>
       </Head>
+
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
-          {/* Header */}
-          <div className="mb-8">
+        <div className="mx-auto max-w-[1500px] px-4 pb-14 pt-20 sm:px-6 lg:px-8">
+          {/* ─── Header ────────────────────────────────────────────── */}
+          <div className="mb-6">
             <button
               type="button"
               onClick={() => router.push(`/admin/tournament/${tournamentId}`)}
-              className="mb-4 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors"
+              className="mb-3 inline-flex items-center gap-2 text-xs text-neutral-400 transition-colors hover:text-white"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <svg
+                className="h-3.5 w-3.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
               </svg>
               Retour au tournoi
             </button>
 
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight">
-                  {data?.tournament.name || 'Dashboard'}
-                </h1>
-                <p className="text-sm text-neutral-400 mt-1">
-                  Progression du tournoi
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-3">
+                  <h1 className="text-3xl font-bold tracking-tight">
+                    {t?.name ?? 'Chargement…'}
+                  </h1>
+                  {t?.status && (
+                    <span
+                      className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                        STATUS_PILL_STYLE[t.status] ?? STATUS_PILL_STYLE.draft
+                      }`}
+                    >
+                      {STATUS_LABEL[t.status] ?? t.status}
+                    </span>
+                  )}
+                  {sig && sig.liveMatches.length > 0 && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/40 bg-rose-500/10 px-3 py-1 text-xs font-semibold text-rose-300">
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-400" />
+                      {sig.liveMatches.length} en direct
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 text-sm text-neutral-400">
+                  Centre de contrôle
+                  {jDayHeader && (
+                    <>
+                      {' · '}prochain kickoff dans{' '}
+                      <span className="text-purple-300">{jDayHeader}</span>
+                    </>
+                  )}
+                  {lastFetchedAt && (
+                    <>
+                      {' · '}
+                      <span
+                        className={
+                          stale ? 'text-amber-300' : 'text-neutral-500'
+                        }
+                      >
+                        {stale ? '⚠ stale' : 'à jour'} ·{' '}
+                        {lastFetchedAt.toLocaleTimeString('fr-FR')}
+                      </span>
+                    </>
+                  )}
                 </p>
               </div>
+
               <div className="flex items-center gap-2">
                 <div className="relative group">
                   <button
                     type="button"
-                    className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors flex items-center gap-2"
+                    className="flex items-center gap-2 rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-2 text-sm font-medium transition-colors hover:bg-neutral-700"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
                     </svg>
                     Exporter
                   </button>
-                  <div className="invisible group-hover:visible absolute right-0 mt-1 w-48 bg-neutral-800 border border-neutral-700 rounded-xl shadow-lg z-10 py-1">
+                  <div className="invisible absolute right-0 z-10 mt-1 w-48 rounded-xl border border-neutral-700 bg-neutral-800 py-1 shadow-lg group-hover:visible">
                     <a
                       href={`/api/admin/tournament/${tournamentId}/export-results?format=csv`}
-                      className="block px-4 py-2 text-sm hover:bg-neutral-700 transition-colors"
+                      className="block px-4 py-2 text-sm transition-colors hover:bg-neutral-700"
                     >
-                      Resultats CSV
+                      Résultats CSV
                     </a>
                     <a
                       href={`/api/admin/tournament/${tournamentId}/export-results?format=json`}
-                      className="block px-4 py-2 text-sm hover:bg-neutral-700 transition-colors"
+                      className="block px-4 py-2 text-sm transition-colors hover:bg-neutral-700"
                     >
-                      Resultats JSON
+                      Résultats JSON
                     </a>
                   </div>
                 </div>
                 <button
                   onClick={fetchDashboard}
-                  className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors"
+                  className="rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-2 text-sm font-medium transition-colors hover:bg-neutral-700"
                 >
-                  Rafraichir
+                  Rafraîchir
                 </button>
               </div>
             </div>
           </div>
 
-          {loading && (
-            <div className="flex items-center justify-center py-20">
-              <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+          {/* ─── Loading / error initial ────────────────────────────── */}
+          {loading && !data && (
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-8 text-center text-neutral-400">
+              Chargement du dashboard…
             </div>
           )}
-
-          {errorMsg && !loading && (
-            <div className="p-4 rounded-xl bg-red-900/40 border border-red-500/50 text-sm">
+          {errorMsg && !data && (
+            <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
               {errorMsg}
             </div>
           )}
 
-          {!loading && data && s && (
-            <div className="space-y-6">
-              {/* Alerts */}
-              {data.alerts.length > 0 && (
-                <div className="space-y-2">
-                  {data.alerts.map((alert, i) => (
-                    <div
-                      key={i}
-                      className={`px-4 py-3 rounded-xl border text-sm flex items-center gap-2 ${
-                        alert.type === 'error'
-                          ? 'bg-red-900/40 border-red-500/50 text-red-200'
-                          : alert.type === 'warning'
-                            ? 'bg-amber-900/40 border-amber-500/50 text-amber-200'
-                            : 'bg-blue-900/40 border-blue-500/50 text-blue-200'
-                      }`}
-                    >
-                      <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                        {alert.type === 'error' ? (
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                        ) : (
-                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                        )}
-                      </svg>
-                      {alert.message}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Summary Cards */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <SummaryCard
-                  label="Equipes"
-                  value={s.totalTeams}
-                  sub={`${s.activeTeams} actives · ${s.eliminatedTeams} eliminees`}
-                  color="blue"
+          {data && t && s && sig && (
+            <>
+              {/* ─── KPIs ───────────────────────────────────────────── */}
+              <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+                <StatCard
+                  label="Équipes"
+                  value={`${s.activeTeams}/${s.totalTeams}`}
+                  hint={`${s.eliminatedTeams} éliminée(s)`}
+                  accent="pink"
                 />
-                <SummaryCard
-                  label="Matchs termines"
-                  value={`${s.finishedMatches} / ${s.totalMatches}`}
-                  sub={`${s.completionPercent}% complete`}
-                  color="emerald"
+                <StatCard
+                  label="Matchs"
+                  value={`${s.finishedMatches}/${s.totalMatches}`}
+                  hint={`${s.completionPercent}% terminé`}
+                  accent="emerald"
                 />
-                <SummaryCard
+                <StatCard
                   label="En cours"
                   value={s.ongoingMatches}
-                  sub={`${s.pendingMatches} en attente`}
-                  color="amber"
+                  hint={s.ongoingMatches > 0 ? 'Live' : '—'}
+                  accent={s.ongoingMatches > 0 ? 'red' : 'gray'}
                 />
-                <SummaryCard
-                  label="Progression"
-                  value={`${s.completionPercent}%`}
-                  sub={`${s.totalMatches - s.finishedMatches} restants`}
-                  color="purple"
-                  isProgress
-                  percent={s.completionPercent}
+                <StatCard
+                  label="Phases"
+                  value={data.stages.length}
+                  hint={
+                    data.stages.find((st) => st.is_active)?.name ??
+                    'Aucune active'
+                  }
+                  accent="blue"
+                />
+                <StatCard
+                  label="Format"
+                  value={t.format ? t.format.toUpperCase() : '—'}
+                  hint={
+                    t.min_players ? `Min ${t.min_players} joueurs` : undefined
+                  }
+                  accent="purple"
+                />
+                <StatCard
+                  label="Démarrage"
+                  value={
+                    t.start_date
+                      ? formatDateTimeTz(t.start_date, t.timezone, {
+                          dateStyle: 'medium',
+                        })
+                      : '—'
+                  }
+                  hint={
+                    t.end_date
+                      ? `→ ${formatDateTimeTz(t.end_date, t.timezone, { dateStyle: 'medium' })}`
+                      : undefined
+                  }
+                  accent="amber"
                 />
               </div>
 
-              {/* Stage Progress */}
-              <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
-                <h2 className="text-lg font-semibold mb-4">Progression par phase</h2>
-                <div className="space-y-4">
-                  {data.stages.map((stage) => {
-                    const pct = stage.totalMatches > 0
-                      ? Math.round((stage.finishedMatches / stage.totalMatches) * 100)
-                      : 0;
+              {/* ─── Alertes actionnables (rendu seulement si signal ≠ 0) ── */}
+              <div className="mb-6 space-y-2">
+                {sig.disputesOpen.count > 0 && (
+                  <ActionableAlert
+                    severity="error"
+                    icon={<span>⚠️</span>}
+                    title={`${sig.disputesOpen.count} dispute${sig.disputesOpen.count > 1 ? 's' : ''} ouverte${sig.disputesOpen.count > 1 ? 's' : ''}`}
+                    message="La propagation du bracket est bloquée tant qu'elles ne sont pas résolues."
+                    cta={{
+                      label: 'Résoudre',
+                      href: `/admin/tournament/${tournamentId}/matches?status=disputed`,
+                    }}
+                  />
+                )}
+                {sig.conflictsCount > 0 && (
+                  <ActionableAlert
+                    severity="warning"
+                    icon={<span>🚨</span>}
+                    title={`${sig.conflictsCount} conflit${sig.conflictsCount > 1 ? 's' : ''} de planning`}
+                    message="Une équipe est planifiée sur deux matchs qui se chevauchent."
+                    cta={{
+                      label: 'Voir',
+                      href: `/admin/tournament/${tournamentId}`,
+                    }}
+                  />
+                )}
+                {sig.checkinNext24h.missing > 0 &&
+                  sig.checkinNext24h.upcoming > 0 && (
+                    <ActionableAlert
+                      severity="warning"
+                      icon={<span>🔔</span>}
+                      title={`${sig.checkinNext24h.missing} équipe${sig.checkinNext24h.missing > 1 ? 's' : ''} pas encore check-in`}
+                      message={`Sur les ${sig.checkinNext24h.upcoming} match(s) à venir dans les 24h.`}
+                      cta={{
+                        label: 'Check-in',
+                        href: `/admin/tournament/${tournamentId}/checkin`,
+                      }}
+                    />
+                  )}
+                {sig.supportHighOpen > 0 && (
+                  <ActionableAlert
+                    severity="critical"
+                    icon={<span>🛂</span>}
+                    title={`${sig.supportHighOpen} ticket${sig.supportHighOpen > 1 ? 's' : ''} critique${sig.supportHighOpen > 1 ? 's' : ''} non résolu${sig.supportHighOpen > 1 ? 's' : ''}`}
+                    message="Sévérité haute. À traiter en priorité."
+                    cta={{ label: 'Ouvrir', href: '/admin/support' }}
+                  />
+                )}
+                {sig.rosterLockProximity.lockedAt &&
+                  sig.rosterLockProximity.hoursLeft !== null &&
+                  sig.rosterLockProximity.hoursLeft <= 24 &&
+                  sig.rosterLockProximity.hoursLeft > 0 && (
+                    <ActionableAlert
+                      severity="warning"
+                      icon={<span>🔒</span>}
+                      title={`Roster lock dans ${sig.rosterLockProximity.hoursLeft}h`}
+                      message={
+                        sig.rosterLockProximity.teamsBelowMin > 0
+                          ? `${sig.rosterLockProximity.teamsBelowMin} équipe(s) sous le minimum de joueurs.`
+                          : 'Vérifiez les rosters avant verrouillage.'
+                      }
+                      cta={{
+                        label: 'Édition',
+                        href: `/admin/tournament/${tournamentId}/edit`,
+                      }}
+                    />
+                  )}
+                {sig.stagesReadyToAdvance.length > 0 && (
+                  <ActionableAlert
+                    severity="info"
+                    icon={<span>🚀</span>}
+                    title={`${sig.stagesReadyToAdvance.length} phase${sig.stagesReadyToAdvance.length > 1 ? 's' : ''} prête${sig.stagesReadyToAdvance.length > 1 ? 's' : ''} à advance`}
+                    message={sig.stagesReadyToAdvance
+                      .map((s) => s.stageName)
+                      .join(', ')}
+                    cta={{
+                      label: 'Phases',
+                      href: `/admin/tournament/${tournamentId}/stages`,
+                    }}
+                  />
+                )}
+                {sig.pendingTeamsCount > 0 && (
+                  <ActionableAlert
+                    severity="info"
+                    icon={<span>📋</span>}
+                    title={`${sig.pendingTeamsCount} inscription${sig.pendingTeamsCount > 1 ? 's' : ''} en attente`}
+                    cta={{
+                      label: 'Équipes',
+                      href: `/admin/tournament/${tournamentId}`,
+                    }}
+                  />
+                )}
+                {sig.activeMvpPolls > 0 && (
+                  <ActionableAlert
+                    severity="info"
+                    icon={<span>🏅</span>}
+                    title={`${sig.activeMvpPolls} sondage${sig.activeMvpPolls > 1 ? 's' : ''} MVP actif${sig.activeMvpPolls > 1 ? 's' : ''}`}
+                    message="Importer le vainqueur après la fermeture côté Discord."
+                    cta={{
+                      label: 'Matchs',
+                      href: `/admin/tournament/${tournamentId}/matches?status=finished`,
+                    }}
+                  />
+                )}
+                {/* Alertes "génériques" héritées de l'ancien dashboard */}
+                {data.alerts.map((a, i) => (
+                  <ActionableAlert
+                    key={i}
+                    severity={
+                      a.type === 'error'
+                        ? 'error'
+                        : a.type === 'warning'
+                          ? 'warning'
+                          : 'info'
+                    }
+                    icon={
+                      <span>
+                        {a.type === 'error'
+                          ? '❗'
+                          : a.type === 'warning'
+                            ? '⚠️'
+                            : 'ℹ️'}
+                      </span>
+                    }
+                    title={a.message}
+                  />
+                ))}
+              </div>
 
+              {/* ─── Status workflow ────────────────────────────────── */}
+              <WidgetCard title="Workflow de statut" className="mb-6">
+                <div className="flex flex-wrap items-center gap-2">
+                  {data.guards.guards.map((g, i) => {
+                    const isCurrent = g.status === data.guards.current_status;
                     return (
-                      <div key={stage.id} className="bg-neutral-900/50 rounded-xl p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-3">
-                            <Link
-                              href={`/admin/stages/${stage.id}`}
-                              className="font-medium text-sm hover:text-blue-400 transition-colors"
-                            >
-                              {stage.name}
-                            </Link>
-                            <span className="text-xs text-neutral-500">
-                              {stageTypeLabel(stage.stage_type)}
-                            </span>
-                            {stage.is_active && (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
-                                Active
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-xs text-neutral-400">
-                            {stage.teamsCount} equipe(s) · {stage.finishedMatches}/{stage.totalMatches} matchs
-                          </div>
-                        </div>
-                        {/* Progress bar */}
-                        <div className="h-2 bg-neutral-700 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all duration-500"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                        <div className="flex items-center gap-4 mt-2 text-xs text-neutral-500">
-                          {stage.ongoingMatches > 0 && (
-                            <span className="text-amber-400">{stage.ongoingMatches} en cours</span>
+                      <div key={g.status} className="flex items-center gap-2">
+                        <div
+                          className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs ${
+                            isCurrent
+                              ? (STATUS_PILL_STYLE[g.status] ??
+                                STATUS_PILL_STYLE.draft)
+                              : g.allowed
+                                ? 'border-white/10 text-gray-300'
+                                : 'border-red-500/20 text-red-400/70'
+                          }`}
+                          title={g.reason}
+                        >
+                          {isCurrent && '● '}
+                          {g.label}
+                          {!g.allowed && !isCurrent && (
+                            <span className="text-red-400">🔒</span>
                           )}
-                          {stage.pendingMatches > 0 && (
-                            <span>{stage.pendingMatches} en attente</span>
-                          )}
-                          {stage.cancelledMatches > 0 && (
-                            <span className="text-red-400">{stage.cancelledMatches} annules</span>
-                          )}
-                          <span className="ml-auto font-medium text-white">{pct}%</span>
                         </div>
+                        {i < data.guards.guards.length - 1 && (
+                          <span className="text-gray-600">→</span>
+                        )}
                       </div>
                     );
                   })}
+                </div>
+                {data.guards.guards
+                  .filter((g) => !g.allowed && g.reason)
+                  .map((g) => (
+                    <p
+                      key={g.status}
+                      className="mt-2 text-[11px] text-red-300/80"
+                    >
+                      {g.label} bloqué : {g.reason}
+                    </p>
+                  ))}
+              </WidgetCard>
 
-                  {data.stages.length === 0 && (
-                    <p className="text-sm text-neutral-500">Aucune phase configuree.</p>
+              {/* ─── Main grid (2 colonnes desktop) ──────────────────── */}
+              <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+                {/* COLONNE GAUCHE */}
+                <div className="space-y-6">
+                  <WidgetCard
+                    title="Phases"
+                    badge={`${data.stages.length}`}
+                    ctaHref={`/admin/tournament/${tournamentId}/stages`}
+                    ctaLabel="Gérer"
+                  >
+                    {data.stages.length === 0 ? (
+                      <p className="text-sm text-gray-500">
+                        Aucune phase configurée.
+                      </p>
+                    ) : (
+                      <div className="space-y-2.5">
+                        {data.stages.map((st) => (
+                          <StageProgressBar
+                            key={st.id}
+                            stageId={st.id}
+                            tournamentId={tournamentId!}
+                            name={st.name}
+                            stageType={st.stage_type}
+                            totalMatches={st.totalMatches}
+                            finishedMatches={st.finishedMatches}
+                            pendingMatches={st.pendingMatches}
+                            ongoingMatches={st.ongoingMatches}
+                            isActive={st.is_active}
+                            teamsCount={st.teamsCount}
+                            isReadyToAdvance={readyStageIds.has(st.id)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </WidgetCard>
+
+                  <WidgetCard
+                    title="Équipes"
+                    ctaHref={`/admin/tournament/${tournamentId}`}
+                    ctaLabel="Gérer"
+                  >
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3 text-center">
+                        <div className="text-2xl font-bold text-emerald-300">
+                          {s.activeTeams}
+                        </div>
+                        <div className="text-[10px] uppercase tracking-wider text-gray-400">
+                          Actives
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-gray-500/20 bg-gray-500/5 p-3 text-center">
+                        <div className="text-2xl font-bold text-gray-300">
+                          {s.eliminatedTeams}
+                        </div>
+                        <div className="text-[10px] uppercase tracking-wider text-gray-400">
+                          Éliminées
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-center">
+                        <div className="text-2xl font-bold text-amber-300">
+                          {sig.pendingTeamsCount}
+                        </div>
+                        <div className="text-[10px] uppercase tracking-wider text-gray-400">
+                          En attente
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-3 text-center">
+                        <div className="text-2xl font-bold text-blue-300">
+                          {s.totalTeams}
+                        </div>
+                        <div className="text-[10px] uppercase tracking-wider text-gray-400">
+                          Total
+                        </div>
+                      </div>
+                    </div>
+                  </WidgetCard>
+
+                  <WidgetCard
+                    title="Check-in (24 h)"
+                    ctaHref={`/admin/tournament/${tournamentId}/checkin`}
+                    ctaLabel="Détail"
+                  >
+                    {sig.checkinNext24h.upcoming === 0 ? (
+                      <p className="text-sm text-gray-500">
+                        Pas de match planifié dans les 24h.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        <div className="rounded-lg bg-emerald-500/10 p-3 text-center">
+                          <div className="text-xl font-bold text-emerald-300">
+                            ✅ {sig.checkinNext24h.bothCheckedIn}
+                          </div>
+                          <div className="text-[10px] uppercase tracking-wider text-gray-400">
+                            OK
+                          </div>
+                        </div>
+                        <div className="rounded-lg bg-amber-500/10 p-3 text-center">
+                          <div className="text-xl font-bold text-amber-300">
+                            ⏳ {sig.checkinNext24h.oneSide}
+                          </div>
+                          <div className="text-[10px] uppercase tracking-wider text-gray-400">
+                            Partiel
+                          </div>
+                        </div>
+                        <div className="rounded-lg bg-red-500/10 p-3 text-center">
+                          <div className="text-xl font-bold text-red-300">
+                            ❌ {sig.checkinNext24h.missing}
+                          </div>
+                          <div className="text-[10px] uppercase tracking-wider text-gray-400">
+                            Aucun
+                          </div>
+                        </div>
+                        <div className="rounded-lg bg-neutral-700/30 p-3 text-center">
+                          <div className="text-xl font-bold text-neutral-300">
+                            🚷 {sig.checkinNext24h.forfeited}
+                          </div>
+                          <div className="text-[10px] uppercase tracking-wider text-gray-400">
+                            Forfait
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </WidgetCard>
+                </div>
+
+                {/* COLONNE DROITE */}
+                <div className="space-y-6">
+                  {sig.liveMatches.length > 0 && (
+                    <WidgetCard
+                      title="En direct"
+                      badge={
+                        <span className="inline-flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-400" />
+                          {sig.liveMatches.length}
+                        </span>
+                      }
+                    >
+                      <div className="space-y-2">
+                        {sig.liveMatches.slice(0, 5).map((m) => (
+                          <UpcomingMatchRow
+                            key={m.id}
+                            matchId={m.id}
+                            team1Name={m.team1Name}
+                            team2Name={m.team2Name}
+                            scheduledAt={m.scheduledAt}
+                            team1Score={m.team1Score}
+                            team2Score={m.team2Score}
+                            streamUrl={m.streamUrl}
+                            roundName={m.roundName}
+                            stageName={m.stageName}
+                            variant="live"
+                          />
+                        ))}
+                      </div>
+                    </WidgetCard>
+                  )}
+
+                  <WidgetCard
+                    title="À venir"
+                    badge={data.upcomingMatches.length}
+                    ctaHref={`/admin/tournament/${tournamentId}/matches?status=pending`}
+                    ctaLabel="Tout voir"
+                  >
+                    {data.upcomingMatches.length === 0 ? (
+                      <p className="text-sm text-gray-500">
+                        Aucun match à venir.
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {data.upcomingMatches.slice(0, 8).map((m) => (
+                          <UpcomingMatchRow
+                            key={m.id}
+                            matchId={m.id}
+                            team1Name={m.team1_name}
+                            team2Name={m.team2_name}
+                            scheduledAt={m.scheduled_at}
+                            streamUrl={m.stream_url}
+                            roundName={m.round_name}
+                            stageName={m.stage_name}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </WidgetCard>
+
+                  {sig.disputesOpen.count > 0 && (
+                    <WidgetCard
+                      title="Disputes ouvertes"
+                      badge={sig.disputesOpen.count}
+                      ctaHref={`/admin/tournament/${tournamentId}/matches?status=disputed`}
+                      ctaLabel="Toutes"
+                    >
+                      <div className="space-y-2">
+                        {sig.disputesOpen.matches.slice(0, 5).map((m) => (
+                          <UpcomingMatchRow
+                            key={m.id}
+                            matchId={m.id}
+                            team1Name={m.team1Name}
+                            team2Name={m.team2Name}
+                            scheduledAt={m.openedAt}
+                            roundName={m.reason ? m.reason.slice(0, 60) : null}
+                            variant="dispute"
+                          />
+                        ))}
+                      </div>
+                    </WidgetCard>
                   )}
                 </div>
-              </section>
+              </div>
 
-              {/* Upcoming Matches */}
-              <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
-                <h2 className="text-lg font-semibold mb-4">Prochains matchs</h2>
-                {data.upcomingMatches.length > 0 ? (
-                  <div className="border border-neutral-700 rounded-xl overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="bg-neutral-900/80 text-neutral-400 text-xs uppercase tracking-wider">
-                          <th className="px-4 py-2 text-left">Phase</th>
-                          <th className="px-4 py-2 text-left">Ronde</th>
-                          <th className="px-4 py-2 text-left">Equipe 1</th>
-                          <th className="px-4 py-2 text-center">vs</th>
-                          <th className="px-4 py-2 text-left">Equipe 2</th>
-                          <th className="px-4 py-2 text-left">Horaire</th>
-                          <th className="px-4 py-2 text-center">Stream</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {data.upcomingMatches.map((m) => (
-                          <tr key={m.id} className="border-t border-neutral-700/50 hover:bg-neutral-700/30 transition-colors">
-                            <td className="px-4 py-2 text-neutral-300 text-xs">
-                              {m.stage_name || '—'}
-                            </td>
-                            <td className="px-4 py-2 text-neutral-400 text-xs">
-                              {m.round_name || (m.round_number ? `R${m.round_number}` : '—')}
-                            </td>
-                            <td className="px-4 py-2 font-medium">
-                              {m.team1_name || <span className="text-neutral-500">TBD</span>}
-                            </td>
-                            <td className="px-4 py-2 text-center text-neutral-500 text-xs">vs</td>
-                            <td className="px-4 py-2 font-medium">
-                              {m.team2_name || <span className="text-neutral-500">TBD</span>}
-                            </td>
-                            <td className="px-4 py-2 text-neutral-400 text-xs">
-                              {formatDateTimeTz(m.scheduled_at, data?.tournament.timezone, { year: undefined })}
-                            </td>
-                            <td className="px-4 py-2 text-center">
-                              {m.stream_url ? (
-                                <span className="inline-block w-2 h-2 rounded-full bg-emerald-400" title="Stream attribue" />
-                              ) : (
-                                <span className="inline-block w-2 h-2 rounded-full bg-neutral-600" title="Pas de stream" />
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <p className="text-sm text-neutral-500">Aucun match a venir.</p>
-                )}
-              </section>
-            </div>
+              {/* ─── Quick access grid ──────────────────────────────── */}
+              <WidgetCard title="Accès rapide">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                  {QUICK_LINKS.map((link) => (
+                    <Link
+                      key={link.label}
+                      href={link.href(tournamentId!)}
+                      className="group rounded-xl border border-white/8 bg-white/[0.02] p-3 transition-colors hover:border-purple-500/30 hover:bg-white/[0.05]"
+                    >
+                      <div className="flex items-start gap-2">
+                        <span className="text-lg">{link.icon}</span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-white group-hover:text-purple-200">
+                            {link.label}
+                          </p>
+                          <p className="mt-0.5 truncate text-[10px] text-gray-500">
+                            {link.description}
+                          </p>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </WidgetCard>
+            </>
           )}
         </div>
       </div>
@@ -370,45 +966,4 @@ function DashboardPage(_: StaffProps) {
   );
 }
 
-function SummaryCard({
-  label,
-  value,
-  sub,
-  color,
-  isProgress,
-  percent,
-}: {
-  label: string;
-  value: string | number;
-  sub: string;
-  color: 'blue' | 'emerald' | 'amber' | 'purple';
-  isProgress?: boolean;
-  percent?: number;
-}) {
-  const colors = {
-    blue: 'from-blue-600/20 to-blue-600/5 border-blue-500/30',
-    emerald: 'from-emerald-600/20 to-emerald-600/5 border-emerald-500/30',
-    amber: 'from-amber-600/20 to-amber-600/5 border-amber-500/30',
-    purple: 'from-purple-600/20 to-purple-600/5 border-purple-500/30',
-  };
-
-  return (
-    <div className={`rounded-2xl border bg-gradient-to-b p-5 ${colors[color]}`}>
-      <div className="text-xs text-neutral-400 uppercase tracking-wider mb-2">
-        {label}
-      </div>
-      <div className="text-2xl font-bold">{value}</div>
-      <div className="text-xs text-neutral-500 mt-1">{sub}</div>
-      {isProgress && percent !== undefined && (
-        <div className="h-1.5 bg-neutral-700 rounded-full overflow-hidden mt-3">
-          <div
-            className="h-full bg-purple-500 rounded-full transition-all duration-500"
-            style={{ width: `${percent}%` }}
-          />
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default DashboardPage;
+export default MegaDashboardPage;
