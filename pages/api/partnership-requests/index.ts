@@ -6,6 +6,10 @@ import {
 } from '@/utils/validation';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { sanitizeUrl } from '@/utils/apiHelpers';
+import {
+  sendPartnershipStaffEmail,
+  sendPartnershipConfirmationEmail,
+} from '@/utils/email';
 
 export default async function handler(
   req: NextApiRequest,
@@ -66,8 +70,30 @@ export default async function handler(
       .json({ error: 'Failed to send request. Please try again.' });
   }
 
+  void sendPartnershipStaffEmail({
+    companyName: body.companyName,
+    contactName: body.contactName,
+    email: body.email,
+    phone: body.phone?.trim() || null,
+    website: insertPayload.website,
+    category: body.category,
+    budgetRange: body.budgetRange?.trim() || null,
+    message: body.message,
+  }).catch((e) =>
+    console.error('[api/partnership-requests] staff email error:', e)
+  );
+
+  void sendPartnershipConfirmationEmail({
+    to: body.email,
+    contactName: body.contactName,
+    companyName: body.companyName,
+  }).catch((e) =>
+    console.error('[api/partnership-requests] confirmation email error:', e)
+  );
+
   return res.status(201).json({
     success: true,
+    requestId: data?.id ?? null,
     message: 'Votre demande de partenariat a bien été envoyée. Nous vous recontacterons rapidement.'
   });
 }

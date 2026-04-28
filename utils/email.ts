@@ -423,6 +423,220 @@ export function sendSupportConfirmationEmail(opts: {
   });
 }
 
+/**
+ * Default staff inbox for inbound notifications (contact, partnerships,
+ * anonymous / HIGH severity support tickets). Override via STAFF_NOTIFY_EMAIL.
+ */
+const STAFF_NOTIFY_EMAIL =
+  process.env.STAFF_NOTIFY_EMAIL || 'owwomenscup@gmail.com';
+
+function detailsTable(rows: { label: string; value: string; isCode?: boolean }[]): string {
+  const last = rows.length - 1;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:rgba(255,255,255,0.05);border-radius:10px;border:1px solid rgba(255,255,255,0.08);margin:0 0 24px;">
+    ${rows
+      .map((r, i) => {
+        const border =
+          i < last ? 'border-bottom:1px solid rgba(255,255,255,0.06);' : '';
+        const valueHtml = r.isCode
+          ? `<code style="font-size:14px;color:#2dccfd;font-family:'Fira Code',monospace;">${escapeHtml(r.value)}</code>`
+          : `<span style="font-size:15px;color:#ffffff;font-weight:500;">${escapeHtml(r.value)}</span>`;
+        return `<tr><td style="padding:14px 20px;${border}"><span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">${escapeHtml(r.label)}</span><br/>${valueHtml}</td></tr>`;
+      })
+      .join('')}
+  </table>`;
+}
+
+function preformattedBlock(text: string): string {
+  return `<div style="white-space:pre-wrap;background-color:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px 18px;color:#E8E2F4;font-size:14px;line-height:1.6;margin:0 0 24px;">${escapeHtml(text)}</div>`;
+}
+
+const SUPPORT_CATEGORY_LABELS: Record<
+  'dispute' | 'behavior' | 'technical' | 'other',
+  string
+> = {
+  dispute: 'Litige / Contestation',
+  behavior: 'Comportement / Safety',
+  technical: 'Problème technique',
+  other: 'Autre',
+};
+
+const SUPPORT_SEVERITY_LABELS: Record<'low' | 'medium' | 'high', string> = {
+  low: 'Basse',
+  medium: 'Moyenne',
+  high: 'Haute',
+};
+
+const PARTNERSHIP_CATEGORY_LABELS: Record<
+  'super' | 'major' | 'cultural' | 'other',
+  string
+> = {
+  super: 'Super partenaire',
+  major: 'Partenaire majeur',
+  cultural: 'Partenaire culturel',
+  other: 'Autre',
+};
+
+/**
+ * Notification sent to staff when the public contact form is submitted.
+ */
+export function sendContactStaffEmail(opts: {
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+}): Promise<SendEmailResult> {
+  return sendEmail({
+    to: STAFF_NOTIFY_EMAIL,
+    subject: `[Contact] ${opts.subject} — ${opts.name}`,
+    tags: ['contact-staff'],
+    html: emailLayout(`
+      ${gradientBar()}
+      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Nouveau message de contact</h1>
+      <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
+        Un visiteur a soumis le formulaire de contact public.
+      </p>
+      ${detailsTable([
+        { label: 'Nom', value: opts.name },
+        { label: 'Email', value: opts.email },
+        { label: 'Sujet', value: opts.subject },
+      ])}
+      <p style="margin:0 0 8px;font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Message</p>
+      ${preformattedBlock(opts.message)}
+      ${ctaButton('mailto:' + opts.email, 'Répondre par email')}
+    `),
+  });
+}
+
+/**
+ * Notification sent to staff when a public partnership request is submitted.
+ */
+export function sendPartnershipStaffEmail(opts: {
+  companyName: string;
+  contactName: string;
+  email: string;
+  phone?: string | null;
+  website?: string | null;
+  category: 'super' | 'major' | 'cultural' | 'other';
+  budgetRange?: string | null;
+  message: string;
+}): Promise<SendEmailResult> {
+  const rows: { label: string; value: string }[] = [
+    { label: 'Entreprise', value: opts.companyName },
+    { label: 'Contact', value: opts.contactName },
+    { label: 'Email', value: opts.email },
+  ];
+  if (opts.phone) rows.push({ label: 'Téléphone', value: opts.phone });
+  if (opts.website) rows.push({ label: 'Site web', value: opts.website });
+  rows.push({
+    label: 'Catégorie',
+    value: PARTNERSHIP_CATEGORY_LABELS[opts.category],
+  });
+  if (opts.budgetRange) rows.push({ label: 'Budget', value: opts.budgetRange });
+
+  return sendEmail({
+    to: STAFF_NOTIFY_EMAIL,
+    subject: `[Partenariat] ${opts.companyName} — ${PARTNERSHIP_CATEGORY_LABELS[opts.category]}`,
+    tags: ['partnership-staff'],
+    html: emailLayout(`
+      ${gradientBar()}
+      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Nouvelle demande de partenariat</h1>
+      <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
+        Une entreprise a soumis une demande via le formulaire public.
+      </p>
+      ${detailsTable(rows)}
+      <p style="margin:0 0 8px;font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Message</p>
+      ${preformattedBlock(opts.message)}
+      ${ctaButton('mailto:' + opts.email, 'Répondre par email')}
+    `),
+  });
+}
+
+/**
+ * Confirmation sent to the partnership requester right after submission.
+ */
+export function sendPartnershipConfirmationEmail(opts: {
+  to: string;
+  contactName: string;
+  companyName: string;
+}): Promise<SendEmailResult> {
+  return sendEmail({
+    to: opts.to,
+    subject: 'Demande de partenariat reçue — OW Women\'s Cup',
+    tags: ['partnership-confirmation'],
+    html: emailLayout(`
+      ${gradientBar()}
+      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Merci ${escapeHtml(opts.contactName)} !</h1>
+      <p style="margin:0 0 16px;font-size:15px;color:#C6BED9;line-height:1.6;">
+        Nous avons bien reçu votre demande de partenariat pour
+        <strong style="color:#ffffff;">${escapeHtml(opts.companyName)}</strong>.
+      </p>
+      <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
+        Notre équipe l&apos;examine et reviendra vers vous sous quelques jours.
+        Pour toute question urgente, vous pouvez répondre directement à cet email.
+      </p>
+      ${ctaButton(SITE_URL + '/partenaires', 'Voir nos partenaires')}
+    `),
+  });
+}
+
+/**
+ * Staff notification for support tickets that bypass the reporter
+ * confirmation flow: anonymous tickets and HIGH-severity tickets.
+ */
+export function sendSupportStaffNotificationEmail(opts: {
+  ticketId: string;
+  category: 'dispute' | 'behavior' | 'technical' | 'other';
+  severity: 'low' | 'medium' | 'high';
+  isAnonymous: boolean;
+  reporterName: string | null;
+  reporterEmail: string | null;
+  subject: string | null;
+  message: string;
+  adminUrl: string;
+}): Promise<SendEmailResult> {
+  const ref = opts.ticketId.slice(0, 8);
+  const isUrgent = opts.severity === 'high';
+
+  const rows: { label: string; value: string; isCode?: boolean }[] = [
+    { label: 'Référence', value: ref, isCode: true },
+    { label: 'Catégorie', value: SUPPORT_CATEGORY_LABELS[opts.category] },
+    { label: 'Sévérité', value: SUPPORT_SEVERITY_LABELS[opts.severity] },
+    {
+      label: 'Auteur',
+      value: opts.isAnonymous
+        ? 'Anonyme'
+        : `${opts.reporterName || '—'}${opts.reporterEmail ? ` · ${opts.reporterEmail}` : ''}`,
+    },
+  ];
+  if (opts.subject) rows.push({ label: 'Sujet', value: opts.subject });
+
+  const subjectPrefix = isUrgent ? '[URGENT] ' : '[Signalement] ';
+  const subjectTitle = opts.subject || SUPPORT_CATEGORY_LABELS[opts.category];
+
+  return sendEmail({
+    to: STAFF_NOTIFY_EMAIL,
+    subject: `${subjectPrefix}${subjectTitle} (${ref})`,
+    tags: ['support-staff', isUrgent ? 'support-urgent' : 'support-anonymous'],
+    html: emailLayout(`
+      ${gradientBar()}
+      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">
+        ${isUrgent ? 'Signalement urgent' : 'Signalement anonyme'}
+      </h1>
+      <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
+        ${
+          isUrgent
+            ? 'Un signalement de sévérité <strong style="color:#ef4444;">haute</strong> vient d&apos;être déposé. Merci de le traiter en priorité.'
+            : 'Un signalement anonyme vient d&apos;être déposé.'
+        }
+      </p>
+      ${detailsTable(rows)}
+      <p style="margin:0 0 8px;font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Message</p>
+      ${preformattedBlock(opts.message)}
+      ${ctaButton(opts.adminUrl, 'Ouvrir dans l\'admin')}
+    `),
+  });
+}
+
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, '&amp;')

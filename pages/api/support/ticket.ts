@@ -8,7 +8,10 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { notifySupportTicket } from '@/utils/discord';
-import { sendSupportConfirmationEmail } from '@/utils/email';
+import {
+  sendSupportConfirmationEmail,
+  sendSupportStaffNotificationEmail,
+} from '@/utils/email';
 
 const VALID_CATEGORIES = ['dispute', 'behavior', 'technical', 'other'] as const;
 const VALID_SEVERITIES = ['low', 'medium', 'high'] as const;
@@ -167,6 +170,22 @@ export default async function handler(
       severity: ticket.severity,
       subject: ticket.subject,
     }).catch((e) => console.error('[support] confirm email error:', e));
+  }
+
+  // Email staff for tickets that bypass the reporter-confirmation flow:
+  // anonymous tickets (Discord-only otherwise) and HIGH-severity tickets.
+  if (anon || ticket.severity === 'high') {
+    void sendSupportStaffNotificationEmail({
+      ticketId: ticket.id,
+      category: ticket.category,
+      severity: ticket.severity,
+      isAnonymous: anon,
+      reporterName: cleanName,
+      reporterEmail: cleanEmail,
+      subject: ticket.subject,
+      message: ticket.message,
+      adminUrl: `${SITE_URL.replace(/\/$/, '')}/admin/support`,
+    }).catch((e) => console.error('[support] staff email error:', e));
   }
 
   return res.status(201).json({
