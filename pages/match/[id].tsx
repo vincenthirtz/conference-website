@@ -56,6 +56,7 @@ type Match = {
   scheduled_at: string | null;
   completed_at: string | null;
   stream_url: string | null;
+  replay_url: string | null;
   lobby_code: string | null;
   notes: string | null;
   team1: SimpleTeam | null;
@@ -94,6 +95,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       scheduled_at,
       completed_at,
       stream_url,
+      replay_url,
       lobby_code,
       notes,
       team1:team1_id ( id, name, short_name, logo_url ),
@@ -395,6 +397,21 @@ export default function MatchPage({ match }: Props) {
                         className="text-emerald-300 hover:text-emerald-100"
                       >
                         Voir le stream
+                      </a>
+                    }
+                  />
+                )}
+                {match.replay_url && (
+                  <InfoRow
+                    label="Replay"
+                    value={
+                      <a
+                        href={match.replay_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-purple-300 hover:text-purple-100"
+                      >
+                        Voir le VOD ↗
                       </a>
                     }
                   />

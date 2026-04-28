@@ -162,6 +162,7 @@ export type Match = {
   winner_team_id: string | null;
   forfeit_team_id: string | null;
   stream_url: string | null;
+  replay_url: string | null;
   lobby_code: string | null;
   notes: string | null;
   next_match_win_id: string | null;

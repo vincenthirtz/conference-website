@@ -607,7 +607,10 @@ export default function TournamentPage({
             {totalTeams > 0 && (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {teams.slice(0, 12).map((team) => (
-                  <Link key={team.id} href={`/team/${team.id}`}>
+                  <Link
+                    key={team.id}
+                    href={`/tournament/${tournament.id}/teams/${team.id}`}
+                  >
                     <div className="group flex flex-col items-center gap-2.5 bg-gradient-to-b from-white/5 to-transparent border border-white/8 rounded-2xl px-3 py-4 cursor-pointer hover:border-emerald-400/50 hover:bg-emerald-500/5 transition-all hover:scale-[1.02]">
                       <div className="w-14 h-14 rounded-full bg-gradient-to-br from-white/10 to-white/5 border border-white/10 flex items-center justify-center overflow-hidden group-hover:border-emerald-400/30 transition-colors">
                         {team.logo_url ? (

@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import type { MatchStatus } from '@/types/admin';
+import MatchHistoryDrawer from '@/components/admin/MatchHistoryDrawer';
 
 type TeamMini = {
   id: string;
@@ -142,6 +143,9 @@ function MatchViewPage(_: StaffProps) {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [match, setMatch] = useState<MatchRow | null>(null);
+
+  // History drawer
+  const [showHistory, setShowHistory] = useState(false);
 
   // Dispute modals
   const [showOpenDispute, setShowOpenDispute] = useState(false);
@@ -304,6 +308,13 @@ function MatchViewPage(_: StaffProps) {
               >
                 Éditer
               </Link>
+              <button
+                onClick={() => setShowHistory(true)}
+                className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/15 text-sm hover:bg-white/15"
+                title="Historique des modifications staff (score, statut, planning, dispute…)"
+              >
+                Historique
+              </button>
               {match && match.status === 'disputed' ? (
                 <>
                   <button
@@ -532,6 +543,14 @@ function MatchViewPage(_: StaffProps) {
           )}
         </div>
       </div>
+
+      {matchIdStr && (
+        <MatchHistoryDrawer
+          matchId={matchIdStr}
+          open={showHistory}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
 
       {showOpenDispute && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">

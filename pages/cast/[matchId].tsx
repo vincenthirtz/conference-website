@@ -56,6 +56,7 @@ type CastData = {
     winnerTeamId: string | null;
     scheduledAt: string | null;
     streamUrl: string | null;
+    replayUrl: string | null;
     lobbyCode: string | null;
     notes: string | null;
   };
@@ -147,6 +148,54 @@ function CastPage(_: StaffProps) {
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [copied, setCopied] = useState(false);
+
+  // Replay URL editor
+  const [replayDraft, setReplayDraft] = useState('');
+  const [savingReplay, setSavingReplay] = useState(false);
+  const [replayMsg, setReplayMsg] = useState<string | null>(null);
+
+  // Sync draft from server data
+  useEffect(() => {
+    if (data?.match.replayUrl !== undefined) {
+      setReplayDraft(data.match.replayUrl ?? '');
+    }
+  }, [data?.match.replayUrl]);
+
+  async function saveReplayUrl() {
+    if (!id) return;
+    const value = replayDraft.trim();
+    if (value.length > 0) {
+      try {
+        const u = new URL(value);
+        if (!['http:', 'https:'].includes(u.protocol)) {
+          setReplayMsg('URL invalide (http/https requis)');
+          return;
+        }
+      } catch {
+        setReplayMsg('URL invalide');
+        return;
+      }
+    }
+    setSavingReplay(true);
+    setReplayMsg(null);
+    try {
+      const res = await fetch(`/api/admin/matches/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ replay_url: value || null }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Erreur');
+      setReplayMsg('Replay enregistré.');
+      // Refresh cast data so the displayed value reflects the new state
+      await fetchData();
+      setTimeout(() => setReplayMsg(null), 3000);
+    } catch (e: unknown) {
+      setReplayMsg((e as Error).message || 'Erreur');
+    } finally {
+      setSavingReplay(false);
+    }
+  }
 
   const fetchData = useCallback(async () => {
     if (!id) return;
@@ -475,6 +524,57 @@ function CastPage(_: StaffProps) {
             <div className="mt-4 bg-neutral-800/40 border border-neutral-700/40 rounded-xl p-3 text-xs text-neutral-400">
               <span className="uppercase tracking-widest text-neutral-500 mr-2">Notes</span>
               {match.notes}
+            </div>
+          )}
+
+          {/* Replay / VOD editor — visible after match end */}
+          {(match.status === 'finished' || match.status === 'walkover' || match.replayUrl) && (
+            <div className="mt-4 bg-neutral-800/40 border border-neutral-700/40 rounded-xl p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs uppercase tracking-widest text-neutral-500">
+                  Replay / VOD
+                </span>
+                {match.replayUrl && (
+                  <a
+                    href={match.replayUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-blue-300 hover:text-blue-200 underline"
+                  >
+                    Ouvrir le replay actuel ↗
+                  </a>
+                )}
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="url"
+                  placeholder="https://youtube.com/watch?v=..."
+                  value={replayDraft}
+                  onChange={(e) => setReplayDraft(e.target.value)}
+                  className="flex-1 px-3 py-2 rounded bg-neutral-900 border border-neutral-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  onClick={saveReplayUrl}
+                  disabled={savingReplay || replayDraft === (match.replayUrl ?? '')}
+                  className="px-3 py-2 rounded bg-blue-600 hover:bg-blue-500 text-sm font-medium disabled:opacity-50"
+                >
+                  {savingReplay ? 'Enregistrement…' : 'Enregistrer'}
+                </button>
+              </div>
+              {replayMsg && (
+                <p
+                  className={`text-xs mt-2 ${
+                    replayMsg.toLowerCase().includes('erreur') || replayMsg.toLowerCase().includes('invalide')
+                      ? 'text-red-300'
+                      : 'text-emerald-300'
+                  }`}
+                >
+                  {replayMsg}
+                </p>
+              )}
+              <p className="text-xs text-neutral-500 mt-2">
+                Colle ici le lien YouTube ou Twitch du VOD post-match. Il sera affiché publiquement sur la page du match.
+              </p>
             </div>
           )}
         </div>
