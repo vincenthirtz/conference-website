@@ -428,24 +428,9 @@ function Navbar(): JSX.Element {
       ],
     },
     {
-      title: 'Logs & stats',
-      ref: '',
-      minRole: 'manager',
-      children: [
-        { title: 'Logs staff', ref: '/admin/logs', minRole: 'manager' },
-        { title: 'Logs emails', ref: '/admin/email-logs', minRole: 'admin' },
-        {
-          title: 'Stats équipes',
-          ref: '/admin/stats/teams',
-          minRole: 'manager',
-        },
-        { title: 'Stats maps', ref: '/admin/stats/maps', minRole: 'manager' },
-      ],
-    },
-    {
       title: 'Configuration',
       ref: '',
-      minRole: 'admin',
+      minRole: 'manager',
       children: [
         {
           title: 'Paramètres du site',
@@ -476,6 +461,29 @@ function Navbar(): JSX.Element {
               title: 'Ajouter un adhérent',
               ref: '/admin/adherents/new',
               minRole: 'admin',
+            },
+          ],
+        },
+        {
+          title: 'Logs & stats',
+          ref: '',
+          minRole: 'manager',
+          children: [
+            { title: 'Logs staff', ref: '/admin/logs', minRole: 'manager' },
+            {
+              title: 'Logs emails',
+              ref: '/admin/email-logs',
+              minRole: 'admin',
+            },
+            {
+              title: 'Stats équipes',
+              ref: '/admin/stats/teams',
+              minRole: 'manager',
+            },
+            {
+              title: 'Stats maps',
+              ref: '/admin/stats/maps',
+              minRole: 'manager',
             },
           ],
         },
