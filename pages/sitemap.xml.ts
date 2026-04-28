@@ -6,6 +6,7 @@ const publicRoutes = [
   { path: '/tournoi', priority: '0.9', changefreq: 'weekly' },
   { path: '/tournaments', priority: '0.9', changefreq: 'weekly' },
   { path: '/inscription-2026', priority: '0.9', changefreq: 'weekly' },
+  { path: '/espace-capitaine', priority: '0.7', changefreq: 'monthly' },
   { path: '/actualites', priority: '0.8', changefreq: 'daily' },
   { path: '/timeline-2026', priority: '0.8', changefreq: 'weekly' },
   { path: '/lore', priority: '0.7', changefreq: 'monthly' },

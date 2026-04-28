@@ -38,6 +38,7 @@ const siteSections: SiteSection[] = [
       { label: 'Inscription staff / joueur', href: '/register' },
       { label: 'Inscription tournoi f\u00e9minin 2026', href: '/inscription-2026' },
       { label: 'Cr\u00e9er une \u00e9quipe', href: '/team/create' },
+      { label: 'Espace capitaine \u2014 pr\u00e9sentation', href: '/espace-capitaine' },
       { label: 'Espace joueur', href: '/player' },
       { label: 'Devenir partenaire', href: '/partenaires/demande' },
       { label: 'Contact', href: '/contact' },
