@@ -176,6 +176,8 @@ export function formatStaffLog(log: StaffLog) {
     map_veto: 'Veto de maps',
     update_discord_webhook: 'Webhook Discord modifié',
     delete_discord_webhook: 'Webhook Discord supprimé',
+    update_support_ticket: 'Ticket support modifié',
+    import_mvp: 'MVP importé',
     other: 'Action staff',
   };
 

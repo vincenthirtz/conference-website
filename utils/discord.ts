@@ -13,7 +13,9 @@ export type DiscordChannelType =
   | 'bracket_updates'
   | 'general_announcements'
   | 'veto_live'
-  | 'checkin_reminders';
+  | 'checkin_reminders'
+  | 'support_tickets'
+  | 'mvp_polls';
 
 type DiscordEmbedField = {
   name: string;
@@ -32,11 +34,28 @@ type DiscordEmbed = {
   thumbnail?: { url: string };
 };
 
+type DiscordPollMedia = {
+  text: string;
+};
+
+type DiscordPollAnswer = {
+  poll_media: DiscordPollMedia;
+};
+
+type DiscordPoll = {
+  question: DiscordPollMedia;
+  answers: DiscordPollAnswer[];
+  duration: number; // hours, max 768
+  allow_multiselect?: boolean;
+  layout_type?: 1;
+};
+
 type DiscordWebhookPayload = {
   content?: string;
   username?: string;
   avatar_url?: string;
   embeds?: DiscordEmbed[];
+  poll?: DiscordPoll;
   allowed_mentions?: {
     parse?: ('roles' | 'users' | 'everyone')[];
     roles?: string[];
@@ -53,6 +72,10 @@ const COLORS = {
   scrim: 0x06b6d4, // cyan-500
   checkinReminder: 0xef4444, // red-500
   checkinForfeit: 0x991b1b, // red-800
+  supportLow: 0x3b82f6, // blue-500
+  supportMedium: 0xf59e0b, // amber-500
+  supportHigh: 0xdc2626, // red-600
+  mvpPoll: 0xfbbf24, // amber-400
 };
 
 /* -----------------------------------------------------------
@@ -652,4 +675,216 @@ export async function notifyVetoStep(
     ],
     allowed_mentions: buildAllowedMentions(cfg.roleMention),
   });
+}
+
+/* -----------------------------------------------------------
+ * Support ticket notification
+ * ---------------------------------------------------------*/
+
+export type SupportTicketNotification = {
+  ticketId: string;
+  tournamentId: string | null;
+  category: 'dispute' | 'behavior' | 'technical' | 'other';
+  severity: 'low' | 'medium' | 'high';
+  isAnonymous: boolean;
+  reporterName: string | null;
+  reporterEmail: string | null;
+  subject: string | null;
+  message: string;
+  adminUrl?: string;
+};
+
+const CATEGORY_LABEL: Record<SupportTicketNotification['category'], string> = {
+  dispute: '⚖️ Litige / Contestation',
+  behavior: '🚨 Comportement / Safety',
+  technical: '🛠️ Problème technique',
+  other: '📬 Autre',
+};
+
+const SEVERITY_LABEL: Record<SupportTicketNotification['severity'], string> = {
+  low: 'Basse',
+  medium: 'Moyenne',
+  high: 'HAUTE — urgent',
+};
+
+export async function notifySupportTicket(
+  data: SupportTicketNotification
+): Promise<{ messageId: string | null }> {
+  const cfg = await resolveWebhook(data.tournamentId, 'support_tickets');
+  if (!cfg) return { messageId: null };
+
+  const color =
+    data.severity === 'high'
+      ? COLORS.supportHigh
+      : data.severity === 'medium'
+        ? COLORS.supportMedium
+        : COLORS.supportLow;
+
+  const fields: DiscordEmbedField[] = [
+    {
+      name: 'Catégorie',
+      value: CATEGORY_LABEL[data.category],
+      inline: true,
+    },
+    {
+      name: 'Sévérité',
+      value: SEVERITY_LABEL[data.severity],
+      inline: true,
+    },
+    {
+      name: 'Auteur',
+      value: data.isAnonymous
+        ? '_Signalement anonyme_'
+        : data.reporterName
+          ? `${data.reporterName}${data.reporterEmail ? ` (${data.reporterEmail})` : ''}`
+          : data.reporterEmail || '_Inconnu_',
+      inline: false,
+    },
+  ];
+
+  if (data.subject) {
+    fields.push({ name: 'Sujet', value: data.subject.slice(0, 256), inline: false });
+  }
+
+  // Truncate message at 1500 chars (embed description limit is 4096 but we keep it readable)
+  const truncated =
+    data.message.length > 1500
+      ? data.message.slice(0, 1500) + '\n...\n_(message tronqué — voir admin)_'
+      : data.message;
+
+  // Only ping the moderation role on HIGH severity. On low/medium, post silently.
+  const channelPing =
+    data.severity === 'high' ? formatRoleMention(cfg.roleMention) : '';
+  const allowedMentions =
+    data.severity === 'high'
+      ? buildAllowedMentions(cfg.roleMention)
+      : { parse: [] as ('roles' | 'users' | 'everyone')[], roles: [] };
+
+  // Capture the message ID returned by Discord with ?wait=true so we can store
+  // it on the ticket row (allows future edits).
+  const url = `${cfg.url}?wait=true`;
+  let messageId: string | null = null;
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: "OW Women's Cup — Support",
+        content: channelPing || undefined,
+        embeds: [
+          {
+            title: `📩 Nouveau signalement (${SEVERITY_LABEL[data.severity]})`,
+            description: truncated,
+            color,
+            fields,
+            timestamp: new Date().toISOString(),
+            footer: { text: `Ticket ${data.ticketId.slice(0, 8)}` },
+            ...(data.adminUrl ? { url: data.adminUrl } : {}),
+          },
+        ],
+        allowed_mentions: allowedMentions,
+      }),
+    });
+
+    if (res.ok) {
+      const body = await res.json().catch(() => null);
+      messageId = body?.id ?? null;
+    } else {
+      const text = await res.text().catch(() => '');
+      console.error('[discord] support ticket POST failed:', res.status, text.slice(0, 300));
+    }
+  } catch (e) {
+    console.error('[discord] support ticket POST error:', e);
+  }
+
+  return { messageId };
+}
+
+/* -----------------------------------------------------------
+ * MVP poll (Discord native poll via webhook)
+ * ---------------------------------------------------------*/
+
+export type MvpPollNotification = {
+  tournamentId: string | null;
+  matchId: string;
+  team1Name: string;
+  team2Name: string;
+  /** Up to 10 answers, each up to 55 chars (Discord limits) */
+  candidates: { displayLabel: string }[];
+  durationHours?: number; // default 24
+};
+
+export async function postMvpPoll(
+  data: MvpPollNotification
+): Promise<{ messageId: string | null; posted: boolean }> {
+  const cfg = await resolveWebhook(data.tournamentId, 'mvp_polls');
+  if (!cfg) return { messageId: null, posted: false };
+
+  // Discord native polls: max 10 answers, each text max 55 chars.
+  // We keep up to 10 candidates and truncate each label.
+  const answers: DiscordPollAnswer[] = data.candidates
+    .slice(0, 10)
+    .map((c) => ({
+      poll_media: { text: c.displayLabel.slice(0, 55) || '—' },
+    }));
+
+  if (answers.length < 2) {
+    // Discord requires at least 2 answers. Skip silently.
+    console.warn(
+      '[discord] postMvpPoll skipped: not enough candidates for match',
+      data.matchId
+    );
+    return { messageId: null, posted: false };
+  }
+
+  const duration = Math.max(1, Math.min(768, data.durationHours ?? 24));
+  const channelPing = formatRoleMention(cfg.roleMention);
+
+  const url = `${cfg.url}?wait=true`;
+  let messageId: string | null = null;
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: "OW Women's Cup",
+        content: channelPing || undefined,
+        embeds: [
+          {
+            title: '🏅 Vote MVP',
+            description: `**${data.team1Name}** vs **${data.team2Name}** — qui mérite le titre de MVP du match ?`,
+            color: COLORS.mvpPoll,
+            timestamp: new Date().toISOString(),
+            footer: {
+              text: `Match ${data.matchId.slice(0, 8)} — sondage ouvert ${duration}h`,
+            },
+          },
+        ],
+        poll: {
+          question: { text: 'MVP du match ?' },
+          answers,
+          duration,
+          allow_multiselect: false,
+          layout_type: 1,
+        },
+        allowed_mentions: buildAllowedMentions(cfg.roleMention),
+      }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      console.error('[discord] mvp poll POST failed:', res.status, text.slice(0, 300));
+      return { messageId: null, posted: false };
+    }
+
+    const body = await res.json().catch(() => null);
+    messageId = body?.id ?? null;
+  } catch (e) {
+    console.error('[discord] mvp poll POST error:', e);
+    return { messageId: null, posted: false };
+  }
+
+  return { messageId, posted: true };
 }

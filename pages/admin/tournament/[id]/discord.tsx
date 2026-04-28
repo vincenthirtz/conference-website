@@ -14,7 +14,9 @@ type ChannelType =
   | 'bracket_updates'
   | 'general_announcements'
   | 'veto_live'
-  | 'checkin_reminders';
+  | 'checkin_reminders'
+  | 'support_tickets'
+  | 'mvp_polls';
 
 type WebhookRow = {
   id: string;
@@ -58,6 +60,14 @@ const CHANNEL_LABELS: Record<ChannelType, { label: string; description: string }
     label: 'Rappels check-in',
     description: 'Rappels T-30min / T-15min avant chaque match + annonce de forfait auto à T-0.',
   },
+  support_tickets: {
+    label: 'Tickets de support',
+    description: 'Signalements (litiges, comportement, technique). Sévérité HAUTE = ping du rôle modération.',
+  },
+  mvp_polls: {
+    label: 'Sondages MVP',
+    description: 'Sondage Discord natif (24h) pour élire la MVP, posté automatiquement à la fin de chaque match.',
+  },
 };
 
 export const getServerSideProps = withStaffPage('admin');
@@ -82,6 +92,8 @@ function DiscordConfigPage(_: StaffProps) {
     general_announcements: { webhookUrl: '', roleMention: '', isActive: true },
     veto_live: { webhookUrl: '', roleMention: '', isActive: true },
     checkin_reminders: { webhookUrl: '', roleMention: '', isActive: true },
+    support_tickets: { webhookUrl: '', roleMention: '', isActive: true },
+    mvp_polls: { webhookUrl: '', roleMention: '', isActive: true },
   });
 
   const [saving, setSaving] = useState<Record<ChannelType, boolean>>({
@@ -91,6 +103,8 @@ function DiscordConfigPage(_: StaffProps) {
     general_announcements: false,
     veto_live: false,
     checkin_reminders: false,
+    support_tickets: false,
+    mvp_polls: false,
   });
 
   const fetchData = useCallback(async () => {

@@ -995,6 +995,10 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                 />
               )}
 
+              {(match.status === 'finished' || match.status === 'walkover') && (
+                <MvpSection matchId={match.id} />
+              )}
+
               <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5">
                 <h2 className="text-lg font-semibold mb-3">Historique</h2>
                 <MatchTimeline matchId={match.id} />
@@ -1124,6 +1128,222 @@ function TeamSummaryCard({
         )}
       </div>
     </div>
+  );
+}
+
+/* -----------------------------------------------------------
+ * MVP poll section — shows poll status and allows manual import of winner
+ * ---------------------------------------------------------*/
+
+type MvpCandidate = {
+  id: string;
+  teamId: string;
+  teamName: string | null;
+  battleTag: string | null;
+  isSubstitute: boolean;
+};
+
+type MvpPollData = {
+  matchId: string;
+  matchStatus: string;
+  poll: {
+    id: string;
+    posted_at: string | null;
+    duration_hours: number;
+    winner_member_id: string | null;
+    winner_battle_tag: string | null;
+    winner_imported_at: string | null;
+  } | null;
+  candidates: MvpCandidate[];
+};
+
+function MvpSection({ matchId }: { matchId: string }) {
+  const [data, setData] = useState<MvpPollData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<string>('');
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setErr(null);
+    try {
+      const res = await fetch(`/api/admin/matches/${matchId}/mvp`);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Erreur');
+      setData(json);
+      if (json.poll?.winner_member_id) {
+        setSelected(json.poll.winner_member_id);
+      }
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }, [matchId]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  async function save() {
+    if (!selected) return;
+    setSaving(true);
+    setErr(null);
+    try {
+      const res = await fetch(`/api/admin/matches/${matchId}/mvp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ winnerMemberId: selected }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Erreur');
+      await fetchData();
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function clear() {
+    if (!confirm('Effacer le MVP enregistré ?')) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/matches/${matchId}/mvp`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || 'Erreur');
+      }
+      setSelected('');
+      await fetchData();
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const poll = data?.poll;
+  const winnerMember = data?.candidates.find(
+    (c) => c.id === poll?.winner_member_id
+  );
+
+  // Group candidates by team for the dropdown
+  const grouped: Record<string, MvpCandidate[]> = {};
+  for (const c of data?.candidates || []) {
+    if (c.isSubstitute) continue;
+    const k = c.teamName || c.teamId;
+    if (!grouped[k]) grouped[k] = [];
+    grouped[k].push(c);
+  }
+
+  return (
+    <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5">
+      <h2 className="text-lg font-semibold mb-3">MVP du match</h2>
+
+      {loading ? (
+        <div className="text-sm text-neutral-400">Chargement...</div>
+      ) : (
+        <div className="space-y-3">
+          <div className="text-xs text-neutral-400">
+            {poll?.posted_at ? (
+              <>
+                Sondage Discord posté le{' '}
+                <span className="text-neutral-200">
+                  {new Date(poll.posted_at).toLocaleString('fr-FR', {
+                    day: '2-digit',
+                    month: 'short',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZone: 'Europe/Paris',
+                  })}
+                </span>{' '}
+                — durée {poll.duration_hours}h
+              </>
+            ) : (
+              <span>
+                Aucun sondage Discord posté (webhook <code>mvp_polls</code> non
+                configuré ou moins de 2 candidates).
+              </span>
+            )}
+          </div>
+
+          {poll?.winner_member_id && winnerMember ? (
+            <div className="rounded-xl bg-amber-900/30 border border-amber-500/40 p-3 flex items-center gap-3">
+              <span className="text-2xl">🏅</span>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs text-amber-300 uppercase tracking-wide">
+                  MVP enregistré
+                </div>
+                <div className="text-sm font-semibold text-white">
+                  {winnerMember.battleTag || '—'}
+                </div>
+                <div className="text-xs text-amber-200/70">
+                  {winnerMember.teamName || ''}{' '}
+                  {poll.winner_imported_at && (
+                    <>
+                      · importé le{' '}
+                      {new Date(poll.winner_imported_at).toLocaleString(
+                        'fr-FR',
+                        { day: '2-digit', month: 'short' }
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={clear}
+                disabled={saving}
+                className="px-3 py-1.5 rounded-lg text-xs bg-neutral-700 hover:bg-neutral-600 transition-colors disabled:opacity-50"
+              >
+                Effacer
+              </button>
+            </div>
+          ) : null}
+
+          <div>
+            <label className="block text-xs text-neutral-400 mb-1">
+              Sélectionner la MVP (vainqueur du sondage Discord)
+            </label>
+            <select
+              value={selected}
+              onChange={(e) => setSelected(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm"
+            >
+              <option value="">— Choisir une joueuse —</option>
+              {Object.entries(grouped).map(([teamName, members]) => (
+                <optgroup key={teamName} label={teamName}>
+                  {members.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.battleTag || `(membre ${m.id.slice(0, 6)})`}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </div>
+
+          {err && (
+            <div className="text-xs rounded-lg bg-red-900/40 border border-red-500/50 px-3 py-2">
+              {err}
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={save}
+            disabled={saving || !selected || selected === poll?.winner_member_id}
+            className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-sm font-medium transition-colors disabled:opacity-50"
+          >
+            {saving ? 'Enregistrement...' : 'Enregistrer le MVP'}
+          </button>
+        </div>
+      )}
+    </section>
   );
 }
 

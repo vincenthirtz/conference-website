@@ -388,6 +388,11 @@ function Navbar(): JSX.Element {
           ref: '/admin/comments',
           minRole: 'manager',
         },
+        {
+          title: 'Tickets de support',
+          ref: '/admin/support',
+          minRole: 'manager',
+        },
       ],
     },
     {

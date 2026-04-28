@@ -15,6 +15,8 @@ const VALID_CHANNEL_TYPES = [
   'general_announcements',
   'veto_live',
   'checkin_reminders',
+  'support_tickets',
+  'mvp_polls',
 ] as const;
 
 export default withStaffRoute(handler, 'admin');

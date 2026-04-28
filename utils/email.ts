@@ -361,6 +361,68 @@ export function sendMatchCheckinEmail(opts: {
   });
 }
 
+/**
+ * Confirmation email sent to a support ticket reporter (only when not anonymous).
+ */
+export function sendSupportConfirmationEmail(opts: {
+  to: string;
+  ticketId: string;
+  category: 'dispute' | 'behavior' | 'technical' | 'other';
+  severity: 'low' | 'medium' | 'high';
+  subject: string | null;
+}): Promise<SendEmailResult> {
+  const categoryLabel: Record<typeof opts.category, string> = {
+    dispute: 'Litige / Contestation',
+    behavior: 'Comportement / Safety',
+    technical: 'Problème technique',
+    other: 'Autre',
+  };
+  const severityLabel: Record<typeof opts.severity, string> = {
+    low: 'Basse',
+    medium: 'Moyenne',
+    high: 'Haute',
+  };
+
+  return sendEmail({
+    to: opts.to,
+    subject: 'Signalement reçu — OW Women\'s Cup',
+    tags: ['support-confirmation'],
+    html: emailLayout(`
+      ${gradientBar()}
+      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Signalement reçu</h1>
+      <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
+        Merci pour votre signalement. Notre &eacute;quipe de mod&eacute;ration l&apos;examine.
+        ${opts.severity === 'high' ? 'Compte tenu de la s&eacute;v&eacute;rit&eacute; haute, nous le traitons en priorit&eacute;.' : ''}
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:rgba(255,255,255,0.05);border-radius:10px;border:1px solid rgba(255,255,255,0.08);margin:0 0 24px;">
+        <tr>
+          <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
+            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">R&eacute;f&eacute;rence ticket</span><br/>
+            <code style="font-size:13px;color:#2dccfd;font-family:'Fira Code',monospace;">${escapeHtml(opts.ticketId.slice(0, 8))}</code>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
+            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Cat&eacute;gorie</span><br/>
+            <span style="font-size:15px;color:#ffffff;font-weight:500;">${escapeHtml(categoryLabel[opts.category])}</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:14px 20px;${opts.subject ? 'border-bottom:1px solid rgba(255,255,255,0.06);' : ''}">
+            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">S&eacute;v&eacute;rit&eacute;</span><br/>
+            <span style="font-size:15px;color:${opts.severity === 'high' ? '#ef4444' : opts.severity === 'medium' ? '#f59e0b' : '#3b82f6'};font-weight:500;">${escapeHtml(severityLabel[opts.severity])}</span>
+          </td>
+        </tr>
+        ${opts.subject ? `<tr><td style="padding:14px 20px;"><span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Sujet</span><br/><span style="font-size:15px;color:#ffffff;">${escapeHtml(opts.subject)}</span></td></tr>` : ''}
+      </table>
+      <p style="margin:0;font-size:13px;color:#675788;line-height:1.5;">
+        Vous serez recontact&eacute;(e) par mail si l&apos;&eacute;quipe a besoin d&apos;informations compl&eacute;mentaires.
+        Pour toute urgence, contactez la mod&eacute;ration directement sur Discord.
+      </p>
+    `),
+  });
+}
+
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, '&amp;')

@@ -32,6 +32,8 @@ export type StaffLogAction =
   | 'map_veto'
   | 'update_discord_webhook'
   | 'delete_discord_webhook'
+  | 'update_support_ticket'
+  | 'import_mvp'
   | 'other';
 
 export type StaffLog = {

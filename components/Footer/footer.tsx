@@ -386,6 +386,34 @@ function LiveIcon({ className, fill }: Readonly<SVGTypes>): JSX.Element {
   );
 }
 
+function SupportIcon({ className, fill }: Readonly<SVGTypes>): JSX.Element {
+  const stroke = fill || 'currentColor';
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v10A1.5 1.5 0 0 1 18.5 17H8l-4 3.5V5.5Z"
+        fill="none"
+        stroke={stroke}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.6"
+      />
+      <path
+        d="M12 8.5v3.2"
+        fill="none"
+        stroke={stroke}
+        strokeLinecap="round"
+        strokeWidth="1.6"
+      />
+      <circle cx="12" cy="14" r="0.9" fill={stroke} />
+    </svg>
+  );
+}
+
 function AboutIcon({ className, fill }: Readonly<SVGTypes>): JSX.Element {
   const stroke = fill || 'currentColor';
   return (
@@ -421,6 +449,7 @@ const footerLinks: FooterLink[] = [
   { label: 'À propos', href: '/about', Icon: AboutIcon },
   { label: 'Règlement', href: '/rules', Icon: RulesIcon },
   { label: 'Nous contacter', href: '/contact', Icon: MailIcon },
+  { label: 'Signalement / Support', href: '/support', Icon: SupportIcon },
   { label: 'Faire un don', href: '/don', Icon: DonationIcon },
   { label: 'Actualités OW', href: '/actualites', Icon: OverwatchNewsIcon },
   // { label: 'Lore & Médias', href: '/lore', Icon: LoreMediaIcon },
