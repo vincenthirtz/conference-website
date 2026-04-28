@@ -103,6 +103,26 @@ function Header(): JSX.Element {
                     FAQ
                   </button>
                 </Link>
+                <Link href="/timeline-2026">
+                  <button
+                    type="button"
+                    className="group flex items-center gap-3 px-6 py-3 rounded-xl bg-white/5 border border-white/15 hover:bg-white/10 hover:border-white/25 text-white font-medium text-base backdrop-blur transition-all duration-300 hover:scale-105"
+                  >
+                    <svg
+                      className="w-5 h-5 transition-transform duration-300 group-hover:scale-110"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M3 12h4l3-9 4 18 3-9h4" />
+                    </svg>
+                    Roadmap
+                  </button>
+                </Link>
               </div>
             </div>
           </div>
