@@ -149,7 +149,10 @@ export async function propagateBracketForMatch(
     }
   } catch (err) {
     // Rollback : restaurer les slots à leur état d'avant propagation
-    console.error(`Propagation failed for match ${matchId}, rolling back:`, err);
+    console.error(
+      `Propagation failed for match ${matchId}, rolling back:`,
+      err
+    );
     await restorePropagationSlots(snapshot);
     throw err;
   }
@@ -208,7 +211,7 @@ async function fetchMatchWithLinks(matchId: string): Promise<MatchRow | null> {
  * Calcul winner / loser à partir du match
  * ---------------------------------------------------------*/
 
-function computeWinnerLoserFromMatch(match: MatchRow): {
+export function computeWinnerLoserFromMatch(match: MatchRow): {
   winnerTeamId: string | null;
   loserTeamId: string | null;
 } {
@@ -368,8 +371,7 @@ export async function snapshotPropagationSlots(
   if (!match) return snapshot;
 
   if (match.next_match_win_id && match.next_match_win_slot) {
-    const field =
-      match.next_match_win_slot === 1 ? 'team1_id' : 'team2_id';
+    const field = match.next_match_win_slot === 1 ? 'team1_id' : 'team2_id';
     snapshot.winMatchId = match.next_match_win_id;
     snapshot.winSlotField = field;
 
@@ -382,8 +384,7 @@ export async function snapshotPropagationSlots(
   }
 
   if (match.next_match_lose_id && match.next_match_lose_slot) {
-    const field =
-      match.next_match_lose_slot === 1 ? 'team1_id' : 'team2_id';
+    const field = match.next_match_lose_slot === 1 ? 'team1_id' : 'team2_id';
     snapshot.loseMatchId = match.next_match_lose_id;
     snapshot.loseSlotField = field;
 

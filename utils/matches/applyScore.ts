@@ -13,7 +13,11 @@ import { logStaffAction } from '../staffLogs';
 import { computeRequiredWins } from './computeRequiredWins';
 import { invalidateStandingsCache } from '../stages/standingsCache';
 import { tryAutoAdvanceFromMatch } from '../stages/autoAdvance';
-import { notifyMatchResult, notifyBracketUpdate, postMvpPoll } from '../discord';
+import {
+  notifyMatchResult,
+  notifyBracketUpdate,
+  postMvpPoll,
+} from '../discord';
 import type { PropagationResult } from '../../types/bracket';
 import type {
   ApplyMatchScoreInput,
@@ -244,7 +248,10 @@ export async function applyMatchScore(
       // Si le reset échoue, restaurer le snapshot et abandonner
       if (propagationSnapshot) {
         await restorePropagationSlots(propagationSnapshot).catch((re) =>
-          console.error('applyMatchScore: restore after reset failure failed', re)
+          console.error(
+            'applyMatchScore: restore after reset failure failed',
+            re
+          )
         );
       }
       throw new Error(
@@ -269,7 +276,10 @@ export async function applyMatchScore(
     // Rollback : restaurer les slots de propagation vidés par le reset
     if (propagationSnapshot) {
       await restorePropagationSlots(propagationSnapshot).catch((re) =>
-        console.error('applyMatchScore: restore after update failure failed', re)
+        console.error(
+          'applyMatchScore: restore after update failure failed',
+          re
+        )
       );
     }
 
@@ -289,7 +299,10 @@ export async function applyMatchScore(
     try {
       propagationResult = await propagateBracketForMatch(matchId);
     } catch (e) {
-      console.error('applyMatchScore: propagateBracketForMatch error — rollback', e);
+      console.error(
+        'applyMatchScore: propagateBracketForMatch error — rollback',
+        e
+      );
 
       // Rollback complet : match + slots de propagation
       const rollbackOps: Promise<any>[] = [
@@ -300,7 +313,10 @@ export async function applyMatchScore(
             .eq('id', matchId)
         ).then(({ error: rollbackErr }) => {
           if (rollbackErr) {
-            console.error('applyMatchScore: match rollback failed!', rollbackErr);
+            console.error(
+              'applyMatchScore: match rollback failed!',
+              rollbackErr
+            );
           }
         }),
       ];
@@ -308,7 +324,10 @@ export async function applyMatchScore(
       if (propagationSnapshot) {
         rollbackOps.push(
           restorePropagationSlots(propagationSnapshot).catch((re) =>
-            console.error('applyMatchScore: propagation slot restore failed', re)
+            console.error(
+              'applyMatchScore: propagation slot restore failed',
+              re
+            )
           )
         );
       }
@@ -384,9 +403,7 @@ export async function applyMatchScore(
       void tryAutoAdvanceFromMatch({
         stageId: match.stage_id,
         staffId: staffId ?? null,
-      }).catch((e: unknown) =>
-        console.error('[autoAdvance] error:', e)
-      );
+      }).catch((e: unknown) => console.error('[autoAdvance] error:', e));
     }
   }
 
@@ -519,7 +536,7 @@ async function sendMatchResultDiscord(params: {
  * - en cas de bye : l'équipe présente gagne automatiquement
  * - en cas d'égalité : pas de vainqueur (null)
  */
-function computeWinnerFromScores(
+export function computeWinnerFromScores(
   team1Id: string | null,
   team2Id: string | null,
   team1Score: number,
