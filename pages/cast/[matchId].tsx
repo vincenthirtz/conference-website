@@ -1,0 +1,648 @@
+// pages/cast/[matchId].tsx
+// Single-screen dashboard for casters during a live match.
+// Layout: header (tournament/round/status), big lobby code, two team panels
+// (logo, players, captain), live veto state, H2H stats, last meetings.
+// Auto-refreshes every 10 seconds.
+
+import { useEffect, useState, useCallback } from 'react';
+import Head from 'next/head';
+import Image from 'next/image';
+import { useRouter } from 'next/router';
+import { withStaffPage } from '@/utils/staff';
+import type { StaffProps } from '@/types/admin';
+
+type Member = {
+  id: string;
+  battle_tag: string | null;
+  role: string;
+  is_substitute: boolean;
+  is_captain: boolean;
+};
+
+type Team = {
+  id: string;
+  name: string;
+  shortName: string | null;
+  logoUrl: string | null;
+  country: string | null;
+  members: Member[];
+};
+
+type VetoStep = {
+  id: string;
+  step_number: number;
+  action: 'ban' | 'pick' | 'decider';
+  team_id: string | null;
+  map_name: string;
+  map_type: string | null;
+};
+
+type FlowStep = {
+  action: 'ban' | 'pick' | 'decider';
+  side: 'team1' | 'team2' | null;
+};
+
+type CastData = {
+  match: {
+    id: string;
+    status: string;
+    matchFormat: string;
+    roundName: string | null;
+    roundNumber: number | null;
+    team1Id: string | null;
+    team2Id: string | null;
+    team1Score: number | null;
+    team2Score: number | null;
+    winnerTeamId: string | null;
+    scheduledAt: string | null;
+    streamUrl: string | null;
+    lobbyCode: string | null;
+    notes: string | null;
+  };
+  team1: Team | null;
+  team2: Team | null;
+  tournament: { id: string; name: string; slug: string | null } | null;
+  stage: { id: string; name: string; stageType: string | null } | null;
+  veto: {
+    format: string;
+    flow: FlowStep[];
+    steps: VetoStep[];
+    currentStepIndex: number;
+    isComplete: boolean;
+    pickedMaps: { map_name: string; map_type: string | null; picked_by: string | null }[];
+  };
+  h2h: {
+    total: number;
+    winsTeam1: number;
+    winsTeam2: number;
+    meetings: {
+      matchId: string;
+      team1Score: number | null;
+      team2Score: number | null;
+      winnerTeamId: string | null;
+      completedAt: string | null;
+      tournamentName: string | null;
+    }[];
+  };
+};
+
+const REFRESH_MS = 10_000;
+
+export const getServerSideProps = withStaffPage('caster');
+
+function formatDateFr(value: string | null): string {
+  if (!value) return '—';
+  try {
+    return new Date(value).toLocaleString('fr-FR', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Europe/Paris',
+    });
+  } catch {
+    return value;
+  }
+}
+
+function statusBadge(status: string): { label: string; className: string } {
+  switch (status) {
+    case 'pending':
+      return {
+        label: 'À VENIR',
+        className: 'bg-blue-600/20 text-blue-300 border-blue-500/40',
+      };
+    case 'ongoing':
+      return {
+        label: 'EN COURS',
+        className:
+          'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 animate-pulse',
+      };
+    case 'finished':
+      return {
+        label: 'TERMINÉ',
+        className: 'bg-neutral-600/20 text-neutral-300 border-neutral-500/40',
+      };
+    case 'walkover':
+      return {
+        label: 'FORFAIT',
+        className: 'bg-red-700/30 text-red-200 border-red-500/40',
+      };
+    default:
+      return {
+        label: status.toUpperCase(),
+        className: 'bg-neutral-600/20 text-neutral-300 border-neutral-500/40',
+      };
+  }
+}
+
+function CastPage(_: StaffProps) {
+  const router = useRouter();
+  const { matchId } = router.query;
+  const id = Array.isArray(matchId) ? matchId[0] : matchId;
+
+  const [data, setData] = useState<CastData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [copied, setCopied] = useState(false);
+
+  const fetchData = useCallback(async () => {
+    if (!id) return;
+    setErrorMsg(null);
+    try {
+      const res = await fetch(`/api/cast/${encodeURIComponent(id)}`);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Erreur');
+      setData(json);
+      setLastRefresh(new Date());
+    } catch (err) {
+      setErrorMsg((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const t = setInterval(fetchData, REFRESH_MS);
+    return () => clearInterval(t);
+  }, [autoRefresh, fetchData]);
+
+  async function copyLobby() {
+    if (!data?.match.lobbyCode) return;
+    try {
+      await navigator.clipboard.writeText(data.match.lobbyCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // ignore
+    }
+  }
+
+  if (loading && !data) {
+    return (
+      <main className="min-h-screen bg-neutral-950 text-white flex items-center justify-center">
+        <div className="w-10 h-10 border-2 border-neutral-700 border-t-white rounded-full animate-spin" />
+      </main>
+    );
+  }
+
+  if (errorMsg && !data) {
+    return (
+      <main className="min-h-screen bg-neutral-950 text-white flex items-center justify-center p-4">
+        <div className="text-center max-w-md">
+          <div className="text-red-400 text-lg mb-2">Erreur</div>
+          <p className="text-sm text-neutral-400">{errorMsg}</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!data) return null;
+
+  const { match, team1, team2, tournament, stage, veto, h2h } = data;
+  const badge = statusBadge(match.status);
+
+  return (
+    <>
+      <Head>
+        <title>Cast — {team1?.name || '?'} vs {team2?.name || '?'}</title>
+        <meta name="robots" content="noindex" />
+      </Head>
+
+      <main className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          {/* Header */}
+          <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
+            <div className="flex items-center gap-3">
+              <span
+                className={`px-3 py-1 rounded-full text-xs font-bold border ${badge.className}`}
+              >
+                {badge.label}
+              </span>
+              {tournament && (
+                <span className="text-sm text-neutral-300">
+                  {tournament.name}
+                </span>
+              )}
+              {stage && (
+                <span className="text-sm text-neutral-500">
+                  · {stage.name}
+                </span>
+              )}
+              {match.roundName && (
+                <span className="text-sm text-neutral-500">
+                  · {match.roundName}
+                </span>
+              )}
+              <span className="text-xs text-neutral-600">
+                · {match.matchFormat.toUpperCase()}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3 text-xs text-neutral-500">
+              {match.scheduledAt && (
+                <span>{formatDateFr(match.scheduledAt)}</span>
+              )}
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={autoRefresh}
+                  onChange={(e) => setAutoRefresh(e.target.checked)}
+                  className="w-3.5 h-3.5 rounded border-neutral-600 bg-neutral-900"
+                />
+                Auto-refresh ({REFRESH_MS / 1000}s)
+              </label>
+              {lastRefresh && (
+                <span className="text-neutral-600">
+                  MAJ&nbsp;{lastRefresh.toLocaleTimeString('fr-FR')}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={fetchData}
+                className="px-2 py-1 rounded border border-neutral-700 hover:bg-neutral-800 transition-colors"
+              >
+                ⟳
+              </button>
+            </div>
+          </div>
+
+          {/* Score / teams banner */}
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4 mb-4 items-stretch">
+            {/* Team 1 */}
+            <TeamBanner team={team1} score={match.team1Score} isWinner={match.winnerTeamId === team1?.id} side="left" />
+
+            {/* Center: lobby code */}
+            <div className="bg-neutral-800/60 backdrop-blur border border-neutral-700/50 rounded-2xl p-5 flex flex-col items-center justify-center min-w-[220px]">
+              <div className="text-[10px] uppercase tracking-widest text-neutral-500 mb-1">
+                Code lobby
+              </div>
+              {match.lobbyCode ? (
+                <button
+                  type="button"
+                  onClick={copyLobby}
+                  className="text-2xl md:text-3xl font-mono font-bold text-amber-300 hover:text-amber-200 transition-colors break-all"
+                  title="Cliquer pour copier"
+                >
+                  {match.lobbyCode}
+                </button>
+              ) : (
+                <span className="text-neutral-600 italic text-sm">non défini</span>
+              )}
+              {copied && (
+                <span className="text-[11px] text-emerald-400 mt-1">copié ✓</span>
+              )}
+              {match.streamUrl && (
+                <a
+                  href={match.streamUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[11px] text-blue-400 hover:text-blue-300 mt-3 truncate max-w-full"
+                >
+                  ↗ Stream
+                </a>
+              )}
+            </div>
+
+            {/* Team 2 */}
+            <TeamBanner team={team2} score={match.team2Score} isWinner={match.winnerTeamId === team2?.id} side="right" />
+          </div>
+
+          {/* Main grid: Players (left), Veto+H2H (right) */}
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-4">
+            {/* Rosters */}
+            <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-5">
+              <h2 className="text-sm uppercase tracking-widest text-neutral-400 mb-3">
+                Rosters
+              </h2>
+              <div className="grid grid-cols-2 gap-4">
+                <RosterColumn team={team1} />
+                <RosterColumn team={team2} />
+              </div>
+            </section>
+
+            {/* Veto + H2H */}
+            <div className="space-y-4">
+              <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-sm uppercase tracking-widest text-neutral-400">
+                    Veto ({veto.format.toUpperCase()})
+                  </h2>
+                  <span className="text-[11px] text-neutral-500">
+                    Étape {Math.min(veto.currentStepIndex + 1, veto.flow.length)} /{' '}
+                    {veto.flow.length}
+                    {veto.isComplete && <span className="text-emerald-400 ml-2">✓ terminé</span>}
+                  </span>
+                </div>
+                <VetoTimeline
+                  flow={veto.flow}
+                  steps={veto.steps}
+                  team1Name={team1?.shortName || team1?.name || 'T1'}
+                  team2Name={team2?.shortName || team2?.name || 'T2'}
+                  team1Id={team1?.id ?? null}
+                  team2Id={team2?.id ?? null}
+                />
+
+                {/* Picked maps (game order) */}
+                {veto.pickedMaps.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-neutral-700/50">
+                    <div className="text-[10px] uppercase tracking-widest text-neutral-500 mb-2">
+                      Cartes en jeu
+                    </div>
+                    <ol className="space-y-1.5">
+                      {veto.pickedMaps.map((m, idx) => {
+                        const byTeam =
+                          m.picked_by === team1?.id
+                            ? team1?.shortName || team1?.name
+                            : m.picked_by === team2?.id
+                              ? team2?.shortName || team2?.name
+                              : 'Decider';
+                        const isDecider = m.picked_by === null;
+                        return (
+                          <li
+                            key={idx}
+                            className="flex items-center gap-2 text-sm"
+                          >
+                            <span className="text-neutral-500 text-xs w-5">
+                              {idx + 1}.
+                            </span>
+                            <span
+                              className={`font-medium ${isDecider ? 'text-amber-300' : 'text-white'}`}
+                            >
+                              {m.map_name}
+                            </span>
+                            {m.map_type && (
+                              <span className="text-[10px] text-neutral-500 uppercase tracking-wide">
+                                {m.map_type}
+                              </span>
+                            )}
+                            <span className="text-xs text-neutral-500 ml-auto">
+                              {byTeam}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  </div>
+                )}
+              </section>
+
+              <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-5">
+                <h2 className="text-sm uppercase tracking-widest text-neutral-400 mb-3">
+                  Head-to-head
+                </h2>
+                {h2h.total === 0 ? (
+                  <p className="text-sm text-neutral-500 italic">
+                    Aucune confrontation préalable.
+                  </p>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-center gap-4 mb-3">
+                      <div className="text-center flex-1">
+                        <div className="text-3xl font-bold text-white">
+                          {h2h.winsTeam1}
+                        </div>
+                        <div className="text-[10px] uppercase tracking-widest text-neutral-500 mt-0.5">
+                          {team1?.shortName || team1?.name || 'T1'}
+                        </div>
+                      </div>
+                      <div className="text-neutral-600 text-xs">
+                        {h2h.total} match{h2h.total > 1 ? 's' : ''}
+                      </div>
+                      <div className="text-center flex-1">
+                        <div className="text-3xl font-bold text-white">
+                          {h2h.winsTeam2}
+                        </div>
+                        <div className="text-[10px] uppercase tracking-widest text-neutral-500 mt-0.5">
+                          {team2?.shortName || team2?.name || 'T2'}
+                        </div>
+                      </div>
+                    </div>
+                    {h2h.meetings.length > 0 && (
+                      <div className="mt-4 pt-3 border-t border-neutral-700/50">
+                        <div className="text-[10px] uppercase tracking-widest text-neutral-500 mb-2">
+                          Dernières confrontations
+                        </div>
+                        <ul className="space-y-1.5">
+                          {h2h.meetings.map((m) => (
+                            <li
+                              key={m.matchId}
+                              className="flex items-center gap-2 text-xs"
+                            >
+                              <span className="text-neutral-500 w-16">
+                                {m.completedAt
+                                  ? new Date(m.completedAt).toLocaleDateString('fr-FR', {
+                                      day: '2-digit',
+                                      month: 'short',
+                                    })
+                                  : '—'}
+                              </span>
+                              <span
+                                className={`font-mono font-semibold ${m.winnerTeamId === team1?.id ? 'text-emerald-300' : 'text-neutral-400'}`}
+                              >
+                                {m.team1Score ?? '?'}
+                              </span>
+                              <span className="text-neutral-600">-</span>
+                              <span
+                                className={`font-mono font-semibold ${m.winnerTeamId === team2?.id ? 'text-emerald-300' : 'text-neutral-400'}`}
+                              >
+                                {m.team2Score ?? '?'}
+                              </span>
+                              {m.tournamentName && (
+                                <span className="text-neutral-600 truncate ml-1">
+                                  · {m.tournamentName}
+                                </span>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </>
+                )}
+              </section>
+            </div>
+          </div>
+
+          {match.notes && (
+            <div className="mt-4 bg-neutral-800/40 border border-neutral-700/40 rounded-xl p-3 text-xs text-neutral-400">
+              <span className="uppercase tracking-widest text-neutral-500 mr-2">Notes</span>
+              {match.notes}
+            </div>
+          )}
+        </div>
+      </main>
+    </>
+  );
+}
+
+function TeamBanner({
+  team,
+  score,
+  isWinner,
+  side,
+}: {
+  team: Team | null;
+  score: number | null;
+  isWinner: boolean;
+  side: 'left' | 'right';
+}) {
+  return (
+    <div
+      className={`bg-neutral-800/60 backdrop-blur border ${isWinner ? 'border-emerald-500/40' : 'border-neutral-700/50'} rounded-2xl p-4 flex items-center gap-4 ${side === 'right' ? 'flex-row-reverse text-right' : ''}`}
+    >
+      {team?.logoUrl ? (
+        <Image
+          src={team.logoUrl}
+          alt={team.name}
+          width={64}
+          height={64}
+          className="w-14 h-14 rounded-xl object-cover border border-neutral-700 flex-shrink-0"
+        />
+      ) : (
+        <div className="w-14 h-14 rounded-xl bg-neutral-700/50 border border-neutral-700 flex-shrink-0" />
+      )}
+      <div className="flex-1 min-w-0">
+        <div className="text-lg font-bold text-white truncate">
+          {team?.name || '—'}
+        </div>
+        <div className="text-xs text-neutral-500">
+          {team?.shortName ? `[${team.shortName}]` : ''} {team?.country || ''}
+        </div>
+      </div>
+      <div
+        className={`text-4xl font-bold ${isWinner ? 'text-emerald-300' : 'text-neutral-300'}`}
+      >
+        {score ?? 0}
+      </div>
+    </div>
+  );
+}
+
+function RosterColumn({ team }: { team: Team | null }) {
+  if (!team) return <div className="text-neutral-500 italic">—</div>;
+  return (
+    <div>
+      <div className="text-xs font-semibold text-white mb-2 truncate">
+        {team.name}
+      </div>
+      {team.members.length === 0 ? (
+        <p className="text-xs text-neutral-500 italic">Pas de roster</p>
+      ) : (
+        <ul className="space-y-1">
+          {team.members.map((m) => (
+            <li
+              key={m.id}
+              className={`flex items-center gap-2 text-xs ${m.is_substitute ? 'opacity-60' : ''}`}
+            >
+              {m.is_captain && (
+                <span
+                  className="text-amber-400 text-xs"
+                  title="Capitaine"
+                >
+                  ★
+                </span>
+              )}
+              <span
+                className={`font-mono ${m.is_captain ? 'text-amber-200 font-semibold' : 'text-neutral-200'}`}
+              >
+                {m.battle_tag || `(${m.id.slice(0, 6)})`}
+              </span>
+              {m.is_substitute && (
+                <span className="text-[9px] uppercase text-neutral-500 tracking-widest">
+                  sub
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function VetoTimeline({
+  flow,
+  steps,
+  team1Name,
+  team2Name,
+  team1Id,
+  team2Id,
+}: {
+  flow: FlowStep[];
+  steps: VetoStep[];
+  team1Name: string;
+  team2Name: string;
+  team1Id: string | null;
+  team2Id: string | null;
+}) {
+  return (
+    <ol className="space-y-1.5">
+      {flow.map((f, idx) => {
+        const step = steps[idx];
+        const isDone = !!step;
+        const isCurrent = !isDone && idx === steps.length;
+        const sideName =
+          f.side === 'team1' ? team1Name : f.side === 'team2' ? team2Name : 'Auto';
+
+        const actionColor =
+          f.action === 'ban'
+            ? 'text-red-400'
+            : f.action === 'pick'
+              ? 'text-emerald-400'
+              : 'text-amber-300';
+
+        const actionEmoji =
+          f.action === 'ban' ? '✕' : f.action === 'pick' ? '✓' : '★';
+
+        const stepTeamName =
+          step?.team_id === team1Id
+            ? team1Name
+            : step?.team_id === team2Id
+              ? team2Name
+              : null;
+
+        return (
+          <li
+            key={idx}
+            className={`flex items-center gap-2 text-xs px-2 py-1.5 rounded-lg ${
+              isCurrent
+                ? 'bg-blue-900/30 border border-blue-500/40 animate-pulse'
+                : isDone
+                  ? ''
+                  : 'opacity-40'
+            }`}
+          >
+            <span className="w-5 text-neutral-500">{idx + 1}.</span>
+            <span className={`w-5 ${actionColor} font-bold`}>{actionEmoji}</span>
+            <span className="text-neutral-400 w-12 uppercase tracking-wider text-[10px]">
+              {f.action}
+            </span>
+            <span className="text-neutral-300 w-16 truncate">
+              {stepTeamName || sideName}
+            </span>
+            <span
+              className={`flex-1 truncate font-medium ${isDone ? 'text-white' : 'text-neutral-600'}`}
+            >
+              {step?.map_name || '—'}
+            </span>
+            {step?.map_type && (
+              <span className="text-[9px] text-neutral-500 uppercase tracking-widest">
+                {step.map_type}
+              </span>
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+export default CastPage;
