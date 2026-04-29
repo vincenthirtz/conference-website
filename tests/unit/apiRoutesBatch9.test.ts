@@ -268,7 +268,7 @@ describe('/api/matches/[matchId]', () => {
     );
     expect(res.statusCode).toBe(200);
     expect(applyMatchScoreMock).toHaveBeenCalledOnce();
-    const args = applyMatchScoreMock.mock.calls[0][0] as any;
+    const args = (applyMatchScoreMock.mock.calls[0] as any[])[0];
     expect(args.matchId).toBe(VALID_UUID);
     expect(args.markFinished).toBe(true);
     expect(args.propagateBracket).toBe(true);
@@ -285,7 +285,7 @@ describe('/api/matches/[matchId]', () => {
       res
     );
     expect(res.statusCode).toBe(200);
-    const args = applyMatchScoreMock.mock.calls[0][0] as any;
+    const args = (applyMatchScoreMock.mock.calls[0] as any[])[0];
     expect(args.propagateBracket).toBe(false);
   });
 

@@ -6,6 +6,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { withAuthRoute } from '@/utils/staff';
 
 export type RegisterTeamBody = {
   teamId: string;
@@ -13,39 +14,16 @@ export type RegisterTeamBody = {
   message?: string;
 };
 
-export default async function handler(
+export default withAuthRoute(async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
+  { user }
 ) {
   if (
     applyRateLimit(req, res, { max: 10, windowMs: 60_000 }, 'demandes-register')
   )
     return;
-  if (!supabaseAdmin) {
-    return res
-      .status(500)
-      .json({ error: 'Database not configured (missing service role).' });
-  }
 
-  // Auth via Bearer token
-  const authHeader = req.headers.authorization;
-  const token =
-    authHeader && authHeader.startsWith('Bearer ')
-      ? authHeader.slice('Bearer '.length)
-      : undefined;
-
-  if (!token) {
-    return res.status(401).json({ error: 'Token required.' });
-  }
-
-  const { data: userData, error: userErr } =
-    await supabaseAdmin.auth.getUser(token);
-
-  if (userErr || !userData?.user) {
-    return res.status(401).json({ error: 'Not authenticated.' });
-  }
-
-  const user = userData.user;
   const userId = user.id;
 
   if (req.method === 'GET') {
@@ -222,4 +200,4 @@ export default async function handler(
 
   res.setHeader('Allow', 'GET,POST');
   return res.status(405).json({ error: 'Method not allowed' });
-}
+});

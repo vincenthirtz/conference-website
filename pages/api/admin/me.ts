@@ -2,6 +2,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { withAuthRoute } from '@/utils/staff';
 
 type MeResponse =
   | {
@@ -15,51 +16,19 @@ type MeResponse =
     }
   | { error: string };
 
-export default async function handler(
+export default withAuthRoute(async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<MeResponse>
+  res: NextApiResponse<MeResponse>,
+  { user }
 ) {
   if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-me'))
     return;
   // Prevent caching of sensitive staff data
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
 
-  // 0) Vérifier que le client admin est dispo (service role non configuré)
   const adminClient = supabaseAdmin;
-  if (!adminClient) {
-    console.error('[/api/admin/me] supabaseAdmin non configuré.');
-    return res.status(500).json({
-      error:
-        'Supabase configuration incomplete (missing service role). Add SUPABASE_SERVICE_ROLE_KEY.',
-    });
-  }
 
-  // 1) Récupérer le token envoyé par le frontend
-  //    (en général: Authorization: Bearer <access_token>)
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.startsWith('Bearer ')
-    ? authHeader.replace('Bearer ', '')
-    : undefined;
-
-  if (!token) {
-    return res.status(401).json({ error: 'Missing auth token' });
-  }
-
-  // 2) Vérifier la validité du token et récupérer l'utilisateur
-  const {
-    data: { user },
-    error: userError,
-  } = await adminClient.auth.getUser(token);
-
-  if (userError || !user) {
-    // Only log unexpected errors (not auth session missing which is expected for invalid tokens)
-    if (userError && !userError.message?.includes('session')) {
-      console.error('[/api/admin/me] getUser error:', userError);
-    }
-    return res.status(401).json({ error: 'Invalid or expired token' });
-  }
-
-  // 3) Chercher l'entrée dans la table staff liée à cet utilisateur
+  // Chercher l'entrée dans la table staff liée à cet utilisateur
   const selectWithAvatar =
     'id, auth_user_id, email, display_name, avatar_url, role, created_at';
   const selectWithoutAvatar =
@@ -184,6 +153,6 @@ export default async function handler(
     (staff as any).avatar_url = null;
   }
 
-  // 4) OK : renvoyer les infos staff (c’est ce que tu consommeras côté front)
+  // OK : renvoyer les infos staff (c'est ce que tu consommeras côté front)
   return res.status(200).json(staff as unknown as MeResponse);
-}
+});

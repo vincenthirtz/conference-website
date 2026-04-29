@@ -31,7 +31,6 @@ import {
   resetSupabaseMock,
   setAuthUser,
   supabaseAdmin,
-  invalidateStaffCache as _,
 } from './__helpers__/supabaseMock';
 
 // `withStaffRoute` reads supabaseAdmin.auth.admin.createUser — extend the mock.

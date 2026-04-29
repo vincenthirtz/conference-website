@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { sanitizeUrl } from '@/utils/apiHelpers';
+import { withAuthRoute } from '@/utils/staff';
 
 type MemberRow = {
   id: string;
@@ -39,32 +40,15 @@ type UpdateBody = {
   website?: string | null;
 };
 
-export default async function handler(
+export default withAuthRoute(async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<GetResponse | { error: string }>
+  res: NextApiResponse<GetResponse | { error: string }>,
+  { user }
 ) {
   if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-teams-my'))
     return;
-  if (!supabaseAdmin) {
-    return res.status(503).json({ error: 'Service unavailable.' });
-  }
 
-  const authHeader = req.headers.authorization;
-  const token =
-    authHeader && authHeader.startsWith('Bearer ')
-      ? authHeader.slice('Bearer '.length)
-      : undefined;
-
-  if (!token) {
-    return res.status(401).json({ error: 'Token required.' });
-  }
-
-  const { data: userData, error: userErr } =
-    await supabaseAdmin.auth.getUser(token);
-  if (userErr || !userData?.user) {
-    return res.status(401).json({ error: 'User not authenticated.' });
-  }
-  const userId = userData.user.id;
+  const userId = user.id;
 
   if (req.method === 'GET') {
     // Chercher l'équipe où l'utilisateur est membre
@@ -224,4 +208,4 @@ export default async function handler(
 
   res.setHeader('Allow', 'GET,PATCH');
   return res.status(405).json({ error: 'Method not allowed' });
-}
+});

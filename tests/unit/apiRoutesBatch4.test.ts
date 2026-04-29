@@ -305,8 +305,9 @@ describe('/api/admin/news', () => {
 
 describe('DELETE /api/player/delete-account', () => {
   it('returns 405 on non-DELETE', async () => {
+    setAuthUser({ id: 'user-1' });
     const res = makeRes();
-    await deleteAccountHandler(makeReq({ method: 'POST' }), res);
+    await deleteAccountHandler(makeReq({ method: 'POST' }, true), res);
     expect(res.statusCode).toBe(405);
   });
 
@@ -381,8 +382,9 @@ describe('DELETE /api/player/delete-account', () => {
 
 describe('PATCH /api/player/update-profile', () => {
   it('returns 405 on non-PATCH', async () => {
+    setAuthUser({ id: 'user-1' });
     const res = makeRes();
-    await updateProfileHandler(makeReq({ method: 'POST' }), res);
+    await updateProfileHandler(makeReq({ method: 'POST' }, true), res);
     expect(res.statusCode).toBe(405);
   });
 
@@ -481,18 +483,20 @@ describe('DELETE /api/teams/[id]/members', () => {
   const memberUuid = '550e8400-e29b-41d4-a716-446655440200';
 
   it('returns 405 on non-DELETE', async () => {
+    setAuthUser({ id: 'user-1' });
     const res = makeRes();
     await teamsMembersHandler(
-      makeReq({ method: 'GET', query: { id: teamUuid } }),
+      makeReq({ method: 'GET', query: { id: teamUuid } }, true),
       res
     );
     expect(res.statusCode).toBe(405);
   });
 
   it('returns 400 when teamId is invalid', async () => {
+    setAuthUser({ id: 'user-1' });
     const res = makeRes();
     await teamsMembersHandler(
-      makeReq({ method: 'DELETE', query: { id: 'bogus' } }),
+      makeReq({ method: 'DELETE', query: { id: 'bogus' } }, true),
       res
     );
     expect(res.statusCode).toBe(400);

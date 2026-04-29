@@ -196,7 +196,7 @@ describe('POST /api/auth/forgot-password', () => {
     expect((res.body as any).success).toBe(true);
     await new Promise((r) => setImmediate(r));
     expect(sendPasswordResetEmail).toHaveBeenCalledOnce();
-    const args = sendPasswordResetEmail.mock.calls[0][0] as any;
+    const args = (sendPasswordResetEmail.mock.calls[0] as any[])[0];
     expect(args.to).toBe('me@example.com');
   });
 
@@ -381,8 +381,9 @@ describe('/api/checkin/[token]', () => {
 
 describe('POST /api/teams/leave', () => {
   it('returns 405 on non-POST', async () => {
+    setAuthUser({ id: 'user-1' });
     const res = makeRes();
-    await teamsLeaveHandler(makeReq({ method: 'GET' }), res);
+    await teamsLeaveHandler(makeReq({ method: 'GET' }, true), res);
     expect(res.statusCode).toBe(405);
   });
 

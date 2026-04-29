@@ -5,10 +5,12 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
+import { withAuthRoute } from '@/utils/staff';
 
-export default async function handler(
+export default withAuthRoute(async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
+  { user }
 ) {
   if (req.method !== 'PATCH') {
     res.setHeader('Allow', 'PATCH');
@@ -24,29 +26,8 @@ export default async function handler(
     )
   )
     return;
-  if (!supabaseAdmin) {
-    return res.status(503).json({ error: 'Service unavailable.' });
-  }
 
-  // Auth via Bearer token
-  const authHeader = req.headers.authorization;
-  const token =
-    authHeader && authHeader.startsWith('Bearer ')
-      ? authHeader.slice('Bearer '.length)
-      : undefined;
-
-  if (!token) {
-    return res.status(401).json({ error: 'Token required.' });
-  }
-
-  const { data: userData, error: userErr } =
-    await supabaseAdmin.auth.getUser(token);
-
-  if (userErr || !userData?.user) {
-    return res.status(401).json({ error: 'Not authenticated.' });
-  }
-
-  const userId = userData.user.id;
+  const userId = user.id;
   const { newCaptainUserId } = req.body || {};
 
   if (
@@ -112,4 +93,4 @@ export default async function handler(
     info: 'Capitanat transféré avec succès.',
     newCaptainUserId,
   });
-}
+});

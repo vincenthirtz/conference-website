@@ -9,10 +9,12 @@ import {
   isTeamRosterLocked,
   rosterLockErrorMessage,
 } from '@/utils/teams/rosterLock';
+import { withAuthRoute } from '@/utils/staff';
 
-export default async function handler(
+export default withAuthRoute(async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
+  { user }
 ) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -21,29 +23,8 @@ export default async function handler(
 
   if (applyRateLimit(req, res, { max: 10, windowMs: 60_000 }, 'teams-leave'))
     return;
-  if (!supabaseAdmin) {
-    return res.status(503).json({ error: 'Service unavailable.' });
-  }
 
-  // Auth via Bearer token
-  const authHeader = req.headers.authorization;
-  const token =
-    authHeader && authHeader.startsWith('Bearer ')
-      ? authHeader.slice('Bearer '.length)
-      : undefined;
-
-  if (!token) {
-    return res.status(401).json({ error: 'Token required.' });
-  }
-
-  const { data: userData, error: userErr } =
-    await supabaseAdmin.auth.getUser(token);
-
-  if (userErr || !userData?.user) {
-    return res.status(401).json({ error: 'Not authenticated.' });
-  }
-
-  const userId = userData.user.id;
+  const userId = user.id;
 
   // Trouver le membership
   const { data: membership, error: membershipErr } = await supabaseAdmin
@@ -99,4 +80,4 @@ export default async function handler(
     success: true,
     info: "Tu as quitté l'équipe.",
   });
-}
+});

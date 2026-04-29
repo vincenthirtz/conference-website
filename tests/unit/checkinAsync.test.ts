@@ -495,7 +495,7 @@ describe('processMatchCheckin — forfeit step', () => {
 
     expect(r.steps[0]).toMatch(/^forfeit \(/);
     expect(applyMatchScore).toHaveBeenCalledOnce();
-    const args = applyMatchScore.mock.calls[0][0] as any;
+    const args = (applyMatchScore.mock.calls[0] as any[])[0];
     expect(args.forfeitTeamId).toBe('team-b');
     expect(notifyCheckinForfeit).toHaveBeenCalledOnce();
   });

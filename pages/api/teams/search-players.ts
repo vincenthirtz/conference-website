@@ -2,9 +2,10 @@
 // Recherche de joueurs par email ou BattleTag pour les capitaines
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { supabaseAdmin, getServerClient } from '@/utils/supabase';
+import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { escapePostgrestValue } from '@/utils/apiHelpers';
+import { withAuthRoute } from '@/utils/staff';
 
 type PlayerResult = {
   id: string;
@@ -16,16 +17,13 @@ type PlayerResult = {
 
 type SearchResponse = { players: PlayerResult[] } | { error: string };
 
-export default async function handler(
+export default withAuthRoute(async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<SearchResponse>
+  res: NextApiResponse<SearchResponse>,
+  { user }
 ) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  if (!supabaseAdmin) {
-    return res.status(503).json({ error: 'Service unavailable.' });
   }
 
   // Rate limiting: 30 searches per minute
@@ -33,16 +31,6 @@ export default async function handler(
     applyRateLimit(req, res, { max: 30, windowMs: 60 * 1000 }, 'search-players')
   )
     return;
-
-  // Check if user is authenticated and is a captain
-  const supabase = getServerClient(req, res);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
 
   // Check if user is captain of a team
   const { data: captainTeam } = await supabaseAdmin
@@ -224,4 +212,4 @@ export default async function handler(
     console.error('[api/teams/search-players] error:', err);
     return res.status(500).json({ error: 'Search failed' });
   }
-}
+});

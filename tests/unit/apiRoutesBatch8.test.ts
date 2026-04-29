@@ -204,8 +204,9 @@ describe('GET /api/announcements', () => {
 
 describe('POST /api/teams/toggle-joinable', () => {
   it('405 on non-POST', async () => {
+    setAuthUser({ id: 'user-1' });
     const res = makeRes();
-    await toggleJoinableHandler(makeReq({ method: 'GET' }), res);
+    await toggleJoinableHandler(makeReq({ method: 'GET' }, true), res);
     expect(res.statusCode).toBe(405);
   });
 

@@ -4,8 +4,10 @@
 // - POST : envoyer un nouveau message (demarrer ou poursuivre une conversation)
 
 import type { NextApiRequest, NextApiResponse } from 'next';
+import type { User } from '@supabase/supabase-js';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { withAuthRoute } from '@/utils/staff';
 
 export type SendMessageBody = {
   targetTeamId: string;
@@ -17,36 +19,12 @@ function conversationId(teamA: string, teamB: string): string {
   return teamA < teamB ? `${teamA}_${teamB}` : `${teamB}_${teamA}`;
 }
 
-async function authenticateCaptain(req: NextApiRequest, res: NextApiResponse) {
-  if (!supabaseAdmin) {
-    res
-      .status(500)
-      .json({ error: 'Database not configured (missing service role).' });
-    return null;
-  }
+type CaptainTeam = { id: string; captain_id: string | null; name: string };
 
-  const authHeader = req.headers.authorization;
-  const token =
-    authHeader && authHeader.startsWith('Bearer ')
-      ? authHeader.slice('Bearer '.length)
-      : undefined;
-
-  if (!token) {
-    res.status(401).json({ error: 'Token required.' });
-    return null;
-  }
-
-  const { data: userData, error: userErr } =
-    await supabaseAdmin.auth.getUser(token);
-
-  if (userErr || !userData?.user) {
-    res.status(401).json({ error: 'Not authenticated.' });
-    return null;
-  }
-
-  const user = userData.user;
-
-  // Check team membership
+async function loadCaptainTeam(
+  res: NextApiResponse,
+  user: User
+): Promise<CaptainTeam | null> {
   const { data: membership, error: memberErr } = await supabaseAdmin
     .from('team_members')
     .select('id, team_id')
@@ -63,26 +41,26 @@ async function authenticateCaptain(req: NextApiRequest, res: NextApiResponse) {
     return null;
   }
 
-  // Check captain
   const { data: myTeam } = await supabaseAdmin
     .from('teams')
     .select('id, captain_id, name')
     .eq('id', membership.team_id)
     .maybeSingle();
 
-  if (myTeam?.captain_id !== user.id) {
+  if (!myTeam || myTeam.captain_id !== user.id) {
     res
       .status(403)
       .json({ error: 'Seul le capitaine peut utiliser la messagerie.' });
     return null;
   }
 
-  return { user, team: myTeam };
+  return myTeam as CaptainTeam;
 }
 
-export default async function handler(
+export default withAuthRoute(async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
+  { user }
 ) {
   if (
     applyRateLimit(req, res, { max: 40, windowMs: 60_000 }, 'player-messages')
@@ -90,10 +68,8 @@ export default async function handler(
     return;
 
   if (req.method === 'GET') {
-    const auth = await authenticateCaptain(req, res);
-    if (!auth) return;
-
-    const { user, team } = auth;
+    const team = await loadCaptainTeam(res, user);
+    if (!team) return;
 
     // Fetch all captain_message demandes involving this captain's team
     // Either sent by this user OR targeting this team
@@ -178,10 +154,9 @@ export default async function handler(
   }
 
   if (req.method === 'POST') {
-    const auth = await authenticateCaptain(req, res);
-    if (!auth) return;
+    const team = await loadCaptainTeam(res, user);
+    if (!team) return;
 
-    const { user, team } = auth;
     const body = req.body as SendMessageBody;
 
     if (!body?.content?.trim()) {
@@ -263,4 +238,4 @@ export default async function handler(
 
   res.setHeader('Allow', 'GET,POST');
   return res.status(405).json({ error: 'Method not allowed' });
-}
+});

@@ -25,7 +25,6 @@ import {
   store,
   resetSupabaseMock,
   setAuthUser,
-  setCookieUser,
   setAuthListUsers,
   setAdminUser,
   setCreateUserResult,
@@ -294,7 +293,7 @@ describe('/api/demandes/scrim', () => {
     expect(res.statusCode).toBe(201);
     expect((store.demandes as any).length).toBe(1);
     expect(notifyScrimRequest).toHaveBeenCalledOnce();
-    const args = notifyScrimRequest.mock.calls[0][0] as any;
+    const args = (notifyScrimRequest.mock.calls[0] as any[])[0];
     expect(args.fromTeamName).toBe('Mine');
     expect(args.targetTeamName).toBe('Target');
   });
@@ -306,31 +305,32 @@ describe('/api/demandes/scrim', () => {
 
 describe('POST /api/teams/add-member', () => {
   it('405 on non-POST', async () => {
+    setAuthUser({ id: 'user-1' });
     const res = makeRes();
-    await teamAddMemberHandler(makeReq({ method: 'GET' }), res);
+    await teamAddMemberHandler(makeReq({ method: 'GET' }, true), res);
     expect(res.statusCode).toBe(405);
   });
 
-  it('401 when no cookie session', async () => {
-    setCookieUser(null);
+  it('401 when no Bearer token', async () => {
+    setAuthUser(null);
     const res = makeRes();
     await teamAddMemberHandler(makeReq({ method: 'POST' }), res);
     expect(res.statusCode).toBe(401);
   });
 
   it('403 when user is not captain', async () => {
-    setCookieUser({ id: 'user-1' });
+    setAuthUser({ id: 'user-1' });
     store.teams = [];
     const res = makeRes();
     await teamAddMemberHandler(
-      makeReq({ method: 'POST', body: { battleTag: 'X#1234' } }),
+      makeReq({ method: 'POST', body: { battleTag: 'X#1234' } }, true),
       res
     );
     expect(res.statusCode).toBe(403);
   });
 
   it('409 when roster is locked', async () => {
-    setCookieUser({ id: 'user-1' });
+    setAuthUser({ id: 'user-1' });
     store.teams = [
       { id: 'team-1', captain_id: 'user-1', name: 'A', logo_url: null },
     ] as any;
@@ -348,48 +348,54 @@ describe('POST /api/teams/add-member', () => {
     ] as any;
     const res = makeRes();
     await teamAddMemberHandler(
-      makeReq({
-        method: 'POST',
-        body: { userId: 'u-new', battleTag: 'Player#1234' },
-      }),
+      makeReq(
+        {
+          method: 'POST',
+          body: { userId: 'u-new', battleTag: 'Player#1234' },
+        },
+        true
+      ),
       res
     );
     expect(res.statusCode).toBe(409);
   });
 
   it('400 on invalid battle tag', async () => {
-    setCookieUser({ id: 'user-1' });
+    setAuthUser({ id: 'user-1' });
     store.teams = [
       { id: 'team-1', captain_id: 'user-1', name: 'A', logo_url: null },
     ] as any;
     store.tournament_teams = [];
     const res = makeRes();
     await teamAddMemberHandler(
-      makeReq({
-        method: 'POST',
-        body: { userId: 'u-new', battleTag: 'no-hash' },
-      }),
+      makeReq(
+        {
+          method: 'POST',
+          body: { userId: 'u-new', battleTag: 'no-hash' },
+        },
+        true
+      ),
       res
     );
     expect(res.statusCode).toBe(400);
   });
 
   it('400 when neither userId nor email', async () => {
-    setCookieUser({ id: 'user-1' });
+    setAuthUser({ id: 'user-1' });
     store.teams = [
       { id: 'team-1', captain_id: 'user-1', name: 'A', logo_url: null },
     ] as any;
     store.tournament_teams = [];
     const res = makeRes();
     await teamAddMemberHandler(
-      makeReq({ method: 'POST', body: { battleTag: 'X#1234' } }),
+      makeReq({ method: 'POST', body: { battleTag: 'X#1234' } }, true),
       res
     );
     expect(res.statusCode).toBe(400);
   });
 
   it('200 adds member by userId', async () => {
-    setCookieUser({ id: 'user-1' });
+    setAuthUser({ id: 'user-1' });
     store.teams = [
       { id: 'team-1', captain_id: 'user-1', name: 'A', logo_url: null },
     ] as any;
@@ -399,10 +405,13 @@ describe('POST /api/teams/add-member', () => {
 
     const res = makeRes();
     await teamAddMemberHandler(
-      makeReq({
-        method: 'POST',
-        body: { userId: 'u-new', battleTag: 'Player#1234', role: 'player' },
-      }),
+      makeReq(
+        {
+          method: 'POST',
+          body: { userId: 'u-new', battleTag: 'Player#1234', role: 'player' },
+        },
+        true
+      ),
       res
     );
     expect(res.statusCode).toBe(200);
@@ -411,7 +420,7 @@ describe('POST /api/teams/add-member', () => {
   });
 
   it('200 resolves user by email when not provided directly', async () => {
-    setCookieUser({ id: 'user-1' });
+    setAuthUser({ id: 'user-1' });
     store.teams = [
       { id: 'team-1', captain_id: 'user-1', name: 'A', logo_url: null },
     ] as any;
@@ -422,13 +431,16 @@ describe('POST /api/teams/add-member', () => {
 
     const res = makeRes();
     await teamAddMemberHandler(
-      makeReq({
-        method: 'POST',
-        body: {
-          email: 'known@example.com',
-          battleTag: 'Player#1234',
+      makeReq(
+        {
+          method: 'POST',
+          body: {
+            email: 'known@example.com',
+            battleTag: 'Player#1234',
+          },
         },
-      }),
+        true
+      ),
       res
     );
     expect(res.statusCode).toBe(200);
@@ -438,7 +450,7 @@ describe('POST /api/teams/add-member', () => {
   });
 
   it('200 auto-creates a Supabase user when email is unknown', async () => {
-    setCookieUser({ id: 'user-1' });
+    setAuthUser({ id: 'user-1' });
     store.teams = [
       { id: 'team-1', captain_id: 'user-1', name: 'A', logo_url: null },
     ] as any;
@@ -453,13 +465,16 @@ describe('POST /api/teams/add-member', () => {
 
     const res = makeRes();
     await teamAddMemberHandler(
-      makeReq({
-        method: 'POST',
-        body: {
-          email: 'new@example.com',
-          battleTag: 'Player#1234',
+      makeReq(
+        {
+          method: 'POST',
+          body: {
+            email: 'new@example.com',
+            battleTag: 'Player#1234',
+          },
         },
-      }),
+        true
+      ),
       res
     );
     expect(res.statusCode).toBe(200);
@@ -467,7 +482,7 @@ describe('POST /api/teams/add-member', () => {
   });
 
   it('400 when team has reached max_players for one of its tournaments', async () => {
-    setCookieUser({ id: 'user-1' });
+    setAuthUser({ id: 'user-1' });
     store.teams = [
       { id: 'team-1', captain_id: 'user-1', name: 'A', logo_url: null },
     ] as any;
@@ -486,14 +501,17 @@ describe('POST /api/teams/add-member', () => {
 
     const res = makeRes();
     await teamAddMemberHandler(
-      makeReq({
-        method: 'POST',
-        body: {
-          userId: 'u-new',
-          battleTag: 'Player#1234',
-          role: 'player',
+      makeReq(
+        {
+          method: 'POST',
+          body: {
+            userId: 'u-new',
+            battleTag: 'Player#1234',
+            role: 'player',
+          },
         },
-      }),
+        true
+      ),
       res
     );
     expect(res.statusCode).toBe(400);
@@ -506,54 +524,55 @@ describe('POST /api/teams/add-member', () => {
 
 describe('GET /api/teams/search-players', () => {
   it('405 on non-GET', async () => {
+    setAuthUser({ id: 'user-1' });
     const res = makeRes();
-    await searchPlayersHandler(makeReq({ method: 'POST' }), res);
+    await searchPlayersHandler(makeReq({ method: 'POST' }, true), res);
     expect(res.statusCode).toBe(405);
   });
 
-  it('401 without cookie session', async () => {
-    setCookieUser(null);
+  it('401 without Bearer token', async () => {
+    setAuthUser(null);
     const res = makeRes();
     await searchPlayersHandler(makeReq({ method: 'GET' }), res);
     expect(res.statusCode).toBe(401);
   });
 
   it('403 when user is not captain', async () => {
-    setCookieUser({ id: 'user-1' });
+    setAuthUser({ id: 'user-1' });
     store.teams = [];
     const res = makeRes();
-    await searchPlayersHandler(makeReq({ method: 'GET' }), res);
+    await searchPlayersHandler(makeReq({ method: 'GET' }, true), res);
     expect(res.statusCode).toBe(403);
   });
 
   it('400 when q too short', async () => {
-    setCookieUser({ id: 'user-1' });
+    setAuthUser({ id: 'user-1' });
     store.teams = [
       { id: 'team-1', captain_id: 'user-1', name: 'A' },
     ] as any;
     const res = makeRes();
     await searchPlayersHandler(
-      makeReq({ method: 'GET', query: { q: 'a' } }),
+      makeReq({ method: 'GET', query: { q: 'a' } }, true),
       res
     );
     expect(res.statusCode).toBe(400);
   });
 
   it('400 when q too long', async () => {
-    setCookieUser({ id: 'user-1' });
+    setAuthUser({ id: 'user-1' });
     store.teams = [
       { id: 'team-1', captain_id: 'user-1', name: 'A' },
     ] as any;
     const res = makeRes();
     await searchPlayersHandler(
-      makeReq({ method: 'GET', query: { q: 'x'.repeat(101) } }),
+      makeReq({ method: 'GET', query: { q: 'x'.repeat(101) } }, true),
       res
     );
     expect(res.statusCode).toBe(400);
   });
 
   it('200 finds players by email and reports has_team', async () => {
-    setCookieUser({ id: 'user-1' });
+    setAuthUser({ id: 'user-1' });
     store.teams = [
       { id: 'team-1', captain_id: 'user-1', name: 'A' },
     ] as any;
@@ -568,7 +587,7 @@ describe('GET /api/teams/search-players', () => {
 
     const res = makeRes();
     await searchPlayersHandler(
-      makeReq({ method: 'GET', query: { q: 'alice' } }),
+      makeReq({ method: 'GET', query: { q: 'alice' } }, true),
       res
     );
     expect(res.statusCode).toBe(200);
@@ -580,7 +599,7 @@ describe('GET /api/teams/search-players', () => {
   });
 
   it('200 fills missing email via auth.admin.getUserById fallback', async () => {
-    setCookieUser({ id: 'user-1' });
+    setAuthUser({ id: 'user-1' });
     store.teams = [
       { id: 'team-1', captain_id: 'user-1', name: 'A' },
     ] as any;
@@ -593,7 +612,7 @@ describe('GET /api/teams/search-players', () => {
 
     const res = makeRes();
     await searchPlayersHandler(
-      makeReq({ method: 'GET', query: { q: 'mercy' } }),
+      makeReq({ method: 'GET', query: { q: 'mercy' } }, true),
       res
     );
     expect(res.statusCode).toBe(200);
@@ -603,7 +622,7 @@ describe('GET /api/teams/search-players', () => {
   });
 
   it('200 returns empty list when no source matches', async () => {
-    setCookieUser({ id: 'user-1' });
+    setAuthUser({ id: 'user-1' });
     store.teams = [
       { id: 'team-1', captain_id: 'user-1', name: 'A' },
     ] as any;
@@ -613,7 +632,7 @@ describe('GET /api/teams/search-players', () => {
 
     const res = makeRes();
     await searchPlayersHandler(
-      makeReq({ method: 'GET', query: { q: 'nothing' } }),
+      makeReq({ method: 'GET', query: { q: 'nothing' } }, true),
       res
     );
     expect((res.body as any).players).toEqual([]);

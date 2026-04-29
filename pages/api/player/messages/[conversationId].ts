@@ -4,38 +4,17 @@
 // - PATCH : marquer les messages entrants comme lus
 
 import type { NextApiRequest, NextApiResponse } from 'next';
+import type { User } from '@supabase/supabase-js';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { withAuthRoute } from '@/utils/staff';
 
-async function authenticateCaptain(req: NextApiRequest, res: NextApiResponse) {
-  if (!supabaseAdmin) {
-    res
-      .status(500)
-      .json({ error: 'Database not configured (missing service role).' });
-    return null;
-  }
+type CaptainTeam = { id: string; captain_id: string | null; name: string };
 
-  const authHeader = req.headers.authorization;
-  const token =
-    authHeader && authHeader.startsWith('Bearer ')
-      ? authHeader.slice('Bearer '.length)
-      : undefined;
-
-  if (!token) {
-    res.status(401).json({ error: 'Token required.' });
-    return null;
-  }
-
-  const { data: userData, error: userErr } =
-    await supabaseAdmin.auth.getUser(token);
-
-  if (userErr || !userData?.user) {
-    res.status(401).json({ error: 'Not authenticated.' });
-    return null;
-  }
-
-  const user = userData.user;
-
+async function loadCaptainTeam(
+  res: NextApiResponse,
+  user: User
+): Promise<CaptainTeam | null> {
   const { data: membership, error: memberErr } = await supabaseAdmin
     .from('team_members')
     .select('id, team_id')
@@ -58,19 +37,20 @@ async function authenticateCaptain(req: NextApiRequest, res: NextApiResponse) {
     .eq('id', membership.team_id)
     .maybeSingle();
 
-  if (myTeam?.captain_id !== user.id) {
+  if (!myTeam || myTeam.captain_id !== user.id) {
     res
       .status(403)
       .json({ error: 'Seul le capitaine peut utiliser la messagerie.' });
     return null;
   }
 
-  return { user, team: myTeam };
+  return myTeam as CaptainTeam;
 }
 
-export default async function handler(
+export default withAuthRoute(async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
+  { user }
 ) {
   if (
     applyRateLimit(
@@ -90,10 +70,8 @@ export default async function handler(
   const [teamIdA, teamIdB] = conversationId.split('_');
 
   if (req.method === 'GET') {
-    const auth = await authenticateCaptain(req, res);
-    if (!auth) return;
-
-    const { team } = auth;
+    const team = await loadCaptainTeam(res, user);
+    if (!team) return;
 
     // Verify captain is part of this conversation
     if (team.id !== teamIdA && team.id !== teamIdB) {
@@ -146,10 +124,8 @@ export default async function handler(
   }
 
   if (req.method === 'PATCH') {
-    const auth = await authenticateCaptain(req, res);
-    if (!auth) return;
-
-    const { team } = auth;
+    const team = await loadCaptainTeam(res, user);
+    if (!team) return;
 
     if (team.id !== teamIdA && team.id !== teamIdB) {
       return res
@@ -178,4 +154,4 @@ export default async function handler(
 
   res.setHeader('Allow', 'GET,PATCH');
   return res.status(405).json({ error: 'Method not allowed' });
-}
+});

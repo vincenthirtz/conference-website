@@ -4,12 +4,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { withAuthRoute } from '@/utils/staff';
 
 const BATTLE_TAG_RE = /^[A-Za-z0-9\u00C0-\u024F]+#[0-9]{4,6}$/;
 
-export default async function handler(
+export default withAuthRoute(async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
+  { user }
 ) {
   if (req.method !== 'PATCH') {
     res.setHeader('Allow', 'PATCH');
@@ -25,27 +27,6 @@ export default async function handler(
     )
   )
     return;
-
-  if (!supabaseAdmin) {
-    return res.status(503).json({ error: 'Service unavailable.' });
-  }
-
-  const authHeader = req.headers.authorization;
-  const token =
-    authHeader && authHeader.startsWith('Bearer ')
-      ? authHeader.slice('Bearer '.length)
-      : undefined;
-
-  if (!token) {
-    return res.status(401).json({ error: 'Token required.' });
-  }
-
-  const { data: userData, error: userErr } =
-    await supabaseAdmin.auth.getUser(token);
-
-  if (userErr || !userData?.user) {
-    return res.status(401).json({ error: 'Not authenticated.' });
-  }
 
   const { display_name, battle_tag } = req.body || {};
   const updates: Record<string, unknown> = {};
@@ -74,9 +55,9 @@ export default async function handler(
     return res.status(400).json({ error: 'Aucun champ a mettre a jour.' });
   }
 
-  const existingMeta = userData.user.user_metadata ?? {};
+  const existingMeta = user.user_metadata ?? {};
   const { error: updateErr } = await supabaseAdmin.auth.admin.updateUserById(
-    userData.user.id,
+    user.id,
     {
       user_metadata: { ...existingMeta, ...updates },
     }
@@ -92,11 +73,11 @@ export default async function handler(
     await supabaseAdmin
       .from('team_members')
       .update({ battle_tag: updates.battle_tag })
-      .eq('user_id', userData.user.id);
+      .eq('user_id', user.id);
   }
 
   return res.status(200).json({
     success: true,
     ...updates,
   });
-}
+});

@@ -511,7 +511,7 @@ describe('POST /api/admin/teams/import-csv', () => {
     );
     expect(res.statusCode).toBe(200);
     expect(importTeamsMock).toHaveBeenCalledOnce();
-    const args = importTeamsMock.mock.calls[0];
+    const args = importTeamsMock.mock.calls[0] as any[];
     const rows = args[0] as any[];
     expect(rows).toHaveLength(2);
     expect(rows[0].name).toBe('Alpha Wolves');

@@ -88,8 +88,9 @@ describe('DELETE /api/demandes/cancel', () => {
   const demandeId = '550e8400-e29b-41d4-a716-446655440100';
 
   it('returns 405 on non-DELETE', async () => {
+    setAuthUser({ id: 'user-1' });
     const res = makeRes();
-    await demandesCancelHandler(makeReq({ method: 'POST' }), res);
+    await demandesCancelHandler(makeReq({ method: 'POST' }, true), res);
     expect(res.statusCode).toBe(405);
   });
 

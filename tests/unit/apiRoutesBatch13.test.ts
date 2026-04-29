@@ -545,7 +545,7 @@ describe('POST /api/admin/teams/bulk', () => {
     );
     expect(res.statusCode).toBe(200);
     expect(logStaffActionMock).toHaveBeenCalledOnce();
-    const args = logStaffActionMock.mock.calls[0][0] as any;
+    const args = (logStaffActionMock.mock.calls[0] as any[])[0];
     expect(args.action).toBe('staff_batch_action');
     expect(args.payload.action_label).toBe('bulk_delete');
   });

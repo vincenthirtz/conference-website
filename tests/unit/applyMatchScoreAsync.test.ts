@@ -350,7 +350,7 @@ describe('applyMatchScore — side effects', () => {
     });
 
     expect(logStaffAction).toHaveBeenCalledOnce();
-    const args = logStaffAction.mock.calls[0][0] as any;
+    const args = (logStaffAction.mock.calls[0] as any[])[0];
     expect(args.action).toBe('update_match');
     expect(args.entity_id).toBe('m1');
     expect(args.payload.new_team1_score).toBe(2);

@@ -2,7 +2,7 @@
 // Ajout d'un membre à une équipe par son capitaine
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { supabaseAdmin, getServerClient } from '@/utils/supabase';
+import { supabaseAdmin } from '@/utils/supabase';
 import {
   findOrCreateUserByEmail,
   listUsersEmailMap,
@@ -14,6 +14,7 @@ import {
   isTeamRosterLocked,
   rosterLockErrorMessage,
 } from '@/utils/teams/rosterLock';
+import { withAuthRoute } from '@/utils/staff';
 
 type AddMemberResponse =
   | {
@@ -26,9 +27,10 @@ type AddMemberResponse =
     }
   | { error: string };
 
-export default async function handler(
+export default withAuthRoute(async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<AddMemberResponse>
+  res: NextApiResponse<AddMemberResponse>,
+  { user }
 ) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -44,20 +46,6 @@ export default async function handler(
     )
   )
     return;
-
-  if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Supabase admin not configured' });
-  }
-
-  // Check if user is authenticated
-  const supabase = getServerClient(req, res);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
 
   // Check if user is captain of a team
   const { data: captainTeam } = await supabaseAdmin
@@ -243,4 +231,4 @@ export default async function handler(
       error: (err as Error)?.message || 'Internal server error',
     });
   }
-}
+});

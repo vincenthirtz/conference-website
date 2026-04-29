@@ -205,7 +205,7 @@ describe('/api/admin/partners', () => {
     expect(inserted.logo_url).toBeNull();
     expect(inserted.website_url).toBe('https://example.com');
     expect(logStaffActionMock).toHaveBeenCalledOnce();
-    const args = logStaffActionMock.mock.calls[0][0] as any;
+    const args = (logStaffActionMock.mock.calls[0] as any[])[0];
     expect(args.entity_type).toBe('partner');
   });
 
@@ -224,8 +224,9 @@ describe('PATCH /api/teams/transfer-captain', () => {
   const otherUuid = '550e8400-e29b-41d4-a716-446655440010';
 
   it('returns 405 on non-PATCH', async () => {
+    setAuthUser({ id: 'user-1' });
     const res = makeRes();
-    await transferCaptainHandler(makeReq({ method: 'POST' }), res);
+    await transferCaptainHandler(makeReq({ method: 'POST' }, true), res);
     expect(res.statusCode).toBe(405);
   });
 
@@ -314,8 +315,9 @@ describe('PATCH /api/teams/update-member-role', () => {
   const memberId = '550e8400-e29b-41d4-a716-446655440020';
 
   it('returns 405 on non-PATCH', async () => {
+    setAuthUser({ id: 'user-1' });
     const res = makeRes();
-    await updateMemberRoleHandler(makeReq({ method: 'POST' }), res);
+    await updateMemberRoleHandler(makeReq({ method: 'POST' }, true), res);
     expect(res.statusCode).toBe(405);
   });
 

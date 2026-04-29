@@ -353,6 +353,57 @@ export function withStaffRoute(
   };
 }
 
+/**
+ * Helper pour les API routes user-level (joueur, capitaine d'équipe) :
+ * - Lit le header `Authorization: Bearer <token>`
+ * - Résout l'utilisateur (avec cache token→user)
+ * - 401 si token absent ou invalide
+ * - Pas de check de rôle staff
+ *
+ * Bearer-only : l'authentification par Bearer est naturellement résistante au
+ * CSRF (le navigateur n'attache pas l'header Authorization automatiquement
+ * cross-origin), donc pas de check CSRF nécessaire. Pour une route qui doit
+ * accepter les cookies SSR, garder l'auth manuelle via getServerClient.
+ */
+export function withAuthRoute(
+  handler: (
+    req: NextApiRequest,
+    res: NextApiResponse,
+    ctx: { user: User }
+  ) => Promise<unknown>
+) {
+  return async (req: NextApiRequest, res: NextApiResponse) => {
+    try {
+      if (!supabaseAdmin) {
+        res.status(503).json({ error: 'Service unavailable.' });
+        return;
+      }
+
+      const authHeader = req.headers.authorization;
+      const token =
+        authHeader && authHeader.startsWith('Bearer ')
+          ? authHeader.slice('Bearer '.length)
+          : undefined;
+
+      if (!token) {
+        res.status(401).json({ error: 'Token required.' });
+        return;
+      }
+
+      const user = await resolveUserFromToken(token);
+      if (!user) {
+        res.status(401).json({ error: 'Not authenticated.' });
+        return;
+      }
+
+      await handler(req, res, { user });
+    } catch (err: unknown) {
+      console.error('withAuthRoute error:', err);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  };
+}
+
 /* -----------------------------------------------------------
  * Utils
  * ---------------------------------------------------------*/
