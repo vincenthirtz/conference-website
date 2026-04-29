@@ -32,6 +32,20 @@ jobs:
       - name: Unit tests
         run: npm run test:unit
 
+      - name: Install coverage tool (CI-only)
+        run: npm install --no-save --no-package-lock @vitest/coverage-v8@^4
+
+      - name: Unit tests coverage
+        run: npx vitest run --coverage --no-isolate
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 14
+
       - name: Build
         run: npm run build
         env:

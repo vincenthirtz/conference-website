@@ -11,7 +11,8 @@
     "lint": "eslint . --fix",
     "test": "playwright test",
     "test:unit": "vitest run",
-    "test:unit:watch": "vitest"
+    "test:unit:watch": "vitest",
+    "test:unit:coverage": "vitest run --coverage --no-isolate"
   },
   "dependencies": {
     "@netlify/functions": "^5.1.2",
@@ -38,6 +39,7 @@
     "@types/react": "^19.2.8",
     "@types/react-dom": "^19.2.3",
     "@types/react-slick": "^0.23.13",
+    "@vitest/coverage-v8": "^4.0.18",
     "dotenv": "^17.2.3",
     "eslint": "^9.39.2",
     "eslint-config-next": "^16.1.1",
