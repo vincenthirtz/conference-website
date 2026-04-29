@@ -57,17 +57,16 @@ export function generateChallenge(): { token: string; question: string } {
 
   const question = `${a} ${op} ${b}`;
   const issuedAt = Date.now();
+  const nonce = crypto.randomBytes(8).toString('hex');
 
-  // Payload: answer|issuedAt
-  const payload = `${answer}|${issuedAt}`;
+  const payload = `${answer}|${issuedAt}|${nonce}`;
   const hmac = crypto
     .createHmac('sha256', CAPTCHA_SECRET)
     .update(payload)
     .digest('hex');
 
-  // Token encodes the payload + signature so verification is stateless
   const token = Buffer.from(
-    JSON.stringify({ answer, issuedAt, hmac })
+    JSON.stringify({ answer, issuedAt, nonce, hmac })
   ).toString('base64url');
 
   return { token, question };
@@ -81,19 +80,23 @@ export function verifyCaptcha(
     return { valid: false, error: 'Captcha manquant' };
   }
 
-  let parsed: { answer: number; issuedAt: number; hmac: string };
+  let parsed: {
+    answer: number;
+    issuedAt: number;
+    nonce?: string;
+    hmac: string;
+  };
   try {
     parsed = JSON.parse(Buffer.from(token, 'base64url').toString());
   } catch {
     return { valid: false, error: 'Token captcha invalide' };
   }
 
-  const { answer, issuedAt, hmac } = parsed;
+  const { answer, issuedAt, nonce, hmac } = parsed;
 
-  // Verify HMAC
   const expectedHmac = crypto
     .createHmac('sha256', CAPTCHA_SECRET)
-    .update(`${answer}|${issuedAt}`)
+    .update(`${answer}|${issuedAt}|${nonce ?? ''}`)
     .digest('hex');
 
   if (!crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(expectedHmac))) {
