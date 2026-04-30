@@ -1,0 +1,139 @@
+import Link from 'next/link';
+import type { JSX } from 'react';
+import Heading from '@/components/Typography/heading';
+import Paragraph from '@/components/Typography/paragraph';
+
+export type UpcomingTournament = {
+  id: string;
+  name: string;
+  slug: string | null;
+  shortName: string | null;
+  status: string;
+  startDate: string | null;
+  endDate: string | null;
+  format: string | null;
+  maxTeams: number | null;
+  teamCount: number;
+};
+
+type HomeUpcomingTournamentProps = {
+  tournament: UpcomingTournament | null;
+};
+
+function formatRange(start: string | null, end: string | null) {
+  if (!start) return null;
+  const startDate = new Date(start);
+  const endDate = end ? new Date(end) : null;
+  const fmtFull = new Intl.DateTimeFormat('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+  if (!endDate || endDate.getTime() === startDate.getTime()) {
+    return fmtFull.format(startDate);
+  }
+  const sameMonth =
+    startDate.getMonth() === endDate.getMonth() &&
+    startDate.getFullYear() === endDate.getFullYear();
+  if (sameMonth) {
+    return `${startDate.getDate()} – ${fmtFull.format(endDate)}`;
+  }
+  const fmtShort = new Intl.DateTimeFormat('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+  });
+  return `${fmtShort.format(startDate)} → ${fmtFull.format(endDate)}`;
+}
+
+export default function HomeUpcomingTournament({
+  tournament,
+}: HomeUpcomingTournamentProps): JSX.Element | null {
+  if (!tournament) return null;
+
+  const isRunning = tournament.status === 'running';
+  const range = formatRange(tournament.startDate, tournament.endDate);
+  const slotsLeft =
+    tournament.maxTeams != null
+      ? Math.max(0, tournament.maxTeams - tournament.teamCount)
+      : null;
+  const detailHref = tournament.slug
+    ? `/tournament/${tournament.slug}`
+    : `/tournament/${tournament.id}`;
+
+  return (
+    <section className="container mt-20 px-4 md:px-0">
+      <div className="flex flex-col items-center text-center mb-6">
+        <div className="text-xl text-white font-semibold border-b-2 border-blue-400 mb-1">
+          {isRunning ? 'En cours' : 'À venir'}
+        </div>
+        <Heading
+          typeStyle="heading-md"
+          className="text-gradient text-center lg:mt-3"
+        >
+          {isRunning ? 'Le tournoi est en direct' : 'Prochain rendez-vous'}
+        </Heading>
+      </div>
+
+      <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-purple-500/10 via-white/[0.03] to-cyan-500/10 p-6 md:p-8 backdrop-blur-sm">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.16em] text-blue-200/80">
+              {isRunning && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-400/40 bg-rose-500/15 px-2.5 py-1 text-rose-100 text-[10px] font-semibold">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-60" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-rose-500" />
+                  </span>
+                  En direct
+                </span>
+              )}
+              {tournament.format && <span>{tournament.format}</span>}
+              {range && <span>{range}</span>}
+            </div>
+            <h3 className="mt-2 text-2xl md:text-3xl font-bold text-white leading-tight">
+              {tournament.name}
+            </h3>
+            <Paragraph
+              className="mt-2 text-sm md:text-base"
+              textColor="text-gray-300"
+            >
+              {tournament.maxTeams != null ? (
+                <>
+                  <span className="font-semibold text-white">
+                    {tournament.teamCount}
+                  </span>
+                  {' / '}
+                  <span>{tournament.maxTeams}</span> équipes inscrites
+                  {slotsLeft != null && slotsLeft > 0 && !isRunning && (
+                    <span className="ml-2 inline-flex items-center rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-100">
+                      {slotsLeft} place{slotsLeft > 1 ? 's' : ''} restante
+                      {slotsLeft > 1 ? 's' : ''}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <>{tournament.teamCount} équipes inscrites</>
+              )}
+            </Paragraph>
+          </div>
+          <div className="flex flex-row items-center gap-3 shrink-0">
+            <Link
+              href={detailHref}
+              className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
+            >
+              Voir les matchs
+            </Link>
+            {!isRunning && (
+              <Link
+                href="/team/create"
+                className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-neutral-900 shadow hover:-translate-y-0.5 hover:shadow-lg transition"
+              >
+                S&apos;inscrire
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}

@@ -59,6 +59,14 @@ const KNOWN_SETTINGS = [
     placeholder: new Date().getFullYear().toString(),
     type: 'number',
   },
+  {
+    key: 'homepage_event_date',
+    label: "Date de l'événement (compte à rebours)",
+    description:
+      "Date ISO du prochain événement affiché en compte à rebours sur la page d'accueil. Si vide, la date de début du prochain tournoi est utilisée. Format : 2026-06-15T18:00:00+02:00",
+    placeholder: '2026-06-15T18:00:00+02:00',
+    type: 'text',
+  },
 ];
 
 function AdminSiteSettingsPage({ staff }: Props) {

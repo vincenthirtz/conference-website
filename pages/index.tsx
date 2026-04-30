@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 import type { GetStaticProps } from 'next';
 import Header from '@/components/Header/header';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
@@ -9,11 +8,20 @@ import AnnouncementsTicker, {
   Announcement,
 } from '@/components/Ads/AnnouncementsTicker';
 import PressSection from '@/components/Press/PressSection';
+import HomeCountdown from '@/components/Home/HomeCountdown';
+import HomeUpcomingTournament, {
+  UpcomingTournament,
+} from '@/components/Home/HomeUpcomingTournament';
+import HomeTwitchEmbed from '@/components/Home/HomeTwitchEmbed';
+import HomeSponsors, { HomePartner } from '@/components/Home/HomeSponsors';
 import { supabaseAdmin } from '@/utils/supabase';
 
 type HomeProps = {
   news: HomeNewsItem[];
   announcements: Announcement[];
+  upcomingTournament: UpcomingTournament | null;
+  partners: HomePartner[];
+  countdownTarget: string | null;
 };
 
 function sanitizeAnnouncementUrl(url: string | null): string | null {
@@ -27,31 +35,123 @@ function sanitizeAnnouncementUrl(url: string | null): string | null {
   }
 }
 
+async function loadUpcomingTournament(): Promise<UpcomingTournament | null> {
+  if (!supabaseAdmin) return null;
+  const { data, error } = await supabaseAdmin
+    .from('tournaments')
+    .select(
+      'id, name, slug, short_name, status, format, start_date, end_date, max_teams'
+    )
+    .in('status', ['running', 'published'])
+    .order('start_date', { ascending: true, nullsFirst: false });
+  if (error || !data?.length) return null;
+
+  const now = Date.now();
+  const running = data.find((t) => t.status === 'running');
+  const upcoming = data.find((t) => {
+    if (t.status !== 'published' || !t.start_date) return false;
+    return new Date(t.start_date).getTime() >= now;
+  });
+  const picked = running || upcoming;
+  if (!picked) return null;
+
+  const { count } = await supabaseAdmin
+    .from('tournament_teams')
+    .select('id', { count: 'exact', head: true })
+    .eq('tournament_id', picked.id);
+
+  return {
+    id: picked.id,
+    name: picked.name,
+    slug: picked.slug,
+    shortName: picked.short_name,
+    status: picked.status,
+    startDate: picked.start_date,
+    endDate: picked.end_date,
+    format: picked.format,
+    maxTeams: picked.max_teams,
+    teamCount: typeof count === 'number' ? count : 0,
+  };
+}
+
+async function loadPartners(): Promise<HomePartner[]> {
+  if (!supabaseAdmin) return [];
+  const { data, error } = await supabaseAdmin
+    .from('partners')
+    .select('id, name, category, logo_url, website_url, display_order')
+    .eq('is_active', true)
+    .order('display_order', { ascending: true })
+    .order('created_at', { ascending: true });
+  if (error || !data) return [];
+  return data
+    .filter(
+      (row: any) =>
+        row.category === 'super' ||
+        row.category === 'major' ||
+        row.category === 'cultural'
+    )
+    .map((row: any) => ({
+      id: row.id,
+      name: row.name,
+      category: row.category,
+      logoUrl: row.logo_url ?? null,
+      websiteUrl: row.website_url ?? null,
+    }));
+}
+
+async function loadCountdownTarget(
+  fallbackStartDate: string | null
+): Promise<string | null> {
+  if (!supabaseAdmin) return fallbackStartDate;
+  const { data } = await supabaseAdmin
+    .from('site_settings')
+    .select('value')
+    .eq('key', 'homepage_event_date')
+    .maybeSingle();
+  const fromSetting = (data?.value ?? '').trim();
+  if (fromSetting) return fromSetting;
+  return fallbackStartDate;
+}
+
 export const getStaticProps: GetStaticProps<HomeProps> = async () => {
   let news: HomeNewsItem[] = [];
   let announcements: Announcement[] = [];
+  let upcomingTournament: UpcomingTournament | null = null;
+  let partners: HomePartner[] = [];
+  let countdownTarget: string | null = null;
 
   if (supabaseAdmin) {
     const nowISO = new Date().toISOString();
 
-    const [newsRes, announcementsRes] = await Promise.all([
-      supabaseAdmin
-        .from('news')
-        .select(
-          'id, title, slug, tag, excerpt, content, image_url, published_at, created_at, updated_at, news_comments(count)'
-        )
-        .eq('status', 'published')
-        .or(`published_at.lte.${nowISO},published_at.is.null`)
-        .order('published_at', { ascending: false, nullsFirst: false })
-        .limit(30),
-      supabaseAdmin
-        .from('announcements')
-        .select('id, title, message, cta_label, cta_url, priority, created_at')
-        .eq('is_active', true)
-        .order('priority', { ascending: false, nullsFirst: false })
-        .order('created_at', { ascending: false })
-        .limit(6),
-    ]);
+    const [newsRes, announcementsRes, upcoming, partnersList] =
+      await Promise.all([
+        supabaseAdmin
+          .from('news')
+          .select(
+            'id, title, slug, tag, excerpt, content, image_url, published_at, created_at, updated_at, news_comments(count)'
+          )
+          .eq('status', 'published')
+          .or(`published_at.lte.${nowISO},published_at.is.null`)
+          .order('published_at', { ascending: false, nullsFirst: false })
+          .limit(30),
+        supabaseAdmin
+          .from('announcements')
+          .select(
+            'id, title, message, cta_label, cta_url, priority, created_at'
+          )
+          .eq('is_active', true)
+          .order('priority', { ascending: false, nullsFirst: false })
+          .order('created_at', { ascending: false })
+          .limit(6),
+        loadUpcomingTournament(),
+        loadPartners(),
+      ]);
+
+    upcomingTournament = upcoming;
+    partners = partnersList;
+    countdownTarget = await loadCountdownTarget(
+      upcomingTournament?.startDate ?? null
+    );
 
     if (!newsRes.error && newsRes.data) {
       news = newsRes.data.map((row: any) => ({
@@ -81,25 +181,34 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
   }
 
   return {
-    props: { news, announcements },
+    props: {
+      news,
+      announcements,
+      upcomingTournament,
+      partners,
+      countdownTarget,
+    },
     revalidate: 300,
   };
 };
 
-function Home({ news, announcements }: HomeProps) {
+function Home({
+  news,
+  announcements,
+  upcomingTournament,
+  partners,
+  countdownTarget,
+}: HomeProps) {
   return (
     <div>
-      <img
-        src="/img/illustra.png"
-        className="color-effect"
-        alt="background-illustration"
-      />
       <Header />
 
-      {/* <Popup /> */}
+      <HomeCountdown targetDate={countdownTarget} />
+      <HomeTwitchEmbed />
+      <HomeUpcomingTournament tournament={upcomingTournament} />
       <HomeNewsSection initialNews={news} />
+      <HomeSponsors partners={partners} />
       <PressSection />
-      <div id="sponsors" className="mt-20"></div>
 
       <div className="mt-5">
         <AnnouncementsTicker initialItems={announcements} />
