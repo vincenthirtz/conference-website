@@ -404,4 +404,77 @@ describe('applyMatchScore — side effects', () => {
     await new Promise((r) => setImmediate(r));
     expect(postMvpPoll).not.toHaveBeenCalled();
   });
+
+  it('auto-computes scores from match_format=bo1 on forfeit of team2', async () => {
+    seedMatch({ match_format: 'bo1' });
+    seedTournament();
+    await applyMatchScore({ matchId: 'm1', forfeitTeamId: 'team-b' });
+    const m = (store.matches as any).find((x: any) => x.id === 'm1');
+    expect(m.team1_score).toBe(1);
+    expect(m.team2_score).toBe(0);
+    expect(m.winner_team_id).toBe('team-a');
+  });
+
+  it('auto-computes scores from match_format=bo7 on forfeit', async () => {
+    seedMatch({ match_format: 'bo7' });
+    seedTournament();
+    await applyMatchScore({ matchId: 'm1', forfeitTeamId: 'team-b' });
+    const m = (store.matches as any).find((x: any) => x.id === 'm1');
+    // bo7 -> first to 4
+    expect(m.team1_score).toBe(4);
+    expect(m.team2_score).toBe(0);
+  });
+
+  it('uses sensible default when match_format unknown on forfeit', async () => {
+    seedMatch({ match_format: null });
+    seedTournament();
+    await applyMatchScore({ matchId: 'm1', forfeitTeamId: 'team-b' });
+    const m = (store.matches as any).find((x: any) => x.id === 'm1');
+    // default is bo1 / 1 win
+    expect(m.team1_score).toBeGreaterThanOrEqual(1);
+    expect(m.winner_team_id).toBe('team-a');
+  });
+
+  it('forfeit transitions match to walkover status', async () => {
+    seedMatch();
+    seedTournament();
+    await applyMatchScore({ matchId: 'm1', forfeitTeamId: 'team-a' });
+    const m = (store.matches as any).find((x: any) => x.id === 'm1');
+    expect(m.status).toBe('walkover');
+    expect(m.forfeit_team_id).toBe('team-a');
+    expect(m.winner_team_id).toBe('team-b');
+  });
+});
+
+/* -----------------------------------------------------------
+ * computeWinnerFromScores — pure helper
+ * ---------------------------------------------------------*/
+
+import { computeWinnerFromScores } from '../../utils/matches/applyScore';
+
+describe('computeWinnerFromScores', () => {
+  it('returns the present team as winner on a bye', () => {
+    expect(computeWinnerFromScores('team-a', null, 0, 0, true)).toBe('team-a');
+    expect(computeWinnerFromScores(null, 'team-b', 0, 0, true)).toBe('team-b');
+  });
+
+  it('returns null when both team IDs are null', () => {
+    expect(computeWinnerFromScores(null, null, 2, 1, false)).toBeNull();
+  });
+
+  it('returns team1 when team1Score > team2Score', () => {
+    expect(computeWinnerFromScores('a', 'b', 3, 1, false)).toBe('a');
+  });
+
+  it('returns team2 when team2Score > team1Score', () => {
+    expect(computeWinnerFromScores('a', 'b', 1, 3, false)).toBe('b');
+  });
+
+  it('returns null on tied scores', () => {
+    expect(computeWinnerFromScores('a', 'b', 2, 2, false)).toBeNull();
+  });
+
+  it('returns null when one team is missing and not a bye', () => {
+    expect(computeWinnerFromScores('a', null, 5, 0, false)).toBeNull();
+  });
 });

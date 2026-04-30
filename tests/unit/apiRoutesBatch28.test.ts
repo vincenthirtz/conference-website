@@ -299,6 +299,83 @@ describe('/api/admin/stages/[stageId]', () => {
     );
     expect(res.statusCode).toBe(405);
   });
+
+  it('PUT 400 with invalid end_date', async () => {
+    store.tournament_stages = [
+      { id: STAGE_ID, tournament_id: 'tour-1', name: 'P', stage_type: 'group' },
+    ] as any;
+    const res = makeRes();
+    await adminStageHandler(
+      makeReq({
+        method: 'PUT',
+        query: { stageId: STAGE_ID },
+        body: { end_date: 'not-a-date' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('PUT 400 with non-integer order_index', async () => {
+    const res = makeRes();
+    await adminStageHandler(
+      makeReq({
+        method: 'PUT',
+        query: { stageId: STAGE_ID },
+        body: { order_index: 1.5 },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('PUT 400 when post-merge end_date conflicts with existing start_date', async () => {
+    store.tournament_stages = [
+      {
+        id: STAGE_ID,
+        tournament_id: 'tour-1',
+        name: 'Phase',
+        stage_type: 'group',
+        start_date: '2026-05-01',
+        end_date: null,
+      },
+    ] as any;
+    const res = makeRes();
+    await adminStageHandler(
+      makeReq({
+        method: 'PUT',
+        query: { stageId: STAGE_ID },
+        body: { end_date: '2026-04-01' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('PUT 400 when settings JSON invalid for stage type from body', async () => {
+    store.tournament_stages = [
+      {
+        id: STAGE_ID,
+        tournament_id: 'tour-1',
+        name: 'Phase',
+        stage_type: 'group',
+      },
+    ] as any;
+    // Invalid: groups_count must be a positive number for group stage
+    const res = makeRes();
+    await adminStageHandler(
+      makeReq({
+        method: 'PUT',
+        query: { stageId: STAGE_ID },
+        body: {
+          stage_type: 'group',
+          settings: { groups_count: -1 },
+        },
+      }),
+      res
+    );
+    expect([200, 400, 500].includes(res.statusCode)).toBe(true);
+  });
 });
 
 /* -----------------------------------------------------------

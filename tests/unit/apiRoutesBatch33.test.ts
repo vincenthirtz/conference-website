@@ -322,6 +322,105 @@ describe('POST /api/admin/tournament/[id]/bulk-matches', () => {
     expect(res.statusCode).toBe(404);
   });
 
+  it('shift_round 400 with non-finite offsetMinutes', async () => {
+    const res = makeRes();
+    await bulkTournamentMatchesHandler(
+      makeReq({
+        method: 'POST',
+        query: { id: TID },
+        body: {
+          mode: 'shift_round',
+          stageId: STAGE_ID,
+          roundNumber: 1,
+          offsetMinutes: 'not-a-number',
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('shift_round 400 when stageId is bogus UUID', async () => {
+    const res = makeRes();
+    await bulkTournamentMatchesHandler(
+      makeReq({
+        method: 'POST',
+        query: { id: TID },
+        body: {
+          mode: 'shift_round',
+          stageId: 'bogus',
+          roundNumber: 1,
+          offsetMinutes: 60,
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('reassign_stage skips matches in wrong tournament', async () => {
+    store.tournament_stages = [
+      { id: STAGE_ID_2, tournament_id: TID },
+    ] as any;
+    store.matches = [
+      {
+        id: 'm-other',
+        tournament_id: 'OTHER_TID',
+        stage_id: STAGE_ID,
+        status: 'pending',
+      },
+    ] as any;
+    const res = makeRes();
+    await bulkTournamentMatchesHandler(
+      makeReq({
+        method: 'POST',
+        query: { id: TID },
+        body: {
+          mode: 'reassign_stage',
+          targetStageId: STAGE_ID_2,
+          matchIds: ['m-other', 'm-not-found'],
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const body = res.body as any;
+    expect(body.skipped.length).toBe(2);
+    const reasons = body.skipped.map((s: any) => s.reason);
+    expect(reasons).toContain('not_found');
+    expect(reasons).toContain('wrong_tournament');
+  });
+
+  it('reassign_stage skips matches already in target stage', async () => {
+    store.tournament_stages = [
+      { id: STAGE_ID_2, tournament_id: TID },
+    ] as any;
+    store.matches = [
+      {
+        id: 'm1',
+        tournament_id: TID,
+        stage_id: STAGE_ID_2,
+        status: 'pending',
+      },
+    ] as any;
+    const res = makeRes();
+    await bulkTournamentMatchesHandler(
+      makeReq({
+        method: 'POST',
+        query: { id: TID },
+        body: {
+          mode: 'reassign_stage',
+          targetStageId: STAGE_ID_2,
+          matchIds: ['m1'],
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const body = res.body as any;
+    expect(body.skipped[0].reason).toBe('already_in_target_stage');
+  });
+
   it('reassign_stage 200 moves valid matches and skips locked ones', async () => {
     store.tournament_stages = [
       { id: STAGE_ID, tournament_id: TID },

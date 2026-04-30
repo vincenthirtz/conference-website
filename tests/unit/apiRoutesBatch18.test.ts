@@ -670,4 +670,99 @@ describe('/api/admin/tournaments', () => {
     );
     expect(res.statusCode).toBe(405);
   });
+
+  it('GET filters by dateFrom/dateTo', async () => {
+    store.tournaments = [
+      {
+        id: 't1',
+        name: 'Old',
+        status: 'published',
+        start_date: '2026-01-01',
+        created_at: '2026-01-01',
+        updated_at: '2026',
+      },
+      {
+        id: 't2',
+        name: 'New',
+        status: 'published',
+        start_date: '2026-06-01',
+        created_at: '2026-06-01',
+        updated_at: '2026',
+      },
+    ] as any;
+    const res = makeRes();
+    await adminTournamentsHandler(
+      makeReq(
+        {
+          method: 'GET',
+          query: { dateFrom: '2026-05-01', dateTo: '2026-12-31' },
+        },
+        true
+      ),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('GET orders by start_date when requested', async () => {
+    store.tournaments = [
+      {
+        id: 't1',
+        name: 'A',
+        status: 'published',
+        start_date: '2026-01-01',
+        created_at: '2026',
+      },
+    ] as any;
+    const res = makeRes();
+    await adminTournamentsHandler(
+      makeReq(
+        {
+          method: 'GET',
+          query: { orderBy: 'start_date', orderDir: 'asc' },
+        },
+        true
+      ),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('GET respects search query filter', async () => {
+    store.tournaments = [
+      {
+        id: 't1',
+        name: 'Spring Cup',
+        status: 'published',
+        created_at: '2026',
+      },
+      {
+        id: 't2',
+        name: 'Summer League',
+        status: 'published',
+        created_at: '2026',
+      },
+    ] as any;
+    const res = makeRes();
+    await adminTournamentsHandler(
+      makeReq({ method: 'GET', query: { search: 'spring' } }, true),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('POST 400 when end_date alone is invalid', async () => {
+    const res = makeRes();
+    await adminTournamentsHandler(
+      makeReq(
+        {
+          method: 'POST',
+          body: { name: 'Cup', end_date: 'not-a-date' },
+        },
+        true
+      ),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
 });

@@ -528,4 +528,111 @@ describe('/api/admin/news/[id]', () => {
     );
     expect(res.statusCode).toBe(405);
   });
+
+  it('PUT 200 publishes news with explicit publishedAt', async () => {
+    store.news = [
+      {
+        id: VALID_UUID,
+        title: 'Old',
+        content: 'X',
+        slug: 'old',
+        tag: 'general',
+        status: 'draft',
+        published_at: null,
+      },
+    ] as any;
+    const res = makeRes();
+    await newsByIdHandler(
+      makeReq({
+        method: 'PUT',
+        query: { id: VALID_UUID },
+        body: {
+          title: 'Now',
+          content: 'X',
+          status: 'published',
+          publishedAt: '2026-04-01T12:00:00Z',
+          tag: 'tournaments',
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect((store.news[0] as any).published_at).toBe(
+      '2026-04-01T12:00:00.000Z'
+    );
+    expect((store.news[0] as any).tag).toBe('tournaments');
+  });
+
+  it('PUT 200 first-time publish without publishedAt uses current time', async () => {
+    store.news = [
+      {
+        id: VALID_UUID,
+        title: 'X',
+        content: 'X',
+        status: 'draft',
+        published_at: null,
+        tag: 'general',
+      },
+    ] as any;
+    const res = makeRes();
+    await newsByIdHandler(
+      makeReq({
+        method: 'PUT',
+        query: { id: VALID_UUID },
+        body: {
+          title: 'X',
+          content: 'X',
+          status: 'published',
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect((store.news[0] as any).published_at).toBeTruthy();
+  });
+
+  it('PUT keeps tag from existing record when none provided', async () => {
+    store.news = [
+      {
+        id: VALID_UUID,
+        title: 'X',
+        content: 'X',
+        status: 'draft',
+        published_at: null,
+        tag: 'community',
+      },
+    ] as any;
+    const res = makeRes();
+    await newsByIdHandler(
+      makeReq({
+        method: 'PUT',
+        query: { id: VALID_UUID },
+        body: { title: 'X', content: 'X', status: 'draft' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect((store.news[0] as any).tag).toBe('community');
+  });
+
+  it('PUT slug derived from explicit slug field if provided', async () => {
+    store.news = [
+      { id: VALID_UUID, title: 'X', content: 'X', status: 'draft', tag: 'g' },
+    ] as any;
+    const res = makeRes();
+    await newsByIdHandler(
+      makeReq({
+        method: 'PUT',
+        query: { id: VALID_UUID },
+        body: {
+          title: 'Some Title',
+          content: 'X',
+          slug: 'My Custom Slug',
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect((store.news[0] as any).slug).toBe('my-custom-slug');
+  });
 });

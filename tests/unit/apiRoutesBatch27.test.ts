@@ -304,6 +304,39 @@ describe('/api/admin/teams/[teamId]', () => {
     );
     expect(res.statusCode).toBe(405);
   });
+
+  it('PUT 400 with invalid logo_url protocol', async () => {
+    store.teams = [
+      { id: TEAM_ID, name: 'Alpha', is_active: true },
+    ] as any;
+    const res = makeRes();
+    await adminTeamHandler(
+      makeReq({
+        method: 'PUT',
+        query: { teamId: TEAM_ID },
+        body: { logo_url: 'javascript:alert(1)' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('PUT 400 with invalid website URL', async () => {
+    store.teams = [
+      { id: TEAM_ID, name: 'Alpha', is_active: true },
+    ] as any;
+    const res = makeRes();
+    await adminTeamHandler(
+      makeReq({
+        method: 'PUT',
+        query: { teamId: TEAM_ID },
+        body: { website: 'not-a-url' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
 });
 
 /* -----------------------------------------------------------

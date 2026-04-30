@@ -638,4 +638,65 @@ describe('/api/admin/adherents', () => {
     await adherentsHandler(makeReq({ method: 'PATCH' }, true), res);
     expect(res.statusCode).toBe(405);
   });
+
+  it('GET filters by paymentStatus, year, role, active', async () => {
+    store.adherents = [
+      {
+        id: 'a1',
+        first_name: 'A',
+        last_name: 'B',
+        email: 'a@b.com',
+        payment_status: 'paid',
+        current_year: 2026,
+        role: 'member',
+        is_active: true,
+      },
+      {
+        id: 'a2',
+        first_name: 'C',
+        last_name: 'D',
+        email: 'c@d.com',
+        payment_status: 'pending',
+        current_year: 2025,
+        role: 'volunteer',
+        is_active: false,
+      },
+    ] as any;
+    const res = makeRes();
+    await adherentsHandler(
+      makeReq(
+        {
+          method: 'GET',
+          query: {
+            paymentStatus: 'paid',
+            year: '2026',
+            role: 'member',
+            active: 'true',
+            search: 'a',
+          },
+        },
+        true
+      ),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('GET filters with active=false', async () => {
+    store.adherents = [
+      {
+        id: 'a1',
+        first_name: 'A',
+        last_name: 'B',
+        email: 'a@b.com',
+        is_active: false,
+      },
+    ] as any;
+    const res = makeRes();
+    await adherentsHandler(
+      makeReq({ method: 'GET', query: { active: 'false' } }, true),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+  });
 });

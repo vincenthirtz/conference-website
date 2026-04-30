@@ -220,6 +220,74 @@ describe('GET /api/admin/tournament/[id]/stats', () => {
     expect(res.statusCode).toBe(404);
   });
 
+  it('200 returns stats with empty matches and teams', async () => {
+    store.tournaments = [
+      { id: TID, name: 'Cup', slug: 'cup' },
+    ] as any;
+    store.matches = [];
+    store.tournament_teams = [];
+    store.games = [];
+    const res = makeRes();
+    await statsHandler(
+      makeReq({ method: 'GET', query: { id: TID } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const body = res.body as any;
+    expect(body.overview.totalMatches).toBe(0);
+    expect(body.overview.totalTeams).toBe(0);
+  });
+
+  it('200 returns stats with bye matches excluded', async () => {
+    store.tournaments = [
+      { id: TID, name: 'Cup', slug: 'cup' },
+    ] as any;
+    store.matches = [
+      {
+        id: 'mb',
+        tournament_id: TID,
+        stage_id: 's1',
+        status: 'finished',
+        is_bye: true,
+        team1_id: 't1',
+        team2_id: null,
+      },
+      {
+        id: 'm1',
+        tournament_id: TID,
+        stage_id: 's1',
+        status: 'finished',
+        is_bye: false,
+        team1_id: 't1',
+        team2_id: 't2',
+        team1_score: 2,
+        team2_score: 1,
+        winner_team_id: 't1',
+        round_number: 1,
+      },
+    ] as any;
+    store.tournament_teams = [
+      {
+        tournament_id: TID,
+        team: { id: 't1', name: 'A', short_name: 'A', logo_url: null },
+      },
+      {
+        tournament_id: TID,
+        team: { id: 't2', name: 'B', short_name: 'B', logo_url: null },
+      },
+    ] as any;
+    store.games = [];
+    const res = makeRes();
+    await statsHandler(
+      makeReq({ method: 'GET', query: { id: TID } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const body = res.body as any;
+    // Only the non-bye match counts
+    expect(body.overview.totalMatches).toBe(1);
+  });
+
   it('200 returns global stats', async () => {
     store.tournaments = [
       { id: TID, name: 'Cup', slug: 'cup' },
@@ -360,5 +428,157 @@ describe('PATCH /api/admin/recycle-bin', () => {
     const res = makeRes();
     await recycleBinHandler(makeReq({ method: 'POST' }), res);
     expect(res.statusCode).toBe(405);
+  });
+
+  it('PATCH restores a soft-deleted match', async () => {
+    store.matches = [
+      {
+        id: 'm-soft',
+        tournament_id: 'tour-1',
+        status: 'cancelled',
+        deleted_at: '2026-04-01',
+      },
+    ] as any;
+    const res = makeRes();
+    await recycleBinHandler(
+      makeReq({
+        method: 'PATCH',
+        body: { id: 'm-soft', type: 'match' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const m = (store.matches as any)[0];
+    expect(m.status).toBe('pending');
+    expect(m.deleted_at).toBeNull();
+  });
+
+  it('PATCH restores a soft-deleted announcement', async () => {
+    store.announcements = [
+      { id: 'a-soft', title: 'Anc', deleted_at: '2026-04-01' },
+    ] as any;
+    const res = makeRes();
+    await recycleBinHandler(
+      makeReq({
+        method: 'PATCH',
+        body: { id: 'a-soft', type: 'announcement' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('PATCH restores a soft-deleted partner', async () => {
+    store.partners = [
+      { id: 'p-soft', name: 'Sponsor', deleted_at: '2026-04-01' },
+    ] as any;
+    const res = makeRes();
+    await recycleBinHandler(
+      makeReq({
+        method: 'PATCH',
+        body: { id: 'p-soft', type: 'partner' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('PATCH restores a soft-deleted cast_member', async () => {
+    store.cast_members = [
+      { id: 'cm-soft', display_name: 'Caster', deleted_at: '2026-04-01' },
+    ] as any;
+    const res = makeRes();
+    await recycleBinHandler(
+      makeReq({
+        method: 'PATCH',
+        body: { id: 'cm-soft', type: 'cast_member' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('PATCH restores a soft-deleted adherent', async () => {
+    store.adherents = [
+      { id: 'ad-soft', first_name: 'A', deleted_at: '2026-04-01' },
+    ] as any;
+    const res = makeRes();
+    await recycleBinHandler(
+      makeReq({
+        method: 'PATCH',
+        body: { id: 'ad-soft', type: 'adherent' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('GET lists soft-deleted matches with team labels', async () => {
+    store.matches = [
+      {
+        id: 'm-soft',
+        tournament_id: 'tour-1',
+        round_number: 1,
+        team1_id: 't1',
+        team2_id: 't2',
+        deleted_at: '2026-04-01',
+      },
+    ] as any;
+    store.teams = [
+      { id: 't1', name: 'Alpha' },
+      { id: 't2', name: 'Beta' },
+    ] as any;
+    const res = makeRes();
+    await recycleBinHandler(
+      makeReq({ method: 'GET', query: { type: 'match' } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const body = res.body as any;
+    expect(body.items.length).toBe(1);
+    expect(body.items[0].type).toBe('match');
+    expect(body.items[0].name).toContain('Alpha');
+  });
+
+  it('GET lists soft-deleted announcements', async () => {
+    store.announcements = [
+      {
+        id: 'a-soft',
+        title: 'Anc',
+        message: 'Hello world',
+        deleted_at: '2026-04-01',
+      },
+    ] as any;
+    const res = makeRes();
+    await recycleBinHandler(
+      makeReq({ method: 'GET', query: { type: 'announcement' } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).items[0].type).toBe('announcement');
+  });
+
+  it('GET lists soft-deleted partners, cast_members, adherents', async () => {
+    store.partners = [
+      { id: 'p1', name: 'Sponsor', deleted_at: '2026-04-01' },
+    ] as any;
+    store.cast_members = [
+      { id: 'cm1', display_name: 'Caster', deleted_at: '2026-04-01' },
+    ] as any;
+    store.adherents = [
+      {
+        id: 'ad1',
+        first_name: 'A',
+        last_name: 'B',
+        deleted_at: '2026-04-01',
+      },
+    ] as any;
+    const res = makeRes();
+    await recycleBinHandler(makeReq({ method: 'GET' }), res);
+    expect(res.statusCode).toBe(200);
+    const types = ((res.body as any).items as any[]).map((i) => i.type);
+    expect(types).toContain('partner');
+    expect(types).toContain('cast_member');
+    expect(types).toContain('adherent');
   });
 });

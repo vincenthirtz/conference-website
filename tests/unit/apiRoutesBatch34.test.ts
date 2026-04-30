@@ -219,4 +219,246 @@ describe('POST /api/teams/create-with-member', () => {
     expect(res.statusCode).toBe(201);
     expect((store.teams as any).length).toBe(1);
   });
+
+  it('400 when set_captain provided without any member', async () => {
+    const res = makeRes();
+    await createWithMemberHandler(
+      makeReq({
+        body: { name: 'Alpha', set_captain: true },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('400 when single member has no battle_tag', async () => {
+    const res = makeRes();
+    await createWithMemberHandler(
+      makeReq({
+        body: {
+          name: 'Alpha',
+          member_email: 'p@example.com',
+          member_role: 'player',
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('500 when member battle_tag has invalid format (caught in email-flow try)', async () => {
+    setAuthListUsers([{ id: 'u1', email: 'p@example.com' }]);
+    const res = makeRes();
+    await createWithMemberHandler(
+      makeReq({
+        body: {
+          name: 'Alpha',
+          member_email: 'p@example.com',
+          member_role: 'player',
+          member_battle_tag: 'invalid_no_hash',
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(500);
+  });
+
+  it('400 when bulk member missing battle_tag', async () => {
+    const res = makeRes();
+    await createWithMemberHandler(
+      makeReq({
+        body: {
+          name: 'Alpha',
+          members: [
+            { email: 'p1@example.com', role: 'player' },
+          ],
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('200 auto-registers team to a published tournament', async () => {
+    setAuthListUsers([{ id: 'u1', email: 'p1@example.com' }]);
+    store.teams = [];
+    store.team_members = [];
+    store.tournaments = [
+      {
+        id: 'tour-1',
+        name: 'Cup',
+        status: 'published',
+        max_teams: null,
+        min_players: null,
+      },
+    ] as any;
+    store.tournament_stages = [
+      { id: 's1', tournament_id: 'tour-1' },
+      { id: 's2', tournament_id: 'tour-1' },
+    ] as any;
+    store.stage_teams = [];
+    const res = makeRes();
+    await createWithMemberHandler(
+      makeReq({
+        body: {
+          name: 'Auto Reg Team',
+          tournament_id: 'tour-1',
+          members: [
+            {
+              email: 'p1@example.com',
+              role: 'player',
+              battle_tag: 'Player1#1234',
+              set_captain: true,
+            },
+          ],
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(201);
+    expect((res.body as any).tournament).toBeTruthy();
+    expect((res.body as any).tournament.tournament_name).toBe('Cup');
+    expect((store.stage_teams as any).length).toBe(2);
+  });
+
+  it('201 skips auto-register when tournament has too few players for min_players', async () => {
+    setAuthListUsers([{ id: 'u1', email: 'p1@example.com' }]);
+    store.teams = [];
+    store.team_members = [];
+    store.tournaments = [
+      {
+        id: 'tour-min',
+        name: 'StrictCup',
+        status: 'published',
+        max_teams: null,
+        min_players: 5,
+      },
+    ] as any;
+    store.tournament_stages = [{ id: 's1', tournament_id: 'tour-min' }] as any;
+    store.stage_teams = [];
+    const res = makeRes();
+    await createWithMemberHandler(
+      makeReq({
+        body: {
+          name: 'Underpowered',
+          tournament_id: 'tour-min',
+          members: [
+            {
+              email: 'p1@example.com',
+              role: 'player',
+              battle_tag: 'P1#1234',
+              set_captain: true,
+            },
+          ],
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(201);
+    expect((res.body as any).tournament).toBeFalsy();
+  });
+
+  it('201 with member_user_id directly (no email lookup)', async () => {
+    store.teams = [];
+    store.team_members = [];
+    const res = makeRes();
+    await createWithMemberHandler(
+      makeReq({
+        body: {
+          name: 'Direct UID Team',
+          member_user_id: 'u-direct',
+          member_role: 'player',
+          member_battle_tag: 'Direct#9999',
+          set_captain: true,
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(201);
+    expect((store.team_members as any).length).toBe(1);
+    expect((store.team_members as any)[0].user_id).toBe('u-direct');
+  });
+
+  it('400 when single member_user_id has invalid battle_tag format', async () => {
+    const res = makeRes();
+    await createWithMemberHandler(
+      makeReq({
+        body: {
+          name: 'BadBT',
+          member_user_id: 'u-direct',
+          member_role: 'player',
+          member_battle_tag: 'no_hash',
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('200 with bulk members where one has user_id and one has email', async () => {
+    setAuthListUsers([{ id: 'u-existing', email: 'existing@example.com' }]);
+    store.teams = [];
+    store.team_members = [];
+    const res = makeRes();
+    await createWithMemberHandler(
+      makeReq({
+        body: {
+          name: 'Mixed Team',
+          members: [
+            {
+              user_id: 'u-direct',
+              role: 'tank',
+              battle_tag: 'Tank#1234',
+              set_captain: true,
+            },
+            {
+              email: 'existing@example.com',
+              role: 'support',
+              battle_tag: 'Sup#5678',
+            },
+          ],
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(201);
+    expect((store.team_members as any).length).toBe(2);
+  });
+
+  it('201 skips auto-register when tournament status is not published', async () => {
+    setAuthListUsers([{ id: 'u1', email: 'p1@example.com' }]);
+    store.teams = [];
+    store.team_members = [];
+    store.tournaments = [
+      {
+        id: 'tour-d',
+        name: 'Draft',
+        status: 'draft',
+        max_teams: null,
+        min_players: null,
+      },
+    ] as any;
+    store.tournament_stages = [{ id: 's1', tournament_id: 'tour-d' }] as any;
+    store.stage_teams = [];
+    const res = makeRes();
+    await createWithMemberHandler(
+      makeReq({
+        body: {
+          name: 'Test',
+          tournament_id: 'tour-d',
+          members: [
+            {
+              email: 'p1@example.com',
+              role: 'player',
+              battle_tag: 'Player1#1234',
+              set_captain: true,
+            },
+          ],
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(201);
+    expect((res.body as any).tournament).toBeFalsy();
+  });
 });

@@ -357,6 +357,87 @@ describe('/api/admin/stages/[stageId]/teams', () => {
     );
     expect(res.statusCode).toBe(405);
   });
+
+  it('POST 201 with duplicate-player warning across other teams', async () => {
+    store.tournament_stages = [
+      { id: STAGE_ID, tournament_id: TID },
+      { id: 'stage-other', tournament_id: TID },
+    ] as any;
+    store.tournaments = [{ id: TID, min_players: null }] as any;
+    store.team_members = [
+      { user_id: 'u1', team_id: TEAM_ID },
+      { user_id: 'u1', team_id: 'team-other', teams: { name: 'OtherTeam' } },
+    ] as any;
+    store.stage_teams = [
+      { stage_id: 'stage-other', team_id: 'team-other' },
+    ] as any;
+    store.teams = [
+      { id: TEAM_ID, name: 'Alpha' },
+      { id: 'team-other', name: 'OtherTeam' },
+    ] as any;
+    const res = makeRes();
+    await stageTeamsHandler(
+      makeReq({
+        method: 'POST',
+        query: { stageId: STAGE_ID },
+        body: { teamId: TEAM_ID, seed: 1 },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(201);
+    const body = res.body as any;
+    expect(body.warnings).toBeTruthy();
+    expect(
+      body.warnings.some((w: string) => w.includes('autre équipe'))
+    ).toBe(true);
+  });
+
+  it('PATCH bulk records per-entry failure for invalid entries', async () => {
+    store.tournament_stages = [
+      { id: STAGE_ID, tournament_id: TID },
+    ] as any;
+    const res = makeRes();
+    await stageTeamsHandler(
+      makeReq({
+        method: 'PATCH',
+        query: { stageId: STAGE_ID },
+        body: {
+          seeds: [
+            { teamId: '', seed: 1 }, // invalid: empty teamId
+            { teamId: 't1', seed: null }, // valid
+          ],
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const body = res.body as any;
+    expect(body.bulk).toBe(true);
+    expect(body.results).toHaveLength(2);
+    expect(body.results[0].success).toBe(false);
+  });
+
+  it('POST 201 without warnings when min_players satisfied', async () => {
+    store.tournament_stages = [
+      { id: STAGE_ID, tournament_id: TID },
+    ] as any;
+    store.tournaments = [{ id: TID, min_players: 1 }] as any;
+    store.team_members = [
+      { user_id: 'u1', team_id: TEAM_ID },
+      { user_id: 'u2', team_id: TEAM_ID },
+    ] as any;
+    store.stage_teams = [];
+    const res = makeRes();
+    await stageTeamsHandler(
+      makeReq({
+        method: 'POST',
+        query: { stageId: STAGE_ID },
+        body: { teamId: TEAM_ID },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(201);
+  });
 });
 
 /* -----------------------------------------------------------

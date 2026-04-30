@@ -310,6 +310,161 @@ describe('/api/admin/stages/[stageId]/groups', () => {
     );
     expect(res.statusCode).toBe(405);
   });
+
+  it('GET 200 infers groups from match.group_key when settings empty', async () => {
+    store.tournament_stages = [
+      {
+        id: STAGE_ID,
+        stage_type: 'group',
+        tournament_id: 'tour-1',
+        settings: {},
+      },
+    ] as any;
+    store.stage_teams = [
+      {
+        stage_id: STAGE_ID,
+        team_id: 't1',
+        seed: 1,
+        team: { id: 't1', name: 'Alpha', short_name: null, logo_url: null },
+      },
+      {
+        stage_id: STAGE_ID,
+        team_id: 't2',
+        seed: 2,
+        team: { id: 't2', name: 'Beta', short_name: null, logo_url: null },
+      },
+    ] as any;
+    store.matches = [
+      {
+        id: 'm1',
+        stage_id: STAGE_ID,
+        team1_id: 't1',
+        team2_id: 't2',
+        group_key: 'A',
+        status: 'pending',
+      },
+    ] as any;
+    const res = makeRes();
+    await groupsHandler(
+      makeReq({ method: 'GET', query: { stageId: STAGE_ID } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const body = res.body as any;
+    expect(body.groups.A).toBeDefined();
+    expect(body.groups.A.length).toBeGreaterThan(0);
+  });
+
+  it('PUT 404 when stage not found', async () => {
+    store.tournament_stages = [];
+    const res = makeRes();
+    await groupsHandler(
+      makeReq({
+        method: 'PUT',
+        query: { stageId: STAGE_ID },
+        body: { assignments: [] },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(404);
+  });
+
+  it('PUT 400 when stage is not group/round_robin', async () => {
+    store.tournament_stages = [
+      { id: STAGE_ID, stage_type: 'bracket', tournament_id: 'tour-1' },
+    ] as any;
+    const res = makeRes();
+    await groupsHandler(
+      makeReq({
+        method: 'PUT',
+        query: { stageId: STAGE_ID },
+        body: { assignments: [] },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('POST 404 when stage not found', async () => {
+    store.tournament_stages = [];
+    const res = makeRes();
+    await groupsHandler(
+      makeReq({
+        method: 'POST',
+        query: { stageId: STAGE_ID },
+        body: { numGroups: 2 },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(404);
+  });
+
+  it('POST 400 when stage is not group/round_robin', async () => {
+    store.tournament_stages = [
+      { id: STAGE_ID, stage_type: 'bracket', tournament_id: 'tour-1' },
+    ] as any;
+    const res = makeRes();
+    await groupsHandler(
+      makeReq({
+        method: 'POST',
+        query: { stageId: STAGE_ID },
+        body: { numGroups: 2 },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('POST 200 distributes teams using random method', async () => {
+    store.tournament_stages = [
+      {
+        id: STAGE_ID,
+        stage_type: 'round_robin',
+        tournament_id: 'tour-1',
+        settings: {},
+      },
+    ] as any;
+    store.stage_teams = [
+      {
+        stage_id: STAGE_ID,
+        team_id: 't1',
+        seed: 1,
+        team: { id: 't1', name: 'Alpha' },
+      },
+      {
+        stage_id: STAGE_ID,
+        team_id: 't2',
+        seed: 2,
+        team: { id: 't2', name: 'Beta' },
+      },
+      {
+        stage_id: STAGE_ID,
+        team_id: 't3',
+        seed: 3,
+        team: { id: 't3', name: 'Gamma' },
+      },
+      {
+        stage_id: STAGE_ID,
+        team_id: 't4',
+        seed: 4,
+        team: { id: 't4', name: 'Delta' },
+      },
+    ] as any;
+    store.matches = [];
+    const res = makeRes();
+    await groupsHandler(
+      makeReq({
+        method: 'POST',
+        query: { stageId: STAGE_ID },
+        body: { numGroups: 2, method: 'random' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const settings = (store.tournament_stages[0] as any).settings;
+    expect(settings.group_assignments).toBeDefined();
+    expect(Object.keys(settings.group_assignments).length).toBe(2);
+  });
 });
 
 /* -----------------------------------------------------------
@@ -529,5 +684,85 @@ describe('/api/admin/matches/[matchId]/veto', () => {
       res
     );
     expect(res.statusCode).toBe(405);
+  });
+
+  it('POST 201 records a step and reports isComplete=false when more steps remain', async () => {
+    store.matches = [
+      {
+        id: M_ID,
+        tournament_id: 'tour-1',
+        match_format: 'bo3',
+        team1_id: 't1',
+        team2_id: 't2',
+      },
+    ] as any;
+    store.match_map_vetos = [];
+    store.teams = [
+      { id: 't1', name: 'Alpha' },
+      { id: 't2', name: 'Beta' },
+    ] as any;
+    const res = makeRes();
+    await vetoHandler(
+      makeReq({
+        method: 'POST',
+        query: { matchId: M_ID },
+        body: {
+          action: 'ban',
+          map_name: 'Lijiang',
+          map_type: 'control',
+          team_id: 't1',
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(201);
+    const body = res.body as any;
+    expect(body.isComplete).toBe(false);
+    expect(body.gamesCreated).toBe(false);
+    expect((store.match_map_vetos as any).length).toBe(1);
+  });
+
+  it('POST 400 when veto step would exceed flow length', async () => {
+    store.matches = [
+      {
+        id: M_ID,
+        tournament_id: 'tour-1',
+        match_format: 'bo3',
+        team1_id: 't1',
+        team2_id: 't2',
+      },
+    ] as any;
+    // Pre-fill enough steps to exceed bo3 flow length
+    store.match_map_vetos = Array.from({ length: 10 }, (_, i) => ({
+      match_id: M_ID,
+      step_number: i + 1,
+      action: 'ban',
+      map_name: `Map${i}`,
+      team_id: 't1',
+    })) as any;
+    const res = makeRes();
+    await vetoHandler(
+      makeReq({
+        method: 'POST',
+        query: { matchId: M_ID },
+        body: { action: 'ban', map_name: 'Lijiang', team_id: 't1' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('POST 404 when match missing on POST', async () => {
+    store.matches = [];
+    const res = makeRes();
+    await vetoHandler(
+      makeReq({
+        method: 'POST',
+        query: { matchId: M_ID },
+        body: { action: 'ban', map_name: 'Lijiang' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(404);
   });
 });

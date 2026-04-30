@@ -37,6 +37,7 @@ import {
   redeemCheckinToken,
   processMatchCheckin,
   listCheckinStatus,
+  processCheckinForUpcomingMatches,
 } from '../../utils/checkin';
 
 /* -----------------------------------------------------------
@@ -551,5 +552,83 @@ describe('listCheckinStatus', () => {
   it('returns an empty array when no matches', async () => {
     store.matches = [];
     expect(await listCheckinStatus('tour-x')).toEqual([]);
+  });
+});
+
+/* -----------------------------------------------------------
+ * processCheckinForUpcomingMatches — bulk scanner
+ * ---------------------------------------------------------*/
+
+describe('processCheckinForUpcomingMatches', () => {
+  it('returns an empty summary when there are no matches', async () => {
+    store.matches = [];
+    const summary = await processCheckinForUpcomingMatches();
+    expect(summary).toEqual({
+      scanned: 0,
+      acted: 0,
+      errors: 0,
+      details: [],
+    });
+  });
+
+  it('scans matches inside the +/- 65 minute window', async () => {
+    const inWindow = new Date(Date.now() + 30 * 60_000).toISOString();
+    const outWindow = new Date(Date.now() + 200 * 60_000).toISOString();
+    store.matches = [
+      defaultMatchSeed({ id: 'in', scheduled_at: inWindow }),
+      defaultMatchSeed({ id: 'out', scheduled_at: outWindow }),
+    ] as any;
+    const summary = await processCheckinForUpcomingMatches();
+    expect(summary.scanned).toBe(1);
+  });
+
+  it('filters by tournamentId when provided', async () => {
+    const inWindow = new Date(Date.now() + 30 * 60_000).toISOString();
+    store.matches = [
+      defaultMatchSeed({
+        id: 'm1',
+        scheduled_at: inWindow,
+        tournament_id: 'tour-A',
+      }),
+      defaultMatchSeed({
+        id: 'm2',
+        scheduled_at: inWindow,
+        tournament_id: 'tour-B',
+      }),
+    ] as any;
+    const summary = await processCheckinForUpcomingMatches({
+      tournamentId: 'tour-A',
+    });
+    expect(summary.scanned).toBe(1);
+  });
+
+  it('skips matches missing scheduled_at', async () => {
+    store.matches = [
+      defaultMatchSeed({ id: 'no-schedule', scheduled_at: null }),
+    ] as any;
+    const summary = await processCheckinForUpcomingMatches();
+    // The query filters .not('scheduled_at', 'is', null), so this match is
+    // excluded from the scan entirely.
+    expect(summary.scanned).toBe(0);
+  });
+
+  it('records steps when a match in the T-30 reminder window has tokens', async () => {
+    setAdminUser('cap-1', 'cap@example.com');
+    const inWindow = new Date(Date.now() + 25 * 60_000).toISOString();
+    store.matches = [
+      defaultMatchSeed({
+        id: 'm-30',
+        scheduled_at: inWindow,
+        team1_checkin_token: 'tk1',
+        team2_checkin_token: 'tk2',
+        checkin_email_sent_at: '2026-01-01T00:00:00Z',
+      }),
+    ] as any;
+    const summary = await processCheckinForUpcomingMatches();
+    expect(summary.scanned).toBe(1);
+    expect(summary.acted).toBe(1);
+    expect(summary.details[0].steps.some((s) => s.startsWith('reminder_30'))).toBe(
+      true
+    );
   });
 });

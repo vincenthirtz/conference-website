@@ -330,4 +330,123 @@ describe('/api/admin/stages/[stageId]/bulk-matches', () => {
     );
     expect(res.statusCode).toBe(405);
   });
+
+  it('POST 400 when action is not "undo"', async () => {
+    store.tournament_stages = [
+      { id: STAGE_ID, tournament_id: 'tour-1' },
+    ] as any;
+    const res = makeRes();
+    await bulkMatchesHandler(
+      makeReq({
+        method: 'POST',
+        query: { stageId: STAGE_ID },
+        body: { action: 'redo' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('POST 400 when undoPayload is missing or invalid', async () => {
+    store.tournament_stages = [
+      { id: STAGE_ID, tournament_id: 'tour-1' },
+    ] as any;
+    const res = makeRes();
+    await bulkMatchesHandler(
+      makeReq({
+        method: 'POST',
+        query: { stageId: STAGE_ID },
+        body: { action: 'undo' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('POST 400 when undoPayload snapshots is empty', async () => {
+    store.tournament_stages = [
+      { id: STAGE_ID, tournament_id: 'tour-1' },
+    ] as any;
+    const res = makeRes();
+    await bulkMatchesHandler(
+      makeReq({
+        method: 'POST',
+        query: { stageId: STAGE_ID },
+        body: {
+          action: 'undo',
+          undoPayload: { type: 'bulk_schedule', snapshots: [] },
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('POST 200 successfully restores from undo snapshots', async () => {
+    store.tournament_stages = [
+      { id: STAGE_ID, tournament_id: 'tour-1' },
+    ] as any;
+    store.matches = [
+      {
+        id: 'm1',
+        stage_id: STAGE_ID,
+        scheduled_at: '2026-04-15T10:00:00Z',
+      },
+    ] as any;
+    const res = makeRes();
+    await bulkMatchesHandler(
+      makeReq({
+        method: 'POST',
+        query: { stageId: STAGE_ID },
+        body: {
+          action: 'undo',
+          undoPayload: {
+            type: 'bulk_schedule',
+            snapshots: [
+              {
+                matchId: 'm1',
+                fields: { scheduled_at: '2026-04-01T10:00:00Z' },
+              },
+            ],
+          },
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const body = res.body as any;
+    expect(body.successCount).toBe(1);
+    expect((store.matches[0] as any).scheduled_at).toBe(
+      '2026-04-01T10:00:00Z'
+    );
+  });
+
+  it('POST 200 with invalid snapshot entries records per-snapshot failures', async () => {
+    store.tournament_stages = [
+      { id: STAGE_ID, tournament_id: 'tour-1' },
+    ] as any;
+    store.matches = [];
+    const res = makeRes();
+    await bulkMatchesHandler(
+      makeReq({
+        method: 'POST',
+        query: { stageId: STAGE_ID },
+        body: {
+          action: 'undo',
+          undoPayload: {
+            type: 'bulk_update',
+            snapshots: [
+              { matchId: '', fields: {} }, // invalid: no matchId
+              { matchId: 'good', fields: null }, // invalid: no fields
+            ],
+          },
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const body = res.body as any;
+    expect(body.results).toHaveLength(2);
+    expect(body.results.every((r: any) => r.success === false)).toBe(true);
+  });
 });
