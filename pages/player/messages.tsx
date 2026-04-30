@@ -6,6 +6,9 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabaseClient } from '@/utils/supabase';
+import { usePlayerSession } from '@/hooks/usePlayerSession';
+import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
+import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 
 type Conversation = {
   conversationId: string;
@@ -50,8 +53,8 @@ type Team = {
 
 export default function MessagesPage() {
   const router = useRouter();
+  const { token, loading: authLoading, ready } = usePlayerSession();
   const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState<string | null>(null);
   const [isCaptain, setIsCaptain] = useState(false);
   const [hasTeam, setHasTeam] = useState(false);
 
@@ -85,40 +88,32 @@ export default function MessagesPage() {
   };
 
   useEffect(() => {
-    const init = async () => {
+    if (!ready || !token) return;
+    let cancelled = false;
+    setLoading(true);
+    (async () => {
       try {
-        const {
-          data: { session },
-        } = await supabaseClient.auth.getSession();
-
-        if (!session?.user) {
-          router.replace('/admin/login');
-          return;
-        }
-
-        setToken(session.access_token);
-
         const teamRes = await fetch('/api/admin/teams/my', {
-          headers: { Authorization: `Bearer ${session.access_token}` },
+          headers: { Authorization: `Bearer ${token}` },
         });
-
         if (teamRes.ok) {
           const data = await teamRes.json();
-          if (data.team) {
+          if (data.team && !cancelled) {
             setHasTeam(true);
             setMyTeamId(data.team.id);
             setIsCaptain(data.isCaptain || false);
           }
         }
       } catch (err) {
-        console.error('[messages] auth error:', err);
+        console.error('[messages] team load error:', err);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
+    })();
+    return () => {
+      cancelled = true;
     };
-
-    init();
-  }, [router]);
+  }, [ready, token]);
 
   const loadConversations = useCallback(async () => {
     if (!token) return;
@@ -190,6 +185,58 @@ export default function MessagesPage() {
       setMsgLoading(false);
     }
   };
+
+  // Silent realtime sync — re-fetch the active conversation without
+  // toggling the loading skeleton, so new inbound messages just append.
+  const silentReloadActive = useCallback(async () => {
+    if (!activeConvId || !token) return;
+    try {
+      const res = await fetch(`/api/player/messages/${activeConvId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      setMessages(data.messages || []);
+      // Mark inbound messages as read on the fly so the unread counter stays
+      // accurate without forcing the user to reopen the conversation.
+      await fetch(`/api/player/messages/${activeConvId}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      loadConversations();
+      setTimeout(scrollToBottom, 80);
+    } catch (err) {
+      console.error('[messages] realtime reload error:', err);
+    }
+  }, [activeConvId, token, loadConversations]);
+
+  // Subscribe to demandes targeting the captain's team. Postgres only
+  // gives us coarse filtering on top-level columns, so we further narrow
+  // to captain_message rows belonging to the active conversation in JS.
+  useRealtimeChannel({
+    enabled: !!activeConvId && !!myTeamId && !!isCaptain,
+    channel: activeConvId
+      ? `messages-${activeConvId}`
+      : 'messages-inactive',
+    table: 'demandes',
+    filter: myTeamId ? `team_id=eq.${myTeamId}` : undefined,
+    onChange: (event) => {
+      const row = (event.new ?? event.old) as
+        | { type?: string; payload?: { conversation_id?: string } }
+        | undefined;
+      if (!row || row.type !== 'captain_message') return;
+      if (
+        activeConvId &&
+        row.payload?.conversation_id &&
+        row.payload.conversation_id !== activeConvId
+      ) {
+        // Different conversation — refresh inbox only, not the open thread.
+        loadConversations();
+        return;
+      }
+      silentReloadActive();
+    },
+  });
 
   const loadTeams = async (search?: string) => {
     setTeamsLoading(true);
@@ -285,12 +332,8 @@ export default function MessagesPage() {
     router.replace('/player/messages', undefined, { shallow: true });
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white flex items-center justify-center">
-        <div className="text-sm text-gray-400">Chargement...</div>
-      </div>
-    );
+  if (authLoading || loading) {
+    return <PlayerPageSkeleton rows={3} />;
   }
 
   if (!hasTeam || !isCaptain) {

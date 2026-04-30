@@ -8,6 +8,13 @@ type TeamInfo = {
   logo_url: string | null;
 } | null;
 
+export type TeamMemberLite = {
+  id: string;
+  role: string | null;
+  is_substitute?: boolean;
+  is_captain?: boolean;
+};
+
 type Demande = {
   id: string;
   type: 'captain_request' | 'join' | 'leave' | 'other';
@@ -29,7 +36,41 @@ type Props = {
   pendingCaptainRequest: Demande | undefined;
   pendingJoinRequest: Demande | undefined;
   onLeaveTeam?: () => Promise<void>;
+  members?: TeamMemberLite[];
 };
+
+type RosterCounts = {
+  total: number;
+  tank: number;
+  dps: number;
+  support: number;
+  substitute: number;
+  coach: number;
+};
+
+function computeRoster(members: TeamMemberLite[] | undefined): RosterCounts {
+  const counts: RosterCounts = {
+    total: 0,
+    tank: 0,
+    dps: 0,
+    support: 0,
+    substitute: 0,
+    coach: 0,
+  };
+  for (const m of members ?? []) {
+    counts.total += 1;
+    if (m.is_substitute) {
+      counts.substitute += 1;
+      continue;
+    }
+    const role = (m.role || '').toLowerCase();
+    if (role === 'tank') counts.tank += 1;
+    else if (role === 'dps') counts.dps += 1;
+    else if (role === 'support') counts.support += 1;
+    else if (role === 'coach') counts.coach += 1;
+  }
+  return counts;
+}
 
 export default function TeamCard({
   team,
@@ -37,11 +78,13 @@ export default function TeamCard({
   pendingCaptainRequest,
   pendingJoinRequest,
   onLeaveTeam,
+  members,
 }: Props) {
   const hasPendingRequest = pendingCaptainRequest || pendingJoinRequest;
   const [leaveConfirm, setLeaveConfirm] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [leaveError, setLeaveError] = useState<string | null>(null);
+  const roster = computeRoster(members);
 
   const handleLeave = async () => {
     if (!onLeaveTeam) return;
@@ -83,6 +126,38 @@ export default function TeamCard({
           {isCaptain && (
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-400/30 text-xs text-purple-200">
               <span>Capitaine</span>
+            </div>
+          )}
+
+          {roster.total > 0 && (
+            <div className="rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2.5">
+              <div className="flex items-baseline gap-2 mb-1.5">
+                <span className="text-sm font-semibold text-white tabular-nums">
+                  {roster.total}
+                </span>
+                <span className="text-xs text-gray-400">
+                  membre{roster.total > 1 ? 's' : ''}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1.5 text-[10px] uppercase tracking-[0.12em]">
+                <RoleBadge label="Tank" count={roster.tank} tone="rose" />
+                <RoleBadge label="DPS" count={roster.dps} tone="orange" />
+                <RoleBadge
+                  label="Support"
+                  count={roster.support}
+                  tone="emerald"
+                />
+                {roster.substitute > 0 && (
+                  <RoleBadge
+                    label="Sub"
+                    count={roster.substitute}
+                    tone="slate"
+                  />
+                )}
+                {roster.coach > 0 && (
+                  <RoleBadge label="Coach" count={roster.coach} tone="cyan" />
+                )}
+              </div>
             </div>
           )}
 
@@ -230,5 +305,37 @@ export default function TeamCard({
         </div>
       )}
     </div>
+  );
+}
+
+const ROLE_TONE: Record<string, string> = {
+  rose: 'border-rose-300/40 bg-rose-500/10 text-rose-100',
+  orange: 'border-orange-300/40 bg-orange-500/10 text-orange-100',
+  emerald: 'border-emerald-300/40 bg-emerald-500/10 text-emerald-100',
+  slate: 'border-slate-300/30 bg-white/5 text-slate-200',
+  cyan: 'border-cyan-300/40 bg-cyan-500/10 text-cyan-100',
+};
+
+function RoleBadge({
+  label,
+  count,
+  tone,
+}: {
+  label: string;
+  count: number;
+  tone: keyof typeof ROLE_TONE;
+}) {
+  const dimmed = count === 0;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 ${
+        dimmed
+          ? 'border-white/10 bg-white/[0.03] text-gray-500'
+          : ROLE_TONE[tone]
+      }`}
+    >
+      <span className="font-semibold tabular-nums">{count}</span>
+      <span>{label}</span>
+    </span>
   );
 }

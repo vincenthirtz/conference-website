@@ -5,8 +5,8 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { supabaseClient } from '@/utils/supabase';
-import type { User } from '@supabase/supabase-js';
+import { usePlayerSession } from '@/hooks/usePlayerSession';
+import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import ExistingTeamSelector from '@/components/player/ExistingTeamSelector';
 import NewTeamForm from '@/components/player/NewTeamForm';
 
@@ -25,9 +25,8 @@ type TeamMember = {
 
 export default function RequestCaptainPage() {
   const router = useRouter();
+  const { user, token, loading: authLoading, ready } = usePlayerSession();
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
 
   // Mode de sélection
   const [mode, setMode] = useState<'existing' | 'new'>('new');
@@ -52,46 +51,36 @@ export default function RequestCaptainPage() {
   const [successTeamName, setSuccessTeamName] = useState('');
 
   useEffect(() => {
-    const checkAuth = async () => {
+    if (!ready || !token) return;
+    let cancelled = false;
+    setLoading(true);
+    (async () => {
       try {
-        const {
-          data: { session },
-        } = await supabaseClient.auth.getSession();
-
-        if (!session?.user) {
-          router.replace('/admin/login');
-          return;
-        }
-
-        setUser(session.user);
-        setToken(session.access_token);
-
         const res = await fetch('/api/demandes/captain', {
-          headers: { Authorization: `Bearer ${session.access_token}` },
+          headers: { Authorization: `Bearer ${token}` },
         });
-
         if (res.ok) {
           const data = await res.json();
           const pending = data.demandes?.find(
             (d: any) => d.status === 'pending'
           );
-          if (pending) {
+          if (pending && !cancelled) {
             router.replace('/player');
             return;
           }
         }
-
-        await loadTeams();
+        if (!cancelled) await loadTeams();
       } catch (err) {
         console.error('[request-captain] auth error:', err);
-        setError('Erreur de connexion.');
+        if (!cancelled) setError('Erreur de connexion.');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
+    })();
+    return () => {
+      cancelled = true;
     };
-
-    checkAuth();
-  }, [router]);
+  }, [ready, token, router]);
 
   const loadTeams = async (search?: string) => {
     setTeamsLoading(true);
@@ -218,12 +207,8 @@ export default function RequestCaptainPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white flex items-center justify-center">
-        <div className="text-sm text-gray-400">Chargement...</div>
-      </div>
-    );
+  if (authLoading || loading) {
+    return <PlayerPageSkeleton rows={3} />;
   }
 
   if (!user) {

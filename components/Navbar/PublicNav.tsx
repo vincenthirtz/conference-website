@@ -3,6 +3,8 @@ import { useRouter } from 'next/router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import linksConfig from '@/config/links.json';
 import type { LinkItem } from '@/types/types';
+import { useAuthSession } from '@/hooks/useAuthSession';
+import PlayerBell from './PlayerBell';
 
 const HIDDEN_PUBLIC_LINKS = new Set([
   'À propos',
@@ -22,6 +24,7 @@ export default function PublicNav({
   showStaffLogin,
 }: PublicNavProps) {
   const router = useRouter();
+  const { user: authUser, loading: authLoading } = useAuthSession();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
   const closeTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -211,11 +214,15 @@ export default function PublicNav({
         );
       })}
 
-      {showStaffLogin && (
+      <PlayerBell />
+
+      {showStaffLogin && !authUser && (
         <Link
           href="/admin/login"
           className={`group/login ml-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 text-[13px] font-medium text-neutral-200 backdrop-blur-md transition-all hover:border-white/20 hover:bg-white/[0.08] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
-            staffLoading ? 'pointer-events-none opacity-0' : 'opacity-100'
+            staffLoading || authLoading
+              ? 'pointer-events-none opacity-0'
+              : 'opacity-100'
           }`}
         >
           <span className="relative flex h-1.5 w-1.5">

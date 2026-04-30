@@ -6,10 +6,17 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabaseClient } from '@/utils/supabase';
-import type { User } from '@supabase/supabase-js';
+import { usePlayerSession } from '@/hooks/usePlayerSession';
 import ProfileCard from '@/components/player/ProfileCard';
-import TeamCard from '@/components/player/TeamCard';
+import TeamCard, {
+  type TeamMemberLite,
+} from '@/components/player/TeamCard';
 import DemandesHistory from '@/components/player/DemandesHistory';
+import QuickAction, {
+  type QuickActionProps,
+} from '@/components/player/QuickAction';
+import NextMatchCard from '@/components/player/NextMatchCard';
+import { PlayerDashboardSkeleton } from '@/components/player/Skeletons';
 
 type TeamInfo = {
   id: string;
@@ -51,11 +58,71 @@ type PendingScrim = {
   } | null;
 };
 
+const SVG_PATHS = {
+  transfer: 'M16 3h5v5M21 3l-7 7M8 21H3v-5M3 21l7-7',
+  scrim: 'M22 12a10 10 0 11-20 0 10 10 0 0120 0zM10 8l6 4-6 4z',
+  messages: 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z',
+  team: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 7a4 4 0 100 8 4 4 0 000-8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75',
+  publicTeam:
+    'M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3',
+};
+
+function buildQuickActions(args: {
+  team: NonNullable<TeamInfo>;
+  isCaptain: boolean;
+  unreadMessages: number;
+}): QuickActionProps[] {
+  const { team, isCaptain, unreadMessages } = args;
+  const actions: QuickActionProps[] = [];
+
+  actions.push({
+    href: '/player/requests?tab=transfer',
+    label: isCaptain ? 'Proposer un transfert' : 'Demander un transfert',
+    description: isCaptain ? 'Transférer un joueur' : 'Vers une autre équipe',
+    iconPath: SVG_PATHS.transfer,
+    tone: 'purple',
+  });
+
+  if (isCaptain) {
+    actions.push({
+      href: '/player/requests?tab=scrim',
+      label: 'Proposer un scrim',
+      description: 'Match amical',
+      iconPath: SVG_PATHS.scrim,
+      tone: 'blue',
+    });
+    actions.push({
+      href: '/player/messages',
+      label: 'Messagerie',
+      description: 'Discuter entre capitaines',
+      iconPath: SVG_PATHS.messages,
+      tone: 'emerald',
+      badge: unreadMessages,
+    });
+    actions.push({
+      href: '/player/manage-team',
+      label: "Gérer l'équipe",
+      description: 'Roster et demandes',
+      iconPath: SVG_PATHS.team,
+    });
+  }
+
+  actions.push({
+    href: `/team/${team.id}`,
+    label: 'Page équipe',
+    description: 'Profil public',
+    iconPath: SVG_PATHS.publicTeam,
+  });
+
+  return actions;
+}
+
 export default function PlayerDashboard() {
   const router = useRouter();
+  const { user, token, loading: authLoading, ready } = usePlayerSession();
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
   const [team, setTeam] = useState<TeamInfo>(null);
+  const [members, setMembers] = useState<TeamMemberLite[]>([]);
   const [isCaptain, setIsCaptain] = useState(false);
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [pendingScrims, setPendingScrims] = useState<PendingScrim[]>([]);
@@ -63,23 +130,24 @@ export default function PlayerDashboard() {
   const [error, setError] = useState<string | null>(null);
 
   const getToken = useCallback(async () => {
+    if (token) return token;
     const { data } = await supabaseClient.auth.getSession();
     return data.session?.access_token ?? null;
-  }, []);
+  }, [token]);
 
   const loadData = useCallback(async () => {
-    const token = await getToken();
-    if (!token) return;
+    const accessToken = await getToken();
+    if (!accessToken) return;
 
     const [teamRes, captainRes, joinRes] = await Promise.all([
       fetch('/api/admin/teams/my', {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${accessToken}` },
       }),
       fetch('/api/demandes/captain', {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${accessToken}` },
       }),
       fetch('/api/demandes/join', {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${accessToken}` },
       }),
     ]);
 
@@ -88,6 +156,7 @@ export default function PlayerDashboard() {
     if (teamRes.ok) {
       const data = await teamRes.json();
       setTeam(data.team || null);
+      setMembers(Array.isArray(data.members) ? data.members : []);
       isCaptainNow = data.isCaptain || false;
       setIsCaptain(isCaptainNow);
     }
@@ -115,10 +184,10 @@ export default function PlayerDashboard() {
     if (isCaptainNow) {
       const [scrimRes, msgRes] = await Promise.all([
         fetch('/api/teams/scrim-requests', {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${accessToken}` },
         }),
         fetch('/api/player/messages', {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${accessToken}` },
         }),
       ]);
 
@@ -139,29 +208,21 @@ export default function PlayerDashboard() {
   }, [getToken]);
 
   useEffect(() => {
-    const init = async () => {
-      try {
-        const {
-          data: { session },
-        } = await supabaseClient.auth.getSession();
-
-        if (!session?.user) {
-          router.replace('/admin/login');
-          return;
-        }
-
-        setUser(session.user);
-        await loadData();
-      } catch (err: unknown) {
+    if (!ready) return;
+    let cancelled = false;
+    setLoading(true);
+    loadData()
+      .catch((err: unknown) => {
         console.error('[player] load error:', err);
-        setError('Erreur lors du chargement de ton profil.');
-      } finally {
-        setLoading(false);
-      }
+        if (!cancelled) setError('Erreur lors du chargement de ton profil.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
     };
-
-    init();
-  }, [router, loadData]);
+  }, [ready, loadData]);
 
   const handleLogout = async () => {
     await supabaseClient.auth.signOut();
@@ -200,16 +261,14 @@ export default function PlayerDashboard() {
     if (!res.ok) throw new Error(data.error || 'Echec.');
 
     setTeam(null);
+    setMembers([]);
     setIsCaptain(false);
     await loadData();
   };
 
-  const handleProfileUpdate = async () => {
-    const {
-      data: { session },
-    } = await supabaseClient.auth.getSession();
-    if (session?.user) setUser(session.user);
-  };
+  // The session hook listens to onAuthStateChange (incl. USER_UPDATED), so
+  // a profile save propagates automatically — no extra plumbing needed here.
+  const handleProfileUpdate = async () => {};
 
   const pendingCaptainRequest = demandes.find(
     (d) => d.type === 'captain_request' && d.status === 'pending'
@@ -219,12 +278,8 @@ export default function PlayerDashboard() {
     (d) => d.type === 'join' && d.status === 'pending'
   );
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white flex items-center justify-center">
-        <div className="text-sm text-gray-400">Chargement...</div>
-      </div>
-    );
+  if (authLoading || loading) {
+    return <PlayerDashboardSkeleton />;
   }
 
   if (!user) {
@@ -281,186 +336,24 @@ export default function PlayerDashboard() {
               pendingCaptainRequest={pendingCaptainRequest}
               pendingJoinRequest={pendingJoinRequest}
               onLeaveTeam={handleLeaveTeam}
+              members={members}
             />
           </div>
+
+          <NextMatchCard />
 
           {/* Actions rapides */}
           {team && (
             <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
               <h2 className="text-lg font-semibold mb-4">Actions rapides</h2>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {!isCaptain && (
-                  <Link
-                    href="/player/requests?tab=transfer"
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition"
-                  >
-                    <svg
-                      className="w-5 h-5 text-purple-400 flex-shrink-0"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      strokeWidth={2}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M16 3h5v5" />
-                      <line x1="21" y1="3" x2="14" y2="10" />
-                      <path d="M8 21H3v-5" />
-                      <line x1="3" y1="21" x2="10" y2="14" />
-                    </svg>
-                    <div>
-                      <div className="text-sm font-medium text-white">
-                        Demander un transfert
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        Vers une autre equipe
-                      </div>
-                    </div>
-                  </Link>
-                )}
-
-                {isCaptain && (
-                  <Link
-                    href="/player/requests?tab=transfer"
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition"
-                  >
-                    <svg
-                      className="w-5 h-5 text-purple-400 flex-shrink-0"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      strokeWidth={2}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M16 3h5v5" />
-                      <line x1="21" y1="3" x2="14" y2="10" />
-                      <path d="M8 21H3v-5" />
-                      <line x1="3" y1="21" x2="10" y2="14" />
-                    </svg>
-                    <div>
-                      <div className="text-sm font-medium text-white">
-                        Proposer un transfert
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        Transferer un joueur
-                      </div>
-                    </div>
-                  </Link>
-                )}
-
-                {isCaptain && (
-                  <Link
-                    href="/player/requests?tab=scrim"
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl border border-blue-400/20 bg-blue-500/10 hover:bg-blue-500/20 transition"
-                  >
-                    <svg
-                      className="w-5 h-5 text-blue-400 flex-shrink-0"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      strokeWidth={2}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <circle cx="12" cy="12" r="10" />
-                      <polygon points="10 8 16 12 10 16 10 8" />
-                    </svg>
-                    <div>
-                      <div className="text-sm font-medium text-white">
-                        Proposer un scrim
-                      </div>
-                      <div className="text-xs text-gray-500">Match amical</div>
-                    </div>
-                  </Link>
-                )}
-
-                {isCaptain && (
-                  <Link
-                    href="/player/messages"
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl border border-emerald-400/20 bg-emerald-500/10 hover:bg-emerald-500/20 transition"
-                  >
-                    <svg
-                      className="w-5 h-5 text-emerald-400 flex-shrink-0"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      strokeWidth={2}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-                    </svg>
-                    <div>
-                      <div className="text-sm font-medium text-white">
-                        Messagerie
-                        {unreadMessages > 0 && (
-                          <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-emerald-500 text-[10px] font-bold text-white">
-                            {unreadMessages}
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        Discuter entre capitaines
-                      </div>
-                    </div>
-                  </Link>
-                )}
-
-                {isCaptain && (
-                  <Link
-                    href="/player/manage-team"
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition"
-                  >
-                    <svg
-                      className="w-5 h-5 text-gray-400 flex-shrink-0"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      strokeWidth={2}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-                      <circle cx="9" cy="7" r="4" />
-                      <path d="M23 21v-2a4 4 0 00-3-3.87" />
-                      <path d="M16 3.13a4 4 0 010 7.75" />
-                    </svg>
-                    <div>
-                      <div className="text-sm font-medium text-white">
-                        Gerer l&apos;equipe
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        Roster et demandes
-                      </div>
-                    </div>
-                  </Link>
-                )}
-
-                <Link
-                  href={`/team/${team.id}`}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition"
-                >
-                  <svg
-                    className="w-5 h-5 text-gray-400 flex-shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4" />
-                    <polyline points="10 17 15 12 10 7" />
-                    <line x1="15" y1="12" x2="3" y2="12" />
-                  </svg>
-                  <div>
-                    <div className="text-sm font-medium text-white">
-                      Page equipe
-                    </div>
-                    <div className="text-xs text-gray-500">Profil public</div>
-                  </div>
-                </Link>
+                {buildQuickActions({
+                  team,
+                  isCaptain,
+                  unreadMessages,
+                }).map((action) => (
+                  <QuickAction key={action.href} {...action} />
+                ))}
               </div>
             </div>
           )}

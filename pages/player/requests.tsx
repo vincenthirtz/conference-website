@@ -5,8 +5,8 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { supabaseClient } from '@/utils/supabase';
-import type { User } from '@supabase/supabase-js';
+import { usePlayerSession } from '@/hooks/usePlayerSession';
+import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 
 type Tab = 'transfer' | 'scrim';
 
@@ -22,9 +22,8 @@ type Team = {
 
 export default function PlayerRequestsPage() {
   const router = useRouter();
+  const { user, token, loading: authLoading, ready } = usePlayerSession();
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('transfer');
 
   // Contexte joueur
@@ -63,64 +62,46 @@ export default function PlayerRequestsPage() {
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
-    const init = async () => {
+    if (!ready || !token || !user) return;
+    let cancelled = false;
+    setLoading(true);
+    (async () => {
       try {
-        const {
-          data: { session },
-        } = await supabaseClient.auth.getSession();
-
-        if (!session?.user) {
-          router.replace('/admin/login');
-          return;
-        }
-
-        setUser(session.user);
-        setToken(session.access_token);
-
-        // Verifier l'appartenance a une equipe
         const teamRes = await fetch('/api/admin/teams/my', {
-          headers: { Authorization: `Bearer ${session.access_token}` },
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         if (teamRes.ok) {
           const data = await teamRes.json();
-          if (data.team) {
+          if (data.team && !cancelled) {
             setHasTeam(true);
             setMyTeamId(data.team.id);
             setIsCaptain(data.isCaptain || false);
-
-            // Charger les membres de l'equipe pour le mode "proposer un transfert"
             if (data.isCaptain) {
-              const membersRes = await fetch('/api/admin/teams/my', {
-                headers: { Authorization: `Bearer ${session.access_token}` },
-              });
-              if (membersRes.ok) {
-                const membersData = await membersRes.json();
-                setTeamMembers(
-                  (membersData.members || []).filter(
-                    (m: { user_id: string }) => m.user_id !== session.user.id
-                  )
-                );
-              }
+              setTeamMembers(
+                (data.members || []).filter(
+                  (m: { user_id: string }) => m.user_id !== user.id
+                )
+              );
             }
           }
         }
 
-        // Lire le tab depuis l'URL
         const urlTab = router.query.tab;
-        if (urlTab === 'scrim') setTab('scrim');
+        if (urlTab === 'scrim' && !cancelled) setTab('scrim');
 
         await loadTeams();
       } catch (err) {
         console.error('[requests] auth error:', err);
-        setError('Erreur de connexion.');
+        if (!cancelled) setError('Erreur de connexion.');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
+    })();
+    return () => {
+      cancelled = true;
     };
-
-    init();
-  }, [router]);
+  }, [ready, token, user, router.query.tab]);
 
   const loadTeams = async (search?: string) => {
     setTeamsLoading(true);
@@ -267,12 +248,8 @@ export default function PlayerRequestsPage() {
 
   const displayTeams = tab === 'transfer' ? transferTeams : filteredTeams;
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white flex items-center justify-center">
-        <div className="text-sm text-gray-400">Chargement...</div>
-      </div>
-    );
+  if (authLoading || loading) {
+    return <PlayerPageSkeleton rows={3} />;
   }
 
   if (!user) return null;

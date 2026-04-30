@@ -4,8 +4,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
 import { supabaseClient } from '@/utils/supabase';
+import { usePlayerSession } from '@/hooks/usePlayerSession';
+import { PlayerPageSkeleton } from '@/components/player/Skeletons';
+import CopyButton from '@/components/player/CopyButton';
 
 type Member = {
   id: string;
@@ -46,9 +48,8 @@ type JoinRequest = {
 };
 
 export default function ManageTeamPage() {
-  const router = useRouter();
+  const { token, loading: authLoading, ready } = usePlayerSession();
   const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState<string | null>(null);
 
   const [team, setTeam] = useState<TeamInfo | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
@@ -89,27 +90,20 @@ export default function ManageTeamPage() {
   }, []);
 
   useEffect(() => {
-    const init = async () => {
-      try {
-        const {
-          data: { session },
-        } = await supabaseClient.auth.getSession();
-
-        if (!session?.user) {
-          router.replace('/admin/login');
-          return;
-        }
-
-        setToken(session.access_token);
-        await loadData(session.access_token);
-      } catch {
-        setError('Erreur de chargement.');
-      } finally {
-        setLoading(false);
-      }
+    if (!ready || !token) return;
+    let cancelled = false;
+    setLoading(true);
+    loadData(token)
+      .catch(() => {
+        if (!cancelled) setError('Erreur de chargement.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
     };
-    init();
-  }, [router, loadData]);
+  }, [ready, token, loadData]);
 
   const showSuccess = (msg: string) => {
     setSuccessMsg(msg);
@@ -232,12 +226,8 @@ export default function ManageTeamPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white flex items-center justify-center">
-        <div className="text-sm text-gray-400">Chargement...</div>
-      </div>
-    );
+  if (authLoading || loading) {
+    return <PlayerPageSkeleton rows={4} />;
   }
 
   if (!team || !isCaptain) {
@@ -355,8 +345,17 @@ export default function ManageTeamPage() {
                       </span>
                     </div>
                     <div className="min-w-0">
-                      <div className="font-medium text-sm truncate">
-                        {m.battle_tag || 'Inconnu'}
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-medium text-sm truncate">
+                          {m.battle_tag || 'Inconnu'}
+                        </span>
+                        {m.battle_tag && (
+                          <CopyButton
+                            value={m.battle_tag}
+                            label="Copier le BattleTag"
+                            className="h-5 w-5 shrink-0"
+                          />
+                        )}
                       </div>
                       <div className="text-xs text-gray-500">
                         {m.is_captain ? (
