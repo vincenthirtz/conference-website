@@ -73,18 +73,18 @@ test.describe('Contact page', () => {
 
   test('form shows validation errors on empty submit', async ({ page }) => {
     await page.goto('/contact');
-    await page.waitForTimeout(1000);
 
-    // Try to find and click submit button
-    const submitBtn = page.locator(
-      'button[type="submit"], input[type="submit"]'
-    );
-    if ((await submitBtn.count()) > 0) {
-      await submitBtn.first().click();
-      // HTML5 validation should prevent submit or show error messages
-      // The form should still be on the contact page
-      expect(page.url()).toContain('/contact');
-    }
+    // Wait for the email input to be present rather than sleeping. The
+    // page is SSG so it should appear immediately, but we use the input
+    // as a hydration signal in case the form is mounted client-side.
+    const submitBtn = page
+      .locator('button[type="submit"], input[type="submit"]')
+      .first();
+    await expect(submitBtn).toBeVisible({ timeout: 10000 });
+
+    await submitBtn.click();
+    // HTML5 validation should prevent submit; we should stay on /contact.
+    expect(page.url()).toContain('/contact');
   });
 });
 
@@ -123,11 +123,14 @@ test.describe('Mentions légales', () => {
 test.describe('Register page', () => {
   test('has registration form elements', async ({ page }) => {
     await page.goto('/register');
-    await page.waitForTimeout(1000);
-    // Should have at least an email input or a form
-    const inputs = page.locator('input');
-    const count = await inputs.count();
-    expect(count).toBeGreaterThan(0);
+    // Wait for the form to mount instead of sleeping. The displayName
+    // input is the canonical mount-signal for the register form.
+    await expect(page.locator('input#displayName')).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(page.locator('input#email')).toBeVisible();
+    await expect(page.locator('input#password')).toBeVisible();
+    await expect(page.locator('input#confirm')).toBeVisible();
   });
 });
 
@@ -140,12 +143,16 @@ test.describe('Accessibility basics', () => {
 
   test('images have alt text on homepage', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(2000);
+    // Wait for the hero (and therefore initial paint) before scanning images.
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
+      timeout: 10000,
+    });
     const images = page.locator('img');
     const count = await images.count();
+    expect(count).toBeGreaterThan(0);
     for (let i = 0; i < Math.min(count, 10); i++) {
       const alt = await images.nth(i).getAttribute('alt');
-      // Alt can be empty string (decorative) but should exist
+      // Alt can be empty string (decorative) but the attribute MUST exist.
       expect(alt !== null, `Image ${i} should have an alt attribute`).toBe(
         true
       );
