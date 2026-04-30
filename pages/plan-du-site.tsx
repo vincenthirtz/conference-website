@@ -42,6 +42,10 @@ const siteSections: SiteSection[] = [
       },
       { label: 'Cr\u00e9er une \u00e9quipe', href: '/team/create' },
       {
+        label: 'Guide capitaine \u2014 g\u00e9rer mon \u00e9quipe',
+        href: '/guide/gerer-mon-equipe',
+      },
+      {
         label: 'Espace capitaine \u2014 pr\u00e9sentation',
         href: '/espace-capitaine',
       },

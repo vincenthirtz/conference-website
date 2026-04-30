@@ -272,6 +272,25 @@ export default function PublicCreateTeamPage() {
             </Link>
           </div>
 
+          <div className="mb-8 rounded-2xl border border-purple-500/30 bg-gradient-to-br from-purple-500/10 via-white/[0.02] to-cyan-500/10 px-4 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.14em] text-purple-200/80">
+                Première fois ?
+              </p>
+              <p className="text-sm text-purple-50/90">
+                Découvre en images ce que tu peux faire depuis ton espace
+                capitaine : roster, candidatures, scrims, check-in et
+                messagerie.
+              </p>
+            </div>
+            <Link
+              href="/guide/gerer-mon-equipe"
+              className="inline-flex items-center justify-center px-4 py-2 rounded-xl text-sm font-semibold bg-white/10 border border-white/15 text-white hover:bg-white/20 transition whitespace-nowrap"
+            >
+              Voir le guide capitaine ↗
+            </Link>
+          </div>
+
           <div className="grid gap-6 lg:grid-cols-[1.8fr,1.2fr] items-start">
             <form
               onSubmit={handleSubmit}

@@ -105,19 +105,30 @@ export default function TournamentCard({
             )}
           </Paragraph>
         </div>
-        <div className="flex flex-row items-center gap-3 shrink-0">
-          <Link
-            href={detailHref}
-            className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
-          >
-            Voir les matchs
-          </Link>
+        <div className="flex flex-col items-stretch gap-2 shrink-0 md:items-end">
+          <div className="flex flex-row items-center gap-3">
+            <Link
+              href={detailHref}
+              className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
+            >
+              Voir les matchs
+            </Link>
+            {!isRunning && (
+              <Link
+                href="/team/create"
+                className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-neutral-900 shadow hover:-translate-y-0.5 hover:shadow-lg transition"
+              >
+                S&apos;inscrire
+              </Link>
+            )}
+          </div>
           {!isRunning && (
             <Link
-              href="/team/create"
-              className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-neutral-900 shadow hover:-translate-y-0.5 hover:shadow-lg transition"
+              href="/guide/gerer-mon-equipe"
+              className="inline-flex items-center gap-1 text-xs text-gray-300 hover:text-white transition-colors"
             >
-              S&apos;inscrire
+              Première inscription ? Voir le guide capitaine
+              <span aria-hidden>→</span>
             </Link>
           )}
         </div>
