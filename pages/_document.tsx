@@ -23,14 +23,6 @@ export default class MyDocument extends Document<MyDocumentProps> {
           {/* Character encoding */}
           <meta charSet="utf-8" />
 
-          {/* Preconnect to external domains for performance */}
-          <link rel="preconnect" href="https://fonts.googleapis.com" />
-          <link
-            rel="preconnect"
-            href="https://fonts.gstatic.com"
-            crossOrigin="anonymous"
-          />
-
           {/* RSS Feed discovery */}
           <link
             rel="alternate"

@@ -2,7 +2,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useEffect, useMemo, useRef, useState, type JSX } from 'react';
-import { useMediaQuery } from 'react-responsive';
 import { supabaseClient } from '@/utils/supabase';
 import { useStaffSession } from '@/hooks/useStaffSession';
 import AdminTopBar from './AdminTopBar';
@@ -15,7 +14,6 @@ const ADMIN_BAR_HEIGHT = 44;
 
 function Navbar(): JSX.Element {
   const router = useRouter();
-  const isTablet = useMediaQuery({ maxWidth: '1118px' });
 
   const { isStaff, staffName, staffRole, loading, clear } = useStaffSession();
 
@@ -121,63 +119,64 @@ function Navbar(): JSX.Element {
             )}
           </div>
 
-          {isTablet ? (
-            <div data-test="nav-Hamberger" className="z-[99]">
-              <button
-                type="button"
-                aria-label={drawerOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
-                aria-expanded={drawerOpen}
-                onClick={() => setDrawerOpen((v) => !v)}
-                className="group relative inline-flex h-10 w-10 items-center justify-center rounded-lg text-white transition-colors hover:bg-white/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
-              >
-                <span className="relative block h-4 w-6">
-                  <span
-                    className={`absolute left-0 top-0 h-[2px] w-full rounded-full bg-white transition-all duration-300 ${
-                      drawerOpen ? 'translate-y-[7px] rotate-45' : ''
-                    }`}
-                  />
-                  <span
-                    className={`absolute left-0 top-[7px] h-[2px] w-full rounded-full bg-white transition-all duration-300 ${
-                      drawerOpen ? 'opacity-0' : 'opacity-100'
-                    }`}
-                  />
-                  <span
-                    className={`absolute bottom-0 left-0 h-[2px] w-full rounded-full bg-white transition-all duration-300 ${
-                      drawerOpen ? '-translate-y-[7px] -rotate-45' : ''
-                    }`}
-                  />
-                </span>
-              </button>
-            </div>
-          ) : (
-            !isStaff && (
+          <div
+            data-test="nav-Hamberger"
+            className="z-[99] min-[1119px]:hidden"
+          >
+            <button
+              type="button"
+              aria-label={drawerOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+              aria-expanded={drawerOpen}
+              onClick={() => setDrawerOpen((v) => !v)}
+              className="group relative inline-flex h-10 w-10 items-center justify-center rounded-lg text-white transition-colors hover:bg-white/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+            >
+              <span className="relative block h-4 w-6">
+                <span
+                  className={`absolute left-0 top-0 h-[2px] w-full rounded-full bg-white transition-all duration-300 ${
+                    drawerOpen ? 'translate-y-[7px] rotate-45' : ''
+                  }`}
+                />
+                <span
+                  className={`absolute left-0 top-[7px] h-[2px] w-full rounded-full bg-white transition-all duration-300 ${
+                    drawerOpen ? 'opacity-0' : 'opacity-100'
+                  }`}
+                />
+                <span
+                  className={`absolute bottom-0 left-0 h-[2px] w-full rounded-full bg-white transition-all duration-300 ${
+                    drawerOpen ? '-translate-y-[7px] -rotate-45' : ''
+                  }`}
+                />
+              </span>
+            </button>
+          </div>
+
+          {!isStaff && (
+            <div className="hidden min-[1119px]:flex">
               <PublicNav staffLoading={loading} showStaffLogin={!isStaff} />
-            )
+            </div>
           )}
 
-          {isTablet && (
-            <div
-              className={`fixed inset-0 z-[98] transition-all duration-500 ${
-                drawerOpen
-                  ? 'opacity-100'
-                  : 'pointer-events-none -translate-y-2 opacity-0'
-              }`}
-              aria-hidden={!drawerOpen}
-            >
-              {drawerOpen && (
-                <NavDrop
-                  setDrop={setDrawerOpen}
-                  ref={drawerRef}
-                  isStaff={isStaff}
-                  staffName={staffName}
-                  adminLinks={visibleAdminLinks}
-                  adminLoading={loading}
-                  offsetTop={headerHeight}
-                  onLogout={handleLogout}
-                />
-              )}
-            </div>
-          )}
+          <div
+            className={`fixed inset-0 z-[98] transition-all duration-500 min-[1119px]:hidden ${
+              drawerOpen
+                ? 'opacity-100'
+                : 'pointer-events-none -translate-y-2 opacity-0'
+            }`}
+            aria-hidden={!drawerOpen}
+          >
+            {drawerOpen && (
+              <NavDrop
+                setDrop={setDrawerOpen}
+                ref={drawerRef}
+                isStaff={isStaff}
+                staffName={staffName}
+                adminLinks={visibleAdminLinks}
+                adminLoading={loading}
+                offsetTop={headerHeight}
+                onLogout={handleLogout}
+              />
+            )}
+          </div>
         </div>
       </div>
     </nav>
