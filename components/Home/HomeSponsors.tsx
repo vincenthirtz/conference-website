@@ -16,55 +16,35 @@ type HomeSponsorsProps = {
   partners: HomePartner[];
 };
 
-const CATEGORY_ORDER: HomePartner['category'][] = [
-  'super',
-  'major',
-  'cultural',
-];
-
-const CATEGORY_META: Record<
-  HomePartner['category'],
-  { label: string; tone: string }
-> = {
-  super: {
-    label: 'Super partenaire',
-    tone: 'border-amber-300/40 bg-amber-300/5 text-amber-100',
-  },
-  major: {
-    label: 'Partenaire majeur',
-    tone: 'border-fuchsia-300/40 bg-fuchsia-300/5 text-fuchsia-100',
-  },
-  cultural: {
-    label: 'Partenaire culturel',
-    tone: 'border-cyan-300/40 bg-cyan-300/5 text-cyan-100',
-  },
-};
-
-function PartnerTile({ partner }: { partner: HomePartner }) {
-  const inner = (
-    <div className="group relative flex h-24 w-full items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-4 transition-all hover:border-white/20 hover:bg-white/[0.08]">
-      {partner.logoUrl ? (
-        <img
-          src={partner.logoUrl}
-          alt={partner.name}
-          className="max-h-12 w-auto object-contain opacity-80 transition-opacity group-hover:opacity-100"
-          loading="lazy"
-        />
-      ) : (
-        <span className="text-sm font-medium text-gray-200">
-          {partner.name}
-        </span>
-      )}
-    </div>
+function PartnerLogo({ partner }: { partner: HomePartner }) {
+  const inner = partner.logoUrl ? (
+    <img
+      src={partner.logoUrl}
+      alt={partner.name}
+      title={partner.name}
+      className="block max-h-14 md:max-h-16 w-auto object-contain transition-all duration-300 grayscale hover:grayscale-0 opacity-70 hover:opacity-100"
+      loading="lazy"
+    />
+  ) : (
+    <span className="text-base md:text-lg font-bold uppercase tracking-wider text-white/70 hover:text-white transition-colors">
+      {partner.name}
+    </span>
   );
-  if (!partner.websiteUrl) return inner;
+
+  if (!partner.websiteUrl) {
+    return (
+      <div className="flex h-16 md:h-20 items-center justify-center px-6 md:px-10">
+        {inner}
+      </div>
+    );
+  }
   return (
     <a
       href={partner.websiteUrl}
       target="_blank"
       rel="noopener noreferrer sponsored"
-      title={partner.name}
       aria-label={partner.name}
+      className="flex h-16 md:h-20 items-center justify-center px-6 md:px-10 outline-none focus-visible:ring-2 focus-visible:ring-white/40 rounded-md"
     >
       {inner}
     </a>
@@ -74,12 +54,17 @@ function PartnerTile({ partner }: { partner: HomePartner }) {
 export default function HomeSponsors({
   partners,
 }: HomeSponsorsProps): JSX.Element | null {
-  if (!partners?.length) return null;
+  // De-duplicate by id (defensive: DB or merge could surface dupes)
+  const unique = Array.from(
+    new Map(partners.map((p) => [p.id, p])).values()
+  );
 
-  const grouped = CATEGORY_ORDER.map((cat) => ({
-    cat,
-    items: partners.filter((p) => p.category === cat),
-  })).filter((g) => g.items.length > 0);
+  if (!unique.length) return null;
+
+  // Duplicate the list once for a seamless infinite loop. Each "lap"
+  // translates the track by 50 %, swapping the visible half.
+  const looped = [...unique, ...unique];
+  const duration = Math.max(28, unique.length * 5);
 
   return (
     <section
@@ -105,21 +90,26 @@ export default function HomeSponsors({
         </Paragraph>
       </div>
 
-      <div className="flex flex-col gap-6">
-        {grouped.map(({ cat, items }) => (
-          <div key={cat} className="flex flex-col gap-3">
+      <div
+        className="sponsor-marquee relative overflow-hidden py-6"
+        aria-label="Liste des partenaires"
+      >
+        <div
+          className="sponsor-marquee-track flex w-max items-center"
+          style={{ animationDuration: `${duration}s` }}
+          role="list"
+        >
+          {looped.map((partner, idx) => (
             <div
-              className={`mx-auto inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${CATEGORY_META[cat].tone}`}
+              key={`${partner.id}-${idx}`}
+              role="listitem"
+              aria-hidden={idx >= unique.length}
+              className="shrink-0"
             >
-              {CATEGORY_META[cat].label}
+              <PartnerLogo partner={partner} />
             </div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-              {items.map((partner) => (
-                <PartnerTile key={partner.id} partner={partner} />
-              ))}
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       <div className="text-center">

@@ -18,13 +18,30 @@ export type HomeNewsItem = {
   commentsCount?: number;
 };
 
-const DEFAULT_LIMIT = 6;
+const DEFAULT_LIMIT = 5;
 
 const formatTagLabel = (tag?: string | null) => {
   if (!tag) return 'General';
   const cleaned = tag.replace(/-/g, ' ').trim() || 'General';
   return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
 };
+
+function formatDate(item: HomeNewsItem) {
+  const raw = item.publishedAt || item.createdAt;
+  if (!raw) return null;
+  return new Date(raw).toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+function getExcerpt(item: HomeNewsItem, max = 140) {
+  if (item.excerpt) return item.excerpt;
+  if (!item.content) return 'Découvre les dernières informations du tournoi.';
+  if (item.content.length <= max) return item.content;
+  return `${item.content.slice(0, max)}…`;
+}
 
 type HomeNewsSectionProps = {
   initialNews?: HomeNewsItem[];
@@ -51,73 +68,17 @@ function HomeNewsSection({
     return items.slice(0, DEFAULT_LIMIT);
   }, [initialNews, selectedTag]);
 
-  const renderCards = () => {
-    if (!filteredNews.length) {
-      return (
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
-          <Paragraph textColor="text-gray-200">
-            {selectedTag === 'all'
-              ? 'Aucune news pour le moment. Revenez bientôt !'
-              : 'Aucune news pour cette catégorie pour le moment.'}
-          </Paragraph>
-        </div>
-      );
-    }
+  const [featured, ...secondaries] = filteredNews;
 
-    return (
-      <div className="grid gap-4 md:grid-cols-3">
-        {filteredNews.map((item) => (
-          <Link
-            key={item.id}
-            href={`/news/${item.slug}`}
-            className="rounded-2xl border border-white/10 bg-white/5 p-5 flex flex-col gap-3 hover:border-blue-300/70 hover:shadow-[0_16px_40px_rgba(0,0,0,0.35)] transition"
-          >
-            <div className="flex items-center justify-between text-xs uppercase tracking-[0.14em] text-blue-200/80">
-              <span>
-                {item.publishedAt || item.createdAt
-                  ? new Date(
-                      item.publishedAt || item.createdAt || ''
-                    ).toLocaleDateString('fr-FR')
-                  : 'News'}
-              </span>
-              <div className="flex items-center gap-2">
-                {item.tag && (
-                  <span className="px-2 py-1 rounded-full border border-blue-300/40 bg-blue-500/10 text-[10px] tracking-[0.12em] text-blue-100">
-                    {formatTagLabel(item.tag)}
-                  </span>
-                )}
-                <span>{item.commentsCount ?? 0} commentaire(s)</span>
-              </div>
-            </div>
-            <h3 className="text-lg font-semibold text-white leading-snug">
-              {item.title}
-            </h3>
-            <Paragraph
-              textColor="text-gray-200"
-              className="text-sm leading-relaxed"
-            >
-              {item.excerpt ||
-                item.content?.slice(0, 140) ||
-                'Découvre les dernières informations du tournoi.'}
-              {item.content && item.content.length > 140 ? '…' : ''}
-            </Paragraph>
-            {item.imageUrl && (
-              <div className="relative w-full h-32 rounded-xl border border-white/10 overflow-hidden">
-                <Image
-                  src={item.imageUrl}
-                  alt={item.title}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 33vw"
-                  className="object-cover"
-                  loading="lazy"
-                />
-              </div>
-            )}
-          </Link>
-        ))}
-      </div>
-    );
-  };
+  const renderEmpty = () => (
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
+      <Paragraph textColor="text-gray-200">
+        {selectedTag === 'all'
+          ? 'Aucune news pour le moment. Revenez bientôt !'
+          : 'Aucune news pour cette catégorie pour le moment.'}
+      </Paragraph>
+    </div>
+  );
 
   return (
     <section
@@ -164,12 +125,133 @@ function HomeNewsSection({
           </div>
         </div>
       )}
-      {renderCards()}
+
+      {!filteredNews.length ? (
+        renderEmpty()
+      ) : (
+        <div className="grid gap-4 md:grid-cols-3">
+          {featured && (
+            <div className="md:col-span-2">
+              <FeaturedCard item={featured} />
+            </div>
+          )}
+          {secondaries.length > 0 && (
+            <div className="flex flex-col gap-4">
+              {secondaries.slice(0, 4).map((item) => (
+                <CompactCard key={item.id} item={item} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="flex justify-center">
+        <Link
+          href="/actualites"
+          className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-5 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+        >
+          Toutes les actualités
+          <span aria-hidden>→</span>
+        </Link>
+      </div>
     </section>
   );
 }
 
 export default HomeNewsSection;
+
+function FeaturedCard({ item }: { item: HomeNewsItem }) {
+  const date = formatDate(item);
+  return (
+    <Link
+      href={`/news/${item.slug}`}
+      className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/5 transition hover:border-blue-300/70 hover:shadow-[0_24px_60px_rgba(0,0,0,0.4)]"
+    >
+      {item.imageUrl ? (
+        <div className="relative aspect-[16/9] w-full overflow-hidden">
+          <Image
+            src={item.imageUrl}
+            alt={item.title}
+            fill
+            sizes="(max-width: 768px) 100vw, 66vw"
+            className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+        </div>
+      ) : (
+        <div className="aspect-[16/9] w-full bg-gradient-to-br from-purple-500/30 via-blue-500/20 to-cyan-500/20" />
+      )}
+      <div className="flex flex-1 flex-col gap-3 p-5 md:p-6">
+        <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.16em] text-blue-200/80">
+          <span className="inline-flex items-center rounded-full border border-blue-300/40 bg-blue-500/15 px-2.5 py-1 text-[10px] font-semibold text-blue-50">
+            À la une
+          </span>
+          {item.tag && (
+            <span className="rounded-full border border-white/15 bg-white/5 px-2 py-0.5 text-blue-100">
+              {formatTagLabel(item.tag)}
+            </span>
+          )}
+          {date && <span>{date}</span>}
+          <span className="text-gray-400">
+            · {item.commentsCount ?? 0} commentaire
+            {(item.commentsCount ?? 0) > 1 ? 's' : ''}
+          </span>
+        </div>
+        <h3 className="text-xl md:text-2xl font-bold text-white leading-tight">
+          {item.title}
+        </h3>
+        <Paragraph
+          textColor="text-gray-200"
+          className="text-sm md:text-base leading-relaxed line-clamp-3"
+        >
+          {getExcerpt(item, 220)}
+        </Paragraph>
+        <span className="mt-auto inline-flex items-center gap-1 text-sm font-medium text-blue-300 transition group-hover:gap-2">
+          Lire l&apos;article <span aria-hidden>→</span>
+        </span>
+      </div>
+    </Link>
+  );
+}
+
+function CompactCard({ item }: { item: HomeNewsItem }) {
+  const date = formatDate(item);
+  return (
+    <Link
+      href={`/news/${item.slug}`}
+      className="group flex gap-3 overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-3 transition hover:border-blue-300/70"
+    >
+      <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-xl bg-white/5">
+        {item.imageUrl ? (
+          <Image
+            src={item.imageUrl}
+            alt=""
+            fill
+            sizes="96px"
+            className="object-cover transition-transform duration-500 group-hover:scale-[1.05]"
+            loading="lazy"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/30 to-purple-500/20" />
+        )}
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.14em] text-blue-200/80">
+          {item.tag && (
+            <span className="rounded-full border border-white/15 bg-white/5 px-1.5 py-0.5 text-[9px] text-blue-100">
+              {formatTagLabel(item.tag)}
+            </span>
+          )}
+          {date && <span className="truncate">{date}</span>}
+        </div>
+        <h4 className="text-sm font-semibold text-white leading-snug line-clamp-2">
+          {item.title}
+        </h4>
+      </div>
+    </Link>
+  );
+}
 
 function FilterPill({
   label,

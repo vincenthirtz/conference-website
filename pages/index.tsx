@@ -9,9 +9,8 @@ import AnnouncementsTicker, {
 } from '@/components/Ads/AnnouncementsTicker';
 import PressSection from '@/components/Press/PressSection';
 import HomeCountdown from '@/components/Home/HomeCountdown';
-import HomeUpcomingTournament, {
-  UpcomingTournament,
-} from '@/components/Home/HomeUpcomingTournament';
+import { type UpcomingTournament } from '@/components/Home/HomeUpcomingTournament';
+import HomeEvents from '@/components/Home/HomeEvents';
 import HomeTwitchEmbed from '@/components/Home/HomeTwitchEmbed';
 import HomeSponsors, { HomePartner } from '@/components/Home/HomeSponsors';
 import { supabaseAdmin } from '@/utils/supabase';
@@ -205,7 +204,7 @@ function Home({
 
       <HomeCountdown targetDate={countdownTarget} />
       <HomeTwitchEmbed />
-      <HomeUpcomingTournament tournament={upcomingTournament} />
+      <HomeEvents tournament={upcomingTournament} />
       <HomeNewsSection initialNews={news} />
       <HomeSponsors partners={partners} />
       <PressSection />
