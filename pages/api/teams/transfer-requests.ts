@@ -9,6 +9,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID, validateRole } from '@/utils/apiHelpers';
 import { withAuthRoute } from '@/utils/staff';
 
+import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -73,7 +74,7 @@ async function handleGet(
   const { data: demandes, error: demandesErr } = await query;
 
   if (demandesErr) {
-    console.error('[transfer-requests] GET error:', demandesErr);
+    logger.error('[transfer-requests] GET error:', demandesErr);
     return res.status(500).json({ error: 'Echec du chargement des demandes.' });
   }
 
@@ -204,7 +205,7 @@ async function handlePost(
         .eq('team_id', fromTeamId);
 
       if (removeErr) {
-        console.error(
+        logger.error(
           '[transfer-requests] remove from old team error:',
           removeErr
         );
@@ -226,7 +227,7 @@ async function handlePost(
       });
 
     if (insertErr) {
-      console.error('[transfer-requests] insert new member error:', insertErr);
+      logger.error('[transfer-requests] insert new member error:', insertErr);
       const msg =
         insertErr.message?.includes('duplicate') ||
         insertErr.message?.includes('unique')
@@ -255,7 +256,7 @@ async function handlePost(
         published_at: new Date().toISOString(),
       });
     } catch (newsErr) {
-      console.error('[transfer-requests] create news error:', newsErr);
+      logger.error('[transfer-requests] create news error:', newsErr);
     }
   }
 
@@ -270,7 +271,7 @@ async function handlePost(
     .eq('id', demandeId);
 
   if (updateErr) {
-    console.error('[transfer-requests] update error:', updateErr);
+    logger.error('[transfer-requests] update error:', updateErr);
     return res
       .status(500)
       .json({ error: 'Echec de la mise a jour de la demande.' });

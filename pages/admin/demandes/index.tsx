@@ -10,6 +10,7 @@ import { withStaffPage } from '@/utils/staff';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import { useToast } from '@/components/Toast';
 
+import { logger } from '../../../utils/logger';
 type DemandeType =
   | 'join_team'
   | 'leave_team'
@@ -163,7 +164,7 @@ export const getServerSideProps = withStaffPage('manager', async (ctx) => {
   ]);
 
   if (demandesRes.error) {
-    console.error('admin demandes SSR error:', demandesRes.error);
+    logger.error('admin demandes SSR error:', demandesRes.error);
     return {
       initialDemandes: [],
       initialTotal: null,
@@ -389,7 +390,7 @@ function AdminDemandesPage({
         a.download = 'demandes.csv';
         a.click();
       } catch (e) {
-        console.error('CSV export error', e);
+        logger.error('CSV export error', e);
       }
     } else {
       window.location.href = url;

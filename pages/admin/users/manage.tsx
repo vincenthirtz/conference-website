@@ -5,6 +5,7 @@ import { withStaffPage } from '@/utils/staff';
 import { supabaseClient } from '@/utils/supabase';
 import { useToast } from '@/components/Toast';
 
+import { logger } from '../../../utils/logger';
 type StaffShape = {
   id: string;
   role: string;
@@ -152,7 +153,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       setUsers(json.items || []);
       setTotal(json.total ?? json.items?.length ?? 0);
     } catch (err) {
-      console.error('Error fetching users', err);
+      logger.error('Error fetching users', err);
     } finally {
       setLoading(false);
     }

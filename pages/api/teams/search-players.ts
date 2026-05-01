@@ -7,6 +7,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { escapePostgrestValue } from '@/utils/apiHelpers';
 import { withAuthRoute } from '@/utils/staff';
 
+import { logger } from '../../../utils/logger';
 type PlayerResult = {
   id: string;
   email: string | null;
@@ -209,7 +210,7 @@ export default withAuthRoute(async function handler(
 
     return res.status(200).json({ players });
   } catch (err: unknown) {
-    console.error('[api/teams/search-players] error:', err);
+    logger.error('[api/teams/search-players] error:', err);
     return res.status(500).json({ error: 'Search failed' });
   }
 });

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { supabaseAdmin, getServerClient } from '@/utils/supabase';
 import { useEffect, useState, Fragment, type ReactNode } from 'react';
 
+import { logger } from '../../utils/logger';
 const SITE_NAME = "OW Women's Cup";
 
 /** Turn plain-text URLs into clickable <a> links, preserving surrounding text. */
@@ -78,7 +79,7 @@ export const getServerSideProps: GetServerSideProps<NewsPageProps> = async (
     .maybeSingle();
 
   if (error) {
-    console.error('[news slug] fetch error', error);
+    logger.error('[news slug] fetch error', error);
     return {
       props: {
         title: '',

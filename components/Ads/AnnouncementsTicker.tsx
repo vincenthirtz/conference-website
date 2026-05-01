@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRef } from 'react';
 
+import { logger } from '../../utils/logger';
 export type Announcement = {
   id: string;
   title: string;
@@ -38,7 +39,7 @@ export default function AnnouncementsTicker({
           setItems(json.items);
         }
       } catch (e) {
-        console.error('announcements load error', e);
+        logger.error('announcements load error', e);
       }
     };
     if (!hasInitialItems) {

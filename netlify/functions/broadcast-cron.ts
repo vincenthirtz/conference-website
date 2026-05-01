@@ -7,10 +7,11 @@
 
 import type { Handler } from '@netlify/functions';
 
+import { logger } from '../../utils/logger';
 export const handler: Handler = async () => {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
-    console.error('[broadcast-cron] CRON_SECRET not set');
+    logger.error('[broadcast-cron] CRON_SECRET not set');
     return {
       statusCode: 500,
       body: JSON.stringify({ error: 'CRON_SECRET not configured' }),
@@ -33,7 +34,7 @@ export const handler: Handler = async () => {
 
     const text = await res.text().catch(() => '');
     if (!res.ok) {
-      console.error(
+      logger.error(
         '[broadcast-cron] non-OK response: %d %s',
         res.status,
         text.slice(0, 200)
@@ -44,10 +45,10 @@ export const handler: Handler = async () => {
       };
     }
 
-    console.log('[broadcast-cron] processed: %s', text.slice(0, 200));
+    logger.info('[broadcast-cron] processed: %s', text.slice(0, 200));
     return { statusCode: 200, body: text };
   } catch (err) {
-    console.error('[broadcast-cron] fetch error:', err);
+    logger.error('[broadcast-cron] fetch error:', err);
     return {
       statusCode: 502,
       body: JSON.stringify({ error: 'Failed to reach app endpoint' }),

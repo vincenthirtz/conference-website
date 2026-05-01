@@ -4,6 +4,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { sanitizeUrl } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../../../utils/logger';
 type CastMemberPayload = {
   name?: string;
   title?: string | null;
@@ -51,7 +52,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data, error } = await query;
 
     if (error) {
-      console.error('[admin/cast-members] list error', error);
+      logger.error('[admin/cast-members] list error', error);
       return res.status(500).json({ error: 'Failed to load cast members.' });
     }
 
@@ -93,7 +94,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .single();
 
     if (error) {
-      console.error('[admin/cast-members] create error', error);
+      logger.error('[admin/cast-members] create error', error);
       return res
         .status(500)
         .json({ error: 'Failed to create the cast member.' });

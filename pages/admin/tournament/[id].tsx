@@ -18,6 +18,7 @@ import Breadcrumb from '@/components/admin/Breadcrumb';
 import { useToast } from '@/components/Toast';
 import type { MatchStatus } from '@/types/admin';
 
+import { logger } from '../../../utils/logger';
 type StaffShape = {
   id: string;
   role: string;
@@ -183,7 +184,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     ]);
 
   if (tournamentRes.error) {
-    console.error('SSR tournament fetch error:', tournamentRes.error);
+    logger.error('SSR tournament fetch error:', tournamentRes.error);
   }
   const tournament = tournamentRes.data;
   if (!tournament) {

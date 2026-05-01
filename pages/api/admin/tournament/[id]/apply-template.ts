@@ -10,6 +10,7 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { TOURNAMENT_TEMPLATES } from '@/config/tournament-templates';
 
+import { logger } from '../../../../../utils/logger';
 type ApiResponse = { stages: any[] } | { error: string };
 
 export default withStaffRoute(handler, 'manager');
@@ -126,7 +127,7 @@ async function handler(
       .select('*');
 
     if (insertErr || !createdStages) {
-      console.error('apply-template insert stages error:', insertErr);
+      logger.error('apply-template insert stages error:', insertErr);
       return res
         .status(500)
         .json({ error: 'Failed to create stages from template' });
@@ -149,13 +150,13 @@ async function handler(
           },
         });
       } catch (e) {
-        console.error('apply-template logStaffAction error:', e);
+        logger.error('apply-template logStaffAction error:', e);
       }
     }
 
     return res.status(201).json({ stages: createdStages });
   } catch (err: unknown) {
-    console.error('[/api/admin/tournament/[id]/apply-template] error:', err);
+    logger.error('[/api/admin/tournament/[id]/apply-template] error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

@@ -10,6 +10,7 @@ import { logStaffAction } from '@/utils/staffLogs';
 import type { MatchStatus, BracketSide } from '@/types/admin';
 import { isValidUUID, parsePagination } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../../utils/logger';
 export type { MatchStatus } from '@/types/admin';
 export type { BracketSide } from '@/types/admin';
 
@@ -85,7 +86,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (err: unknown) {
-    console.error('[/api/admin/tournament/[id]/matches] internal error:', err);
+    logger.error('[/api/admin/tournament/[id]/matches] internal error:', err);
     return res.status(500).json({
       error: 'Internal server error',
     });
@@ -233,7 +234,7 @@ async function handleGet(
   const { data, error } = await query;
 
   if (error) {
-    console.error('admin GET tournament matches error:', error);
+    logger.error('admin GET tournament matches error:', error);
     return res.status(500).json({
       error: 'Failed to fetch matches',
     });
@@ -305,7 +306,7 @@ async function handlePost(
     .select('*');
 
   if (error) {
-    console.error('admin POST tournament matches error:', error);
+    logger.error('admin POST tournament matches error:', error);
     return res.status(500).json({
       error: 'Failed to create matches',
     });
@@ -329,7 +330,7 @@ async function handlePost(
         },
       });
     } catch (e) {
-      console.error('admin POST tournament matches logStaffAction error:', e);
+      logger.error('admin POST tournament matches logStaffAction error:', e);
     }
   }
 

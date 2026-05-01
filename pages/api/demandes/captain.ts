@@ -9,6 +9,7 @@ import { captainRequestSchema, formatZodError } from '@/utils/validation';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 
+import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -31,7 +32,7 @@ export default withAuthRoute(async function handler(
       .order('created_at', { ascending: false });
 
     if (demandesErr) {
-      console.error('[demandes/captain] GET error:', demandesErr);
+      logger.error('[demandes/captain] GET error:', demandesErr);
       return res.status(500).json({ error: 'Failed to load requests.' });
     }
 
@@ -59,7 +60,7 @@ export default withAuthRoute(async function handler(
       .maybeSingle();
 
     if (existingErr) {
-      console.error('[demandes/captain] check existing error:', existingErr);
+      logger.error('[demandes/captain] check existing error:', existingErr);
       return res.status(500).json({ error: 'Verification error.' });
     }
 
@@ -130,7 +131,7 @@ export default withAuthRoute(async function handler(
       .single();
 
     if (insertErr) {
-      console.error('[demandes/captain] insert error:', insertErr);
+      logger.error('[demandes/captain] insert error:', insertErr);
       return res.status(500).json({ error: 'Failed to create request.' });
     }
 

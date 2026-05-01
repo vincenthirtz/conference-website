@@ -9,6 +9,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 
+import { logger } from '../../../../utils/logger';
 type CaptainTeam = { id: string; captain_id: string | null; name: string };
 
 async function loadCaptainTeam(
@@ -93,7 +94,7 @@ export default withAuthRoute(async function handler(
       .order('created_at', { ascending: true });
 
     if (allErr) {
-      console.error('[player/messages/conv] GET error:', allErr);
+      logger.error('[player/messages/conv] GET error:', allErr);
       return res.status(500).json({ error: 'Failed to load conversation.' });
     }
 
@@ -145,7 +146,7 @@ export default withAuthRoute(async function handler(
       );
 
     if (updateErr) {
-      console.error('[player/messages/conv] PATCH error:', updateErr);
+      logger.error('[player/messages/conv] PATCH error:', updateErr);
       return res.status(500).json({ error: 'Failed to mark as read.' });
     }
 

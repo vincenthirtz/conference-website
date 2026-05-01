@@ -12,6 +12,7 @@ import type { MatchStatus } from '@/types/admin';
 import { parsePagination, isValidUUID } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../../utils/logger';
 /* -----------------------------------------------------------
  * Types
  * ---------------------------------------------------------*/
@@ -129,7 +130,7 @@ export default async function handler(
       .neq('status', 'cancelled');
 
     if (mErr) {
-      console.error('/api/maps/stats matches error:', mErr);
+      logger.error('/api/maps/stats matches error:', mErr);
       return res.status(500).json({
         error: 'Failed to fetch matches',
       });
@@ -161,7 +162,7 @@ export default async function handler(
       .in('match_id', matchIds);
 
     if (gErr) {
-      console.error('/api/maps/stats games error:', gErr);
+      logger.error('/api/maps/stats games error:', gErr);
       return res.status(500).json({
         error: 'Failed to fetch games',
       });
@@ -276,7 +277,7 @@ export default async function handler(
     );
     return res.status(200).json(response);
   } catch (err: unknown) {
-    console.error('[/api/maps/stats] internal error:', err);
+    logger.error('[/api/maps/stats] internal error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

@@ -4,6 +4,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../../../utils/logger';
 type CastMemberPayload = {
   name?: string;
   title?: string | null;
@@ -46,7 +47,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .single();
 
     if (error) {
-      console.error('[admin/cast-members] get error', error);
+      logger.error('[admin/cast-members] get error', error);
       return res.status(404).json({ error: 'Cast member not found.' });
     }
     return res.status(200).json(data);
@@ -78,7 +79,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .single();
 
     if (error) {
-      console.error('[admin/cast-members] update error', error);
+      logger.error('[admin/cast-members] update error', error);
       return res
         .status(500)
         .json({ error: 'Failed to update the cast member.' });
@@ -91,7 +92,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { error } = await admin.from('cast_members').delete().eq('id', id);
 
     if (error) {
-      console.error('[admin/cast-members] delete error', error);
+      logger.error('[admin/cast-members] delete error', error);
       return res
         .status(500)
         .json({ error: 'Failed to delete the cast member.' });

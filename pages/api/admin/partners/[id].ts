@@ -5,6 +5,7 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../../../utils/logger';
 type PartnerPayload = {
   name?: string;
   description?: string;
@@ -87,7 +88,7 @@ async function handler(
       .single();
 
     if (error) {
-      console.error('[admin/partners] update error', error);
+      logger.error('[admin/partners] update error', error);
       return res.status(500).json({ error: 'Failed to update the partner.' });
     }
 
@@ -122,7 +123,7 @@ async function handler(
     const { error } = await admin.from('partners').delete().eq('id', id);
 
     if (error) {
-      console.error('[admin/partners] delete error', error);
+      logger.error('[admin/partners] delete error', error);
       return res.status(500).json({ error: 'Failed to delete the partner.' });
     }
 

@@ -10,6 +10,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { withStaffRoute } from '@/utils/staff';
+import { logger } from '../../../../utils/logger';
 import {
   importTeams,
   MAX_ROWS,
@@ -101,7 +102,7 @@ async function handler(
     });
     return res.status(200).json(result);
   } catch (err: unknown) {
-    console.error('[admin/teams/import-csv] error:', err);
+    logger.error('[admin/teams/import-csv] error:', err);
     return res
       .status(500)
       .json({ error: (err as Error)?.message || 'Erreur import CSV' });

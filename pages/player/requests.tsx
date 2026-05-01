@@ -8,6 +8,7 @@ import { useRouter } from 'next/router';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 
+import { logger } from '../../utils/logger';
 type Tab = 'transfer' | 'scrim';
 
 type Team = {
@@ -92,7 +93,7 @@ export default function PlayerRequestsPage() {
 
         await loadTeams();
       } catch (err) {
-        console.error('[requests] auth error:', err);
+        logger.error('[requests] auth error:', err);
         if (!cancelled) setError('Erreur de connexion.');
       } finally {
         if (!cancelled) setLoading(false);
@@ -115,7 +116,7 @@ export default function PlayerRequestsPage() {
         setTeams(data.teams || []);
       }
     } catch (err) {
-      console.error('[requests] load teams error:', err);
+      logger.error('[requests] load teams error:', err);
     } finally {
       setTeamsLoading(false);
     }

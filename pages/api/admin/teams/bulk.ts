@@ -12,6 +12,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 
+import { logger } from '../../../../utils/logger';
 type BulkAction = 'delete' | 'activate' | 'deactivate' | 'assign';
 
 type BulkBody = {
@@ -154,13 +155,13 @@ async function handler(
           },
         });
       } catch (e) {
-        console.error('bulk teams logStaffAction error:', e);
+        logger.error('bulk teams logStaffAction error:', e);
       }
     }
 
     return res.status(200).json({ success: true, count, action });
   } catch (err: unknown) {
-    console.error('[/api/admin/teams/bulk] error:', err);
+    logger.error('[/api/admin/teams/bulk] error:', err);
     return res.status(500).json({
       error: (err as Error)?.message || 'Erreur interne',
     });

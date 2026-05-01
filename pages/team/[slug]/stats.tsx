@@ -10,6 +10,7 @@ import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
 import type { MatchStatus } from '@/types/admin';
 
+import { logger } from '../../../utils/logger';
 type Team = {
   id: string;
   name: string;
@@ -99,12 +100,12 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       .maybeSingle();
 
     if (sErr) {
-      console.error('team_stats_view error:', sErr);
+      logger.error('team_stats_view error:', sErr);
     } else if (statsData) {
       stats = statsData as TeamStatsView;
     }
   } catch (e) {
-    console.error('team_stats_view not available:', e);
+    logger.error('team_stats_view not available:', e);
   }
 
   // 3) Matches de l'équipe (tous tournois confondus, hors BYE)
@@ -115,7 +116,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     .neq('status', 'cancelled');
 
   if (mErr) {
-    console.error('team stats matches error:', mErr);
+    logger.error('team stats matches error:', mErr);
   }
 
   const matches = ((matchesData || []) as MatchRow[]).filter((m) => !m.is_bye);
@@ -132,7 +133,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       .in('match_id', matchIds);
 
     if (gErr) {
-      console.error('team stats games error:', gErr);
+      logger.error('team stats games error:', gErr);
     } else {
       games = (gamesData || []) as GameRow[];
     }

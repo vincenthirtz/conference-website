@@ -11,6 +11,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../../utils/logger';
 export default withStaffRoute(handler, 'manager');
 
 async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
@@ -34,7 +35,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (err: unknown) {
-    console.error('[/api/admin/stages/[stageId]/teams] error:', err);
+    logger.error('[/api/admin/stages/[stageId]/teams] error:', err);
     return res.status(500).json({
       error: 'Internal server error',
     });
@@ -78,7 +79,7 @@ async function handleGet(
     .order('seed', { ascending: true, nullsFirst: false });
 
   if (teamsErr) {
-    console.error('GET stage teams error:', teamsErr);
+    logger.error('GET stage teams error:', teamsErr);
     return res.status(500).json({ error: 'Failed to fetch stage teams' });
   }
 
@@ -213,7 +214,7 @@ async function handlePost(
     .maybeSingle();
 
   if (error) {
-    console.error('POST stage team error:', error);
+    logger.error('POST stage team error:', error);
     return res.status(500).json({ error: 'Failed to add team to stage' });
   }
 
@@ -327,7 +328,7 @@ async function handlePatch(
     .maybeSingle();
 
   if (error) {
-    console.error('PATCH stage team error:', error);
+    logger.error('PATCH stage team error:', error);
     return res.status(500).json({ error: 'Failed to update seed' });
   }
 
@@ -399,10 +400,10 @@ async function handleDelete(
   ]);
 
   if (cleanT1.error) {
-    console.error('cleanup matches team1 error:', cleanT1.error);
+    logger.error('cleanup matches team1 error:', cleanT1.error);
   }
   if (cleanT2.error) {
-    console.error('cleanup matches team2 error:', cleanT2.error);
+    logger.error('cleanup matches team2 error:', cleanT2.error);
   }
 
   // Delete the stage_teams entries
@@ -413,7 +414,7 @@ async function handleDelete(
     .in('team_id', idsToRemove);
 
   if (error) {
-    console.error('DELETE stage teams error:', error);
+    logger.error('DELETE stage teams error:', error);
     return res.status(500).json({ error: 'Failed to remove teams' });
   }
 

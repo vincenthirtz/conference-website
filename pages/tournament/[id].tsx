@@ -10,6 +10,7 @@ import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
 import type { MatchStatus } from '@/types/admin';
 
+import { logger } from '../../utils/logger';
 type Tournament = {
   id: string;
   name: string;
@@ -186,11 +187,11 @@ export const getServerSideProps: GetServerSideProps<
   ]);
 
   if (stagesResult.error)
-    console.error('tournament stages error:', stagesResult.error);
+    logger.error('tournament stages error:', stagesResult.error);
   if (matchesResult.error)
-    console.error('tournament matches error:', matchesResult.error);
+    logger.error('tournament matches error:', matchesResult.error);
   if (teamsResult.error)
-    console.error('tournament teams error:', teamsResult.error);
+    logger.error('tournament teams error:', teamsResult.error);
 
   const stages = (stagesResult.data || []) as any;
   const matches = (matchesResult.data || []) as any as SimpleMatch[];

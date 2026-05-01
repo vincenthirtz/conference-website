@@ -5,6 +5,7 @@ import { sanitizeUrl } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { notifyAnnouncement } from '@/utils/discord';
 
+import { logger } from '../../../../utils/logger';
 type AnnouncementPayload = {
   title?: string;
   message?: string;
@@ -56,7 +57,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data, error } = await query;
 
     if (error) {
-      console.error('[admin/announcements] list error', error);
+      logger.error('[admin/announcements] list error', error);
       return res.status(500).json({ error: 'Failed to load announcements.' });
     }
 
@@ -87,7 +88,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .single();
 
     if (error) {
-      console.error('[admin/announcements] create error', error);
+      logger.error('[admin/announcements] create error', error);
       return res
         .status(500)
         .json({ error: 'Failed to create the announcement.' });
@@ -100,7 +101,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         message: data.message,
         ctaLabel: data.cta_label ?? null,
         ctaUrl: data.cta_url ?? null,
-      }).catch((e) => console.error('[discord] notifyAnnouncement error:', e));
+      }).catch((e) => logger.error('[discord] notifyAnnouncement error:', e));
     }
 
     return res.status(201).json(data);

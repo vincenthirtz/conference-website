@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin, getServerClient } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../../utils/logger';
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || 'https://example.com';
 
@@ -36,7 +37,7 @@ export default async function handler(
     .limit(50);
 
   if (error) {
-    console.error('[news/rss] error', error);
+    logger.error('[news/rss] error', error);
     return res.status(500).json({ error: 'Failed to generate RSS feed.' });
   }
 

@@ -6,6 +6,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { parsePagination, sanitizeSearch } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../utils/logger';
 export type TeamRow = {
   id: string;
   name: string;
@@ -34,7 +35,7 @@ async function handler(
         return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (err: unknown) {
-    console.error('[/api/admin/teams] internal error:', err);
+    logger.error('[/api/admin/teams] internal error:', err);
     return res.status(500).json({
       error: 'Internal server error',
     });
@@ -92,7 +93,7 @@ async function handleGet(
   const { data, error, count } = await query;
 
   if (error) {
-    console.error('admin GET teams error:', error);
+    logger.error('admin GET teams error:', error);
     return res.status(500).json({
       error: 'Failed to fetch teams',
     });

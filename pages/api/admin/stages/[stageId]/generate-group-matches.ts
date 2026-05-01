@@ -18,6 +18,7 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { generateRoundRobinPairings } from '@/utils/groups/roundRobin';
 import type { MatchStatus } from '@/types/admin';
 
+import { logger } from '../../../../../utils/logger';
 type DryRunPairing = {
   group_key: string;
   round_number: number;
@@ -199,7 +200,7 @@ async function handler(
       .select('id');
 
     if (insertErr || !inserted) {
-      console.error('generate-group-matches insert error:', insertErr);
+      logger.error('generate-group-matches insert error:', insertErr);
       return res.status(500).json({ error: 'Failed to insert group matches' });
     }
 
@@ -222,7 +223,7 @@ async function handler(
           },
         });
       } catch (e) {
-        console.error('generate-group-matches logStaffAction error:', e);
+        logger.error('generate-group-matches logStaffAction error:', e);
       }
     }
 
@@ -233,7 +234,7 @@ async function handler(
       perGroupRounds: rounds,
     });
   } catch (err: unknown) {
-    console.error(
+    logger.error(
       '[/api/admin/stages/[stageId]/generate-group-matches] error:',
       err
     );

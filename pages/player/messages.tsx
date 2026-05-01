@@ -10,6 +10,7 @@ import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 
+import { logger } from '../../utils/logger';
 type Conversation = {
   conversationId: string;
   otherTeamId: string;
@@ -105,7 +106,7 @@ export default function MessagesPage() {
           }
         }
       } catch (err) {
-        console.error('[messages] team load error:', err);
+        logger.error('[messages] team load error:', err);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -127,7 +128,7 @@ export default function MessagesPage() {
         setConversations(data.conversations || []);
       }
     } catch (err) {
-      console.error('[messages] load conversations error:', err);
+      logger.error('[messages] load conversations error:', err);
     } finally {
       setConvLoading(false);
     }
@@ -206,7 +207,7 @@ export default function MessagesPage() {
       loadConversations();
       setTimeout(scrollToBottom, 80);
     } catch (err) {
-      console.error('[messages] realtime reload error:', err);
+      logger.error('[messages] realtime reload error:', err);
     }
   }, [activeConvId, token, loadConversations]);
 
@@ -248,7 +249,7 @@ export default function MessagesPage() {
         setTeams((data.teams || []).filter((t: Team) => t.id !== myTeamId));
       }
     } catch (err) {
-      console.error('[messages] load teams error:', err);
+      logger.error('[messages] load teams error:', err);
     } finally {
       setTeamsLoading(false);
     }

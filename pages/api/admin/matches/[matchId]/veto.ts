@@ -13,6 +13,7 @@ import { VETO_FLOWS } from '@/types/veto';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { notifyVetoStep } from '@/utils/discord';
 
+import { logger } from '../../../../../utils/logger';
 export default withStaffRoute(handler, 'manager');
 
 async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
@@ -34,7 +35,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (err: unknown) {
-    console.error('[/api/admin/matches/[matchId]/veto] error:', err);
+    logger.error('[/api/admin/matches/[matchId]/veto] error:', err);
     return res.status(500).json({
       error: 'Internal server error',
     });
@@ -65,7 +66,7 @@ async function handleGet(matchId: string, res: NextApiResponse) {
     .order('step_number', { ascending: true });
 
   if (sErr) {
-    console.error('GET veto steps error:', sErr);
+    logger.error('GET veto steps error:', sErr);
     return res.status(500).json({ error: 'Failed to fetch veto steps' });
   }
 
@@ -191,7 +192,7 @@ async function handlePost(
     .maybeSingle();
 
   if (error || !data) {
-    console.error('POST veto step error:', error);
+    logger.error('POST veto step error:', error);
     return res.status(500).json({ error: 'Failed to record veto step' });
   }
 
@@ -226,7 +227,7 @@ async function handlePost(
         .insert(gamesPayload);
 
       if (gErr) {
-        console.error('Auto-create games from veto error:', gErr);
+        logger.error('Auto-create games from veto error:', gErr);
       } else {
         gamesCreated = true;
       }
@@ -264,7 +265,7 @@ async function handlePost(
     mapName: body.map_name,
     byTeamId: body.team_id ?? null,
     isComplete: isNowComplete,
-  }).catch((e) => console.error('[discord] notifyVetoStep error:', e));
+  }).catch((e) => logger.error('[discord] notifyVetoStep error:', e));
 
   return res.status(201).json({
     step: data as VetoStep,
@@ -343,7 +344,7 @@ async function handleDelete(matchId: string, res: NextApiResponse, ctx: any) {
     .eq('match_id', matchId);
 
   if (error) {
-    console.error('DELETE veto steps error:', error);
+    logger.error('DELETE veto steps error:', error);
     return res.status(500).json({ error: 'Failed to reset veto' });
   }
 

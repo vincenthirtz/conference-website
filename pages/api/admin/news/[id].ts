@@ -5,6 +5,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../../../utils/logger';
 type NewsPayload = {
   title?: string;
   slug?: string;
@@ -50,7 +51,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .maybeSingle();
 
     if (error) {
-      console.error('[admin/news/id] fetch error', error);
+      logger.error('[admin/news/id] fetch error', error);
       return res.status(500).json({ error: 'Failed to load the article.' });
     }
 
@@ -74,7 +75,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .maybeSingle();
 
     if (existingErr) {
-      console.error('[admin/news/id] fetch existing error', existingErr);
+      logger.error('[admin/news/id] fetch existing error', existingErr);
       return res
         .status(500)
         .json({ error: 'Failed to load the existing article.' });
@@ -114,7 +115,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .single();
 
     if (error) {
-      console.error('[admin/news/id] update error', error);
+      logger.error('[admin/news/id] update error', error);
       return res.status(500).json({ error: 'Failed to update the article.' });
     }
 
@@ -125,7 +126,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { error } = await admin.from('news').delete().eq('id', id);
 
     if (error) {
-      console.error('[admin/news/id] delete error', error);
+      logger.error('[admin/news/id] delete error', error);
       return res.status(500).json({ error: 'Failed to delete the article.' });
     }
 

@@ -1,3 +1,4 @@
+import { logger } from '../logger';
 // lib/swiss/pairing.ts
 // Génération de pairings Swiss pour un round donné
 // - évite les rematches autant que possible
@@ -57,7 +58,7 @@ export function generateSwissPairings(
 
   // 6) Si échec et fallback autorisé → on ignore la contrainte de rematch
   if (!success && allowRematchesFallback) {
-    console.warn(
+    logger.warn(
       `[Swiss pairing] Backtracking exhausted for ${ids.length} participants — falling back to greedy pairing (rematches possible).`
     );
     pairingIds.length = 0;

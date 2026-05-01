@@ -6,6 +6,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import { logStaffAction } from '@/utils/staffLogs';
 
+import { logger } from '../../../../utils/logger';
 export default withStaffRoute(handler, 'manager');
 
 /* -----------------------------------------------------------
@@ -62,7 +63,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (err: unknown) {
-    console.error('[/api/matches/[matchId]/games] error:', err);
+    logger.error('[/api/matches/[matchId]/games] error:', err);
     return res.status(500).json({
       error: 'Internal server error',
     });
@@ -81,7 +82,7 @@ async function handleGet(matchId: string, res: NextApiResponse) {
     .order('map_order', { ascending: true });
 
   if (error) {
-    console.error('GET games error:', error);
+    logger.error('GET games error:', error);
     return res.status(500).json({ error: 'Failed to fetch games' });
   }
 
@@ -122,7 +123,7 @@ async function handlePost(
     .maybeSingle();
 
   if (error || !data) {
-    console.error('POST game error:', error);
+    logger.error('POST game error:', error);
     return res.status(500).json({ error: 'Failed to create game' });
   }
 
@@ -173,7 +174,7 @@ async function handlePut(
     .eq('match_id', matchId);
 
   if (delErr) {
-    console.error('DELETE existing games error:', delErr);
+    logger.error('DELETE existing games error:', delErr);
     return res.status(500).json({
       error: 'Failed to clear existing games',
     });
@@ -201,7 +202,7 @@ async function handlePut(
       .select('*');
 
     if (insErr) {
-      console.error('INSERT games error:', insErr);
+      logger.error('INSERT games error:', insErr);
       return res.status(500).json({
         error: 'Failed to insert games',
       });
@@ -265,7 +266,7 @@ async function handlePut(
         staffId: ctx.staff?.id ?? null,
       });
     } catch (e) {
-      console.error('Recompute match from games error:', e);
+      logger.error('Recompute match from games error:', e);
       // On ne bloque pas forcément pour ça, les games sont quand même sauvegardées
     }
   }
@@ -304,7 +305,7 @@ async function handleDelete(matchId: string, res: NextApiResponse, ctx: any) {
     .eq('match_id', matchId);
 
   if (error) {
-    console.error('DELETE games error:', error);
+    logger.error('DELETE games error:', error);
     return res.status(500).json({
       error: 'Failed to delete games',
     });

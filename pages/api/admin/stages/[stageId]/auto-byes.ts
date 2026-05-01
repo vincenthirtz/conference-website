@@ -26,6 +26,7 @@ import {
 import type { MatchStatus } from '@/types/admin';
 import { isValidUUID } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../../utils/logger';
 type DbMatchRow = {
   id: string;
   tournament_id: string;
@@ -124,7 +125,7 @@ async function handler(
     const { data: matchesData, error: mErr } = await query;
 
     if (mErr) {
-      console.error('auto-byes: fetch matches error', mErr);
+      logger.error('auto-byes: fetch matches error', mErr);
       return res.status(500).json({
         error: 'Failed to fetch stage matches',
       });
@@ -197,7 +198,7 @@ async function handler(
           try {
             await propagateBracketForMatch(matchId);
           } catch (e: any) {
-            console.error(
+            logger.error(
               'auto-byes: propagateBracketForMatch error',
               matchId,
               e
@@ -208,7 +209,7 @@ async function handler(
 
         updatedMatchIds.push(matchId);
       } catch (err: unknown) {
-        console.error('auto-byes: error processing match', matchId, err);
+        logger.error('auto-byes: error processing match', matchId, err);
         failed.push({
           matchId,
           reason: (err as Error)?.message ?? 'unknown',
@@ -235,7 +236,7 @@ async function handler(
           },
         });
       } catch (e) {
-        console.error('auto-byes: logStaffAction error', e);
+        logger.error('auto-byes: logStaffAction error', e);
       }
     }
 
@@ -249,7 +250,7 @@ async function handler(
 
     return res.status(200).json(result);
   } catch (err: unknown) {
-    console.error('[/api/admin/stages/[stageId]/auto-byes] error:', err);
+    logger.error('[/api/admin/stages/[stageId]/auto-byes] error:', err);
     return res.status(500).json({
       error: 'Internal server error',
     });

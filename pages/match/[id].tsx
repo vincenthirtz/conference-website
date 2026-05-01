@@ -10,6 +10,7 @@ import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
 import type { MatchStatus, BracketSide } from '@/types/admin';
 
+import { logger } from '../../utils/logger';
 type SimpleTeam = {
   id: string;
   name: string;
@@ -109,7 +110,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     .single();
 
   if (error || !data) {
-    console.error('match page error:', error);
+    logger.error('match page error:', error);
     return { notFound: true };
   }
 

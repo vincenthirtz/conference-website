@@ -10,6 +10,7 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 import slugify from 'slugify';
 
+import { logger } from '../../../../../utils/logger';
 type ApiResponse =
   | { tournament: any; stages: any[]; maps: number }
   | { error: string };
@@ -95,7 +96,7 @@ async function handler(
       .single();
 
     if (createErr || !cloned) {
-      console.error('clone: create tournament error', createErr);
+      logger.error('clone: create tournament error', createErr);
       return res
         .status(500)
         .json({ error: 'Failed to create cloned tournament' });
@@ -129,7 +130,7 @@ async function handler(
         .select('*');
 
       if (stagesErr) {
-        console.error('clone: copy stages error', stagesErr);
+        logger.error('clone: copy stages error', stagesErr);
       } else {
         createdStages = stages || [];
       }
@@ -159,7 +160,7 @@ async function handler(
         .insert(mapInserts);
 
       if (mapsErr) {
-        console.error('clone: copy maps error', mapsErr);
+        logger.error('clone: copy maps error', mapsErr);
       } else {
         copiedMapsCount = mapInserts.length;
       }
@@ -182,7 +183,7 @@ async function handler(
           },
         });
       } catch (e) {
-        console.error('clone: logStaffAction error', e);
+        logger.error('clone: logStaffAction error', e);
       }
     }
 
@@ -192,7 +193,7 @@ async function handler(
       maps: copiedMapsCount,
     });
   } catch (err: unknown) {
-    console.error('[/api/admin/tournament/[id]/clone] error:', err);
+    logger.error('[/api/admin/tournament/[id]/clone] error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

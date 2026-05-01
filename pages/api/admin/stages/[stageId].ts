@@ -11,6 +11,7 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { validateStageSettings } from '@/utils/stageSettings';
 import { isValidUUID } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../utils/logger';
 export type StageType =
   | 'group'
   | 'bracket'
@@ -60,7 +61,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (err: unknown) {
-    console.error('[/api/admin/stages/[stageId]] internal error:', err);
+    logger.error('[/api/admin/stages/[stageId]] internal error:', err);
     return res.status(500).json({
       error: 'Internal server error',
     });
@@ -79,7 +80,7 @@ async function handleGet(id: string, res: NextApiResponse) {
     .maybeSingle();
 
   if (error || !data) {
-    console.error('admin GET stage error:', error);
+    logger.error('admin GET stage error:', error);
     return res.status(404).json({ error: 'Stage not found' });
   }
 
@@ -258,7 +259,7 @@ async function handlePut(
     .maybeSingle();
 
   if (error || !data) {
-    console.error('admin PUT stage error:', error);
+    logger.error('admin PUT stage error:', error);
     return res.status(500).json({
       error: 'Failed to update stage',
     });
@@ -279,7 +280,7 @@ async function handlePut(
         },
       });
     } catch (e) {
-      console.error('admin PUT stage logStaffAction error:', e);
+      logger.error('admin PUT stage logStaffAction error:', e);
     }
   }
 
@@ -321,7 +322,7 @@ async function handleDelete(
       .eq('id', id);
 
     if (error) {
-      console.error('admin hard delete stage error:', error);
+      logger.error('admin hard delete stage error:', error);
       return res.status(500).json({
         error: 'Failed to hard-delete stage',
       });
@@ -340,7 +341,7 @@ async function handleDelete(
           },
         });
       } catch (e) {
-        console.error('admin hard delete stage logStaffAction error:', e);
+        logger.error('admin hard delete stage logStaffAction error:', e);
       }
     }
 
@@ -363,7 +364,7 @@ async function handleDelete(
     .maybeSingle();
 
   if (error || !data) {
-    console.error('admin soft delete stage error:', error);
+    logger.error('admin soft delete stage error:', error);
     return res.status(500).json({
       error: 'Failed to deactivate stage',
     });
@@ -384,7 +385,7 @@ async function handleDelete(
         },
       });
     } catch (e) {
-      console.error('admin soft delete stage logStaffAction error:', e);
+      logger.error('admin soft delete stage logStaffAction error:', e);
     }
   }
 

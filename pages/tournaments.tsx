@@ -9,6 +9,7 @@ import Paragraph from '@/components/Typography/paragraph';
 import { supabaseAdmin } from '@/utils/supabase';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
+import { logger } from '../utils/logger';
 type Tournament = {
   id: string;
   name: string;
@@ -54,7 +55,7 @@ export const getStaticProps: GetStaticProps<
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('[tournaments] fetch error:', error);
+    logger.error('[tournaments] fetch error:', error);
     return { props: { tournaments: [] }, revalidate: 60 };
   }
 

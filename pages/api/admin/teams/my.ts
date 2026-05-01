@@ -4,6 +4,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { sanitizeUrl } from '@/utils/apiHelpers';
 import { withAuthRoute } from '@/utils/staff';
 
+import { logger } from '../../../../utils/logger';
 type MemberRow = {
   id: string;
   user_id: string | null;
@@ -62,7 +63,7 @@ export default withAuthRoute(async function handler(
       .maybeSingle();
 
     if (membershipErr) {
-      console.error('[teams/my] membership error:', membershipErr);
+      logger.error('[teams/my] membership error:', membershipErr);
       return res.status(500).json({ error: 'Failed to load your team.' });
     }
 
@@ -95,7 +96,7 @@ export default withAuthRoute(async function handler(
       .order('created_at', { ascending: true });
 
     if (membersErr) {
-      console.error('[teams/my] members error:', membersErr);
+      logger.error('[teams/my] members error:', membersErr);
       return res
         .status(500)
         .json({ error: 'Failed to load your team members.' });
@@ -197,7 +198,7 @@ export default withAuthRoute(async function handler(
       .maybeSingle();
 
     if (updateErr) {
-      console.error('[teams/my] update error:', updateErr);
+      logger.error('[teams/my] update error:', updateErr);
       return res.status(500).json({ error: 'Failed to update team.' });
     }
 

@@ -9,6 +9,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { isValidUUID } from '@/utils/apiHelpers';
 import type { MatchFormat } from '@/types/matches';
 
+import { logger } from '../../../../../utils/logger';
 type ScheduledMatch = {
   id: string;
   stage_id: string | null;
@@ -102,7 +103,7 @@ async function handler(
       .not('scheduled_at', 'is', null);
 
     if (mErr) {
-      console.error('conflicts: fetch matches error', mErr);
+      logger.error('conflicts: fetch matches error', mErr);
       return res.status(500).json({ error: 'Failed to fetch matches' });
     }
 
@@ -231,7 +232,7 @@ async function handler(
       checked_matches: matches.length,
     });
   } catch (err: unknown) {
-    console.error('[/api/admin/tournament/[id]/conflicts] error:', err);
+    logger.error('[/api/admin/tournament/[id]/conflicts] error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

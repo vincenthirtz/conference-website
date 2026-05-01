@@ -10,6 +10,7 @@ import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import ExistingTeamSelector from '@/components/player/ExistingTeamSelector';
 import NewTeamForm from '@/components/player/NewTeamForm';
 
+import { logger } from '../../utils/logger';
 type Team = {
   id: string;
   name: string;
@@ -71,7 +72,7 @@ export default function RequestCaptainPage() {
         }
         if (!cancelled) await loadTeams();
       } catch (err) {
-        console.error('[request-captain] auth error:', err);
+        logger.error('[request-captain] auth error:', err);
         if (!cancelled) setError('Erreur de connexion.');
       } finally {
         if (!cancelled) setLoading(false);
@@ -95,7 +96,7 @@ export default function RequestCaptainPage() {
         setTeams(data.teams || []);
       }
     } catch (err) {
-      console.error('[request-captain] load teams error:', err);
+      logger.error('[request-captain] load teams error:', err);
     } finally {
       setTeamsLoading(false);
     }

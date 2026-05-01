@@ -6,6 +6,7 @@ import { withStaffPage } from '@/utils/staff';
 import Button from '@/components/Buttons/button';
 import { useToast } from '@/components/Toast';
 
+import { logger } from '../../../utils/logger';
 type StaffShape = {
   id: string;
   role: string;
@@ -101,7 +102,7 @@ function AdminCreateUserPage({ staff }: StaffProps) {
       const json = await res.json();
       setTeams(json.teams || []);
     } catch (e) {
-      console.error('Failed to load teams list', e);
+      logger.error('Failed to load teams list', e);
     } finally {
       setLoadingTeams(false);
     }

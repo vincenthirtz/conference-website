@@ -16,6 +16,7 @@ import { sendMatchCheckinEmail } from './email';
 import { notifyCheckinReminder, notifyCheckinForfeit } from './discord';
 import { applyMatchScore } from './matches/applyScore';
 
+import { logger } from './logger';
 export const CHECKIN_OPEN_MINUTES = 60;
 export const REMINDER_30_MINUTES = 30;
 export const REMINDER_15_MINUTES = 15;
@@ -174,7 +175,7 @@ export async function redeemCheckinToken(
     .eq('id', resolved.matchId);
 
   if (error) {
-    console.error('[checkin] redeem update error:', error);
+    logger.error('[checkin] redeem update error:', error);
     return { ok: false, error: "Échec de l'enregistrement du check-in" };
   }
 
@@ -209,7 +210,7 @@ async function getCaptainEmail(teamId: string): Promise<string | null> {
     );
     return data?.user?.email ?? null;
   } catch (e) {
-    console.error('[checkin] getCaptainEmail error:', e);
+    logger.error('[checkin] getCaptainEmail error:', e);
     return null;
   }
 }
@@ -528,7 +529,7 @@ async function runForfeitStep(
     forfeitedTeamName: forfeitedName,
     forfeitedTeamRoleId: forfeitedRoleId,
     opponentName: winnerName,
-  }).catch((e) => console.error('[checkin] notifyCheckinForfeit error:', e));
+  }).catch((e) => logger.error('[checkin] notifyCheckinForfeit error:', e));
 
   await markForfeitProcessed(match.id, result);
   result.steps.push(`forfeit (${forfeitedName} -> walkover)`);
@@ -606,7 +607,7 @@ export async function processCheckinForUpcomingMatches(opts?: {
   const { data: matches, error } = await q;
 
   if (error) {
-    console.error('[checkin] bulk scan error:', error);
+    logger.error('[checkin] bulk scan error:', error);
     return summary;
   }
 
@@ -676,7 +677,7 @@ export async function listCheckinStatus(
     .order('scheduled_at', { ascending: true, nullsFirst: false });
 
   if (error) {
-    console.error('[checkin] listCheckinStatus error:', error);
+    logger.error('[checkin] listCheckinStatus error:', error);
     return [];
   }
 

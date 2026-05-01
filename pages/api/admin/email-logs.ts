@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { withStaffRoute } from '../../../utils/staff';
 
+import { logger } from '../../../utils/logger';
 type BrevoEvent = {
   email: string;
   date: string;
@@ -66,7 +67,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const data: BrevoResponse = await response.json();
     return res.status(200).json(data);
   } catch (err) {
-    console.error('[email-logs] fetch error:', err);
+    logger.error('[email-logs] fetch error:', err);
     return res.status(502).json({ error: 'Failed to reach Brevo API' });
   }
 }

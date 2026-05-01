@@ -10,6 +10,7 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { sendTournamentNotificationEmail } from '@/utils/email';
 
+import { logger } from '../../../../utils/logger';
 export default withStaffRoute(handler, 'manager');
 
 async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
@@ -47,7 +48,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
     .not('captain_id', 'is', null);
 
   if (teamsErr) {
-    console.error('[notify-captains] teams error:', teamsErr);
+    logger.error('[notify-captains] teams error:', teamsErr);
     return res.status(500).json({ error: 'Echec du chargement des equipes.' });
   }
 
@@ -161,7 +162,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
         },
       });
     } catch (logErr) {
-      console.error('[notify-captains] log error:', logErr);
+      logger.error('[notify-captains] log error:', logErr);
     }
   }
 

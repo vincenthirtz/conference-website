@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { withStaffPage } from '@/utils/staff';
 import { supabaseClient } from '@/utils/supabase';
 
+import { logger } from '../../../utils/logger';
 type TwitchChannelRow = {
   id: string;
   channel: string;
@@ -71,7 +72,7 @@ function AdminTwitchChannelsPage({ staff }: Props) {
 
       setChannels(json.items || []);
     } catch (err) {
-      console.error('Error fetching twitch channels', err);
+      logger.error('Error fetching twitch channels', err);
     } finally {
       setLoading(false);
     }
@@ -170,7 +171,7 @@ function AdminTwitchChannelsPage({ staff }: Props) {
           )
         );
       } catch (err: unknown) {
-        console.error('Reorder error', err);
+        logger.error('Reorder error', err);
         alert('Erreur lors de la sauvegarde de l\u2019ordre.');
         fetchData();
       } finally {

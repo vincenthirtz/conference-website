@@ -4,6 +4,7 @@ import Button from '@/components/Buttons/button';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 
+import { logger } from '../../utils/logger';
 type PatchNote = {
   id: string;
   title: string;
@@ -47,7 +48,7 @@ function PatchNotesSection(): JSX.Element {
           setError(data.error);
         }
       } catch (err) {
-        console.error('Failed to load patch notes', err);
+        logger.error('Failed to load patch notes', err);
         if (isMounted) {
           setError('Impossible de charger les patch notes pour le moment.');
         }

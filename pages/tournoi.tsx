@@ -11,6 +11,7 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import type { Team as TeamType } from '@/types/types';
 
+import { logger } from '../utils/logger';
 // Types
 
 type Match = {
@@ -352,7 +353,7 @@ function Tournoi() {
         result: finalResult || undefined,
       });
     } catch (err) {
-      console.error('Erreur génération finale:', err);
+      logger.error('Erreur génération finale:', err);
     }
   }, [matches, standings, teams]);
 

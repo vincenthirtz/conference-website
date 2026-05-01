@@ -6,6 +6,7 @@ import { withStaffPage } from '@/utils/staff';
 import { supabaseAdmin, supabaseClient } from '@/utils/supabase';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 
+import { logger } from '../../../utils/logger';
 type PartnerRow = {
   id: string;
   name: string;
@@ -349,7 +350,7 @@ export const getServerSideProps = withStaffPage('admin', async (ctx) => {
   const { data, error } = await q;
 
   if (error) {
-    console.error('admin partners SSR error:', error);
+    logger.error('admin partners SSR error:', error);
     return { partners: [] };
   }
 

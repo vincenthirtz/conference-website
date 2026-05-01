@@ -5,6 +5,7 @@ import Speaker from '@/components/Speaker/speaker';
 import { supabaseAdmin } from '@/utils/supabase';
 import { useSiteSetting } from '@/hooks/useSiteSettings';
 
+import { logger } from '../utils/logger';
 type CastMember = {
   id: string;
   name: string;
@@ -601,7 +602,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
     .order('sort_order', { ascending: true });
 
   if (error) {
-    console.error('[association] Error fetching cast members:', error);
+    logger.error('[association] Error fetching cast members:', error);
     return {
       props: {
         castMembers: [],

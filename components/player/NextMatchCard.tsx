@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type JSX } from 'react';
 import Link from 'next/link';
 import { supabaseClient } from '@/utils/supabase';
 
+import { logger } from '../../utils/logger';
 type NextMatch = {
   match: {
     id: string;
@@ -78,7 +79,7 @@ export default function NextMatchCard(): JSX.Element | null {
       const json: NextMatch = await res.json();
       setData(json);
     } catch (err) {
-      console.error('[NextMatchCard] load error:', err);
+      logger.error('[NextMatchCard] load error:', err);
     } finally {
       setLoading(false);
     }

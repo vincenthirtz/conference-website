@@ -18,6 +18,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../../utils/logger';
 type ApiResponse =
   | {
       mode: 'shift_round';
@@ -69,7 +70,7 @@ async function handler(
       error: "Invalid mode. Use 'shift_round' or 'reassign_stage'.",
     });
   } catch (err: unknown) {
-    console.error('[admin/tournament/bulk-matches] error:', err);
+    logger.error('[admin/tournament/bulk-matches] error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
@@ -189,7 +190,7 @@ async function handleShiftRound(
         },
       });
     } catch (e) {
-      console.error('shift_round logStaffAction error:', e);
+      logger.error('shift_round logStaffAction error:', e);
     }
   }
 
@@ -314,7 +315,7 @@ async function handleReassignStage(
         },
       });
     } catch (e) {
-      console.error('reassign_stage logStaffAction error:', e);
+      logger.error('reassign_stage logStaffAction error:', e);
     }
   }
 

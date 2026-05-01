@@ -6,6 +6,7 @@
 import { supabaseAdmin } from './supabase';
 import { logStaffAction } from './staffLogs';
 
+import { logger } from './logger';
 export const MAX_NAME = 100;
 export const MAX_SHORT_NAME = 20;
 export const MAX_COUNTRY = 10;
@@ -190,7 +191,7 @@ export async function importTeams(
         },
       });
     } catch (e) {
-      console.error('importTeams logStaffAction error:', e);
+      logger.error('importTeams logStaffAction error:', e);
     }
   }
 

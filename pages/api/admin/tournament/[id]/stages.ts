@@ -11,6 +11,7 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { validateStageSettings } from '@/utils/stageSettings';
 
+import { logger } from '../../../../../utils/logger';
 type StageType =
   | 'group'
   | 'bracket'
@@ -62,7 +63,7 @@ async function handler(
         return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (err: unknown) {
-    console.error('[/api/admin/tournament/[id]/stages] internal error:', err);
+    logger.error('[/api/admin/tournament/[id]/stages] internal error:', err);
     return res.status(500).json({
       error: 'Internal server error',
     });
@@ -86,7 +87,7 @@ async function handleGet(
     .order('order_index', { ascending: true, nullsFirst: false });
 
   if (error) {
-    console.error('admin GET tournament stages error:', error);
+    logger.error('admin GET tournament stages error:', error);
     return res.status(500).json({ error: 'Failed to fetch tournament stages' });
   }
 
@@ -226,7 +227,7 @@ async function handlePost(
     .single();
 
   if (error || !data) {
-    console.error('admin POST tournament stage error:', error);
+    logger.error('admin POST tournament stage error:', error);
     return res.status(500).json({ error: 'Failed to create stage' });
   }
 
@@ -246,7 +247,7 @@ async function handlePost(
         },
       });
     } catch (e) {
-      console.error('logStaffAction error:', e);
+      logger.error('logStaffAction error:', e);
     }
   }
 
@@ -319,7 +320,7 @@ async function handlePatch(
   }
 
   if (errors.length > 0) {
-    console.error('admin PATCH tournament stages errors:', errors);
+    logger.error('admin PATCH tournament stages errors:', errors);
     return res.status(500).json({ error: 'Some stages failed to update' });
   }
 
@@ -340,7 +341,7 @@ async function handlePatch(
         },
       });
     } catch (e) {
-      console.error('logStaffAction error:', e);
+      logger.error('logStaffAction error:', e);
     }
   }
 

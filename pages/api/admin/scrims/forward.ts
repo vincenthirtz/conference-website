@@ -9,6 +9,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../utils/logger';
 type ForwardBody = {
   demandeId?: string;
   targetTeamId?: string;
@@ -113,7 +114,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
     .single();
 
   if (insertErr || !inserted) {
-    console.error('[admin/scrims/forward] insert error:', insertErr);
+    logger.error('[admin/scrims/forward] insert error:', insertErr);
     return res.status(500).json({ error: 'Échec du transfert.' });
   }
 
@@ -149,7 +150,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
         },
       });
     } catch (e) {
-      console.error('[admin/scrims/forward] log error:', e);
+      logger.error('[admin/scrims/forward] log error:', e);
     }
   }
 

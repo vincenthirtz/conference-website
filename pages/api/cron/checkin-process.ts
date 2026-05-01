@@ -9,6 +9,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { processCheckinForUpcomingMatches } from '@/utils/checkin';
 import { supabaseAdmin } from '@/utils/supabase';
 
+import { logger } from '../../../utils/logger';
 export const config = {
   api: {
     // Cron jobs may run for a few seconds when there are many matches in the
@@ -21,7 +22,7 @@ function isAuthorized(req: NextApiRequest): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     // If no secret is configured, refuse rather than running unauthenticated
-    console.error('[cron/checkin] CRON_SECRET not configured — refusing');
+    logger.error('[cron/checkin] CRON_SECRET not configured — refusing');
     return false;
   }
 
@@ -49,7 +50,7 @@ export default async function handler(
 
   try {
     const summary = await processCheckinForUpcomingMatches();
-    console.log(
+    logger.info(
       '[cron/checkin] scanned=%d acted=%d errors=%d',
       summary.scanned,
       summary.acted,
@@ -71,7 +72,7 @@ export default async function handler(
           { onConflict: 'key' }
         );
       } catch (e) {
-        console.error('[cron/checkin] heartbeat write error:', e);
+        logger.error('[cron/checkin] heartbeat write error:', e);
       }
     }
 
@@ -80,7 +81,7 @@ export default async function handler(
       ...summary,
     });
   } catch (err) {
-    console.error('[cron/checkin] error:', err);
+    logger.error('[cron/checkin] error:', err);
     return res
       .status(500)
       .json({ error: 'Internal server error', detail: String(err) });

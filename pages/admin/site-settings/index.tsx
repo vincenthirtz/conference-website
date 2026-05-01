@@ -4,6 +4,7 @@ import { withStaffPage } from '@/utils/staff';
 import { supabaseClient } from '@/utils/supabase';
 import { useToast } from '@/components/Toast';
 
+import { logger } from '../../../utils/logger';
 type SiteSetting = {
   key: string;
   value: string;
@@ -111,7 +112,7 @@ function AdminSiteSettingsPage({ staff }: Props) {
       setSettings(settingsMap);
       setValues(valuesMap);
     } catch (err) {
-      console.error('Error fetching site settings', err);
+      logger.error('Error fetching site settings', err);
     } finally {
       setLoading(false);
     }

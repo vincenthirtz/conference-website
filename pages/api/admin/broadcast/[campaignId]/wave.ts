@@ -7,6 +7,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { getCampaign, processCampaignWave } from '@/utils/broadcasts';
 
+import { logger } from '../../../../../utils/logger';
 export default withStaffRoute(handler, 'admin');
 
 async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
@@ -25,7 +26,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
   try {
     result = await processCampaignWave(campaignId);
   } catch (err: unknown) {
-    console.error('[broadcast/wave] error:', err);
+    logger.error('[broadcast/wave] error:', err);
     return res.status(500).json({ error: (err as Error).message });
   }
 
@@ -53,7 +54,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
         },
       });
     } catch (logErr) {
-      console.error('[broadcast/wave] log error:', logErr);
+      logger.error('[broadcast/wave] log error:', logErr);
     }
   }
 

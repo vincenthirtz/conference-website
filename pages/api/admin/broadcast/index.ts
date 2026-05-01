@@ -7,6 +7,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { BROADCAST_CAMPAIGNS } from '@/utils/broadcasts';
 
+import { logger } from '../../../../utils/logger';
 type CampaignStats = {
   totalSent: number;
   totalFailed: number;
@@ -56,7 +57,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     .limit(500);
 
   if (error) {
-    console.error('[broadcast/index] staff_logs error:', error);
+    logger.error('[broadcast/index] staff_logs error:', error);
     return res.status(500).json({ error: 'Echec du chargement des stats' });
   }
 
@@ -94,7 +95,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const campaignIds = BROADCAST_CAMPAIGNS.map((c) => c.id);
   const scheduleByCampaign = new Map<
     string,
-    { waveSize: number; status: 'scheduled' | 'paused' | 'completed'; lastWaveAt: string | null; totalRecipients: number }
+    {
+      waveSize: number;
+      status: 'scheduled' | 'paused' | 'completed';
+      lastWaveAt: string | null;
+      totalRecipients: number;
+    }
   >();
   const recipientCounts = new Map<
     string,

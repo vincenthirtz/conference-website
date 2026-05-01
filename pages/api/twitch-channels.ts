@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../utils/logger';
 export type TwitchChannelPublic = {
   channel: string;
   label: string;
@@ -36,7 +37,7 @@ export default async function handler(
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('[/api/twitch-channels] fetch error', error);
+      logger.error('[/api/twitch-channels] fetch error', error);
       return res.status(500).json({ error: 'Failed to load channels.' });
     }
 
@@ -53,7 +54,7 @@ export default async function handler(
 
     return res.status(200).json({ items });
   } catch (err) {
-    console.error('[/api/twitch-channels] error', err);
+    logger.error('[/api/twitch-channels] error', err);
     return res.status(500).json({ error: 'Internal server error.' });
   }
 }

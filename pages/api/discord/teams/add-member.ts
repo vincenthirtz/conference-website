@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import crypto from 'crypto';
 import { supabaseAdmin } from '@/utils/supabase';
 
+import { logger } from '../../../../utils/logger';
 type Body = {
   team_id?: string;
   user_id?: string;
@@ -84,7 +85,7 @@ export default async function handler(
         });
 
       if (listErr) {
-        console.error(
+        logger.error(
           '[/api/discord/teams/add-member] listUsers error:',
           listErr
         );
@@ -135,7 +136,7 @@ export default async function handler(
         .eq('id', teamId);
 
       if (captainErr) {
-        console.error(
+        logger.error(
           '[/api/discord/teams/add-member] captain update error:',
           captainErr
         );
@@ -160,7 +161,7 @@ export default async function handler(
         : 'Member added to team',
     });
   } catch (err: unknown) {
-    console.error('[/api/discord/teams/add-member] error:', err);
+    logger.error('[/api/discord/teams/add-member] error:', err);
     return res.status(500).json({
       error: (err as Error)?.message || 'Internal server error',
     });

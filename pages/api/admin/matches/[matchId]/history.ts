@@ -9,6 +9,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { formatStaffLog, StaffLog } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../../utils/logger';
 export default withStaffRoute(handler, 'manager'); // managers & + peuvent voir l'historique
 
 type MatchHistoryResponse = {
@@ -63,7 +64,7 @@ async function handler(
       .order('created_at', { ascending: false });
 
     if (matchErr) {
-      console.error('match history: matchLogs error:', matchErr);
+      logger.error('match history: matchLogs error:', matchErr);
     }
 
     // 2) Logs sur les maps/games rattachés au match (entity_type = "game" + payload.match_id)
@@ -93,7 +94,7 @@ async function handler(
       .order('created_at', { ascending: false });
 
     if (gameErr) {
-      console.error('match history: gameLogs error:', gameErr);
+      logger.error('match history: gameLogs error:', gameErr);
     }
 
     // 3) Merge + tri chrono desc
@@ -111,7 +112,7 @@ async function handler(
       logs: formatted,
     });
   } catch (err: unknown) {
-    console.error('[/api/admin/matches/[matchId]/history] error:', err);
+    logger.error('[/api/admin/matches/[matchId]/history] error:', err);
     return res.status(500).json({
       error: 'Internal server error',
     });

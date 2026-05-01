@@ -7,6 +7,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 
+import { logger } from '../../../utils/logger';
 type NewsRow = {
   id: string;
   title: string;
@@ -454,7 +455,7 @@ export const getServerSideProps = withStaffPage('admin', async (ctx) => {
   const { data, error, count } = await q;
 
   if (error) {
-    console.error('admin news SSR error:', error);
+    logger.error('admin news SSR error:', error);
     return { news: [], total: 0, errorMsg: 'Erreur lors du chargement' };
   }
 

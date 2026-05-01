@@ -6,6 +6,7 @@ import { supabaseClient } from '@/utils/supabase';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 
+import { logger } from '../../utils/logger';
 type StaffShape = {
   id: string;
   role: string;
@@ -89,7 +90,7 @@ function AdminProfilePage({ staff }: Props) {
           avatarUrl: json.avatar_url || '',
         });
       } catch (err: unknown) {
-        console.error('AdminProfilePage: profile fetch error', err);
+        logger.error('AdminProfilePage: profile fetch error', err);
         setErrorMsg((err as Error)?.message || 'Erreur inattendue');
       } finally {
         setLoading(false);
@@ -124,7 +125,7 @@ function AdminProfilePage({ staff }: Props) {
       );
       setNewEmail('');
     } catch (err: unknown) {
-      console.error('AdminProfilePage: email change error', err);
+      logger.error('AdminProfilePage: email change error', err);
       setEmailErrorMsg(
         (err as Error)?.message || "Erreur lors du changement d'email."
       );
@@ -162,7 +163,7 @@ function AdminProfilePage({ staff }: Props) {
       setNewPassword('');
       setConfirmPassword('');
     } catch (err: unknown) {
-      console.error('AdminProfilePage: password change error', err);
+      logger.error('AdminProfilePage: password change error', err);
       setPasswordErrorMsg(
         (err as Error)?.message || 'Erreur lors du changement de mot de passe.'
       );
@@ -212,7 +213,7 @@ function AdminProfilePage({ staff }: Props) {
       });
       addToast('Profil mis à jour.', 'success');
     } catch (err: unknown) {
-      console.error('AdminProfilePage: profile update error', err);
+      logger.error('AdminProfilePage: profile update error', err);
       setErrorMsg((err as Error)?.message || 'Erreur inattendue');
     } finally {
       setSaving(false);
@@ -248,7 +249,7 @@ function AdminProfilePage({ staff }: Props) {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err: unknown) {
-      console.error('AdminProfilePage: export error', err);
+      logger.error('AdminProfilePage: export error', err);
       setDataError((err as Error)?.message || 'Erreur lors de l\u2019export.');
     } finally {
       setExporting(false);
@@ -275,7 +276,7 @@ function AdminProfilePage({ staff }: Props) {
       await supabaseClient.auth.signOut();
       router.replace('/');
     } catch (err: unknown) {
-      console.error('AdminProfilePage: delete account error', err);
+      logger.error('AdminProfilePage: delete account error', err);
       setDataError((err as Error)?.message || 'Erreur lors de la suppression.');
     } finally {
       setDeleting(false);

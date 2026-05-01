@@ -8,6 +8,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 
+import { logger } from '../../../utils/logger';
 export type RegisterTeamBody = {
   teamId: string;
   tournamentId: string;
@@ -35,7 +36,7 @@ export default withAuthRoute(async function handler(
       .order('created_at', { ascending: false });
 
     if (demandesErr) {
-      console.error('[demandes/register-team] GET error:', demandesErr);
+      logger.error('[demandes/register-team] GET error:', demandesErr);
       return res.status(500).json({ error: 'Failed to load requests.' });
     }
 
@@ -185,7 +186,7 @@ export default withAuthRoute(async function handler(
       .single();
 
     if (insertErr) {
-      console.error('[demandes/register-team] insert error:', insertErr);
+      logger.error('[demandes/register-team] insert error:', insertErr);
       return res
         .status(500)
         .json({ error: 'Echec de la creation de la demande.' });

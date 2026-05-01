@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 
+import { logger } from '../../../utils/logger';
 type StaffShape = {
   id: string;
   role: string;
@@ -120,7 +121,7 @@ function AdminTeamsStatsPage({ staff }: StaffProps) {
       const json: TournamentsApiResponse = await res.json();
       setTournaments(json.tournaments || []);
     } catch (err) {
-      console.error('Failed to load tournaments for stats filters', err);
+      logger.error('Failed to load tournaments for stats filters', err);
     } finally {
       setLoadingTournaments(false);
     }

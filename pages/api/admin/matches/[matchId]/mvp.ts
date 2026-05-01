@@ -10,6 +10,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../../utils/logger';
 export default withStaffRoute(handler, 'caster');
 
 async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
@@ -37,7 +38,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
     res.setHeader('Allow', 'GET,POST,DELETE');
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
-    console.error('[admin/matches/mvp] error:', err);
+    logger.error('[admin/matches/mvp] error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
@@ -173,7 +174,7 @@ async function handlePost(
       .select('*')
       .maybeSingle();
     if (error) {
-      console.error('[admin/matches/mvp] update error:', error);
+      logger.error('[admin/matches/mvp] update error:', error);
       return res.status(500).json({ error: "Échec de l'enregistrement" });
     }
     result = data;
@@ -187,7 +188,7 @@ async function handlePost(
       .select('*')
       .maybeSingle();
     if (error) {
-      console.error('[admin/matches/mvp] insert error:', error);
+      logger.error('[admin/matches/mvp] insert error:', error);
       return res.status(500).json({ error: "Échec de l'enregistrement" });
     }
     result = data;
@@ -225,7 +226,7 @@ async function handleDelete(matchId: string, res: NextApiResponse, ctx: any) {
     .maybeSingle();
 
   if (error) {
-    console.error('[admin/matches/mvp] clear error:', error);
+    logger.error('[admin/matches/mvp] clear error:', error);
     return res.status(500).json({ error: 'Échec' });
   }
 

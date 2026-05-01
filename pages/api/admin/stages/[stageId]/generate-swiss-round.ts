@@ -36,6 +36,7 @@ import type {
 import type { MatchStatus } from '@/types/admin';
 import { isValidUUID } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../../utils/logger';
 type StageRow = {
   id: string;
   tournament_id: string;
@@ -166,7 +167,7 @@ async function handler(
       .eq('stage_id', id);
 
     if (teamErr) {
-      console.error('generate-swiss-round stage_teams error:', teamErr);
+      logger.error('generate-swiss-round stage_teams error:', teamErr);
       return res.status(500).json({
         error: 'Failed to fetch stage participants',
       });
@@ -202,7 +203,7 @@ async function handler(
       .neq('status', 'cancelled');
 
     if (matchesErr) {
-      console.error('generate-swiss-round matches error:', matchesErr);
+      logger.error('generate-swiss-round matches error:', matchesErr);
       return res.status(500).json({
         error: 'Failed to fetch stage matches',
       });
@@ -562,7 +563,7 @@ async function handler(
       .select('id, team1_id, team2_id, is_bye, round_number, status');
 
     if (insertErr || !inserted) {
-      console.error('generate-swiss-round insert matches error:', insertErr);
+      logger.error('generate-swiss-round insert matches error:', insertErr);
       return res.status(500).json({
         error: 'Failed to insert swiss matches',
       });
@@ -589,7 +590,7 @@ async function handler(
           },
         });
       } catch (e) {
-        console.error('generate-swiss-round logStaffAction error:', e);
+        logger.error('generate-swiss-round logStaffAction error:', e);
       }
     }
 
@@ -605,7 +606,7 @@ async function handler(
 
     return res.status(200).json(response);
   } catch (err: unknown) {
-    console.error(
+    logger.error(
       '[/api/admin/stages/[stageId]/generate-swiss-round] error:',
       err
     );

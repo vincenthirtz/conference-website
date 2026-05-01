@@ -11,6 +11,7 @@ import type { StaffProps, Stage, StageType, Tournament } from '@/types/admin';
 import AdvancementRulesEditor from '@/components/admin/AdvancementRulesEditor';
 import type { AdvancementRules } from '@/components/admin/AdvancementRulesEditor';
 
+import { logger } from '../../../utils/logger';
 type StageApiResponse = {
   stage: Stage;
 };
@@ -295,7 +296,7 @@ function AdminStagePage({ staff }: StaffProps) {
             setTournament(json2.tournament);
           }
         } catch (e) {
-          console.error('fetch parent tournament error', e);
+          logger.error('fetch parent tournament error', e);
         }
 
         // Fetch sibling stages for advancement target dropdown
@@ -315,7 +316,7 @@ function AdminStagePage({ staff }: StaffProps) {
             setAdvancementSiblingStages(siblings);
           }
         } catch (e) {
-          console.error('fetch sibling stages error', e);
+          logger.error('fetch sibling stages error', e);
         }
       }
     } catch (err: unknown) {
@@ -334,7 +335,7 @@ function AdminStagePage({ staff }: StaffProps) {
         setSwissStatus(json);
       }
     } catch (e) {
-      console.error('fetchSwissStatus error', e);
+      logger.error('fetchSwissStatus error', e);
     }
   }, [stageId]);
 
@@ -347,7 +348,7 @@ function AdminStagePage({ staff }: StaffProps) {
         setCompletionStatus(json);
       }
     } catch (e) {
-      console.error('fetchCompletionStatus error', e);
+      logger.error('fetchCompletionStatus error', e);
     }
   }, [stageId]);
 
@@ -375,7 +376,7 @@ function AdminStagePage({ staff }: StaffProps) {
         );
       }
     } catch (e) {
-      console.error('fetch tournaments error', e);
+      logger.error('fetch tournaments error', e);
     }
   }
 
@@ -412,7 +413,7 @@ function AdminStagePage({ staff }: StaffProps) {
             setTournament(json2.tournament);
           }
         } catch (e) {
-          console.error('fetch updated tournament error', e);
+          logger.error('fetch updated tournament error', e);
         }
       }
     } catch (err: unknown) {
@@ -526,7 +527,7 @@ function AdminStagePage({ staff }: StaffProps) {
         if (others.length > 0) setAdvanceTargetStageId(others[0].id);
       }
     } catch (err) {
-      console.error('openAdvanceModal error:', err);
+      logger.error('openAdvanceModal error:', err);
     } finally {
       setAdvanceLoading(false);
     }
@@ -654,7 +655,7 @@ function AdminStagePage({ staff }: StaffProps) {
         if (sources.length > 0) setAutoSeedSourceStageId(sources[0].id);
       }
     } catch (err) {
-      console.error('openAutoSeedModal error:', err);
+      logger.error('openAutoSeedModal error:', err);
     } finally {
       setAutoSeedLoading(false);
     }

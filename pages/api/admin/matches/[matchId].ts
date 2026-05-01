@@ -12,6 +12,7 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { notifyMatchStarting } from '@/utils/discord';
 
+import { logger } from '../../../../utils/logger';
 export default withStaffRoute(handler, 'manager'); // rôle min : manager
 
 async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
@@ -34,7 +35,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (err: unknown) {
-    console.error('[/api/admin/matches/[matchId]] error:', err);
+    logger.error('[/api/admin/matches/[matchId]] error:', err);
     return res.status(500).json({
       error: 'Internal server error',
     });
@@ -106,7 +107,7 @@ async function handleGet(
     .maybeSingle();
 
   if (error || !data) {
-    console.error('admin GET match error:', error);
+    logger.error('admin GET match error:', error);
     return res.status(404).json({ error: 'Match not found' });
   }
 
@@ -415,7 +416,7 @@ async function handlePut(
     .maybeSingle();
 
   if (updErr || !updated) {
-    console.error('admin PUT match meta error:', updErr);
+    logger.error('admin PUT match meta error:', updErr);
     return res.status(500).json({
       error: 'Failed to update match metadata',
     });
@@ -444,7 +445,7 @@ async function handlePut(
     before.status !== 'ongoing'
   ) {
     void notifyMatchStartingForMatch(matchId).catch((e) =>
-      console.error('[discord] notifyMatchStarting error:', e)
+      logger.error('[discord] notifyMatchStarting error:', e)
     );
   }
 
@@ -541,7 +542,7 @@ async function handleDelete(
       .eq('id', matchId);
 
     if (error) {
-      console.error('admin hard delete match error:', error);
+      logger.error('admin hard delete match error:', error);
       return res.status(500).json({
         error: 'Failed to hard-delete match',
       });
@@ -578,7 +579,7 @@ async function handleDelete(
     .eq('id', matchId);
 
   if (error) {
-    console.error('admin cancel match error:', error);
+    logger.error('admin cancel match error:', error);
     return res.status(500).json({
       error: 'Failed to cancel match',
     });

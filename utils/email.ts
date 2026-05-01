@@ -1,3 +1,4 @@
+import { logger } from './logger';
 // utils/email.ts
 // Lightweight email utility using Brevo (ex-Sendinblue) transactional API.
 // Free tier: 300 emails/day — https://brevo.com
@@ -35,7 +36,7 @@ export async function sendEmail(
   const fromName = process.env.EMAIL_FROM_NAME || 'Tournoi';
 
   if (!apiKey) {
-    console.warn('[email] BREVO_API_KEY not set — skipping email');
+    logger.warn('[email] BREVO_API_KEY not set — skipping email');
     return { success: false, error: 'BREVO_API_KEY not configured' };
   }
 
@@ -66,11 +67,11 @@ export async function sendEmail(
 
     if (!res.ok) {
       const msg = data?.message || `HTTP ${res.status}`;
-      console.error('[email] Brevo error:', msg, JSON.stringify(data));
+      logger.error('[email] Brevo error:', msg, JSON.stringify(data));
       return { success: false, error: msg };
     }
 
-    console.log(
+    logger.info(
       '[email] sent to=%s subject=%s messageId=%s',
       opts.to,
       opts.subject,
@@ -78,7 +79,7 @@ export async function sendEmail(
     );
     return { success: true, id: data?.messageId };
   } catch (err: unknown) {
-    console.error('[email] fetch error:', err);
+    logger.error('[email] fetch error:', err);
     return {
       success: false,
       error: (err as Error)?.message || 'Network error',
@@ -274,9 +275,7 @@ export function buildIdahobitLiveEmailHtml(
   displayLabel: string | null
 ): string {
   const twitchUrl = 'https://www.twitch.tv/womens_cup';
-  const greeting = displayLabel
-    ? `Hey ${escapeHtml(displayLabel)},`
-    : 'Hey,';
+  const greeting = displayLabel ? `Hey ${escapeHtml(displayLabel)},` : 'Hey,';
 
   return emailLayout(`
     ${gradientBar()}

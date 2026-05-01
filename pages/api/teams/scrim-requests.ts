@@ -10,6 +10,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { withAuthRoute } from '@/utils/staff';
 
+import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -56,7 +57,7 @@ export default withAuthRoute(async function handler(
     const { data: demandes, error: demandesErr } = await query;
 
     if (demandesErr) {
-      console.error('[scrim-requests] GET error:', demandesErr);
+      logger.error('[scrim-requests] GET error:', demandesErr);
       return res.status(500).json({ error: 'Echec du chargement.' });
     }
 
@@ -171,7 +172,7 @@ export default withAuthRoute(async function handler(
       .eq('id', demandeId);
 
     if (updateErr) {
-      console.error('[scrim-requests] update error:', updateErr);
+      logger.error('[scrim-requests] update error:', updateErr);
       return res.status(500).json({ error: 'Echec de la mise a jour.' });
     }
 

@@ -6,6 +6,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { isValidUUID, escapePostgrestValue } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../utils/logger';
 type PlayerResult = {
   id: string;
   email: string | null;
@@ -202,7 +203,7 @@ async function handler(
 
     return res.status(200).json({ players });
   } catch (err: unknown) {
-    console.error('[api/admin/users/search] error:', err);
+    logger.error('[api/admin/users/search] error:', err);
     return res.status(500).json({ error: 'Search failed' });
   }
 }

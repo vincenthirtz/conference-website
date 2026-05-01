@@ -10,6 +10,7 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 import type { BracketSide } from '@/types/admin';
 import type { MatchForGraph } from '@/types/bracket';
+import { logger } from '../../../../../utils/logger';
 import {
   buildBracketGraph,
   validateBracketGraph,
@@ -47,7 +48,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
       });
     }
   } catch (err: unknown) {
-    console.error('[/api/admin/tournament/[id]/bracket] error:', err);
+    logger.error('[/api/admin/tournament/[id]/bracket] error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
@@ -175,7 +176,7 @@ async function handleGenerate(
     .order('round_number', { ascending: true });
 
   if (insertError) {
-    console.error('bracket generate insert error:', insertError);
+    logger.error('bracket generate insert error:', insertError);
     return res.status(500).json({
       error: 'Failed to create bracket matches',
       detail: insertError.message,
@@ -247,7 +248,7 @@ async function handleGenerate(
     }
 
     if (linkErrors.length > 0) {
-      console.error('bracket linkage errors, rolling back:', linkErrors);
+      logger.error('bracket linkage errors, rolling back:', linkErrors);
       const matchIds = rows.map((r) => r.id);
       await supabaseAdmin.from('matches').delete().in('id', matchIds);
       return res.status(500).json({
@@ -276,7 +277,7 @@ async function handleGenerate(
         },
       });
     } catch (e) {
-      console.error('logStaffAction error:', e);
+      logger.error('logStaffAction error:', e);
     }
   }
 
@@ -339,7 +340,7 @@ async function handleSave(
   }
 
   if (errors.length > 0) {
-    console.error('bracket save errors:', errors);
+    logger.error('bracket save errors:', errors);
   }
 
   // Log
@@ -357,7 +358,7 @@ async function handleSave(
         },
       });
     } catch (e) {
-      console.error('logStaffAction error:', e);
+      logger.error('logStaffAction error:', e);
     }
   }
 
@@ -401,7 +402,7 @@ async function handleValidate(
   const { data, error } = await query;
 
   if (error) {
-    console.error('bracket validate: fetch error', error);
+    logger.error('bracket validate: fetch error', error);
     return res.status(500).json({ error: 'Failed to fetch matches' });
   }
 
@@ -637,7 +638,7 @@ async function handleGenerateDoubleElim(
     .order('round_number', { ascending: true });
 
   if (insertError) {
-    console.error('double elim generate insert error:', insertError);
+    logger.error('double elim generate insert error:', insertError);
     return res.status(500).json({
       error: 'Failed to create double elimination matches',
       detail: insertError.message,
@@ -858,7 +859,7 @@ async function handleGenerateDoubleElim(
   }
 
   if (linkErrors.length > 0) {
-    console.error('double elim linkage errors, rolling back:', linkErrors);
+    logger.error('double elim linkage errors, rolling back:', linkErrors);
     const matchIds = rows.map((r) => r.id);
     await supabaseAdmin.from('matches').delete().in('id', matchIds);
     return res.status(500).json({
@@ -889,7 +890,7 @@ async function handleGenerateDoubleElim(
         },
       });
     } catch (e) {
-      console.error('logStaffAction error:', e);
+      logger.error('logStaffAction error:', e);
     }
   }
 

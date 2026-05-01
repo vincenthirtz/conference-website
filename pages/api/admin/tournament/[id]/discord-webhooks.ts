@@ -10,6 +10,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../../utils/logger';
 const VALID_CHANNEL_TYPES = [
   'match_announcements',
   'match_results',
@@ -72,7 +73,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (err) {
-    console.error('[discord-webhooks] error:', err);
+    logger.error('[discord-webhooks] error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
@@ -85,7 +86,7 @@ async function handleGet(tournamentId: string, res: NextApiResponse) {
     .order('channel_type', { ascending: true });
 
   if (error) {
-    console.error('[discord-webhooks] GET error:', error);
+    logger.error('[discord-webhooks] GET error:', error);
     return res.status(500).json({ error: 'Failed to load webhooks' });
   }
 
@@ -151,7 +152,7 @@ async function handlePut(
       .maybeSingle();
 
     if (error) {
-      console.error('[discord-webhooks] update error:', error);
+      logger.error('[discord-webhooks] update error:', error);
       return res.status(500).json({ error: 'Failed to update webhook' });
     }
     result = data;
@@ -169,7 +170,7 @@ async function handlePut(
       .maybeSingle();
 
     if (error) {
-      console.error('[discord-webhooks] insert error:', error);
+      logger.error('[discord-webhooks] insert error:', error);
       return res.status(500).json({ error: 'Failed to create webhook' });
     }
     result = data;
@@ -212,7 +213,7 @@ async function handleDelete(
     .eq('channel_type', channelType);
 
   if (error) {
-    console.error('[discord-webhooks] delete error:', error);
+    logger.error('[discord-webhooks] delete error:', error);
     return res.status(500).json({ error: 'Failed to delete webhook' });
   }
 

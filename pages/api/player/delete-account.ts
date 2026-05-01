@@ -7,6 +7,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { sendAccountDeletedEmail } from '@/utils/email';
 import { withAuthRoute } from '@/utils/staff';
 
+import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -57,7 +58,7 @@ export default withAuthRoute(async function handler(
   // Send account deleted email (non-blocking)
   if (user.email) {
     sendAccountDeletedEmail(user.email).catch((err) => {
-      console.error('[player/delete-account] email error:', err);
+      logger.error('[player/delete-account] email error:', err);
     });
   }
 
@@ -66,7 +67,7 @@ export default withAuthRoute(async function handler(
     await supabaseAdmin.auth.admin.deleteUser(userId);
 
   if (deleteErr) {
-    console.error('[player/delete-account] delete error:', deleteErr);
+    logger.error('[player/delete-account] delete error:', deleteErr);
     return res
       .status(500)
       .json({ error: 'Erreur lors de la suppression du compte.' });

@@ -5,6 +5,7 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../../../utils/logger';
 type AdherentPayload = {
   firstName?: string;
   lastName?: string;
@@ -153,7 +154,7 @@ async function handler(
       .single();
 
     if (error) {
-      console.error('[admin/adherents] update error', error);
+      logger.error('[admin/adherents] update error', error);
       return res.status(500).json({ error: 'Failed to update the member.' });
     }
 
@@ -193,7 +194,7 @@ async function handler(
     const { error } = await admin.from('adherents').delete().eq('id', id);
 
     if (error) {
-      console.error('[admin/adherents] delete error', error);
+      logger.error('[admin/adherents] delete error', error);
       return res.status(500).json({ error: 'Failed to delete the member.' });
     }
 

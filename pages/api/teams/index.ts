@@ -11,6 +11,7 @@ import {
 } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../../utils/logger';
 export type PublicTeam = {
   id: string;
   name: string;
@@ -77,7 +78,7 @@ export default async function handler(
     const { data, error, count } = await query;
 
     if (error) {
-      console.error('[api/teams] error:', error);
+      logger.error('[api/teams] error:', error);
       return res.status(500).json({ error: 'Failed to fetch teams' });
     }
 
@@ -101,7 +102,7 @@ export default async function handler(
       total: typeof count === 'number' ? count : null,
     });
   } catch (err: unknown) {
-    console.error('[api/teams] internal error:', err);
+    logger.error('[api/teams] internal error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

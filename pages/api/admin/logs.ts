@@ -26,6 +26,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { StaffLog, formatStaffLog } from '@/utils/staffLogs';
+import { logger } from '../../../utils/logger';
 import {
   parsePagination,
   sanitizeSearch,
@@ -114,7 +115,7 @@ async function handler(
     const { data, error, count } = await query;
 
     if (error) {
-      console.error('admin logs GET error:', error);
+      logger.error('admin logs GET error:', error);
       return res.status(500).json({
         error: 'Failed to fetch staff logs',
       });
@@ -128,7 +129,7 @@ async function handler(
       total: typeof count === 'number' ? count : null,
     });
   } catch (err: unknown) {
-    console.error('[/api/admin/logs] internal error:', err);
+    logger.error('[/api/admin/logs] internal error:', err);
     return res.status(500).json({
       error: 'Internal server error',
     });

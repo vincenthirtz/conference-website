@@ -7,6 +7,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 
+import { logger } from '../../../utils/logger';
 type AnnouncementRow = {
   id: string;
   title: string;
@@ -463,7 +464,7 @@ export const getServerSideProps = withStaffPage('admin', async (ctx) => {
   const { data, error, count } = await q;
 
   if (error) {
-    console.error('admin announcements SSR error:', error);
+    logger.error('admin announcements SSR error:', error);
     return {
       announcements: [],
       total: 0,

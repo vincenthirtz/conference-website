@@ -8,6 +8,7 @@ import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
 
+import { logger } from '../../../utils/logger';
 type Tournament = {
   id: string;
   name: string;
@@ -111,7 +112,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     .neq('status', 'cancelled');
 
   if (mErr) {
-    console.error('maps page matches error:', mErr);
+    logger.error('maps page matches error:', mErr);
   }
 
   const allMatches = (matchesData || []) as MatchRow[];

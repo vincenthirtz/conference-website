@@ -9,6 +9,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID, validateRole } from '@/utils/apiHelpers';
 import { withAuthRoute } from '@/utils/staff';
 
+import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -88,7 +89,7 @@ export default withAuthRoute(async function handler(
     .eq('team_id', captainTeam.id);
 
   if (updateErr) {
-    console.error('[update-member-role] error:', updateErr);
+    logger.error('[update-member-role] error:', updateErr);
     return res.status(500).json({ error: 'Echec de la mise a jour du role.' });
   }
 

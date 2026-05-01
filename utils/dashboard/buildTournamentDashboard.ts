@@ -8,6 +8,7 @@
 import { supabaseAdmin } from '../supabase';
 import { isValidUUID } from '../apiHelpers';
 
+import { logger } from '../logger';
 /* -----------------------------------------------------------
  * Types exportés
  * ---------------------------------------------------------*/
@@ -1087,7 +1088,7 @@ export async function fetchDashboardData(
 
     return { ok: true, data };
   } catch (err: unknown) {
-    console.error('[buildTournamentDashboard] error:', err);
+    logger.error('[buildTournamentDashboard] error:', err);
     return { ok: false, status: 500, error: 'Internal server error' };
   }
 }

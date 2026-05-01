@@ -6,6 +6,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { isValidUUID } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../utils/logger';
 type LeaderboardEntry = {
   memberId: string | null;
   battleTag: string | null;
@@ -210,7 +211,7 @@ export default async function handler(
       perMatch,
     });
   } catch (err: unknown) {
-    console.error('[/api/tournaments/[id]/mvp-leaderboard] error:', err);
+    logger.error('[/api/tournaments/[id]/mvp-leaderboard] error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

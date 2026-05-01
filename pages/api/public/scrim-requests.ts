@@ -11,6 +11,7 @@ import { verifyCaptcha } from '@/utils/captcha';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { notifyScrimRequest } from '@/utils/discord';
 
+import { logger } from '../../../utils/logger';
 type Body = {
   targetTeamId?: string;
   targetTeamSlug?: string;
@@ -239,7 +240,7 @@ export default async function handler(
     .single();
 
   if (insertErr || !inserted) {
-    console.error('[public/scrim-requests] insert error:', insertErr);
+    logger.error('[public/scrim-requests] insert error:', insertErr);
     return res.status(500).json({ error: 'Échec de la création.' });
   }
 

@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../utils/logger';
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -50,7 +51,7 @@ export default async function handler(
     .order('key');
 
   if (error) {
-    console.error('[site-settings] list error', error);
+    logger.error('[site-settings] list error', error);
     return res.status(500).json({ error: 'Failed to load settings.' });
   }
 

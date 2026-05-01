@@ -8,6 +8,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 
+import { logger } from '../../../utils/logger';
 export type TransferRequestBody = {
   teamId: string;
   desiredRole?: 'player' | 'substitute' | 'coach';
@@ -37,7 +38,7 @@ export default withAuthRoute(async function handler(
       .order('created_at', { ascending: false });
 
     if (demandesErr) {
-      console.error('[demandes/transfer] GET error:', demandesErr);
+      logger.error('[demandes/transfer] GET error:', demandesErr);
       return res.status(500).json({ error: 'Failed to load requests.' });
     }
 
@@ -74,7 +75,7 @@ export default withAuthRoute(async function handler(
         .maybeSingle();
 
       if (captMemErr) {
-        console.error('[demandes/transfer] captain check error:', captMemErr);
+        logger.error('[demandes/transfer] captain check error:', captMemErr);
         return res.status(500).json({ error: 'Verification error.' });
       }
 
@@ -106,7 +107,7 @@ export default withAuthRoute(async function handler(
           .maybeSingle();
 
       if (playerMemErr) {
-        console.error('[demandes/transfer] player check error:', playerMemErr);
+        logger.error('[demandes/transfer] player check error:', playerMemErr);
         return res.status(500).json({ error: 'Verification error.' });
       }
 
@@ -158,7 +159,7 @@ export default withAuthRoute(async function handler(
         .maybeSingle();
 
       if (existErr) {
-        console.error('[demandes/transfer] check existing error:', existErr);
+        logger.error('[demandes/transfer] check existing error:', existErr);
         return res.status(500).json({ error: 'Verification error.' });
       }
 
@@ -219,7 +220,7 @@ export default withAuthRoute(async function handler(
         .single();
 
       if (insertErr) {
-        console.error('[demandes/transfer] captain insert error:', insertErr);
+        logger.error('[demandes/transfer] captain insert error:', insertErr);
         return res.status(500).json({ error: 'Failed to create request.' });
       }
 
@@ -246,7 +247,7 @@ export default withAuthRoute(async function handler(
       .maybeSingle();
 
     if (memberErr) {
-      console.error('[demandes/transfer] check member error:', memberErr);
+      logger.error('[demandes/transfer] check member error:', memberErr);
       return res.status(500).json({ error: 'Verification error.' });
     }
 
@@ -306,7 +307,7 @@ export default withAuthRoute(async function handler(
       .maybeSingle();
 
     if (existingErr) {
-      console.error('[demandes/transfer] check existing error:', existingErr);
+      logger.error('[demandes/transfer] check existing error:', existingErr);
       return res.status(500).json({ error: 'Verification error.' });
     }
 
@@ -356,7 +357,7 @@ export default withAuthRoute(async function handler(
       .single();
 
     if (insertErr) {
-      console.error('[demandes/transfer] insert error:', insertErr);
+      logger.error('[demandes/transfer] insert error:', insertErr);
       return res.status(500).json({ error: 'Failed to create request.' });
     }
 

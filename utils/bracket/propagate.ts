@@ -5,6 +5,7 @@ import { supabaseAdmin } from '../supabase';
 import type { MatchRow, PropagationResult } from '@/types/bracket';
 import type { TiebreakerPolicy } from '@/types/admin';
 
+import { logger } from '../logger';
 export type { MatchStatus } from '@/types/admin';
 export type { BracketSide } from '@/types/admin';
 export type { MatchRow, PropagationResult } from '@/types/bracket';
@@ -149,10 +150,7 @@ export async function propagateBracketForMatch(
     }
   } catch (err) {
     // Rollback : restaurer les slots à leur état d'avant propagation
-    console.error(
-      `Propagation failed for match ${matchId}, rolling back:`,
-      err
-    );
+    logger.error(`Propagation failed for match ${matchId}, rolling back:`, err);
     await restorePropagationSlots(snapshot);
     throw err;
   }
@@ -200,7 +198,7 @@ async function fetchMatchWithLinks(matchId: string): Promise<MatchRow | null> {
     .maybeSingle();
 
   if (error) {
-    console.error('fetchMatchWithLinks error:', error);
+    logger.error('fetchMatchWithLinks error:', error);
     return null;
   }
 

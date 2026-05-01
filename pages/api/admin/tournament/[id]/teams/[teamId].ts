@@ -10,6 +10,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../../../utils/logger';
 type ApiResponse = { success: boolean } | { team: any } | { error: string };
 
 export default withStaffRoute(handler, 'manager');
@@ -47,7 +48,7 @@ async function handler(
         return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (err: unknown) {
-    console.error(
+    logger.error(
       '[/api/admin/tournament/[id]/teams/[teamId]] internal error:',
       err
     );
@@ -152,7 +153,7 @@ async function handlePatch(
     .single();
 
   if (error || !data) {
-    console.error('admin PATCH tournament team error:', error);
+    logger.error('admin PATCH tournament team error:', error);
     return res.status(500).json({ error: 'Failed to update tournament team' });
   }
 
@@ -172,7 +173,7 @@ async function handlePatch(
         },
       });
     } catch (e) {
-      console.error('logStaffAction error:', e);
+      logger.error('logStaffAction error:', e);
     }
   }
 
@@ -208,7 +209,7 @@ async function handleDelete(
     .eq('id', tournamentTeamId);
 
   if (error) {
-    console.error('admin DELETE tournament team error:', error);
+    logger.error('admin DELETE tournament team error:', error);
     return res
       .status(500)
       .json({ error: 'Failed to remove team from tournament' });
@@ -230,7 +231,7 @@ async function handleDelete(
         },
       });
     } catch (e) {
-      console.error('logStaffAction error:', e);
+      logger.error('logStaffAction error:', e);
     }
   }
 

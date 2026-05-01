@@ -8,6 +8,7 @@ import { useRouter } from 'next/router';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 
+import { logger } from '../../utils/logger';
 type Team = {
   id: string;
   name: string;
@@ -67,7 +68,7 @@ export default function JoinTeamPage() {
         }
         if (!cancelled) await loadTeams();
       } catch (err) {
-        console.error('[join-team] auth error:', err);
+        logger.error('[join-team] auth error:', err);
         if (!cancelled) setError('Erreur de connexion.');
       } finally {
         if (!cancelled) setLoading(false);
@@ -110,7 +111,7 @@ export default function JoinTeamPage() {
         setTeams(result);
       }
     } catch (err) {
-      console.error('[join-team] load teams error:', err);
+      logger.error('[join-team] load teams error:', err);
     } finally {
       setTeamsLoading(false);
     }

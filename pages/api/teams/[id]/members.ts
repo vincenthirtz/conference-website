@@ -7,6 +7,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { withAuthRoute } from '@/utils/staff';
 
+import { logger } from '../../../../utils/logger';
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -85,7 +86,7 @@ export default withAuthRoute(async function handler(
     .eq('team_id', teamId);
 
   if (deleteErr) {
-    console.error('[teams/[teamId]/members] delete error:', deleteErr);
+    logger.error('[teams/[teamId]/members] delete error:', deleteErr);
     return res
       .status(500)
       .json({ error: 'Échec de la suppression du membre.' });

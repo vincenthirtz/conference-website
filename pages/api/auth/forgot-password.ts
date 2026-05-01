@@ -8,6 +8,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { sendPasswordResetEmail } from '@/utils/email';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../../utils/logger';
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ||
   process.env.SITE_URL ||
@@ -81,20 +82,20 @@ export default async function handler(
     if (status === 404 || /not.?found/i.test(error.message)) {
       return res.status(200).json(ok);
     }
-    console.error('[api/auth/forgot-password] generateLink error:', error);
+    logger.error('[api/auth/forgot-password] generateLink error:', error);
     return res.status(500).json({ error: 'Échec de la génération du lien' });
   }
 
   const actionLink = data?.properties?.action_link;
   if (!actionLink) {
-    console.error(
+    logger.error(
       '[api/auth/forgot-password] generateLink returned no action_link'
     );
     return res.status(500).json({ error: 'Échec de la génération du lien' });
   }
 
   void sendPasswordResetEmail({ to: cleanEmail, actionLink }).catch((e) =>
-    console.error('[api/auth/forgot-password] email send error:', e)
+    logger.error('[api/auth/forgot-password] email send error:', e)
   );
 
   return res.status(200).json(ok);

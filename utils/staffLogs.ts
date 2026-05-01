@@ -1,6 +1,7 @@
 // lib/staffLogs.ts
 // Gestion centralisée des logs staff (inserts + lecture + filtres)
 import { supabaseAdmin } from './supabase';
+import { logger } from './logger';
 import type {
   StaffLogAction,
   StaffLog,
@@ -39,7 +40,7 @@ export async function logStaffAction(params: StaffLogInsert) {
   });
 
   if (error) {
-    console.error('logStaffAction error:', error, params);
+    logger.error('logStaffAction error:', error, params);
   }
 }
 
@@ -66,7 +67,7 @@ export async function fetchStaffLogs(limit = 100): Promise<StaffLog[]> {
     .limit(limit);
 
   if (error) {
-    console.error('fetchStaffLogs error:', error);
+    logger.error('fetchStaffLogs error:', error);
     return [];
   }
 
@@ -132,7 +133,7 @@ export async function fetchStaffLogsFiltered(
   const { data, error } = await query;
 
   if (error) {
-    console.error('fetchStaffLogsFiltered error:', error);
+    logger.error('fetchStaffLogsFiltered error:', error);
     return [];
   }
 

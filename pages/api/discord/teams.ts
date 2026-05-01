@@ -4,6 +4,7 @@ import slugify from 'slugify';
 import { supabaseAdmin } from '@/utils/supabase';
 import { sanitizeUrl } from '@/utils/apiHelpers';
 
+import { logger } from '../../../utils/logger';
 type CreateTeamBody = {
   name?: string;
   short_name?: string | null;
@@ -90,7 +91,7 @@ export default async function handler(
           published_at: new Date().toISOString(),
         });
       } catch (newsErr) {
-        console.error('[/api/discord/teams] create news error:', newsErr);
+        logger.error('[/api/discord/teams] create news error:', newsErr);
       }
 
       return res.status(201).json({ team: data });
@@ -105,7 +106,7 @@ export default async function handler(
     }
   }
 
-  console.error('[/api/discord/teams] create error:', lastError);
+  logger.error('[/api/discord/teams] create error:', lastError);
   return res.status(500).json({
     error:
       lastError?.message ||

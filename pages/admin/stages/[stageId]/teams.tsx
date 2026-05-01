@@ -6,6 +6,7 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 
+import { logger } from '../../../../utils/logger';
 type StaffShape = {
   id: string;
   role: string;
@@ -159,7 +160,7 @@ function AdminStageTeamsPage({ staff }: StaffProps) {
       const json: TournamentTeamsApiResponse = await res.json();
       setTournamentTeams(json.teams || []);
     } catch (err) {
-      console.error('fetchTournamentTeams error', err);
+      logger.error('fetchTournamentTeams error', err);
     } finally {
       setLoadingTeams(false);
     }

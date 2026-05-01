@@ -11,6 +11,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { StaffLog, formatStaffLog } from '@/utils/staffLogs';
 import { parsePagination, isValidUUID } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../../utils/logger';
 type StageHistoryResponse = {
   stageId: string;
   logs: Array<ReturnType<typeof formatStaffLog>>;
@@ -91,7 +92,7 @@ async function handler(
     const { data: stageLogsData, error: stageErr } = await stageLogsQuery;
 
     if (stageErr) {
-      console.error('stage history: stageLogs error:', stageErr);
+      logger.error('stage history: stageLogs error:', stageErr);
     }
 
     // 2) Logs d'autres entités (matchs, maps, etc.) qui référencent ce stage via payload.stage_id
@@ -133,7 +134,7 @@ async function handler(
     const { data: payloadLogsData, error: payloadErr } = await payloadLogsQuery;
 
     if (payloadErr) {
-      console.error('stage history: payloadLogs error:', payloadErr);
+      logger.error('stage history: payloadLogs error:', payloadErr);
     }
 
     // 3) Merge + tri chrono desc
@@ -151,7 +152,7 @@ async function handler(
       logs: formatted,
     });
   } catch (err: unknown) {
-    console.error('[/api/admin/stages/[stageId]/history] error:', err);
+    logger.error('[/api/admin/stages/[stageId]/history] error:', err);
     return res.status(500).json({
       error: 'Internal server error',
     });

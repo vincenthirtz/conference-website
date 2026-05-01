@@ -9,6 +9,7 @@ import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
 
+import { logger } from '../../../utils/logger';
 type Tournament = {
   id: string;
   name: string;
@@ -109,7 +110,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       : { data: null, error: null };
 
   if (stErr) {
-    console.error('stats page stage_teams error:', stErr);
+    logger.error('stats page stage_teams error:', stErr);
   }
 
   const teamMap = new Map<string, SimpleTeam>();
@@ -139,7 +140,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     .neq('status', 'cancelled');
 
   if (mErr) {
-    console.error('stats page matches error:', mErr);
+    logger.error('stats page matches error:', mErr);
   }
 
   const matches = ((matchesData || []) as MatchRow[]).filter((m) => !m.is_bye);
@@ -155,7 +156,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       .in('match_id', matchIds);
 
     if (gErr) {
-      console.error('stats page games error:', gErr);
+      logger.error('stats page games error:', gErr);
     } else {
       games = (gamesData || []) as GameRow[];
     }

@@ -9,6 +9,7 @@ import { supabaseAdmin } from '../supabase';
 import { computeStageStandings } from './standings';
 import { logStaffAction } from '../staffLogs';
 
+import { logger } from '../logger';
 export type AdvancementRules = {
   advance_top?: number;
   advance_per_group?: number;
@@ -202,7 +203,7 @@ export async function tryAutoAdvanceFromMatch(params: {
     .insert(inserts);
 
   if (insertErr) {
-    console.error('autoAdvance insert error:', insertErr);
+    logger.error('autoAdvance insert error:', insertErr);
     return { triggered: false, reason: 'insert_failed' };
   }
 
@@ -230,7 +231,7 @@ export async function tryAutoAdvanceFromMatch(params: {
         },
       });
     } catch (e) {
-      console.error('autoAdvance logStaffAction error:', e);
+      logger.error('autoAdvance logStaffAction error:', e);
     }
   }
 

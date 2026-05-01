@@ -18,6 +18,7 @@ import {
 import { fetchToornamentParticipants } from '@/utils/tournamentImport/toornament';
 import { fetchChallongeParticipants } from '@/utils/tournamentImport/challonge';
 import { fetchStartGgParticipants } from '@/utils/tournamentImport/startgg';
+import { logger } from '../../../../utils/logger';
 import {
   PlatformImportError,
   type PlatformSource,
@@ -136,7 +137,7 @@ async function handler(
         err.status >= 400 && err.status < 600 ? err.status : 502;
       return res.status(httpStatus).json({ error: err.message });
     }
-    console.error('[admin/teams/import-platform] error:', err);
+    logger.error('[admin/teams/import-platform] error:', err);
     return res
       .status(500)
       .json({ error: (err as Error)?.message || 'Erreur import plateforme' });

@@ -3,6 +3,7 @@ import { withStaffRoute, StaffContext } from '@/utils/staff';
 import { fetchMemberships, fetchForms } from '@/utils/helloasso';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../../../utils/logger';
 /**
  * GET /api/admin/helloasso/memberships
  *
@@ -62,7 +63,7 @@ async function handler(
       pagination: result.pagination,
     });
   } catch (err) {
-    console.error('[admin/helloasso/memberships]', err);
+    logger.error('[admin/helloasso/memberships]', err);
     return res.status(502).json({
       error: 'Impossible de récupérer les adhésions depuis HelloAsso.',
     });

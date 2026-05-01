@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, StaffContext } from '@/utils/staff';
 
+import { logger } from '../../../../utils/logger';
 async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -38,7 +39,7 @@ async function handler(
   const { data, error } = await query;
 
   if (error) {
-    console.error('[admin/partnership-requests] list error', error);
+    logger.error('[admin/partnership-requests] list error', error);
     return res.status(500).json({ error: 'Failed to load requests.' });
   }
 

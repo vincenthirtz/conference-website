@@ -6,6 +6,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { isValidUUID } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../../utils/logger';
 export default withStaffRoute(handler, 'manager');
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -174,7 +175,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.status(200).end(csv);
   } catch (err: unknown) {
-    console.error('[export-results] error:', err);
+    logger.error('[export-results] error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

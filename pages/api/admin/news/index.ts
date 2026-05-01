@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, type StaffContext } from '@/utils/staff';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../../../utils/logger';
 type NewsPayload = {
   title?: string;
   slug?: string;
@@ -60,7 +61,7 @@ async function handler(
     const { data, error } = await query;
 
     if (error) {
-      console.error('[admin/news] list error', error);
+      logger.error('[admin/news] list error', error);
       return res.status(500).json({ error: 'Failed to load articles.' });
     }
 
@@ -100,7 +101,7 @@ async function handler(
       .single();
 
     if (error) {
-      console.error('[admin/news] create error', error);
+      logger.error('[admin/news] create error', error);
       return res.status(500).json({ error: 'Failed to create the article.' });
     }
 

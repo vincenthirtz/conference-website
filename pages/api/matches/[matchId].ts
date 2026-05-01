@@ -7,6 +7,7 @@ import { applyMatchScore } from '@/utils/matches/applyScore';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
+import { logger } from '../../../utils/logger';
 export default withStaffRoute(handler, 'manager');
 
 /* -----------------------------------------------------------
@@ -40,7 +41,7 @@ async function handler(
         return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (e: any) {
-    console.error('[/api/matches/[matchId]] error:', e);
+    logger.error('[/api/matches/[matchId]] error:', e);
     return res
       .status(500)
       .json({ error: 'Internal server error', detail: e.message });
@@ -168,7 +169,7 @@ async function handleDelete(
     .eq('id', matchId);
 
   if (error) {
-    console.error('delete match error:', error);
+    logger.error('delete match error:', error);
     return res.status(500).json({ error: 'Error cancelling match' });
   }
 

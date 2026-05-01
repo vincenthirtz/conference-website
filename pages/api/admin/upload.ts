@@ -8,6 +8,7 @@ import { withStaffRoute } from '@/utils/staff';
 import crypto from 'crypto';
 import { supabaseAdmin } from '@/utils/supabase';
 
+import { logger } from '../../../utils/logger';
 export const config = {
   api: {
     bodyParser: {
@@ -136,7 +137,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     });
 
   if (uploadError) {
-    console.error('[upload] Supabase Storage error:', uploadError);
+    logger.error('[upload] Supabase Storage error:', uploadError);
     return res.status(500).json({
       error: "Impossible d'uploader le fichier",
       detail: uploadError.message,

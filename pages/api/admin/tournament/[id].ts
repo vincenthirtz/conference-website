@@ -9,6 +9,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../utils/logger';
 type TournamentDetail = {
   id: string;
   name: string;
@@ -103,7 +104,7 @@ async function handleGet(
       .maybeSingle();
 
     if (error) {
-      console.error('admin GET tournament error:', error);
+      logger.error('admin GET tournament error:', error);
       return res.status(500).json({ error: 'Failed to fetch tournament' });
     }
 
@@ -113,7 +114,7 @@ async function handleGet(
 
     return res.status(200).json({ tournament: data as TournamentDetail });
   } catch (err: unknown) {
-    console.error('admin GET tournament internal error:', err);
+    logger.error('admin GET tournament internal error:', err);
     return res
       .status(500)
       .json({ error: (err as Error)?.message || 'Internal server error' });
@@ -369,7 +370,7 @@ async function handlePatch(
       .single();
 
     if (updateErr) {
-      console.error('admin PATCH tournament error:', updateErr);
+      logger.error('admin PATCH tournament error:', updateErr);
       return res.status(500).json({ error: 'Failed to update tournament' });
     }
 
@@ -390,7 +391,7 @@ async function handlePatch(
           },
         });
       } catch (logErr) {
-        console.error('admin PATCH tournament logStaffAction error:', logErr);
+        logger.error('admin PATCH tournament logStaffAction error:', logErr);
       }
     }
 
@@ -399,7 +400,7 @@ async function handlePatch(
       tournament: after as TournamentDetail,
     });
   } catch (err: unknown) {
-    console.error('admin PATCH tournament internal error:', err);
+    logger.error('admin PATCH tournament internal error:', err);
     return res
       .status(500)
       .json({ error: (err as Error)?.message || 'Internal server error' });

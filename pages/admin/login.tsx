@@ -9,6 +9,7 @@ import Button from '@/components/Buttons/button';
 import { supabaseClient } from '@/utils/supabase';
 import { useSiteSetting } from '@/hooks/useSiteSettings';
 
+import { logger } from '../../utils/logger';
 const AdminLoginPage = () => {
   const router = useRouter();
   const { value: contactEmail } = useSiteSetting('contact_email');
@@ -57,7 +58,7 @@ const AdminLoginPage = () => {
           }
         }
       } catch (err) {
-        console.error('[staff login] session check error:', err);
+        logger.error('[staff login] session check error:', err);
       } finally {
         if (!cancelled) setIsCheckingSession(false);
       }
@@ -117,7 +118,7 @@ const AdminLoginPage = () => {
         setError('Utilisateur non trouvé après la connexion.');
       }
     } catch (err: unknown) {
-      console.error('[staff login] error:', err);
+      logger.error('[staff login] error:', err);
       setError(
         (err as Error)?.message ||
           'Une erreur est survenue pendant la connexion. Réessaie dans un instant.'
@@ -152,7 +153,7 @@ const AdminLoginPage = () => {
         );
       }
     } catch (err: unknown) {
-      console.error('[staff login] discord error:', err);
+      logger.error('[staff login] discord error:', err);
       setError(
         (err as Error)?.message ||
           'Une erreur est survenue avec Discord. Réessaie dans un instant.'

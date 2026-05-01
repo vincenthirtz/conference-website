@@ -9,6 +9,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { notifyScrimRequest } from '@/utils/discord';
 import { withAuthRoute } from '@/utils/staff';
 
+import { logger } from '../../../utils/logger';
 export type ScrimRequestBody = {
   teamId: string;
   message?: string;
@@ -34,7 +35,7 @@ export default withAuthRoute(async function handler(
       .order('created_at', { ascending: false });
 
     if (demandesErr) {
-      console.error('[demandes/scrim] GET error:', demandesErr);
+      logger.error('[demandes/scrim] GET error:', demandesErr);
       return res.status(500).json({ error: 'Failed to load requests.' });
     }
 
@@ -67,7 +68,7 @@ export default withAuthRoute(async function handler(
       .maybeSingle();
 
     if (memberErr) {
-      console.error('[demandes/scrim] check member error:', memberErr);
+      logger.error('[demandes/scrim] check member error:', memberErr);
       return res.status(500).json({ error: 'Verification error.' });
     }
 
@@ -119,7 +120,7 @@ export default withAuthRoute(async function handler(
       .maybeSingle();
 
     if (existingErr) {
-      console.error('[demandes/scrim] check existing error:', existingErr);
+      logger.error('[demandes/scrim] check existing error:', existingErr);
       return res.status(500).json({ error: 'Verification error.' });
     }
 
@@ -166,7 +167,7 @@ export default withAuthRoute(async function handler(
       .single();
 
     if (insertErr) {
-      console.error('[demandes/scrim] insert error:', insertErr);
+      logger.error('[demandes/scrim] insert error:', insertErr);
       return res.status(500).json({ error: 'Failed to create request.' });
     }
 

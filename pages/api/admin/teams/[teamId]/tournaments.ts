@@ -5,6 +5,7 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../../utils/logger';
 /**
  * GET /api/admin/teams/[teamId]/tournaments
  * Retrieve tournaments a team is registered for and available tournaments
@@ -150,7 +151,7 @@ async function handleGet(
       available,
     });
   } catch (err: unknown) {
-    console.error('GET /api/admin/teams/[teamId]/tournaments error:', err);
+    logger.error('GET /api/admin/teams/[teamId]/tournaments error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
@@ -335,7 +336,7 @@ async function handlePost(
         published_at: new Date().toISOString(),
       });
     } catch (newsErr) {
-      console.error('[admin/teams/tournaments] create news error:', newsErr);
+      logger.error('[admin/teams/tournaments] create news error:', newsErr);
     }
 
     return res.status(201).json({
@@ -344,7 +345,7 @@ async function handlePost(
       registrations: inserted,
     });
   } catch (err: unknown) {
-    console.error('POST /api/admin/teams/[teamId]/tournaments error:', err);
+    logger.error('POST /api/admin/teams/[teamId]/tournaments error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
@@ -431,7 +432,7 @@ async function handleDelete(
       message: `Team unregistered (${count || 0} entry(ies) removed)`,
     });
   } catch (err: unknown) {
-    console.error('DELETE /api/admin/teams/[teamId]/tournaments error:', err);
+    logger.error('DELETE /api/admin/teams/[teamId]/tournaments error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

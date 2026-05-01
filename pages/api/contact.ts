@@ -3,6 +3,7 @@ import { contactSchema, formatZodError } from '@/utils/validation';
 import { sendContactStaffEmail } from '@/utils/email';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../utils/logger';
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -24,7 +25,7 @@ export default async function handler(
   const result = await sendContactStaffEmail({ name, email, subject, message });
 
   if (!result.success) {
-    console.error('[api/contact] email send error:', result.error);
+    logger.error('[api/contact] email send error:', result.error);
     return res
       .status(500)
       .json({ error: "Erreur lors de l'envoi du message." });

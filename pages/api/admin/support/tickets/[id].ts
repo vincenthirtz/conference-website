@@ -8,6 +8,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../../utils/logger';
 const VALID_STATUSES = ['open', 'in_progress', 'resolved', 'closed'] as const;
 
 export default withStaffRoute(handler, 'manager');
@@ -83,7 +84,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
         .maybeSingle();
 
       if (error || !data) {
-        console.error('[admin/support/tickets/id] update error:', error);
+        logger.error('[admin/support/tickets/id] update error:', error);
         return res.status(500).json({ error: 'Échec de la mise à jour' });
       }
 
@@ -111,7 +112,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
         .eq('id', ticketId);
 
       if (error) {
-        console.error('[admin/support/tickets/id] delete error:', error);
+        logger.error('[admin/support/tickets/id] delete error:', error);
         return res.status(500).json({ error: 'Échec de la suppression' });
       }
 
@@ -132,7 +133,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
     res.setHeader('Allow', 'GET,PATCH,DELETE');
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
-    console.error('[admin/support/tickets/id] error:', err);
+    logger.error('[admin/support/tickets/id] error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

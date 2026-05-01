@@ -27,6 +27,7 @@ import { applyMatchScore } from '@/utils/matches/applyScore';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../../utils/logger';
 export default withStaffRoute(handler, 'manager');
 
 type ScoreEntry = {
@@ -178,7 +179,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
         },
       });
     } catch (e) {
-      console.error('batch-scores: logStaffAction error', e);
+      logger.error('batch-scores: logStaffAction error', e);
     }
   }
 

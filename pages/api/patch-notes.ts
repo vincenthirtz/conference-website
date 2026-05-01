@@ -3,6 +3,7 @@ import { load } from 'cheerio';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../utils/logger';
 const PATCH_NOTES_URL =
   'https://overwatch.blizzard.com/fr-fr/news/patch-notes/';
 
@@ -166,7 +167,7 @@ async function savePatchNotesToDb(items: PatchNoteItem[]): Promise<void> {
     .upsert(records, { onConflict: 'id' });
 
   if (error) {
-    console.error('[/api/patch-notes] failed to save to DB:', error);
+    logger.error('[/api/patch-notes] failed to save to DB:', error);
   }
 }
 
@@ -183,7 +184,7 @@ async function getPatchNotesFromDb(): Promise<PatchNoteItem[]> {
     .limit(4);
 
   if (error) {
-    console.error('[/api/patch-notes] failed to fetch from DB:', error);
+    logger.error('[/api/patch-notes] failed to fetch from DB:', error);
     return [];
   }
 
@@ -215,11 +216,11 @@ export default async function handler(
       // Sauvegarder les nouveaux patch notes en BDD (en arrière-plan)
       if (scrapedItems.length > 0) {
         savePatchNotesToDb(scrapedItems).catch((err) => {
-          console.error('[/api/patch-notes] background save error:', err);
+          logger.error('[/api/patch-notes] background save error:', err);
         });
       }
     } catch (scrapeError) {
-      console.error('[/api/patch-notes] scrape failed:', scrapeError);
+      logger.error('[/api/patch-notes] scrape failed:', scrapeError);
       // Continue - on va essayer de récupérer depuis la BDD
     }
 
@@ -236,7 +237,7 @@ export default async function handler(
       items: items.slice(0, 4),
     });
   } catch (error) {
-    console.error('[/api/patch-notes] failed to load patch notes', error);
+    logger.error('[/api/patch-notes] failed to load patch notes', error);
     return res.status(500).json({
       error: 'Failed to load Overwatch patch notes.',
     });

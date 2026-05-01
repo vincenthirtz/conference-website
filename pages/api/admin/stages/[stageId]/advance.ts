@@ -20,6 +20,7 @@ import {
 } from '@/utils/stages/standings';
 import { isValidUUID } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../../utils/logger';
 type AdvancedTeam = { teamId: string; seed: number | null };
 
 type ApiResponse =
@@ -243,7 +244,7 @@ async function handler(
       .insert(inserts);
 
     if (insertErr) {
-      console.error('advance teams insert error:', insertErr);
+      logger.error('advance teams insert error:', insertErr);
       return res.status(500).json({ error: 'Failed to advance teams' });
     }
 
@@ -262,7 +263,7 @@ async function handler(
 
       if (deactivateErr) {
         // Rollback: remove the teams we just inserted into the target stage
-        console.error('advance deactivate source stage error:', deactivateErr);
+        logger.error('advance deactivate source stage error:', deactivateErr);
         await supabaseAdmin
           .from('stage_teams')
           .delete()
@@ -295,7 +296,7 @@ async function handler(
           },
         });
       } catch (e) {
-        console.error('advance teams logStaffAction error:', e);
+        logger.error('advance teams logStaffAction error:', e);
       }
     }
 
@@ -306,7 +307,7 @@ async function handler(
       ...(sourceStageCompleted ? { sourceStageCompleted } : {}),
     });
   } catch (err: unknown) {
-    console.error('[/api/admin/stages/[stageId]/advance] error:', err);
+    logger.error('[/api/admin/stages/[stageId]/advance] error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

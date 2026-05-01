@@ -11,6 +11,7 @@ import { useAutoSave } from '@/utils/useAutoSave';
 import DraftBanner from '@/components/admin/DraftBanner';
 import AutoSaveIndicator from '@/components/admin/AutoSaveIndicator';
 
+import { logger } from '../../../utils/logger';
 type Props = {
   staff: {
     id: string;
@@ -199,10 +200,10 @@ function AdminTournamentCreatePage({ staff }: Props) {
             );
             if (!tplRes.ok) {
               const tplJson = await tplRes.json().catch(() => ({}));
-              console.error('apply-template error:', tplJson.error);
+              logger.error('apply-template error:', tplJson.error);
             }
           } catch (tplErr) {
-            console.error('apply-template fetch error:', tplErr);
+            logger.error('apply-template fetch error:', tplErr);
           }
         }
 

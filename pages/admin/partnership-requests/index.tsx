@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
 import { supabaseClient } from '@/utils/supabase';
 
+import { logger } from '../../../utils/logger';
 type RequestRow = {
   id: string;
   company_name: string;
@@ -106,7 +107,7 @@ function AdminPartnershipRequestsPage({ staff }: Props) {
       setRequests(json.items || []);
       setCounts(json.counts || {});
     } catch (err) {
-      console.error('Error fetching partnership requests', err);
+      logger.error('Error fetching partnership requests', err);
     } finally {
       setLoading(false);
     }

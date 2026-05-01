@@ -3,6 +3,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
+import { logger } from '../../../../utils/logger';
 import {
   parsePagination,
   sanitizeSearch,
@@ -81,7 +82,7 @@ async function listComments(
   const { data, error, count } = await query;
 
   if (error) {
-    console.error('admin comments GET error:', error);
+    logger.error('admin comments GET error:', error);
     return res.status(500).json({ error: 'Failed to fetch comments' });
   }
 
@@ -126,7 +127,7 @@ async function updateComment(
     .maybeSingle();
 
   if (error) {
-    console.error('admin comments PATCH error:', error);
+    logger.error('admin comments PATCH error:', error);
     return res.status(500).json({ error: 'Failed to update comment' });
   }
 
@@ -148,7 +149,7 @@ async function deleteComment(
     .eq('id', id);
 
   if (error) {
-    console.error('admin comments DELETE error:', error);
+    logger.error('admin comments DELETE error:', error);
     return res.status(500).json({ error: 'Failed to delete comment' });
   }
 

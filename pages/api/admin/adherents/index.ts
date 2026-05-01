@@ -5,6 +5,7 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { sanitizeSearch } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../../../utils/logger';
 type AdherentPayload = {
   firstName: string;
   lastName: string;
@@ -101,7 +102,7 @@ async function handler(
     const { data, error } = await query;
 
     if (error) {
-      console.error('[admin/adherents] list error', error);
+      logger.error('[admin/adherents] list error', error);
       return res.status(500).json({ error: 'Failed to load members.' });
     }
 
@@ -181,7 +182,7 @@ async function handler(
       .single();
 
     if (error) {
-      console.error('[admin/adherents] create error', error);
+      logger.error('[admin/adherents] create error', error);
       return res.status(500).json({ error: 'Failed to create the member.' });
     }
 

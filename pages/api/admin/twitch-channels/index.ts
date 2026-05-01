@@ -4,6 +4,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { sanitizeUrl } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../../../utils/logger';
 type TwitchChannelPayload = {
   channel?: string;
   label?: string;
@@ -42,7 +43,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data, error } = await query;
 
     if (error) {
-      console.error('[admin/twitch-channels] list error', error);
+      logger.error('[admin/twitch-channels] list error', error);
       return res.status(500).json({ error: 'Failed to load channels.' });
     }
 
@@ -82,7 +83,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .single();
 
     if (error) {
-      console.error('[admin/twitch-channels] create error', error);
+      logger.error('[admin/twitch-channels] create error', error);
       if (error.code === '23505') {
         return res.status(400).json({ error: 'This channel already exists.' });
       }

@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
+import { logger } from '../../utils/logger';
 const NETLIFY_SITE_ID = process.env.NETLIFY_SITE_ID;
 const NETLIFY_API_TOKEN = process.env.NETLIFY_API_TOKEN;
 
@@ -48,7 +49,7 @@ export default async function handler(
   });
 
   if (!apiRes.ok) {
-    console.error('[netlify-builds] API error:', apiRes.status);
+    logger.error('[netlify-builds] API error:', apiRes.status);
     return res.status(502).json({ error: 'Failed to fetch builds.' });
   }
 

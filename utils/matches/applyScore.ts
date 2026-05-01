@@ -19,6 +19,7 @@ import {
   postMvpPoll,
 } from '../discord';
 import type { PropagationResult } from '../../types/bracket';
+import { logger } from '../logger';
 import type {
   ApplyMatchScoreInput,
   ApplyMatchScoreResult,
@@ -86,7 +87,7 @@ export async function applyMatchScore(
     .maybeSingle();
 
   if (fetchErr || !match) {
-    console.error('applyMatchScore: fetch match error', fetchErr);
+    logger.error('applyMatchScore: fetch match error', fetchErr);
     throw new Error('Match introuvable');
   }
 
@@ -248,7 +249,7 @@ export async function applyMatchScore(
       // Si le reset échoue, restaurer le snapshot et abandonner
       if (propagationSnapshot) {
         await restorePropagationSlots(propagationSnapshot).catch((re) =>
-          console.error(
+          logger.error(
             'applyMatchScore: restore after reset failure failed',
             re
           )
@@ -271,15 +272,12 @@ export async function applyMatchScore(
     .maybeSingle();
 
   if (updateErr || !updated) {
-    console.error('applyMatchScore: update match error', updateErr);
+    logger.error('applyMatchScore: update match error', updateErr);
 
     // Rollback : restaurer les slots de propagation vidés par le reset
     if (propagationSnapshot) {
       await restorePropagationSlots(propagationSnapshot).catch((re) =>
-        console.error(
-          'applyMatchScore: restore after update failure failed',
-          re
-        )
+        logger.error('applyMatchScore: restore after update failure failed', re)
       );
     }
 
@@ -299,7 +297,7 @@ export async function applyMatchScore(
     try {
       propagationResult = await propagateBracketForMatch(matchId);
     } catch (e) {
-      console.error(
+      logger.error(
         'applyMatchScore: propagateBracketForMatch error — rollback',
         e
       );
@@ -313,7 +311,7 @@ export async function applyMatchScore(
             .eq('id', matchId)
         ).then(({ error: rollbackErr }) => {
           if (rollbackErr) {
-            console.error(
+            logger.error(
               'applyMatchScore: match rollback failed!',
               rollbackErr
             );
@@ -324,10 +322,7 @@ export async function applyMatchScore(
       if (propagationSnapshot) {
         rollbackOps.push(
           restorePropagationSlots(propagationSnapshot).catch((re) =>
-            console.error(
-              'applyMatchScore: propagation slot restore failed',
-              re
-            )
+            logger.error('applyMatchScore: propagation slot restore failed', re)
           )
         );
       }
@@ -366,7 +361,7 @@ export async function applyMatchScore(
         },
       });
     } catch (e) {
-      console.error('applyMatchScore: logStaffAction error', e);
+      logger.error('applyMatchScore: logStaffAction error', e);
     }
   }
 
@@ -382,7 +377,7 @@ export async function applyMatchScore(
       winnerTeamId: newWinnerTeamId,
       isForfeit: !!resolvedForfeitTeamId,
       propagationResult,
-    }).catch((e) => console.error('[discord] match result/bracket error:', e));
+    }).catch((e) => logger.error('[discord] match result/bracket error:', e));
 
     // MVP poll: only on real finishes (not forfeits — there's no game to vote
     // an MVP for). Fire-and-forget; failures are logged but don't block.
@@ -392,7 +387,7 @@ export async function applyMatchScore(
         tournamentId: match.tournament_id ?? null,
         team1Id: match.team1_id ?? null,
         team2Id: match.team2_id ?? null,
-      }).catch((e: unknown) => console.error('[discord] mvp poll error:', e));
+      }).catch((e: unknown) => logger.error('[discord] mvp poll error:', e));
     }
 
     // Auto-advance: si tous les matchs du stage source sont termines et que
@@ -403,7 +398,7 @@ export async function applyMatchScore(
       void tryAutoAdvanceFromMatch({
         stageId: match.stage_id,
         staffId: staffId ?? null,
-      }).catch((e: unknown) => console.error('[autoAdvance] error:', e));
+      }).catch((e: unknown) => logger.error('[autoAdvance] error:', e));
     }
   }
 

@@ -5,6 +5,7 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../../../utils/logger';
 type UpdatePayload = {
   status?:
     | 'new'
@@ -144,7 +145,7 @@ async function handler(
         .single();
 
       if (partnerError) {
-        console.error(
+        logger.error(
           '[admin/partnership-requests] auto-create partner error',
           partnerError
         );
@@ -164,7 +165,7 @@ async function handler(
     }
 
     if (error) {
-      console.error('[admin/partnership-requests] update error', error);
+      logger.error('[admin/partnership-requests] update error', error);
       return res.status(500).json({ error: 'Failed to update the request.' });
     }
 
@@ -202,7 +203,7 @@ async function handler(
       .eq('id', id);
 
     if (error) {
-      console.error('[admin/partnership-requests] delete error', error);
+      logger.error('[admin/partnership-requests] delete error', error);
       return res.status(500).json({ error: 'Failed to delete the request.' });
     }
 

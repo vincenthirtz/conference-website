@@ -7,6 +7,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { parsePagination } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../../utils/logger';
 export type PublicTournament = {
   id: string;
   name: string;
@@ -90,7 +91,7 @@ export default async function handler(
     const { data, error, count } = await query;
 
     if (error) {
-      console.error('[api/tournaments] error:', error);
+      logger.error('[api/tournaments] error:', error);
       return res.status(500).json({ error: 'Failed to fetch tournaments' });
     }
 
@@ -124,7 +125,7 @@ export default async function handler(
       total: typeof count === 'number' ? count : null,
     });
   } catch (err: unknown) {
-    console.error('[api/tournaments] internal error:', err);
+    logger.error('[api/tournaments] internal error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

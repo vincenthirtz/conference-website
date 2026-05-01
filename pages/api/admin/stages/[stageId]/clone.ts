@@ -8,6 +8,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../../utils/logger';
 export default withStaffRoute(handler, 'manager');
 
 async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
@@ -72,7 +73,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
       .single();
 
     if (insertErr || !cloned) {
-      console.error('clone stage insert error:', insertErr);
+      logger.error('clone stage insert error:', insertErr);
       return res.status(500).json({ error: 'Failed to clone stage' });
     }
 
@@ -210,7 +211,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
           },
         });
       } catch (e) {
-        console.error('logStaffAction clone_stage error:', e);
+        logger.error('logStaffAction clone_stage error:', e);
       }
     }
 
@@ -219,7 +220,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
       clonedMatchCount,
     });
   } catch (err: unknown) {
-    console.error('[/api/admin/stages/[stageId]/clone] error:', err);
+    logger.error('[/api/admin/stages/[stageId]/clone] error:', err);
     return res.status(500).json({
       error: 'Internal server error',
     });

@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin, getServerClient } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../../utils/logger';
 type AnnouncementRow = {
   id: string;
   title: string;
@@ -53,7 +54,7 @@ export default async function handler(
     .limit(limit);
 
   if (error) {
-    console.error('[announcements] public list error', error);
+    logger.error('[announcements] public list error', error);
     return res.status(500).json({ error: 'Failed to load announcements.' });
   }
 

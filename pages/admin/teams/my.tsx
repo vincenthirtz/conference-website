@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import { supabaseClient } from '@/utils/supabase';
 import { withStaffPage } from '@/utils/staff';
 
+import { logger } from '../../../utils/logger';
 type StaffShape = {
   id: string;
   role: string;
@@ -132,7 +133,7 @@ function MyTeamPage({ staff }: StaffProps) {
         setAllTeams(json.teams || []);
       }
     } catch (err) {
-      console.error('Failed to load teams list', err);
+      logger.error('Failed to load teams list', err);
     } finally {
       setLoadingAllTeams(false);
     }
@@ -295,7 +296,7 @@ function MyTeamPage({ staff }: StaffProps) {
         setSearchResults([]);
       }
     } catch (err) {
-      console.error('Search error:', err);
+      logger.error('Search error:', err);
       setSearchResults([]);
     } finally {
       setSearchLoading(false);
@@ -387,7 +388,7 @@ function MyTeamPage({ staff }: StaffProps) {
         setJoinRequests(json.demandes || []);
       }
     } catch (err) {
-      console.error('Failed to load join requests', err);
+      logger.error('Failed to load join requests', err);
     } finally {
       setJoinRequestsLoading(false);
     }
@@ -417,7 +418,7 @@ function MyTeamPage({ staff }: StaffProps) {
         alert(json?.error || 'Erreur');
       }
     } catch (err) {
-      console.error('Toggle joinable error:', err);
+      logger.error('Toggle joinable error:', err);
     } finally {
       setTogglingJoinable(false);
     }
@@ -458,7 +459,7 @@ function MyTeamPage({ staff }: StaffProps) {
         alert(json?.error || 'Erreur');
       }
     } catch (err) {
-      console.error('Join request action error:', err);
+      logger.error('Join request action error:', err);
     } finally {
       setProcessingRequestId(null);
     }

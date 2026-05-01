@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import type { User } from '@supabase/supabase-js';
 import { supabaseClient } from '@/utils/supabase';
 
+import { logger } from '../../utils/logger';
 type Props = {
   user: User;
   displayName: string;
@@ -99,7 +100,7 @@ export default function ProfileCard({
       );
       setNewEmail('');
     } catch (err: unknown) {
-      console.error('[player] email change error:', err);
+      logger.error('[player] email change error:', err);
       setEmailError(
         (err as Error)?.message || "Erreur lors du changement d'email."
       );
@@ -133,7 +134,7 @@ export default function ProfileCard({
       setNewPassword('');
       setConfirmPassword('');
     } catch (err: unknown) {
-      console.error('[player] password change error:', err);
+      logger.error('[player] password change error:', err);
       setPasswordError(
         (err as Error)?.message || 'Erreur lors du changement de mot de passe.'
       );
@@ -171,7 +172,7 @@ export default function ProfileCard({
       a.click();
       URL.revokeObjectURL(url);
     } catch (err: unknown) {
-      console.error('[player] export error:', err);
+      logger.error('[player] export error:', err);
       setDataError((err as Error)?.message || 'Erreur lors de l\u2019export.');
     } finally {
       setExporting(false);
@@ -198,7 +199,7 @@ export default function ProfileCard({
       await supabaseClient.auth.signOut();
       router.replace('/');
     } catch (err: unknown) {
-      console.error('[player] delete account error:', err);
+      logger.error('[player] delete account error:', err);
       setDataError((err as Error)?.message || 'Erreur lors de la suppression.');
     } finally {
       setDeleting(false);

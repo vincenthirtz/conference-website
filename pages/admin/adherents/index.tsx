@@ -5,6 +5,7 @@ import { withStaffPage } from '@/utils/staff';
 import { supabaseClient } from '@/utils/supabase';
 import { useDebounce } from '@/hooks/useDebounce';
 
+import { logger } from '../../../utils/logger';
 type AdherentRow = {
   id: string;
   member_number: string | null;
@@ -120,7 +121,7 @@ function AdminAdherentsPage({ staff }: Props) {
         setCotisationAmount(parseFloat(cotisation.value) || 0);
       }
     } catch (err) {
-      console.error('Error fetching adherents', err);
+      logger.error('Error fetching adherents', err);
     } finally {
       setLoading(false);
     }

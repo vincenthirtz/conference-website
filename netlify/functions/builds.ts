@@ -1,5 +1,6 @@
 import type { Handler } from '@netlify/functions';
 
+import { logger } from '../../utils/logger';
 const NETLIFY_SITE_ID = process.env.NETLIFY_SITE_ID;
 const NETLIFY_API_TOKEN = process.env.NETLIFY_API_TOKEN;
 
@@ -41,7 +42,7 @@ export const handler: Handler = async () => {
   });
 
   if (!res.ok) {
-    console.error('[netlify/builds] API error:', res.status);
+    logger.error('[netlify/builds] API error:', res.status);
     return {
       statusCode: 502,
       body: JSON.stringify({ error: 'Failed to fetch builds.' }),

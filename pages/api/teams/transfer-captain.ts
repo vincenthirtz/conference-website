@@ -7,6 +7,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { withAuthRoute } from '@/utils/staff';
 
+import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -50,7 +51,7 @@ export default withAuthRoute(async function handler(
     .maybeSingle();
 
   if (teamErr) {
-    console.error('[transfer-captain] team lookup error:', teamErr);
+    logger.error('[transfer-captain] team lookup error:', teamErr);
     return res.status(500).json({ error: 'Failed to find your team.' });
   }
 
@@ -84,7 +85,7 @@ export default withAuthRoute(async function handler(
     .eq('id', team.id);
 
   if (updateErr) {
-    console.error('[transfer-captain] update error:', updateErr);
+    logger.error('[transfer-captain] update error:', updateErr);
     return res.status(500).json({ error: 'Failed to transfer captaincy.' });
   }
 

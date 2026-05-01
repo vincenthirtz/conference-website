@@ -7,6 +7,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { isValidUUID } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../../utils/logger';
 type StatusGuard = {
   status: string;
   label: string;
@@ -147,7 +148,7 @@ async function handler(
       guards,
     });
   } catch (err: unknown) {
-    console.error('[/api/admin/tournament/[id]/status-guards] error:', err);
+    logger.error('[/api/admin/tournament/[id]/status-guards] error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

@@ -9,6 +9,7 @@ import type { MatchStatus } from '@/types/admin';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../../../utils/logger';
 /* -----------------------------------------------------------
  * Types
  * ---------------------------------------------------------*/
@@ -96,7 +97,7 @@ export default async function handler(
       .neq('status', 'cancelled');
 
     if (mErr) {
-      console.error('team maps matches error:', mErr);
+      logger.error('team maps matches error:', mErr);
     }
 
     const matches = ((matchesData || []) as MatchRow[]).filter(
@@ -115,7 +116,7 @@ export default async function handler(
         .in('match_id', matchIds);
 
       if (gErr) {
-        console.error('team maps games error:', gErr);
+        logger.error('team maps games error:', gErr);
       } else {
         games = (gamesData || []) as GameRow[];
       }
@@ -138,7 +139,7 @@ export default async function handler(
     );
     return res.status(200).json(response);
   } catch (err: unknown) {
-    console.error('[/api/team/[id]/maps] internal error:', err);
+    logger.error('[/api/team/[id]/maps] internal error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

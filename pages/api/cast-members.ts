@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../utils/logger';
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -26,7 +27,7 @@ export default async function handler(
     .order('sort_order', { ascending: true });
 
   if (error) {
-    console.error('[api/cast-members] error', error);
+    logger.error('[api/cast-members] error', error);
     return res.status(500).json({ error: 'Failed to load cast members.' });
   }
 

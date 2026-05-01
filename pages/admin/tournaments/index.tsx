@@ -8,6 +8,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import type { StaffProps, Tournament } from '@/types/admin';
 
+import { logger } from '../../../utils/logger';
 type AdminTournamentsProps = StaffProps & {
   tournaments: Tournament[];
   total: number | null;
@@ -537,7 +538,7 @@ export const getServerSideProps = withStaffPage('manager', async (ctx) => {
   const { data, error, count } = await q;
 
   if (error) {
-    console.error('admin tournaments SSR error:', error);
+    logger.error('admin tournaments SSR error:', error);
     return {
       tournaments: [],
       total: null,

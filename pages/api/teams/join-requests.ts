@@ -9,6 +9,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID, validateRole } from '@/utils/apiHelpers';
 import { withAuthRoute } from '@/utils/staff';
 
+import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -72,7 +73,7 @@ async function handleGet(
   const { data: demandes, error: demandesErr } = await query;
 
   if (demandesErr) {
-    console.error('[join-requests] GET error:', demandesErr);
+    logger.error('[join-requests] GET error:', demandesErr);
     return res.status(500).json({ error: 'Echec du chargement des demandes.' });
   }
 
@@ -218,7 +219,7 @@ async function handlePost(
         published_at: new Date().toISOString(),
       });
     } catch (newsErr) {
-      console.error('[join-requests] create news error:', newsErr);
+      logger.error('[join-requests] create news error:', newsErr);
     }
   }
 
@@ -233,7 +234,7 @@ async function handlePost(
     .eq('id', demandeId);
 
   if (updateErr) {
-    console.error('[join-requests] update error:', updateErr);
+    logger.error('[join-requests] update error:', updateErr);
     return res
       .status(500)
       .json({ error: 'Echec de la mise a jour de la demande.' });

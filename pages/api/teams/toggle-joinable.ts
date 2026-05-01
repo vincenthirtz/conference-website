@@ -6,6 +6,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 
+import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -46,7 +47,7 @@ export default withAuthRoute(async function handler(
     .eq('id', team.id);
 
   if (updateErr) {
-    console.error('[toggle-joinable] update error:', updateErr);
+    logger.error('[toggle-joinable] update error:', updateErr);
     return res.status(500).json({ error: 'Echec de la mise a jour.' });
   }
 

@@ -7,12 +7,10 @@
 // à reconstruire l'historique d'envoi pour le tableau de bord admin.
 
 import { supabaseAdmin } from './supabase';
-import {
-  buildIdahobitLiveEmailHtml,
-  sendIdahobitLiveEmail,
-} from './email';
+import { buildIdahobitLiveEmailHtml, sendIdahobitLiveEmail } from './email';
 import type { SendEmailResult } from './email';
 
+import { logger } from './logger';
 export type CampaignAudience = 'all-confirmed-users';
 export type CampaignStatus = 'active' | 'draft' | 'archived';
 
@@ -217,7 +215,7 @@ export async function processCampaignWave(
       .eq('user_id', r.user_id as string);
 
     if (updErr) {
-      console.error('[broadcast/wave] update recipient error:', updErr);
+      logger.error('[broadcast/wave] update recipient error:', updErr);
     }
 
     if (success) sent++;

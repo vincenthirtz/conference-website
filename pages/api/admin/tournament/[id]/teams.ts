@@ -8,6 +8,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 
+import { logger } from '../../../../../utils/logger';
 type TournamentTeam = {
   id: string;
   tournament_id: string;
@@ -52,7 +53,7 @@ async function handler(
         return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (err: unknown) {
-    console.error('[/api/admin/tournament/[id]/teams] internal error:', err);
+    logger.error('[/api/admin/tournament/[id]/teams] internal error:', err);
     return res.status(500).json({
       error: 'Internal server error',
     });
@@ -90,7 +91,7 @@ async function handleGet(
     .order('seed', { ascending: true, nullsFirst: false });
 
   if (error) {
-    console.error('admin GET tournament teams error:', error);
+    logger.error('admin GET tournament teams error:', error);
     return res.status(500).json({ error: 'Failed to fetch tournament teams' });
   }
 
@@ -147,7 +148,7 @@ async function handlePost(
       .eq('team_id', team_id);
 
     if (countPlayersError) {
-      console.error('Error counting team members:', countPlayersError);
+      logger.error('Error counting team members:', countPlayersError);
       return res.status(500).json({ error: 'Failed to verify team size' });
     }
 
@@ -214,7 +215,7 @@ async function handlePost(
     .single();
 
   if (error || !data) {
-    console.error('admin POST tournament team error:', error);
+    logger.error('admin POST tournament team error:', error);
     return res.status(500).json({ error: 'Failed to add team to tournament' });
   }
 
@@ -234,7 +235,7 @@ async function handlePost(
         },
       });
     } catch (e) {
-      console.error('logStaffAction error:', e);
+      logger.error('logStaffAction error:', e);
     }
   }
 
@@ -252,7 +253,7 @@ async function handlePost(
       published_at: new Date().toISOString(),
     });
   } catch (newsErr) {
-    console.error('[admin/tournament/teams] create news error:', newsErr);
+    logger.error('[admin/tournament/teams] create news error:', newsErr);
   }
 
   return res.status(201).json({

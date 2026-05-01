@@ -11,6 +11,7 @@ import {
 } from '@/utils/teams/rosterLock';
 import { withAuthRoute } from '@/utils/staff';
 
+import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -34,7 +35,7 @@ export default withAuthRoute(async function handler(
     .maybeSingle();
 
   if (membershipErr) {
-    console.error('[teams/leave] membership error:', membershipErr);
+    logger.error('[teams/leave] membership error:', membershipErr);
     return res.status(500).json({ error: 'Failed to check membership.' });
   }
 
@@ -72,7 +73,7 @@ export default withAuthRoute(async function handler(
     .eq('id', membership.id);
 
   if (deleteErr) {
-    console.error('[teams/leave] delete error:', deleteErr);
+    logger.error('[teams/leave] delete error:', deleteErr);
     return res.status(500).json({ error: 'Failed to leave team.' });
   }
 

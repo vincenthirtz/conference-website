@@ -4,6 +4,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
+import { logger } from '../../../utils/logger';
 import { supabaseAdmin } from '@/utils/supabase'; // adapte le chemin si besoin
 
 type Team = {
@@ -252,7 +253,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     .maybeSingle();
 
   if (teamError || !team) {
-    console.error('Erreur chargement équipe (maps):', teamError);
+    logger.error('Erreur chargement équipe (maps):', teamError);
     return { notFound: true };
   }
 
@@ -266,7 +267,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     .order('games_played', { ascending: false });
 
   if (mapsError) {
-    console.error('Erreur chargement team_map_stats:', mapsError);
+    logger.error('Erreur chargement team_map_stats:', mapsError);
   }
 
   return {

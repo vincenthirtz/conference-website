@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 
+import { logger } from '../../../utils/logger';
 type MeResponse =
   | {
       id: string;
@@ -91,7 +92,7 @@ export default withAuthRoute(async function handler(
     }
 
     if (updateError) {
-      console.error('[/api/admin/me] update error:', updateError);
+      logger.error('[/api/admin/me] update error:', updateError);
       return res.status(500).json({ error: 'Failed to update the profile.' });
     }
 

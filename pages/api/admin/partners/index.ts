@@ -5,6 +5,7 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { sanitizeUrl } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../../../utils/logger';
 type PartnerPayload = {
   name?: string;
   description?: string;
@@ -54,7 +55,7 @@ async function handler(
     const { data, error } = await query;
 
     if (error) {
-      console.error('[admin/partners] list error', error);
+      logger.error('[admin/partners] list error', error);
       return res.status(500).json({ error: 'Failed to load partners.' });
     }
 
@@ -94,7 +95,7 @@ async function handler(
       .single();
 
     if (error) {
-      console.error('[admin/partners] create error', error);
+      logger.error('[admin/partners] create error', error);
       return res.status(500).json({ error: 'Failed to create the partner.' });
     }
 

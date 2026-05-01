@@ -6,6 +6,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 
+import { logger } from '../../../utils/logger';
 const BATTLE_TAG_RE = /^[A-Za-z0-9\u00C0-\u024F]+#[0-9]{4,6}$/;
 
 export default withAuthRoute(async function handler(
@@ -64,7 +65,7 @@ export default withAuthRoute(async function handler(
   );
 
   if (updateErr) {
-    console.error('[player/update-profile] error:', updateErr);
+    logger.error('[player/update-profile] error:', updateErr);
     return res.status(500).json({ error: 'Echec de la mise a jour.' });
   }
 

@@ -3,6 +3,7 @@ import { supabaseAdmin, getServerClient } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { verifyCaptcha } from '@/utils/captcha';
 
+import { logger } from '../../../utils/logger';
 type Comment = {
   id: string;
   news_id: string;
@@ -55,7 +56,7 @@ async function listComments(
     .limit(limit);
 
   if (error) {
-    console.error('[/api/news/comments] list error:', error);
+    logger.error('[/api/news/comments] list error:', error);
     return res.status(500).json({ error: 'Failed to fetch comments' });
   }
 
@@ -135,7 +136,7 @@ async function createComment(
     .maybeSingle();
 
   if (error || !data) {
-    console.error('[/api/news/comments] create error:', error);
+    logger.error('[/api/news/comments] create error:', error);
     return res.status(500).json({ error: 'Failed to create comment' });
   }
 

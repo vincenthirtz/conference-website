@@ -11,6 +11,7 @@ import { parsePagination, sanitizeSearch } from '@/utils/apiHelpers';
 import slugify from 'slugify';
 import { OVERWATCH_MAPS } from '@/config/overwatch-maps';
 
+import { logger } from '../../../../utils/logger';
 export type TournamentRow = {
   id: string;
   name: string;
@@ -48,7 +49,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (err: unknown) {
-    console.error('[/api/admin/tournaments] internal error:', err);
+    logger.error('[/api/admin/tournaments] internal error:', err);
     return res.status(500).json({
       error: 'Internal server error',
     });
@@ -119,7 +120,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
   const { data, error, count } = await query;
 
   if (error) {
-    console.error('admin GET tournaments error:', error);
+    logger.error('admin GET tournaments error:', error);
     return res.status(500).json({
       error: 'Failed to fetch tournaments',
     });
@@ -210,7 +211,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: any) {
     .maybeSingle();
 
   if (error || !data) {
-    console.error('admin POST tournaments error:', error);
+    logger.error('admin POST tournaments error:', error);
     return res.status(500).json({
       error: 'Failed to create tournament',
     });
@@ -227,7 +228,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: any) {
         payload: { name: data.name, slug: data.slug },
       });
     } catch (logErr) {
-      console.error('logStaffAction(create_tournament) error:', logErr);
+      logger.error('logStaffAction(create_tournament) error:', logErr);
     }
   }
 
@@ -248,10 +249,10 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: any) {
       .insert(mapRows);
 
     if (mapsErr) {
-      console.error('Auto-insert tournament_maps error:', mapsErr);
+      logger.error('Auto-insert tournament_maps error:', mapsErr);
     }
   } catch (mapsInsertErr) {
-    console.error('Auto-insert tournament_maps exception:', mapsInsertErr);
+    logger.error('Auto-insert tournament_maps exception:', mapsInsertErr);
   }
 
   return res.status(201).json({ tournament: data });

@@ -12,6 +12,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 import { CHECKIN_OPEN_MINUTES } from '@/utils/checkin';
 
+import { logger } from '../../../utils/logger';
 export type NextMatchPayload =
   | {
       match: {
@@ -107,7 +108,7 @@ export default withAuthRoute(async function handler(
     .limit(1);
 
   if (error) {
-    console.error('[/api/player/next-match] error:', error);
+    logger.error('[/api/player/next-match] error:', error);
     return res.status(500).json({ error: 'Failed to load next match' });
   }
 

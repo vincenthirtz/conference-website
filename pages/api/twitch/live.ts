@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../../utils/logger';
 type LiveStatus = {
   live: boolean;
   title?: string;
@@ -128,7 +129,7 @@ export default async function handler(
     );
     return res.status(200).json({ statuses: liveMap });
   } catch (err: unknown) {
-    console.error('[/api/twitch/live] error:', err);
+    logger.error('[/api/twitch/live] error:', err);
     return res.status(500).json({
       error: (err as Error)?.message || 'Failed to check live status',
     });

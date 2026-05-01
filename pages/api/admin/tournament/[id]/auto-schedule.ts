@@ -36,6 +36,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
+import { logger } from '../../../../../utils/logger';
 import {
   autoScheduleMatches,
   makeMultiDayWindows,
@@ -142,7 +143,7 @@ async function handler(
       .neq('status', 'cancelled');
 
     if (mErr) {
-      console.error('auto-schedule: fetch matches error', mErr);
+      logger.error('auto-schedule: fetch matches error', mErr);
       return res.status(500).json({
         error: 'Failed to fetch matches',
       });
@@ -263,7 +264,7 @@ async function handler(
       const updateResults = await Promise.all(updates);
       updateResults.forEach((r, idx) => {
         if (r.error) {
-          console.error(
+          logger.error(
             'auto-schedule: update match scheduled_at error',
             result.scheduled[idx].matchId,
             r.error
@@ -289,7 +290,7 @@ async function handler(
           },
         });
       } catch (e) {
-        console.error('auto-schedule: logStaffAction error', e);
+        logger.error('auto-schedule: logStaffAction error', e);
       }
     }
 
@@ -302,7 +303,7 @@ async function handler(
 
     return res.status(200).json(response);
   } catch (err: unknown) {
-    console.error('[/api/admin/tournament/[id]/auto-schedule] error:', err);
+    logger.error('[/api/admin/tournament/[id]/auto-schedule] error:', err);
     return res.status(500).json({
       error: 'Internal server error',
     });

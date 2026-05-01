@@ -22,6 +22,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { computeAudienceRecipients, getCampaign } from '@/utils/broadcasts';
 
+import { logger } from '../../../../../utils/logger';
 export default withStaffRoute(handler, 'admin');
 
 async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
@@ -39,7 +40,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
     return handleGet(campaignId, res);
   }
   if (req.method === 'POST') {
-    return handlePost(req, res, ctx, campaignId, campaign.audience, campaign.name);
+    return handlePost(
+      req,
+      res,
+      ctx,
+      campaignId,
+      campaign.audience,
+      campaign.name
+    );
   }
   if (req.method === 'DELETE') {
     return handleDelete(req, res, ctx, campaignId, campaign.name);
@@ -59,7 +67,7 @@ async function handleGet(campaignId: string, res: NextApiResponse) {
     .maybeSingle();
 
   if (schedErr) {
-    console.error('[broadcast/schedule GET] schedule error:', schedErr);
+    logger.error('[broadcast/schedule GET] schedule error:', schedErr);
     return res.status(500).json({ error: 'Echec du chargement du planning' });
   }
 
@@ -70,7 +78,7 @@ async function handleGet(campaignId: string, res: NextApiResponse) {
     .eq('campaign_id', campaignId);
 
   if (countErr) {
-    console.error('[broadcast/schedule GET] counts error:', countErr);
+    logger.error('[broadcast/schedule GET] counts error:', countErr);
     return res.status(500).json({ error: 'Echec du chargement des stats' });
   }
 
@@ -97,11 +105,7 @@ async function handlePost(
   campaignName: string
 ) {
   const rawWaveSize = Number(req.body?.waveSize);
-  if (
-    !Number.isFinite(rawWaveSize) ||
-    rawWaveSize < 1 ||
-    rawWaveSize > 290
-  ) {
+  if (!Number.isFinite(rawWaveSize) || rawWaveSize < 1 || rawWaveSize > 290) {
     return res.status(400).json({
       error: 'waveSize doit être un entier entre 1 et 290.',
     });
@@ -113,7 +117,7 @@ async function handlePost(
   try {
     recipients = await computeAudienceRecipients(audience);
   } catch (err: unknown) {
-    console.error('[broadcast/schedule] recipients error:', err);
+    logger.error('[broadcast/schedule] recipients error:', err);
     return res.status(500).json({ error: 'Echec du calcul des destinataires' });
   }
 
@@ -145,7 +149,7 @@ async function handlePost(
         count: 'exact',
       });
     if (insErr) {
-      console.error('[broadcast/schedule] insert error:', insErr);
+      logger.error('[broadcast/schedule] insert error:', insErr);
       return res.status(500).json({ error: 'Echec du snapshot recipients' });
     }
     inserted += count ?? 0;
@@ -175,7 +179,7 @@ async function handlePost(
     );
 
   if (upErr) {
-    console.error('[broadcast/schedule] upsert error:', upErr);
+    logger.error('[broadcast/schedule] upsert error:', upErr);
     return res.status(500).json({ error: 'Echec de la planification' });
   }
 
@@ -195,7 +199,7 @@ async function handlePost(
         },
       });
     } catch (logErr) {
-      console.error('[broadcast/schedule] log error:', logErr);
+      logger.error('[broadcast/schedule] log error:', logErr);
     }
   }
 
@@ -223,7 +227,7 @@ async function handleDelete(
     .eq('status', 'pending');
 
   if (delRecErr) {
-    console.error('[broadcast/schedule DELETE] recipients error:', delRecErr);
+    logger.error('[broadcast/schedule DELETE] recipients error:', delRecErr);
     return res.status(500).json({ error: 'Echec de la suppression' });
   }
 
@@ -233,7 +237,7 @@ async function handleDelete(
     .eq('campaign_id', campaignId);
 
   if (delSchedErr) {
-    console.error('[broadcast/schedule DELETE] schedule error:', delSchedErr);
+    logger.error('[broadcast/schedule DELETE] schedule error:', delSchedErr);
     return res.status(500).json({ error: 'Echec de la suppression' });
   }
 
@@ -251,7 +255,7 @@ async function handleDelete(
         },
       });
     } catch (logErr) {
-      console.error('[broadcast/schedule DELETE] log error:', logErr);
+      logger.error('[broadcast/schedule DELETE] log error:', logErr);
     }
   }
 

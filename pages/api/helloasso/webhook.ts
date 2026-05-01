@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import type { HelloAssoWebhookEvent } from '@/utils/helloasso';
 
+import { logger } from '../../../utils/logger';
 /**
  * HelloAsso webhook endpoint.
  *
@@ -27,7 +28,7 @@ export default async function handler(
   }
 
   // Log the event for now — extend with DB writes or emails as needed
-  console.log(
+  logger.info(
     `[helloasso/webhook] ${event.eventType} — amount=${event.data.amount} state=${event.data.state} payer=${event.data.payer?.email ?? 'unknown'}`
   );
 

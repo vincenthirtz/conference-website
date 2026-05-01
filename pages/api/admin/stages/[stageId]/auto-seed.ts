@@ -14,6 +14,7 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { computeStageStandings } from '@/utils/stages/standings';
 import { isValidUUID } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../../utils/logger';
 type SeededSlot = {
   matchId: string;
   slot: 1 | 2;
@@ -156,7 +157,7 @@ async function handler(
         .eq('id', u.matchId);
 
       if (updErr) {
-        console.error('auto-seed update error:', updErr);
+        logger.error('auto-seed update error:', updErr);
       }
     }
 
@@ -201,7 +202,7 @@ async function handler(
           },
         });
       } catch (e) {
-        console.error('auto-seed logStaffAction error:', e);
+        logger.error('auto-seed logStaffAction error:', e);
       }
     }
 
@@ -210,7 +211,7 @@ async function handler(
       totalMatches: bracketMatches.length,
     });
   } catch (err: unknown) {
-    console.error('[/api/admin/stages/[stageId]/auto-seed] error:', err);
+    logger.error('[/api/admin/stages/[stageId]/auto-seed] error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

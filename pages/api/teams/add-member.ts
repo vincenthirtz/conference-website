@@ -16,6 +16,7 @@ import {
 } from '@/utils/teams/rosterLock';
 import { withAuthRoute } from '@/utils/staff';
 
+import { logger } from '../../../utils/logger';
 type AddMemberResponse =
   | {
       teamMemberId?: string;
@@ -110,10 +111,10 @@ export default withAuthRoute(async function handler(
         );
         resolvedUserId = userId;
         if (created) {
-          console.log(`[add-member] auto-created user for ${email}`);
+          logger.info(`[add-member] auto-created user for ${email}`);
         }
       } catch (err: unknown) {
-        console.error('[add-member] findOrCreateUser error:', err);
+        logger.error('[add-member] findOrCreateUser error:', err);
         return res.status(500).json({
           error: (err as Error)?.message || 'Failed to find or create user',
         });
@@ -180,7 +181,7 @@ export default withAuthRoute(async function handler(
         captainTeam.name,
         memberPayload.role
       ).catch((err) => {
-        console.error('[add-member] team join email error:', err);
+        logger.error('[add-member] team join email error:', err);
       });
     } else if (resolvedUserId) {
       supabaseAdmin.auth.admin
@@ -192,7 +193,7 @@ export default withAuthRoute(async function handler(
               captainTeam.name,
               memberPayload.role
             ).catch((err) => {
-              console.error('[add-member] team join email error:', err);
+              logger.error('[add-member] team join email error:', err);
             });
           }
         })
@@ -214,7 +215,7 @@ export default withAuthRoute(async function handler(
         published_at: new Date().toISOString(),
       });
     } catch (newsErr) {
-      console.error('[/api/teams/add-member] create news error:', newsErr);
+      logger.error('[/api/teams/add-member] create news error:', newsErr);
     }
 
     return res.status(200).json({
@@ -226,7 +227,7 @@ export default withAuthRoute(async function handler(
       info: "Membre ajouté à l'équipe",
     });
   } catch (err: unknown) {
-    console.error('[/api/teams/add-member] error:', err);
+    logger.error('[/api/teams/add-member] error:', err);
     return res.status(500).json({
       error: (err as Error)?.message || 'Internal server error',
     });

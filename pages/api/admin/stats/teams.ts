@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { sanitizeSearch, escapePostgrestValue } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../utils/logger';
 type TeamStatsRow = {
   team_id: string;
   team_name: string | null;
@@ -144,7 +145,7 @@ async function handler(
   const { data, error, count } = await query;
 
   if (error) {
-    console.error('[/api/admin/stats/teams] fetch error', error);
+    logger.error('[/api/admin/stats/teams] fetch error', error);
     return res.status(500).json({ error: 'Failed to load team stats.' });
   }
 

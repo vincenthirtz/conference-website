@@ -8,6 +8,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 
+import { logger } from '../../../utils/logger';
 export type JoinRequestBody = {
   teamId: string;
   message?: string;
@@ -34,7 +35,7 @@ export default withAuthRoute(async function handler(
       .order('created_at', { ascending: false });
 
     if (demandesErr) {
-      console.error('[demandes/join] GET error:', demandesErr);
+      logger.error('[demandes/join] GET error:', demandesErr);
       return res.status(500).json({ error: 'Failed to load requests.' });
     }
 
@@ -87,7 +88,7 @@ export default withAuthRoute(async function handler(
       .maybeSingle();
 
     if (memberErr) {
-      console.error('[demandes/join] check member error:', memberErr);
+      logger.error('[demandes/join] check member error:', memberErr);
     }
 
     if (existingMember) {
@@ -107,7 +108,7 @@ export default withAuthRoute(async function handler(
       .maybeSingle();
 
     if (existingErr) {
-      console.error('[demandes/join] check existing error:', existingErr);
+      logger.error('[demandes/join] check existing error:', existingErr);
       return res.status(500).json({ error: 'Verification error.' });
     }
 
@@ -162,7 +163,7 @@ export default withAuthRoute(async function handler(
       .single();
 
     if (insertErr) {
-      console.error('[demandes/join] insert error:', insertErr);
+      logger.error('[demandes/join] insert error:', insertErr);
       return res.status(500).json({ error: 'Failed to create request.' });
     }
 

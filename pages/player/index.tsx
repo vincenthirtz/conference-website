@@ -16,6 +16,7 @@ import QuickAction, {
 import NextMatchCard from '@/components/player/NextMatchCard';
 import { PlayerDashboardSkeleton } from '@/components/player/Skeletons';
 
+import { logger } from '../../utils/logger';
 type TeamInfo = {
   id: string;
   name: string;
@@ -218,7 +219,7 @@ export default function PlayerDashboard() {
     setLoading(true);
     loadData()
       .catch((err: unknown) => {
-        console.error('[player] load error:', err);
+        logger.error('[player] load error:', err);
         if (!cancelled) setError('Erreur lors du chargement de ton profil.');
       })
       .finally(() => {

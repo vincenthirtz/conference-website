@@ -10,6 +10,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../utils/logger';
 export type TeamRow = {
   id: string;
   name: string;
@@ -54,7 +55,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (err: unknown) {
-    console.error('[/api/admin/teams/[teamId]] internal error:', err);
+    logger.error('[/api/admin/teams/[teamId]] internal error:', err);
     return res.status(500).json({
       error: 'Internal server error',
     });
@@ -73,7 +74,7 @@ async function handleGet(id: string, res: NextApiResponse) {
     .maybeSingle();
 
   if (error || !data) {
-    console.error('admin GET team error:', error);
+    logger.error('admin GET team error:', error);
     return res.status(404).json({ error: 'Team not found' });
   }
 
@@ -96,7 +97,7 @@ async function handleGet(id: string, res: NextApiResponse) {
     .eq('team_id', id);
 
   if (membersError) {
-    console.error('admin GET team members error:', membersError);
+    logger.error('admin GET team members error:', membersError);
   }
 
   // Formater les membres
@@ -238,7 +239,7 @@ async function handlePut(
     .maybeSingle();
 
   if (error || !data) {
-    console.error('admin PUT team error:', error);
+    logger.error('admin PUT team error:', error);
     return res.status(500).json({
       error: 'Failed to update team',
     });
@@ -258,7 +259,7 @@ async function handlePut(
         },
       });
     } catch (e) {
-      console.error('admin PUT team logStaffAction error:', e);
+      logger.error('admin PUT team logStaffAction error:', e);
     }
   }
 
@@ -298,7 +299,7 @@ async function handleDelete(
       .delete()
       .eq('team_id', id);
     if (demandesErr) {
-      console.error(
+      logger.error(
         'admin hard delete team — demandes cleanup error:',
         demandesErr
       );
@@ -309,7 +310,7 @@ async function handleDelete(
       .delete()
       .eq('team_id', id);
     if (stageTeamsErr) {
-      console.error(
+      logger.error(
         'admin hard delete team — stage_teams cleanup error:',
         stageTeamsErr
       );
@@ -320,7 +321,7 @@ async function handleDelete(
       .delete()
       .eq('team_id', id);
     if (membersErr) {
-      console.error(
+      logger.error(
         'admin hard delete team — team_members cleanup error:',
         membersErr
       );
@@ -329,7 +330,7 @@ async function handleDelete(
     const { error } = await supabaseAdmin.from('teams').delete().eq('id', id);
 
     if (error) {
-      console.error('admin hard delete team error:', error);
+      logger.error('admin hard delete team error:', error);
       return res.status(500).json({
         error: 'Failed to hard-delete team',
       });
@@ -349,7 +350,7 @@ async function handleDelete(
           },
         });
       } catch (e) {
-        console.error('admin hard delete team logStaffAction error:', e);
+        logger.error('admin hard delete team logStaffAction error:', e);
       }
     }
 
@@ -373,7 +374,7 @@ async function handleDelete(
     .maybeSingle();
 
   if (error || !data) {
-    console.error('admin soft delete team error:', error);
+    logger.error('admin soft delete team error:', error);
     return res.status(500).json({
       error: 'Failed to deactivate team',
     });
@@ -393,7 +394,7 @@ async function handleDelete(
         },
       });
     } catch (e) {
-      console.error('admin soft delete team logStaffAction error:', e);
+      logger.error('admin soft delete team logStaffAction error:', e);
     }
   }
 

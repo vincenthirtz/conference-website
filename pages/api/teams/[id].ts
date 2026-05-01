@@ -6,6 +6,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../../utils/logger';
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -33,7 +34,7 @@ export default async function handler(
     .maybeSingle();
 
   if (error || !data) {
-    console.error('GET team error:', error);
+    logger.error('GET team error:', error);
     return res.status(404).json({ error: 'Team not found' });
   }
 

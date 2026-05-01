@@ -7,6 +7,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
+import { logger } from '../../../../utils/logger';
 import {
   parsePagination,
   sanitizeSearch,
@@ -89,7 +90,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (err: unknown) {
-    console.error('[/api/admin/demandes] internal error:', err);
+    logger.error('[/api/admin/demandes] internal error:', err);
     return res.status(500).json({
       error: 'Internal server error',
     });
@@ -249,7 +250,7 @@ async function handleGet(
   const { data, error, count } = await query;
 
   if (error) {
-    console.error('admin GET demandes error:', error);
+    logger.error('admin GET demandes error:', error);
     return res.status(500).json({
       error: 'Failed to fetch demandes',
     });
@@ -394,7 +395,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: any) {
     .in('id', demandeIds);
 
   if (fetchErr) {
-    console.error('admin demandes batch fetch error:', fetchErr);
+    logger.error('admin demandes batch fetch error:', fetchErr);
     return res.status(500).json({
       error: 'Failed to fetch demandes before update',
     });
@@ -420,7 +421,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: any) {
     .select('*');
 
   if (updErr) {
-    console.error('admin demandes batch update error:', updErr);
+    logger.error('admin demandes batch update error:', updErr);
     return res.status(500).json({
       error: 'Failed to update demandes',
     });
@@ -448,7 +449,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: any) {
             });
 
           if (regErr) {
-            console.error('auto-register team_registration error:', regErr);
+            logger.error('auto-register team_registration error:', regErr);
           } else {
             // Auto news: team approved for tournament
             try {
@@ -472,7 +473,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: any) {
                 published_at: new Date().toISOString(),
               });
             } catch (newsErr) {
-              console.error('[admin/demandes] create news error:', newsErr);
+              logger.error('[admin/demandes] create news error:', newsErr);
             }
           }
         }
@@ -530,7 +531,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: any) {
       });
 
       if (notifErr) {
-        console.error('admin scrim accept notification error:', notifErr);
+        logger.error('admin scrim accept notification error:', notifErr);
       }
     }
   }
@@ -561,7 +562,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: any) {
             });
 
           if (memberErr) {
-            console.error('auto-add join member error:', memberErr);
+            logger.error('auto-add join member error:', memberErr);
           } else {
             try {
               const playerName =
@@ -586,7 +587,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: any) {
                 published_at: new Date().toISOString(),
               });
             } catch (newsErr) {
-              console.error('[admin/demandes] join news error:', newsErr);
+              logger.error('[admin/demandes] join news error:', newsErr);
             }
           }
         }
@@ -612,7 +613,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: any) {
         },
       });
     } catch (e) {
-      console.error('admin demandes batch logStaffAction error:', e);
+      logger.error('admin demandes batch logStaffAction error:', e);
     }
   }
 

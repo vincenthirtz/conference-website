@@ -16,6 +16,7 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import type { MatchStatus } from '@/types/admin';
 
+import { logger } from '../../../../../utils/logger';
 const VALID_RESUME_STATUSES: MatchStatus[] = [
   'pending',
   'ongoing',
@@ -47,7 +48,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (err: unknown) {
-    console.error('[/api/admin/matches/[matchId]/dispute] error:', err);
+    logger.error('[/api/admin/matches/[matchId]/dispute] error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
@@ -124,7 +125,7 @@ async function openDispute(
     .maybeSingle();
 
   if (updErr || !updated) {
-    console.error('openDispute update error:', updErr);
+    logger.error('openDispute update error:', updErr);
     return res.status(500).json({ error: 'Failed to open dispute' });
   }
 
@@ -248,7 +249,7 @@ async function resolveDispute(
       .eq('id', matchId);
 
     if (clearErr) {
-      console.error('resolveDispute clear status error:', clearErr);
+      logger.error('resolveDispute clear status error:', clearErr);
       return res.status(500).json({ error: 'Failed to clear dispute status' });
     }
 
@@ -297,7 +298,7 @@ async function resolveDispute(
         })
         .eq('id', matchId);
 
-      console.error('resolveDispute applyMatchScore error:', e);
+      logger.error('resolveDispute applyMatchScore error:', e);
       return res.status(500).json({
         error: `Erreur lors de l'application du score : ${
           e instanceof Error ? e.message : 'unknown'
@@ -321,7 +322,7 @@ async function resolveDispute(
     .maybeSingle();
 
   if (updErr || !updated) {
-    console.error('resolveDispute simple update error:', updErr);
+    logger.error('resolveDispute simple update error:', updErr);
     return res.status(500).json({ error: 'Failed to resolve dispute' });
   }
 
@@ -404,7 +405,7 @@ async function cancelDispute(
     .maybeSingle();
 
   if (updErr || !updated) {
-    console.error('cancelDispute update error:', updErr);
+    logger.error('cancelDispute update error:', updErr);
     return res.status(500).json({ error: 'Failed to cancel dispute' });
   }
 

@@ -6,6 +6,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { isValidUUID } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../utils/logger';
 export default withStaffRoute(handler, 'caster');
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -51,7 +52,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     .maybeSingle();
 
   if (error) {
-    console.error('[admin/demandes/:id] fetch error:', error);
+    logger.error('[admin/demandes/:id] fetch error:', error);
     return res.status(500).json({ error: 'Failed to fetch demande' });
   }
 
@@ -82,7 +83,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         };
       }
     } catch (e) {
-      console.error('[admin/demandes/:id] user fetch error:', e);
+      logger.error('[admin/demandes/:id] user fetch error:', e);
     }
   }
 
@@ -99,7 +100,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         demande.handled_by = staffData;
       }
     } catch (e) {
-      console.error('[admin/demandes/:id] staff fetch error:', e);
+      logger.error('[admin/demandes/:id] staff fetch error:', e);
     }
   }
 

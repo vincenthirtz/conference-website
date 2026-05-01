@@ -6,6 +6,7 @@ import { sendAccountDeletedEmail, sendWelcomeEmail } from '@/utils/email';
 import crypto from 'crypto';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../../../utils/logger';
 type TeamMembership = {
   team_id: string;
   team_name: string;
@@ -65,7 +66,7 @@ async function handler(
     });
 
     if (error) {
-      console.error('[admin/users/manage] list error:', error);
+      logger.error('[admin/users/manage] list error:', error);
       return res.status(500).json({ error: 'Failed to load users.' });
     }
 
@@ -168,7 +169,7 @@ async function handler(
         });
 
       if (updateErr) {
-        console.error('[admin/users/manage] reset password error:', updateErr);
+        logger.error('[admin/users/manage] reset password error:', updateErr);
         return res.status(500).json({ error: 'Failed to reset password.' });
       }
 
@@ -176,10 +177,7 @@ async function handler(
       if (email) {
         const emailResult = await sendWelcomeEmail(email, newPassword);
         if (!emailResult.success) {
-          console.error(
-            '[admin/users/manage] email failed:',
-            emailResult.error
-          );
+          logger.error('[admin/users/manage] email failed:', emailResult.error);
           return res.status(200).json({
             success: true,
             warning: `Mot de passe réinitialisé mais l'email n'a pas pu être envoyé : ${emailResult.error}`,
@@ -210,7 +208,7 @@ async function handler(
         .eq('team_id', teamId);
 
       if (updateErr) {
-        console.error(
+        logger.error(
           '[admin/users/manage] battle_tag update error:',
           updateErr
         );
@@ -244,7 +242,7 @@ async function handler(
       );
 
       if (error || !data?.user) {
-        console.error('[admin/users/manage] display_name update error:', error);
+        logger.error('[admin/users/manage] display_name update error:', error);
         return res
           .status(500)
           .json({ error: 'Failed to update display name.' });
@@ -284,7 +282,7 @@ async function handler(
     const { data: target, error: targetErr } =
       await supabaseAdmin.auth.admin.getUserById(userId);
     if (targetErr || !target?.user) {
-      console.error('[admin/users/manage] get target error:', targetErr);
+      logger.error('[admin/users/manage] get target error:', targetErr);
       return res
         .status(404)
         .json({ error: 'Target user not found or inaccessible.' });
@@ -322,7 +320,7 @@ async function handler(
     );
 
     if (error || !data?.user) {
-      console.error('[admin/users/manage] update error:', error);
+      logger.error('[admin/users/manage] update error:', error);
       return res.status(500).json({ error: 'Failed to update user.' });
     }
 
@@ -414,7 +412,7 @@ async function handler(
     const deletedEmail = target.user.email;
     if (deletedEmail) {
       sendAccountDeletedEmail(deletedEmail).catch((err) => {
-        console.error('[admin/users/manage] account deleted email error:', err);
+        logger.error('[admin/users/manage] account deleted email error:', err);
       });
     }
 
@@ -422,7 +420,7 @@ async function handler(
     const { error: deleteErr } =
       await supabaseAdmin.auth.admin.deleteUser(userId);
     if (deleteErr) {
-      console.error('[admin/users/manage] delete error:', deleteErr);
+      logger.error('[admin/users/manage] delete error:', deleteErr);
       return res.status(500).json({ error: 'Failed to delete user.' });
     }
 

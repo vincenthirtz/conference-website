@@ -13,6 +13,7 @@ import {
 } from '@/utils/checkin';
 import { logStaffAction } from '@/utils/staffLogs';
 
+import { logger } from '../../../../../utils/logger';
 export default withStaffRoute(handler, 'manager');
 
 async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
@@ -54,7 +55,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
     res.setHeader('Allow', 'GET,POST');
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
-    console.error('[admin/tournament/checkin] error:', err);
+    logger.error('[admin/tournament/checkin] error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

@@ -7,6 +7,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { withAuthRoute } from '@/utils/staff';
 
+import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -59,7 +60,7 @@ export default withAuthRoute(async function handler(
     .eq('id', demandeId);
 
   if (updateErr) {
-    console.error('[demandes/cancel] update error:', updateErr);
+    logger.error('[demandes/cancel] update error:', updateErr);
     return res.status(500).json({ error: "Échec de l'annulation." });
   }
 

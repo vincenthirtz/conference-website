@@ -11,6 +11,7 @@ import {
 import { sendTeamJoinEmail } from '@/utils/email';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID, validateRole } from '@/utils/apiHelpers';
+import { logger } from '../../../../../utils/logger';
 import {
   isTeamRosterLocked,
   rosterLockErrorMessage,
@@ -77,7 +78,7 @@ async function handler(
       .order('created_at', { ascending: true });
 
     if (error) {
-      console.error('admin GET team members error:', error);
+      logger.error('admin GET team members error:', error);
       return res.status(500).json({ error: 'Failed to fetch team members' });
     }
 
@@ -154,10 +155,10 @@ async function handler(
           );
           resolvedUserId = userId;
           if (created) {
-            console.log(`[members POST] auto-created user for ${email}`);
+            logger.info(`[members POST] auto-created user for ${email}`);
           }
         } catch (err: unknown) {
-          console.error('[members POST] findOrCreateUser error:', err);
+          logger.error('[members POST] findOrCreateUser error:', err);
           return res.status(500).json({
             error: (err as Error)?.message || 'Failed to find or create user',
           });
@@ -202,7 +203,7 @@ async function handler(
       if (memberEmail) {
         sendTeamJoinEmail(memberEmail, team.name, memberPayload.role).catch(
           (err) => {
-            console.error('[members POST] team join email error:', err);
+            logger.error('[members POST] team join email error:', err);
           }
         );
       } else {
@@ -216,7 +217,7 @@ async function handler(
                 team.name,
                 memberPayload.role
               ).catch((err) => {
-                console.error('[members POST] team join email error:', err);
+                logger.error('[members POST] team join email error:', err);
               });
             }
           })
@@ -228,7 +229,7 @@ async function handler(
         info: setCaptain ? 'Member added and set as captain' : 'Member added',
       });
     } catch (err: unknown) {
-      console.error('[members POST] error:', err);
+      logger.error('[members POST] error:', err);
       return res.status(500).json({
         error: (err as Error)?.message || 'Internal server error',
       });
@@ -300,7 +301,7 @@ async function handler(
           .eq('team_id', teamId);
 
         if (upA || upB) {
-          console.error('[members PATCH swap] error:', upA, upB);
+          logger.error('[members PATCH swap] error:', upA, upB);
           return res.status(500).json({ error: 'Failed to swap members' });
         }
 
@@ -309,7 +310,7 @@ async function handler(
           info: `Swapped ${memberA.battle_tag} and ${memberB.battle_tag}`,
         });
       } catch (err: unknown) {
-        console.error('[members PATCH swap] error:', err);
+        logger.error('[members PATCH swap] error:', err);
         return res.status(500).json({
           error: (err as Error)?.message || 'Internal server error',
         });
@@ -353,7 +354,7 @@ async function handler(
         .maybeSingle();
 
       if (updateErr) {
-        console.error('[members PATCH] error:', updateErr);
+        logger.error('[members PATCH] error:', updateErr);
         return res.status(500).json({ error: 'Failed to update member' });
       }
 
@@ -366,7 +367,7 @@ async function handler(
         info: 'Member updated',
       });
     } catch (err: unknown) {
-      console.error('[members PATCH] error:', err);
+      logger.error('[members PATCH] error:', err);
       return res.status(500).json({
         error: (err as Error)?.message || 'Internal server error',
       });
@@ -419,7 +420,7 @@ async function handler(
         .eq('team_id', teamId);
 
       if (deleteErr) {
-        console.error('[members DELETE] error:', deleteErr);
+        logger.error('[members DELETE] error:', deleteErr);
         return res.status(500).json({ error: 'Failed to delete member' });
       }
 
@@ -436,7 +437,7 @@ async function handler(
         info: 'Member removed from team',
       });
     } catch (err: unknown) {
-      console.error('[members DELETE] error:', err);
+      logger.error('[members DELETE] error:', err);
       return res.status(500).json({
         error: (err as Error)?.message || 'Internal server error',
       });

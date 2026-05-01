@@ -4,6 +4,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../../../utils/logger';
 type AnnouncementPayload = {
   title?: string;
   message?: string;
@@ -51,7 +52,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .single();
 
     if (error) {
-      console.error('[admin/announcements] get error', error);
+      logger.error('[admin/announcements] get error', error);
       return res.status(404).json({ error: 'Announcement not found.' });
     }
     return res.status(200).json(data);
@@ -83,7 +84,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .single();
 
     if (error) {
-      console.error('[admin/announcements] update error', error);
+      logger.error('[admin/announcements] update error', error);
       return res
         .status(500)
         .json({ error: 'Failed to update the announcement.' });
@@ -96,7 +97,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { error } = await admin.from('announcements').delete().eq('id', id);
 
     if (error) {
-      console.error('[admin/announcements] delete error', error);
+      logger.error('[admin/announcements] delete error', error);
       return res
         .status(500)
         .json({ error: 'Failed to delete the announcement.' });

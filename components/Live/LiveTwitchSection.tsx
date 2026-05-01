@@ -3,6 +3,7 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
 
+import { logger } from '../../utils/logger';
 type TwitchChannel = {
   channel: string;
   label: string;
@@ -29,7 +30,7 @@ export default function LiveTwitchSection() {
         const json = await resp.json();
         setTwitchChannels(json.items || []);
       } catch (err) {
-        console.error('LiveTwitchSection channels fetch error:', err);
+        logger.error('LiveTwitchSection channels fetch error:', err);
         setTwitchChannels([]);
       } finally {
         setLoadingChannels(false);
@@ -56,7 +57,7 @@ export default function LiveTwitchSection() {
         });
         setLiveStatus(statuses);
       } catch (err) {
-        console.error('LiveTwitchSection status fetch error:', err);
+        logger.error('LiveTwitchSection status fetch error:', err);
       } finally {
         setLoadingStatus(false);
       }

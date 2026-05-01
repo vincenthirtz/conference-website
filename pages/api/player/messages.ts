@@ -9,6 +9,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 
+import { logger } from '../../../utils/logger';
 export type SendMessageBody = {
   targetTeamId: string;
   content: string;
@@ -81,7 +82,7 @@ export default withAuthRoute(async function handler(
       .order('created_at', { ascending: false });
 
     if (msgErr) {
-      console.error('[player/messages] GET error:', msgErr);
+      logger.error('[player/messages] GET error:', msgErr);
       return res.status(500).json({ error: 'Failed to load messages.' });
     }
 
@@ -225,7 +226,7 @@ export default withAuthRoute(async function handler(
       .single();
 
     if (insertErr) {
-      console.error('[player/messages] insert error:', insertErr);
+      logger.error('[player/messages] insert error:', insertErr);
       return res.status(500).json({ error: 'Failed to send message.' });
     }
 

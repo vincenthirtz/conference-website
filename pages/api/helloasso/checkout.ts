@@ -4,6 +4,7 @@ import { createCheckoutIntent } from '@/utils/helloasso';
 import { z } from 'zod';
 import { formatZodError } from '@/utils/validation';
 
+import { logger } from '../../../utils/logger';
 const checkoutSchema = z.object({
   amount: z
     .number()
@@ -59,7 +60,7 @@ export default async function handler(
 
     return res.status(200).json({ redirectUrl: checkout.redirectUrl });
   } catch (err) {
-    console.error('[api/helloasso/checkout]', err);
+    logger.error('[api/helloasso/checkout]', err);
     return res.status(502).json({
       error: 'Impossible de créer la session de paiement. Réessayez plus tard.',
     });

@@ -3,6 +3,7 @@ import { load } from 'cheerio';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../utils/logger';
 const NEWS_URL = 'https://overwatch.blizzard.com/fr-fr/news/';
 
 export type BlizzardNewsItem = {
@@ -236,7 +237,7 @@ async function saveNewsToDb(items: BlizzardNewsItem[]): Promise<void> {
     .upsert(records, { onConflict: 'id' });
 
   if (error) {
-    console.error('[/api/blizzard-news] failed to save to DB:', error);
+    logger.error('[/api/blizzard-news] failed to save to DB:', error);
   }
 }
 
@@ -253,7 +254,7 @@ async function getNewsFromDb(limit = 8): Promise<BlizzardNewsItem[]> {
     .limit(limit);
 
   if (error) {
-    console.error('[/api/blizzard-news] failed to fetch from DB:', error);
+    logger.error('[/api/blizzard-news] failed to fetch from DB:', error);
     return [];
   }
 
@@ -292,11 +293,11 @@ export default async function handler(
       // Sauvegarder en BDD (en arrière-plan)
       if (scrapedItems.length > 0) {
         saveNewsToDb(scrapedItems).catch((err) => {
-          console.error('[/api/blizzard-news] background save error:', err);
+          logger.error('[/api/blizzard-news] background save error:', err);
         });
       }
     } catch (scrapeError) {
-      console.error('[/api/blizzard-news] scrape failed:', scrapeError);
+      logger.error('[/api/blizzard-news] scrape failed:', scrapeError);
     }
 
     // 2. Récupérer depuis la BDD
@@ -311,7 +312,7 @@ export default async function handler(
       items: items.slice(0, limit),
     });
   } catch (error) {
-    console.error('[/api/blizzard-news] error:', error);
+    logger.error('[/api/blizzard-news] error:', error);
     return res.status(500).json({
       error: 'Failed to load Overwatch news.',
     });

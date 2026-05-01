@@ -4,6 +4,7 @@ import { withStaffRoute, StaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../../../utils/logger';
 type SiteSetting = {
   key: string;
   value: string;
@@ -40,7 +41,7 @@ async function handler(
       .order('key');
 
     if (error) {
-      console.error('[admin/site-settings] list error', error);
+      logger.error('[admin/site-settings] list error', error);
       return res.status(500).json({ error: 'Failed to load settings.' });
     }
 
@@ -69,7 +70,7 @@ async function handler(
       .single();
 
     if (error) {
-      console.error('[admin/site-settings] upsert error', error);
+      logger.error('[admin/site-settings] upsert error', error);
       return res.status(500).json({ error: 'Failed to save the setting.' });
     }
 

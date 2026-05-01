@@ -7,6 +7,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { isValidUUID } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../../utils/logger';
 export default withStaffRoute(handler, 'caster');
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -111,10 +112,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       advancementRules: hasAutoAdvancement ? advancementRules : undefined,
     });
   } catch (err: unknown) {
-    console.error(
-      '[/api/admin/stages/[stageId]/completion-status] error:',
-      err
-    );
+    logger.error('[/api/admin/stages/[stageId]/completion-status] error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

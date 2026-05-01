@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 
+import { logger } from '../../../utils/logger';
 type StaffShape = {
   id: string;
   role: string;
@@ -63,7 +64,7 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
       const json: ApiTeams = await res.json();
       setTeams(json.teams || []);
     } catch (e) {
-      console.error('Failed to load teams list', e);
+      logger.error('Failed to load teams list', e);
     } finally {
       setLoadingTeams(false);
     }

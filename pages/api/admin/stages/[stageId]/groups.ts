@@ -10,6 +10,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../../utils/logger';
 type TeamInfo = {
   teamId: string;
   name: string;
@@ -45,7 +46,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (err: unknown) {
-    console.error('[/api/admin/stages/[stageId]/groups] error:', err);
+    logger.error('[/api/admin/stages/[stageId]/groups] error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
@@ -249,7 +250,7 @@ async function handlePut(
         payload: { group_assignments: groupAssignments },
       });
     } catch (e) {
-      console.error('groups PUT logStaffAction error:', e);
+      logger.error('groups PUT logStaffAction error:', e);
     }
   }
 
@@ -415,7 +416,7 @@ async function handlePost(
         },
       });
     } catch (e) {
-      console.error('groups POST logStaffAction error:', e);
+      logger.error('groups POST logStaffAction error:', e);
     }
   }
 

@@ -11,6 +11,7 @@ import { supabaseAdmin, getServerClient } from './supabase';
 import type { StaffRole } from '@/types/admin';
 import type { StaffMember, StaffContext } from '@/types/staff';
 
+import { logger } from './logger';
 export type { StaffRole } from '@/types/admin';
 export type { StaffMember, StaffContext } from '@/types/staff';
 
@@ -117,7 +118,7 @@ export async function getStaffByUserId(
     .maybeSingle();
 
   if (error) {
-    console.error('getStaffByUserId error:', error);
+    logger.error('getStaffByUserId error:', error);
     return null;
   }
 
@@ -165,7 +166,7 @@ async function resolveUserFromToken(token: string): Promise<User | null> {
       error,
     } = await supabaseAdmin.auth.getUser(token);
     if (error) {
-      console.error('resolveUserFromToken error:', error);
+      logger.error('resolveUserFromToken error:', error);
       tokenUserCache.set(token, {
         user: null,
         expiresAt: now + TOKEN_CACHE_TTL,
@@ -175,7 +176,7 @@ async function resolveUserFromToken(token: string): Promise<User | null> {
     tokenUserCache.set(token, { user, expiresAt: now + TOKEN_CACHE_TTL });
     return user;
   } catch (err) {
-    console.error('resolveUserFromToken exception:', err);
+    logger.error('resolveUserFromToken exception:', err);
     return null;
   }
 }
@@ -228,7 +229,7 @@ export async function getStaffContextFromRequest(
         msg.includes('Auth session missing') || status === 400;
 
       if (!isMissingSession) {
-        console.error('getStaffContextFromRequest cookie error:', cookieError);
+        logger.error('getStaffContextFromRequest cookie error:', cookieError);
       }
     }
 
@@ -347,7 +348,7 @@ export function withStaffRoute(
       }
 
       // Log only unexpected errors
-      console.error('withStaffRoute error:', err);
+      logger.error('withStaffRoute error:', err);
       res.status(500).json({ error: 'Erreur serveur' });
     }
   };
@@ -398,7 +399,7 @@ export function withAuthRoute(
 
       await handler(req, res, { user });
     } catch (err: unknown) {
-      console.error('withAuthRoute error:', err);
+      logger.error('withAuthRoute error:', err);
       res.status(500).json({ error: 'Erreur serveur' });
     }
   };
@@ -477,7 +478,7 @@ export function withStaffPage<
       }
 
       // Autre erreur → /500
-      console.error('withStaffPage error:', err);
+      logger.error('withStaffPage error:', err);
       return {
         redirect: {
           destination: '/500',

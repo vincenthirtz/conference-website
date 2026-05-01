@@ -9,6 +9,7 @@ import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
 import type { MatchStatus as BaseMatchStatus } from '@/types/admin';
 
+import { logger } from '../../../utils/logger';
 type MatchStatus = BaseMatchStatus | 'completed';
 
 type Tournament = {
@@ -96,7 +97,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     .order('created_at', { ascending: true });
 
   if (sErr) {
-    console.error('matches page stages error:', sErr);
+    logger.error('matches page stages error:', sErr);
   }
 
   // 3) Matches avec filtres
@@ -142,7 +143,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     .order('created_at', { ascending: true });
 
   if (mErr) {
-    console.error('matches page matches error:', mErr);
+    logger.error('matches page matches error:', mErr);
   }
 
   const matches = (matchesData || []) as any as SimpleMatch[];

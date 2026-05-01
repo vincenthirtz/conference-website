@@ -8,6 +8,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 
+import { logger } from '../../../../utils/logger';
 export type TournamentMapRow = {
   id: string;
   tournament_id: string;
@@ -55,7 +56,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (err: unknown) {
-    console.error('[/api/tournament/[id]/maps] error:', err);
+    logger.error('[/api/tournament/[id]/maps] error:', err);
     return res.status(500).json({
       error: 'Internal server error',
     });
@@ -75,7 +76,7 @@ async function handleGet(tournamentId: string, res: NextApiResponse) {
     .order('map_name', { ascending: true });
 
   if (error) {
-    console.error('GET tournament_maps error:', error);
+    logger.error('GET tournament_maps error:', error);
     return res.status(500).json({
       error: 'Failed to fetch tournament maps',
     });
@@ -137,7 +138,7 @@ async function handlePost(
     .maybeSingle();
 
   if (error || !data) {
-    console.error('POST tournament_maps error:', error);
+    logger.error('POST tournament_maps error:', error);
     return res.status(500).json({
       error: 'Failed to create tournament map',
     });
@@ -188,7 +189,7 @@ async function handlePut(
     .eq('tournament_id', tournamentId);
 
   if (delErr) {
-    console.error('DELETE existing tournament_maps error:', delErr);
+    logger.error('DELETE existing tournament_maps error:', delErr);
     return res.status(500).json({
       error: 'Failed to clear tournament maps',
     });
@@ -214,7 +215,7 @@ async function handlePut(
       .select('*');
 
     if (insErr) {
-      console.error('INSERT tournament_maps error:', insErr);
+      logger.error('INSERT tournament_maps error:', insErr);
       return res.status(500).json({
         error: 'Failed to insert tournament maps',
       });
@@ -293,7 +294,7 @@ async function handlePatch(
     .maybeSingle();
 
   if (error || !data) {
-    console.error('PATCH tournament_map error:', error);
+    logger.error('PATCH tournament_map error:', error);
     return res.status(500).json({
       error: 'Failed to update tournament map',
     });
@@ -348,7 +349,7 @@ async function handleDelete(
   const { error } = await query;
 
   if (error) {
-    console.error('DELETE tournament_map(s) error:', error);
+    logger.error('DELETE tournament_map(s) error:', error);
     return res.status(500).json({
       error: 'Failed to delete tournament maps',
     });

@@ -8,6 +8,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { notifySupportTicket } from '@/utils/discord';
+import { logger } from '../../../utils/logger';
 import {
   sendSupportConfirmationEmail,
   sendSupportStaffNotificationEmail,
@@ -150,7 +151,7 @@ export default async function handler(
     .single();
 
   if (insertErr || !ticket) {
-    console.error('[support/ticket] insert error:', insertErr);
+    logger.error('[support/ticket] insert error:', insertErr);
     return res.status(500).json({ error: 'Échec de la création du ticket' });
   }
 
@@ -176,7 +177,7 @@ export default async function handler(
           .eq('id', ticket.id);
       }
     })
-    .catch((e) => console.error('[support] notifySupportTicket error:', e));
+    .catch((e) => logger.error('[support] notifySupportTicket error:', e));
 
   if (!anon && cleanEmail) {
     void sendSupportConfirmationEmail({
@@ -185,7 +186,7 @@ export default async function handler(
       category: ticket.category,
       severity: ticket.severity,
       subject: ticket.subject,
-    }).catch((e) => console.error('[support] confirm email error:', e));
+    }).catch((e) => logger.error('[support] confirm email error:', e));
   }
 
   // Email staff for tickets that bypass the reporter-confirmation flow:
@@ -201,7 +202,7 @@ export default async function handler(
       subject: ticket.subject,
       message: ticket.message,
       adminUrl: `${SITE_URL.replace(/\/$/, '')}/admin/support`,
-    }).catch((e) => console.error('[support] staff email error:', e));
+    }).catch((e) => logger.error('[support] staff email error:', e));
   }
 
   return res.status(201).json({

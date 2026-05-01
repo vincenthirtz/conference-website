@@ -1,6 +1,7 @@
 import type { GetServerSideProps } from 'next';
 import { supabaseAdmin, getServerClient } from '@/utils/supabase';
 
+import { logger } from '../utils/logger';
 const publicRoutes = [
   { path: '/', priority: '1.0', changefreq: 'daily' },
   { path: '/tournoi', priority: '0.9', changefreq: 'weekly' },
@@ -137,7 +138,7 @@ export const getServerSideProps: GetServerSideProps = async ({ res, req }) => {
 
     newsItems = (data || []).filter((n) => n.slug);
   } catch (err) {
-    console.error('[sitemap] Error fetching news:', err);
+    logger.error('[sitemap] Error fetching news:', err);
   }
 
   // Fetch public tournaments
@@ -152,7 +153,7 @@ export const getServerSideProps: GetServerSideProps = async ({ res, req }) => {
 
     tournaments = (data || []) as TournamentItem[];
   } catch (err) {
-    console.error('[sitemap] Error fetching tournaments:', err);
+    logger.error('[sitemap] Error fetching tournaments:', err);
   }
 
   const sitemap = generateSiteMap(baseUrl, newsItems, tournaments);

@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { partnershipRequestSchema, formatZodError } from '@/utils/validation';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { sanitizeUrl } from '@/utils/apiHelpers';
+import { logger } from '../../../utils/logger';
 import {
   sendPartnershipStaffEmail,
   sendPartnershipConfirmationEmail,
@@ -68,7 +69,7 @@ export default async function handler(
     .single();
 
   if (error) {
-    console.error('[api/partnership-requests] insert error', error);
+    logger.error('[api/partnership-requests] insert error', error);
     return res
       .status(500)
       .json({ error: 'Failed to send request. Please try again.' });
@@ -84,7 +85,7 @@ export default async function handler(
     budgetRange: body.budgetRange?.trim() || null,
     message: body.message,
   }).catch((e) =>
-    console.error('[api/partnership-requests] staff email error:', e)
+    logger.error('[api/partnership-requests] staff email error:', e)
   );
 
   void sendPartnershipConfirmationEmail({
@@ -92,7 +93,7 @@ export default async function handler(
     contactName: body.contactName,
     companyName: body.companyName,
   }).catch((e) =>
-    console.error('[api/partnership-requests] confirmation email error:', e)
+    logger.error('[api/partnership-requests] confirmation email error:', e)
   );
 
   return res.status(201).json({

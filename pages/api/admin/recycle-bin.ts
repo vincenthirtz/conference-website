@@ -7,6 +7,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 
+import { logger } from '../../../utils/logger';
 type DeletedItem = {
   id: string;
   type:
@@ -337,13 +338,13 @@ async function handleRestore(
           payload: { action_label: 'restore_item', type, restored_at: nowIso },
         });
       } catch (e) {
-        console.error('recycle-bin logStaffAction error:', e);
+        logger.error('recycle-bin logStaffAction error:', e);
       }
     }
 
     return res.status(200).json({ restored: true, type, id });
   } catch (err: unknown) {
-    console.error('[/api/admin/recycle-bin] restore error:', err);
+    logger.error('[/api/admin/recycle-bin] restore error:', err);
     return res
       .status(500)
       .json({ error: (err as Error)?.message || 'Failed to restore item' });

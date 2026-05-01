@@ -5,6 +5,7 @@ import { fetchMemberships, fetchForms } from '@/utils/helloasso';
 import { logStaffAction } from '@/utils/staffLogs';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../../../utils/logger';
 /**
  * POST /api/admin/helloasso/sync
  *
@@ -189,7 +190,7 @@ async function handler(
       skipped,
     });
   } catch (err) {
-    console.error('[admin/helloasso/sync]', err);
+    logger.error('[admin/helloasso/sync]', err);
     return res.status(502).json({
       error: 'Erreur lors de la synchronisation avec HelloAsso.',
     });

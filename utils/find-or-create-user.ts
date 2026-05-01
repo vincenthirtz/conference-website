@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import { supabaseAdmin } from '@/utils/supabase';
 import { sendWelcomeEmail } from '@/utils/email';
 
+import { logger } from './logger';
 /**
  * Build an email→userId map from Supabase Auth (paginated).
  */
@@ -22,7 +23,7 @@ export async function listUsersEmailMap(): Promise<Map<string, string>> {
     });
 
     if (error) {
-      console.error('[listUsersEmailMap] error:', error);
+      logger.error('[listUsersEmailMap] error:', error);
       throw new Error(error.message || 'Failed to list users');
     }
 
@@ -67,7 +68,7 @@ export async function findOrCreateUserByEmail(
   });
 
   if (error || !data?.user?.id) {
-    console.error('[findOrCreateUserByEmail] createUser error:', error);
+    logger.error('[findOrCreateUserByEmail] createUser error:', error);
     throw new Error(error?.message || 'Failed to create user');
   }
 
@@ -75,7 +76,7 @@ export async function findOrCreateUserByEmail(
 
   // Send welcome email with credentials (non-blocking)
   sendWelcomeEmail(normalizedEmail, generatedPassword).catch((err) => {
-    console.error('[findOrCreateUserByEmail] welcome email error:', err);
+    logger.error('[findOrCreateUserByEmail] welcome email error:', err);
   });
 
   return { userId: data.user.id, created: true };

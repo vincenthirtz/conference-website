@@ -10,6 +10,7 @@ import Paragraph from '@/components/Typography/paragraph';
 import PublicScrimDialog from '@/components/Team/PublicScrimDialog';
 import { supabaseAdmin } from '@/utils/supabase';
 
+import { logger } from '../../utils/logger';
 function safeHref(url: string): string | undefined {
   try {
     const full = url.startsWith('http') ? url : `https://${url}`;
@@ -153,7 +154,7 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
     .order('created_at', { ascending: true });
 
   if (membersError) {
-    console.error('Error fetching team members:', membersError);
+    logger.error('Error fetching team members:', membersError);
   }
 
   // Compute is_captain based on team.captain_id
@@ -286,7 +287,7 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
     .limit(10);
 
   if (matchesError) {
-    console.error('Error fetching recent matches:', matchesError);
+    logger.error('Error fetching recent matches:', matchesError);
   }
 
   // Fetch opponent teams and tournaments separately

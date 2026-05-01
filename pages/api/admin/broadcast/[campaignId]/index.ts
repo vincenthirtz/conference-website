@@ -14,6 +14,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { computeAudienceRecipients, getCampaign } from '@/utils/broadcasts';
 
+import { logger } from '../../../../../utils/logger';
 export default withStaffRoute(handler, 'admin');
 
 async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
@@ -71,7 +72,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
   try {
     recipients = await computeAudienceRecipients(campaign.audience);
   } catch (err: unknown) {
-    console.error('[broadcast] computeAudienceRecipients error:', err);
+    logger.error('[broadcast] computeAudienceRecipients error:', err);
     return res.status(500).json({ error: 'Echec du chargement des comptes' });
   }
 
@@ -137,7 +138,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
         },
       });
     } catch (logErr) {
-      console.error('[broadcast] log error:', logErr);
+      logger.error('[broadcast] log error:', logErr);
     }
   }
 

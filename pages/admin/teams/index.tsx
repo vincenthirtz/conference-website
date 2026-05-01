@@ -9,6 +9,7 @@ import { useToast } from '@/components/Toast';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import type { TeamRow } from '@/types/admin';
 
+import { logger } from '../../../utils/logger';
 type AdminTeamsProps = {
   staff: {
     id: string | null;
@@ -1342,7 +1343,7 @@ export const getServerSideProps = withStaffPage('manager', async (ctx) => {
   const { data, error, count } = await q;
 
   if (error) {
-    console.error('admin teams SSR error:', error);
+    logger.error('admin teams SSR error:', error);
     return { teams: [], total: null, errorMsg: 'Erreur lors du chargement' };
   }
 

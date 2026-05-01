@@ -3,6 +3,7 @@ import { load } from 'cheerio';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../utils/logger';
 const MEDIA_URL = 'https://overwatch.blizzard.com/fr-fr/media/';
 const BASE_URL = 'https://overwatch.blizzard.com';
 
@@ -1426,7 +1427,7 @@ async function saveMediaToDb(items: BlizzardMediaItem[]): Promise<void> {
     .upsert(records, { onConflict: 'id' });
 
   if (error) {
-    console.error('[/api/blizzard-media] failed to save to DB:', error);
+    logger.error('[/api/blizzard-media] failed to save to DB:', error);
   }
 }
 
@@ -1454,7 +1455,7 @@ async function getMediaFromDb(
   const { data, error } = await query;
 
   if (error) {
-    console.error('[/api/blizzard-media] failed to fetch from DB:', error);
+    logger.error('[/api/blizzard-media] failed to fetch from DB:', error);
     return [];
   }
 
@@ -1508,11 +1509,11 @@ export default async function handler(
       // Sauvegarder en BDD (en arrière-plan)
       if (scrapedItems.length > 0) {
         saveMediaToDb(scrapedItems).catch((err) => {
-          console.error('[/api/blizzard-media] background save error:', err);
+          logger.error('[/api/blizzard-media] background save error:', err);
         });
       }
     } catch (scrapeError) {
-      console.error('[/api/blizzard-media] scrape failed:', scrapeError);
+      logger.error('[/api/blizzard-media] scrape failed:', scrapeError);
     }
 
     // 2. Récupérer depuis la BDD
@@ -1531,13 +1532,13 @@ export default async function handler(
         : scrapedItems;
     } else {
       // Fallback sur les données statiques
-      console.log('[/api/blizzard-media] using static fallback data');
+      logger.info('[/api/blizzard-media] using static fallback data');
       items = getStaticMedia(type);
 
       // Sauvegarder les données statiques en BDD si elle est vide
       if (dbItems.length === 0) {
         saveMediaToDb(items).catch((err) => {
-          console.error('[/api/blizzard-media] static save error:', err);
+          logger.error('[/api/blizzard-media] static save error:', err);
         });
       }
     }
@@ -1552,7 +1553,7 @@ export default async function handler(
       types: availableTypes,
     });
   } catch (error) {
-    console.error('[/api/blizzard-media] error:', error);
+    logger.error('[/api/blizzard-media] error:', error);
 
     // En cas d'erreur totale, renvoyer les données statiques
     const staticItems = getStaticMedia(type);

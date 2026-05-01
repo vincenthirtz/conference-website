@@ -1,3 +1,4 @@
+import { logger } from '../logger';
 // lib/matches/computeRequiredWins.ts
 // Helpers pour savoir combien de maps/manches sont nécessaires
 // pour gagner une série (BO1 / BO3 / BO5 / etc.)
@@ -52,7 +53,7 @@ export function computeRequiredWins(format: MatchSeriesFormat): number {
   }
 
   // Fallback safe : 1 victoire
-  console.warn(
+  logger.warn(
     `[computeRequiredWins] Format inconnu : "${format}". Fallback à 1 victoire requise.`
   );
   return 1;

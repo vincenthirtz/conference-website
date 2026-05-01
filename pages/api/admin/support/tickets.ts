@@ -6,6 +6,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 
+import { logger } from '../../../../utils/logger';
 const VALID_STATUSES = ['open', 'in_progress', 'resolved', 'closed'] as const;
 const VALID_SEVERITIES = ['low', 'medium', 'high'] as const;
 const VALID_CATEGORIES = ['dispute', 'behavior', 'technical', 'other'] as const;
@@ -60,7 +61,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data, error, count } = await q;
 
   if (error) {
-    console.error('[admin/support/tickets] list error:', error);
+    logger.error('[admin/support/tickets] list error:', error);
     return res.status(500).json({ error: 'Échec du chargement' });
   }
 

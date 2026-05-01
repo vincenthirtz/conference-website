@@ -8,6 +8,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { isValidUUID } from '@/utils/apiHelpers';
 import type { MatchStatus } from '@/types/admin';
 
+import { logger } from '../../../../../utils/logger';
 type MatchRow = {
   id: string;
   tournament_id: string;
@@ -64,7 +65,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .maybeSingle();
 
     if (tErr) {
-      console.error('admin stats tournament error:', tErr);
+      logger.error('admin stats tournament error:', tErr);
       return res.status(500).json({ error: 'Failed to fetch tournament' });
     }
 
@@ -84,7 +85,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .neq('status', 'cancelled');
 
     if (mErr) {
-      console.error('admin stats matches error:', mErr);
+      logger.error('admin stats matches error:', mErr);
       return res.status(500).json({ error: 'Failed to fetch matches' });
     }
 
@@ -98,7 +99,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .eq('tournament_id', tournamentId);
 
     if (teErr) {
-      console.error('admin stats teams error:', teErr);
+      logger.error('admin stats teams error:', teErr);
     }
 
     const teams: TeamMini[] = ((teamsData || []) as any[])
@@ -121,7 +122,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         .in('match_id', matchIds);
 
       if (gErr) {
-        console.error('admin stats games error:', gErr);
+        logger.error('admin stats games error:', gErr);
       } else {
         games = (gamesData || []) as GameRow[];
       }
@@ -162,7 +163,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       closestMatches,
     });
   } catch (err: unknown) {
-    console.error('[/api/admin/tournament/[id]/stats] internal error:', err);
+    logger.error('[/api/admin/tournament/[id]/stats] internal error:', err);
     return res.status(500).json({
       error: 'Internal server error',
     });

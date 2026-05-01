@@ -8,6 +8,7 @@ import { useAutoSave } from '@/utils/useAutoSave';
 import DraftBanner from '@/components/admin/DraftBanner';
 import AutoSaveIndicator from '@/components/admin/AutoSaveIndicator';
 
+import { logger } from '../../../utils/logger';
 type Props = {
   staff: {
     id: string;
@@ -114,7 +115,7 @@ function AdminNewAdherentPage({ staff }: Props) {
           setCotisationAmount(parseFloat(cotisation.value) || 0);
         }
       } catch (err) {
-        console.error('Error fetching settings', err);
+        logger.error('Error fetching settings', err);
       }
     };
     fetchSettings();

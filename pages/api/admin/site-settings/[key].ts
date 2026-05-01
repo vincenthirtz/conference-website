@@ -4,6 +4,7 @@ import { withStaffRoute, StaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { applyRateLimit } from '@/utils/rateLimit';
 
+import { logger } from '../../../../utils/logger';
 async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -38,7 +39,7 @@ async function handler(
       .single();
 
     if (error) {
-      console.error('[admin/site-settings] get error', error);
+      logger.error('[admin/site-settings] get error', error);
       return res.status(404).json({ error: 'Setting not found.' });
     }
     return res.status(200).json(data);
@@ -68,7 +69,7 @@ async function handler(
       .single();
 
     if (error) {
-      console.error('[admin/site-settings] update error', error);
+      logger.error('[admin/site-settings] update error', error);
       return res.status(500).json({ error: 'Failed to update the setting.' });
     }
 
@@ -87,7 +88,7 @@ async function handler(
     const { error } = await admin.from('site_settings').delete().eq('key', key);
 
     if (error) {
-      console.error('[admin/site-settings] delete error', error);
+      logger.error('[admin/site-settings] delete error', error);
       return res.status(500).json({ error: 'Failed to delete the setting.' });
     }
 

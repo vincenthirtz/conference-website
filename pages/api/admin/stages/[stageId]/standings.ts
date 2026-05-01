@@ -12,6 +12,7 @@ import {
 import type { StageStanding, GroupedStandings } from '@/utils/stages/standings';
 import { isValidUUID } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../../utils/logger';
 type ApiResponse =
   | {
       stageId: string;
@@ -65,7 +66,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
       try {
         grouped = await computeGroupedStandings(id);
       } catch (e) {
-        console.error('grouped standings error:', e);
+        logger.error('grouped standings error:', e);
       }
     }
 
@@ -144,7 +145,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
       ...(grouped ? { grouped } : {}),
     });
   } catch (err: unknown) {
-    console.error('[/api/admin/stages/[stageId]/standings] error:', err);
+    logger.error('[/api/admin/stages/[stageId]/standings] error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

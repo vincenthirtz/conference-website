@@ -7,6 +7,7 @@
 
 import { supabaseAdmin } from './supabase';
 
+import { logger } from './logger';
 export type DiscordChannelType =
   | 'match_announcements'
   | 'match_results'
@@ -119,7 +120,7 @@ export async function postToDiscordWebhook(
     });
     if (!res.ok) {
       const text = await res.text().catch(() => '');
-      console.error(
+      logger.error(
         '[discord] webhook POST failed:',
         res.status,
         text.slice(0, 300)
@@ -129,7 +130,7 @@ export async function postToDiscordWebhook(
       void trackWebhookPost(webhookUrl, 'ok');
     }
   } catch (e) {
-    console.error('[discord] webhook POST error:', e);
+    logger.error('[discord] webhook POST error:', e);
     void trackWebhookPost(webhookUrl, 'failed');
   }
 }
@@ -281,7 +282,7 @@ export async function notifyScrimRequest(
 ): Promise<void> {
   const webhookUrl = process.env.DISCORD_SCRIM_WEBHOOK_URL;
   if (!webhookUrl) {
-    console.warn('[discord] DISCORD_SCRIM_WEBHOOK_URL not configured');
+    logger.warn('[discord] DISCORD_SCRIM_WEBHOOK_URL not configured');
     return;
   }
 
@@ -882,14 +883,14 @@ export async function notifySupportTicket(
       messageId = body?.id ?? null;
     } else {
       const text = await res.text().catch(() => '');
-      console.error(
+      logger.error(
         '[discord] support ticket POST failed:',
         res.status,
         text.slice(0, 300)
       );
     }
   } catch (e) {
-    console.error('[discord] support ticket POST error:', e);
+    logger.error('[discord] support ticket POST error:', e);
   }
 
   return { messageId };
@@ -925,7 +926,7 @@ export async function postMvpPoll(
 
   if (answers.length < 2) {
     // Discord requires at least 2 answers. Skip silently.
-    console.warn(
+    logger.warn(
       '[discord] postMvpPoll skipped: not enough candidates for match',
       data.matchId
     );
@@ -969,7 +970,7 @@ export async function postMvpPoll(
 
     if (!res.ok) {
       const text = await res.text().catch(() => '');
-      console.error(
+      logger.error(
         '[discord] mvp poll POST failed:',
         res.status,
         text.slice(0, 300)
@@ -980,7 +981,7 @@ export async function postMvpPoll(
     const body = await res.json().catch(() => null);
     messageId = body?.id ?? null;
   } catch (e) {
-    console.error('[discord] mvp poll POST error:', e);
+    logger.error('[discord] mvp poll POST error:', e);
     return { messageId: null, posted: false };
   }
 

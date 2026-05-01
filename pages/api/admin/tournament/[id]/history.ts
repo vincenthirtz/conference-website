@@ -10,6 +10,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { StaffLog, formatStaffLog } from '@/utils/staffLogs';
 import { isValidUUID, parsePagination } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../../utils/logger';
 type TournamentHistoryResponse = {
   tournamentId: string;
   logs: Array<ReturnType<typeof formatStaffLog>>;
@@ -84,7 +85,7 @@ async function handler(
     const { data, error } = await query;
 
     if (error) {
-      console.error('tournament history logs error:', error);
+      logger.error('tournament history logs error:', error);
       return res.status(500).json({
         error: 'Failed to fetch tournament history',
       });
@@ -100,7 +101,7 @@ async function handler(
       logs: formatted,
     });
   } catch (err: unknown) {
-    console.error('[/api/admin/tournament/[id]/history] error:', err);
+    logger.error('[/api/admin/tournament/[id]/history] error:', err);
     return res.status(500).json({
       error: 'Internal server error',
     });

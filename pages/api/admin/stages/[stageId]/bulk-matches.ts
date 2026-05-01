@@ -10,6 +10,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
+import { logger } from '../../../../../utils/logger';
 export default withStaffRoute(handler, 'manager');
 
 async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
@@ -68,7 +69,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (err: unknown) {
-    console.error('[/api/admin/stages/[stageId]/bulk-matches] error:', err);
+    logger.error('[/api/admin/stages/[stageId]/bulk-matches] error:', err);
     return res.status(500).json({
       error: 'Internal server error',
     });
@@ -301,7 +302,7 @@ async function handleBulkUpdate(
     .in('id', matchIds);
 
   if (error) {
-    console.error('bulk update matches error:', error);
+    logger.error('bulk update matches error:', error);
     return res.status(500).json({ error: 'Failed to update matches' });
   }
 
@@ -401,7 +402,7 @@ async function handleBulkDelete(
       .in('id', matchIds);
 
     if (error) {
-      console.error('bulk hard delete matches error:', error);
+      logger.error('bulk hard delete matches error:', error);
       return res.status(500).json({ error: 'Failed to delete matches' });
     }
   } else {
@@ -417,7 +418,7 @@ async function handleBulkDelete(
       .in('id', matchIds);
 
     if (error) {
-      console.error('bulk cancel matches error:', error);
+      logger.error('bulk cancel matches error:', error);
       return res.status(500).json({ error: 'Failed to cancel matches' });
     }
   }

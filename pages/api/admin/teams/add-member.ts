@@ -5,6 +5,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 
+import { logger } from '../../../../utils/logger';
 type AddMemberResponse =
   | {
       teamMemberId?: string;
@@ -84,7 +85,7 @@ async function handler(
         });
 
       if (listErr) {
-        console.error('add-member listUsers error:', listErr);
+        logger.error('add-member listUsers error:', listErr);
         return res
           .status(500)
           .json({ error: listErr.message || 'Failed to list users' });
@@ -157,7 +158,7 @@ async function handler(
         .eq('id', teamId);
 
       if (captainErr) {
-        console.error('add-member captain update error:', captainErr);
+        logger.error('add-member captain update error:', captainErr);
         return res.status(500).json({
           error:
             captainErr.message ||
@@ -184,10 +185,7 @@ async function handler(
         published_at: new Date().toISOString(),
       });
     } catch (newsErr) {
-      console.error(
-        '[/api/admin/teams/add-member] create news error:',
-        newsErr
-      );
+      logger.error('[/api/admin/teams/add-member] create news error:', newsErr);
     }
 
     return res.status(200).json({
@@ -202,7 +200,7 @@ async function handler(
         : 'Member added to team',
     });
   } catch (err: unknown) {
-    console.error('[/api/admin/teams/add-member] error:', err);
+    logger.error('[/api/admin/teams/add-member] error:', err);
     return res.status(500).json({
       error: (err as Error)?.message || 'Internal server error',
     });

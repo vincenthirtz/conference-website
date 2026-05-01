@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabaseClient } from '@/utils/supabase';
 
+import { logger } from '../../utils/logger';
 export default function DiscordMemberRedirect() {
   const router = useRouter();
   const [status, setStatus] = useState('Connexion via Discord…');
@@ -68,7 +69,7 @@ export default function DiscordMemberRedirect() {
         setStatus('Redirection…');
         router.replace(next);
       } catch (e) {
-        console.error('[discord-member] error', e);
+        logger.error('[discord-member] error', e);
         setError('Erreur de connexion Discord. Réessaie.');
         setStatus('Erreur de connexion. Redirection vers accueil…');
         setTimeout(() => router.replace('/'), 1000);

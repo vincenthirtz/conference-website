@@ -4,6 +4,7 @@ import { supabaseAdmin, getServerClient } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { parsePagination } from '@/utils/apiHelpers';
 
+import { logger } from '../../../utils/logger';
 const normalizeTag = (value?: string | null) => {
   const cleaned = (value || '').toString().trim();
   if (!cleaned) return '';
@@ -44,7 +45,7 @@ export default async function handler(
   const { data, error } = await query;
 
   if (error) {
-    console.error('[news] public list error', error);
+    logger.error('[news] public list error', error);
     return res.status(500).json({ error: 'Failed to load news.' });
   }
 

@@ -9,6 +9,7 @@ import { sendTeamJoinEmail } from '@/utils/email';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { sanitizeUrl, validateRole } from '@/utils/apiHelpers';
 
+import { logger } from '../../../utils/logger';
 type Body = {
   name?: string;
   short_name?: string | null;
@@ -301,7 +302,7 @@ export default async function handler(
   }
 
   if (!createdTeam) {
-    console.error('[/api/teams/create-with-member] create error:', lastError);
+    logger.error('[/api/teams/create-with-member] create error:', lastError);
     return res.status(500).json({
       error:
         lastError?.message ||
@@ -335,7 +336,7 @@ export default async function handler(
       .maybeSingle();
 
     if (insertErr) {
-      console.error(
+      logger.error(
         '[/api/teams/create-with-member] add-member error:',
         insertErr
       );
@@ -371,7 +372,7 @@ export default async function handler(
       .eq('id', createdTeam.id);
 
     if (captainErr) {
-      console.error(
+      logger.error(
         '[/api/teams/create-with-member] captain update error:',
         captainErr
       );
@@ -399,7 +400,7 @@ export default async function handler(
     const email = userIdToEmail.get(m.user_id);
     if (email) {
       sendTeamJoinEmail(email, createdTeam.name, m.role).catch((err) => {
-        console.error('[create-with-member] team join email error:', err);
+        logger.error('[create-with-member] team join email error:', err);
       });
     }
   }
@@ -466,7 +467,7 @@ export default async function handler(
                 stages_count: stages.length,
               };
             } else {
-              console.error(
+              logger.error(
                 '[create-with-member] tournament registration error:',
                 regError
               );
@@ -476,7 +477,7 @@ export default async function handler(
       }
     } catch (err) {
       // Non-blocking: team is created, registration is best-effort
-      console.error('[create-with-member] tournament registration error:', err);
+      logger.error('[create-with-member] tournament registration error:', err);
     }
   }
 

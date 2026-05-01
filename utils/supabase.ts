@@ -6,6 +6,7 @@ import {
   type CookieOptions,
 } from '@supabase/ssr';
 import { serialize } from 'cookie';
+import { logger } from './logger';
 import type {
   GetServerSidePropsContext,
   NextApiRequest,
@@ -30,7 +31,7 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 
 // ⚠️ On NE log PAS la service role, jamais.
 if (!SUPABASE_SERVICE_ROLE) {
-  console.warn(
+  logger.warn(
     'Supabase: SUPABASE_SERVICE_ROLE_KEY manquant. supabaseAdmin ne fonctionnera pas (API / SSR).'
   );
 }

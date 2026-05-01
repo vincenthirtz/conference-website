@@ -7,6 +7,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { sendWelcomeEmail } from '@/utils/email';
 
+import { logger } from '../../../../utils/logger';
 type CreateUserResponse =
   | {
       userId: string;
@@ -53,7 +54,7 @@ async function handler(
     });
 
     if (error || !data?.user?.id) {
-      console.error('[/api/admin/users] createUser error:', error);
+      logger.error('[/api/admin/users] createUser error:', error);
       return res.status(500).json({ error: 'Failed to create user' });
     }
 
@@ -63,7 +64,7 @@ async function handler(
       await sendWelcomeEmail(safeEmail, plainPassword);
       passwordSentByEmail = true;
     } catch (emailErr) {
-      console.error('[/api/admin/users] welcome email error:', emailErr);
+      logger.error('[/api/admin/users] welcome email error:', emailErr);
     }
 
     return res.status(201).json({
@@ -72,7 +73,7 @@ async function handler(
       passwordSentByEmail,
     });
   } catch (err: unknown) {
-    console.error('[/api/admin/users] internal error:', err);
+    logger.error('[/api/admin/users] internal error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
