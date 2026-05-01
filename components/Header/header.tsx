@@ -137,6 +137,27 @@ function Header(): JSX.Element {
                   Roadmap
                 </button>
               </Link>
+              <Link href="/scrim" className="flex-1 sm:flex-none">
+                <button
+                  type="button"
+                  className="group flex w-full items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl bg-cyan-500/15 border border-cyan-400/40 hover:bg-cyan-500/25 hover:border-cyan-300/60 text-white font-medium text-sm sm:text-base backdrop-blur transition-all duration-300 hover:scale-105"
+                >
+                  <svg
+                    className="w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-300 group-hover:scale-110"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M10 8l6 4-6 4z" fill="currentColor" />
+                  </svg>
+                  Scrim
+                </button>
+              </Link>
             </div>
           </div>
         </div>
