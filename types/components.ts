@@ -31,10 +31,6 @@ export interface IDropdown {
   handleSpeakers: (arg0: string) => void;
 }
 
-export interface ISlider {
-  children: ReactNode[];
-}
-
 export interface ISpeaker {
   details: Speaker;
   location?: string | undefined;

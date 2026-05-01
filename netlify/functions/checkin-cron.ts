@@ -7,10 +7,11 @@
 
 import type { Handler } from '@netlify/functions';
 
+import { logger } from '../../utils/logger';
 export const handler: Handler = async () => {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
-    console.error('[checkin-cron] CRON_SECRET not set');
+    logger.error('[checkin-cron] CRON_SECRET not set');
     return {
       statusCode: 500,
       body: JSON.stringify({ error: 'CRON_SECRET not configured' }),
@@ -21,6 +22,12 @@ export const handler: Handler = async () => {
     process.env.URL || process.env.SITE_URL || 'https://owwomenscup.fr';
   const target = `${baseUrl.replace(/\/$/, '')}/api/cron/checkin-process`;
 
+  // Cap each invocation well under Netlify's scheduled-function ceiling so a
+  // slow upstream cannot drain the monthly function-seconds quota (cron fires
+  // every 5 minutes, ~8.6k invocations/month).
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20_000);
+
   try {
     const res = await fetch(target, {
       method: 'POST',
@@ -29,11 +36,12 @@ export const handler: Handler = async () => {
         'Content-Type': 'application/json',
       },
       body: '{}',
+      signal: controller.signal,
     });
 
     const text = await res.text().catch(() => '');
     if (!res.ok) {
-      console.error(
+      logger.error(
         '[checkin-cron] non-OK response: %d %s',
         res.status,
         text.slice(0, 200)
@@ -44,16 +52,25 @@ export const handler: Handler = async () => {
       };
     }
 
-    console.log('[checkin-cron] processed: %s', text.slice(0, 200));
+    logger.info('[checkin-cron] processed: %s', text.slice(0, 200));
     return {
       statusCode: 200,
       body: text,
     };
   } catch (err) {
-    console.error('[checkin-cron] fetch error:', err);
+    const aborted = (err as Error)?.name === 'AbortError';
+    logger.error(
+      '[checkin-cron] fetch %s:',
+      aborted ? 'timed out after 20s' : 'error',
+      err
+    );
     return {
-      statusCode: 502,
-      body: JSON.stringify({ error: 'Failed to reach app endpoint' }),
+      statusCode: aborted ? 504 : 502,
+      body: JSON.stringify({
+        error: aborted ? 'Upstream timeout' : 'Failed to reach app endpoint',
+      }),
     };
+  } finally {
+    clearTimeout(timeout);
   }
 };
