@@ -44,9 +44,7 @@ let _generateLinkResult: {
   error: null,
 };
 
-export function setGenerateLinkResult(
-  result: typeof _generateLinkResult
-) {
+export function setGenerateLinkResult(result: typeof _generateLinkResult) {
   _generateLinkResult = result;
 }
 
@@ -216,12 +214,35 @@ class Builder {
     return this;
   }
 
+  /**
+   * PostgREST .filter(col, op, value) — supports JSON-path syntax like
+   * `payload->>field` for the `eq` operator. Other operators are treated as a
+   * no-op so the surrounding query still resolves to an empty list.
+   */
+  filter(col: string, op: string, value: unknown) {
+    if (op !== 'eq') return this;
+    const arrowIdx = col.indexOf('->>');
+    if (arrowIdx === -1) {
+      this.filters.push((row) => row[col] === value);
+      return this;
+    }
+    const base = col.slice(0, arrowIdx);
+    const key = col.slice(arrowIdx + 3);
+    this.filters.push((row) => {
+      const obj = row[base] as Record<string, unknown> | null | undefined;
+      return Boolean(obj) && (obj as Record<string, unknown>)[key] === value;
+    });
+    return this;
+  }
+
   /** PostgREST .ilike(col, pattern) — naive contains-style match (case-insensitive). */
   ilike(col: string, pattern: string) {
     const trimmed = pattern.replace(/^%|%$/g, '').toLowerCase();
     if (!trimmed) return this;
     this.filters.push((row) =>
-      String(row[col] ?? '').toLowerCase().includes(trimmed)
+      String(row[col] ?? '')
+        .toLowerCase()
+        .includes(trimmed)
     );
     return this;
   }
@@ -275,9 +296,11 @@ class Builder {
 
   /** Awaiting a non-terminal chain runs the query and resolves to {data, error[, count]}. */
   then<R1 = unknown, R2 = never>(
-    onFulfilled?: (
-      r: { data: Row[] | null; error: unknown; count?: number | null }
-    ) => R1 | PromiseLike<R1>,
+    onFulfilled?: (r: {
+      data: Row[] | null;
+      error: unknown;
+      count?: number | null;
+    }) => R1 | PromiseLike<R1>,
     onRejected?: (err: unknown) => R2 | PromiseLike<R2>
   ): Promise<R1 | R2> {
     return this._execute().then(onFulfilled, onRejected);
@@ -392,8 +415,7 @@ export const supabaseAdmin = {
           error: null as any,
         });
       },
-      generateLink: (_input: unknown) =>
-        Promise.resolve(_generateLinkResult),
+      generateLink: (_input: unknown) => Promise.resolve(_generateLinkResult),
       updateUserById: (userId: string, updates: any) => {
         // Echo back a minimal user object so callers that read `data.user`
         // get something meaningful (mirrors Supabase's real behavior).

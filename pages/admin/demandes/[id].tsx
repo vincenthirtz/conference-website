@@ -159,6 +159,12 @@ function statusColor(status: DemandeStatus) {
   }
 }
 
+type ForwardCandidate = {
+  id: string;
+  name: string;
+  short_name: string | null;
+};
+
 function AdminDemandeDetailPage() {
   const router = useRouter();
   const { addToast } = useToast();
@@ -170,6 +176,10 @@ function AdminDemandeDetailPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [staffNote, setStaffNote] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [forwardOpen, setForwardOpen] = useState(false);
+  const [forwardTeams, setForwardTeams] = useState<ForwardCandidate[]>([]);
+  const [forwardTargetId, setForwardTargetId] = useState('');
+  const [forwarding, setForwarding] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -213,6 +223,70 @@ function AdminDemandeDetailPage() {
       setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function openForwardPanel() {
+    if (!token) return;
+    setForwardOpen(true);
+    setForwardTargetId('');
+    if (forwardTeams.length > 0) return;
+    try {
+      const res = await fetch(
+        '/api/admin/teams?limit=200&isActive=true&includeTotal=0',
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Échec du chargement.');
+      const teams = (json.teams || json.data || []).map((t: any) => ({
+        id: t.id,
+        name: t.name,
+        short_name: t.short_name ?? null,
+      }));
+      setForwardTeams(
+        teams
+          .filter((t: ForwardCandidate) => t.id !== demande?.team_id)
+          .sort((a: ForwardCandidate, b: ForwardCandidate) =>
+            a.name.localeCompare(b.name)
+          )
+      );
+    } catch (err) {
+      addToast(
+        (err as Error)?.message || 'Impossible de charger les équipes.',
+        'error'
+      );
+    }
+  }
+
+  async function submitForward() {
+    if (!token || !id || !forwardTargetId) return;
+    setForwarding(true);
+    try {
+      const res = await fetch('/api/admin/scrims/forward', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          demandeId: id,
+          targetTeamId: forwardTargetId,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Échec du transfert.');
+      addToast(
+        `Demande transférée vers ${json.targetTeam?.name || 'l’équipe'}.`,
+        'success'
+      );
+      setForwardOpen(false);
+      await fetchDemande();
+    } catch (err) {
+      addToast((err as Error)?.message || 'Erreur', 'error');
+    } finally {
+      setForwarding(false);
     }
   }
 
@@ -444,9 +518,16 @@ function AdminDemandeDetailPage() {
           {/* Payload type-specific */}
           {demande.type === 'scrim' && (
             <div className="bg-neutral-800/50 backdrop-blur border border-cyan-500/20 rounded-2xl p-6 mb-6">
-              <h3 className="text-xs uppercase tracking-wide text-cyan-300/80 mb-3">
-                Détails du scrim
-              </h3>
+              <div className="flex items-start justify-between gap-3 mb-3 flex-wrap">
+                <h3 className="text-xs uppercase tracking-wide text-cyan-300/80">
+                  Détails du scrim
+                </h3>
+                {demande.source === 'public' && (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-200 border border-amber-500/40 text-[10px] uppercase tracking-wide">
+                    Demande externe
+                  </span>
+                )}
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 {payload.from_team_name && (
                   <div>
@@ -465,7 +546,7 @@ function AdminDemandeDetailPage() {
                   </div>
                 )}
                 {payload.preferred_date && (
-                  <div className="sm:col-span-2">
+                  <div>
                     <div className="text-neutral-500 text-xs">
                       Date souhaitée
                     </div>
@@ -474,7 +555,118 @@ function AdminDemandeDetailPage() {
                     </div>
                   </div>
                 )}
+                {payload.format && (
+                  <div>
+                    <div className="text-neutral-500 text-xs">Format</div>
+                    <div className="font-medium">{payload.format}</div>
+                  </div>
+                )}
+                {demande.source === 'public' && (
+                  <>
+                    {payload.requester_name && (
+                      <div>
+                        <div className="text-neutral-500 text-xs">Contact</div>
+                        <div className="font-medium">
+                          {payload.requester_name}
+                        </div>
+                      </div>
+                    )}
+                    {payload.requester_email && (
+                      <div>
+                        <div className="text-neutral-500 text-xs">Email</div>
+                        <a
+                          href={`mailto:${payload.requester_email}`}
+                          className="font-medium text-cyan-300 hover:underline break-all"
+                        >
+                          {payload.requester_email}
+                        </a>
+                      </div>
+                    )}
+                    {payload.requester_discord && (
+                      <div>
+                        <div className="text-neutral-500 text-xs">Discord</div>
+                        <div className="font-medium break-all">
+                          {payload.requester_discord}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
+
+              {payload.forwarded_from && (
+                <div className="mt-4 rounded-lg bg-neutral-900/60 border border-neutral-700 px-3 py-2 text-xs text-neutral-400">
+                  Transférée depuis{' '}
+                  <Link
+                    href={`/admin/demandes/${payload.forwarded_from.demande_id}`}
+                    className="text-cyan-300 hover:underline"
+                  >
+                    la demande d’origine
+                  </Link>
+                  {payload.forwarded_from.forwarded_at && (
+                    <>
+                      {' '}
+                      le {formatDateTime(payload.forwarded_from.forwarded_at)}
+                    </>
+                  )}
+                  .
+                </div>
+              )}
+
+              {/* Forward action — only for external scrims */}
+              {demande.source === 'public' && (
+                <div className="mt-5 pt-4 border-t border-neutral-700/60">
+                  {!forwardOpen ? (
+                    <button
+                      type="button"
+                      onClick={openForwardPanel}
+                      className="px-4 py-2 rounded-lg bg-cyan-600/80 hover:bg-cyan-500 text-sm font-medium"
+                    >
+                      Transférer à une autre équipe
+                    </button>
+                  ) : (
+                    <div className="space-y-3">
+                      <label className="block text-xs uppercase tracking-wide text-neutral-500">
+                        Choisir l’équipe destinataire
+                      </label>
+                      <select
+                        value={forwardTargetId}
+                        onChange={(e) => setForwardTargetId(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg bg-neutral-900/60 border border-neutral-700 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                      >
+                        <option value="">— Sélectionner —</option>
+                        {forwardTeams.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name}
+                            {t.short_name ? ` (${t.short_name})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          disabled={!forwardTargetId || forwarding}
+                          onClick={submitForward}
+                          className="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-sm font-medium"
+                        >
+                          {forwarding ? 'Transfert…' : 'Confirmer le transfert'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setForwardOpen(false)}
+                          className="px-4 py-2 rounded-lg border border-neutral-700 hover:bg-neutral-800 text-sm"
+                        >
+                          Annuler
+                        </button>
+                      </div>
+                      <p className="text-xs text-neutral-500">
+                        Une nouvelle demande sera créée pour l’équipe choisie,
+                        avec le même contact et message.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

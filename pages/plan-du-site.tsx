@@ -51,6 +51,7 @@ const siteSections: SiteSection[] = [
       },
       { label: 'Espace joueur', href: '/player' },
       { label: 'Devenir partenaire', href: '/partenaires/demande' },
+      { label: 'Proposer un scrim', href: '/scrim' },
       { label: 'Contact', href: '/contact' },
       { label: 'Signalement / Support', href: '/support' },
       { label: 'Faire un don', href: '/don' },

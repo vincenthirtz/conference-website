@@ -8,9 +8,7 @@ import { useRouter } from 'next/router';
 import { supabaseClient } from '@/utils/supabase';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import ProfileCard from '@/components/player/ProfileCard';
-import TeamCard, {
-  type TeamMemberLite,
-} from '@/components/player/TeamCard';
+import TeamCard, { type TeamMemberLite } from '@/components/player/TeamCard';
 import DemandesHistory from '@/components/player/DemandesHistory';
 import QuickAction, {
   type QuickActionProps,
@@ -49,12 +47,18 @@ type PendingScrim = {
   id: string;
   comment: string | null;
   created_at: string;
+  source?: string | null;
   payload: {
     from_team_name?: string;
     preferred_date?: string;
+    format?: string | null;
+    requester_email?: string | null;
+    requester_discord?: string | null;
   };
   user: {
     display_name: string | null;
+    email?: string | null;
+    discord?: string | null;
   } | null;
 };
 
@@ -63,8 +67,7 @@ const SVG_PATHS = {
   scrim: 'M22 12a10 10 0 11-20 0 10 10 0 0120 0zM10 8l6 4-6 4z',
   messages: 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z',
   team: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 7a4 4 0 100 8 4 4 0 000-8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75',
-  publicTeam:
-    'M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3',
+  publicTeam: 'M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3',
 };
 
 function buildQuickActions(args: {
@@ -126,6 +129,8 @@ export default function PlayerDashboard() {
   const [isCaptain, setIsCaptain] = useState(false);
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [pendingScrims, setPendingScrims] = useState<PendingScrim[]>([]);
+  const [scrimActionId, setScrimActionId] = useState<string | null>(null);
+  const [scrimError, setScrimError] = useState<string | null>(null);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
@@ -248,6 +253,33 @@ export default function PlayerDashboard() {
     await loadData();
   };
 
+  const handleScrimAction = async (
+    demandeId: string,
+    action: 'approve' | 'reject' | 'report'
+  ) => {
+    setScrimError(null);
+    setScrimActionId(demandeId);
+    try {
+      const t = await getToken();
+      if (!t) throw new Error('Session expirée.');
+      const res = await fetch('/api/teams/scrim-requests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${t}`,
+        },
+        body: JSON.stringify({ demandeId, action }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || 'Échec.');
+      setPendingScrims((prev) => prev.filter((s) => s.id !== demandeId));
+    } catch (err) {
+      setScrimError((err as Error).message);
+    } finally {
+      setScrimActionId(null);
+    }
+  };
+
   const handleLeaveTeam = async () => {
     const token = await getToken();
     if (!token) throw new Error('Session expiree.');
@@ -367,51 +399,139 @@ export default function PlayerDashboard() {
                   {pendingScrims.length}
                 </span>
               </h2>
+              {scrimError && (
+                <div className="mb-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-100">
+                  {scrimError}
+                </div>
+              )}
               <div className="space-y-3">
-                {pendingScrims.map((scrim) => (
-                  <div
-                    key={scrim.id}
-                    className="flex items-center justify-between gap-4 p-4 rounded-xl border border-white/10 bg-black/30"
-                  >
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium text-white">
-                        {scrim.payload?.from_team_name || 'Equipe inconnue'}
-                      </div>
-                      {scrim.comment && (
-                        <p className="text-xs text-gray-400 mt-1 truncate">
-                          {scrim.comment}
-                        </p>
-                      )}
-                      <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
-                        {scrim.payload?.preferred_date && (
-                          <span>
-                            Date :{' '}
-                            {new Date(
-                              scrim.payload.preferred_date
-                            ).toLocaleDateString('fr-FR', {
-                              day: 'numeric',
-                              month: 'short',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </span>
-                        )}
-                        <span>
-                          Recu le{' '}
-                          {new Date(scrim.created_at).toLocaleDateString(
-                            'fr-FR'
+                {pendingScrims.map((scrim) => {
+                  const isExternal = scrim.source === 'public';
+                  const contactEmail =
+                    scrim.user?.email || scrim.payload?.requester_email || null;
+                  const contactDiscord =
+                    scrim.user?.discord ||
+                    scrim.payload?.requester_discord ||
+                    null;
+                  const busy = scrimActionId === scrim.id;
+                  return (
+                    <div
+                      key={scrim.id}
+                      className="p-4 rounded-xl border border-white/10 bg-black/30 space-y-3"
+                    >
+                      <div className="flex items-start justify-between gap-3 flex-wrap">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-medium text-white">
+                              {scrim.payload?.from_team_name ||
+                                'Equipe inconnue'}
+                            </span>
+                            {isExternal && (
+                              <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-200 border border-amber-500/40 text-[10px] uppercase tracking-wide">
+                                Externe
+                              </span>
+                            )}
+                          </div>
+                          {scrim.user?.display_name && !isExternal && (
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              Capitaine : {scrim.user.display_name}
+                            </p>
                           )}
-                        </span>
+                          {isExternal && scrim.user?.display_name && (
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              Contact : {scrim.user.display_name}
+                            </p>
+                          )}
+                          {scrim.comment && (
+                            <p className="text-xs text-gray-300 mt-2 whitespace-pre-line">
+                              {scrim.comment}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-3 flex-wrap text-xs text-gray-500 mt-2">
+                            {scrim.payload?.preferred_date && (
+                              <span>
+                                Date :{' '}
+                                {new Date(
+                                  scrim.payload.preferred_date
+                                ).toLocaleDateString('fr-FR', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </span>
+                            )}
+                            {scrim.payload?.format && (
+                              <span>Format : {scrim.payload.format}</span>
+                            )}
+                            <span>
+                              Reçu le{' '}
+                              {new Date(scrim.created_at).toLocaleDateString(
+                                'fr-FR'
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {isExternal && (contactEmail || contactDiscord) && (
+                        <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-100 space-y-0.5">
+                          <p className="uppercase tracking-wide text-[10px] text-amber-300/80">
+                            Contact pour répondre
+                          </p>
+                          {contactEmail && (
+                            <p>
+                              <span className="text-gray-400">Email :</span>{' '}
+                              <a
+                                href={`mailto:${contactEmail}`}
+                                className="underline hover:text-white"
+                              >
+                                {contactEmail}
+                              </a>
+                            </p>
+                          )}
+                          {contactDiscord && (
+                            <p>
+                              <span className="text-gray-400">Discord :</span>{' '}
+                              {contactDiscord}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => handleScrimAction(scrim.id, 'approve')}
+                          className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-xs font-medium text-white"
+                        >
+                          Accepter
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => handleScrimAction(scrim.id, 'reject')}
+                          className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-50 text-xs"
+                        >
+                          Refuser
+                        </button>
+                        {isExternal && (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() =>
+                              handleScrimAction(scrim.id, 'report')
+                            }
+                            className="px-3 py-1.5 rounded-lg border border-red-500/30 text-red-200 hover:bg-red-500/10 disabled:opacity-50 text-xs ml-auto"
+                          >
+                            Signaler
+                          </button>
+                        )}
                       </div>
                     </div>
-                    <Link
-                      href="/player/manage-team"
-                      className="flex-shrink-0 px-3 py-2 rounded-lg bg-blue-500/20 border border-blue-400/30 text-xs font-medium text-blue-200 hover:bg-blue-500/30 transition"
-                    >
-                      Repondre
-                    </Link>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

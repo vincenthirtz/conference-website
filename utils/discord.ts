@@ -272,6 +272,8 @@ export type ScrimNotification = {
   preferredDate?: string | null;
   message?: string | null;
   requesterDisplayName?: string | null;
+  /** True when the request was submitted via the public (unauthenticated) form. */
+  isExternal?: boolean;
 };
 
 export async function notifyScrimRequest(
@@ -303,17 +305,21 @@ export async function notifyScrimRequest(
 
   if (data.requesterDisplayName) {
     fields.push({
-      name: 'Capitaine',
+      name: data.isExternal ? 'Contact (externe)' : 'Capitaine',
       value: data.requesterDisplayName,
       inline: true,
     });
   }
 
+  const title = data.isExternal
+    ? '🌐 Demande de scrim externe'
+    : '🎯 Nouvelle demande de scrim';
+
   await postToDiscordWebhook(webhookUrl, {
     username: "OW Women's Cup — Scrims",
     embeds: [
       {
-        title: '🎯 Nouvelle demande de scrim',
+        title,
         description: `**${data.fromTeamName}** souhaite affronter **${data.targetTeamName}**.`,
         color: COLORS.scrim,
         fields,

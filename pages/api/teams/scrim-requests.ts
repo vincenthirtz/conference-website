@@ -60,7 +60,10 @@ export default withAuthRoute(async function handler(
       return res.status(500).json({ error: 'Echec du chargement.' });
     }
 
-    // Enrich with sender info
+    // Enrich with sender info. Authenticated requests carry user_id and we
+    // look up the auth user; public (external) requests have user_id=null and
+    // we surface the contact info from payload instead so the captain can
+    // reach back.
     const enriched = await Promise.all(
       (demandes || []).map(async (d: any) => {
         let userInfo = null;
@@ -75,15 +78,25 @@ export default withAuthRoute(async function handler(
                 id: d.user_id,
                 email: u.user.email || null,
                 display_name: meta.display_name || meta.full_name || null,
+                discord: meta.discord || null,
               };
             }
           } catch {
             // skip
           }
+        } else if (d.source === 'public' && d.payload) {
+          const p = d.payload as Record<string, any>;
+          userInfo = {
+            id: null,
+            email: p.requester_email || null,
+            display_name: p.requester_name || null,
+            discord: p.requester_discord || null,
+          };
         }
         return {
           id: d.id,
           user_id: d.user_id,
+          source: d.source,
           status: d.status,
           comment: d.comment,
           payload: d.payload,
@@ -107,10 +120,10 @@ export default withAuthRoute(async function handler(
       return res.status(400).json({ error: 'demandeId invalide.' });
     }
 
-    if (action !== 'approve' && action !== 'reject') {
-      return res
-        .status(400)
-        .json({ error: 'Action invalide. Utilise "approve" ou "reject".' });
+    if (action !== 'approve' && action !== 'reject' && action !== 'report') {
+      return res.status(400).json({
+        error: 'Action invalide. Utilise "approve", "reject" ou "report".',
+      });
     }
 
     const { data: demande, error: fetchErr } = await supabaseAdmin
@@ -128,7 +141,24 @@ export default withAuthRoute(async function handler(
         .json({ error: 'Demande introuvable ou deja traitee.' });
     }
 
-    const newStatus = action === 'approve' ? 'approved' : 'rejected';
+    // 'report' is only valid for public (external) scrim requests.
+    if (action === 'report' && (demande as any).source !== 'public') {
+      return res.status(400).json({
+        error: 'Seules les demandes externes peuvent être signalées.',
+      });
+    }
+
+    const newStatus =
+      action === 'approve'
+        ? 'approved'
+        : action === 'report'
+          ? 'cancelled'
+          : 'rejected';
+
+    const staffNote =
+      action === 'report'
+        ? `Signalée comme spam par le capitaine (${userId})`
+        : `Traite par le capitaine (${userId})`;
 
     // Update the demande
     const { error: updateErr } = await supabaseAdmin
@@ -136,7 +166,7 @@ export default withAuthRoute(async function handler(
       .update({
         status: newStatus,
         processed_at: new Date().toISOString(),
-        staff_note: `Traite par le capitaine (${userId})`,
+        staff_note: staffNote,
       })
       .eq('id', demandeId);
 
@@ -182,7 +212,9 @@ export default withAuthRoute(async function handler(
       message:
         action === 'approve'
           ? "Scrim accepte ! L'equipe organisatrice a ete notifiee."
-          : 'Demande de scrim refusee.',
+          : action === 'report'
+            ? 'Demande signalée. Le staff la passera en revue.'
+            : 'Demande de scrim refusee.',
     });
   }
 

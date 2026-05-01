@@ -13,6 +13,7 @@ import { type UpcomingTournament } from '@/components/Home/HomeUpcomingTournamen
 import HomeEvents from '@/components/Home/HomeEvents';
 import HomeTwitchEmbed from '@/components/Home/HomeTwitchEmbed';
 import HomeSponsors, { HomePartner } from '@/components/Home/HomeSponsors';
+import HomeQuickLinks from '@/components/Home/HomeQuickLinks';
 import { supabaseAdmin } from '@/utils/supabase';
 
 type HomeProps = {
@@ -205,6 +206,7 @@ function Home({
       <HomeCountdown targetDate={countdownTarget} />
       <HomeTwitchEmbed />
       <HomeEvents tournament={upcomingTournament} />
+      <HomeQuickLinks />
       <HomeNewsSection initialNews={news} />
       <HomeSponsors partners={partners} />
       <PressSection />
