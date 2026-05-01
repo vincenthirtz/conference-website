@@ -119,10 +119,7 @@ function Navbar(): JSX.Element {
             )}
           </div>
 
-          <div
-            data-test="nav-Hamberger"
-            className="z-[99] min-[1119px]:hidden"
-          >
+          <div data-test="nav-Hamberger" className="z-[99] min-[1119px]:hidden">
             <button
               type="button"
               aria-label={drawerOpen ? 'Fermer le menu' : 'Ouvrir le menu'}

@@ -99,7 +99,8 @@ export default function HomeCountdown({
 
   if (!isValid) return null;
   // Reserve the visual slot during SSR / pre-hydration to avoid CLS.
-  if (!mounted || !parts) return <CountdownSkeleton targetMs={targetMs} label={label} />;
+  if (!mounted || !parts)
+    return <CountdownSkeleton targetMs={targetMs} label={label} />;
 
   const cells: { value: number; label: string }[] = [
     { value: parts.days, label: parts.days > 1 ? 'jours' : 'jour' },

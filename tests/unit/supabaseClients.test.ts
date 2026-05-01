@@ -11,9 +11,8 @@ import { describe, it, expect, vi, beforeAll } from 'vitest';
 // real Supabase auth flow without making network calls.
 const captured: { opts: any } = { opts: null };
 vi.mock('@supabase/ssr', async () => {
-  const actual = await vi.importActual<typeof import('@supabase/ssr')>(
-    '@supabase/ssr'
-  );
+  const actual =
+    await vi.importActual<typeof import('@supabase/ssr')>('@supabase/ssr');
   return {
     ...actual,
     createServerClient: (_url: any, _key: any, opts: any) => {

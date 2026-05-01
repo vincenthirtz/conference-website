@@ -33,7 +33,10 @@ vi.mock('@/utils/bracket/propagate', () => ({
   propagateBracketForMatch,
   snapshotPropagationSlots: vi.fn(async () => ({})),
   restorePropagationSlots: vi.fn(async () => undefined),
-  computeWinnerLoserFromMatch: () => ({ winnerTeamId: null, loserTeamId: null }),
+  computeWinnerLoserFromMatch: () => ({
+    winnerTeamId: null,
+    loserTeamId: null,
+  }),
 }));
 
 import {
@@ -310,10 +313,7 @@ describe('/api/admin/matches/[matchId]/mvp', () => {
   it('GET 404 when match missing', async () => {
     store.matches = [];
     const res = makeRes();
-    await mvpHandler(
-      makeReq({ method: 'GET', query: { matchId: M_ID } }),
-      res
-    );
+    await mvpHandler(makeReq({ method: 'GET', query: { matchId: M_ID } }), res);
     expect(res.statusCode).toBe(404);
   });
 
@@ -352,10 +352,7 @@ describe('/api/admin/matches/[matchId]/mvp', () => {
     ] as any;
 
     const res = makeRes();
-    await mvpHandler(
-      makeReq({ method: 'GET', query: { matchId: M_ID } }),
-      res
-    );
+    await mvpHandler(makeReq({ method: 'GET', query: { matchId: M_ID } }), res);
     expect(res.statusCode).toBe(200);
     const body = res.body as any;
     expect(body.candidates).toHaveLength(2);

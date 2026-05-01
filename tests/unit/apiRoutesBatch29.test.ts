@@ -278,10 +278,30 @@ describe('/api/admin/stages/[stageId]/groups', () => {
       },
     ] as any;
     store.stage_teams = [
-      { stage_id: STAGE_ID, team_id: 't1', seed: 1, team: { id: 't1', name: 'Alpha' } },
-      { stage_id: STAGE_ID, team_id: 't2', seed: 2, team: { id: 't2', name: 'Beta' } },
-      { stage_id: STAGE_ID, team_id: 't3', seed: 3, team: { id: 't3', name: 'Gamma' } },
-      { stage_id: STAGE_ID, team_id: 't4', seed: 4, team: { id: 't4', name: 'Delta' } },
+      {
+        stage_id: STAGE_ID,
+        team_id: 't1',
+        seed: 1,
+        team: { id: 't1', name: 'Alpha' },
+      },
+      {
+        stage_id: STAGE_ID,
+        team_id: 't2',
+        seed: 2,
+        team: { id: 't2', name: 'Beta' },
+      },
+      {
+        stage_id: STAGE_ID,
+        team_id: 't3',
+        seed: 3,
+        team: { id: 't3', name: 'Gamma' },
+      },
+      {
+        stage_id: STAGE_ID,
+        team_id: 't4',
+        seed: 4,
+        team: { id: 't4', name: 'Delta' },
+      },
     ] as any;
     store.matches = [];
     const res = makeRes();
@@ -651,9 +671,7 @@ describe('/api/admin/matches/[matchId]/veto', () => {
   });
 
   it('DELETE 200 resets all veto steps', async () => {
-    store.matches = [
-      { id: M_ID, tournament_id: 'tour-1' },
-    ] as any;
+    store.matches = [{ id: M_ID, tournament_id: 'tour-1' }] as any;
     store.match_map_vetos = [
       { match_id: M_ID, step_number: 1, action: 'ban' },
       { match_id: M_ID, step_number: 2, action: 'pick' },

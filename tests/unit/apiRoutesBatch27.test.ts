@@ -244,9 +244,7 @@ describe('/api/admin/teams/[teamId]', () => {
   });
 
   it('DELETE soft 200 deactivates the team', async () => {
-    store.teams = [
-      { id: TEAM_ID, name: 'A', is_active: true },
-    ] as any;
+    store.teams = [{ id: TEAM_ID, name: 'A', is_active: true }] as any;
     const res = makeRes();
     await adminTeamHandler(
       makeReq({ method: 'DELETE', query: { teamId: TEAM_ID } }),
@@ -258,18 +256,10 @@ describe('/api/admin/teams/[teamId]', () => {
   });
 
   it('DELETE ?hard=1 cascades and removes the team', async () => {
-    store.teams = [
-      { id: TEAM_ID, name: 'A', is_active: true },
-    ] as any;
-    store.team_members = [
-      { id: 'tm1', team_id: TEAM_ID },
-    ] as any;
-    store.demandes = [
-      { id: 'd1', team_id: TEAM_ID },
-    ] as any;
-    store.stage_teams = [
-      { stage_id: 's1', team_id: TEAM_ID },
-    ] as any;
+    store.teams = [{ id: TEAM_ID, name: 'A', is_active: true }] as any;
+    store.team_members = [{ id: 'tm1', team_id: TEAM_ID }] as any;
+    store.demandes = [{ id: 'd1', team_id: TEAM_ID }] as any;
+    store.stage_teams = [{ stage_id: 's1', team_id: TEAM_ID }] as any;
     const res = makeRes();
     await adminTeamHandler(
       makeReq({
@@ -306,9 +296,7 @@ describe('/api/admin/teams/[teamId]', () => {
   });
 
   it('PUT 400 with invalid logo_url protocol', async () => {
-    store.teams = [
-      { id: TEAM_ID, name: 'Alpha', is_active: true },
-    ] as any;
+    store.teams = [{ id: TEAM_ID, name: 'Alpha', is_active: true }] as any;
     const res = makeRes();
     await adminTeamHandler(
       makeReq({
@@ -322,9 +310,7 @@ describe('/api/admin/teams/[teamId]', () => {
   });
 
   it('PUT 400 with invalid website URL', async () => {
-    store.teams = [
-      { id: TEAM_ID, name: 'Alpha', is_active: true },
-    ] as any;
+    store.teams = [{ id: TEAM_ID, name: 'Alpha', is_active: true }] as any;
     const res = makeRes();
     await adminTeamHandler(
       makeReq({
@@ -336,7 +322,6 @@ describe('/api/admin/teams/[teamId]', () => {
     );
     expect(res.statusCode).toBe(400);
   });
-
 });
 
 /* -----------------------------------------------------------

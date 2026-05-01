@@ -47,7 +47,9 @@ import publicTeamsHandler from '../../pages/api/teams/index';
  * Helpers
  * ---------------------------------------------------------*/
 
-function makeStaffRow(role: 'owner' | 'admin' | 'manager' | 'caster' = 'admin'): StaffMember {
+function makeStaffRow(
+  role: 'owner' | 'admin' | 'manager' | 'caster' = 'admin'
+): StaffMember {
   return {
     id: 'staff-1',
     auth_user_id: 'user-1',
@@ -137,10 +139,7 @@ describe('POST /api/admin/users', () => {
 
   it('returns 400 when email is missing', async () => {
     const res = makeRes();
-    await adminUsersHandler(
-      makeAuthedReq({ method: 'POST', body: {} }),
-      res
-    );
+    await adminUsersHandler(makeAuthedReq({ method: 'POST', body: {} }), res);
     expect(res.statusCode).toBe(400);
   });
 
@@ -409,10 +408,7 @@ describe('GET /api/teams (public)', () => {
       { id: 't2', name: 'Beta', is_joinable: false },
     ] as any;
     const res = makeRes();
-    await publicTeamsHandler(
-      makeAuthedReq({ query: { joinable: '1' } }),
-      res
-    );
+    await publicTeamsHandler(makeAuthedReq({ query: { joinable: '1' } }), res);
     const teams = (res.body as any).teams;
     expect(teams).toHaveLength(1);
     expect(teams[0].id).toBe('t1');

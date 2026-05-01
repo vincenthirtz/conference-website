@@ -16,8 +16,7 @@ export type HomepageEvent = {
 export const homepageEvents: HomepageEvent[] = [
   {
     id: 'idahot-2026',
-    title:
-      "Journée internationale contre l'homophobie et la transphobie",
+    title: "Journée internationale contre l'homophobie et la transphobie",
     description:
       "Stream spécial sur la chaîne Twitch de la Women's Cup à l'occasion de la journée IDAHOTB.",
     date: '2026-05-17T14:00:00+02:00',

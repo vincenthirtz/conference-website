@@ -297,10 +297,7 @@ describe('/api/admin/tournament/[id]/matches', () => {
     ] as any;
     const res = makeRes();
     await tournamentMatchesHandler(
-      makeReq(
-        { method: 'GET', query: { id: TID, stageId: 's2' } },
-        true
-      ),
+      makeReq({ method: 'GET', query: { id: TID, stageId: 's2' } }, true),
       res
     );
     expect((res.body as any).matches.map((m: any) => m.id)).toEqual(['m2']);
@@ -325,10 +322,7 @@ describe('/api/admin/tournament/[id]/matches', () => {
     ] as any;
     const res = makeRes();
     await tournamentMatchesHandler(
-      makeReq(
-        { method: 'GET', query: { id: TID, status: 'finished' } },
-        true
-      ),
+      makeReq({ method: 'GET', query: { id: TID, status: 'finished' } }, true),
       res
     );
     expect((res.body as any).matches.map((m: any) => m.id)).toEqual(['m1']);
@@ -353,10 +347,7 @@ describe('/api/admin/tournament/[id]/matches', () => {
     ] as any;
     const res = makeRes();
     await tournamentMatchesHandler(
-      makeReq(
-        { method: 'GET', query: { id: TID, result: 'bye' } },
-        true
-      ),
+      makeReq({ method: 'GET', query: { id: TID, result: 'bye' } }, true),
       res
     );
     expect((res.body as any).matches.map((m: any) => m.id)).toEqual(['m-bye']);
@@ -383,10 +374,7 @@ describe('/api/admin/tournament/[id]/matches', () => {
     ] as any;
     const res = makeRes();
     await tournamentMatchesHandler(
-      makeReq(
-        { method: 'GET', query: { id: TID, result: 'win' } },
-        true
-      ),
+      makeReq({ method: 'GET', query: { id: TID, result: 'win' } }, true),
       res
     );
     expect((res.body as any).matches.map((m: any) => m.id)).toEqual(['m-won']);
@@ -413,10 +401,7 @@ describe('/api/admin/tournament/[id]/matches', () => {
     ] as any;
     const res = makeRes();
     await tournamentMatchesHandler(
-      makeReq(
-        { method: 'GET', query: { id: TID, result: 'no_result' } },
-        true
-      ),
+      makeReq({ method: 'GET', query: { id: TID, result: 'no_result' } }, true),
       res
     );
     expect((res.body as any).matches.map((m: any) => m.id)).toEqual(['m-tie']);
@@ -425,10 +410,7 @@ describe('/api/admin/tournament/[id]/matches', () => {
   it('POST 400 when matches array missing', async () => {
     const res = makeRes();
     await tournamentMatchesHandler(
-      makeReq(
-        { method: 'POST', query: { id: TID }, body: {} },
-        true
-      ),
+      makeReq({ method: 'POST', query: { id: TID }, body: {} }, true),
       res
     );
     expect(res.statusCode).toBe(400);

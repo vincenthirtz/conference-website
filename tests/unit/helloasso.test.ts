@@ -76,7 +76,9 @@ describe('utils/helloasso', () => {
     expect(out.id).toBe(42);
     expect(out.redirectUrl).toBe('https://r');
     const secondCallUrl = fetchSpy.mock.calls[1][0];
-    expect(secondCallUrl).toContain('/v5/organizations/my-org/checkout-intents');
+    expect(secondCallUrl).toContain(
+      '/v5/organizations/my-org/checkout-intents'
+    );
   });
 
   it('fetchMemberships uses cached token (single fetch call)', async () => {

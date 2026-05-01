@@ -113,10 +113,7 @@ describe('/api/demandes/scrim', () => {
   it('POST 400 when teamId missing', async () => {
     setAuthUser({ id: 'user-1' });
     const res = makeRes();
-    await scrimHandler(
-      makeReq({ method: 'POST', body: {} }, true),
-      res
-    );
+    await scrimHandler(makeReq({ method: 'POST', body: {} }, true), res);
     expect(res.statusCode).toBe(400);
   });
 
@@ -141,10 +138,7 @@ describe('/api/demandes/scrim', () => {
     store.team_members = [];
     const res = makeRes();
     await scrimHandler(
-      makeReq(
-        { method: 'POST', body: { teamId: 'team-x' } },
-        true
-      ),
+      makeReq({ method: 'POST', body: { teamId: 'team-x' } }, true),
       res
     );
     expect(res.statusCode).toBe(400);
@@ -160,10 +154,7 @@ describe('/api/demandes/scrim', () => {
     ] as any;
     const res = makeRes();
     await scrimHandler(
-      makeReq(
-        { method: 'POST', body: { teamId: 'target' } },
-        true
-      ),
+      makeReq({ method: 'POST', body: { teamId: 'target' } }, true),
       res
     );
     expect(res.statusCode).toBe(403);
@@ -179,10 +170,7 @@ describe('/api/demandes/scrim', () => {
     ] as any;
     const res = makeRes();
     await scrimHandler(
-      makeReq(
-        { method: 'POST', body: { teamId: 'my-team' } },
-        true
-      ),
+      makeReq({ method: 'POST', body: { teamId: 'my-team' } }, true),
       res
     );
     expect(res.statusCode).toBe(400);
@@ -198,10 +186,7 @@ describe('/api/demandes/scrim', () => {
     ] as any;
     const res = makeRes();
     await scrimHandler(
-      makeReq(
-        { method: 'POST', body: { teamId: 'unknown' } },
-        true
-      ),
+      makeReq({ method: 'POST', body: { teamId: 'unknown' } }, true),
       res
     );
     expect(res.statusCode).toBe(400);
@@ -227,10 +212,7 @@ describe('/api/demandes/scrim', () => {
     ] as any;
     const res = makeRes();
     await scrimHandler(
-      makeReq(
-        { method: 'POST', body: { teamId: 'target' } },
-        true
-      ),
+      makeReq({ method: 'POST', body: { teamId: 'target' } }, true),
       res
     );
     expect(res.statusCode).toBe(400);
@@ -547,9 +529,7 @@ describe('GET /api/teams/search-players', () => {
 
   it('400 when q too short', async () => {
     setAuthUser({ id: 'user-1' });
-    store.teams = [
-      { id: 'team-1', captain_id: 'user-1', name: 'A' },
-    ] as any;
+    store.teams = [{ id: 'team-1', captain_id: 'user-1', name: 'A' }] as any;
     const res = makeRes();
     await searchPlayersHandler(
       makeReq({ method: 'GET', query: { q: 'a' } }, true),
@@ -560,9 +540,7 @@ describe('GET /api/teams/search-players', () => {
 
   it('400 when q too long', async () => {
     setAuthUser({ id: 'user-1' });
-    store.teams = [
-      { id: 'team-1', captain_id: 'user-1', name: 'A' },
-    ] as any;
+    store.teams = [{ id: 'team-1', captain_id: 'user-1', name: 'A' }] as any;
     const res = makeRes();
     await searchPlayersHandler(
       makeReq({ method: 'GET', query: { q: 'x'.repeat(101) } }, true),
@@ -573,16 +551,12 @@ describe('GET /api/teams/search-players', () => {
 
   it('200 finds players by email and reports has_team', async () => {
     setAuthUser({ id: 'user-1' });
-    store.teams = [
-      { id: 'team-1', captain_id: 'user-1', name: 'A' },
-    ] as any;
+    store.teams = [{ id: 'team-1', captain_id: 'user-1', name: 'A' }] as any;
     setAuthListUsers([
       { id: 'u1', email: 'alice@example.com' },
       { id: 'u2', email: 'bob@example.com' },
     ]);
-    store.team_members = [
-      { user_id: 'u1', battle_tag: 'Alice#1234' },
-    ] as any;
+    store.team_members = [{ user_id: 'u1', battle_tag: 'Alice#1234' }] as any;
     store.profiles = [];
 
     const res = makeRes();
@@ -600,13 +574,9 @@ describe('GET /api/teams/search-players', () => {
 
   it('200 fills missing email via auth.admin.getUserById fallback', async () => {
     setAuthUser({ id: 'user-1' });
-    store.teams = [
-      { id: 'team-1', captain_id: 'user-1', name: 'A' },
-    ] as any;
+    store.teams = [{ id: 'team-1', captain_id: 'user-1', name: 'A' }] as any;
     setAuthListUsers([]);
-    store.team_members = [
-      { user_id: 'u-bt', battle_tag: 'Mercy#1234' },
-    ] as any;
+    store.team_members = [{ user_id: 'u-bt', battle_tag: 'Mercy#1234' }] as any;
     store.profiles = [];
     setAdminUser('u-bt', 'mercy@example.com');
 
@@ -623,9 +593,7 @@ describe('GET /api/teams/search-players', () => {
 
   it('200 returns empty list when no source matches', async () => {
     setAuthUser({ id: 'user-1' });
-    store.teams = [
-      { id: 'team-1', captain_id: 'user-1', name: 'A' },
-    ] as any;
+    store.teams = [{ id: 'team-1', captain_id: 'user-1', name: 'A' }] as any;
     setAuthListUsers([]);
     store.team_members = [];
     store.profiles = [];

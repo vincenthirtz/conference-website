@@ -198,7 +198,9 @@ describe('/api/admin/teams/import-platform', () => {
     store.site_settings = [
       { key: 'challonge_api_key', value: 'k', description: null },
     ] as any;
-    fetchChallongeParticipants.mockResolvedValueOnce([{ name: 'TeamA' }] as any);
+    fetchChallongeParticipants.mockResolvedValueOnce([
+      { name: 'TeamA' },
+    ] as any);
     importTeams.mockResolvedValueOnce({
       created: 1,
       skipped: 0,

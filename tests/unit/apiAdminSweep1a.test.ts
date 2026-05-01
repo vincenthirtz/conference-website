@@ -20,20 +20,24 @@ vi.mock('@/utils/rateLimit', () => ({
   getClientIp: () => '127.0.0.1',
 }));
 
-const { postToDiscordWebhook, listCheckinStatus, processCheckinForUpcomingMatches, fetchDashboardData } =
-  vi.hoisted(() => ({
-    postToDiscordWebhook: vi.fn(async () => undefined),
-    listCheckinStatus: vi.fn(async () => [{ id: 'm1', status: 'ok' }]),
-    processCheckinForUpcomingMatches: vi.fn(async () => ({
-      scanned: 5,
-      acted: 2,
-      errors: 0,
-    })),
-    fetchDashboardData: vi.fn(async () => ({
-      ok: true as const,
-      data: { tournament: { id: 'tour-1' } } as any,
-    })),
-  }));
+const {
+  postToDiscordWebhook,
+  listCheckinStatus,
+  processCheckinForUpcomingMatches,
+  fetchDashboardData,
+} = vi.hoisted(() => ({
+  postToDiscordWebhook: vi.fn(async () => undefined),
+  listCheckinStatus: vi.fn(async () => [{ id: 'm1', status: 'ok' }]),
+  processCheckinForUpcomingMatches: vi.fn(async () => ({
+    scanned: 5,
+    acted: 2,
+    errors: 0,
+  })),
+  fetchDashboardData: vi.fn(async () => ({
+    ok: true as const,
+    data: { tournament: { id: 'tour-1' } } as any,
+  })),
+}));
 
 vi.mock('@/utils/discord', () => ({ postToDiscordWebhook }));
 vi.mock('@/utils/checkin', () => ({

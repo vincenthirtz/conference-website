@@ -73,10 +73,7 @@ describe('POST /api/teams/create-with-member', () => {
 
   it('400 when name too short', async () => {
     const res = makeRes();
-    await createWithMemberHandler(
-      makeReq({ body: { name: 'A' } }),
-      res
-    );
+    await createWithMemberHandler(makeReq({ body: { name: 'A' } }), res);
     expect(res.statusCode).toBe(400);
   });
 
@@ -269,9 +266,7 @@ describe('POST /api/teams/create-with-member', () => {
       makeReq({
         body: {
           name: 'Alpha',
-          members: [
-            { email: 'p1@example.com', role: 'player' },
-          ],
+          members: [{ email: 'p1@example.com', role: 'player' }],
         },
       }),
       res

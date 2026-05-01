@@ -106,12 +106,8 @@ describe('/api/player/messages', () => {
 
   it('403 when not captain', async () => {
     setAuthUser({ id: 'u1', email: 'u@x.com', user_metadata: {} });
-    store.team_members = [
-      { id: 'tm1', user_id: 'u1', team_id: TEAM_A },
-    ] as any;
-    store.teams = [
-      { id: TEAM_A, captain_id: 'u-other', name: 'Alpha' },
-    ] as any;
+    store.team_members = [{ id: 'tm1', user_id: 'u1', team_id: TEAM_A }] as any;
+    store.teams = [{ id: TEAM_A, captain_id: 'u-other', name: 'Alpha' }] as any;
     const res = makeRes();
     await messagesHandler(makeAuthedReq({ method: 'GET' }), res);
     expect(res.statusCode).toBe(403);
@@ -122,9 +118,7 @@ describe('/api/player/messages', () => {
     store.team_members = [
       { id: 'tm1', user_id: 'cap', team_id: TEAM_A },
     ] as any;
-    store.teams = [
-      { id: TEAM_A, captain_id: 'cap', name: 'Alpha' },
-    ] as any;
+    store.teams = [{ id: TEAM_A, captain_id: 'cap', name: 'Alpha' }] as any;
     store.demandes = [
       {
         id: 'm1',
@@ -169,9 +163,7 @@ describe('/api/player/messages', () => {
     store.team_members = [
       { id: 'tm1', user_id: 'cap', team_id: TEAM_A },
     ] as any;
-    store.teams = [
-      { id: TEAM_A, captain_id: 'cap', name: 'Alpha' },
-    ] as any;
+    store.teams = [{ id: TEAM_A, captain_id: 'cap', name: 'Alpha' }] as any;
     const res = makeRes();
     await messagesHandler(
       makeAuthedReq({
@@ -188,9 +180,7 @@ describe('/api/player/messages', () => {
     store.team_members = [
       { id: 'tm1', user_id: 'cap', team_id: TEAM_A },
     ] as any;
-    store.teams = [
-      { id: TEAM_A, captain_id: 'cap', name: 'Alpha' },
-    ] as any;
+    store.teams = [{ id: TEAM_A, captain_id: 'cap', name: 'Alpha' }] as any;
     const res = makeRes();
     await messagesHandler(
       makeAuthedReq({
@@ -207,9 +197,7 @@ describe('/api/player/messages', () => {
     store.team_members = [
       { id: 'tm1', user_id: 'cap', team_id: TEAM_A },
     ] as any;
-    store.teams = [
-      { id: TEAM_A, captain_id: 'cap', name: 'Alpha' },
-    ] as any;
+    store.teams = [{ id: TEAM_A, captain_id: 'cap', name: 'Alpha' }] as any;
     const res = makeRes();
     await messagesHandler(
       makeAuthedReq({ method: 'POST', body: { content: 'hi' } }),
@@ -223,9 +211,7 @@ describe('/api/player/messages', () => {
     store.team_members = [
       { id: 'tm1', user_id: 'cap', team_id: TEAM_A },
     ] as any;
-    store.teams = [
-      { id: TEAM_A, captain_id: 'cap', name: 'Alpha' },
-    ] as any;
+    store.teams = [{ id: TEAM_A, captain_id: 'cap', name: 'Alpha' }] as any;
     const res = makeRes();
     await messagesHandler(
       makeAuthedReq({
@@ -242,9 +228,7 @@ describe('/api/player/messages', () => {
     store.team_members = [
       { id: 'tm1', user_id: 'cap', team_id: TEAM_A },
     ] as any;
-    store.teams = [
-      { id: TEAM_A, captain_id: 'cap', name: 'Alpha' },
-    ] as any;
+    store.teams = [{ id: TEAM_A, captain_id: 'cap', name: 'Alpha' }] as any;
     const res = makeRes();
     await messagesHandler(
       makeAuthedReq({
@@ -279,7 +263,7 @@ describe('/api/player/messages', () => {
     );
     expect(res.statusCode).toBe(201);
     expect((res.body as any).conversationId).toBe(`${TEAM_A}_${TEAM_B}`);
-    expect((store.demandes as any[])).toHaveLength(1);
+    expect(store.demandes as any[]).toHaveLength(1);
   });
 
   it('405 on PUT', async () => {
@@ -287,9 +271,7 @@ describe('/api/player/messages', () => {
     store.team_members = [
       { id: 'tm1', user_id: 'cap', team_id: TEAM_A },
     ] as any;
-    store.teams = [
-      { id: TEAM_A, captain_id: 'cap', name: 'Alpha' },
-    ] as any;
+    store.teams = [{ id: TEAM_A, captain_id: 'cap', name: 'Alpha' }] as any;
     const res = makeRes();
     await messagesHandler(makeAuthedReq({ method: 'PUT' }), res);
     expect(res.statusCode).toBe(405);
@@ -375,9 +357,7 @@ describe('/api/player/messages/[conversationId]', () => {
     store.team_members = [
       { id: 'tm1', user_id: 'cap', team_id: TEAM_A },
     ] as any;
-    store.teams = [
-      { id: TEAM_A, captain_id: 'cap', name: 'Alpha' },
-    ] as any;
+    store.teams = [{ id: TEAM_A, captain_id: 'cap', name: 'Alpha' }] as any;
     store.demandes = [
       {
         id: 'm1',
@@ -439,9 +419,7 @@ describe('/api/player/messages/[conversationId]', () => {
     store.team_members = [
       { id: 'tm1', user_id: 'cap-other', team_id: 'team-z' },
     ] as any;
-    store.teams = [
-      { id: 'team-z', captain_id: 'cap-other', name: 'Z' },
-    ] as any;
+    store.teams = [{ id: 'team-z', captain_id: 'cap-other', name: 'Z' }] as any;
     const res = makeRes();
     await conversationHandler(
       makeAuthedReq({
@@ -458,9 +436,7 @@ describe('/api/player/messages/[conversationId]', () => {
     store.team_members = [
       { id: 'tm1', user_id: 'cap', team_id: TEAM_A },
     ] as any;
-    store.teams = [
-      { id: TEAM_A, captain_id: 'cap', name: 'Alpha' },
-    ] as any;
+    store.teams = [{ id: TEAM_A, captain_id: 'cap', name: 'Alpha' }] as any;
     const res = makeRes();
     await conversationHandler(
       makeAuthedReq({
@@ -601,7 +577,13 @@ describe('/api/teams/transfer-requests', () => {
   it('POST approve transfers the player and updates status', async () => {
     setAuthUser({ id: 'cap', email: 'c@x.com', user_metadata: {} });
     store.teams = [
-      { id: TEAM_A, captain_id: 'cap', name: 'Alpha', is_active: true, logo_url: null },
+      {
+        id: TEAM_A,
+        captain_id: 'cap',
+        name: 'Alpha',
+        is_active: true,
+        logo_url: null,
+      },
     ] as any;
     const demandeId = '11111111-1111-1111-1111-111111111111';
     store.demandes = [
@@ -635,7 +617,9 @@ describe('/api/teams/transfer-requests', () => {
     // Player moved
     const memberRows = store.team_members as any[];
     expect(memberRows.find((m) => m.team_id === TEAM_B)).toBeUndefined();
-    expect(memberRows.find((m) => m.team_id === TEAM_A && m.user_id === 'movee')).toBeDefined();
+    expect(
+      memberRows.find((m) => m.team_id === TEAM_A && m.user_id === 'movee')
+    ).toBeDefined();
     // News inserted
     expect((store.news as any[]).length).toBeGreaterThan(0);
   });
@@ -806,7 +790,13 @@ describe('/api/team/[id]/maps', () => {
 
   it('200 with no matches returns empty stats', async () => {
     store.teams = [
-      { id: TEAM_A, name: 'Alpha', short_name: null, logo_url: null, country: null },
+      {
+        id: TEAM_A,
+        name: 'Alpha',
+        short_name: null,
+        logo_url: null,
+        country: null,
+      },
     ] as any;
     const res = makeRes();
     await teamMapsHandler(makeReq({ query: { id: TEAM_A } }), res);
@@ -819,7 +809,13 @@ describe('/api/team/[id]/maps', () => {
 
   it('200 aggregates map stats from games', async () => {
     store.teams = [
-      { id: TEAM_A, name: 'Alpha', short_name: null, logo_url: null, country: null },
+      {
+        id: TEAM_A,
+        name: 'Alpha',
+        short_name: null,
+        logo_url: null,
+        country: null,
+      },
     ] as any;
     store.matches = [
       {
@@ -914,7 +910,13 @@ describe('/api/team/[id]/stats', () => {
 
   it('200 with stats from view + map aggregation including duration', async () => {
     store.teams = [
-      { id: TEAM_A, name: 'Alpha', short_name: 'A', logo_url: null, country: 'FR' },
+      {
+        id: TEAM_A,
+        name: 'Alpha',
+        short_name: 'A',
+        logo_url: null,
+        country: 'FR',
+      },
     ] as any;
     store.team_stats_view = [
       {

@@ -11,15 +11,12 @@ vi.mock('@/utils/rateLimit', () => ({
   getClientIp: () => '127.0.0.1',
 }));
 
-const {
-  logStaffActionMock,
-  sendWelcomeEmail,
-  sendAccountDeletedEmail,
-} = vi.hoisted(() => ({
-  logStaffActionMock: vi.fn(async () => undefined),
-  sendWelcomeEmail: vi.fn(async () => ({ success: true as const })),
-  sendAccountDeletedEmail: vi.fn(async () => undefined),
-}));
+const { logStaffActionMock, sendWelcomeEmail, sendAccountDeletedEmail } =
+  vi.hoisted(() => ({
+    logStaffActionMock: vi.fn(async () => undefined),
+    sendWelcomeEmail: vi.fn(async () => ({ success: true as const })),
+    sendAccountDeletedEmail: vi.fn(async () => undefined),
+  }));
 
 vi.mock('@/utils/staffLogs', () => ({
   logStaffAction: logStaffActionMock,
@@ -248,9 +245,7 @@ describe('/api/admin/tournament/[id]', () => {
 
   it('PATCH 400 transitioning to running without teams', async () => {
     store.tournaments = [{ id: TID, status: 'published' }] as any;
-    store.tournament_stages = [
-      { id: 's1', tournament_id: TID },
-    ] as any;
+    store.tournament_stages = [{ id: 's1', tournament_id: TID }] as any;
     store.tournament_teams = [];
     const res = makeRes();
     await tournamentByIdHandler(
@@ -453,10 +448,7 @@ describe('/api/admin/users/manage', () => {
 
   it('PATCH 400 when userId or role missing', async () => {
     const res = makeRes();
-    await usersManageHandler(
-      makeReq({ method: 'PATCH', body: {} }),
-      res
-    );
+    await usersManageHandler(makeReq({ method: 'PATCH', body: {} }), res);
     expect(res.statusCode).toBe(400);
   });
 
@@ -602,10 +594,7 @@ describe('/api/admin/users/manage', () => {
 
   it('DELETE 400 when userId missing', async () => {
     const res = makeRes();
-    await usersManageHandler(
-      makeReq({ method: 'DELETE', body: {} }),
-      res
-    );
+    await usersManageHandler(makeReq({ method: 'DELETE', body: {} }), res);
     expect(res.statusCode).toBe(400);
   });
 
@@ -822,7 +811,13 @@ describe('/api/admin/demandes', () => {
 
   it('GET enriches with user data when includeUser=true', async () => {
     store.demandes = [
-      { id: 'd1', type: 'join', status: 'pending', user_id: 'u-x', created_at: '2026' },
+      {
+        id: 'd1',
+        type: 'join',
+        status: 'pending',
+        user_id: 'u-x',
+        created_at: '2026',
+      },
     ] as any;
     setAdminUser('u-x', 'someone@example.com');
     const res = makeRes();
@@ -830,15 +825,15 @@ describe('/api/admin/demandes', () => {
       makeReq({ method: 'GET', query: { includeUser: '1' } }),
       res
     );
-    expect((res.body as any).demandes[0].user.username || (res.body as any).demandes[0].user.battle_tag !== undefined).toBeTruthy();
+    expect(
+      (res.body as any).demandes[0].user.username ||
+        (res.body as any).demandes[0].user.battle_tag !== undefined
+    ).toBeTruthy();
   });
 
   it('POST 400 when action missing', async () => {
     const res = makeRes();
-    await adminDemandesHandler(
-      makeReq({ method: 'POST', body: {} }),
-      res
-    );
+    await adminDemandesHandler(makeReq({ method: 'POST', body: {} }), res);
     expect(res.statusCode).toBe(400);
   });
 

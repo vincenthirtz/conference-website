@@ -133,22 +133,18 @@ describe('POST /api/admin/stages/[stageId]/batch-scores', () => {
     store.tournament_stages = [];
     const res = makeRes();
     await batchScoresHandler(
-      makeReq(
-        {
-          method: 'POST',
-          query: { stageId: STAGE_ID },
-          body: { scores: [] },
-        }
-      ),
+      makeReq({
+        method: 'POST',
+        query: { stageId: STAGE_ID },
+        body: { scores: [] },
+      }),
       res
     );
     expect(res.statusCode).toBe(404);
   });
 
   it('403 when tournament is completed', async () => {
-    store.tournament_stages = [
-      { id: STAGE_ID, tournament_id: TID },
-    ] as any;
+    store.tournament_stages = [{ id: STAGE_ID, tournament_id: TID }] as any;
     store.tournaments = [{ id: TID, status: 'completed' }] as any;
     const res = makeRes();
     await batchScoresHandler(
@@ -163,9 +159,7 @@ describe('POST /api/admin/stages/[stageId]/batch-scores', () => {
   });
 
   it('400 when scores empty', async () => {
-    store.tournament_stages = [
-      { id: STAGE_ID, tournament_id: TID },
-    ] as any;
+    store.tournament_stages = [{ id: STAGE_ID, tournament_id: TID }] as any;
     store.tournaments = [{ id: TID, status: 'running' }] as any;
     const res = makeRes();
     await batchScoresHandler(
@@ -180,9 +174,7 @@ describe('POST /api/admin/stages/[stageId]/batch-scores', () => {
   });
 
   it('400 when too many scores (>50)', async () => {
-    store.tournament_stages = [
-      { id: STAGE_ID, tournament_id: TID },
-    ] as any;
+    store.tournament_stages = [{ id: STAGE_ID, tournament_id: TID }] as any;
     store.tournaments = [{ id: TID, status: 'running' }] as any;
     const scores = Array.from({ length: 51 }, () => ({
       matchId: M_ID_1,
@@ -202,9 +194,7 @@ describe('POST /api/admin/stages/[stageId]/batch-scores', () => {
   });
 
   it('400 when a matchId is invalid', async () => {
-    store.tournament_stages = [
-      { id: STAGE_ID, tournament_id: TID },
-    ] as any;
+    store.tournament_stages = [{ id: STAGE_ID, tournament_id: TID }] as any;
     store.tournaments = [{ id: TID, status: 'running' }] as any;
     const res = makeRes();
     await batchScoresHandler(
@@ -219,13 +209,9 @@ describe('POST /api/admin/stages/[stageId]/batch-scores', () => {
   });
 
   it('400 when a match does not belong to the stage', async () => {
-    store.tournament_stages = [
-      { id: STAGE_ID, tournament_id: TID },
-    ] as any;
+    store.tournament_stages = [{ id: STAGE_ID, tournament_id: TID }] as any;
     store.tournaments = [{ id: TID, status: 'running' }] as any;
-    store.matches = [
-      { id: M_ID_1, stage_id: 'other-stage' },
-    ] as any;
+    store.matches = [{ id: M_ID_1, stage_id: 'other-stage' }] as any;
     const res = makeRes();
     await batchScoresHandler(
       makeReq({
@@ -239,9 +225,7 @@ describe('POST /api/admin/stages/[stageId]/batch-scores', () => {
   });
 
   it('200 applies scores and reports per-match results', async () => {
-    store.tournament_stages = [
-      { id: STAGE_ID, tournament_id: TID },
-    ] as any;
+    store.tournament_stages = [{ id: STAGE_ID, tournament_id: TID }] as any;
     store.tournaments = [{ id: TID, status: 'running' }] as any;
     store.matches = [
       { id: M_ID_1, stage_id: STAGE_ID },
@@ -273,9 +257,7 @@ describe('POST /api/admin/stages/[stageId]/batch-scores', () => {
   it('500 when all scores fail', async () => {
     applyMatchScoreMock.mockRejectedValue(new Error('boom'));
 
-    store.tournament_stages = [
-      { id: STAGE_ID, tournament_id: TID },
-    ] as any;
+    store.tournament_stages = [{ id: STAGE_ID, tournament_id: TID }] as any;
     store.tournaments = [{ id: TID, status: 'running' }] as any;
     store.matches = [{ id: M_ID_1, stage_id: STAGE_ID }] as any;
 
@@ -345,7 +327,14 @@ describe('/api/admin/tournament/[id]/teams/[teamId]', () => {
 
   it('PATCH 400 when no fields provided', async () => {
     store.tournament_teams = [
-      { id: TT_ID, tournament_id: TID, team_id: 't1', seed: 1, status: 'registered', team: { id: 't1', name: 'A' } },
+      {
+        id: TT_ID,
+        tournament_id: TID,
+        team_id: 't1',
+        seed: 1,
+        status: 'registered',
+        team: { id: 't1', name: 'A' },
+      },
     ] as any;
     const res = makeRes();
     await tournamentTeamByIdHandler(

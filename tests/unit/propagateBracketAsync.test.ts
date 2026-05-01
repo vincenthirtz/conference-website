@@ -251,9 +251,7 @@ describe('propagateBracketForMatch — tiebreakers', () => {
     store.tournament_stages = [
       { id: 'stage1', tiebreaker_policy: 'map_diff' },
     ] as any;
-    store.games = [
-      { match_id: 'm1', team1_score: 3, team2_score: 3 },
-    ] as any;
+    store.games = [{ match_id: 'm1', team1_score: 3, team2_score: 3 }] as any;
 
     const result = await propagateBracketForMatch('m1');
     expect(result.tiebreakerApplied).toBe('extra_round');

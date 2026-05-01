@@ -293,9 +293,9 @@ describe('/api/tournament/[id]/maps', () => {
       res
     );
     expect(res.statusCode).toBe(200);
-    expect((store.tournament_maps as any).filter(
-      (m: any) => m.tournament_id === TID
-    )).toHaveLength(0);
+    expect(
+      (store.tournament_maps as any).filter((m: any) => m.tournament_id === TID)
+    ).toHaveLength(0);
   });
 
   it('returns 405 on unsupported method', async () => {

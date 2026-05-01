@@ -43,9 +43,10 @@ vi.mock('@/utils/email', () => ({
 // utils/helloasso.ts unit tests we use the real module. Expose a hoisted
 // mock that points to the real implementation by default.
 vi.mock('@/utils/helloasso', async () => {
-  const real = await vi.importActual<typeof import('../../utils/helloasso')>(
-    '@/utils/helloasso'
-  );
+  const real =
+    await vi.importActual<typeof import('../../utils/helloasso')>(
+      '@/utils/helloasso'
+    );
   return {
     ...real,
     createCheckoutIntent,
@@ -476,4 +477,3 @@ describe('/api/helloasso/webhook', () => {
     expect((res.body as any).ok).toBe(true);
   });
 });
-

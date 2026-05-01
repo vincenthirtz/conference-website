@@ -18,7 +18,11 @@ const publicPages: PublicPage[] = [
     contains: /partenariat|demande/i,
   },
   { path: '/don', name: 'Don', contains: /don|soutenir/i },
-  { path: '/register', name: 'Inscription', contains: /inscri|cr[ée]er.*compte/i },
+  {
+    path: '/register',
+    name: 'Inscription',
+    contains: /inscri|cr[ée]er.*compte/i,
+  },
   { path: '/contact', name: 'Contact', contains: /contact/i },
   { path: '/timeline-2026', name: 'Timeline', contains: /timeline|2026/i },
   { path: '/actualites', name: 'Actualités', contains: /actualit/i },
@@ -41,9 +45,9 @@ test.describe('Pages publiques — disponibilité et contenu', () => {
       expect(res?.status(), `${path} should not 4xx/5xx`).toBeLessThan(400);
       // Real assertion on rendered content — the body must contain the
       // expected page-specific text rather than just being non-empty.
-      await expect(page.locator('body').getByText(contains).first()).toBeVisible(
-        { timeout: 10000 }
-      );
+      await expect(
+        page.locator('body').getByText(contains).first()
+      ).toBeVisible({ timeout: 10000 });
     });
   }
 });

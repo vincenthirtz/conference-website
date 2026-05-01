@@ -215,9 +215,7 @@ export default function MessagesPage() {
   // to captain_message rows belonging to the active conversation in JS.
   useRealtimeChannel({
     enabled: !!activeConvId && !!myTeamId && !!isCaptain,
-    channel: activeConvId
-      ? `messages-${activeConvId}`
-      : 'messages-inactive',
+    channel: activeConvId ? `messages-${activeConvId}` : 'messages-inactive',
     table: 'demandes',
     filter: myTeamId ? `team_id=eq.${myTeamId}` : undefined,
     onChange: (event) => {

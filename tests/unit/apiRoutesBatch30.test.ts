@@ -108,10 +108,7 @@ describe('POST /api/admin/tournament/[id]/bracket', () => {
 
   it('405 on non-POST', async () => {
     const res = makeRes();
-    await bracketHandler(
-      makeReq({ method: 'GET', query: { id: TID } }),
-      res
-    );
+    await bracketHandler(makeReq({ method: 'GET', query: { id: TID } }), res);
     expect(res.statusCode).toBe(405);
   });
 
@@ -194,44 +191,30 @@ describe('POST /api/admin/tournament/[id]/bracket', () => {
 describe('GET /api/admin/tournament/[id]/stats', () => {
   it('400 on invalid id', async () => {
     const res = makeRes();
-    await statsHandler(
-      makeReq({ method: 'GET', query: { id: 'bogus' } }),
-      res
-    );
+    await statsHandler(makeReq({ method: 'GET', query: { id: 'bogus' } }), res);
     expect(res.statusCode).toBe(400);
   });
 
   it('405 on non-GET', async () => {
     const res = makeRes();
-    await statsHandler(
-      makeReq({ method: 'POST', query: { id: TID } }),
-      res
-    );
+    await statsHandler(makeReq({ method: 'POST', query: { id: TID } }), res);
     expect(res.statusCode).toBe(405);
   });
 
   it('404 when tournament missing', async () => {
     store.tournaments = [];
     const res = makeRes();
-    await statsHandler(
-      makeReq({ method: 'GET', query: { id: TID } }),
-      res
-    );
+    await statsHandler(makeReq({ method: 'GET', query: { id: TID } }), res);
     expect(res.statusCode).toBe(404);
   });
 
   it('200 returns stats with empty matches and teams', async () => {
-    store.tournaments = [
-      { id: TID, name: 'Cup', slug: 'cup' },
-    ] as any;
+    store.tournaments = [{ id: TID, name: 'Cup', slug: 'cup' }] as any;
     store.matches = [];
     store.tournament_teams = [];
     store.games = [];
     const res = makeRes();
-    await statsHandler(
-      makeReq({ method: 'GET', query: { id: TID } }),
-      res
-    );
+    await statsHandler(makeReq({ method: 'GET', query: { id: TID } }), res);
     expect(res.statusCode).toBe(200);
     const body = res.body as any;
     expect(body.overview.totalMatches).toBe(0);
@@ -239,9 +222,7 @@ describe('GET /api/admin/tournament/[id]/stats', () => {
   });
 
   it('200 returns stats with bye matches excluded', async () => {
-    store.tournaments = [
-      { id: TID, name: 'Cup', slug: 'cup' },
-    ] as any;
+    store.tournaments = [{ id: TID, name: 'Cup', slug: 'cup' }] as any;
     store.matches = [
       {
         id: 'mb',
@@ -278,10 +259,7 @@ describe('GET /api/admin/tournament/[id]/stats', () => {
     ] as any;
     store.games = [];
     const res = makeRes();
-    await statsHandler(
-      makeReq({ method: 'GET', query: { id: TID } }),
-      res
-    );
+    await statsHandler(makeReq({ method: 'GET', query: { id: TID } }), res);
     expect(res.statusCode).toBe(200);
     const body = res.body as any;
     // Only the non-bye match counts
@@ -289,9 +267,7 @@ describe('GET /api/admin/tournament/[id]/stats', () => {
   });
 
   it('200 returns global stats', async () => {
-    store.tournaments = [
-      { id: TID, name: 'Cup', slug: 'cup' },
-    ] as any;
+    store.tournaments = [{ id: TID, name: 'Cup', slug: 'cup' }] as any;
     store.matches = [
       {
         id: 'm1',
@@ -341,10 +317,7 @@ describe('GET /api/admin/tournament/[id]/stats', () => {
     ] as any;
 
     const res = makeRes();
-    await statsHandler(
-      makeReq({ method: 'GET', query: { id: TID } }),
-      res
-    );
+    await statsHandler(makeReq({ method: 'GET', query: { id: TID } }), res);
     expect(res.statusCode).toBe(200);
     const body = res.body as any;
     // Body shape varies; just ensure it returned a non-error JSON object.
@@ -360,10 +333,7 @@ describe('GET /api/admin/tournament/[id]/stats', () => {
 describe('PATCH /api/admin/recycle-bin', () => {
   it('400 when id or type missing', async () => {
     const res = makeRes();
-    await recycleBinHandler(
-      makeReq({ method: 'PATCH', body: {} }),
-      res
-    );
+    await recycleBinHandler(makeReq({ method: 'PATCH', body: {} }), res);
     expect(res.statusCode).toBe(400);
   });
 

@@ -148,21 +148,20 @@ export default function NextMatchCard(): JSX.Element | null {
         {data.tournament && <span>{data.tournament.name}</span>}
         {data.match.roundName && <span>{data.match.roundName}</span>}
         {data.match.format && (
-          <span className="tabular-nums">{data.match.format.toUpperCase()}</span>
+          <span className="tabular-nums">
+            {data.match.format.toUpperCase()}
+          </span>
         )}
       </div>
 
       <div className="mt-3 flex flex-col gap-1">
         <h3 className="text-2xl md:text-3xl font-bold text-white leading-tight">
-          {data.team.name}{' '}
-          <span className="text-white/50">vs</span>{' '}
+          {data.team.name} <span className="text-white/50">vs</span>{' '}
           {data.opponent.name}
         </h3>
         <p className="text-sm text-gray-300">
           <span className="capitalize">{formatScheduled(scheduled)}</span>
-          {relative && (
-            <span className="text-gray-500"> · {relative}</span>
-          )}
+          {relative && <span className="text-gray-500"> · {relative}</span>}
         </p>
       </div>
 

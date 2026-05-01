@@ -26,7 +26,7 @@ const STEPS: Step[] = [
     number: '01',
     title: 'Inscris ton équipe',
     description:
-      "Crée ton équipe en deux minutes : nom, BattleTag de capitaine, premiers membres. Tu deviens capitaine automatiquement.",
+      'Crée ton équipe en deux minutes : nom, BattleTag de capitaine, premiers membres. Tu deviens capitaine automatiquement.',
     bullets: [
       'Choisis un nom et un tag (ex. PHX)',
       'Renseigne 5 BattleTags pour démarrer le roster',
@@ -38,7 +38,7 @@ const STEPS: Step[] = [
     number: '02',
     title: 'Reçois et valide les candidatures',
     description:
-      "Active le mode “équipe ouverte” pour recevoir des demandes. Lis le message, accepte ou refuse — la joueuse reçoit une notification.",
+      'Active le mode “équipe ouverte” pour recevoir des demandes. Lis le message, accepte ou refuse — la joueuse reçoit une notification.',
     bullets: [
       'Toggle ouvert/fermé en un clic',
       'Voir le rôle souhaité et un mot d’intro',
@@ -50,7 +50,7 @@ const STEPS: Step[] = [
     number: '03',
     title: 'Gère le roster et les rôles',
     description:
-      "Ajuste les rôles (tank/dps/support/sub/coach), passe le brassard de capitaine, copie un BattleTag en un clic pour les lobbies.",
+      'Ajuste les rôles (tank/dps/support/sub/coach), passe le brassard de capitaine, copie un BattleTag en un clic pour les lobbies.',
     bullets: [
       'Compteur Tank / DPS / Support visible',
       'Bouton 📋 à côté de chaque BattleTag',
@@ -62,7 +62,7 @@ const STEPS: Step[] = [
     number: '04',
     title: 'Discute avec les autres capitaines',
     description:
-      "Messagerie intégrée entre capitaines pour caler horaires, lobbies ou règles maison sans quitter le site.",
+      'Messagerie intégrée entre capitaines pour caler horaires, lobbies ou règles maison sans quitter le site.',
     bullets: [
       'Inbox triée par dernière activité',
       'Compteur de messages non lus dans la navbar',
@@ -74,7 +74,7 @@ const STEPS: Step[] = [
     number: '05',
     title: 'Check-in du prochain match',
     description:
-      "Une heure avant le coup d’envoi, le bouton check-in s’ouvre directement dans ton espace. Plus besoin de chercher le mail Draftbot.",
+      'Une heure avant le coup d’envoi, le bouton check-in s’ouvre directement dans ton espace. Plus besoin de chercher le mail Draftbot.',
     bullets: [
       'Carte “Prochain match” en haut du dashboard',
       'Compte à rebours, format BO3/BO5, lien live',
@@ -86,7 +86,7 @@ const STEPS: Step[] = [
     number: '06',
     title: 'Propose des scrims',
     description:
-      "Choisis une équipe adverse, propose un horaire et un message. La capitaine adverse accepte ou refuse depuis son espace.",
+      'Choisis une équipe adverse, propose un horaire et un message. La capitaine adverse accepte ou refuse depuis son espace.',
     bullets: [
       'Recherche d’équipe avec filtre pays/places',
       'Proposition + date + commentaire',
@@ -213,10 +213,7 @@ function GuidePage(): JSX.Element {
       {/* Features grid */}
       <section className="relative mx-auto max-w-6xl px-4 md:px-6 pb-20">
         <div className="mb-8 text-center">
-          <Heading
-            typeStyle="heading-md"
-            className="text-gradient text-center"
-          >
+          <Heading typeStyle="heading-md" className="text-gradient text-center">
             Et aussi…
           </Heading>
         </div>
@@ -242,8 +239,8 @@ function GuidePage(): JSX.Element {
             Prête à passer le brassard ?
           </h2>
           <p className="mt-3 text-gray-300">
-            L’inscription est libre, le formulaire prend deux minutes et tu
-            peux ajuster le roster à tout moment.
+            L’inscription est libre, le formulaire prend deux minutes et tu peux
+            ajuster le roster à tout moment.
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             <Link
@@ -346,7 +343,11 @@ function NewTeamPreview() {
         Créer mon équipe
       </div>
       <FieldRow label="Nom" value="Phenix" />
-      <FieldRow label="Tag" value="PHX" hint="3-4 lettres, visible en bracket" />
+      <FieldRow
+        label="Tag"
+        value="PHX"
+        hint="3-4 lettres, visible en bracket"
+      />
       <FieldRow label="Capitaine" value="Lina#21834" />
       <div>
         <div className="text-[10px] uppercase tracking-[0.16em] text-gray-400 mb-1">

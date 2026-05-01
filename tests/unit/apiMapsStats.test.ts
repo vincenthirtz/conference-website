@@ -164,7 +164,12 @@ describe('GET /api/maps/stats — full response', () => {
     store.match_map_vetos = [
       { match_id: 'm1', action: 'ban', team_id: 't1', map_name: 'Eichenwalde' },
       { match_id: 'm1', action: 'pick', team_id: 't2', map_name: 'Lijiang' },
-      { match_id: 'm1', action: 'decider', team_id: null, map_name: 'Hanamura' },
+      {
+        match_id: 'm1',
+        action: 'decider',
+        team_id: null,
+        map_name: 'Hanamura',
+      },
       { match_id: 'm2', action: 'ban', team_id: 't1', map_name: 'Numbani' },
       { match_id: 'm2', action: 'pick', team_id: 't2', map_name: 'Lijiang' },
     ] as any;
@@ -189,7 +194,10 @@ describe('GET /api/maps/stats — full response', () => {
   it('orders maps by gamesPlayed desc', async () => {
     const res = makeRes();
     await handler(makeReq({ tournamentId: TID }), res);
-    const maps = (res.body as any).maps as { mapName: string; gamesPlayed: number }[];
+    const maps = (res.body as any).maps as {
+      mapName: string;
+      gamesPlayed: number;
+    }[];
     // Lijiang has 2 games, Hanamura 1
     expect(maps[0].mapName).toBe('Lijiang');
     expect(maps[0].gamesPlayed).toBe(2);

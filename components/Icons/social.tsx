@@ -72,10 +72,7 @@ export function YouTubeIcon({
   );
 }
 
-export function RssIcon({
-  className,
-  fill,
-}: Readonly<SVGTypes>): JSX.Element {
+export function RssIcon({ className, fill }: Readonly<SVGTypes>): JSX.Element {
   return (
     <svg
       className={className}

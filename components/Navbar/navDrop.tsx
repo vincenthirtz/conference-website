@@ -243,9 +243,7 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(function NavDrop(
             const isActive =
               (!hasSubMenu && router.pathname === link.ref) ||
               (hasSubMenu &&
-                link.subMenu!.some(
-                  (s) => s.ref && router.pathname === s.ref
-                ));
+                link.subMenu!.some((s) => s.ref && router.pathname === s.ref));
 
             if (!hasSubMenu) {
               return (

@@ -253,7 +253,13 @@ describe('/api/admin/stages/[stageId]', () => {
 
   it('DELETE soft 200 deactivates', async () => {
     store.tournament_stages = [
-      { id: STAGE_ID, tournament_id: 'tour-1', is_active: true, is_public: true, name: 'A' },
+      {
+        id: STAGE_ID,
+        tournament_id: 'tour-1',
+        is_active: true,
+        is_public: true,
+        name: 'A',
+      },
     ] as any;
     const res = makeRes();
     await adminStageHandler(

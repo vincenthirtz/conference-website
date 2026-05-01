@@ -19,7 +19,9 @@ test.describe('Guide capitaine — /guide/gerer-mon-equipe', () => {
   test('exposes a "Créer mon équipe" CTA pointing at /team/create', async ({
     page,
   }) => {
-    const cta = page.getByRole('link', { name: /Cr[ée]er mon [ée]quipe/i }).first();
+    const cta = page
+      .getByRole('link', { name: /Cr[ée]er mon [ée]quipe/i })
+      .first();
     await expect(cta).toBeVisible();
     await expect(cta).toHaveAttribute('href', '/team/create');
   });
@@ -34,7 +36,9 @@ test.describe('Guide capitaine — /guide/gerer-mon-equipe', () => {
     await expect(cta).toHaveAttribute('href', '/player');
   });
 
-  test('lists the six steps with their numbers and titles', async ({ page }) => {
+  test('lists the six steps with their numbers and titles', async ({
+    page,
+  }) => {
     const expectedTitles = [
       /Inscris ton [ée]quipe/i,
       /Re[çc]ois et valide les candidatures/i,
@@ -61,9 +65,7 @@ test.describe('Guide capitaine — /guide/gerer-mon-equipe', () => {
     // The next-match preview shows the demo opponent.
     await expect(page.getByText(/Avoidgers/).first()).toBeVisible();
     // The agenda preview spells out the example date.
-    await expect(
-      page.getByText(/dimanche 18 mai 2026 à 19:00/i)
-    ).toBeVisible();
+    await expect(page.getByText(/dimanche 18 mai 2026 à 19:00/i)).toBeVisible();
   });
 
   test('shows the "Et aussi" feature grid with 4 cards', async ({ page }) => {

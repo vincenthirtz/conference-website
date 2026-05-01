@@ -55,9 +55,7 @@ export default function HomeSponsors({
   partners,
 }: HomeSponsorsProps): JSX.Element | null {
   // De-duplicate by id (defensive: DB or merge could surface dupes)
-  const unique = Array.from(
-    new Map(partners.map((p) => [p.id, p])).values()
-  );
+  const unique = Array.from(new Map(partners.map((p) => [p.id, p])).values());
 
   if (!unique.length) return null;
 

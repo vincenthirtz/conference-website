@@ -48,10 +48,7 @@ export function RulesIcon({
   );
 }
 
-export function MailIcon({
-  className,
-  fill,
-}: Readonly<SVGTypes>): JSX.Element {
+export function MailIcon({ className, fill }: Readonly<SVGTypes>): JSX.Element {
   const stroke = fill || 'currentColor';
   return (
     <svg
@@ -243,10 +240,7 @@ export function SitemapIcon({
   );
 }
 
-export function NewsIcon({
-  className,
-  fill,
-}: Readonly<SVGTypes>): JSX.Element {
+export function NewsIcon({ className, fill }: Readonly<SVGTypes>): JSX.Element {
   const stroke = fill || 'currentColor';
   return (
     <svg
@@ -281,10 +275,7 @@ export function NewsIcon({
   );
 }
 
-export function LiveIcon({
-  className,
-  fill,
-}: Readonly<SVGTypes>): JSX.Element {
+export function LiveIcon({ className, fill }: Readonly<SVGTypes>): JSX.Element {
   const stroke = fill || 'currentColor';
   return (
     <svg

@@ -61,30 +61,27 @@ describe('importTeams', () => {
   });
 
   it('records error rows for missing names', async () => {
-    const result = await importTeams(
-      [{ name: '' }, { name: 'OK' }],
-      { sourceLabel: 'csv_import' }
-    );
+    const result = await importTeams([{ name: '' }, { name: 'OK' }], {
+      sourceLabel: 'csv_import',
+    });
     expect(result.created).toBe(1);
     expect(result.errors[0].message).toContain('manquant');
-    expect((store.teams as any[])).toHaveLength(1);
+    expect(store.teams as any[]).toHaveLength(1);
   });
 
   it('records error rows for too-long names', async () => {
-    const result = await importTeams(
-      [{ name: 'a'.repeat(150) }],
-      { sourceLabel: 'csv_import' }
-    );
+    const result = await importTeams([{ name: 'a'.repeat(150) }], {
+      sourceLabel: 'csv_import',
+    });
     expect(result.created).toBe(0);
     expect(result.errors[0].message).toContain('Nom trop long');
   });
 
   it('skips duplicates (case-insensitive)', async () => {
     store.teams = [{ id: 't-existing', name: 'Alpha' }] as any;
-    const result = await importTeams(
-      [{ name: 'alpha' }, { name: 'Beta' }],
-      { sourceLabel: 'csv_import' }
-    );
+    const result = await importTeams([{ name: 'alpha' }, { name: 'Beta' }], {
+      sourceLabel: 'csv_import',
+    });
     expect(result.skipped).toBe(1);
     expect(result.created).toBe(1);
   });
@@ -107,14 +104,11 @@ describe('importTeams', () => {
   });
 
   it('upserts into tournament_teams when tournamentId provided', async () => {
-    const result = await importTeams(
-      [{ name: 'Squad' }],
-      {
-        sourceLabel: 'toornament_import',
-        tournamentId: 't-tour',
-        staffId: 's-1',
-      }
-    );
+    const result = await importTeams([{ name: 'Squad' }], {
+      sourceLabel: 'toornament_import',
+      tournamentId: 't-tour',
+      staffId: 's-1',
+    });
     expect(result.created).toBe(1);
     // staff_logs inserted (defensive against shared-cache reorderings under
     // vitest's --no-isolate; the table key is created lazily by the mock).
@@ -244,9 +238,7 @@ describe('tryAutoAdvanceFromMatch', () => {
         },
       },
     ] as any;
-    store.matches = [
-      { id: 'm1', stage_id: 's1', status: 'finished' },
-    ] as any;
+    store.matches = [{ id: 'm1', stage_id: 's1', status: 'finished' }] as any;
     const r = await tryAutoAdvanceFromMatch({ stageId: 's1', staffId: null });
     expect(r.reason).toBe('target_stage_not_found');
   });
@@ -271,9 +263,7 @@ describe('tryAutoAdvanceFromMatch', () => {
         is_active: true,
       },
     ] as any;
-    store.matches = [
-      { id: 'm1', stage_id: 's1', status: 'finished' },
-    ] as any;
+    store.matches = [{ id: 'm1', stage_id: 's1', status: 'finished' }] as any;
     const r = await tryAutoAdvanceFromMatch({ stageId: 's1', staffId: null });
     expect(r.reason).toBe('target_stage_wrong_tournament');
   });
@@ -294,9 +284,7 @@ describe('tryAutoAdvanceFromMatch', () => {
       },
       { id: 'target', tournament_id: 't1', is_active: true },
     ] as any;
-    store.matches = [
-      { id: 'm1', stage_id: 's1', status: 'finished' },
-    ] as any;
+    store.matches = [{ id: 'm1', stage_id: 's1', status: 'finished' }] as any;
     computeStageStandings.mockResolvedValueOnce([]);
     const r = await tryAutoAdvanceFromMatch({ stageId: 's1', staffId: null });
     expect(r.reason).toBe('standings_empty');
@@ -357,9 +345,7 @@ describe('tryAutoAdvanceFromMatch', () => {
       },
       { id: 'target', tournament_id: 't1', is_active: true },
     ] as any;
-    store.matches = [
-      { id: 'm1', stage_id: 's1', status: 'finished' },
-    ] as any;
+    store.matches = [{ id: 'm1', stage_id: 's1', status: 'finished' }] as any;
     store.stage_teams = [
       { stage_id: 'target', team_id: 'tA' },
       { stage_id: 'target', team_id: 'tB' },
@@ -395,9 +381,7 @@ describe('tryAutoAdvanceFromMatch', () => {
       },
       { id: 'target', tournament_id: 't1', is_active: true },
     ] as any;
-    store.matches = [
-      { id: 'm1', stage_id: 's1', status: 'finished' },
-    ] as any;
+    store.matches = [{ id: 'm1', stage_id: 's1', status: 'finished' }] as any;
     computeStageStandings.mockResolvedValueOnce([
       { teamId: 'tA', rank: 1 },
       { teamId: 'tB', rank: 3 },
@@ -427,9 +411,7 @@ describe('tryAutoAdvanceFromMatch', () => {
       },
       { id: 'target', tournament_id: 't1', is_active: true },
     ] as any;
-    store.matches = [
-      { id: 'm1', stage_id: 's1', status: 'finished' },
-    ] as any;
+    store.matches = [{ id: 'm1', stage_id: 's1', status: 'finished' }] as any;
     computeStageStandings.mockResolvedValueOnce([
       { teamId: 'tA', rank: 1 },
     ] as any);

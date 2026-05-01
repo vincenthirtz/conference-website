@@ -47,14 +47,34 @@ const communityLinks: FooterLink[] = [
 
 const legalLinks: FooterLink[] = [
   { label: 'Nous contacter', href: '/contact', Icon: MailIcon },
-  { label: 'Mentions légales', href: '/mentions-legales', Icon: LegalShieldIcon },
+  {
+    label: 'Mentions légales',
+    href: '/mentions-legales',
+    Icon: LegalShieldIcon,
+  },
 ];
 
 const socials: SocialLink[] = [
-  { label: 'TikTok', href: 'https://www.tiktok.com/@ow_womenscup', Icon: TikTokIcon },
-  { label: 'Instagram', href: 'https://www.instagram.com/womenscup_asso', Icon: InstagramIcon },
-  { label: 'Twitch', href: 'https://www.twitch.tv/womens_cup', Icon: TwitchIcon },
-  { label: 'YouTube', href: 'https://www.youtube.com/@owwomenscup', Icon: YouTubeIcon },
+  {
+    label: 'TikTok',
+    href: 'https://www.tiktok.com/@ow_womenscup',
+    Icon: TikTokIcon,
+  },
+  {
+    label: 'Instagram',
+    href: 'https://www.instagram.com/womenscup_asso',
+    Icon: InstagramIcon,
+  },
+  {
+    label: 'Twitch',
+    href: 'https://www.twitch.tv/womens_cup',
+    Icon: TwitchIcon,
+  },
+  {
+    label: 'YouTube',
+    href: 'https://www.youtube.com/@owwomenscup',
+    Icon: YouTubeIcon,
+  },
   { label: 'RSS', href: '/api/news/rss', Icon: RssIcon },
 ];
 

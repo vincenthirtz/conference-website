@@ -202,10 +202,7 @@ describe('/api/admin/tournament-templates', () => {
 
   it('DELETE 400 when templateId missing', async () => {
     const res = makeRes();
-    await templatesHandler(
-      makeReq({ method: 'DELETE', body: {} }),
-      res
-    );
+    await templatesHandler(makeReq({ method: 'DELETE', body: {} }), res);
     expect(res.statusCode).toBe(400);
   });
 
@@ -299,7 +296,11 @@ describe('GET /api/admin/tournament/[id]/status-guards', () => {
     expect(res.statusCode).toBe(200);
     const body = res.body as any;
     expect(body.current_status).toBe('draft');
-    const guards = body.guards as Array<{ status: string; allowed: boolean; reason?: string }>;
+    const guards = body.guards as Array<{
+      status: string;
+      allowed: boolean;
+      reason?: string;
+    }>;
     const published = guards.find((g) => g.status === 'published')!;
     expect(published.allowed).toBe(false);
     expect(published.reason).toMatch(/au moins 1 phase/);
@@ -309,9 +310,7 @@ describe('GET /api/admin/tournament/[id]/status-guards', () => {
 
   it('200 with running allowed when stages + teams present', async () => {
     store.tournaments = [{ id: TID, status: 'published' }] as any;
-    store.tournament_stages = [
-      { id: 's1', tournament_id: TID },
-    ] as any;
+    store.tournament_stages = [{ id: 's1', tournament_id: TID }] as any;
     store.tournament_teams = [
       { id: 'tt1', tournament_id: TID, team_id: 't1' },
     ] as any;
@@ -371,14 +370,31 @@ describe('GET /api/admin/tournament/[id]/status-guards', () => {
 describe('POST /api/admin/upload', () => {
   // Minimal valid PNG: 8 bytes signature + IHDR start (only header validation matters)
   const pngBuffer = Buffer.from([
-    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, // signature
-    0x00, 0x00, 0x00, 0x0d, // IHDR length
+    0x89,
+    0x50,
+    0x4e,
+    0x47,
+    0x0d,
+    0x0a,
+    0x1a,
+    0x0a, // signature
+    0x00,
+    0x00,
+    0x00,
+    0x0d, // IHDR length
   ]);
   const pngBase64 = pngBuffer.toString('base64');
 
   // Minimal valid PDF
   const pdfBuffer = Buffer.from([
-    0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34, // %PDF-1.4
+    0x25,
+    0x50,
+    0x44,
+    0x46,
+    0x2d,
+    0x31,
+    0x2e,
+    0x34, // %PDF-1.4
   ]);
   const pdfBase64 = pdfBuffer.toString('base64');
 
@@ -393,10 +409,7 @@ describe('POST /api/admin/upload', () => {
 
   it('400 when data or mimeType missing', async () => {
     const res = makeRes();
-    await uploadHandler(
-      makeReq({ method: 'POST', body: {} }),
-      res
-    );
+    await uploadHandler(makeReq({ method: 'POST', body: {} }), res);
     expect(res.statusCode).toBe(400);
   });
 

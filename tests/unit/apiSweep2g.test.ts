@@ -452,7 +452,9 @@ describe('/api/admin/stages/[stageId]/generate-swiss-round', () => {
     const body = res.body as any;
     // Both losers eliminated by loss_threshold
     expect(body.eliminatedTeams?.length).toBe(2);
-    expect(body.eliminatedTeams.every((t: any) => t.reason === 'loss_threshold')).toBe(true);
+    expect(
+      body.eliminatedTeams.every((t: any) => t.reason === 'loss_threshold')
+    ).toBe(true);
     // Round 2 created with the 2 surviving teams
     expect(body.createdMatches.length).toBe(1);
   });

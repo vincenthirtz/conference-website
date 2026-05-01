@@ -334,9 +334,7 @@ describe('processMatchCheckin — early returns', () => {
   });
 
   it('returns no steps when scheduled_at is missing', async () => {
-    const r = await processMatchCheckin(
-      buildMatchLite({ scheduled_at: null })
-    );
+    const r = await processMatchCheckin(buildMatchLite({ scheduled_at: null }));
     expect(r.steps).toEqual([]);
   });
 
@@ -627,8 +625,8 @@ describe('processCheckinForUpcomingMatches', () => {
     const summary = await processCheckinForUpcomingMatches();
     expect(summary.scanned).toBe(1);
     expect(summary.acted).toBe(1);
-    expect(summary.details[0].steps.some((s) => s.startsWith('reminder_30'))).toBe(
-      true
-    );
+    expect(
+      summary.details[0].steps.some((s) => s.startsWith('reminder_30'))
+    ).toBe(true);
   });
 });

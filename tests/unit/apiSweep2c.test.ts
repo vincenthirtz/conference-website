@@ -200,14 +200,14 @@ describe('/api/matches/[matchId]/games', () => {
     expect(res.statusCode).toBe(200);
     expect((res.body as any).games.length).toBe(2);
     // old game removed
-    expect((store.games as any[]).find((g) => g.id === 'g-old')).toBeUndefined();
+    expect(
+      (store.games as any[]).find((g) => g.id === 'g-old')
+    ).toBeUndefined();
   });
 
   it('PUT with empty games clears all', async () => {
     setupStaff();
-    store.games = [
-      { id: 'g-old', match_id: 'm1', map_name: 'Old' },
-    ] as any;
+    store.games = [{ id: 'g-old', match_id: 'm1', map_name: 'Old' }] as any;
     const res = makeRes();
     await gamesHandler(
       makeAuthedReq({
@@ -338,10 +338,7 @@ describe('/api/demandes/transfer', () => {
   it('POST 400 when teamId missing', async () => {
     setupUser();
     const res = makeRes();
-    await transferHandler(
-      makeAuthedReq({ method: 'POST', body: {} }),
-      res
-    );
+    await transferHandler(makeAuthedReq({ method: 'POST', body: {} }), res);
     expect(res.statusCode).toBe(400);
   });
 
@@ -422,7 +419,13 @@ describe('/api/demandes/transfer', () => {
     ] as any;
     store.teams = [
       { id: TEAM_A, captain_id: 'capA', name: 'Alpha', is_active: true },
-      { id: TEAM_B, captain_id: 'capB', name: 'Beta', is_active: true, is_joinable: false },
+      {
+        id: TEAM_B,
+        captain_id: 'capB',
+        name: 'Beta',
+        is_active: true,
+        is_joinable: false,
+      },
     ] as any;
     const res = makeRes();
     await transferHandler(
@@ -439,7 +442,13 @@ describe('/api/demandes/transfer', () => {
     ] as any;
     store.teams = [
       { id: TEAM_A, captain_id: 'capA', name: 'Alpha', is_active: true },
-      { id: TEAM_B, captain_id: 'capB', name: 'Beta', is_active: true, is_joinable: true },
+      {
+        id: TEAM_B,
+        captain_id: 'capB',
+        name: 'Beta',
+        is_active: true,
+        is_joinable: true,
+      },
     ] as any;
     store.demandes = [
       {
@@ -466,7 +475,13 @@ describe('/api/demandes/transfer', () => {
     ] as any;
     store.teams = [
       { id: TEAM_A, captain_id: 'capA', name: 'Alpha', is_active: true },
-      { id: TEAM_B, captain_id: 'capB', name: 'Beta', is_active: true, is_joinable: true },
+      {
+        id: TEAM_B,
+        captain_id: 'capB',
+        name: 'Beta',
+        is_active: true,
+        is_joinable: true,
+      },
     ] as any;
     const res = makeRes();
     await transferHandler(
@@ -525,9 +540,7 @@ describe('/api/demandes/transfer', () => {
     store.team_members = [
       { id: 'tm-cap', user_id: 'captain', team_id: TEAM_A },
     ] as any;
-    store.teams = [
-      { id: TEAM_A, captain_id: 'captain', name: 'Alpha' },
-    ] as any;
+    store.teams = [{ id: TEAM_A, captain_id: 'captain', name: 'Alpha' }] as any;
     const res = makeRes();
     await transferHandler(
       makeAuthedReq({
@@ -544,9 +557,7 @@ describe('/api/demandes/transfer', () => {
     store.team_members = [
       { id: 'tm-cap', user_id: 'captain', team_id: TEAM_A },
     ] as any;
-    store.teams = [
-      { id: TEAM_A, captain_id: 'captain', name: 'Alpha' },
-    ] as any;
+    store.teams = [{ id: TEAM_A, captain_id: 'captain', name: 'Alpha' }] as any;
     const res = makeRes();
     await transferHandler(
       makeAuthedReq({
@@ -564,9 +575,7 @@ describe('/api/demandes/transfer', () => {
       { id: 'tm-cap', user_id: 'captain', team_id: TEAM_A },
       { id: 'tm-p', user_id: 'player1', team_id: TEAM_A, battle_tag: 'P#1234' },
     ] as any;
-    store.teams = [
-      { id: TEAM_A, captain_id: 'captain', name: 'Alpha' },
-    ] as any;
+    store.teams = [{ id: TEAM_A, captain_id: 'captain', name: 'Alpha' }] as any;
     const res = makeRes();
     await transferHandler(
       makeAuthedReq({

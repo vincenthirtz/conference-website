@@ -170,12 +170,7 @@ const M_ID = '550e8400-e29b-41d4-a716-446655440013';
 
 describe('swissPairByRecord', () => {
   it('returns pairings for an even number of teams with no history', () => {
-    const teams = [
-      team('a', 1),
-      team('b', 2),
-      team('c', 3),
-      team('d', 4),
-    ];
+    const teams = [team('a', 1), team('b', 2), team('c', 3), team('d', 4)];
     const pairings = swissPairByRecord(teams, []);
     expect(pairings.length).toBe(2);
     // Every team appears exactly once
@@ -452,10 +447,7 @@ describe('GET /api/admin/me', () => {
 describe('/api/admin/users/manage extras', () => {
   it('400 on POST with no email', async () => {
     const res = makeRes();
-    await adminUsersManageHandler(
-      makeReq({ method: 'POST', body: {} }),
-      res
-    );
+    await adminUsersManageHandler(makeReq({ method: 'POST', body: {} }), res);
     // The route validates body shape — should reject
     expect([400, 405].includes(res.statusCode)).toBe(true);
   });
@@ -523,19 +515,13 @@ describe('/api/twitch-channels', () => {
       },
     ] as any;
     const res = makeRes();
-    await twitchChannelsHandler(
-      makeReq({ method: 'GET' }, false),
-      res
-    );
+    await twitchChannelsHandler(makeReq({ method: 'GET' }, false), res);
     expect(res.statusCode).toBe(200);
   });
 
   it('405 on POST', async () => {
     const res = makeRes();
-    await twitchChannelsHandler(
-      makeReq({ method: 'POST' }, false),
-      res
-    );
+    await twitchChannelsHandler(makeReq({ method: 'POST' }, false), res);
     expect(res.statusCode).toBe(405);
   });
 });
@@ -574,9 +560,7 @@ describe('/api/cast-members', () => {
 
 describe('/api/partners', () => {
   it('200 returns active partners', async () => {
-    store.partners = [
-      { id: 'p1', name: 'Sponsor', is_active: true },
-    ] as any;
+    store.partners = [{ id: 'p1', name: 'Sponsor', is_active: true }] as any;
     const res = makeRes();
     await partnersHandler(makeReq({ method: 'GET' }, false), res);
     expect(res.statusCode).toBe(200);
@@ -695,9 +679,7 @@ describe('POST /api/admin/teams/[teamId]/tournaments — min_players + max_teams
       { team_id: TEAM_ID, user_id: 'u1' },
       { team_id: TEAM_ID, user_id: 'u2' },
     ] as any;
-    store.tournament_stages = [
-      { id: 's1', tournament_id: 'tour-1' },
-    ] as any;
+    store.tournament_stages = [{ id: 's1', tournament_id: 'tour-1' }] as any;
     store.stage_teams = [];
     const res = makeRes();
     await teamTournamentsHandler(

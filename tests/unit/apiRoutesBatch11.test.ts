@@ -46,10 +46,7 @@ vi.mock('@/utils/email', () => ({
   sendSupportStaffNotificationEmail,
 }));
 
-import {
-  store,
-  resetSupabaseMock,
-} from './__helpers__/supabaseMock';
+import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
 
 import cronCheckinHandler from '../../pages/api/cron/checkin-process';
 import newsCommentsHandler from '../../pages/api/news/comments';
@@ -176,9 +173,7 @@ describe('/api/cron/checkin-process', () => {
   });
 
   it('500 when the bulk processor throws', async () => {
-    processCheckinForUpcomingMatches.mockRejectedValueOnce(
-      new Error('boom')
-    );
+    processCheckinForUpcomingMatches.mockRejectedValueOnce(new Error('boom'));
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const res = makeRes();
     await cronCheckinHandler(
@@ -336,7 +331,11 @@ describe('POST /api/support/ticket', () => {
     await supportTicketHandler(
       makeReq({
         method: 'POST',
-        body: { category: 'bogus', severity: 'low', message: 'a longer message' },
+        body: {
+          category: 'bogus',
+          severity: 'low',
+          message: 'a longer message',
+        },
       }),
       res
     );
@@ -348,7 +347,11 @@ describe('POST /api/support/ticket', () => {
     await supportTicketHandler(
       makeReq({
         method: 'POST',
-        body: { category: 'other', severity: 'bogus', message: 'a longer message' },
+        body: {
+          category: 'other',
+          severity: 'bogus',
+          message: 'a longer message',
+        },
       }),
       res
     );

@@ -12,35 +12,43 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 import { CHECKIN_OPEN_MINUTES } from '@/utils/checkin';
 
-export type NextMatchPayload = {
-  match: {
-    id: string;
-    scheduledAt: string | null;
-    status: string;
-    format: string | null;
-    roundName: string | null;
-    streamUrl: string | null;
-    bestOf: number | null;
-  } | null;
-  team: {
-    id: string;
-    name: string;
-    slot: 1 | 2;
-  } | null;
-  opponent: { id: string; name: string } | null;
-  tournament: { id: string; name: string; slug: string | null } | null;
-  checkin: {
-    token: string | null;
-    alreadyCheckedIn: boolean;
-    checkedInAt: string | null;
-    /** Window opens at scheduledAt - CHECKIN_OPEN_MINUTES, closes at scheduledAt. */
-    opensAt: string | null;
-    closesAt: string | null;
-    /** Convenience flags for the UI; computed from server clock. */
-    isOpen: boolean;
-    isPassed: boolean;
-  };
-} | { match: null; team: null; opponent: null; tournament: null; checkin: null };
+export type NextMatchPayload =
+  | {
+      match: {
+        id: string;
+        scheduledAt: string | null;
+        status: string;
+        format: string | null;
+        roundName: string | null;
+        streamUrl: string | null;
+        bestOf: number | null;
+      } | null;
+      team: {
+        id: string;
+        name: string;
+        slot: 1 | 2;
+      } | null;
+      opponent: { id: string; name: string } | null;
+      tournament: { id: string; name: string; slug: string | null } | null;
+      checkin: {
+        token: string | null;
+        alreadyCheckedIn: boolean;
+        checkedInAt: string | null;
+        /** Window opens at scheduledAt - CHECKIN_OPEN_MINUTES, closes at scheduledAt. */
+        opensAt: string | null;
+        closesAt: string | null;
+        /** Convenience flags for the UI; computed from server clock. */
+        isOpen: boolean;
+        isPassed: boolean;
+      };
+    }
+  | {
+      match: null;
+      team: null;
+      opponent: null;
+      tournament: null;
+      checkin: null;
+    };
 
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
@@ -116,21 +124,21 @@ export default withAuthRoute(async function handler(
 
   const isTeam1 = match.team1_id === teamId;
   const slot: 1 | 2 = isTeam1 ? 1 : 2;
-  const team = (Array.isArray(match.team1) ? match.team1[0] : match.team1) as
-    | { id: string; name: string }
-    | null;
-  const opp = (Array.isArray(match.team2) ? match.team2[0] : match.team2) as
-    | { id: string; name: string }
-    | null;
+  const team = (Array.isArray(match.team1) ? match.team1[0] : match.team1) as {
+    id: string;
+    name: string;
+  } | null;
+  const opp = (Array.isArray(match.team2) ? match.team2[0] : match.team2) as {
+    id: string;
+    name: string;
+  } | null;
   const myTeam = isTeam1 ? team : opp;
   const opponent = isTeam1 ? opp : team;
   const tn = (
     Array.isArray(match.tournament) ? match.tournament[0] : match.tournament
   ) as { id: string; name: string; slug: string | null } | null;
 
-  const token = isTeam1
-    ? match.team1_checkin_token
-    : match.team2_checkin_token;
+  const token = isTeam1 ? match.team1_checkin_token : match.team2_checkin_token;
   const checkedInAt = isTeam1
     ? match.team1_checked_in_at
     : match.team2_checked_in_at;

@@ -204,9 +204,7 @@ describe('POST /api/admin/tournament/[id]/bulk-matches', () => {
   });
 
   it('shift_round 200 when no scheduled matches', async () => {
-    store.tournament_stages = [
-      { id: STAGE_ID, tournament_id: TID },
-    ] as any;
+    store.tournament_stages = [{ id: STAGE_ID, tournament_id: TID }] as any;
     store.matches = [];
     const res = makeRes();
     await bulkTournamentMatchesHandler(
@@ -227,9 +225,7 @@ describe('POST /api/admin/tournament/[id]/bulk-matches', () => {
   });
 
   it('shift_round 200 shifts scheduled matches by offset', async () => {
-    store.tournament_stages = [
-      { id: STAGE_ID, tournament_id: TID },
-    ] as any;
+    store.tournament_stages = [{ id: STAGE_ID, tournament_id: TID }] as any;
     store.matches = [
       {
         id: 'm1',
@@ -359,9 +355,7 @@ describe('POST /api/admin/tournament/[id]/bulk-matches', () => {
   });
 
   it('reassign_stage skips matches in wrong tournament', async () => {
-    store.tournament_stages = [
-      { id: STAGE_ID_2, tournament_id: TID },
-    ] as any;
+    store.tournament_stages = [{ id: STAGE_ID_2, tournament_id: TID }] as any;
     store.matches = [
       {
         id: 'm-other',
@@ -392,9 +386,7 @@ describe('POST /api/admin/tournament/[id]/bulk-matches', () => {
   });
 
   it('reassign_stage skips matches already in target stage', async () => {
-    store.tournament_stages = [
-      { id: STAGE_ID_2, tournament_id: TID },
-    ] as any;
+    store.tournament_stages = [{ id: STAGE_ID_2, tournament_id: TID }] as any;
     store.matches = [
       {
         id: 'm1',

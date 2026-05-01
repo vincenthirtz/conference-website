@@ -233,8 +233,7 @@ export default function AdminTopBar({
               />
               <DropdownPanel open={openMenu === cat.title}>
                 {cat.children?.map((child) => {
-                  const hasNested =
-                    child.children && child.children.length > 0;
+                  const hasNested = child.children && child.children.length > 0;
                   if (hasNested) {
                     const isExpanded = openSubMenu === child.title;
                     return (

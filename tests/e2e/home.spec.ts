@@ -221,7 +221,9 @@ test.describe('Home — footer 3 columns', () => {
     await expect(footer).toBeVisible();
 
     // Brand block + the three column headings (h2 with uppercase tracking)
-    await expect(footer.getByText("OW Women's Cup", { exact: true })).toBeVisible();
+    await expect(
+      footer.getByText("OW Women's Cup", { exact: true })
+    ).toBeVisible();
     await expect(
       footer.getByRole('heading', { name: /^Tournoi$/ })
     ).toBeVisible();
@@ -237,9 +239,7 @@ test.describe('Home — footer 3 columns', () => {
     await page.goto('/');
     const footer = page.locator('[data-test="footer"]');
     for (const network of ['TikTok', 'Instagram', 'Twitch', 'YouTube', 'RSS']) {
-      await expect(
-        footer.getByRole('link', { name: network })
-      ).toBeVisible();
+      await expect(footer.getByRole('link', { name: network })).toBeVisible();
     }
   });
 });

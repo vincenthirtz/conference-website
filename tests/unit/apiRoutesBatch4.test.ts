@@ -111,7 +111,10 @@ describe('/api/admin/site-settings/[key]', () => {
 
   it('returns 400 when key is missing', async () => {
     const res = makeRes();
-    await siteSettingsKeyHandler(makeReq({ method: 'GET', query: {} }, true), res);
+    await siteSettingsKeyHandler(
+      makeReq({ method: 'GET', query: {} }, true),
+      res
+    );
     expect(res.statusCode).toBe(400);
   });
 
@@ -461,10 +464,7 @@ describe('PATCH /api/player/update-profile', () => {
 
     const res = makeRes();
     await updateProfileHandler(
-      makeReq(
-        { method: 'PATCH', body: { battle_tag: 'New#9999' } },
-        true
-      ),
+      makeReq({ method: 'PATCH', body: { battle_tag: 'New#9999' } }, true),
       res
     );
 

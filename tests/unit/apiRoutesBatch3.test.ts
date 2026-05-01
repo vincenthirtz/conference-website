@@ -20,10 +20,9 @@ const { logStaffAction: logStaffActionMock } = vi.hoisted(() => ({
   logStaffAction: vi.fn(async () => undefined),
 }));
 vi.mock('@/utils/staffLogs', async () => {
-  const real =
-    await vi.importActual<typeof import('../../utils/staffLogs')>(
-      '../../utils/staffLogs'
-    );
+  const real = await vi.importActual<typeof import('../../utils/staffLogs')>(
+    '../../utils/staffLogs'
+  );
   return { ...real, logStaffAction: logStaffActionMock };
 });
 
@@ -34,10 +33,7 @@ import {
 } from './__helpers__/supabaseMock';
 
 import { invalidateStaffCache } from '../../utils/staff';
-import {
-  logStaffAction,
-  fetchStaffLogs,
-} from '../../utils/staffLogs';
+import { logStaffAction, fetchStaffLogs } from '../../utils/staffLogs';
 
 import partnersHandler from '../../pages/api/admin/partners/index';
 import transferCaptainHandler from '../../pages/api/teams/transfer-captain';
@@ -250,10 +246,7 @@ describe('PATCH /api/teams/transfer-captain', () => {
     setAuthUser({ id: otherUuid });
     const res = makeRes();
     await transferCaptainHandler(
-      makeReq(
-        { method: 'PATCH', body: { newCaptainUserId: otherUuid } },
-        true
-      ),
+      makeReq({ method: 'PATCH', body: { newCaptainUserId: otherUuid } }, true),
       res
     );
     expect(res.statusCode).toBe(400);
@@ -264,10 +257,7 @@ describe('PATCH /api/teams/transfer-captain', () => {
     store.teams = [{ id: 't1', captain_id: 'someone-else' }] as any;
     const res = makeRes();
     await transferCaptainHandler(
-      makeReq(
-        { method: 'PATCH', body: { newCaptainUserId: otherUuid } },
-        true
-      ),
+      makeReq({ method: 'PATCH', body: { newCaptainUserId: otherUuid } }, true),
       res
     );
     expect(res.statusCode).toBe(403);
@@ -279,10 +269,7 @@ describe('PATCH /api/teams/transfer-captain', () => {
     store.team_members = []; // target not member
     const res = makeRes();
     await transferCaptainHandler(
-      makeReq(
-        { method: 'PATCH', body: { newCaptainUserId: otherUuid } },
-        true
-      ),
+      makeReq({ method: 'PATCH', body: { newCaptainUserId: otherUuid } }, true),
       res
     );
     expect(res.statusCode).toBe(400);
@@ -296,10 +283,7 @@ describe('PATCH /api/teams/transfer-captain', () => {
     ] as any;
     const res = makeRes();
     await transferCaptainHandler(
-      makeReq(
-        { method: 'PATCH', body: { newCaptainUserId: otherUuid } },
-        true
-      ),
+      makeReq({ method: 'PATCH', body: { newCaptainUserId: otherUuid } }, true),
       res
     );
     expect(res.statusCode).toBe(200);

@@ -133,10 +133,7 @@ describe('GET /api/admin/tournament/[id]/conflicts', () => {
       { id: 's1', tournament_id: TID, name: 'Group' },
     ] as any;
     const res = makeRes();
-    await conflictsHandler(
-      makeReq({ method: 'GET', query: { id: TID } }),
-      res
-    );
+    await conflictsHandler(makeReq({ method: 'GET', query: { id: TID } }), res);
     expect(res.statusCode).toBe(200);
     const body = res.body as any;
     expect(body.total).toBe(0);
@@ -180,10 +177,7 @@ describe('GET /api/admin/tournament/[id]/conflicts', () => {
     ] as any;
 
     const res = makeRes();
-    await conflictsHandler(
-      makeReq({ method: 'GET', query: { id: TID } }),
-      res
-    );
+    await conflictsHandler(makeReq({ method: 'GET', query: { id: TID } }), res);
     const body = res.body as any;
     expect(body.total).toBe(1);
     expect(body.conflicts[0].team_id).toBe('t1');
@@ -204,10 +198,7 @@ describe('GET /api/admin/tournament/[id]/conflicts', () => {
     ] as any;
     store.tournament_stages = [];
     const res = makeRes();
-    await conflictsHandler(
-      makeReq({ method: 'GET', query: { id: TID } }),
-      res
-    );
+    await conflictsHandler(makeReq({ method: 'GET', query: { id: TID } }), res);
     expect((res.body as any).checked_matches).toBe(0);
   });
 
@@ -253,10 +244,7 @@ describe('GET /api/admin/tournament/[id]/conflicts', () => {
     ] as any;
     store.tournament_stages = [];
     const res = makeRes();
-    await conflictsHandler(
-      makeReq({ method: 'GET', query: { id: TID } }),
-      res
-    );
+    await conflictsHandler(makeReq({ method: 'GET', query: { id: TID } }), res);
     const body = res.body as any;
     // 3 pairs: (m1,m2), (m1,m3), (m2,m3) — all overlapping
     expect(body.total).toBe(3);
@@ -321,7 +309,10 @@ describe('/api/admin/tournament/[id]/discord-webhooks', () => {
       makeReq({
         method: 'PUT',
         query: { id: TID },
-        body: { channelType: 'bogus', webhookUrl: 'https://discord.com/api/webhooks/1/x' },
+        body: {
+          channelType: 'bogus',
+          webhookUrl: 'https://discord.com/api/webhooks/1/x',
+        },
       }),
       res
     );

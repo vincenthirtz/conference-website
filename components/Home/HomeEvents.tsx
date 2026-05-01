@@ -130,8 +130,7 @@ export default function HomeEvents({
         ? new Date(tournament.endDate).getTime()
         : start;
       const includesNow =
-        tournament.status === 'running' ||
-        (Number.isFinite(end) && end >= now);
+        tournament.status === 'running' || (Number.isFinite(end) && end >= now);
       if (!filterPast || includesNow) {
         items.push({
           key: `tournament-${tournament.id}`,
@@ -143,9 +142,7 @@ export default function HomeEvents({
 
     for (const event of homepageEvents) {
       const start = new Date(event.date).getTime();
-      const end = event.endDate
-        ? new Date(event.endDate).getTime()
-        : start;
+      const end = event.endDate ? new Date(event.endDate).getTime() : start;
       if (filterPast && (!Number.isFinite(end) || end < now)) continue;
       items.push({
         key: `event-${event.id}`,

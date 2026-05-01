@@ -46,7 +46,12 @@ const {
   })),
   fetchForms: vi.fn(
     async () =>
-      [] as Array<{ formSlug: string; formType: string; title: string; state: string }>
+      [] as Array<{
+        formSlug: string;
+        formType: string;
+        title: string;
+        state: string;
+      }>
   ),
 }));
 
@@ -186,10 +191,7 @@ describe('/api/admin/test-email', () => {
 
   it('400 when "to" missing', async () => {
     const res = makeRes();
-    await testEmailHandler(
-      makeAuthedReq({ method: 'POST', body: {} }),
-      res
-    );
+    await testEmailHandler(makeAuthedReq({ method: 'POST', body: {} }), res);
     expect(res.statusCode).toBe(400);
   });
 
@@ -399,17 +401,19 @@ describe('/api/admin/helloasso/memberships', () => {
       { formSlug: 'don', formType: 'Donation', title: 'Don', state: 'Public' },
     ] as any);
     const res = makeRes();
-    await membershipsHandler(
-      makeAuthedReq({ method: 'GET', query: {} }),
-      res
-    );
+    await membershipsHandler(makeAuthedReq({ method: 'GET', query: {} }), res);
     expect(res.statusCode).toBe(404);
   });
 
   it('200 auto-detects Membership form', async () => {
     fetchForms.mockResolvedValueOnce([
       { formSlug: 'don', formType: 'Donation', title: 'Don', state: 'Public' },
-      { formSlug: 'adh', formType: 'Membership', title: 'Adh', state: 'Public' },
+      {
+        formSlug: 'adh',
+        formType: 'Membership',
+        title: 'Adh',
+        state: 'Public',
+      },
     ] as any);
     fetchMemberships.mockResolvedValueOnce({
       data: [],

@@ -20,7 +20,12 @@ vi.mock('@/utils/rateLimit', () => ({
 const { fetchForms, fetchMemberships } = vi.hoisted(() => ({
   fetchForms: vi.fn(
     async () =>
-      [] as Array<{ formSlug: string; formType: string; title: string; state: string }>
+      [] as Array<{
+        formSlug: string;
+        formType: string;
+        title: string;
+        state: string;
+      }>
   ),
   fetchMemberships: vi.fn(async () => ({
     data: [] as any[],
@@ -238,9 +243,7 @@ describe('/api/admin/cast-members/[id]', () => {
   });
 
   it('DELETE removes the cast member', async () => {
-    store.cast_members = [
-      { id: VALID_UUID, name: 'X' },
-    ] as any;
+    store.cast_members = [{ id: VALID_UUID, name: 'X' }] as any;
     const res = makeRes();
     await castMemberIdHandler(
       makeAuthedReq({ method: 'DELETE', query: { id: VALID_UUID } }),

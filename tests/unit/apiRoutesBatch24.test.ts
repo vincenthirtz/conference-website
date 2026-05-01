@@ -84,7 +84,13 @@ describe('/api/teams/join-requests', () => {
   it('GET 200 lists pending join demandes for captain team', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 'team-1', captain_id: 'user-1', is_active: true, name: 'Alpha', logo_url: null },
+      {
+        id: 'team-1',
+        captain_id: 'user-1',
+        is_active: true,
+        name: 'Alpha',
+        logo_url: null,
+      },
     ] as any;
     store.demandes = [
       {
@@ -379,10 +385,7 @@ describe('/api/admin/teams/my', () => {
   it('PATCH 400 when teamId missing', async () => {
     setAuthUser({ id: 'user-1' });
     const res = makeRes();
-    await myTeamHandler(
-      makeReq({ method: 'PATCH', body: {} }, true),
-      res
-    );
+    await myTeamHandler(makeReq({ method: 'PATCH', body: {} }, true), res);
     expect(res.statusCode).toBe(400);
   });
 
@@ -402,9 +405,7 @@ describe('/api/admin/teams/my', () => {
 
   it('PATCH 403 when not captain', async () => {
     setAuthUser({ id: 'user-1' });
-    store.teams = [
-      { id: 'team-1', captain_id: 'someone-else' },
-    ] as any;
+    store.teams = [{ id: 'team-1', captain_id: 'someone-else' }] as any;
     const res = makeRes();
     await myTeamHandler(
       makeReq(
@@ -421,10 +422,7 @@ describe('/api/admin/teams/my', () => {
     store.teams = [{ id: 'team-1', captain_id: 'user-1' }] as any;
     const res = makeRes();
     await myTeamHandler(
-      makeReq(
-        { method: 'PATCH', body: { teamId: 'team-1', name: 'X' } },
-        true
-      ),
+      makeReq({ method: 'PATCH', body: { teamId: 'team-1', name: 'X' } }, true),
       res
     );
     expect(res.statusCode).toBe(400);
@@ -495,7 +493,9 @@ describe('/api/admin/teams/my', () => {
     expect(res.statusCode).toBe(200);
     expect((store.teams[0] as any).name).toBe('New Name');
     expect((store.teams[0] as any).country).toBe('BE');
-    expect((store.teams[0] as any).logo_url).toBe('https://example.com/logo.png');
+    expect((store.teams[0] as any).logo_url).toBe(
+      'https://example.com/logo.png'
+    );
   });
 
   it('returns 405 on unsupported method', async () => {

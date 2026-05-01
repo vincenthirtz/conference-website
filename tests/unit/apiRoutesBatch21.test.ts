@@ -25,10 +25,9 @@ vi.mock('@/utils/staffLogs', () => ({
   logStaffAction: logStaffActionMock,
 }));
 vi.mock('@/utils/teamImport', async () => {
-  const real =
-    await vi.importActual<typeof import('../../utils/teamImport')>(
-      '../../utils/teamImport'
-    );
+  const real = await vi.importActual<typeof import('../../utils/teamImport')>(
+    '../../utils/teamImport'
+  );
   return {
     ...real,
     importTeams: importTeamsMock,
@@ -213,9 +212,7 @@ describe('POST /api/admin/stages/[stageId]/clone', () => {
         match_format: 'bo3',
       },
     ] as any;
-    store.stage_teams = [
-      { stage_id: STAGE_ID, team_id: 't1', seed: 1 },
-    ] as any;
+    store.stage_teams = [{ stage_id: STAGE_ID, team_id: 't1', seed: 1 }] as any;
     const res = makeRes();
     await cloneStageHandler(
       makeReq({
@@ -452,10 +449,7 @@ describe('POST /api/admin/teams/import-csv', () => {
 
   it('400 when csv field missing', async () => {
     const res = makeRes();
-    await importCsvHandler(
-      makeReq({ method: 'POST', body: {} }),
-      res
-    );
+    await importCsvHandler(makeReq({ method: 'POST', body: {} }), res);
     expect(res.statusCode).toBe(400);
   });
 
@@ -528,10 +522,7 @@ describe('POST /api/admin/teams/import-csv', () => {
   it('200 supports French aliases for column names', async () => {
     const csv = ['nom,pays,joueurs', 'Hello,FR,P1#1234'].join('\n');
     const res = makeRes();
-    await importCsvHandler(
-      makeReq({ method: 'POST', body: { csv } }),
-      res
-    );
+    await importCsvHandler(makeReq({ method: 'POST', body: { csv } }), res);
     expect(res.statusCode).toBe(200);
     const rows = importTeamsMock.mock.calls[0][0] as any[];
     expect(rows[0].name).toBe('Hello');
@@ -544,10 +535,7 @@ describe('POST /api/admin/teams/import-csv', () => {
     const csv = ['name', 'X'].join('\n');
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const res = makeRes();
-    await importCsvHandler(
-      makeReq({ method: 'POST', body: { csv } }),
-      res
-    );
+    await importCsvHandler(makeReq({ method: 'POST', body: { csv } }), res);
     consoleSpy.mockRestore();
     expect(res.statusCode).toBe(500);
   });

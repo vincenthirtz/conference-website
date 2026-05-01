@@ -34,7 +34,9 @@ import teamsLeaveHandler from '../../pages/api/teams/leave';
  * Helpers (same shape as apiAdminRoutes.test.ts)
  * ---------------------------------------------------------*/
 
-function makeStaff(role: 'owner' | 'admin' | 'manager' | 'caster' = 'admin'): StaffMember {
+function makeStaff(
+  role: 'owner' | 'admin' | 'manager' | 'caster' = 'admin'
+): StaffMember {
   return {
     id: 'staff-1',
     auth_user_id: 'user-1',
@@ -96,8 +98,20 @@ describe('/api/admin/twitch-channels', () => {
 
   it('GET 200 lists active channels', async () => {
     store.twitch_channels = [
-      { id: 'c1', channel: 'foo', label: 'Foo', is_active: true, sort_order: 1 },
-      { id: 'c2', channel: 'bar', label: 'Bar', is_active: false, sort_order: 2 },
+      {
+        id: 'c1',
+        channel: 'foo',
+        label: 'Foo',
+        is_active: true,
+        sort_order: 1,
+      },
+      {
+        id: 'c2',
+        channel: 'bar',
+        label: 'Bar',
+        is_active: false,
+        sort_order: 2,
+      },
     ] as any;
     const res = makeRes();
     await twitchChannelsHandler(makeReq({ method: 'GET' }, true), res);
@@ -158,10 +172,7 @@ describe('/api/admin/twitch-channels', () => {
 
   it('POST 405 on unsupported methods', async () => {
     const res = makeRes();
-    await twitchChannelsHandler(
-      makeReq({ method: 'PATCH' }, true),
-      res
-    );
+    await twitchChannelsHandler(makeReq({ method: 'PATCH' }, true), res);
     expect(res.statusCode).toBe(405);
   });
 });
@@ -410,7 +421,9 @@ describe('POST /api/teams/leave', () => {
 
   it('returns 403 when user is the captain of the team', async () => {
     setAuthUser({ id: 'user-1' });
-    store.team_members = [{ id: 'tm1', team_id: 't1', user_id: 'user-1' }] as any;
+    store.team_members = [
+      { id: 'tm1', team_id: 't1', user_id: 'user-1' },
+    ] as any;
     store.teams = [{ id: 't1', captain_id: 'user-1' }] as any;
     const res = makeRes();
     await teamsLeaveHandler(makeReq({ method: 'POST' }, true), res);
@@ -419,7 +432,9 @@ describe('POST /api/teams/leave', () => {
 
   it('returns 409 when the roster is locked', async () => {
     setAuthUser({ id: 'user-1' });
-    store.team_members = [{ id: 'tm1', team_id: 't1', user_id: 'user-1' }] as any;
+    store.team_members = [
+      { id: 'tm1', team_id: 't1', user_id: 'user-1' },
+    ] as any;
     store.teams = [{ id: 't1', captain_id: 'someone-else' }] as any;
     store.tournament_teams = [{ tournament_id: 'tour1', team_id: 't1' }] as any;
     const past = new Date(Date.now() - 60_000).toISOString();

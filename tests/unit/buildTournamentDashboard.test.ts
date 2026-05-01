@@ -259,7 +259,11 @@ describe('fetchDashboardData', () => {
       },
     ] as any;
     store.match_mvp_polls = [
-      { match_id: 'm1', winner_member_id: null, matches: { tournament_id: TOUR } },
+      {
+        match_id: 'm1',
+        winner_member_id: null,
+        matches: { tournament_id: TOUR },
+      },
     ] as any;
     store.staff_logs = [
       {

@@ -101,9 +101,7 @@ export default function PublicNav({
                 }}
                 type="button"
                 className={`group/link relative flex items-center gap-1.5 rounded-lg px-3 py-2 text-[14px] font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
-                  isActive
-                    ? 'text-white'
-                    : 'text-neutral-200 hover:text-white'
+                  isActive ? 'text-white' : 'text-neutral-200 hover:text-white'
                 }`}
                 onClick={() => setOpenMenu(isOpen ? null : link.title)}
                 onKeyDown={(e) => {
@@ -241,9 +239,7 @@ function Underline({ active }: { active: boolean }) {
     <span
       aria-hidden
       className={`pointer-events-none absolute inset-x-3 -bottom-px h-px origin-center bg-gradient-to-r from-transparent via-white/80 to-transparent transition-transform duration-300 ${
-        active
-          ? 'scale-x-100'
-          : 'scale-x-0 group-hover/link:scale-x-100'
+        active ? 'scale-x-100' : 'scale-x-0 group-hover/link:scale-x-100'
       }`}
     />
   );

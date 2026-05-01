@@ -416,9 +416,7 @@ describe('/api/admin/stages/[stageId]/bulk-matches', () => {
     expect(res.statusCode).toBe(200);
     const body = res.body as any;
     expect(body.successCount).toBe(1);
-    expect((store.matches[0] as any).scheduled_at).toBe(
-      '2026-04-01T10:00:00Z'
-    );
+    expect((store.matches[0] as any).scheduled_at).toBe('2026-04-01T10:00:00Z');
   });
 
   it('POST 200 with invalid snapshot entries records per-snapshot failures', async () => {

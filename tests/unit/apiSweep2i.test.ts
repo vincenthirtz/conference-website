@@ -101,7 +101,6 @@ describe('/api/netlify-builds', () => {
       expect(Array.isArray(res.body)).toBe(true);
     }
   });
-
 });
 
 /* -----------------------------------------------------------

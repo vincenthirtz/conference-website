@@ -411,8 +411,20 @@ describe('/api/admin/comments', () => {
 
   it('GET 200 lists comments', async () => {
     store.news_comments = [
-      { id: 'c1', news_id: 'n1', author_name: 'A', content: 'hi', created_at: '2026-04-01' },
-      { id: 'c2', news_id: 'n1', author_name: 'B', content: 'hello', created_at: '2026-04-02' },
+      {
+        id: 'c1',
+        news_id: 'n1',
+        author_name: 'A',
+        content: 'hi',
+        created_at: '2026-04-01',
+      },
+      {
+        id: 'c2',
+        news_id: 'n1',
+        author_name: 'B',
+        content: 'hello',
+        created_at: '2026-04-02',
+      },
     ] as any;
     const res = makeRes();
     await adminCommentsHandler(makeReq({ method: 'GET' }, true), res);
@@ -454,7 +466,13 @@ describe('/api/admin/comments', () => {
 
   it('PATCH 200 updates the content', async () => {
     store.news_comments = [
-      { id: 'c1', news_id: 'n1', author_name: 'A', content: 'old', created_at: '2026' },
+      {
+        id: 'c1',
+        news_id: 'n1',
+        author_name: 'A',
+        content: 'old',
+        created_at: '2026',
+      },
     ] as any;
     const res = makeRes();
     await adminCommentsHandler(

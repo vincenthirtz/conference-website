@@ -292,9 +292,7 @@ describe('/api/admin/support/tickets/[id]', () => {
   });
 
   it('PATCH 400 with invalid status', async () => {
-    store.support_tickets = [
-      { id: VALID_UUID, status: 'open' },
-    ] as any;
+    store.support_tickets = [{ id: VALID_UUID, status: 'open' }] as any;
     const res = makeRes();
     await supportTicketByIdHandler(
       makeReq(
@@ -311,15 +309,10 @@ describe('/api/admin/support/tickets/[id]', () => {
   });
 
   it('PATCH 400 when nothing to update', async () => {
-    store.support_tickets = [
-      { id: VALID_UUID, status: 'open' },
-    ] as any;
+    store.support_tickets = [{ id: VALID_UUID, status: 'open' }] as any;
     const res = makeRes();
     await supportTicketByIdHandler(
-      makeReq(
-        { method: 'PATCH', query: { id: VALID_UUID }, body: {} },
-        true
-      ),
+      makeReq({ method: 'PATCH', query: { id: VALID_UUID }, body: {} }, true),
       res
     );
     expect(res.statusCode).toBe(400);
@@ -350,9 +343,7 @@ describe('/api/admin/support/tickets/[id]', () => {
   });
 
   it('PATCH 400 when resolution_note is non-string non-null', async () => {
-    store.support_tickets = [
-      { id: VALID_UUID, status: 'open' },
-    ] as any;
+    store.support_tickets = [{ id: VALID_UUID, status: 'open' }] as any;
     const res = makeRes();
     await supportTicketByIdHandler(
       makeReq(
@@ -418,7 +409,10 @@ describe('POST /api/admin/teams/bulk', () => {
   it('400 when teamIds empty', async () => {
     const res = makeRes();
     await bulkTeamsHandler(
-      makeReq({ method: 'POST', body: { action: 'delete', teamIds: [] } }, true),
+      makeReq(
+        { method: 'POST', body: { action: 'delete', teamIds: [] } },
+        true
+      ),
       res
     );
     expect(res.statusCode).toBe(400);
@@ -428,7 +422,10 @@ describe('POST /api/admin/teams/bulk', () => {
     const res = makeRes();
     const ids = Array.from({ length: 201 }, (_, i) => `t${i}`);
     await bulkTeamsHandler(
-      makeReq({ method: 'POST', body: { action: 'delete', teamIds: ids } }, true),
+      makeReq(
+        { method: 'POST', body: { action: 'delete', teamIds: ids } },
+        true
+      ),
       res
     );
     expect(res.statusCode).toBe(400);

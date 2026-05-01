@@ -18,15 +18,13 @@ const {
   postMvpPoll,
 } = vi.hoisted(() => ({
   resetPropagationForMatch: vi.fn(async () => undefined),
-  propagateBracketForMatch: vi.fn(
-    async (matchId: string) => ({
-      matchId,
-      winnerTeamId: null,
-      loserTeamId: null,
-      updatedWinMatchId: null,
-      updatedLoseMatchId: null,
-    })
-  ),
+  propagateBracketForMatch: vi.fn(async (matchId: string) => ({
+    matchId,
+    winnerTeamId: null,
+    loserTeamId: null,
+    updatedWinMatchId: null,
+    updatedLoseMatchId: null,
+  })),
   snapshotPropagationSlots: vi.fn(async () => ({
     winMatchId: null,
     winSlotField: null,

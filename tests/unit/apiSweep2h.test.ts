@@ -441,7 +441,12 @@ describe('/api/admin/adherents/[id]', () => {
   it('PATCH 400 when email already used by another adherent', async () => {
     store.adherents = [
       { id: VALID_UUID, email: 'old@x.com', first_name: 'X', last_name: 'Y' },
-      { id: 'other-uuid', email: 'taken@x.com', first_name: 'O', last_name: 'P' },
+      {
+        id: 'other-uuid',
+        email: 'taken@x.com',
+        first_name: 'O',
+        last_name: 'P',
+      },
     ] as any;
     const res = makeRes();
     await adherentIdHandler(

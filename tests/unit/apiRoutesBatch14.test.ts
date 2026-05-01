@@ -150,18 +150,13 @@ describe('/api/admin/me', () => {
     setAuthUser({ id: 'user-1' });
     store.staff = [makeStaffRow('admin')] as any;
     const res = makeRes();
-    await meHandler(
-      makeReq({ method: 'PATCH', body: {} }, true),
-      res
-    );
+    await meHandler(makeReq({ method: 'PATCH', body: {} }, true), res);
     expect(res.statusCode).toBe(400);
   });
 
   it('PATCH 200 updates display_name and avatar_url', async () => {
     setAuthUser({ id: 'user-1' });
-    store.staff = [
-      makeStaffRow('admin'),
-    ] as any;
+    store.staff = [makeStaffRow('admin')] as any;
     const res = makeRes();
     await meHandler(
       makeReq(
@@ -271,9 +266,7 @@ describe('GET /api/admin/users/search', () => {
   });
 
   it('200 deduplicates candidates across sources', async () => {
-    setAuthListUsers([
-      { id: 'shared', email: 'shared@example.com' } as any,
-    ]);
+    setAuthListUsers([{ id: 'shared', email: 'shared@example.com' } as any]);
     store.team_members = [
       {
         user_id: 'shared',
@@ -352,10 +345,7 @@ describe('/api/demandes/join', () => {
   it('POST 400 when teamId missing', async () => {
     setAuthUser({ id: 'user-1' });
     const res = makeRes();
-    await demandesJoinHandler(
-      makeReq({ method: 'POST', body: {} }, true),
-      res
-    );
+    await demandesJoinHandler(makeReq({ method: 'POST', body: {} }, true), res);
     expect(res.statusCode).toBe(400);
   });
 
@@ -380,10 +370,7 @@ describe('/api/demandes/join', () => {
     store.teams = [];
     const res = makeRes();
     await demandesJoinHandler(
-      makeReq(
-        { method: 'POST', body: { teamId: 'unknown' } },
-        true
-      ),
+      makeReq({ method: 'POST', body: { teamId: 'unknown' } }, true),
       res
     );
     expect(res.statusCode).toBe(400);
@@ -401,10 +388,7 @@ describe('/api/demandes/join', () => {
     ] as any;
     const res = makeRes();
     await demandesJoinHandler(
-      makeReq(
-        { method: 'POST', body: { teamId: 'team-1' } },
-        true
-      ),
+      makeReq({ method: 'POST', body: { teamId: 'team-1' } }, true),
       res
     );
     expect(res.statusCode).toBe(400);
@@ -420,10 +404,7 @@ describe('/api/demandes/join', () => {
     ] as any;
     const res = makeRes();
     await demandesJoinHandler(
-      makeReq(
-        { method: 'POST', body: { teamId: 'team-1' } },
-        true
-      ),
+      makeReq({ method: 'POST', body: { teamId: 'team-1' } }, true),
       res
     );
     expect(res.statusCode).toBe(400);
@@ -466,10 +447,7 @@ describe('/api/demandes/join', () => {
     store.demandes = [];
     const res = makeRes();
     await demandesJoinHandler(
-      makeReq(
-        { method: 'POST', body: { teamId: 'team-1' } },
-        true
-      ),
+      makeReq({ method: 'POST', body: { teamId: 'team-1' } }, true),
       res
     );
     expect(res.statusCode).toBe(201);
@@ -562,10 +540,7 @@ describe('/api/admin/adherents', () => {
     ] as any;
     const res = makeRes();
     await adherentsHandler(
-      makeReq(
-        { method: 'GET', query: { paymentStatus: 'paid' } },
-        true
-      ),
+      makeReq({ method: 'GET', query: { paymentStatus: 'paid' } }, true),
       res
     );
     expect((res.body as any).items.map((i: any) => i.id)).toEqual(['a1']);
@@ -574,19 +549,14 @@ describe('/api/admin/adherents', () => {
   it('POST 400 when required fields missing', async () => {
     const res = makeRes();
     await adherentsHandler(
-      makeReq(
-        { method: 'POST', body: { firstName: 'X' } },
-        true
-      ),
+      makeReq({ method: 'POST', body: { firstName: 'X' } }, true),
       res
     );
     expect(res.statusCode).toBe(400);
   });
 
   it('POST 400 when email already exists', async () => {
-    store.adherents = [
-      { id: 'a1', email: 'taken@example.com' },
-    ] as any;
+    store.adherents = [{ id: 'a1', email: 'taken@example.com' }] as any;
     const res = makeRes();
     await adherentsHandler(
       makeReq(

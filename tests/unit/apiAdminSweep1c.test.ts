@@ -251,9 +251,7 @@ describe('/api/admin/teams/[teamId]/members', () => {
   });
 
   it('POST creates a member by userId and sets captain', async () => {
-    store.teams = [
-      { id: TEAM_UUID, name: 'Alpha', captain_id: null },
-    ] as any;
+    store.teams = [{ id: TEAM_UUID, name: 'Alpha', captain_id: null }] as any;
     setAdminUser('user-direct', 'direct@y.com');
     const res = makeRes();
     await membersHandler(
@@ -570,9 +568,7 @@ describe('/api/admin/teams/[teamId]/members', () => {
         is_substitute: false,
       },
     ] as any;
-    store.teams = [
-      { id: TEAM_UUID, name: 'Alpha', captain_id: null },
-    ] as any;
+    store.teams = [{ id: TEAM_UUID, name: 'Alpha', captain_id: null }] as any;
     const res = makeRes();
     await membersHandler(
       makeAuthedReq({

@@ -66,10 +66,7 @@ export default function HomeTwitchEmbed(): JSX.Element | null {
           {info.title || 'Le live est en cours'}
         </Heading>
         {typeof info.viewer_count === 'number' && (
-          <Paragraph
-            className="mt-2 text-sm"
-            textColor="text-gray-300"
-          >
+          <Paragraph className="mt-2 text-sm" textColor="text-gray-300">
             {info.viewer_count.toLocaleString('fr-FR')} spectateur
             {info.viewer_count > 1 ? 's' : ''} connecté
             {info.viewer_count > 1 ? 's' : ''}

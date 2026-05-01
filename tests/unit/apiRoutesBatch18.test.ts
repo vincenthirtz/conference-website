@@ -109,10 +109,7 @@ describe('POST /api/admin/teams/add-member', () => {
   it('400 when teamId missing', async () => {
     const res = makeRes();
     await addMemberHandler(
-      makeReq(
-        { method: 'POST', body: { battleTag: 'Player#1234' } },
-        true
-      ),
+      makeReq({ method: 'POST', body: { battleTag: 'Player#1234' } }, true),
       res
     );
     expect(res.statusCode).toBe(400);
@@ -230,9 +227,7 @@ describe('POST /api/admin/teams/add-member', () => {
   });
 
   it('400 when team already at max_players for one of its tournaments', async () => {
-    store.teams = [
-      { id: 'team-1', name: 'Alpha', logo_url: null },
-    ] as any;
+    store.teams = [{ id: 'team-1', name: 'Alpha', logo_url: null }] as any;
     store.team_members = [
       { id: 'm1', team_id: 'team-1' },
       { id: 'm2', team_id: 'team-1' },
@@ -367,9 +362,7 @@ describe('/api/demandes/register-team', () => {
     store.teams = [
       { id: 'team-1', name: 'A', captain_id: 'user-1', is_active: true },
     ] as any;
-    store.tournaments = [
-      { id: TID, name: 'X', status: 'draft' },
-    ] as any;
+    store.tournaments = [{ id: TID, name: 'X', status: 'draft' }] as any;
     const res = makeRes();
     await registerTeamHandler(
       makeReq(
@@ -390,7 +383,13 @@ describe('/api/demandes/register-team', () => {
       { id: 'team-1', name: 'A', captain_id: 'user-1', is_active: true },
     ] as any;
     store.tournaments = [
-      { id: TID, name: 'X', status: 'published', min_players: null, max_teams: null },
+      {
+        id: TID,
+        name: 'X',
+        status: 'published',
+        min_players: null,
+        max_teams: null,
+      },
     ] as any;
     store.tournament_teams = [
       { id: 'tt1', tournament_id: TID, team_id: 'team-1' },
@@ -424,9 +423,7 @@ describe('/api/demandes/register-team', () => {
       },
     ] as any;
     store.tournament_teams = [];
-    store.team_members = [
-      { id: 'm1', team_id: 'team-1' },
-    ] as any;
+    store.team_members = [{ id: 'm1', team_id: 'team-1' }] as any;
     const res = makeRes();
     await registerTeamHandler(
       makeReq(
@@ -544,8 +541,20 @@ describe('/api/admin/tournaments', () => {
 
   it('GET filters by status', async () => {
     store.tournaments = [
-      { id: 't1', name: 'A', status: 'draft', created_at: '2026', updated_at: '2026' },
-      { id: 't2', name: 'B', status: 'published', created_at: '2026', updated_at: '2026' },
+      {
+        id: 't1',
+        name: 'A',
+        status: 'draft',
+        created_at: '2026',
+        updated_at: '2026',
+      },
+      {
+        id: 't2',
+        name: 'B',
+        status: 'published',
+        created_at: '2026',
+        updated_at: '2026',
+      },
     ] as any;
     const res = makeRes();
     await adminTournamentsHandler(
@@ -649,10 +658,7 @@ describe('/api/admin/tournaments', () => {
     store.tournament_maps = [];
     const res = makeRes();
     await adminTournamentsHandler(
-      makeReq(
-        { method: 'POST', body: { name: 'Brand New Cup' } },
-        true
-      ),
+      makeReq({ method: 'POST', body: { name: 'Brand New Cup' } }, true),
       res
     );
     expect(res.statusCode).toBe(201);
@@ -664,10 +670,7 @@ describe('/api/admin/tournaments', () => {
 
   it('returns 405 on unsupported method', async () => {
     const res = makeRes();
-    await adminTournamentsHandler(
-      makeReq({ method: 'PATCH' }, true),
-      res
-    );
+    await adminTournamentsHandler(makeReq({ method: 'PATCH' }, true), res);
     expect(res.statusCode).toBe(405);
   });
 

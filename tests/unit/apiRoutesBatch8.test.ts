@@ -113,9 +113,7 @@ describe('GET /api/site-settings', () => {
   });
 
   it('returns the value for a specific valid key', async () => {
-    store.site_settings = [
-      { key: 'maintenance', value: 'on' },
-    ] as any;
+    store.site_settings = [{ key: 'maintenance', value: 'on' }] as any;
     const res = makeRes();
     await siteSettingsHandler(
       makeReq({ method: 'GET', query: { key: 'maintenance' } }),
@@ -189,8 +187,24 @@ describe('GET /api/announcements', () => {
 
   it('hides inactive announcements', async () => {
     store.announcements = [
-      { id: 'a1', is_active: true, title: 'A', message: 'M', priority: 0, created_at: '2026', updated_at: '2026' },
-      { id: 'a2', is_active: false, title: 'B', message: 'M', priority: 0, created_at: '2026', updated_at: '2026' },
+      {
+        id: 'a1',
+        is_active: true,
+        title: 'A',
+        message: 'M',
+        priority: 0,
+        created_at: '2026',
+        updated_at: '2026',
+      },
+      {
+        id: 'a2',
+        is_active: false,
+        title: 'B',
+        message: 'M',
+        priority: 0,
+        created_at: '2026',
+        updated_at: '2026',
+      },
     ] as any;
     const res = makeRes();
     await announcementsPublicHandler(makeReq(), res);
@@ -230,7 +244,13 @@ describe('POST /api/teams/toggle-joinable', () => {
   it('200 toggles is_joinable when no body value provided', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 't1', captain_id: 'user-1', is_active: true, is_joinable: false, name: 'A' },
+      {
+        id: 't1',
+        captain_id: 'user-1',
+        is_active: true,
+        is_joinable: false,
+        name: 'A',
+      },
     ] as any;
     const res = makeRes();
     await toggleJoinableHandler(
@@ -245,7 +265,13 @@ describe('POST /api/teams/toggle-joinable', () => {
   it('200 sets explicit value when body provides one', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 't1', captain_id: 'user-1', is_active: true, is_joinable: true, name: 'A' },
+      {
+        id: 't1',
+        captain_id: 'user-1',
+        is_active: true,
+        is_joinable: true,
+        name: 'A',
+      },
     ] as any;
     const res = makeRes();
     await toggleJoinableHandler(
@@ -269,10 +295,7 @@ describe('GET /api/admin/partnership-requests', () => {
 
   it('405 on non-GET', async () => {
     const res = makeRes();
-    await partnershipRequestsHandler(
-      makeReq({ method: 'POST' }, true),
-      res
-    );
+    await partnershipRequestsHandler(makeReq({ method: 'POST' }, true), res);
     expect(res.statusCode).toBe(405);
   });
 
@@ -280,7 +303,12 @@ describe('GET /api/admin/partnership-requests', () => {
     store.partnership_requests = [
       { id: 'r1', status: 'open', category: 'super', created_at: '2026' },
       { id: 'r2', status: 'open', category: 'major', created_at: '2026' },
-      { id: 'r3', status: 'resolved', category: 'cultural', created_at: '2026' },
+      {
+        id: 'r3',
+        status: 'resolved',
+        category: 'cultural',
+        created_at: '2026',
+      },
     ] as any;
     const res = makeRes();
     await partnershipRequestsHandler(makeReq(undefined, true), res);
@@ -330,10 +358,7 @@ describe('GET /api/admin/support/tickets', () => {
 
   it('405 on non-GET', async () => {
     const res = makeRes();
-    await supportTicketsHandler(
-      makeReq({ method: 'POST' }, true),
-      res
-    );
+    await supportTicketsHandler(makeReq({ method: 'POST' }, true), res);
     expect(res.statusCode).toBe(405);
   });
 
@@ -365,8 +390,20 @@ describe('GET /api/admin/support/tickets', () => {
 
   it('filters by status', async () => {
     store.support_tickets = [
-      { id: 't1', status: 'open', severity: 'medium', category: 'other', created_at: '2026' },
-      { id: 't2', status: 'closed', severity: 'medium', category: 'other', created_at: '2026' },
+      {
+        id: 't1',
+        status: 'open',
+        severity: 'medium',
+        category: 'other',
+        created_at: '2026',
+      },
+      {
+        id: 't2',
+        status: 'closed',
+        severity: 'medium',
+        category: 'other',
+        created_at: '2026',
+      },
     ] as any;
     const res = makeRes();
     await supportTicketsHandler(
@@ -378,7 +415,13 @@ describe('GET /api/admin/support/tickets', () => {
 
   it('ignores invalid filter values', async () => {
     store.support_tickets = [
-      { id: 't1', status: 'open', severity: 'medium', category: 'other', created_at: '2026' },
+      {
+        id: 't1',
+        status: 'open',
+        severity: 'medium',
+        category: 'other',
+        created_at: '2026',
+      },
     ] as any;
     const res = makeRes();
     await supportTicketsHandler(
@@ -390,8 +433,22 @@ describe('GET /api/admin/support/tickets', () => {
 
   it('filters by tournament_id when given', async () => {
     store.support_tickets = [
-      { id: 't1', status: 'open', severity: 'low', category: 'other', tournament_id: 'tour-1', created_at: '2026' },
-      { id: 't2', status: 'open', severity: 'low', category: 'other', tournament_id: 'tour-2', created_at: '2026' },
+      {
+        id: 't1',
+        status: 'open',
+        severity: 'low',
+        category: 'other',
+        tournament_id: 'tour-1',
+        created_at: '2026',
+      },
+      {
+        id: 't2',
+        status: 'open',
+        severity: 'low',
+        category: 'other',
+        tournament_id: 'tour-2',
+        created_at: '2026',
+      },
     ] as any;
     const res = makeRes();
     await supportTicketsHandler(

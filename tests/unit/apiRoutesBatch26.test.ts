@@ -124,9 +124,7 @@ describe('/api/admin/stages/[stageId]/teams', () => {
         stage_type: 'group',
       },
     ] as any;
-    store.tournaments = [
-      { id: TID, name: 'Cup', slug: 'cup' },
-    ] as any;
+    store.tournaments = [{ id: TID, name: 'Cup', slug: 'cup' }] as any;
     store.stage_teams = [
       {
         stage_id: STAGE_ID,
@@ -155,9 +153,7 @@ describe('/api/admin/stages/[stageId]/teams', () => {
   });
 
   it('POST 400 when teamId missing', async () => {
-    store.tournament_stages = [
-      { id: STAGE_ID, tournament_id: TID },
-    ] as any;
+    store.tournament_stages = [{ id: STAGE_ID, tournament_id: TID }] as any;
     const res = makeRes();
     await stageTeamsHandler(
       makeReq({
@@ -185,15 +181,9 @@ describe('/api/admin/stages/[stageId]/teams', () => {
   });
 
   it('POST 201 inserts a stage_team and reports min_players warning', async () => {
-    store.tournament_stages = [
-      { id: STAGE_ID, tournament_id: TID },
-    ] as any;
-    store.tournaments = [
-      { id: TID, min_players: 5 },
-    ] as any;
-    store.team_members = [
-      { user_id: 'u1', team_id: TEAM_ID },
-    ] as any;
+    store.tournament_stages = [{ id: STAGE_ID, tournament_id: TID }] as any;
+    store.tournaments = [{ id: TID, min_players: 5 }] as any;
+    store.team_members = [{ user_id: 'u1', team_id: TEAM_ID }] as any;
     store.stage_teams = [];
     const res = makeRes();
     await stageTeamsHandler(
@@ -212,9 +202,7 @@ describe('/api/admin/stages/[stageId]/teams', () => {
   });
 
   it('PATCH unitaire 200 updates a single seed', async () => {
-    store.tournament_stages = [
-      { id: STAGE_ID, tournament_id: TID },
-    ] as any;
+    store.tournament_stages = [{ id: STAGE_ID, tournament_id: TID }] as any;
     store.stage_teams = [
       { stage_id: STAGE_ID, team_id: TEAM_ID, seed: 5 },
     ] as any;
@@ -232,9 +220,7 @@ describe('/api/admin/stages/[stageId]/teams', () => {
   });
 
   it('PATCH bulk 200 updates multiple seeds', async () => {
-    store.tournament_stages = [
-      { id: STAGE_ID, tournament_id: TID },
-    ] as any;
+    store.tournament_stages = [{ id: STAGE_ID, tournament_id: TID }] as any;
     store.stage_teams = [
       { stage_id: STAGE_ID, team_id: 't1', seed: 1 },
       { stage_id: STAGE_ID, team_id: 't2', seed: 2 },
@@ -261,9 +247,7 @@ describe('/api/admin/stages/[stageId]/teams', () => {
   });
 
   it('PATCH unitaire 400 when teamId missing', async () => {
-    store.tournament_stages = [
-      { id: STAGE_ID, tournament_id: TID },
-    ] as any;
+    store.tournament_stages = [{ id: STAGE_ID, tournament_id: TID }] as any;
     const res = makeRes();
     await stageTeamsHandler(
       makeReq({
@@ -277,9 +261,7 @@ describe('/api/admin/stages/[stageId]/teams', () => {
   });
 
   it('DELETE 400 when no teamId / teamIds provided', async () => {
-    store.tournament_stages = [
-      { id: STAGE_ID, tournament_id: TID },
-    ] as any;
+    store.tournament_stages = [{ id: STAGE_ID, tournament_id: TID }] as any;
     const res = makeRes();
     await stageTeamsHandler(
       makeReq({
@@ -293,9 +275,7 @@ describe('/api/admin/stages/[stageId]/teams', () => {
   });
 
   it('DELETE unitaire 200 removes a team and clears match slots', async () => {
-    store.tournament_stages = [
-      { id: STAGE_ID, tournament_id: TID },
-    ] as any;
+    store.tournament_stages = [{ id: STAGE_ID, tournament_id: TID }] as any;
     store.stage_teams = [
       { stage_id: STAGE_ID, team_id: TEAM_ID, seed: 1 },
     ] as any;
@@ -326,9 +306,7 @@ describe('/api/admin/stages/[stageId]/teams', () => {
   });
 
   it('DELETE bulk 200 removes multiple teams', async () => {
-    store.tournament_stages = [
-      { id: STAGE_ID, tournament_id: TID },
-    ] as any;
+    store.tournament_stages = [{ id: STAGE_ID, tournament_id: TID }] as any;
     store.stage_teams = [
       { stage_id: STAGE_ID, team_id: 't1', seed: 1 },
       { stage_id: STAGE_ID, team_id: 't2', seed: 2 },
@@ -387,15 +365,13 @@ describe('/api/admin/stages/[stageId]/teams', () => {
     expect(res.statusCode).toBe(201);
     const body = res.body as any;
     expect(body.warnings).toBeTruthy();
-    expect(
-      body.warnings.some((w: string) => w.includes('autre équipe'))
-    ).toBe(true);
+    expect(body.warnings.some((w: string) => w.includes('autre équipe'))).toBe(
+      true
+    );
   });
 
   it('PATCH bulk records per-entry failure for invalid entries', async () => {
-    store.tournament_stages = [
-      { id: STAGE_ID, tournament_id: TID },
-    ] as any;
+    store.tournament_stages = [{ id: STAGE_ID, tournament_id: TID }] as any;
     const res = makeRes();
     await stageTeamsHandler(
       makeReq({
@@ -418,9 +394,7 @@ describe('/api/admin/stages/[stageId]/teams', () => {
   });
 
   it('POST 201 without warnings when min_players satisfied', async () => {
-    store.tournament_stages = [
-      { id: STAGE_ID, tournament_id: TID },
-    ] as any;
+    store.tournament_stages = [{ id: STAGE_ID, tournament_id: TID }] as any;
     store.tournaments = [{ id: TID, min_players: 1 }] as any;
     store.team_members = [
       { user_id: 'u1', team_id: TEAM_ID },

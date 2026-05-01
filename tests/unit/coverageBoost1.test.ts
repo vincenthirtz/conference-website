@@ -228,9 +228,9 @@ describe('POST /api/admin/tournament/[id]/bracket — generate_double_elim', () 
     expect(res.statusCode).toBe(201);
     const all = store.matches as any[];
     // GF + reset
-    expect((all.filter((m) => m.bracket_side === 'final') as any[]).length).toBe(
-      2
-    );
+    expect(
+      (all.filter((m) => m.bracket_side === 'final') as any[]).length
+    ).toBe(2);
   });
 
   it('201 generates size=16 DE without bestOf or startDate', async () => {
@@ -530,9 +530,7 @@ describe('POST /api/admin/stages/[stageId]/advance — manual mode', () => {
         is_active: false,
       },
     ] as any;
-    store.stage_teams = [
-      { stage_id: STAGE_ID, team_id: 't1' },
-    ] as any;
+    store.stage_teams = [{ stage_id: STAGE_ID, team_id: 't1' }] as any;
     const res = makeRes();
     await advanceHandler(
       makeReq({
@@ -1090,10 +1088,7 @@ describe('POST /api/admin/demandes — batch updateStatus', () => {
 
   it('400 when action missing', async () => {
     const res = makeRes();
-    await adminDemandesHandler(
-      makeReq({ method: 'POST', body: {} }),
-      res
-    );
+    await adminDemandesHandler(makeReq({ method: 'POST', body: {} }), res);
     expect(res.statusCode).toBe(400);
   });
 
@@ -1156,8 +1151,7 @@ describe('POST /api/admin/demandes — batch updateStatus', () => {
   it('400 when batch larger than 50', async () => {
     const big = Array.from(
       { length: 51 },
-      (_, i) =>
-        `660e8400-e29b-41d4-a716-44665544${String(i).padStart(4, '0')}`
+      (_, i) => `660e8400-e29b-41d4-a716-44665544${String(i).padStart(4, '0')}`
     );
     const res = makeRes();
     await adminDemandesHandler(
@@ -1252,9 +1246,7 @@ describe('POST /api/admin/demandes — batch updateStatus', () => {
         payload: { team_name: 'Alpha', tournament_name: 'Cup' },
       },
     ] as any;
-    store.teams = [
-      { id: TEAM_ID, name: 'Alpha', logo_url: null },
-    ] as any;
+    store.teams = [{ id: TEAM_ID, name: 'Alpha', logo_url: null }] as any;
     store.tournament_teams = [];
     store.news = [];
     const res = makeRes();
@@ -1359,10 +1351,7 @@ describe('GET /api/admin/demandes', () => {
   it('200 returns empty list with no demandes', async () => {
     store.demandes = [];
     const res = makeRes();
-    await adminDemandesHandler(
-      makeReq({ method: 'GET', query: {} }),
-      res
-    );
+    await adminDemandesHandler(makeReq({ method: 'GET', query: {} }), res);
     expect(res.statusCode).toBe(200);
     expect((res.body as any).demandes).toEqual([]);
   });
@@ -1619,9 +1608,7 @@ describe('DELETE /api/admin/teams/[teamId]/tournaments', () => {
     store.teams = [{ id: TEAM_ID, name: 'Alpha' }] as any;
     store.tournaments = [{ id: 'tour-1', name: 'Cup' }] as any;
     store.tournament_stages = [{ id: 's1', tournament_id: 'tour-1' }] as any;
-    store.stage_teams = [
-      { stage_id: 's1', team_id: 'other-team' },
-    ] as any;
+    store.stage_teams = [{ stage_id: 's1', team_id: 'other-team' }] as any;
     const res = makeRes();
     await teamTournamentsHandler(
       makeReq({

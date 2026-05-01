@@ -13,10 +13,7 @@ import {
 import type { AdminLink } from '../../types/components';
 import type { StaffRole } from '../../utils/staff';
 
-function findByTitle(
-  links: AdminLink[],
-  title: string
-): AdminLink | undefined {
+function findByTitle(links: AdminLink[], title: string): AdminLink | undefined {
   return links.find((l) => l.title === title);
 }
 
@@ -154,9 +151,9 @@ describe('filterAdminLinks – child minRole inheritance', () => {
         ],
       },
     ];
-    expect(
-      filterAdminLinks('caster', customLinks).map((l) => l.title)
-    ).toEqual([]);
+    expect(filterAdminLinks('caster', customLinks).map((l) => l.title)).toEqual(
+      []
+    );
     expect(
       filterAdminLinks('manager', customLinks).map((l) => l.title)
     ).toEqual(['Parent (manager)']);
@@ -190,9 +187,7 @@ describe('filterAdminLinks – child minRole inheritance', () => {
   });
 
   it('default minRole "admin" applies when a top-level item has no minRole', () => {
-    const customLinks: AdminLink[] = [
-      { title: 'No role', ref: '/x' },
-    ];
+    const customLinks: AdminLink[] = [{ title: 'No role', ref: '/x' }];
     expect(filterAdminLinks('manager', customLinks)).toEqual([]);
     expect(filterAdminLinks('admin', customLinks)).toHaveLength(1);
   });

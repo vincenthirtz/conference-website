@@ -35,10 +35,7 @@ export default function CopyButton({
   const handleClick = async () => {
     if (!value) return;
     try {
-      if (
-        typeof navigator !== 'undefined' &&
-        navigator.clipboard?.writeText
-      ) {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(value);
         setCopied(true);
         return;

@@ -121,10 +121,7 @@ describe('POST /api/admin/tournament/[id]/apply-template', () => {
   it('400 when templateId missing', async () => {
     const res = makeRes();
     await applyTemplateHandler(
-      makeReq(
-        { method: 'POST', query: { id: TID }, body: {} },
-        true
-      ),
+      makeReq({ method: 'POST', query: { id: TID }, body: {} }, true),
       res
     );
     expect(res.statusCode).toBe(400);
@@ -357,10 +354,7 @@ describe('POST /api/admin/tournament/[id]/clone', () => {
   it('400 on invalid id', async () => {
     const res = makeRes();
     await cloneHandler(
-      makeReq(
-        { method: 'POST', query: { id: 'bogus' }, body: {} },
-        true
-      ),
+      makeReq({ method: 'POST', query: { id: 'bogus' }, body: {} }, true),
       res
     );
     expect(res.statusCode).toBe(400);
@@ -370,10 +364,7 @@ describe('POST /api/admin/tournament/[id]/clone', () => {
     store.tournaments = [];
     const res = makeRes();
     await cloneHandler(
-      makeReq(
-        { method: 'POST', query: { id: TID }, body: {} },
-        true
-      ),
+      makeReq({ method: 'POST', query: { id: TID }, body: {} }, true),
       res
     );
     expect(res.statusCode).toBe(404);
@@ -418,7 +409,10 @@ describe('POST /api/admin/tournament/[id]/clone', () => {
   it('disambiguates slug when target slug already exists', async () => {
     seedSource();
     // Pre-existing tournament with the slug
-    (store.tournaments as any).push({ id: 'other', slug: 'original-cup-copie' });
+    (store.tournaments as any).push({
+      id: 'other',
+      slug: 'original-cup-copie',
+    });
     const res = makeRes();
     await cloneHandler(
       makeReq({ method: 'POST', query: { id: TID }, body: {} }, true),

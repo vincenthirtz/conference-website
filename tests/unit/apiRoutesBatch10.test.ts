@@ -22,14 +22,17 @@ vi.mock('@/utils/rateLimit', () => ({
   getClientIp: () => '127.0.0.1',
 }));
 
-const { sendWelcomeEmail, sendTournamentNotificationEmail, logStaffActionMock } =
-  vi.hoisted(() => ({
-    sendWelcomeEmail: vi.fn(async () => undefined),
-    sendTournamentNotificationEmail: vi.fn(async () => ({
-      success: true as const,
-    })),
-    logStaffActionMock: vi.fn(async () => undefined),
-  }));
+const {
+  sendWelcomeEmail,
+  sendTournamentNotificationEmail,
+  logStaffActionMock,
+} = vi.hoisted(() => ({
+  sendWelcomeEmail: vi.fn(async () => undefined),
+  sendTournamentNotificationEmail: vi.fn(async () => ({
+    success: true as const,
+  })),
+  logStaffActionMock: vi.fn(async () => undefined),
+}));
 
 vi.mock('@/utils/email', () => ({
   sendWelcomeEmail,
@@ -266,9 +269,9 @@ describe('GET /api/admin/stats/maps', () => {
       makeReq({ method: 'GET', query: { minMatches: '3' } }, true),
       res
     );
-    expect(
-      (res.body as any).stats.map((s: any) => s.map_name)
-    ).toEqual(['Lijiang']);
+    expect((res.body as any).stats.map((s: any) => s.map_name)).toEqual([
+      'Lijiang',
+    ]);
   });
 
   it('exports CSV when ?export=csv', async () => {
@@ -290,9 +293,9 @@ describe('GET /api/admin/stats/maps', () => {
       makeReq({ method: 'GET', query: { search: 'lijiang' } }, true),
       res
     );
-    expect(
-      (res.body as any).stats.map((s: any) => s.map_name)
-    ).toEqual(['Lijiang']);
+    expect((res.body as any).stats.map((s: any) => s.map_name)).toEqual([
+      'Lijiang',
+    ]);
   });
 });
 
@@ -308,10 +311,7 @@ describe('POST /api/admin/tournaments/notify-captains', () => {
 
   it('405 on non-POST', async () => {
     const res = makeRes();
-    await notifyCaptainsHandler(
-      makeReq({ method: 'GET' }, true),
-      res
-    );
+    await notifyCaptainsHandler(makeReq({ method: 'GET' }, true), res);
     expect(res.statusCode).toBe(405);
   });
 
@@ -533,11 +533,7 @@ describe('find-or-create-user', () => {
       error: null,
     });
     const map = new Map<string, string>();
-    const out = await findOrCreateUserByEmail(
-      'new@example.com',
-      'admin',
-      map
-    );
+    const out = await findOrCreateUserByEmail('new@example.com', 'admin', map);
     expect(out.userId).toBe('new-user');
     expect(out.created).toBe(true);
     expect(map.get('new@example.com')).toBe('new-user');

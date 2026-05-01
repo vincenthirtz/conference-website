@@ -145,13 +145,28 @@ describe('GET /api/admin/logs', () => {
 
   it('filters by entityType and action', async () => {
     store.staff_logs = [
-      { id: 'l1', staff_id: 's1', action: 'create_match', entity_type: 'match', created_at: '2026' },
-      { id: 'l2', staff_id: 's1', action: 'create_team', entity_type: 'team', created_at: '2026' },
+      {
+        id: 'l1',
+        staff_id: 's1',
+        action: 'create_match',
+        entity_type: 'match',
+        created_at: '2026',
+      },
+      {
+        id: 'l2',
+        staff_id: 's1',
+        action: 'create_team',
+        entity_type: 'team',
+        created_at: '2026',
+      },
     ] as any;
     const res = makeRes();
     await adminLogsHandler(
       makeReq(
-        { method: 'GET', query: { entityType: 'match', action: 'create_match' } },
+        {
+          method: 'GET',
+          query: { entityType: 'match', action: 'create_match' },
+        },
         true
       ),
       res
@@ -161,9 +176,24 @@ describe('GET /api/admin/logs', () => {
 
   it('filters by date range (from/to)', async () => {
     store.staff_logs = [
-      { id: 'l1', created_at: '2026-04-01T10:00:00Z', action: 'login', staff_id: 's1' },
-      { id: 'l2', created_at: '2026-04-05T10:00:00Z', action: 'login', staff_id: 's1' },
-      { id: 'l3', created_at: '2026-04-10T10:00:00Z', action: 'login', staff_id: 's1' },
+      {
+        id: 'l1',
+        created_at: '2026-04-01T10:00:00Z',
+        action: 'login',
+        staff_id: 's1',
+      },
+      {
+        id: 'l2',
+        created_at: '2026-04-05T10:00:00Z',
+        action: 'login',
+        staff_id: 's1',
+      },
+      {
+        id: 'l3',
+        created_at: '2026-04-10T10:00:00Z',
+        action: 'login',
+        staff_id: 's1',
+      },
     ] as any;
     const res = makeRes();
     await adminLogsHandler(
@@ -217,8 +247,18 @@ describe('GET /api/admin/stages/[stageId]/standings', () => {
       },
     ] as any;
     store.stage_teams = [
-      { stage_id: stageId, team_id: 't1', seed: 1, team: { id: 't1', name: 'Alpha', short_name: null } },
-      { stage_id: stageId, team_id: 't2', seed: 2, team: { id: 't2', name: 'Beta', short_name: null } },
+      {
+        stage_id: stageId,
+        team_id: 't1',
+        seed: 1,
+        team: { id: 't1', name: 'Alpha', short_name: null },
+      },
+      {
+        stage_id: stageId,
+        team_id: 't2',
+        seed: 2,
+        team: { id: 't2', name: 'Beta', short_name: null },
+      },
     ] as any;
     store.matches = [
       {
@@ -282,10 +322,7 @@ describe('GET /api/admin/stages/[stageId]/standings', () => {
     seedStandingsData();
     const res = makeRes();
     await stageStandingsHandler(
-      makeReq(
-        { method: 'GET', query: { stageId, export: 'csv' } },
-        true
-      ),
+      makeReq({ method: 'GET', query: { stageId, export: 'csv' } }, true),
       res
     );
     expect(res.headers['Content-Type']).toMatch(/text\/csv/);
@@ -298,10 +335,7 @@ describe('GET /api/admin/stages/[stageId]/standings', () => {
     seedStandingsData();
     const res = makeRes();
     await stageStandingsHandler(
-      makeReq(
-        { method: 'GET', query: { stageId, export: 'json' } },
-        true
-      ),
+      makeReq({ method: 'GET', query: { stageId, export: 'json' } }, true),
       res
     );
     expect(res.headers['Content-Type']).toMatch(/application\/json/);
@@ -511,9 +545,7 @@ describe('/api/admin/twitch-channels/[id]', () => {
   });
 
   it('DELETE 204 removes the row', async () => {
-    store.twitch_channels = [
-      { id, channel: 'foo', label: 'Foo' },
-    ] as any;
+    store.twitch_channels = [{ id, channel: 'foo', label: 'Foo' }] as any;
     const res = makeRes();
     await twitchChannelByIdHandler(
       makeReq({ method: 'DELETE', query: { id } }, true),

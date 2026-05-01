@@ -165,10 +165,7 @@ describe('isTeamRosterLocked', () => {
 
   it('returns the first locking tournament when several are locked', async () => {
     const past = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-    seedRegistrations([
-      { tournament_id: 't1' },
-      { tournament_id: 't2' },
-    ]);
+    seedRegistrations([{ tournament_id: 't1' }, { tournament_id: 't2' }]);
     seedTournaments([
       {
         id: 't1',

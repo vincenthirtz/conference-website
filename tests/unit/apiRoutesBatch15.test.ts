@@ -115,7 +115,13 @@ describe('/api/teams/scrim-requests', () => {
   it('GET 200 lists pending scrim demandes for captain team', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 't1', captain_id: 'user-1', is_active: true, name: 'A', logo_url: null },
+      {
+        id: 't1',
+        captain_id: 'user-1',
+        is_active: true,
+        name: 'A',
+        logo_url: null,
+      },
     ] as any;
     store.demandes = [
       {
@@ -489,9 +495,7 @@ describe('GET /api/tournaments/[id]/mvp-leaderboard', () => {
   });
 
   it('404 when tournament is not public', async () => {
-    store.tournaments = [
-      { id: TID, name: 'Cup', is_public: false },
-    ] as any;
+    store.tournaments = [{ id: TID, name: 'Cup', is_public: false }] as any;
     const res = makeRes();
     await mvpLeaderboardHandler(
       makeReq({ method: 'GET', query: { id: TID } }),
@@ -501,9 +505,7 @@ describe('GET /api/tournaments/[id]/mvp-leaderboard', () => {
   });
 
   it('200 aggregates MVP counts per member', async () => {
-    store.tournaments = [
-      { id: TID, name: 'Cup', is_public: true },
-    ] as any;
+    store.tournaments = [{ id: TID, name: 'Cup', is_public: true }] as any;
     store.matches = [
       {
         id: 'm1',
@@ -560,9 +562,7 @@ describe('GET /api/tournaments/[id]/mvp-leaderboard', () => {
   });
 
   it('200 with empty leaderboard when no MVP polls', async () => {
-    store.tournaments = [
-      { id: TID, name: 'Cup', is_public: true },
-    ] as any;
+    store.tournaments = [{ id: TID, name: 'Cup', is_public: true }] as any;
     store.matches = [];
     const res = makeRes();
     await mvpLeaderboardHandler(
@@ -670,10 +670,7 @@ describe('GET /api/admin/tournament/[id]/export-results', () => {
     seedExport();
     const res = makeRes();
     await exportResultsHandler(
-      makeReq(
-        { method: 'GET', query: { id: TID, format: 'json' } },
-        true
-      ),
+      makeReq({ method: 'GET', query: { id: TID, format: 'json' } }, true),
       res
     );
     expect(res.headers['Content-Type']).toMatch(/application\/json/);
