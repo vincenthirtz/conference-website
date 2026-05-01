@@ -1,16 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { StaffMember } from '../../types/staff';
 
-vi.mock('@/utils/supabase', async () => {
-  const m = await import('./__helpers__/supabaseMock');
-  return { supabaseAdmin: m.supabaseAdmin, getServerClient: m.getServerClient };
-});
-
-vi.mock('@/utils/rateLimit', () => ({
-  applyRateLimit: () => false,
-  getClientIp: () => '127.0.0.1',
-}));
-
 const { sendWelcomeEmail, notifyAnnouncement } = vi.hoisted(() => ({
   sendWelcomeEmail: vi.fn(async () => undefined),
   notifyAnnouncement: vi.fn(async () => undefined),

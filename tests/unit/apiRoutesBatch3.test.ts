@@ -1,21 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { StaffMember } from '../../types/staff';
 
-vi.mock('@/utils/supabase', async () => {
-  const m = await import('./__helpers__/supabaseMock');
-  return { supabaseAdmin: m.supabaseAdmin, getServerClient: m.getServerClient };
-});
 // Aliases used by routes that import via relative path
-vi.mock('../../utils/supabase', async () => {
-  const m = await import('./__helpers__/supabaseMock');
-  return { supabaseAdmin: m.supabaseAdmin, getServerClient: m.getServerClient };
-});
-
-vi.mock('@/utils/rateLimit', () => ({
-  applyRateLimit: () => false,
-  getClientIp: () => '127.0.0.1',
-}));
-
 const { logStaffAction: logStaffActionMock } = vi.hoisted(() => ({
   logStaffAction: vi.fn(async () => undefined),
 }));

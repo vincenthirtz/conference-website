@@ -8,16 +8,6 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('@/utils/supabase', async () => {
-  const m = await import('./__helpers__/supabaseMock');
-  return { supabaseAdmin: m.supabaseAdmin, getServerClient: m.getServerClient };
-});
-
-vi.mock('@/utils/rateLimit', () => ({
-  applyRateLimit: () => false,
-  getClientIp: () => '127.0.0.1',
-}));
-
 import { resetSupabaseMock } from './__helpers__/supabaseMock';
 
 import netlifyBuildsHandler from '../../pages/api/netlify-builds';

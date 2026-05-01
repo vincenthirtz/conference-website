@@ -4,6 +4,7 @@ import path from 'path';
 export default defineConfig({
   test: {
     include: ['tests/unit/**/*.test.ts'],
+    setupFiles: ['tests/unit/__helpers__/testSetup.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'json-summary'],

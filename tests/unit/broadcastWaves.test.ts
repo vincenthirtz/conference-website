@@ -1,11 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { StaffMember } from '../../types/staff';
 
-vi.mock('@/utils/supabase', async () => {
-  const m = await import('./__helpers__/supabaseMock');
-  return { supabaseAdmin: m.supabaseAdmin, getServerClient: m.getServerClient };
-});
-
 const { sendIdahobitLiveEmail, buildIdahobitLiveEmailHtml } = vi.hoisted(
   () => ({
     sendIdahobitLiveEmail: vi.fn(

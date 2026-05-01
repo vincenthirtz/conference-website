@@ -13,16 +13,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { StaffMember } from '../../types/staff';
 
-vi.mock('@/utils/supabase', async () => {
-  const m = await import('./__helpers__/supabaseMock');
-  return { supabaseAdmin: m.supabaseAdmin, getServerClient: m.getServerClient };
-});
-
-vi.mock('@/utils/rateLimit', () => ({
-  applyRateLimit: () => false,
-  getClientIp: () => '127.0.0.1',
-}));
-
 const {
   sendTestEmail,
   sendContactStaffEmail,

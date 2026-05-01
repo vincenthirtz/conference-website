@@ -11,16 +11,6 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('@/utils/supabase', async () => {
-  const m = await import('./__helpers__/supabaseMock');
-  return { supabaseAdmin: m.supabaseAdmin, getServerClient: m.getServerClient };
-});
-
-vi.mock('@/utils/rateLimit', () => ({
-  applyRateLimit: () => false,
-  getClientIp: () => '127.0.0.1',
-}));
-
 const {
   sendPartnershipStaffEmail,
   sendPartnershipConfirmationEmail,
@@ -28,7 +18,7 @@ const {
 } = vi.hoisted(() => ({
   sendPartnershipStaffEmail: vi.fn(async () => undefined),
   sendPartnershipConfirmationEmail: vi.fn(async () => undefined),
-  createCheckoutIntent: vi.fn(async () => ({
+  createCheckoutIntent: vi.fn<(...args: any[]) => any>(async () => ({
     id: 1,
     redirectUrl: 'https://helloasso/redirect',
   })),

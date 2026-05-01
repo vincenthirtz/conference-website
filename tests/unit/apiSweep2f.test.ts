@@ -7,16 +7,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { StaffMember } from '../../types/staff';
 
-vi.mock('@/utils/supabase', async () => {
-  const m = await import('./__helpers__/supabaseMock');
-  return { supabaseAdmin: m.supabaseAdmin, getServerClient: m.getServerClient };
-});
-
-vi.mock('@/utils/rateLimit', () => ({
-  applyRateLimit: () => false,
-  getClientIp: () => '127.0.0.1',
-}));
-
 const { fetchForms, fetchMemberships } = vi.hoisted(() => ({
   fetchForms: vi.fn(
     async () =>
@@ -260,6 +250,39 @@ describe('/api/admin/cast-members/[id]', () => {
       res
     );
     expect(res.statusCode).toBe(405);
+  });
+
+  // Sanitisation coverage: trims whitespace, drops javascript: image URLs,
+  // accepts twitch_url, sort_order, city. Hits the in-memory store path
+  // (no stubbed update chain), which the previous test cannot exercise.
+  it('PATCH sanitises and writes allowed fields to the store', async () => {
+    store.cast_members = [
+      { id: VALID_UUID, name: 'old', is_active: false, sort_order: 1 },
+    ] as any;
+    const res = makeRes();
+    await castMemberIdHandler(
+      makeAuthedReq({
+        method: 'PATCH',
+        query: { id: VALID_UUID },
+        body: {
+          name: '  New  ',
+          isActive: true,
+          twitchUrl: 'https://twitch.tv/x',
+          imageUrl: 'javascript:alert(1)',
+          sortOrder: 9,
+          city: '  Paris  ',
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const m = (store.cast_members as any)[0];
+    expect(m.name).toBe('New');
+    expect(m.is_active).toBe(true);
+    expect(m.twitch_url).toBe('https://twitch.tv/x');
+    expect(m.image_url).toBeNull();
+    expect(m.sort_order).toBe(9);
+    expect(m.city).toBe('Paris');
   });
 });
 

@@ -5,16 +5,6 @@ vi.hoisted(() => {
   process.env.DISCORD_TEAM_SECRET = 'discord-test-secret';
 });
 
-vi.mock('@/utils/supabase', async () => {
-  const m = await import('./__helpers__/supabaseMock');
-  return { supabaseAdmin: m.supabaseAdmin, getServerClient: m.getServerClient };
-});
-
-vi.mock('@/utils/rateLimit', () => ({
-  applyRateLimit: () => false,
-  getClientIp: () => '127.0.0.1',
-}));
-
 const { logStaffActionMock } = vi.hoisted(() => ({
   logStaffActionMock: vi.fn(async () => undefined),
 }));

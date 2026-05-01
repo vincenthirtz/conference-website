@@ -7,11 +7,6 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('@/utils/supabase', async () => {
-  const m = await import('./__helpers__/supabaseMock');
-  return { supabaseAdmin: m.supabaseAdmin, getServerClient: m.getServerClient };
-});
-
 const { computeStageStandings } = vi.hoisted(() => ({
   computeStageStandings: vi.fn(async () => [] as any[]),
 }));

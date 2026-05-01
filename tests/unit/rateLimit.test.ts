@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { NextApiRequest, NextApiResponse } from 'next';
+
+// Global setup mocks @/utils/rateLimit so unit tests can bypass it. This file
+// exercises the REAL implementation, so undo that mock before importing.
+vi.unmock('@/utils/rateLimit');
+
 import { applyRateLimit, getClientIp } from '../../utils/rateLimit';
 
 function makeReq(

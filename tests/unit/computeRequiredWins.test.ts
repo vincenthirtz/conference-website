@@ -5,6 +5,7 @@ import {
   isSeriesFinished,
   getSeriesWinnerFromScores,
 } from '../../utils/matches/computeRequiredWins';
+import { logger } from '../../utils/logger';
 
 describe('computeRequiredWins', () => {
   it.each([
@@ -28,7 +29,7 @@ describe('computeRequiredWins', () => {
   });
 
   it('logs a warning for unknown string formats', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
 
     computeRequiredWins('freeforall');
     expect(warnSpy).toHaveBeenCalledWith(
@@ -40,7 +41,7 @@ describe('computeRequiredWins', () => {
   });
 
   it('does not warn for known formats', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
 
     computeRequiredWins('bo3');
     computeRequiredWins('bo5');

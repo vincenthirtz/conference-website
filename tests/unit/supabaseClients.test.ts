@@ -6,6 +6,11 @@
 
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 
+// Global setup remaps @/utils/supabase to the in-memory mock. This file tests
+// the REAL implementation, so cancel that remap before importing the module.
+vi.unmock('@/utils/supabase');
+vi.unmock('../../utils/supabase');
+
 // Capture the options passed to createServerClient so we can drive the cookie
 // callbacks (set / remove) directly. We can't easily call them through the
 // real Supabase auth flow without making network calls.

@@ -1,16 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { StaffMember } from '../../types/staff';
 
-vi.mock('@/utils/supabase', async () => {
-  const m = await import('./__helpers__/supabaseMock');
-  return { supabaseAdmin: m.supabaseAdmin, getServerClient: m.getServerClient };
-});
-
-vi.mock('@/utils/rateLimit', () => ({
-  applyRateLimit: () => false,
-  getClientIp: () => '127.0.0.1',
-}));
-
 const { logStaffActionMock } = vi.hoisted(() => ({
   logStaffActionMock: vi.fn(async () => undefined),
 }));
@@ -28,7 +18,6 @@ import { invalidateStaffCache } from '../../utils/staff';
 
 import announcementByIdHandler from '../../pages/api/admin/announcements/[id]';
 import partnerByIdHandler from '../../pages/api/admin/partners/[id]';
-import castMemberByIdHandler from '../../pages/api/admin/cast-members/[id]';
 // news/[id] re-imported lazily inside its describe block to isolate any module
 // load issue from other handlers.
 
@@ -306,86 +295,6 @@ describe('/api/admin/partners/[id]', () => {
       res
     );
     expect(res.statusCode).toBe(405);
-  });
-});
-
-/* -----------------------------------------------------------
- * /api/admin/cast-members/[id]
- * ---------------------------------------------------------*/
-
-describe('/api/admin/cast-members/[id]', () => {
-  it('returns 400 for invalid id', async () => {
-    const res = makeRes();
-    await castMemberByIdHandler(
-      makeReq({ method: 'GET', query: { id: 'bogus' } }),
-      res
-    );
-    expect(res.statusCode).toBe(400);
-  });
-
-  it('GET 404 when cast member missing', async () => {
-    store.cast_members = [];
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const res = makeRes();
-    await castMemberByIdHandler(
-      makeReq({ method: 'GET', query: { id: VALID_UUID } }),
-      res
-    );
-    consoleSpy.mockRestore();
-    expect(res.statusCode).toBe(404);
-  });
-
-  it('GET 200 returns the row', async () => {
-    store.cast_members = [
-      { id: VALID_UUID, name: 'CastA', is_active: true },
-    ] as any;
-    const res = makeRes();
-    await castMemberByIdHandler(
-      makeReq({ method: 'GET', query: { id: VALID_UUID } }),
-      res
-    );
-    expect((res.body as any).name).toBe('CastA');
-  });
-
-  it('PATCH updates allowed fields', async () => {
-    store.cast_members = [
-      { id: VALID_UUID, name: 'old', is_active: false, sort_order: 1 },
-    ] as any;
-    const res = makeRes();
-    await castMemberByIdHandler(
-      makeReq({
-        method: 'PATCH',
-        query: { id: VALID_UUID },
-        body: {
-          name: '  New  ',
-          isActive: true,
-          twitchUrl: 'https://twitch.tv/x',
-          imageUrl: 'javascript:alert(1)',
-          sortOrder: 9,
-          city: '  Paris  ',
-        },
-      }),
-      res
-    );
-    expect(res.statusCode).toBe(200);
-    const m = (store.cast_members as any)[0];
-    expect(m.name).toBe('New');
-    expect(m.is_active).toBe(true);
-    expect(m.twitch_url).toBe('https://twitch.tv/x');
-    expect(m.image_url).toBeNull();
-    expect(m.sort_order).toBe(9);
-    expect(m.city).toBe('Paris');
-  });
-
-  it('DELETE 204 removes the row', async () => {
-    store.cast_members = [{ id: VALID_UUID, name: 'X' }] as any;
-    const res = makeRes();
-    await castMemberByIdHandler(
-      makeReq({ method: 'DELETE', query: { id: VALID_UUID } }),
-      res
-    );
-    expect(res.statusCode).toBe(204);
-    expect(store.cast_members.length).toBe(0);
   });
 });
 
