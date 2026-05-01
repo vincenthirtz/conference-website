@@ -14,6 +14,11 @@
 [functions."checkin-cron"]
   schedule = "*/5 * * * *"
 
+# Scheduled function: process broadcast email waves once per day at 10:00 UTC
+# (12h Paris en hiver, 11h en été). Quota Brevo gratuit = 300 emails/jour.
+[functions."broadcast-cron"]
+  schedule = "0 10 * * *"
+
 [[headers]]
   for = "/*"
   [headers.values]

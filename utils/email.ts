@@ -16,7 +16,7 @@ type SendEmailOptions = {
   tags?: string[];
 };
 
-type SendEmailResult = {
+export type SendEmailResult = {
   success: boolean;
   id?: string;
   error?: string;
@@ -260,6 +260,77 @@ export function sendTestEmail(to: string): Promise<SendEmailResult> {
         Envoy&eacute; le ${new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}
       </p>
     `),
+  });
+}
+
+/**
+ * Broadcast email for the IDAHOBIT live (Journée mondiale contre les LGBTphobies).
+ * One-shot campaign — Twitch URL is hardcoded by design.
+ */
+export const IDAHOBIT_LIVE_SUBJECT =
+  'Live Twitch — Journée internationale contre les LGBTphobies, dimanche 17 mai à 14h';
+
+export function buildIdahobitLiveEmailHtml(
+  displayLabel: string | null
+): string {
+  const twitchUrl = 'https://www.twitch.tv/womens_cup';
+  const greeting = displayLabel
+    ? `Hey ${escapeHtml(displayLabel)},`
+    : 'Hey,';
+
+  return emailLayout(`
+    ${gradientBar()}
+    <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">
+      On allume la cha&icirc;ne pour le 17 mai
+    </h1>
+    <p style="margin:0 0 16px;font-size:15px;color:#C6BED9;line-height:1.6;">
+      ${greeting}
+    </p>
+    <p style="margin:0 0 20px;font-size:15px;color:#C6BED9;line-height:1.6;">
+      Dimanche <strong style="color:#2dccfd;">17 mai &agrave; 14h</strong>, on se retrouve en direct sur Twitch pour la
+      <strong style="color:#ffffff;">Journ&eacute;e mondiale contre l&rsquo;homophobie, la transphobie et la biphobie</strong>.
+    </p>
+    <p style="margin:0 0 20px;font-size:15px;color:#C6BED9;line-height:1.6;">
+      Au programme&nbsp;: des <strong style="color:#ffffff;">scrims qui tournent</strong> tout l&rsquo;apr&egrave;s-midi,
+      plusieurs &eacute;quipes au passage, et un moment communautaire pour porter un message qui nous tient &agrave; c&oelig;ur
+      &mdash; visibilit&eacute;, soutien, et z&eacute;ro tol&eacute;rance pour les LGBTphobies, sur et hors du jeu.
+    </p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:rgba(255,255,255,0.05);border-radius:10px;border:1px solid rgba(255,255,255,0.08);margin:0 0 24px;">
+      <tr>
+        <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
+          <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Date</span><br/>
+          <span style="font-size:15px;color:#ffffff;font-weight:500;">Dimanche 17 mai 2026 &mdash; 14h (Paris)</span>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
+          <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Format</span><br/>
+          <span style="font-size:15px;color:#ffffff;font-weight:500;">Scrims en rotation, live comment&eacute;</span>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:14px 20px;">
+          <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Comment participer</span><br/>
+          <span style="font-size:15px;color:#C6BED9;font-weight:400;">Rejoins le Discord pour t&rsquo;ins&eacute;rer dans une rotation, ou viens chiller dans le chat Twitch.</span>
+        </td>
+      </tr>
+    </table>
+    ${ctaButton(twitchUrl, 'Voir le live sur Twitch')}
+    <p style="margin:24px 0 0;font-size:13px;color:#9081B0;line-height:1.5;text-align:center;">
+      Pas dispo dimanche&nbsp;? Un VOD sera dispo apr&egrave;s le live sur la cha&icirc;ne.
+    </p>
+  `);
+}
+
+export function sendIdahobitLiveEmail(
+  to: string,
+  displayLabel: string | null
+): Promise<SendEmailResult> {
+  return sendEmail({
+    to,
+    subject: IDAHOBIT_LIVE_SUBJECT,
+    tags: ['idahobit-live-2026'],
+    html: buildIdahobitLiveEmailHtml(displayLabel),
   });
 }
 

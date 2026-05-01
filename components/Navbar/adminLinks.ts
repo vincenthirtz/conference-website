@@ -204,6 +204,11 @@ export const ADMIN_LINKS: AdminLink[] = [
         ],
       },
       {
+        title: 'Campagnes emails',
+        ref: '/admin/campaigns',
+        minRole: 'admin',
+      },
+      {
         title: 'Logs & stats',
         ref: '',
         minRole: 'manager',
