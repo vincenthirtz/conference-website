@@ -11,6 +11,7 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import type { StaffProps } from '@/types/admin';
 import { formatDateTimeTz } from '@/utils/timezone';
+import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
 import StatCard from '@/components/admin/dashboard/StatCard';
 import ActionableAlert from '@/components/admin/dashboard/ActionableAlert';
 import WidgetCard from '@/components/admin/dashboard/WidgetCard';
@@ -265,7 +266,8 @@ function MegaDashboardPage({ initialData, initialError }: Props) {
   }, [tournamentId]);
 
   // Auto-refresh (pause si onglet caché). Pas de fetch initial : SSR a déjà
-  // chargé les données via getServerSideProps.
+  // chargé les données via getServerSideProps. Sert aussi de filet de
+  // securite si la souscription realtime tombe (cf. useRealtimeChannel).
   useEffect(() => {
     function tick() {
       if (
@@ -280,6 +282,17 @@ function MegaDashboardPage({ initialData, initialError }: Props) {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [fetchDashboard]);
+
+  // Realtime : refresh immediat quand un match du tournoi change (score,
+  // statut, scheduled_at, dispute…). Bien plus reactif que d'attendre 30s.
+  // Le polling reste actif comme filet de securite.
+  useRealtimeChannel({
+    enabled: !!tournamentId,
+    channel: `dashboard-matches-${tournamentId}`,
+    table: 'matches',
+    filter: tournamentId ? `tournament_id=eq.${tournamentId}` : undefined,
+    onChange: fetchDashboard,
+  });
 
   // Tick "now" toutes les 60s pour le compteur roster-lock et la fraîcheur de l'ETA.
   useEffect(() => {

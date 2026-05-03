@@ -30,6 +30,8 @@ type AddMemberResponse =
       role: string;
       battle_tag?: string | null;
       info?: string;
+      /** Set when the welcome email could not be delivered (member was added). */
+      emailWarning?: string;
     }
   | { error: string };
 
@@ -130,32 +132,38 @@ export default withAuthRoute(async function handler(
     const member = { id: insertResult.memberId };
     const memberPayload = { role: validatedRole };
 
-    // Send team join email (non-blocking)
-    const memberEmail =
+    // Send team join email. On attend le resultat pour pouvoir le surfacer
+    // au client (warning si l'email a echoue) plutot que de l'enterrer en log.
+    let emailWarning: string | null = null;
+    let resolvedEmail: string | null =
       typeof email === 'string' ? email.trim().toLowerCase() : null;
-    if (memberEmail) {
-      sendTeamJoinEmail(
-        memberEmail,
-        captainTeam.name,
-        memberPayload.role
-      ).catch((err) => {
+    if (!resolvedEmail && resolvedUserId) {
+      try {
+        const { data } =
+          await supabaseAdmin.auth.admin.getUserById(resolvedUserId);
+        resolvedEmail = data?.user?.email ?? null;
+      } catch {
+        /* ignore : pas d'email = pas de mail a envoyer, c'est OK */
+      }
+    }
+    if (resolvedEmail) {
+      try {
+        const result = await sendTeamJoinEmail(
+          resolvedEmail,
+          captainTeam.name,
+          memberPayload.role
+        );
+        if (!result.success) {
+          emailWarning = `Email d'invitation non envoye (${result.error ?? 'raison inconnue'}).`;
+          logger.error(
+            '[add-member] team join email failed:',
+            result.error
+          );
+        }
+      } catch (err: unknown) {
+        emailWarning = "Email d'invitation non envoye (erreur reseau).";
         logger.error('[add-member] team join email error:', err);
-      });
-    } else if (resolvedUserId) {
-      supabaseAdmin.auth.admin
-        .getUserById(resolvedUserId)
-        .then(({ data }) => {
-          if (data?.user?.email) {
-            sendTeamJoinEmail(
-              data.user.email,
-              captainTeam.name,
-              memberPayload.role
-            ).catch((err) => {
-              logger.error('[add-member] team join email error:', err);
-            });
-          }
-        })
-        .catch(() => {});
+      }
     }
 
     // Create auto news
@@ -183,6 +191,7 @@ export default withAuthRoute(async function handler(
       role: memberPayload.role,
       battle_tag: battleTagValue,
       info: "Membre ajouté à l'équipe",
+      ...(emailWarning ? { emailWarning } : {}),
     });
   } catch (err: unknown) {
     logger.error('[/api/teams/add-member] error:', err);

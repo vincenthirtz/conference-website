@@ -874,4 +874,126 @@ describe('/api/admin/tournament/[id]/auto-schedule', () => {
     expect(res.statusCode).toBe(200);
     expect((res.body as any).unscheduledMatchIds).toContain('m-fresh');
   });
+
+  it('409 SCHEDULE_CONFLICTS_REQUIRE_CONFIRMATION when scheduler returns conflicts without acceptConflicts', async () => {
+    store.matches = [
+      {
+        id: 'm1',
+        tournament_id: TOUR_UUID,
+        stage_id: null,
+        status: 'pending',
+        is_bye: false,
+        match_format: 'bo3',
+        round_number: 1,
+        scheduled_at: null,
+        team1_id: 't1',
+        team2_id: 't2',
+      },
+    ] as any;
+    autoScheduleMatches.mockReturnValueOnce({
+      scheduled: [
+        {
+          matchId: 'm1',
+          resourceId: 'default',
+          startAt: '2026-04-29T19:00:00.000Z',
+          endAt: '2026-04-29T19:45:00.000Z',
+          format: 'bo3' as const,
+        },
+      ],
+      unscheduledMatchIds: [],
+      conflicts: [
+        {
+          matchId1: 'm1',
+          matchId2: 'm-other',
+          teamId: 't1',
+          overlapStart: '2026-04-29T19:00:00.000Z',
+          overlapEnd: '2026-04-29T19:30:00.000Z',
+        },
+      ],
+    });
+    const res = makeRes();
+    await autoScheduleHandler(
+      makeAuthedReq({
+        method: 'POST',
+        query: { id: TOUR_UUID },
+        body: {
+          windows: [
+            {
+              start: '2026-04-29T18:00:00.000Z',
+              end: '2026-04-29T22:00:00.000Z',
+            },
+          ],
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(409);
+    expect((res.body as any).detail).toBe(
+      'SCHEDULE_CONFLICTS_REQUIRE_CONFIRMATION'
+    );
+    expect((res.body as any).conflicts?.length).toBe(1);
+    // Pas d'ecriture dans matches
+    expect((store.matches as any[])[0].scheduled_at).toBeNull();
+  });
+
+  it('200 applies the schedule when acceptConflicts=true is passed', async () => {
+    store.matches = [
+      {
+        id: 'm1',
+        tournament_id: TOUR_UUID,
+        stage_id: null,
+        status: 'pending',
+        is_bye: false,
+        match_format: 'bo3',
+        round_number: 1,
+        scheduled_at: null,
+        team1_id: 't1',
+        team2_id: 't2',
+      },
+    ] as any;
+    autoScheduleMatches.mockReturnValueOnce({
+      scheduled: [
+        {
+          matchId: 'm1',
+          resourceId: 'default',
+          startAt: '2026-04-29T19:00:00.000Z',
+          endAt: '2026-04-29T19:45:00.000Z',
+          format: 'bo3' as const,
+        },
+      ],
+      unscheduledMatchIds: [],
+      conflicts: [
+        {
+          matchId1: 'm1',
+          matchId2: 'm-other',
+          teamId: 't1',
+          overlapStart: '2026-04-29T19:00:00.000Z',
+          overlapEnd: '2026-04-29T19:30:00.000Z',
+        },
+      ],
+    });
+    const res = makeRes();
+    await autoScheduleHandler(
+      makeAuthedReq({
+        method: 'POST',
+        query: { id: TOUR_UUID },
+        body: {
+          acceptConflicts: true,
+          windows: [
+            {
+              start: '2026-04-29T18:00:00.000Z',
+              end: '2026-04-29T22:00:00.000Z',
+            },
+          ],
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).conflicts?.length).toBe(1);
+    // scheduled_at a ete ecrit
+    expect((store.matches as any[])[0].scheduled_at).toBe(
+      '2026-04-29T19:00:00.000Z'
+    );
+  });
 });

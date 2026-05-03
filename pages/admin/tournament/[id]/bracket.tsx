@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 
 type StaffProps = {
@@ -37,6 +38,7 @@ function AdminBracketPage(_: StaffProps) {
   const [generating, setGenerating] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { addToast } = useToast();
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   // Vérifier s'il y a déjà des matchs bracket
   useEffect(() => {
@@ -57,6 +59,24 @@ function AdminBracketPage(_: StaffProps) {
   async function handleGenerate(e: React.FormEvent) {
     e.preventDefault();
     if (!tournamentId) return;
+
+    // Recap explicite des choix avant insertion massive en base.
+    // (Le formulaire est masque quand hasMatches=true ; on garde quand meme
+    // une garde au cas ou l'API serait sollicitee depuis un autre flow.)
+    const ok = await confirm({
+      title:
+        bracketType === 'double'
+          ? `Generer un bracket Double Elimination de ${size} slots ?`
+          : `Generer un bracket Single Elimination de ${size} slots ?`,
+      subtitle: `${totalMatches} matchs au format ${bestOf ? `BO${bestOf}` : '—'}${
+        bracketType === 'double' && grandFinalReset
+          ? ', avec grand-final reset'
+          : ''
+      }.`,
+      variant: 'info',
+      confirmLabel: 'Generer',
+    });
+    if (!ok) return;
 
     setGenerating(true);
     setErrorMsg(null);
@@ -124,6 +144,7 @@ function AdminBracketPage(_: StaffProps) {
 
   return (
     <>
+      {confirmDialog}
       <Head>
         <title>Admin · Bracket</title>
       </Head>

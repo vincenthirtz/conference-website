@@ -238,20 +238,25 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
               <div className="space-y-2">
                 {members.map((m) => {
                   const isCaptain = team?.captain_id === m.user_id;
+                  const isManager = !isCaptain && m.role === 'manager';
+                  const containerClass = isCaptain
+                    ? 'bg-amber-900/20 border border-amber-500/30'
+                    : isManager
+                      ? 'bg-sky-900/20 border border-sky-500/30'
+                      : 'bg-neutral-900/60 border border-neutral-700';
+                  const iconBgClass = isCaptain
+                    ? 'bg-amber-500/20'
+                    : isManager
+                      ? 'bg-sky-500/20'
+                      : 'bg-neutral-700';
                   return (
                     <div
                       key={m.id}
-                      className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm ${
-                        isCaptain
-                          ? 'bg-amber-900/20 border border-amber-500/30'
-                          : 'bg-neutral-900/60 border border-neutral-700'
-                      }`}
+                      className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm ${containerClass}`}
                     >
                       <div className="flex items-center gap-3">
                         <div
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                            isCaptain ? 'bg-amber-500/20' : 'bg-neutral-700'
-                          }`}
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center ${iconBgClass}`}
                         >
                           {isCaptain ? (
                             <svg
@@ -260,6 +265,14 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
                               viewBox="0 0 24 24"
                             >
                               <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
+                            </svg>
+                          ) : isManager ? (
+                            <svg
+                              className="w-4 h-4 text-sky-400"
+                              fill="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path d="M12 2l3.5 7.5L23 11l-5.5 5 1.3 7.5L12 19.5 5.2 23.5 6.5 16 1 11l7.5-1.5L12 2z" />
                             </svg>
                           ) : (
                             <svg
@@ -285,6 +298,11 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
                             {isCaptain && (
                               <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold">
                                 Capitaine
+                              </span>
+                            )}
+                            {isManager && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] bg-sky-500/20 text-sky-300 border border-sky-500/30 font-semibold">
+                                Manager
                               </span>
                             )}
                           </div>

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 
 type StaffShape = {
   id: string;
@@ -364,6 +365,8 @@ function CampaignDrawer({
   onAfterSend: () => void;
   onRefresh: () => void | Promise<void>;
 }) {
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
+
   // Live HTML preview
   const [previewLabel, setPreviewLabel] = useState('');
   const previewSrc = `/api/admin/broadcast/${encodeURIComponent(
@@ -451,9 +454,15 @@ function CampaignDrawer({
   }
 
   async function cancelSchedule() {
-    if (!window.confirm('Annuler la programmation ? Les emails déjà envoyés sont conservés en historique.')) {
-      return;
-    }
+    const ok = await confirm({
+      title: 'Annuler la programmation de cette campagne ?',
+      subtitle:
+        'Les emails deja envoyes restent dans l historique. Les destinataires non encore traites ne recevront pas la campagne.',
+      variant: 'warning',
+      confirmLabel: 'Annuler la programmation',
+      cancelLabel: 'Garder',
+    });
+    if (!ok) return;
     setScheduleBusy(true);
     setScheduleError(null);
     setScheduleNotice(null);
@@ -582,10 +591,12 @@ function CampaignDrawer({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-stretch justify-end"
-      onClick={onClose}
-    >
+    <>
+      {confirmDialog}
+      <div
+        className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-stretch justify-end"
+        onClick={onClose}
+      >
       <div
         className="w-full max-w-2xl h-full bg-neutral-900 border-l border-neutral-700/50 overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
@@ -1054,7 +1065,8 @@ function CampaignDrawer({
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

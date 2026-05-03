@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import type { MatchStatus } from '@/types/admin';
 
 type StaffShape = {
@@ -137,6 +138,7 @@ function AdminSwissStagePage({ staff }: StaffProps) {
   const router = useRouter();
   const { stageId } = router.query;
   const { addToast } = useToast();
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -240,9 +242,13 @@ function AdminSwissStagePage({ staff }: StaffProps) {
     // Si l'apercu signale des rematches, demander une confirmation explicite
     // avant d'envoyer la requete de generation. Le back exigera acceptRematches=true.
     if (previewHasRematches) {
-      const ok = window.confirm(
-        'Cet appariement contient des rematches (deux equipes vont se rejouer). Confirmer la generation ?'
-      );
+      const ok = await confirm({
+        title: 'Cet appariement contient des rematches',
+        subtitle:
+          'Deux equipes vont se rejouer (le solveur n a pas trouve mieux). Confirmer la generation ?',
+        variant: 'warning',
+        confirmLabel: 'Generer quand meme',
+      });
       if (!ok) return;
     }
 
@@ -300,6 +306,7 @@ function AdminSwissStagePage({ staff }: StaffProps) {
 
   return (
     <>
+      {confirmDialog}
       <Head>
         <title>Admin – Swiss stage</title>
       </Head>

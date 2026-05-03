@@ -310,6 +310,97 @@ describe('/api/admin/stages/[stageId]/generate-swiss-round', () => {
     expect((res.body as any).createdMatches.length).toBe(2);
   });
 
+  it('409 REMATCHES_REQUIRE_CONFIRMATION when pairing has rematches without acceptRematches', async () => {
+    // 2 equipes ayant deja joue : le solveur ne peut pas eviter le rematch.
+    // Le back doit refuser l'insert sans acceptRematches=true.
+    store.tournament_stages = [
+      {
+        id: STAGE,
+        tournament_id: TOUR,
+        stage_type: 'swiss',
+        name: 'Swiss',
+        settings: null,
+      },
+    ] as any;
+    store.stage_teams = [
+      { stage_id: STAGE, team_id: 'tA', seed: 1 },
+      { stage_id: STAGE, team_id: 'tB', seed: 2 },
+    ] as any;
+    // Round 1 deja joue entre tA et tB
+    store.matches = [
+      {
+        id: 'm1',
+        stage_id: STAGE,
+        tournament_id: TOUR,
+        status: 'finished',
+        is_bye: false,
+        round_number: 1,
+        team1_id: 'tA',
+        team2_id: 'tB',
+        winner_team_id: 'tA',
+        team1_score: 1,
+        team2_score: 0,
+      },
+    ] as any;
+    const res = makeRes();
+    await generateSwissRoundHandler(
+      makeAuthedReq({
+        method: 'POST',
+        query: { stageId: STAGE },
+        body: { roundNumber: 2 },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(409);
+    expect((res.body as any).detail).toBe('REMATCHES_REQUIRE_CONFIRMATION');
+    // Aucun match cree
+    expect((store.matches as any[]).length).toBe(1);
+  });
+
+  it('200 inserts rematches when acceptRematches=true is passed', async () => {
+    store.tournament_stages = [
+      {
+        id: STAGE,
+        tournament_id: TOUR,
+        stage_type: 'swiss',
+        name: 'Swiss',
+        settings: null,
+      },
+    ] as any;
+    store.stage_teams = [
+      { stage_id: STAGE, team_id: 'tA', seed: 1 },
+      { stage_id: STAGE, team_id: 'tB', seed: 2 },
+    ] as any;
+    store.matches = [
+      {
+        id: 'm1',
+        stage_id: STAGE,
+        tournament_id: TOUR,
+        status: 'finished',
+        is_bye: false,
+        round_number: 1,
+        team1_id: 'tA',
+        team2_id: 'tB',
+        winner_team_id: 'tA',
+        team1_score: 1,
+        team2_score: 0,
+      },
+    ] as any;
+    const res = makeRes();
+    await generateSwissRoundHandler(
+      makeAuthedReq({
+        method: 'POST',
+        query: { stageId: STAGE },
+        body: { roundNumber: 2, acceptRematches: true },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).hasRematches).toBe(true);
+    // Le rematch a ete cree (round 1 + round 2)
+    expect((store.matches as any[]).length).toBe(2);
+  });
+
   it('200 dryRun returns preview without inserts', async () => {
     store.tournament_stages = [
       {

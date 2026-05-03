@@ -6,6 +6,9 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { supabaseAdmin } from '@/utils/supabase';
 import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import EmptyState from '@/components/admin/EmptyState';
+import { SkeletonListRow } from '@/components/admin/Skeleton';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import type { TeamRow } from '@/types/admin';
 
@@ -43,6 +46,7 @@ function AdminTeamsListPage({
   errorMsg: ssrError,
 }: AdminTeamsProps) {
   const { addToast } = useToast();
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const router = useRouter();
   const { filters, setFilter, setFilters } = useUrlFilters(FILTER_KEYS);
 
@@ -169,6 +173,28 @@ function AdminTeamsListPage({
 
   async function handleBulkAction() {
     if (selected.size === 0 || !bulkAction) return;
+
+    // Confirmation pour les actions destructives ou lourdes en consequences
+    if (bulkAction === 'delete') {
+      const ok = await confirm({
+        title: `Supprimer ${selected.size} equipe(s) ?`,
+        subtitle:
+          'Soft-delete : recuperable depuis la corbeille pendant 30 jours.',
+        variant: 'danger',
+        confirmLabel: 'Supprimer',
+      });
+      if (!ok) return;
+    } else if (bulkAction === 'deactivate') {
+      const ok = await confirm({
+        title: `Desactiver ${selected.size} equipe(s) ?`,
+        subtitle:
+          'Elles ne pourront plus etre listees publiquement.',
+        variant: 'warning',
+        confirmLabel: 'Desactiver',
+      });
+      if (!ok) return;
+    }
+
     setBulkProcessing(true);
     setErrorMsg(null);
 
@@ -346,6 +372,7 @@ function AdminTeamsListPage({
 
   return (
     <>
+      {confirmDialog}
       <Head>
         <title>Admin – Équipes</title>
       </Head>
@@ -602,26 +629,16 @@ function AdminTeamsListPage({
           {/* Teams List */}
           <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
             {loading ? (
-              <div className="flex items-center justify-center py-20">
-                <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+              <div className="p-4 space-y-2">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <SkeletonListRow key={i} />
+                ))}
               </div>
             ) : teams.length === 0 ? (
-              <div className="text-center py-20 text-neutral-400">
-                <svg
-                  className="w-12 h-12 mx-auto mb-4 text-neutral-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                  />
-                </svg>
-                Aucune équipe trouvée
-              </div>
+              <EmptyState
+                title="Aucune equipe trouvee"
+                description="Aucune equipe ne correspond a tes filtres. Essaie d'elargir la recherche ou cree une nouvelle equipe."
+              />
             ) : (
               <div className="divide-y divide-neutral-700/50">
                 {/* Select all header */}

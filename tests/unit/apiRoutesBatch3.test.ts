@@ -275,6 +275,63 @@ describe('PATCH /api/teams/transfer-captain', () => {
     expect(res.statusCode).toBe(200);
     expect((store.teams[0] as any).captain_id).toBe(otherUuid);
   });
+
+  it('returns 409 when the team roster is locked by an active tournament', async () => {
+    // Le transfert pendant un tournoi en cours est bloque pour preserver
+    // l'integrite metier (capitaine = responsable lineup, scrims, scores).
+    setAuthUser({ id: 'user-1' });
+    store.teams = [{ id: 't1', captain_id: 'user-1' }] as any;
+    store.team_members = [
+      { id: 'tm-target', team_id: 't1', user_id: otherUuid },
+    ] as any;
+    store.tournament_teams = [
+      { team_id: 't1', tournament_id: 'tour-1' },
+    ] as any;
+    store.tournaments = [
+      {
+        id: 'tour-1',
+        name: 'Cup',
+        // verrouillage il y a 1h
+        roster_locked_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+        status: 'in_progress',
+      },
+    ] as any;
+    const res = makeRes();
+    await transferCaptainHandler(
+      makeReq({ method: 'PATCH', body: { newCaptainUserId: otherUuid } }, true),
+      res
+    );
+    expect(res.statusCode).toBe(409);
+    // captain_id n'a PAS bouge
+    expect((store.teams[0] as any).captain_id).toBe('user-1');
+  });
+
+  it('allows transfer when the only registered tournament is completed', async () => {
+    // Un tournoi termine ne verrouille plus les rosters (cf. rosterLock.ts).
+    setAuthUser({ id: 'user-1' });
+    store.teams = [{ id: 't1', captain_id: 'user-1' }] as any;
+    store.team_members = [
+      { id: 'tm-target', team_id: 't1', user_id: otherUuid },
+    ] as any;
+    store.tournament_teams = [
+      { team_id: 't1', tournament_id: 'tour-old' },
+    ] as any;
+    store.tournaments = [
+      {
+        id: 'tour-old',
+        name: 'OldCup',
+        roster_locked_at: new Date(Date.now() - 86400_000).toISOString(),
+        status: 'completed',
+      },
+    ] as any;
+    const res = makeRes();
+    await transferCaptainHandler(
+      makeReq({ method: 'PATCH', body: { newCaptainUserId: otherUuid } }, true),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect((store.teams[0] as any).captain_id).toBe(otherUuid);
+  });
 });
 
 /* -----------------------------------------------------------

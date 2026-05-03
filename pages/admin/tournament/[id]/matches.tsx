@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import type {
@@ -123,6 +124,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
   // auto-scheduler
   const [autoSchedRunning, setAutoSchedRunning] = useState(false);
   const { addToast } = useToast();
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   // inline quick-score
   const [quickScoreId, setQuickScoreId] = useState<string | null>(null);
@@ -399,9 +401,13 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
         const json = await res.json().catch(() => ({}));
         if (json.detail === 'SCHEDULE_CONFLICTS_REQUIRE_CONFIRMATION') {
           const count = json.conflicts?.length ?? 0;
-          const ok = window.confirm(
-            `L'auto-scheduler a detecte ${count} conflit(s) horaire(s) (meme equipe sur deux creneaux qui se chevauchent). Appliquer quand meme ?`
-          );
+          const ok = await confirm({
+            title: `${count} conflit(s) horaire(s) detecte(s)`,
+            subtitle:
+              'Une meme equipe est planifiee sur deux creneaux qui se chevauchent. Appliquer quand meme ?',
+            variant: 'warning',
+            confirmLabel: 'Appliquer',
+          });
           if (!ok) {
             setAutoSchedRunning(false);
             return;
@@ -801,6 +807,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
   return (
     <>
+      {confirmDialog}
       <Head>
         <title>Admin – Matches du tournoi</title>
       </Head>

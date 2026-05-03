@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import type { VetoFlowStep, VetoStep, MatchVetoState } from '@/types/veto';
 
 type StaffShape = { id: string; role: string; display_name: string | null };
@@ -111,6 +112,7 @@ function AdminVetoPage(_: StaffProps) {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { addToast } = useToast();
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const [maps, setMaps] = useState<TournamentMapRow[]>([]);
   const [tournamentName, setTournamentName] = useState<string>('Tournoi');
 
@@ -260,7 +262,14 @@ function AdminVetoPage(_: StaffProps) {
   const handleReset = useCallback(async () => {
     if (!selectedMatchId) return;
 
-    if (!window.confirm('Réinitialiser tous les vetos de ce match ?')) return;
+    const ok = await confirm({
+      title: 'Reinitialiser tous les vetos de ce match ?',
+      subtitle:
+        'Toutes les selections de map de ce match vont etre supprimees.',
+      variant: 'danger',
+      confirmLabel: 'Reinitialiser',
+    });
+    if (!ok) return;
 
     setSubmitting(true);
     setErrorMsg(null);
@@ -295,6 +304,7 @@ function AdminVetoPage(_: StaffProps) {
 
   return (
     <>
+      {confirmDialog}
       <Head>
         <title>Admin · Veto de maps</title>
       </Head>

@@ -569,6 +569,40 @@ function AdminTournamentPage({
   const [cloning, setCloning] = useState(false);
   const [showCloneConfirm, setShowCloneConfirm] = useState(false);
 
+  // Notify captains
+  const [notifyingCaptains, setNotifyingCaptains] = useState(false);
+
+  const notifyCaptains = useCallback(async () => {
+    if (!id || notifyingCaptains) return;
+    setNotifyingCaptains(true);
+    try {
+      const res = await fetch('/api/admin/tournaments/notify-captains', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tournamentId: id }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        addToast(json.error || 'Echec de la notification', 'error');
+        return;
+      }
+      const errCount = json.errors?.length ?? 0;
+      const baseMsg = `${json.notified ?? 0} responsable(s) notifie(s) (${json.emailsSent ?? 0} email(s), ${json.messagesSent ?? 0} message(s)).`;
+      if (errCount > 0) {
+        addToast(`${baseMsg} ${errCount} erreur(s) — voir /admin/logs.`, 'info');
+      } else {
+        addToast(baseMsg, 'success');
+      }
+    } catch (err: unknown) {
+      addToast(
+        (err as Error)?.message || 'Echec de la notification',
+        'error'
+      );
+    } finally {
+      setNotifyingCaptains(false);
+    }
+  }, [id, notifyingCaptains, addToast]);
+
   const fetchTournament = useCallback(async () => {
     if (!id) return;
     setLoading(true);
@@ -1158,6 +1192,34 @@ function AdminTournamentPage({
                   </svg>
                   Check-in
                 </Link>
+                <button
+                  type="button"
+                  onClick={notifyCaptains}
+                  disabled={notifyingCaptains}
+                  title="Envoie un email + un message interne au capitaine et aux managers de chaque equipe active"
+                  className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors flex items-center gap-2"
+                >
+                  {notifyingCaptains ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                      />
+                    </svg>
+                  )}
+                  {notifyingCaptains
+                    ? 'Envoi en cours...'
+                    : 'Notifier les capitaines'}
+                </button>
                 <button
                   type="button"
                   onClick={() => {
