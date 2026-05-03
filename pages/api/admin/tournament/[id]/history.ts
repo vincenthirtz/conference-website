@@ -6,7 +6,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { StaffLog, formatStaffLog } from '@/utils/staffLogs';
 import { isValidUUID, parsePagination } from '@/utils/apiHelpers';
 
@@ -24,7 +24,7 @@ async function handler(
   res: NextApiResponse<
     TournamentHistoryResponse | { error: string; detail?: string }
   >,
-  _ctx: any
+  _ctx: AuthenticatedStaffContext
 ) {
   const { id } = req.query;
 

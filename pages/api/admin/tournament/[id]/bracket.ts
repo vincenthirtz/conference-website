@@ -5,7 +5,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 import type { BracketSide } from '@/types/admin';
@@ -18,7 +18,7 @@ import {
 
 export default withStaffRoute(handler, 'manager');
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
+async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   const { id } = req.query;
 
   if (!id || Array.isArray(id) || !isValidUUID(id)) {
@@ -71,7 +71,7 @@ async function handleGenerate(
   tournamentId: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const {
     size,
@@ -302,7 +302,7 @@ async function handleSave(
   tournamentId: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const { matches } = req.body as {
     matches: {
@@ -453,7 +453,7 @@ async function handleGenerateDoubleElim(
   tournamentId: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const {
     size,

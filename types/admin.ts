@@ -97,7 +97,7 @@ export type Stage = {
   start_date: string | null;
   end_date: string | null;
   tiebreaker_policy: TiebreakerPolicy | null;
-  settings: any | null;
+  settings: import('./stages').StageSettings | null;
   created_at: string;
   updated_at: string | null;
 };

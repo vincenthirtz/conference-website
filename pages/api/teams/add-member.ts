@@ -1,12 +1,8 @@
 // pages/api/teams/add-member.ts
-// Ajout d'un membre à une équipe par son capitaine
+// Ajout d'un membre à une équipe par son capitaine ou manager
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import {
-  findOrCreateUserByEmail,
-  listUsersEmailMap,
-} from '@/utils/find-or-create-user';
 import { sendTeamJoinEmail } from '@/utils/email';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { validateRole } from '@/utils/apiHelpers';
@@ -18,6 +14,11 @@ import {
   getManagedTeam,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
+import {
+  validateBattleTag,
+  resolveUserIdByEmail,
+  insertTeamMember,
+} from '@/utils/teams/addMember';
 import { withAuthRoute } from '@/utils/staff';
 
 import { logger } from '../../../utils/logger';
@@ -77,21 +78,10 @@ export default withAuthRoute(async function handler(
   }
 
   const { userId, email, role, battleTag } = req.body || {};
+  const validatedRole = validateRole(role);
 
   let resolvedUserId =
     typeof userId === 'string' && userId.trim().length > 0 ? userId.trim() : '';
-
-  // Validate BattleTag
-  const validateBattleTag = (tag: string) => {
-    const trimmed = (tag || '').trim();
-    const re = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
-    if (!re.test(trimmed)) {
-      throw new Error(
-        'BattleTag required (format Name#0000, alphanumeric + # + 3 to 6 digits)'
-      );
-    }
-    return trimmed;
-  };
 
   let battleTagValue: string;
   try {
@@ -103,7 +93,7 @@ export default withAuthRoute(async function handler(
   }
 
   try {
-    // Resolve user by email (or create if not found)
+    // Resolve user by email (auto-create si pas trouve : route capitaine)
     if (!resolvedUserId) {
       if (!email || typeof email !== 'string') {
         return res
@@ -111,85 +101,34 @@ export default withAuthRoute(async function handler(
           .json({ error: 'Provide userId or email to find the user' });
       }
 
-      try {
-        const emailMap = await listUsersEmailMap();
-        const { userId, created } = await findOrCreateUserByEmail(
-          email,
-          validateRole(role),
-          emailMap
-        );
-        resolvedUserId = userId;
-        if (created) {
-          logger.info(`[add-member] auto-created user for ${email}`);
-        }
-      } catch (err: unknown) {
-        logger.error('[add-member] findOrCreateUser error:', err);
-        return res.status(500).json({
-          error: (err as Error)?.message || 'Failed to find or create user',
-        });
+      const resolved = await resolveUserIdByEmail({
+        email,
+        create: true,
+        defaultRole: validatedRole,
+      });
+      if (!resolved.ok) {
+        return res.status(resolved.status).json({ error: resolved.error });
+      }
+      resolvedUserId = resolved.userId;
+      if (resolved.created) {
+        logger.info(`[add-member] auto-created user for ${email}`);
       }
     }
 
-    // Check max_players limit across all tournaments (coaches are excluded)
-    const validatedRole = validateRole(role);
-    if (validatedRole !== 'coach') {
-      const [{ count: currentNonCoachCount }, { data: teamTournaments }] =
-        await Promise.all([
-          supabaseAdmin
-            .from('team_members')
-            .select('*', { count: 'exact', head: true })
-            .eq('team_id', captainTeam.id)
-            .neq('role', 'coach'),
-          supabaseAdmin
-            .from('tournament_teams')
-            .select('tournament_id, tournaments!inner(max_players)')
-            .eq('team_id', captainTeam.id),
-        ]);
+    // Insert (le helper fait le pre-check max_players + traduit les erreurs)
+    const insertResult = await insertTeamMember({
+      teamId: captainTeam.id,
+      userId: resolvedUserId,
+      role: validatedRole,
+      battleTag: battleTagValue,
+      enforceMaxPlayersPreCheck: true,
+    });
 
-      if (teamTournaments && teamTournaments.length > 0) {
-        for (const tt of teamTournaments) {
-          const maxPlayers = (tt as any).tournaments?.max_players;
-          if (maxPlayers && (currentNonCoachCount ?? 0) >= maxPlayers) {
-            return res.status(400).json({
-              error: `L'équipe a atteint la limite de ${maxPlayers} joueur(s) imposée par un tournoi.`,
-            });
-          }
-        }
-      }
+    if (!insertResult.ok) {
+      return res.status(insertResult.status).json({ error: insertResult.error });
     }
-
-    // Insert into team_members
-    const memberPayload = {
-      team_id: captainTeam.id,
-      user_id: resolvedUserId,
-      role: validateRole(role),
-      battle_tag: battleTagValue,
-    };
-
-    const { data: member, error: insertErr } = await supabaseAdmin
-      .from('team_members')
-      .insert(memberPayload)
-      .select('id')
-      .maybeSingle();
-
-    if (insertErr) {
-      // Le trigger PG `team_members_enforce_max_players` rejette avec ERRCODE
-      // 23514 (check_violation) si une race a permis de depasser max_players.
-      // C'est notre defense atomique : le pre-check ci-dessus reste en place
-      // pour la majorite des cas (et donne un message friendly), le trigger
-      // ferme la fenetre de race entre 2 requetes concurrentes.
-      const errMsg = insertErr.message?.toLowerCase() || '';
-      const isMaxPlayersViolation =
-        insertErr.code === '23514' || errMsg.includes('max_players');
-
-      const msg = isMaxPlayersViolation
-        ? "L'équipe a atteint la limite de joueur(s) imposée par un tournoi."
-        : insertErr.message?.includes('duplicate') ||
-            insertErr.message?.includes('unique')
-          ? 'Ce joueur est déjà dans une équipe'
-          : "Échec de l'ajout du membre";
-      return res.status(400).json({ error: msg });
-    }
+    const member = { id: insertResult.memberId };
+    const memberPayload = { role: validatedRole };
 
     // Send team join email (non-blocking)
     const memberEmail =
@@ -238,7 +177,7 @@ export default withAuthRoute(async function handler(
     }
 
     return res.status(200).json({
-      teamMemberId: member?.id,
+      teamMemberId: member.id ?? undefined,
       teamId: captainTeam.id,
       userId: resolvedUserId,
       role: memberPayload.role,

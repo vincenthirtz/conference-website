@@ -161,8 +161,8 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
         status: t.status || 'draft',
         start_date: t.start_date ? toLocalInputValue(t.start_date) : '',
         end_date: t.end_date ? toLocalInputValue(t.end_date) : '',
-        roster_locked_at: (t as any).roster_locked_at
-          ? toLocalInputValue((t as any).roster_locked_at)
+        roster_locked_at: t.roster_locked_at
+          ? toLocalInputValue(t.roster_locked_at)
           : '',
         timezone: t.timezone || 'Europe/Paris',
         format_type: t.format_type || '',
@@ -173,11 +173,11 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
         is_featured: t.is_featured,
         logo_url: t.logo_url || '',
         banner_url: t.banner_url || '',
-        rules_url: (t as any).rules_url || '',
-        description_info: (t as any).description_info || '',
-        schedule_details: (t as any).schedule_details || '',
-        schedule_rules: (t as any).schedule_rules || '',
-        format_details: (t as any).format_details || '',
+        rules_url: t.rules_url || '',
+        description_info: t.description_info || '',
+        schedule_details: t.schedule_details || '',
+        schedule_rules: t.schedule_rules || '',
+        format_details: t.format_details || '',
       });
 
       setFormReady(true);

@@ -3,14 +3,14 @@
 // Utile pour tester la cadence ou rattraper un retard sans attendre le cron.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { getCampaign, processCampaignWave } from '@/utils/broadcasts';
 
 import { logger } from '../../../../../utils/logger';
 export default withStaffRoute(handler, 'admin');
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
+async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });

@@ -5,7 +5,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { parsePagination, sanitizeSearch } from '@/utils/apiHelpers';
 import slugify from 'slugify';
@@ -38,7 +38,7 @@ export type TournamentCreateInput = {
 // Rôle minimum : manager (gestion tournois)
 export default withStaffRoute(handler, 'manager');
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
+async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   try {
     switch (req.method) {
       case 'GET':
@@ -137,7 +137,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
  * Body: TournamentCreateInput
  * ---------------------------------------------------------*/
 
-async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: any) {
+async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   const body = req.body as TournamentCreateInput;
 
   if (!body?.name) {

@@ -4,7 +4,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
@@ -13,7 +13,7 @@ const VALID_STATUSES = ['open', 'in_progress', 'resolved', 'closed'] as const;
 
 export default withStaffRoute(handler, 'manager');
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
+async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   const { id } = req.query;
   if (!id || Array.isArray(id) || !isValidUUID(id)) {
     return res.status(400).json({ error: 'Invalid ticket id' });

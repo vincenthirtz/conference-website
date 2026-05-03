@@ -6,7 +6,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
@@ -49,7 +49,7 @@ function sanitizeWebhookUrl(url: unknown): string | null {
 
 export default withStaffRoute(handler, 'admin');
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
+async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   const { id } = req.query;
   if (!id || Array.isArray(id) || !isValidUUID(id)) {
     return res.status(400).json({ error: 'Invalid tournament ID' });
@@ -106,7 +106,7 @@ async function handlePut(
   tournamentId: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const { channelType, webhookUrl, roleMention, isActive } = req.body || {};
 
@@ -197,7 +197,7 @@ async function handleDelete(
   tournamentId: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const channelType = req.query.channelType;
   if (!isValidChannelType(channelType)) {

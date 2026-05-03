@@ -5,7 +5,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { logger } from '../../../../utils/logger';
 import {
@@ -79,7 +79,7 @@ type PostBody = BatchUpdateStatusBody;
 // rôle minimum : caster (le support peut traiter les demandes)
 export default withStaffRoute(handler, 'caster');
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
+async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   try {
     switch (req.method) {
       case 'GET':
@@ -322,7 +322,7 @@ async function handleGet(
  * }
  * ---------------------------------------------------------*/
 
-async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: any) {
+async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   if (!supabaseAdmin) {
     return res.status(500).json({ error: 'Supabase admin not configured' });
   }

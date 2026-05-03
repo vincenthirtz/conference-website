@@ -7,7 +7,7 @@
 // Retourne : { created, skipped, errors, teams } (même format que /import-csv)
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { supabaseAdmin } from '@/utils/supabase';
 import {
@@ -43,7 +43,7 @@ export default withStaffRoute(handler, 'admin');
 async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse>,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });

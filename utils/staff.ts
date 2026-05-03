@@ -9,11 +9,19 @@ import type {
 import type { User } from '@supabase/supabase-js';
 import { supabaseAdmin, getServerClient } from './supabase';
 import type { StaffRole } from '@/types/admin';
-import type { StaffMember, StaffContext } from '@/types/staff';
+import type {
+  StaffMember,
+  StaffContext,
+  AuthenticatedStaffContext,
+} from '@/types/staff';
 
 import { logger } from './logger';
 export type { StaffRole } from '@/types/admin';
-export type { StaffMember, StaffContext } from '@/types/staff';
+export type {
+  StaffMember,
+  StaffContext,
+  AuthenticatedStaffContext,
+} from '@/types/staff';
 
 /* -----------------------------------------------------------
  * Types & constantes
@@ -265,18 +273,19 @@ export async function requireStaffRoleFromRequest(
   req: NextApiRequest,
   res: NextApiResponse,
   minRole: StaffRole
-): Promise<StaffContext> {
+): Promise<AuthenticatedStaffContext> {
   const ctx = await getStaffContextFromRequest(req, res);
 
   if (!ctx.user) {
     throw new StaffUnauthenticatedError();
   }
 
-  if (!ctx.role || !hasAtLeastRole(ctx.role, minRole)) {
+  if (!ctx.role || !ctx.staff || !hasAtLeastRole(ctx.role, minRole)) {
     throw new StaffUnauthorizedError('Accès non autorisé');
   }
 
-  return ctx;
+  // Apres ces checks, user / staff / role sont tous garantis non-null.
+  return { user: ctx.user, staff: ctx.staff, role: ctx.role };
 }
 
 /* -----------------------------------------------------------
@@ -323,7 +332,7 @@ export function withStaffRoute(
   handler: (
     req: NextApiRequest,
     res: NextApiResponse,
-    ctx: StaffContext
+    ctx: AuthenticatedStaffContext
   ) => Promise<unknown>,
   minRole: StaffRole = 'admin'
 ) {
@@ -423,7 +432,7 @@ export function isManagerOrAbove(role: StaffRole | null | undefined) {
 
 type StaffPageLoader<P> = (
   ctx: GetServerSidePropsContext,
-  staffCtx: StaffContext
+  staffCtx: AuthenticatedStaffContext
 ) => Promise<P> | P;
 
 export function withStaffPage<
@@ -444,9 +453,9 @@ export function withStaffPage<
 
       const baseProps = {
         staff: {
-          id: staffCtx.staff?.id ?? null,
+          id: staffCtx.staff.id,
           role: staffCtx.role,
-          display_name: staffCtx.staff?.display_name ?? null,
+          display_name: staffCtx.staff.display_name,
         },
       };
 

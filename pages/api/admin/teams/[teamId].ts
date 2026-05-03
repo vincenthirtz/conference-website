@@ -6,7 +6,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 
@@ -33,7 +33,7 @@ export type TeamRow = {
 // rôle minimum : manager (gestion des équipes)
 export default withStaffRoute(handler, 'manager');
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
+async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   const { teamId } = req.query;
 
   if (!teamId || Array.isArray(teamId) || !isValidUUID(teamId)) {
@@ -125,7 +125,7 @@ async function handlePut(
   id: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const body = req.body || {};
 
@@ -278,7 +278,7 @@ async function handleDelete(
   id: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const hard = req.query.hard === '1' || req.query.hard === 'true';
 

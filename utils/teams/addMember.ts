@@ -1,0 +1,280 @@
+// utils/teams/addMember.ts
+// Helpers partages entre les 3 endpoints d'ajout de membre :
+//   - pages/api/teams/add-member.ts          (capitaine/manager)
+//   - pages/api/admin/teams/add-member.ts    (staff)
+//   - pages/api/discord/teams/add-member.ts  (bot Discord)
+//
+// On factorise ici : validation BattleTag, resolution user par email,
+// insert team_members + traduction des erreurs (duplicate / max_players),
+// update captain_id avec rollback du membre en cas d'echec.
+
+import { supabaseAdmin } from '../supabase';
+import { logger } from '../logger';
+import {
+  findOrCreateUserByEmail,
+  listUsersEmailMap,
+} from '../find-or-create-user';
+
+/* -----------------------------------------------------------
+ * BattleTag
+ * ---------------------------------------------------------*/
+
+export const BATTLE_TAG_REGEX = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
+export const BATTLE_TAG_FORMAT_HINT =
+  'BattleTag required (format Name#0000, alphanumeric + # + 3 to 6 digits)';
+
+/**
+ * Valide un BattleTag.
+ * @throws Error('BattleTag …') si le format est invalide
+ */
+export function validateBattleTag(tag: string | null | undefined): string {
+  const trimmed = (tag ?? '').trim();
+  if (!BATTLE_TAG_REGEX.test(trimmed)) {
+    throw new Error(BATTLE_TAG_FORMAT_HINT);
+  }
+  return trimmed;
+}
+
+/* -----------------------------------------------------------
+ * Resolution user par email
+ * ---------------------------------------------------------*/
+
+export type ResolveUserByEmailOptions = {
+  email: string;
+  /**
+   * Si true, on cree le user s'il n'existe pas (via findOrCreateUserByEmail).
+   * Si false, on cherche uniquement dans les users existants (paginated).
+   */
+  create: boolean;
+  /** Role par defaut a passer a findOrCreateUserByEmail (si create=true). */
+  defaultRole?: string;
+};
+
+export type ResolveUserByEmailResult =
+  | { ok: true; userId: string; created: boolean }
+  | { ok: false; error: string; status: number };
+
+/**
+ * Trouve (ou cree) un user a partir d'un email. Renvoie un resultat discriminant
+ * pour que les handlers puissent mapper proprement vers une reponse HTTP.
+ */
+export async function resolveUserIdByEmail(
+  opts: ResolveUserByEmailOptions
+): Promise<ResolveUserByEmailResult> {
+  if (!supabaseAdmin) {
+    return { ok: false, error: 'Service unavailable.', status: 503 };
+  }
+
+  const email = opts.email.trim();
+  if (!email) {
+    return {
+      ok: false,
+      error: 'Provide userId or email to find the user',
+      status: 400,
+    };
+  }
+
+  if (opts.create) {
+    try {
+      const emailMap = await listUsersEmailMap();
+      const { userId, created } = await findOrCreateUserByEmail(
+        email,
+        opts.defaultRole ?? 'player',
+        emailMap
+      );
+      return { ok: true, userId, created };
+    } catch (err: unknown) {
+      logger.error('[addMember] findOrCreateUserByEmail error:', err);
+      return {
+        ok: false,
+        error: (err as Error)?.message ?? 'Failed to find or create user',
+        status: 500,
+      };
+    }
+  }
+
+  // No create: look up existing users only (paginated to avoid silently
+  // missing users beyond the first page on big instances).
+  const emailLower = email.toLowerCase();
+  const PAGE_SIZE = 200;
+  for (let page = 1; page <= 50; page++) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+      page,
+      perPage: PAGE_SIZE,
+    });
+    if (error) {
+      logger.error('[addMember] listUsers error:', error);
+      return {
+        ok: false,
+        error: error.message || 'Failed to list users',
+        status: 500,
+      };
+    }
+    const users = data?.users ?? [];
+    const found = users.find((u) => u.email?.toLowerCase() === emailLower);
+    if (found?.id) {
+      return { ok: true, userId: found.id, created: false };
+    }
+    if (users.length < PAGE_SIZE) break; // derniere page
+  }
+
+  return { ok: false, error: 'User not found for this email', status: 404 };
+}
+
+/* -----------------------------------------------------------
+ * Insert team_members
+ * ---------------------------------------------------------*/
+
+export type InsertTeamMemberInput = {
+  teamId: string;
+  userId: string;
+  role: string;
+  /** Optionnel : tous les endpoints ne stockent pas le battle_tag. */
+  battleTag?: string | null;
+  /**
+   * Si true, on fait un pre-check `max_players` avant d'insert :
+   * compte les membres non-coach actuels et compare a la plus petite limite
+   * imposee par les tournois auxquels la team est inscrite. Renvoie une
+   * erreur friendly avant l'insert (UX). Le trigger PG reste la source de
+   * verite anti-race en cas de concurrence — voir migration
+   * `enforce_team_max_players_trigger.sql`.
+   */
+  enforceMaxPlayersPreCheck?: boolean;
+};
+
+export type InsertTeamMemberResult =
+  | { ok: true; memberId: string | null }
+  | {
+      ok: false;
+      error: string;
+      status: number;
+      isDuplicate?: boolean;
+      isMaxPlayersViolation?: boolean;
+    };
+
+/**
+ * Insert un membre dans `team_members` et traduit les erreurs PG/trigger
+ * en messages metier :
+ *   - 23514 (check_violation) ou message contenant "max_players" → limite atteinte
+ *   - duplicate / unique → user deja dans une equipe
+ */
+export async function insertTeamMember(
+  input: InsertTeamMemberInput
+): Promise<InsertTeamMemberResult> {
+  if (!supabaseAdmin) {
+    return { ok: false, error: 'Service unavailable.', status: 503 };
+  }
+
+  // Pre-check max_players (UX rapide ; le trigger PG est la source de verite)
+  if (input.enforceMaxPlayersPreCheck && input.role !== 'coach') {
+    const [{ count: currentNonCoachCount }, { data: teamTournaments }] =
+      await Promise.all([
+        supabaseAdmin
+          .from('team_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('team_id', input.teamId)
+          .neq('role', 'coach'),
+        supabaseAdmin
+          .from('tournament_teams')
+          .select('tournament_id, tournaments!inner(max_players)')
+          .eq('team_id', input.teamId),
+      ]);
+
+    for (const tt of teamTournaments ?? []) {
+      const maxPlayers = (tt as { tournaments?: { max_players?: number } })
+        .tournaments?.max_players;
+      if (maxPlayers && (currentNonCoachCount ?? 0) >= maxPlayers) {
+        return {
+          ok: false,
+          status: 400,
+          error: `L'équipe a atteint la limite de ${maxPlayers} joueur(s) imposée par un tournoi.`,
+          isMaxPlayersViolation: true,
+        };
+      }
+    }
+  }
+
+  const payload: Record<string, unknown> = {
+    team_id: input.teamId,
+    user_id: input.userId,
+    role: input.role,
+  };
+  if (input.battleTag) payload.battle_tag = input.battleTag;
+
+  const { data: member, error: insertErr } = await supabaseAdmin
+    .from('team_members')
+    .insert(payload)
+    .select('id')
+    .maybeSingle();
+
+  if (insertErr) {
+    const msg = insertErr.message?.toLowerCase() || '';
+    const isMaxPlayersViolation =
+      insertErr.code === '23514' || msg.includes('max_players');
+    const isDuplicate = msg.includes('duplicate') || msg.includes('unique');
+
+    if (isMaxPlayersViolation) {
+      return {
+        ok: false,
+        status: 400,
+        error: "L'équipe a atteint la limite de joueur(s) imposée par un tournoi.",
+        isMaxPlayersViolation: true,
+      };
+    }
+    if (isDuplicate) {
+      return {
+        ok: false,
+        status: 400,
+        error: 'Ce joueur est déjà dans une équipe',
+        isDuplicate: true,
+      };
+    }
+    return {
+      ok: false,
+      status: 400,
+      error: "Échec de l'ajout du membre",
+    };
+  }
+
+  return { ok: true, memberId: member?.id ?? null };
+}
+
+/* -----------------------------------------------------------
+ * Set team captain (avec rollback du membre si l'update echoue)
+ * ---------------------------------------------------------*/
+
+export type SetTeamCaptainResult =
+  | { ok: true }
+  | { ok: false; error: string; status: number };
+
+/**
+ * Promeut un user au rang de capitaine d'une equipe (`teams.captain_id`).
+ * En cas d'echec, le caller est responsable de decider du rollback (la plupart
+ * des handlers laissent le membre en place et retournent juste une erreur).
+ */
+export async function setTeamCaptain(
+  teamId: string,
+  userId: string
+): Promise<SetTeamCaptainResult> {
+  if (!supabaseAdmin) {
+    return { ok: false, error: 'Service unavailable.', status: 503 };
+  }
+
+  const { error: captainErr } = await supabaseAdmin
+    .from('teams')
+    .update({ captain_id: userId })
+    .eq('id', teamId);
+
+  if (captainErr) {
+    logger.error('[addMember] captain update error:', captainErr);
+    return {
+      ok: false,
+      status: 500,
+      error:
+        captainErr.message ||
+        'Member added but failed to set as captain (check teams.captain_id column)',
+    };
+  }
+
+  return { ok: true };
+}

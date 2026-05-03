@@ -5,7 +5,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
@@ -50,7 +50,7 @@ export default withStaffRoute(handler, 'manager');
 async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse>,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const { id } = req.query;
 
@@ -125,7 +125,7 @@ async function handlePatch(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse>,
   id: string,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   try {
     const {

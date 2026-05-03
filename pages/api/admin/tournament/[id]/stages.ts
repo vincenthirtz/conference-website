@@ -6,10 +6,11 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { validateStageSettings } from '@/utils/stageSettings';
+import type { StageSettings } from '@/types/stages';
 
 import { logger } from '../../../../../utils/logger';
 type StageType =
@@ -29,7 +30,7 @@ type Stage = {
   order_index: number | null;
   is_public: boolean;
   start_date: string | null;
-  settings: any | null;
+  settings: StageSettings | null;
   created_at: string;
   updated_at: string | null;
 };
@@ -41,7 +42,7 @@ export default withStaffRoute(handler, 'manager');
 async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse>,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const { id } = req.query;
 
@@ -100,7 +101,7 @@ async function handlePost(
   tournamentId: string,
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse>,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   if (!supabaseAdmin) {
     return res
@@ -260,7 +261,7 @@ async function handlePatch(
   tournamentId: string,
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse>,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   if (!supabaseAdmin) {
     return res

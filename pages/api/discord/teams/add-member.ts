@@ -1,6 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import crypto from 'crypto';
 import { supabaseAdmin } from '@/utils/supabase';
+import {
+  resolveUserIdByEmail,
+  insertTeamMember,
+  setTeamCaptain,
+} from '@/utils/teams/addMember';
 
 import { logger } from '../../../../utils/logger';
 type Body = {
@@ -68,7 +73,7 @@ export default async function handler(
       return res.status(404).json({ error: 'Team not found' });
     }
 
-    // Resolve user by email if no user_id provided
+    // Resolve user by email if no user_id provided (no auto-create cote bot)
     if (!resolvedUserId) {
       const email = body.email?.trim();
       if (!email) {
@@ -76,82 +81,33 @@ export default async function handler(
           error: "Provide either 'user_id' or 'email' to find the user",
         });
       }
-
-      const emailLower = email.toLowerCase();
-      const { data: usersData, error: listErr } =
-        await supabaseAdmin.auth.admin.listUsers({
-          page: 1,
-          perPage: 200,
-        });
-
-      if (listErr) {
-        logger.error(
-          '[/api/discord/teams/add-member] listUsers error:',
-          listErr
-        );
-        return res
-          .status(500)
-          .json({ error: listErr.message || 'Failed to list users' });
+      const resolved = await resolveUserIdByEmail({ email, create: false });
+      if (!resolved.ok) {
+        return res.status(resolved.status).json({ error: resolved.error });
       }
-
-      const found = usersData?.users?.find(
-        (u) => u.email?.toLowerCase() === emailLower
-      );
-
-      if (!found?.id) {
-        return res.status(404).json({ error: 'User not found for this email' });
-      }
-
-      resolvedUserId = found.id;
+      resolvedUserId = resolved.userId;
     }
 
-    // Insert into team_members
-    const memberPayload = {
-      team_id: teamId,
-      user_id: resolvedUserId,
+    const insertResult = await insertTeamMember({
+      teamId,
+      userId: resolvedUserId,
       role,
-    };
-
-    const { data: member, error: insertErr } = await supabaseAdmin
-      .from('team_members')
-      .insert(memberPayload)
-      .select('id')
-      .maybeSingle();
-
-    if (insertErr) {
-      const msg =
-        insertErr.message?.includes('duplicate') ||
-        insertErr.message?.includes('unique')
-          ? 'User already in this team'
-          : 'Failed to add member';
-      return res.status(400).json({ error: msg });
+    });
+    if (!insertResult.ok) {
+      return res.status(insertResult.status).json({ error: insertResult.error });
     }
 
     let captainSet = false;
-
     if (setCaptain) {
-      const { error: captainErr } = await supabaseAdmin
-        .from('teams')
-        .update({ captain_id: resolvedUserId })
-        .eq('id', teamId);
-
-      if (captainErr) {
-        logger.error(
-          '[/api/discord/teams/add-member] captain update error:',
-          captainErr
-        );
-        return res.status(500).json({
-          error:
-            captainErr.message ||
-            'Member added but failed to set as captain (check teams.captain_id column)',
-        });
+      const captainResult = await setTeamCaptain(teamId, resolvedUserId);
+      if (!captainResult.ok) {
+        return res.status(captainResult.status).json({ error: captainResult.error });
       }
-
       captainSet = true;
     }
 
     return res.status(200).json({
-      teamMemberId: member?.id,
+      teamMemberId: insertResult.memberId ?? undefined,
       teamId,
       userId: resolvedUserId,
       role,

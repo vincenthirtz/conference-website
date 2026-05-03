@@ -33,7 +33,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '../../../../../utils/logger';
@@ -113,7 +113,7 @@ async function handler(
     | AutoScheduleResponse
     | { error: string; detail?: string; conflicts?: ConflictEntry[] }
   >,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const { id } = req.query;
 

@@ -16,3 +16,14 @@ export type StaffContext = {
   staff: StaffMember | null;
   role: StaffRole | null;
 };
+
+/**
+ * Variante "garantie authentifiee" du StaffContext : tous les champs sont
+ * non-null. C'est le type passe aux handlers proteges par `withStaffRoute`,
+ * puisque ce wrapper rejette deja les requetes sans staff valide.
+ */
+export type AuthenticatedStaffContext = {
+  user: User;
+  staff: StaffMember;
+  role: StaffRole;
+};

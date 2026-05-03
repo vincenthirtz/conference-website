@@ -18,14 +18,14 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { computeAudienceRecipients, getCampaign } from '@/utils/broadcasts';
 
 import { logger } from '../../../../../utils/logger';
 export default withStaffRoute(handler, 'admin');
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
+async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   if (!supabaseAdmin) {
     return res.status(500).json({ error: 'Supabase admin not configured' });
   }
@@ -99,7 +99,7 @@ async function handleGet(campaignId: string, res: NextApiResponse) {
 async function handlePost(
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: any,
+  ctx: AuthenticatedStaffContext,
   campaignId: string,
   audience: 'all-confirmed-users',
   campaignName: string
@@ -215,7 +215,7 @@ async function handlePost(
 async function handleDelete(
   _req: NextApiRequest,
   res: NextApiResponse,
-  ctx: any,
+  ctx: AuthenticatedStaffContext,
   campaignId: string,
   campaignName: string
 ) {

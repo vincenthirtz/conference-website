@@ -6,14 +6,14 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../../utils/logger';
 export default withStaffRoute(handler, 'manager');
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
+async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   const { stageId } = req.query;
 
   if (!stageId || Array.isArray(stageId) || !isValidUUID(stageId)) {
@@ -88,7 +88,7 @@ async function handleBulkSchedule(
   tournamentId: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const { schedules } = req.body;
 
@@ -230,7 +230,7 @@ async function handleBulkUpdate(
   tournamentId: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const { matchIds, fields } = req.body;
 
@@ -357,7 +357,7 @@ async function handleBulkDelete(
   tournamentId: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const { matchIds, hard = false } = req.body;
 
@@ -466,7 +466,7 @@ async function handleBulkUndo(
   tournamentId: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const { action, undoPayload } = req.body;
 

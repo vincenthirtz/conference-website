@@ -30,8 +30,20 @@ const STATUS_ORDER: Record<string, number> = {
   cancelled: 4,
 };
 
+type MatchGameRow = {
+  id?: string;
+  map_name: string | null;
+  map_order: number | null;
+  team1_score: number | null;
+  team2_score: number | null;
+  is_tiebreaker: boolean | null;
+  went_overtime: boolean | null;
+};
+
+type MatchWithGames = Match & { games?: MatchGameRow[] | null };
+
 type ApiResponse = {
-  match: Match;
+  match: MatchWithGames;
   tournament: TournamentMini | null;
   stage: StageMini | null;
   team1: TeamMini | null;
@@ -199,10 +211,11 @@ function AdminMatchEditPage({ staff }: StaffProps) {
       const m = json.match;
 
       // Load games
-      const matchGames = (m as any).games as any[] | undefined;
+      const matchGames = m.games;
       if (matchGames && Array.isArray(matchGames)) {
         setGames(
           matchGames
+            .slice()
             .sort((a, b) => (a.map_order ?? 0) - (b.map_order ?? 0))
             .map((g, idx) => ({
               map_name: g.map_name || '',

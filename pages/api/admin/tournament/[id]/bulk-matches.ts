@@ -14,7 +14,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
@@ -39,7 +39,7 @@ export default withStaffRoute(handler, 'manager');
 async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse>,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -83,7 +83,7 @@ async function handleShiftRound(
   tournamentId: string,
   body: any,
   res: NextApiResponse<ApiResponse>,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const { stageId, roundNumber, offsetMinutes } = body;
 
@@ -210,7 +210,7 @@ async function handleReassignStage(
   tournamentId: string,
   body: any,
   res: NextApiResponse<ApiResponse>,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const { matchIds, targetStageId } = body;
 

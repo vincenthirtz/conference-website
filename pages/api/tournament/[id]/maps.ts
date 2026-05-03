@@ -5,7 +5,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 
 import { logger } from '../../../../utils/logger';
@@ -34,7 +34,7 @@ export type TournamentMapInput = {
 // Rôle minimum : manager (peut gérer les settings du tournoi)
 export default withStaffRoute(handler, 'manager');
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
+async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   const { id } = req.query;
   if (!id || Array.isArray(id)) {
     return res.status(400).json({ error: 'Invalid tournament id' });
@@ -96,7 +96,7 @@ async function handlePost(
   tournamentId: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const body = req.body as TournamentMapInput;
 
@@ -170,7 +170,7 @@ async function handlePut(
   tournamentId: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const { maps } = req.body as {
     maps: TournamentMapInput[];
@@ -253,7 +253,7 @@ async function handlePatch(
   tournamentId: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const { mapId } = req.query;
 
@@ -327,7 +327,7 @@ async function handleDelete(
   tournamentId: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const { mapId } = req.query;
 

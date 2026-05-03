@@ -6,7 +6,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
@@ -15,7 +15,7 @@ import { notifyMatchStarting } from '@/utils/discord';
 import { logger } from '../../../../utils/logger';
 export default withStaffRoute(handler, 'manager'); // rôle min : manager
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
+async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   const { matchId } = req.query;
 
   if (!matchId || Array.isArray(matchId) || !isValidUUID(matchId)) {
@@ -128,7 +128,7 @@ async function handlePut(
   matchId: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const { mode } = req.body as { mode?: 'score' | 'meta' };
 
@@ -521,7 +521,7 @@ async function handleDelete(
   matchId: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const hard = req.query.hard === '1' || req.query.hard === 'true';
 

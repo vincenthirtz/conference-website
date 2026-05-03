@@ -6,14 +6,14 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../../utils/logger';
 export default withStaffRoute(handler, 'caster');
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
+async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   const { matchId } = req.query;
   if (!matchId || Array.isArray(matchId) || !isValidUUID(matchId)) {
     return res.status(400).json({ error: 'Invalid matchId' });
@@ -110,7 +110,7 @@ async function handlePost(
   matchId: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const { winnerMemberId } = req.body || {};
   if (
@@ -211,7 +211,7 @@ async function handlePost(
   return res.status(200).json({ poll: result });
 }
 
-async function handleDelete(matchId: string, res: NextApiResponse, ctx: any) {
+async function handleDelete(matchId: string, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   const { data, error } = await supabaseAdmin
     .from('match_mvp_polls')
     .update({

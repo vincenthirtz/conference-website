@@ -6,10 +6,11 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { validateStageSettings } from '@/utils/stageSettings';
 import { isValidUUID } from '@/utils/apiHelpers';
+import type { StageSettings } from '@/types/stages';
 
 import { logger } from '../../../../utils/logger';
 export type StageType =
@@ -31,7 +32,7 @@ export type StageRow = {
   is_public: boolean;
   start_date: string | null;
   end_date: string | null;
-  settings: any | null; // JSONB (config spécifique)
+  settings: StageSettings | null; // JSONB (config spécifique)
   created_at: string;
   updated_at: string | null;
 };
@@ -39,7 +40,7 @@ export type StageRow = {
 // rôle minimum : manager (gestion de la structure du tournoi)
 export default withStaffRoute(handler, 'manager');
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
+async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   const { stageId } = req.query;
 
   if (!stageId || Array.isArray(stageId) || !isValidUUID(stageId)) {
@@ -98,7 +99,7 @@ async function handlePut(
   id: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const body = req.body || {};
 
@@ -299,7 +300,7 @@ async function handleDelete(
   id: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const hard = req.query.hard === '1' || req.query.hard === 'true';
 

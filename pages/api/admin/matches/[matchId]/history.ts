@@ -5,7 +5,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { formatStaffLog, StaffLog } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
@@ -22,7 +22,7 @@ async function handler(
   res: NextApiResponse<
     MatchHistoryResponse | { error: string; detail?: string }
   >,
-  _ctx: any
+  _ctx: AuthenticatedStaffContext
 ) {
   const { matchId } = req.query;
 

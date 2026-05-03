@@ -17,7 +17,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import {
   resetPropagationForMatch,
@@ -60,7 +60,7 @@ export default withStaffRoute(handler, 'manager');
 async function handler(
   req: NextApiRequest,
   res: NextApiResponse<AutoByesResult | { error: string; detail?: string }>,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const { stageId } = req.query;
 

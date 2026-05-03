@@ -6,7 +6,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import type { VetoStep, VetoStepInput, VetoAction } from '@/types/veto';
 import { VETO_FLOWS } from '@/types/veto';
@@ -16,7 +16,7 @@ import { notifyVetoStep } from '@/utils/discord';
 import { logger } from '../../../../../utils/logger';
 export default withStaffRoute(handler, 'manager');
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
+async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   const { matchId } = req.query;
 
   if (!matchId || Array.isArray(matchId) || !isValidUUID(matchId)) {
@@ -119,7 +119,7 @@ async function handlePost(
   matchId: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const body = req.body as VetoStepInput;
 
@@ -331,7 +331,7 @@ async function sendVetoStepDiscord(params: {
  * DELETE : reset all veto steps for a match
  * ---------------------------------------------------------*/
 
-async function handleDelete(matchId: string, res: NextApiResponse, ctx: any) {
+async function handleDelete(matchId: string, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   // Also delete auto-created games to stay in sync
   const { data: vetoSteps } = await supabaseAdmin
     .from('match_map_vetos')

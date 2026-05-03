@@ -6,7 +6,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
@@ -18,7 +18,7 @@ export default withStaffRoute(handler, 'manager');
 async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse>,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const { id, teamId } = req.query;
 
@@ -101,7 +101,7 @@ async function handlePatch(
   tournamentId: string,
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse>,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   if (!supabaseAdmin) {
     return res
@@ -184,7 +184,7 @@ async function handleDelete(
   tournamentTeamId: string,
   tournamentId: string,
   res: NextApiResponse<ApiResponse>,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   if (!supabaseAdmin) {
     return res

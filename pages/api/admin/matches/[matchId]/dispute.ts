@@ -10,7 +10,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { applyMatchScore } from '@/utils/matches/applyScore';
@@ -27,7 +27,7 @@ const VALID_RESUME_STATUSES: MatchStatus[] = [
 // Ouvrir une dispute = decision sensible : minimum manager.
 export default withStaffRoute(handler, 'manager');
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
+async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   const { matchId } = req.query;
 
   if (!matchId || Array.isArray(matchId) || !isValidUUID(matchId)) {
@@ -66,7 +66,7 @@ async function openDispute(
   matchId: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const { reason } = (req.body || {}) as { reason?: unknown };
 
@@ -166,7 +166,7 @@ async function resolveDispute(
   matchId: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const body = (req.body || {}) as {
     resolution?: unknown;
@@ -355,7 +355,7 @@ async function cancelDispute(
   matchId: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   let resumeStatus: MatchStatus = 'pending';
   if (typeof req.query.resumeStatus === 'string') {

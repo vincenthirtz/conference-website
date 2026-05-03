@@ -5,7 +5,7 @@
 //          (same logic as the cron, scoped to one tournament)
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { isValidUUID } from '@/utils/apiHelpers';
 import {
   listCheckinStatus,
@@ -16,7 +16,7 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { logger } from '../../../../../utils/logger';
 export default withStaffRoute(handler, 'manager');
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
+async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   const { id } = req.query;
   if (!id || Array.isArray(id) || !isValidUUID(id)) {
     return res.status(400).json({ error: 'Invalid tournament ID' });

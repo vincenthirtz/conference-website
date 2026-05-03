@@ -2,7 +2,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import { logStaffAction } from '@/utils/staffLogs';
 
@@ -41,7 +41,7 @@ type GameInput = {
 
 type RecomputeMode = 'none' | 'from_games';
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
+async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   const { matchId } = req.query;
 
   if (!matchId || Array.isArray(matchId)) {
@@ -100,7 +100,7 @@ async function handlePost(
   matchId: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const body = req.body as GameInput;
 
@@ -154,7 +154,7 @@ async function handlePut(
   matchId: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const { games, recomputeMode } = req.body as {
     games: GameInput[];
@@ -298,7 +298,7 @@ async function handlePut(
  * DELETE : supprimer toutes les games du match
  * ---------------------------------------------------------*/
 
-async function handleDelete(matchId: string, res: NextApiResponse, ctx: any) {
+async function handleDelete(matchId: string, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   const { error } = await supabaseAdmin
     .from('games')
     .delete()

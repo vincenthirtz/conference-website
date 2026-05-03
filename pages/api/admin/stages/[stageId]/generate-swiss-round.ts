@@ -16,7 +16,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 
 import { generateSwissPairings } from '@/utils/swiss/pairing';
@@ -34,6 +34,7 @@ import type {
   SwissStandingParticipant,
 } from '@/types/swiss';
 import type { MatchStatus } from '@/types/admin';
+import type { SwissSettings } from '@/types/stages';
 import { isValidUUID } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../../utils/logger';
@@ -42,7 +43,7 @@ type StageRow = {
   tournament_id: string;
   stage_type: string | null;
   name: string;
-  settings: any | null;
+  settings: SwissSettings | null;
 };
 
 type StageTeamRow = {
@@ -125,7 +126,7 @@ async function handler(
   res: NextApiResponse<
     GenerateSwissRoundResponse | { error: string; detail?: string }
   >,
-  ctx: any
+  ctx: AuthenticatedStaffContext
 ) {
   const { stageId } = req.query;
 
