@@ -74,11 +74,22 @@ function appendSetCookie(res: SupabaseServerRes, cookie: string) {
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-/** Enforce security flags on all auth cookies */
-function hardenCookieOptions(options: CookieOptions): CookieOptions {
+/**
+ * Enforce security flags on cookies set server-side.
+ *
+ * Supabase auth cookies (`sb-*`) must remain readable by `document.cookie` so
+ * `createBrowserClient` can keep the client session in sync after SSR refreshes;
+ * forcing them httpOnly breaks `supabaseClient.auth.getSession()` on the client
+ * and turns every admin fetch into a "Session staff introuvable" failure.
+ */
+function hardenCookieOptions(
+  name: string,
+  options: CookieOptions
+): CookieOptions {
+  const isSupabaseAuthCookie = name.startsWith('sb-');
   return {
     ...options,
-    httpOnly: true,
+    httpOnly: isSupabaseAuthCookie ? false : true,
     secure: isProduction,
     sameSite: options.sameSite ?? 'lax',
   };
@@ -96,14 +107,14 @@ export function getServerClient(
       set(name: string, value: string, options: CookieOptions) {
         appendSetCookie(
           res,
-          serialize(name, value, hardenCookieOptions(options))
+          serialize(name, value, hardenCookieOptions(name, options))
         );
       },
       remove(name: string, options: CookieOptions) {
         appendSetCookie(
           res,
           serialize(name, '', {
-            ...hardenCookieOptions(options),
+            ...hardenCookieOptions(name, options),
             maxAge: 0,
           })
         );
