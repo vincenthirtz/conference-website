@@ -88,6 +88,60 @@ describe('utils/supabase', () => {
     cookies.remove('sb-1', {});
   });
 
+  it('sb-* auth cookies are NOT httpOnly so the browser client can read them', async () => {
+    const mod = await import('../../utils/supabase');
+
+    const headers: Record<string, string | string[]> = {};
+    const req: any = { cookies: {} };
+    const res: any = {
+      getHeader: (k: string) => headers[k],
+      setHeader: (k: string, v: string | string[]) => {
+        headers[k] = v;
+      },
+    };
+
+    mod.getServerClient(req, res);
+    const cookies = captured.opts.cookies;
+
+    cookies.set('sb-myproject-auth-token', 'token-value', {});
+    const setCookie = headers['Set-Cookie'];
+    const serialized = Array.isArray(setCookie) ? setCookie[0] : setCookie;
+    expect(serialized).toContain('sb-myproject-auth-token=token-value');
+    // Critical: must not be HttpOnly, otherwise supabaseClient.auth.getSession()
+    // returns null on the client and every admin fetch bails with
+    // "Session staff manquante."
+    expect(serialized?.toLowerCase()).not.toContain('httponly');
+
+    // remove must also keep sb-* cookies non-httpOnly
+    headers['Set-Cookie'] = '';
+    cookies.remove('sb-myproject-auth-token', {});
+    const removed = headers['Set-Cookie'];
+    const removedSerialized = Array.isArray(removed) ? removed[0] : removed;
+    expect(removedSerialized?.toLowerCase()).not.toContain('httponly');
+  });
+
+  it('non-sb cookies remain hardened with HttpOnly', async () => {
+    const mod = await import('../../utils/supabase');
+
+    const headers: Record<string, string | string[]> = {};
+    const req: any = { cookies: {} };
+    const res: any = {
+      getHeader: (k: string) => headers[k],
+      setHeader: (k: string, v: string | string[]) => {
+        headers[k] = v;
+      },
+    };
+
+    mod.getServerClient(req, res);
+    const cookies = captured.opts.cookies;
+
+    cookies.set('custom-session', 'opaque', {});
+    const serialized = headers['Set-Cookie'];
+    const value = Array.isArray(serialized) ? serialized[0] : serialized;
+    expect(value).toContain('custom-session=opaque');
+    expect(value?.toLowerCase()).toContain('httponly');
+  });
+
   // Note: tests that toggle env vars and reload the module use vi.resetModules,
   // which under --no-isolate also resets module-level mocks set up by sibling
   // test files (e.g. utils/stages/standings). Skip those reload tests to avoid
