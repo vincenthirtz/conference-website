@@ -133,10 +133,6 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
         data: { session },
       } = await supabaseClient.auth.getSession();
       const token = session?.access_token;
-      if (!token) {
-        setLoading(false);
-        return;
-      }
 
       const params = new URLSearchParams();
       params.set('limit', String(limit));
@@ -145,8 +141,12 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       if (search.trim()) params.set('search', search);
       if (roleFilter) params.set('role', roleFilter);
 
+      const headers: Record<string, string> = {};
+      if (token) headers.Authorization = `Bearer ${token}`;
+
       const res = await fetch(`/api/admin/users/manage?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers,
+        credentials: 'same-origin',
       });
       const json: ApiResponse = await res.json();
 
@@ -154,6 +154,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       setTotal(json.total ?? json.items?.length ?? 0);
     } catch (err) {
       logger.error('Error fetching users', err);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
