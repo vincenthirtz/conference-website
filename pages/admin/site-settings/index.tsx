@@ -39,14 +39,6 @@ const KNOWN_SETTINGS = [
     type: 'url',
   },
   {
-    key: 'mixte_tournament_id',
-    label: 'ID du tournoi mixte',
-    description:
-      "UUID du tournoi mixte utilisé pour le bouton d'inscription sur la page d'accueil",
-    placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
-    type: 'text',
-  },
-  {
     key: 'cotisation_amount',
     label: 'Montant de la cotisation annuelle',
     description:
