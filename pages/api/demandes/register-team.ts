@@ -7,6 +7,10 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
+import {
+  getManagedTeam,
+  TEAM_MANAGEMENT_FORBIDDEN,
+} from '@/utils/teams/managementAccess';
 
 import { logger } from '../../../utils/logger';
 export type RegisterTeamBody = {
@@ -62,7 +66,7 @@ export default withAuthRoute(async function handler(
     }
     const message = rawMessage?.slice(0, 1000) || null;
 
-    // Verify team exists and user is captain
+    // Verify team exists
     const { data: team, error: teamErr } = await supabaseAdmin
       .from('teams')
       .select('id, name, captain_id, is_active')
@@ -77,9 +81,12 @@ export default withAuthRoute(async function handler(
       return res.status(400).json({ error: "L'equipe est desactivee." });
     }
 
-    if (team.captain_id !== userId) {
+    // Verify user can manage the team (captain or manager)
+    const access = await getManagedTeam(userId);
+    if (!access || access.teamId !== team.id) {
       return res.status(403).json({
-        error: "Seul le capitaine de l'equipe peut soumettre une inscription.",
+        error:
+          "Seul le capitaine ou un manager de l'equipe peut soumettre une inscription.",
       });
     }
 

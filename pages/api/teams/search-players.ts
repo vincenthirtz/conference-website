@@ -6,6 +6,10 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { escapePostgrestValue } from '@/utils/apiHelpers';
 import { withAuthRoute } from '@/utils/staff';
+import {
+  getManagedTeam,
+  TEAM_MANAGEMENT_FORBIDDEN,
+} from '@/utils/teams/managementAccess';
 
 import { logger } from '../../../utils/logger';
 type PlayerResult = {
@@ -33,15 +37,10 @@ export default withAuthRoute(async function handler(
   )
     return;
 
-  // Check if user is captain of a team
-  const { data: captainTeam } = await supabaseAdmin
-    .from('teams')
-    .select('id, name')
-    .eq('captain_id', user.id)
-    .maybeSingle();
-
-  if (!captainTeam) {
-    return res.status(403).json({ error: 'You must be a team captain' });
+  // Check if user can manage a team (captain or manager)
+  const access = await getManagedTeam(user.id);
+  if (!access) {
+    return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
   }
 
   const { q } = req.query;

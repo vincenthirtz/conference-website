@@ -30,6 +30,7 @@ export default function PlayerRequestsPage() {
   // Contexte joueur
   const [hasTeam, setHasTeam] = useState(false);
   const [isCaptain, setIsCaptain] = useState(false);
+  const [isManager, setIsManager] = useState(false);
   const [myTeamId, setMyTeamId] = useState<string | null>(null);
 
   // Equipes
@@ -78,7 +79,8 @@ export default function PlayerRequestsPage() {
             setHasTeam(true);
             setMyTeamId(data.team.id);
             setIsCaptain(data.isCaptain || false);
-            if (data.isCaptain) {
+            setIsManager(data.isManager || false);
+            if (data.isCaptain || data.isManager) {
               setTeamMembers(
                 (data.members || []).filter(
                   (m: { user_id: string }) => m.user_id !== user.id
@@ -384,8 +386,8 @@ export default function PlayerRequestsPage() {
                   </div>
                 ) : (
                   <>
-                    {/* Mode toggle pour les capitaines */}
-                    {isCaptain && (
+                    {/* Mode toggle pour les capitaines/managers */}
+                    {(isCaptain || isManager) && (
                       <div className="flex gap-2 mb-6">
                         <button
                           type="button"
@@ -434,8 +436,8 @@ export default function PlayerRequestsPage() {
                       </div>
                     )}
 
-                    {/* Mode "proposer un transfert" (capitaine uniquement) */}
-                    {isCaptain && transferMode === 'propose' && (
+                    {/* Mode "proposer un transfert" (capitaine ou manager) */}
+                    {(isCaptain || isManager) && transferMode === 'propose' && (
                       <form
                         onSubmit={handleSubmitTransfer}
                         className="space-y-6"
@@ -567,8 +569,8 @@ export default function PlayerRequestsPage() {
                       </form>
                     )}
 
-                    {/* Mode "mon transfert" (joueur non-capitaine) */}
-                    {!isCaptain && (
+                    {/* Mode "mon transfert" (joueur non-capitaine ou manager en self) */}
+                    {!isCaptain && transferMode === 'self' && (
                       <form
                         onSubmit={handleSubmitTransfer}
                         className="space-y-6"
@@ -660,12 +662,12 @@ export default function PlayerRequestsPage() {
                       </Link>
                     </p>
                   </div>
-                ) : !isCaptain ? (
+                ) : !isCaptain && !isManager ? (
                   <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 text-sm text-amber-200">
-                    <p className="font-semibold mb-1">Capitaine requis</p>
+                    <p className="font-semibold mb-1">Capitaine ou manager requis</p>
                     <p>
-                      Seul le capitaine de l&apos;equipe peut envoyer une
-                      demande de scrim.
+                      Seul le capitaine ou un manager de l&apos;equipe peut
+                      envoyer une demande de scrim.
                     </p>
                   </div>
                 ) : (

@@ -14,17 +14,20 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 import { CHECKIN_OPEN_MINUTES } from '@/utils/checkin';
+import { getManagedTeam } from '@/utils/teams/managementAccess';
 
 export type PlayerNotificationsPayload = {
   hasTeam: boolean;
+  /** True when the user is the team captain OR a team manager. */
   isCaptain: boolean;
+  isManager: boolean;
   /**
-   * The captain's team id, when applicable. Exposed so client realtime
-   * subscriptions can filter by it (`demandes.team_id=eq.<id>`) without an
-   * extra round-trip.
+   * Id of the team the user can manage (captain or manager). Exposed so client
+   * realtime subscriptions can filter by it (`demandes.team_id=eq.<id>`)
+   * without an extra round-trip.
    */
   captainTeamId: string | null;
-  /** The user's membership team id (== captainTeamId for captains). */
+  /** The user's membership team id (== captainTeamId when manager/captain). */
   memberTeamId: string | null;
   unreadMessages: number;
   pendingScrims: number;
@@ -32,16 +35,6 @@ export type PlayerNotificationsPayload = {
   checkinPending: 0 | 1;
   total: number;
 };
-
-async function countCaptainTeam(userId: string) {
-  const { data } = await supabaseAdmin!
-    .from('teams')
-    .select('id')
-    .eq('captain_id', userId)
-    .eq('is_active', true)
-    .maybeSingle();
-  return data?.id ?? null;
-}
 
 async function countMembership(userId: string) {
   const { data } = await supabaseAdmin!
@@ -68,17 +61,20 @@ export default withAuthRoute(async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const captainTeamId = await countCaptainTeam(user.id);
-  const memberTeamId = captainTeamId ?? (await countMembership(user.id));
+  const access = await getManagedTeam(user.id);
+  const managedTeamId = access?.teamId ?? null;
+  const memberTeamId = managedTeamId ?? (await countMembership(user.id));
   const hasTeam = !!memberTeamId;
-  const isCaptain = !!captainTeamId;
+  const isCaptain = !!access?.isCaptain;
+  const isManager = !!access?.isManager;
+  const canManageInbox = !!access; // captain ou manager
 
   let unreadMessages = 0;
   let pendingScrims = 0;
   let pendingJoinRequests = 0;
   let checkinPending: 0 | 1 = 0;
 
-  if (isCaptain && captainTeamId) {
+  if (canManageInbox && managedTeamId) {
     // All inbound demandes targeting this team. Messages, scrims and joins
     // share the `demandes` table; we discriminate on `type`.
     //
@@ -88,7 +84,7 @@ export default withAuthRoute(async function handler(
     const { count: unread } = await supabaseAdmin!
       .from('demandes')
       .select('id', { count: 'exact', head: true })
-      .eq('team_id', captainTeamId)
+      .eq('team_id', managedTeamId)
       .eq('type', 'captain_message')
       .eq('status', 'pending');
     unreadMessages = unread ?? 0;
@@ -96,7 +92,7 @@ export default withAuthRoute(async function handler(
     const { count: scrims } = await supabaseAdmin!
       .from('demandes')
       .select('id', { count: 'exact', head: true })
-      .eq('team_id', captainTeamId)
+      .eq('team_id', managedTeamId)
       .eq('type', 'scrim')
       .eq('status', 'pending');
     pendingScrims = scrims ?? 0;
@@ -104,7 +100,7 @@ export default withAuthRoute(async function handler(
     const { count: joins } = await supabaseAdmin!
       .from('demandes')
       .select('id', { count: 'exact', head: true })
-      .eq('team_id', captainTeamId)
+      .eq('team_id', managedTeamId)
       .eq('type', 'join')
       .eq('status', 'pending');
     pendingJoinRequests = joins ?? 0;
@@ -149,7 +145,8 @@ export default withAuthRoute(async function handler(
   return res.status(200).json({
     hasTeam,
     isCaptain,
-    captainTeamId: captainTeamId ?? null,
+    isManager,
+    captainTeamId: managedTeamId,
     memberTeamId: memberTeamId ?? null,
     unreadMessages,
     pendingScrims,

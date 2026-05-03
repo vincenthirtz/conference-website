@@ -8,6 +8,10 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { notifyScrimRequest } from '@/utils/discord';
 import { withAuthRoute } from '@/utils/staff';
+import {
+  getManagedTeam,
+  TEAM_MANAGEMENT_FORBIDDEN,
+} from '@/utils/teams/managementAccess';
 
 import { logger } from '../../../utils/logger';
 export type ScrimRequestBody = {
@@ -60,38 +64,24 @@ export default withAuthRoute(async function handler(
     }
     const message = rawMessage?.slice(0, 1000) || null;
 
-    // Verifier que le joueur est dans une equipe et est capitaine
-    const { data: currentMembership, error: memberErr } = await supabaseAdmin
-      .from('team_members')
-      .select('id, team_id')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (memberErr) {
-      logger.error('[demandes/scrim] check member error:', memberErr);
-      return res.status(500).json({ error: 'Verification error.' });
-    }
-
-    if (!currentMembership) {
-      return res.status(400).json({
-        error: "Tu n'es membre d'aucune equipe.",
-      });
+    // Verifier que l'user est capitaine ou manager d'une equipe active
+    const access = await getManagedTeam(userId);
+    if (!access) {
+      return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
     }
 
     const { data: myTeam } = await supabaseAdmin
       .from('teams')
-      .select('id, captain_id, name')
-      .eq('id', currentMembership.team_id)
+      .select('id, name')
+      .eq('id', access.teamId)
       .maybeSingle();
 
-    if (myTeam?.captain_id !== userId) {
-      return res.status(403).json({
-        error: 'Seul le capitaine peut envoyer une demande de scrim.',
-      });
+    if (!myTeam) {
+      return res.status(404).json({ error: 'Team introuvable.' });
     }
 
     // Ne peut pas demander un scrim contre sa propre equipe
-    if (currentMembership.team_id === teamId) {
+    if (access.teamId === teamId) {
       return res.status(400).json({
         error: 'Tu ne peux pas demander un scrim contre ta propre equipe.',
       });

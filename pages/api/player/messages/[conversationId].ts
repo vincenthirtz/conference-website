@@ -8,6 +8,10 @@ import type { User } from '@supabase/supabase-js';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
+import {
+  getManagedTeam,
+  TEAM_MANAGEMENT_FORBIDDEN,
+} from '@/utils/teams/managementAccess';
 
 import { logger } from '../../../../utils/logger';
 type CaptainTeam = { id: string; captain_id: string | null; name: string };
@@ -16,32 +20,20 @@ async function loadCaptainTeam(
   res: NextApiResponse,
   user: User
 ): Promise<CaptainTeam | null> {
-  const { data: membership, error: memberErr } = await supabaseAdmin
-    .from('team_members')
-    .select('id, team_id')
-    .eq('user_id', user.id)
-    .maybeSingle();
-
-  if (memberErr) {
-    res.status(500).json({ error: 'Verification error.' });
-    return null;
-  }
-
-  if (!membership) {
-    res.status(400).json({ error: "Tu n'es membre d'aucune equipe." });
+  const access = await getManagedTeam(user.id);
+  if (!access) {
+    res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
     return null;
   }
 
   const { data: myTeam } = await supabaseAdmin
     .from('teams')
     .select('id, captain_id, name')
-    .eq('id', membership.team_id)
+    .eq('id', access.teamId)
     .maybeSingle();
 
-  if (!myTeam || myTeam.captain_id !== user.id) {
-    res
-      .status(403)
-      .json({ error: 'Seul le capitaine peut utiliser la messagerie.' });
+  if (!myTeam) {
+    res.status(404).json({ error: 'Team introuvable.' });
     return null;
   }
 

@@ -3,6 +3,10 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { sanitizeUrl } from '@/utils/apiHelpers';
 import { withAuthRoute } from '@/utils/staff';
+import {
+  getManagedTeam,
+  TEAM_MANAGEMENT_FORBIDDEN,
+} from '@/utils/teams/managementAccess';
 
 import { logger } from '../../../../utils/logger';
 type MemberRow = {
@@ -28,6 +32,7 @@ type GetResponse = {
   team: TeamRow | null;
   members: MemberRow[];
   isCaptain: boolean;
+  isManager: boolean;
 };
 
 type UpdateBody = {
@@ -72,6 +77,7 @@ export default withAuthRoute(async function handler(
         team: null,
         members: [],
         isCaptain: false,
+        isManager: false,
       });
     }
 
@@ -79,6 +85,10 @@ export default withAuthRoute(async function handler(
     const teamRaw = (membership as any).teams as any;
     const captainId = teamRaw.captain_id as string | null;
     const isCaptain = captainId === userId;
+    const access = await getManagedTeam(userId);
+    const isManager = !!(
+      access?.isManager && access?.teamId === teamId
+    );
     const team: TeamRow & { is_joinable?: boolean } = {
       id: teamRaw.id,
       name: teamRaw.name,
@@ -113,6 +123,7 @@ export default withAuthRoute(async function handler(
       team,
       members,
       isCaptain,
+      isManager,
     });
   }
 
@@ -122,7 +133,12 @@ export default withAuthRoute(async function handler(
       return res.status(400).json({ error: 'teamId required.' });
     }
 
-    // Vérifier capitaine via teams.captain_id
+    // Vérifier que l'utilisateur peut gérer cette team (capitaine ou manager)
+    const access = await getManagedTeam(userId);
+    if (!access || access.teamId !== body.teamId) {
+      return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
+    }
+
     const { data: teamData, error: teamErr } = await supabaseAdmin
       .from('teams')
       .select('captain_id')
@@ -131,12 +147,6 @@ export default withAuthRoute(async function handler(
 
     if (teamErr || !teamData) {
       return res.status(404).json({ error: 'Team not found.' });
-    }
-
-    if (teamData.captain_id !== userId) {
-      return res
-        .status(403)
-        .json({ error: 'Access restricted to team captain.' });
     }
 
     // Validations
@@ -202,9 +212,12 @@ export default withAuthRoute(async function handler(
       return res.status(500).json({ error: 'Failed to update team.' });
     }
 
-    return res
-      .status(200)
-      .json({ team: updatedTeam, members: [], isCaptain: true });
+    return res.status(200).json({
+      team: updatedTeam,
+      members: [],
+      isCaptain: access.isCaptain,
+      isManager: access.isManager,
+    });
   }
 
   res.setHeader('Allow', 'GET,PATCH');

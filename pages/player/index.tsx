@@ -74,20 +74,22 @@ const SVG_PATHS = {
 function buildQuickActions(args: {
   team: NonNullable<TeamInfo>;
   isCaptain: boolean;
+  isManager: boolean;
   unreadMessages: number;
 }): QuickActionProps[] {
-  const { team, isCaptain, unreadMessages } = args;
+  const { team, isCaptain, isManager, unreadMessages } = args;
+  const canManage = isCaptain || isManager;
   const actions: QuickActionProps[] = [];
 
   actions.push({
     href: '/player/requests?tab=transfer',
-    label: isCaptain ? 'Proposer un transfert' : 'Demander un transfert',
-    description: isCaptain ? 'Transférer un joueur' : 'Vers une autre équipe',
+    label: canManage ? 'Proposer un transfert' : 'Demander un transfert',
+    description: canManage ? 'Transférer un joueur' : 'Vers une autre équipe',
     iconPath: SVG_PATHS.transfer,
     tone: 'purple',
   });
 
-  if (isCaptain) {
+  if (canManage) {
     actions.push({
       href: '/player/requests?tab=scrim',
       label: 'Proposer un scrim',
@@ -128,6 +130,7 @@ export default function PlayerDashboard() {
   const [team, setTeam] = useState<TeamInfo>(null);
   const [members, setMembers] = useState<TeamMemberLite[]>([]);
   const [isCaptain, setIsCaptain] = useState(false);
+  const [isManager, setIsManager] = useState(false);
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [pendingScrims, setPendingScrims] = useState<PendingScrim[]>([]);
   const [scrimActionId, setScrimActionId] = useState<string | null>(null);
@@ -158,13 +161,16 @@ export default function PlayerDashboard() {
     ]);
 
     let isCaptainNow = false;
+    let isManagerNow = false;
 
     if (teamRes.ok) {
       const data = await teamRes.json();
       setTeam(data.team || null);
       setMembers(Array.isArray(data.members) ? data.members : []);
       isCaptainNow = data.isCaptain || false;
+      isManagerNow = data.isManager || false;
       setIsCaptain(isCaptainNow);
+      setIsManager(isManagerNow);
     }
 
     const allDemandes: Demande[] = [];
@@ -186,8 +192,8 @@ export default function PlayerDashboard() {
 
     setDemandes(allDemandes);
 
-    // Captain-only: load pending scrims and unread messages
-    if (isCaptainNow) {
+    // Captain or manager: load pending scrims and unread messages
+    if (isCaptainNow || isManagerNow) {
       const [scrimRes, msgRes] = await Promise.all([
         fetch('/api/teams/scrim-requests', {
           headers: { Authorization: `Bearer ${accessToken}` },
@@ -383,6 +389,7 @@ export default function PlayerDashboard() {
                 {buildQuickActions({
                   team,
                   isCaptain,
+                  isManager,
                   unreadMessages,
                 }).map((action) => (
                   <QuickAction key={action.href} {...action} />
@@ -391,8 +398,8 @@ export default function PlayerDashboard() {
             </div>
           )}
 
-          {/* Scrims en attente (capitaine) */}
-          {isCaptain && pendingScrims.length > 0 && (
+          {/* Scrims en attente (capitaine ou manager) */}
+          {(isCaptain || isManager) && pendingScrims.length > 0 && (
             <div className="mt-6 rounded-2xl border border-blue-400/20 bg-blue-500/5 backdrop-blur-xl p-6">
               <h2 className="text-lg font-semibold mb-4">
                 Demandes de scrim en attente

@@ -9,6 +9,10 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { withAuthRoute } from '@/utils/staff';
+import {
+  getManagedTeam,
+  TEAM_MANAGEMENT_FORBIDDEN,
+} from '@/utils/teams/managementAccess';
 
 import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
@@ -21,18 +25,20 @@ export default withAuthRoute(async function handler(
 
   const userId = user.id;
 
-  // Check captain
+  // Check if user can manage a team (captain or manager)
+  const access = await getManagedTeam(userId);
+  if (!access) {
+    return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
+  }
+
   const { data: captainTeam, error: teamErr } = await supabaseAdmin
     .from('teams')
     .select('id, name, logo_url')
-    .eq('captain_id', userId)
-    .eq('is_active', true)
+    .eq('id', access.teamId)
     .maybeSingle();
 
   if (teamErr || !captainTeam) {
-    return res
-      .status(403)
-      .json({ error: "Tu dois etre capitaine d'une equipe active." });
+    return res.status(404).json({ error: 'Team introuvable.' });
   }
 
   if (req.method === 'GET') {

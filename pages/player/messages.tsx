@@ -57,6 +57,7 @@ export default function MessagesPage() {
   const { token, loading: authLoading, ready } = usePlayerSession();
   const [loading, setLoading] = useState(true);
   const [isCaptain, setIsCaptain] = useState(false);
+  const [isManager, setIsManager] = useState(false);
   const [hasTeam, setHasTeam] = useState(false);
 
   // Inbox
@@ -103,6 +104,7 @@ export default function MessagesPage() {
             setHasTeam(true);
             setMyTeamId(data.team.id);
             setIsCaptain(data.isCaptain || false);
+            setIsManager(data.isManager || false);
           }
         }
       } catch (err) {
@@ -134,20 +136,22 @@ export default function MessagesPage() {
     }
   }, [token]);
 
+  const canManage = isCaptain || isManager;
+
   useEffect(() => {
-    if (token && isCaptain) {
+    if (token && canManage) {
       loadConversations();
     }
-  }, [token, isCaptain, loadConversations]);
+  }, [token, canManage, loadConversations]);
 
   // Open conversation from URL query
   useEffect(() => {
     const convId = router.query.conv as string;
-    if (convId && token && isCaptain) {
+    if (convId && token && canManage) {
       openConversation(convId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router.query.conv, token, isCaptain]);
+  }, [router.query.conv, token, canManage]);
 
   const openConversation = async (convId: string) => {
     setActiveConvId(convId);
@@ -215,7 +219,7 @@ export default function MessagesPage() {
   // gives us coarse filtering on top-level columns, so we further narrow
   // to captain_message rows belonging to the active conversation in JS.
   useRealtimeChannel({
-    enabled: !!activeConvId && !!myTeamId && !!isCaptain,
+    enabled: !!activeConvId && !!myTeamId && canManage,
     channel: activeConvId ? `messages-${activeConvId}` : 'messages-inactive',
     table: 'demandes',
     filter: myTeamId ? `team_id=eq.${myTeamId}` : undefined,
@@ -335,7 +339,7 @@ export default function MessagesPage() {
     return <PlayerPageSkeleton rows={3} />;
   }
 
-  if (!hasTeam || !isCaptain) {
+  if (!hasTeam || !canManage) {
     return (
       <>
         <Head>

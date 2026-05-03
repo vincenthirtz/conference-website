@@ -14,6 +14,10 @@ import {
   isTeamRosterLocked,
   rosterLockErrorMessage,
 } from '@/utils/teams/rosterLock';
+import {
+  getManagedTeam,
+  TEAM_MANAGEMENT_FORBIDDEN,
+} from '@/utils/teams/managementAccess';
 import { withAuthRoute } from '@/utils/staff';
 
 import { logger } from '../../../utils/logger';
@@ -48,15 +52,20 @@ export default withAuthRoute(async function handler(
   )
     return;
 
-  // Check if user is captain of a team
+  // Check if user can manage a team (captain OR manager)
+  const access = await getManagedTeam(user.id);
+  if (!access) {
+    return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
+  }
+
   const { data: captainTeam } = await supabaseAdmin
     .from('teams')
     .select('id, name, logo_url')
-    .eq('captain_id', user.id)
+    .eq('id', access.teamId)
     .maybeSingle();
 
   if (!captainTeam) {
-    return res.status(403).json({ error: 'You must be a team captain' });
+    return res.status(404).json({ error: 'Team not found' });
   }
 
   // Garde roster lock : un capitaine ne peut PAS forcer le verrouillage.

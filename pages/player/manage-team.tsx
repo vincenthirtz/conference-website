@@ -54,6 +54,7 @@ export default function ManageTeamPage() {
   const [team, setTeam] = useState<TeamInfo | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [isCaptain, setIsCaptain] = useState(false);
+  const [isManager, setIsManager] = useState(false);
   const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
 
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +82,7 @@ export default function ManageTeamPage() {
       setTeam(data.team || null);
       setMembers(data.members || []);
       setIsCaptain(data.isCaptain || false);
+      setIsManager(data.isManager || false);
     }
 
     if (requestsRes.ok) {
@@ -230,13 +232,14 @@ export default function ManageTeamPage() {
     return <PlayerPageSkeleton rows={4} />;
   }
 
-  if (!team || !isCaptain) {
+  if (!team || (!isCaptain && !isManager)) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white flex items-center justify-center px-4">
         <div className="text-center">
           <h1 className="text-xl font-bold mb-4">Acces refuse</h1>
           <p className="text-gray-400 mb-6">
-            Tu dois etre capitaine d&apos;une equipe pour acceder a cette page.
+            Tu dois etre capitaine ou manager d&apos;une equipe pour acceder a
+            cette page.
           </p>
           <Link
             href="/player"

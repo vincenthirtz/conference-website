@@ -493,7 +493,7 @@ describe('/api/demandes/transfer', () => {
 
   /* ---- captain-proposed transfer paths ---- */
 
-  it('POST 400 when captain proposing but not member of any team', async () => {
+  it('POST 403 when proposing transfer but no team to manage', async () => {
     setupUser();
     const res = makeRes();
     await transferHandler(
@@ -503,7 +503,7 @@ describe('/api/demandes/transfer', () => {
       }),
       res
     );
-    expect(res.statusCode).toBe(400);
+    expect(res.statusCode).toBe(403);
   });
 
   it('POST 403 when proposing player but not captain of own team', async () => {

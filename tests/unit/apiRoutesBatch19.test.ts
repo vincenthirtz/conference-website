@@ -123,7 +123,7 @@ describe('/api/demandes/scrim', () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it('POST 400 when user is not in any team', async () => {
+  it('POST 403 when user is not captain or manager of any team', async () => {
     setAuthUser({ id: 'user-1' });
     store.team_members = [];
     const res = makeRes();
@@ -131,7 +131,7 @@ describe('/api/demandes/scrim', () => {
       makeReq({ method: 'POST', body: { teamId: 'team-x' } }, true),
       res
     );
-    expect(res.statusCode).toBe(400);
+    expect(res.statusCode).toBe(403);
   });
 
   it('POST 403 when user not captain', async () => {

@@ -87,11 +87,11 @@ describe('/api/player/messages', () => {
     expect(res.statusCode).toBe(401);
   });
 
-  it('400 when not a member of any team', async () => {
+  it('403 when not captain or manager of any team', async () => {
     setAuthUser({ id: 'u1', email: 'u@x.com', user_metadata: {} });
     const res = makeRes();
     await messagesHandler(makeAuthedReq({ method: 'GET' }), res);
-    expect(res.statusCode).toBe(400);
+    expect(res.statusCode).toBe(403);
   });
 
   it('403 when not captain', async () => {
@@ -371,7 +371,7 @@ describe('/api/player/messages/[conversationId]', () => {
     expect((store.demandes as any[])[0].status).toBe('approved');
   });
 
-  it('400 when user is not in any team', async () => {
+  it('403 when user is not captain or manager of any team', async () => {
     setAuthUser({ id: 'lone-user', email: 'l@x.com', user_metadata: {} });
     store.team_members = [];
     const res = makeRes();
@@ -382,7 +382,7 @@ describe('/api/player/messages/[conversationId]', () => {
       }),
       res
     );
-    expect(res.statusCode).toBe(400);
+    expect(res.statusCode).toBe(403);
   });
 
   it('403 when user is not the captain', async () => {

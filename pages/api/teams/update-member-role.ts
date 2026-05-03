@@ -8,6 +8,10 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID, validateRole } from '@/utils/apiHelpers';
 import { withAuthRoute } from '@/utils/staff';
+import {
+  getManagedTeam,
+  TEAM_MANAGEMENT_FORBIDDEN,
+} from '@/utils/teams/managementAccess';
 
 import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
@@ -32,18 +36,20 @@ export default withAuthRoute(async function handler(
 
   const userId = user.id;
 
-  // Check if user is captain of a team
+  // Check if user can manage a team (captain or manager)
+  const access = await getManagedTeam(userId);
+  if (!access) {
+    return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
+  }
+
   const { data: captainTeam, error: teamErr } = await supabaseAdmin
     .from('teams')
     .select('id, name')
-    .eq('captain_id', userId)
-    .eq('is_active', true)
+    .eq('id', access.teamId)
     .maybeSingle();
 
   if (teamErr || !captainTeam) {
-    return res
-      .status(403)
-      .json({ error: "Tu dois etre capitaine d'une equipe active." });
+    return res.status(404).json({ error: 'Team introuvable.' });
   }
 
   const { memberId, role } = req.body || {};
@@ -57,6 +63,13 @@ export default withAuthRoute(async function handler(
   }
 
   const newRole = validateRole(role);
+
+  // Anti-escalation : seul le capitaine peut promouvoir un membre au role 'manager'.
+  if (newRole === 'manager' && !access.isCaptain) {
+    return res.status(403).json({
+      error: "Seul le capitaine peut promouvoir un membre au role 'manager'.",
+    });
+  }
 
   // Fetch the member to verify they belong to this team
   const { data: member, error: memberErr } = await supabaseAdmin
@@ -77,6 +90,13 @@ export default withAuthRoute(async function handler(
     return res
       .status(400)
       .json({ error: 'Tu ne peux pas changer ton propre role.' });
+  }
+
+  // Anti-escalation : un manager ne peut pas degrader un autre manager.
+  if (member.role === 'manager' && !access.isCaptain) {
+    return res.status(403).json({
+      error: "Seul le capitaine peut modifier le role d'un autre manager.",
+    });
   }
 
   // Update role and is_substitute flag accordingly

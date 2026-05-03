@@ -46,6 +46,7 @@ type ApiResponse = {
   team: TeamLite | null;
   members: Member[];
   isCaptain: boolean;
+  isManager?: boolean;
   error?: string;
 };
 
@@ -182,6 +183,7 @@ function MyTeamPage({ staff }: StaffProps) {
             team: json.team,
             members: json.members || [],
             isCaptain: true, // Admin has full access
+            isManager: false,
           });
           setForm({
             name: json.team.name || '',
@@ -468,11 +470,12 @@ function MyTeamPage({ staff }: StaffProps) {
   // Load join requests when team data changes
   const teamId = data?.team?.id;
   const isCaptain = data?.isCaptain;
+  const isManager = data?.isManager;
   useEffect(() => {
-    if (teamId && (isCaptain || isStaffAdmin)) {
+    if (teamId && (isCaptain || isManager || isStaffAdmin)) {
       loadJoinRequests();
     }
-  }, [teamId, isCaptain, isStaffAdmin, loadJoinRequests]);
+  }, [teamId, isCaptain, isManager, isStaffAdmin, loadJoinRequests]);
 
   // Sync isJoinable state from team data
   useEffect(() => {
@@ -481,7 +484,7 @@ function MyTeamPage({ staff }: StaffProps) {
     }
   }, [data?.team]);
 
-  const canEdit = isStaffAdmin || data?.isCaptain;
+  const canEdit = isStaffAdmin || data?.isCaptain || data?.isManager;
 
   const renderMembers = () => {
     if (!data?.team) return null;
@@ -611,7 +614,9 @@ function MyTeamPage({ staff }: StaffProps) {
                     ? 'Mode administrateur : vous pouvez gerer toutes les equipes'
                     : data?.isCaptain
                       ? 'Vous etes capitaine : modification autorisee'
-                      : 'Vue en lecture seule'}
+                      : data?.isManager
+                        ? 'Vous etes manager : modification autorisee'
+                        : 'Vue en lecture seule'}
                 </p>
               </div>
 

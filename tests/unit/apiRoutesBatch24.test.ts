@@ -379,7 +379,7 @@ describe('/api/admin/teams/my', () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it('PATCH 404 when team not found', async () => {
+  it('PATCH 403 when team not found and user has no team', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [];
     const res = makeRes();
@@ -390,7 +390,9 @@ describe('/api/admin/teams/my', () => {
       ),
       res
     );
-    expect(res.statusCode).toBe(404);
+    // The management-access check now runs before the team lookup,
+    // so an unknown teamId on a user with no team yields 403, not 404.
+    expect(res.statusCode).toBe(403);
   });
 
   it('PATCH 403 when not captain', async () => {

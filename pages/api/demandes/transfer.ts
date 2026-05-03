@@ -7,6 +7,10 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
+import {
+  getManagedTeam,
+  TEAM_MANAGEMENT_FORBIDDEN,
+} from '@/utils/teams/managementAccess';
 
 import { logger } from '../../../utils/logger';
 export type TransferRequestBody = {
@@ -63,41 +67,27 @@ export default withAuthRoute(async function handler(
     }
     const message = rawMessage?.slice(0, 1000) || null;
 
-    // ─── Captain-proposed transfer: propose le transfert d'un joueur ───
+    // ─── Captain/manager-proposed transfer: propose le transfert d'un joueur ───
     if (body.targetPlayerId?.trim()) {
       const targetPlayerId = body.targetPlayerId.trim();
 
-      // Verifier que le demandeur est capitaine
-      const { data: captainMembership, error: captMemErr } = await supabaseAdmin
-        .from('team_members')
-        .select('id, team_id')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (captMemErr) {
-        logger.error('[demandes/transfer] captain check error:', captMemErr);
-        return res.status(500).json({ error: 'Verification error.' });
-      }
-
-      if (!captainMembership) {
-        return res
-          .status(400)
-          .json({ error: "Tu n'es membre d'aucune equipe." });
+      // Verifier que le demandeur peut gerer une equipe (capitaine ou manager)
+      const access = await getManagedTeam(userId);
+      if (!access) {
+        return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
       }
 
       const { data: captTeam } = await supabaseAdmin
         .from('teams')
-        .select('id, captain_id, name')
-        .eq('id', captainMembership.team_id)
+        .select('id, name')
+        .eq('id', access.teamId)
         .maybeSingle();
 
-      if (captTeam?.captain_id !== userId) {
-        return res.status(403).json({
-          error: "Seul le capitaine peut proposer le transfert d'un joueur.",
-        });
+      if (!captTeam) {
+        return res.status(404).json({ error: 'Team introuvable.' });
       }
 
-      // Verifier que le joueur cible est dans l'equipe du capitaine
+      // Verifier que le joueur cible est dans l'equipe geree
       const { data: playerMembership, error: playerMemErr } =
         await supabaseAdmin
           .from('team_members')
