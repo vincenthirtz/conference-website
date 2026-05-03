@@ -206,6 +206,37 @@ function AdminSiteSettingsPage({ staff }: Props) {
                   </div>
                 </div>
               </Link>
+
+              <Link
+                href="/admin/site-settings/team-roles"
+                className="group flex items-start gap-3 p-4 rounded-xl bg-neutral-900/50 border border-neutral-700/50 hover:border-emerald-500/50 hover:bg-neutral-900/80 transition-colors"
+              >
+                <div className="w-10 h-10 rounded-xl bg-emerald-600/20 text-emerald-300 flex items-center justify-center flex-shrink-0">
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-5.13a4 4 0 11-8 0 4 4 0 018 0zm6 0a4 4 0 11-8 0 4 4 0 018 0z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <div className="font-semibold text-white group-hover:text-emerald-200 transition-colors">
+                    Rôles d&apos;équipe
+                  </div>
+                  <div className="text-xs text-neutral-400 mt-0.5">
+                    Liste des rôles proposés dans les selects des formulaires
+                    d&apos;ajout / édition de membre.
+                  </div>
+                </div>
+              </Link>
             </div>
           </section>
 

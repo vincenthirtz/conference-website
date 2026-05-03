@@ -4,8 +4,15 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
+import { supabaseAdmin } from '@/utils/supabase';
+import {
+  loadTeamRolesFromSupabase,
+  DEFAULT_TEAM_ROLES,
+  type TeamRole,
+} from '@/utils/teamRoles';
 
 import { logger } from '../../../utils/logger';
+
 type StaffShape = {
   id: string;
   role: string;
@@ -14,6 +21,7 @@ type StaffShape = {
 
 type StaffProps = {
   staff: StaffShape;
+  teamRoles: TeamRole[];
 };
 
 type TeamOption = {
@@ -34,9 +42,17 @@ type AddMemberResponse = {
   info?: string;
 };
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage<{ teamRoles: TeamRole[] }>(
+  'manager',
+  async () => {
+    const teamRoles = supabaseAdmin
+      ? await loadTeamRolesFromSupabase(supabaseAdmin)
+      : DEFAULT_TEAM_ROLES;
+    return { teamRoles };
+  }
+);
 
-function AdminAddTeamMemberPage({ staff }: StaffProps) {
+function AdminAddTeamMemberPage({ staff, teamRoles }: StaffProps) {
   const router = useRouter();
   const { addToast } = useToast();
 
@@ -239,13 +255,17 @@ function AdminAddTeamMemberPage({ staff }: StaffProps) {
                     <label className="block text-sm text-neutral-300 mb-1">
                       Role
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={role}
                       onChange={(e) => setRole(e.target.value)}
                       className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                      placeholder="joueur / coach / sub"
-                    />
+                    >
+                      {teamRoles.map((r) => (
+                        <option key={r.value} value={r.value}>
+                          {r.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <label className="inline-flex items-center gap-3 mt-6 text-sm cursor-pointer">

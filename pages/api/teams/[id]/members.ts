@@ -10,6 +10,10 @@ import {
   getManagedTeam,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
+import {
+  loadTeamRolesFromSupabase,
+  roleHasAnyPermission,
+} from '@/utils/teamRoles';
 
 import { logger } from '../../../../utils/logger';
 export default withAuthRoute(async function handler(
@@ -82,10 +86,15 @@ export default withAuthRoute(async function handler(
     });
   }
 
-  // Anti-escalation : un manager ne peut pas retirer un autre manager
-  if (member.role === 'manager' && !access.isCaptain) {
+  // Anti-escalation : un membre privilegie (role accordant des permissions)
+  // ne peut etre retire que par le capitaine.
+  const teamRoles = await loadTeamRolesFromSupabase(supabaseAdmin);
+  if (
+    roleHasAnyPermission(teamRoles, member.role) &&
+    !access.isCaptain
+  ) {
     return res.status(403).json({
-      error: 'Seul le capitaine peut retirer un autre manager.',
+      error: 'Seul le capitaine peut retirer un autre membre privilégié.',
     });
   }
 

@@ -12,6 +12,10 @@ import {
   getManagedTeam,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
+import {
+  loadTeamRolesFromSupabase,
+  roleHasAnyPermission,
+} from '@/utils/teamRoles';
 
 import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
@@ -63,11 +67,13 @@ export default withAuthRoute(async function handler(
   }
 
   const newRole = validateRole(role);
+  const teamRoles = await loadTeamRolesFromSupabase(supabaseAdmin);
 
-  // Anti-escalation : seul le capitaine peut promouvoir un membre au role 'manager'.
-  if (newRole === 'manager' && !access.isCaptain) {
+  // Anti-escalation : seul le capitaine peut accorder un role privilegie
+  // (role qui ouvre >=1 permission de gestion).
+  if (roleHasAnyPermission(teamRoles, newRole) && !access.isCaptain) {
     return res.status(403).json({
-      error: "Seul le capitaine peut promouvoir un membre au role 'manager'.",
+      error: 'Seul le capitaine peut accorder un rôle privilégié.',
     });
   }
 
@@ -92,10 +98,14 @@ export default withAuthRoute(async function handler(
       .json({ error: 'Tu ne peux pas changer ton propre role.' });
   }
 
-  // Anti-escalation : un manager ne peut pas degrader un autre manager.
-  if (member.role === 'manager' && !access.isCaptain) {
+  // Anti-escalation : un membre privilegie ne peut etre degrade que par le
+  // capitaine.
+  if (
+    roleHasAnyPermission(teamRoles, member.role) &&
+    !access.isCaptain
+  ) {
     return res.status(403).json({
-      error: "Seul le capitaine peut modifier le role d'un autre manager.",
+      error: "Seul le capitaine peut modifier le rôle d'un membre privilégié.",
     });
   }
 

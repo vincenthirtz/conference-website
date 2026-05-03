@@ -6,6 +6,12 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import LogoUpload from '@/components/admin/LogoUpload';
 import { useToast } from '@/components/Toast';
+import { supabaseAdmin } from '@/utils/supabase';
+import {
+  loadTeamRolesFromSupabase,
+  DEFAULT_TEAM_ROLES,
+  type TeamRole,
+} from '@/utils/teamRoles';
 
 type StaffShape = {
   id: string;
@@ -15,6 +21,7 @@ type StaffShape = {
 
 type StaffProps = {
   staff: StaffShape;
+  teamRoles: TeamRole[];
 };
 
 type CreateTeamResponse = {
@@ -29,9 +36,17 @@ type MemberInput = {
   role: string;
 };
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage<{ teamRoles: TeamRole[] }>(
+  'manager',
+  async () => {
+    const teamRoles = supabaseAdmin
+      ? await loadTeamRolesFromSupabase(supabaseAdmin)
+      : DEFAULT_TEAM_ROLES;
+    return { teamRoles };
+  }
+);
 
-function AdminNewTeamPage({ staff }: StaffProps) {
+function AdminNewTeamPage({ staff, teamRoles }: StaffProps) {
   const router = useRouter();
   const { addToast } = useToast();
 
@@ -43,9 +58,11 @@ function AdminNewTeamPage({ staff }: StaffProps) {
   const [description, setDescription] = useState('');
   const [captainEmail, setCaptainEmail] = useState('');
 
+  const defaultRole = teamRoles[0]?.value || 'player';
+
   // Membres
   const [members, setMembers] = useState<MemberInput[]>([
-    { email: '', role: 'player' },
+    { email: '', role: defaultRole },
   ]);
 
   const [submitting, setSubmitting] = useState(false);
@@ -64,7 +81,7 @@ function AdminNewTeamPage({ staff }: StaffProps) {
   };
 
   const addMemberRow = () => {
-    setMembers((prev) => [...prev, { email: '', role: 'player' }]);
+    setMembers((prev) => [...prev, { email: '', role: defaultRole }]);
   };
 
   const removeMemberRow = (index: number) => {
@@ -91,7 +108,7 @@ function AdminNewTeamPage({ staff }: StaffProps) {
           .filter((m) => m.email.trim().length > 0)
           .map((m) => ({
             email: m.email.trim(),
-            role: m.role.trim() || 'player',
+            role: m.role.trim() || defaultRole,
           })),
       };
 
@@ -330,15 +347,19 @@ function AdminNewTeamPage({ staff }: StaffProps) {
                         <label className="block text-xs text-neutral-400 mb-1">
                           Role
                         </label>
-                        <input
+                        <select
                           className="w-full px-3 py-2.5 rounded-xl bg-neutral-950/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                          type="text"
                           value={member.role}
                           onChange={(e) =>
                             handleMemberChange(index, 'role', e.target.value)
                           }
-                          placeholder="player / coach / sub..."
-                        />
+                        >
+                          {teamRoles.map((r) => (
+                            <option key={r.value} value={r.value}>
+                              {r.label}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                       <div className="flex items-end">
                         <button

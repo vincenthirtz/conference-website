@@ -7,6 +7,12 @@ import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import LogoUpload from '@/components/admin/LogoUpload';
+import { supabaseAdmin } from '@/utils/supabase';
+import {
+  loadTeamRolesFromSupabase,
+  DEFAULT_TEAM_ROLES,
+  type TeamRole,
+} from '@/utils/teamRoles';
 import type { StaffProps, TeamRow, TeamMemberRow } from '@/types/admin';
 
 type TournamentRow = {
@@ -28,9 +34,20 @@ type TournamentRegistration = TournamentRow & {
   }>;
 };
 
-export const getServerSideProps = withStaffPage('manager');
+export const getServerSideProps = withStaffPage<{ teamRoles: TeamRole[] }>(
+  'manager',
+  async () => {
+    const teamRoles = supabaseAdmin
+      ? await loadTeamRolesFromSupabase(supabaseAdmin)
+      : DEFAULT_TEAM_ROLES;
+    return { teamRoles };
+  }
+);
 
-function AdminEditTeamPage({ staff }: StaffProps) {
+function AdminEditTeamPage({
+  staff,
+  teamRoles,
+}: StaffProps & { teamRoles: TeamRole[] }) {
   const router = useRouter();
   const { teamId } = router.query as { teamId?: string };
 
@@ -1633,15 +1650,19 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                   <label className="block text-sm font-medium text-neutral-200 mb-1.5">
                     Rôle dans l&apos;équipe
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={memberForm.role}
                     onChange={(e) =>
                       setMemberForm({ ...memberForm, role: e.target.value })
                     }
                     className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/60 text-sm placeholder:text-neutral-500 transition-colors"
-                    placeholder="player / coach / sub"
-                  />
+                  >
+                    {teamRoles.map((r) => (
+                      <option key={r.value} value={r.value}>
+                        {r.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -1844,15 +1865,19 @@ function AdminEditTeamPage({ staff }: StaffProps) {
                 <label className="block text-sm text-neutral-400 mb-1">
                   Rôle
                 </label>
-                <input
-                  type="text"
+                <select
                   value={memberForm.role}
                   onChange={(e) =>
                     setMemberForm({ ...memberForm, role: e.target.value })
                   }
                   className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  placeholder="player / coach / sub"
-                />
+                >
+                  {teamRoles.map((r) => (
+                    <option key={r.value} value={r.value}>
+                      {r.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <label className="flex items-center gap-2 text-sm">

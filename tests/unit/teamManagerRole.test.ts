@@ -240,7 +240,7 @@ describe('/api/teams/update-member-role as manager', () => {
       res
     );
     expect(res.statusCode).toBe(403);
-    expect((res.body as any).error).toMatch(/manager/i);
+    expect((res.body as any).error).toMatch(/privil/i);
   });
 
   it('manager CANNOT demote another manager', async () => {

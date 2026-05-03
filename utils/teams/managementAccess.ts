@@ -1,28 +1,37 @@
-// Centralise la notion de "user pouvant gerer une team" : capitaine OU manager.
-// Les API routes qui geraient le roster, les scrims, les messages capitaine,
-// etc. doivent appeler ce helper plutot que de checker directement teams.captain_id.
+// Centralise la notion de "user pouvant gerer une team" : capitaine OU membre
+// dont le role accorde au moins une permission de gestion (config dynamique
+// dans site_settings.team_roles, cf. utils/teamRoles.ts).
+//
+// Les API routes qui gerent le roster, les scrims, les messages capitaine,
+// etc. doivent appeler ce helper plutot que de checker directement
+// teams.captain_id ou team_members.role.
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
+import {
+  loadTeamRolesFromSupabase,
+  privilegedRoleValues,
+} from '@/utils/teamRoles';
 
 export type TeamManagementAccess = {
   teamId: string;
   /** true si l'user est le captain_id de l'equipe */
   isCaptain: boolean;
-  /** true si l'user a team_members.role = 'manager' dans cette equipe */
+  /** true si l'user a un team_members.role accordant >=1 permission */
   isManager: boolean;
 };
 
 /**
- * Retourne la team que l'user gere (en tant que capitaine OU manager d'equipe),
- * ou null s'il n'a aucun droit de gestion.
+ * Retourne la team que l'user gere (en tant que capitaine OU via un role
+ * accordant des permissions de gestion), ou null s'il n'a aucun droit.
  *
  * Regles :
- *  - Un user n'a au plus qu'une "team manageriale" : on est capitaine d'une seule
- *    equipe, et on est manager dans une seule equipe (pas plus, c'est metier).
- *  - Si on est capitaine d'une equipe ET manager d'une autre, on retourne celle
- *    dont on est capitaine (priorite la plus forte).
- *  - On ne considere que les teams actives (is_active = true).
+ *  - Un user n'a au plus qu'une "team manageriale" : on est capitaine d'une
+ *    seule equipe, et on n'a un role privilegie que dans une seule equipe
+ *    (regle metier).
+ *  - Si on est capitaine d'une equipe ET on a un role privilegie dans une
+ *    autre, on retourne celle dont on est capitaine (priorite la plus forte).
+ *  - On ne considere que les teams actives implicitement (RLS / API en aval).
  */
 export async function getManagedTeam(
   userId: string
@@ -48,12 +57,16 @@ export async function getManagedTeam(
     return { teamId: captainTeam.id, isCaptain: true, isManager: false };
   }
 
-  // 2. Manager d'une team ?
+  // 2. Role privilegie (>=1 permission) dans une team ?
+  const roles = await loadTeamRolesFromSupabase(supabaseAdmin);
+  const privileged = privilegedRoleValues(roles);
+  if (privileged.length === 0) return null;
+
   const { data: managerRow, error: mgrErr } = await supabaseAdmin
     .from('team_members')
     .select('team_id')
     .eq('user_id', userId)
-    .eq('role', 'manager')
+    .in('role', privileged)
     .maybeSingle();
 
   if (mgrErr) {
@@ -73,4 +86,4 @@ export async function getManagedTeam(
 
 /** Petit helper pour les messages d'erreur uniformes. */
 export const TEAM_MANAGEMENT_FORBIDDEN =
-  "Tu dois etre capitaine ou manager d'une equipe active.";
+  "Tu dois etre capitaine ou avoir un role de gestion dans une equipe active.";

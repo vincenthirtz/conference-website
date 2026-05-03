@@ -5,6 +5,12 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import Button from '@/components/Buttons/button';
 import { useToast } from '@/components/Toast';
+import { supabaseAdmin } from '@/utils/supabase';
+import {
+  loadTeamRolesFromSupabase,
+  DEFAULT_TEAM_ROLES,
+  type TeamRole,
+} from '@/utils/teamRoles';
 
 import { logger } from '../../../utils/logger';
 type StaffShape = {
@@ -15,6 +21,7 @@ type StaffShape = {
 
 type StaffProps = {
   staff: StaffShape;
+  teamRoles: TeamRole[];
 };
 
 type CreateUserResponse = {
@@ -39,7 +46,6 @@ type AddMemberResponse = {
 };
 
 const ROLES = ['member', 'player', 'caster', 'manager', 'admin', 'owner'];
-const TEAM_ROLES = ['player', 'coach', 'sub', 'manager'];
 
 function roleLabel(role: string) {
   switch (role) {
@@ -60,9 +66,17 @@ function roleLabel(role: string) {
   }
 }
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage<{ teamRoles: TeamRole[] }>(
+  'admin',
+  async () => {
+    const teamRoles = supabaseAdmin
+      ? await loadTeamRolesFromSupabase(supabaseAdmin)
+      : DEFAULT_TEAM_ROLES;
+    return { teamRoles };
+  }
+);
 
-function AdminCreateUserPage({ staff }: StaffProps) {
+function AdminCreateUserPage({ staff, teamRoles }: StaffProps) {
   const router = useRouter();
   const { addToast } = useToast();
 
@@ -78,7 +92,9 @@ function AdminCreateUserPage({ staff }: StaffProps) {
   const [loadingTeams, setLoadingTeams] = useState(false);
   const [selectedTeamId, setSelectedTeamId] = useState('');
   const [battleTag, setBattleTag] = useState('');
-  const [teamRole, setTeamRole] = useState('player');
+  const [teamRole, setTeamRole] = useState(
+    () => teamRoles[0]?.value || 'player'
+  );
   const [setCaptain, setSetCaptain] = useState(false);
 
   const [loading, setLoading] = useState(false);
@@ -493,9 +509,9 @@ function AdminCreateUserPage({ staff }: StaffProps) {
                             onChange={(e) => setTeamRole(e.target.value)}
                             className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                           >
-                            {TEAM_ROLES.map((r) => (
-                              <option key={r} value={r}>
-                                {r.charAt(0).toUpperCase() + r.slice(1)}
+                            {teamRoles.map((r) => (
+                              <option key={r.value} value={r.value}>
+                                {r.label}
                               </option>
                             ))}
                           </select>
