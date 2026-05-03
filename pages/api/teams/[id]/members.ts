@@ -1,11 +1,15 @@
 // pages/api/teams/[teamId]/members.ts
-// DELETE : le capitaine retire un membre de son équipe (route publique, auth Bearer)
+// DELETE : un capitaine ou manager retire un membre de son équipe (route publique, auth Bearer)
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { withAuthRoute } from '@/utils/staff';
+import {
+  getManagedTeam,
+  TEAM_MANAGEMENT_FORBIDDEN,
+} from '@/utils/teams/managementAccess';
 
 import { logger } from '../../../../utils/logger';
 export default withAuthRoute(async function handler(
@@ -35,7 +39,6 @@ export default withAuthRoute(async function handler(
 
   const userId = user.id;
 
-  // Vérifier que l'utilisateur est capitaine de cette équipe
   const { data: team } = await supabaseAdmin
     .from('teams')
     .select('id, captain_id')
@@ -46,10 +49,10 @@ export default withAuthRoute(async function handler(
     return res.status(404).json({ error: 'Équipe introuvable.' });
   }
 
-  if (team.captain_id !== userId) {
-    return res.status(403).json({
-      error: 'Seul le capitaine peut retirer des membres.',
-    });
+  // Vérifier que l'utilisateur gère cette équipe (capitaine ou manager)
+  const access = await getManagedTeam(userId);
+  if (!access || access.teamId !== teamId) {
+    return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
   }
 
   const { memberId } = req.body || {};
@@ -60,7 +63,7 @@ export default withAuthRoute(async function handler(
   // Récupérer le membre
   const { data: member, error: fetchErr } = await supabaseAdmin
     .from('team_members')
-    .select('id, user_id')
+    .select('id, user_id, role')
     .eq('id', memberId)
     .eq('team_id', teamId)
     .maybeSingle();
@@ -71,11 +74,25 @@ export default withAuthRoute(async function handler(
       .json({ error: 'Membre introuvable dans cette équipe.' });
   }
 
-  // Empêcher le capitaine de se retirer lui-même via cet endpoint
-  if (member.user_id === userId) {
+  // Le capitaine ne peut pas se retirer lui-même via cet endpoint
+  if (member.user_id === team.captain_id) {
     return res.status(400).json({
       error:
-        "Le capitaine ne peut pas se retirer. Transfère le capitanat d'abord.",
+        "Le capitaine ne peut pas être retiré. Transfère le capitanat d'abord.",
+    });
+  }
+
+  // Anti-escalation : un manager ne peut pas retirer un autre manager
+  if (member.role === 'manager' && !access.isCaptain) {
+    return res.status(403).json({
+      error: 'Seul le capitaine peut retirer un autre manager.',
+    });
+  }
+
+  // Un manager ne peut pas se retirer lui-même via cet endpoint (cohérence avec leave.ts)
+  if (member.user_id === userId) {
+    return res.status(400).json({
+      error: "Utilise le bouton 'Quitter l'équipe' pour partir.",
     });
   }
 

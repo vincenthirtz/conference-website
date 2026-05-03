@@ -40,12 +40,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
     return res.status(404).json({ error: 'Tournoi introuvable.' });
   }
 
-  // Fetch all active teams with captains
+  // Fetch all active teams (les managers comptent meme sans captain assigne)
   const { data: teams, error: teamsErr } = await supabaseAdmin!
     .from('teams')
     .select('id, name, captain_id')
-    .eq('is_active', true)
-    .not('captain_id', 'is', null);
+    .eq('is_active', true);
 
   if (teamsErr) {
     logger.error('[notify-captains] teams error:', teamsErr);
@@ -56,18 +55,38 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
     return res.status(200).json({
       success: true,
       notified: 0,
-      message: 'Aucune equipe active avec capitaine.',
+      message: 'Aucune equipe active.',
     });
   }
 
-  // Deduplicate captains (a captain can only have one team, but just in case)
-  const captainIds = [
-    ...new Set(teams.map((t) => t.captain_id).filter(Boolean)),
-  ] as string[];
+  // Fetch managers pour ces equipes
+  const teamIds = teams.map((t) => t.id);
+  const { data: managers, error: mgrErr } = await supabaseAdmin!
+    .from('team_members')
+    .select('team_id, user_id')
+    .eq('role', 'manager')
+    .in('team_id', teamIds);
+
+  if (mgrErr) {
+    logger.error('[notify-captains] managers error:', mgrErr);
+  }
+
+  // Recipients par team : capitaine + managers (dedup)
+  const recipientsByTeam = new Map<string, Set<string>>();
+  for (const t of teams) {
+    const set = new Set<string>();
+    if (t.captain_id) set.add(t.captain_id);
+    recipientsByTeam.set(t.id, set);
+  }
+  for (const m of managers || []) {
+    const set = recipientsByTeam.get(m.team_id);
+    if (set && m.user_id) set.add(m.user_id);
+  }
 
   let emailsSent = 0;
   let messagesSent = 0;
   const errors: string[] = [];
+  const uniqueRecipients = new Set<string>();
 
   // Build a notification message
   const startDateStr = tournament.start_date
@@ -83,20 +102,47 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
     (startDateStr ? ` Il debutera le ${startDateStr}.` : '') +
     ` Inscris ton equipe des maintenant sur le site.`;
 
-  for (const captainId of captainIds) {
-    try {
-      // Get captain email from auth
-      const { data: userData } =
-        await supabaseAdmin!.auth.admin.getUserById(captainId);
-      const captainEmail = userData?.user?.email;
+  for (const team of teams) {
+    const userIds = Array.from(recipientsByTeam.get(team.id) || []);
+    if (userIds.length === 0) continue; // pas de responsable, on saute
 
-      // Find the team for this captain
-      const captainTeam = teams.find((t) => t.captain_id === captainId);
+    // Un seul message interne par team (la conversation est ancree sur l'equipe)
+    const { error: msgErr } = await supabaseAdmin!.from('demandes').insert({
+      user_id: null,
+      team_id: team.id,
+      type: 'captain_message',
+      status: 'pending',
+      comment: messageContent,
+      source: 'system',
+      payload: {
+        conversation_id: `system_${team.id}`,
+        from_team_id: 'system',
+        from_team_name: "OW Women's Cup",
+        target_team_name: team.name,
+        sender_display_name: 'Organisateur',
+        notification_type: 'tournament_open',
+        tournament_id: tournament.id,
+        tournament_name: tournament.name,
+      },
+    });
 
-      // Send email if available
-      if (captainEmail) {
+    if (msgErr) {
+      errors.push(`Message echoue pour team ${team.name}: ${msgErr.message}`);
+    } else {
+      messagesSent++;
+    }
+
+    // Email a chaque responsable (capitaine + managers)
+    for (const userId of userIds) {
+      uniqueRecipients.add(userId);
+      try {
+        const { data: userData } =
+          await supabaseAdmin!.auth.admin.getUserById(userId);
+        const recipientEmail = userData?.user?.email;
+        if (!recipientEmail) continue;
+
         const emailResult = await sendTournamentNotificationEmail(
-          captainEmail,
+          recipientEmail,
           tournament.name,
           tournament.start_date,
           tournament.slug
@@ -105,44 +151,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
           emailsSent++;
         } else {
           errors.push(
-            `Email echoue pour ${captainEmail}: ${emailResult.error}`
+            `Email echoue pour ${recipientEmail}: ${emailResult.error}`
           );
         }
+      } catch (err: unknown) {
+        errors.push(`Erreur destinataire ${userId}: ${(err as Error).message}`);
       }
-
-      // Always send an internal message via the messaging system
-      if (captainTeam) {
-        const { error: msgErr } = await supabaseAdmin!.from('demandes').insert({
-          user_id: null,
-          team_id: captainTeam.id,
-          type: 'captain_message',
-          status: 'pending',
-          comment: messageContent,
-          source: 'system',
-          payload: {
-            conversation_id: `system_${captainTeam.id}`,
-            from_team_id: 'system',
-            from_team_name: "OW Women's Cup",
-            target_team_name: captainTeam.name,
-            sender_display_name: 'Organisateur',
-            notification_type: 'tournament_open',
-            tournament_id: tournament.id,
-            tournament_name: tournament.name,
-          },
-        });
-
-        if (msgErr) {
-          errors.push(
-            `Message echoue pour team ${captainTeam.name}: ${msgErr.message}`
-          );
-        } else {
-          messagesSent++;
-        }
-      }
-    } catch (err: unknown) {
-      errors.push(`Erreur capitaine ${captainId}: ${(err as Error).message}`);
     }
   }
+
+  const notified = uniqueRecipients.size;
 
   // Log the action
   if (ctx?.staff?.id) {
@@ -155,7 +173,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
         tournament_id: tournament.id,
         payload: {
           tournament_name: tournament.name,
-          captains_count: captainIds.length,
+          recipients_count: notified,
           emails_sent: emailsSent,
           messages_sent: messagesSent,
           errors: errors.length > 0 ? errors : undefined,
@@ -168,10 +186,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: any) {
 
   return res.status(200).json({
     success: true,
-    notified: captainIds.length,
+    notified,
     emailsSent,
     messagesSent,
     errors: errors.length > 0 ? errors : undefined,
-    message: `${captainIds.length} capitaine(s) notifie(s) : ${emailsSent} email(s) + ${messagesSent} message(s).`,
+    message: `${notified} responsable(s) notifie(s) : ${emailsSent} email(s) + ${messagesSent} message(s).`,
   });
 }

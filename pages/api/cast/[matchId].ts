@@ -25,6 +25,7 @@ type Member = {
   role: string;
   is_substitute: boolean;
   is_captain: boolean;
+  is_manager: boolean;
 };
 
 type H2HMeeting = {
@@ -134,14 +135,16 @@ async function handler(
         is_captain:
           (m.team_id === match.team1_id && team1?.captain_id === m.user_id) ||
           (m.team_id === match.team2_id && team2?.captain_id === m.user_id),
+        is_manager: m.role === 'manager',
       };
       if (m.team_id === match.team1_id) team1Members.push(enriched);
       else if (m.team_id === match.team2_id) team2Members.push(enriched);
     }
 
-    // Captains first, then non-substitutes, then substitutes; alphabetic within group
+    // Capitaines puis managers (relais capitaine), puis non-remplaçants, puis remplaçants
     const sortMembers = (a: Member, b: Member) => {
       if (a.is_captain !== b.is_captain) return a.is_captain ? -1 : 1;
+      if (a.is_manager !== b.is_manager) return a.is_manager ? -1 : 1;
       if (a.is_substitute !== b.is_substitute) return a.is_substitute ? 1 : -1;
       return (a.battle_tag || '').localeCompare(b.battle_tag || '');
     };

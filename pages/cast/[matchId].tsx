@@ -17,6 +17,7 @@ type Member = {
   role: string;
   is_substitute: boolean;
   is_captain: boolean;
+  is_manager: boolean;
 };
 
 type Team = {
@@ -720,8 +721,19 @@ function RosterColumn({ team }: { team: Team | null }) {
                   ★
                 </span>
               )}
+              {!m.is_captain && m.is_manager && (
+                <span className="text-sky-400 text-xs" title="Manager">
+                  ◆
+                </span>
+              )}
               <span
-                className={`font-mono ${m.is_captain ? 'text-amber-200 font-semibold' : 'text-neutral-200'}`}
+                className={`font-mono ${
+                  m.is_captain
+                    ? 'text-amber-200 font-semibold'
+                    : m.is_manager
+                      ? 'text-sky-200 font-semibold'
+                      : 'text-neutral-200'
+                }`}
               >
                 {m.battle_tag || `(${m.id.slice(0, 6)})`}
               </span>
