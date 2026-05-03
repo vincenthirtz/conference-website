@@ -1,5 +1,6 @@
-// pages/admin/tournament/[id]/discord.tsx
-// Configuration des webhooks Discord par type de channel pour un tournoi.
+// pages/admin/site-settings/discord.tsx
+// Configuration des webhooks Discord *globaux* (maitres). Sert de fallback
+// quand un tournoi n'a pas de webhook configure pour le channel donne.
 
 import { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
@@ -15,12 +16,10 @@ import {
 } from '@/utils/discord/channels';
 import type { StaffProps } from '@/types/admin';
 
-type ChannelType = DiscordChannelType;
-
 type WebhookRow = {
   id: string;
   tournament_id: string | null;
-  channel_type: ChannelType;
+  channel_type: DiscordChannelType;
   webhook_url: string;
   role_mention: string | null;
   is_active: boolean;
@@ -29,51 +28,49 @@ type WebhookRow = {
 };
 
 type ApiResponse = {
-  channelTypes: ChannelType[];
-  scoped: WebhookRow[];
+  channelTypes: readonly DiscordChannelType[];
   globals: WebhookRow[];
 };
 
+type DraftMap = Record<
+  DiscordChannelType,
+  { webhookUrl: string; roleMention: string; isActive: boolean }
+>;
+
+function emptyDrafts(): DraftMap {
+  return Object.fromEntries(
+    DISCORD_CHANNEL_TYPES.map((ct) => [
+      ct,
+      { webhookUrl: '', roleMention: '', isActive: true },
+    ])
+  ) as DraftMap;
+}
+
+function emptySaving(): Record<DiscordChannelType, boolean> {
+  return Object.fromEntries(
+    DISCORD_CHANNEL_TYPES.map((ct) => [ct, false])
+  ) as Record<DiscordChannelType, boolean>;
+}
+
 export const getServerSideProps = withStaffPage('admin');
 
-function DiscordConfigPage(_: StaffProps) {
+function DiscordGlobalConfigPage(_: StaffProps) {
   const router = useRouter();
-  const { id } = router.query;
-  const tournamentId = Array.isArray(id) ? id[0] : id;
   const { addToast } = useToast();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<ApiResponse | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  // Per-channel form state — initialise une entree par DISCORD_CHANNEL_TYPES.
-  const emptyDrafts = () =>
-    Object.fromEntries(
-      DISCORD_CHANNEL_TYPES.map((ct) => [
-        ct,
-        { webhookUrl: '', roleMention: '', isActive: true },
-      ])
-    ) as Record<
-      ChannelType,
-      { webhookUrl: string; roleMention: string; isActive: boolean }
-    >;
-  const emptySaving = () =>
-    Object.fromEntries(
-      DISCORD_CHANNEL_TYPES.map((ct) => [ct, false])
-    ) as Record<ChannelType, boolean>;
-
-  const [drafts, setDrafts] = useState(emptyDrafts);
-  const [saving, setSaving] = useState(emptySaving);
+  const [drafts, setDrafts] = useState<DraftMap>(emptyDrafts());
+  const [saving, setSaving] =
+    useState<Record<DiscordChannelType, boolean>>(emptySaving());
 
   const fetchData = useCallback(async () => {
-    if (!tournamentId) return;
     setLoading(true);
     setErrorMsg(null);
     try {
-      const res = await fetch(
-        `/api/admin/tournament/${tournamentId}/discord-webhooks`
-      );
+      const res = await fetch('/api/admin/site-settings/discord-webhooks');
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
         throw new Error(j.error || 'Impossible de charger les webhooks');
@@ -81,30 +78,30 @@ function DiscordConfigPage(_: StaffProps) {
       const json: ApiResponse = await res.json();
       setData(json);
 
-      // Hydrate drafts from scoped webhooks
-      const next = { ...drafts };
-      for (const w of json.scoped) {
-        next[w.channel_type] = {
-          webhookUrl: w.webhook_url,
-          roleMention: w.role_mention || '',
-          isActive: w.is_active,
-        };
-      }
-      setDrafts(next);
+      // Hydrate les drafts depuis les globals existants
+      setDrafts((prev) => {
+        const next = { ...prev };
+        for (const w of json.globals) {
+          next[w.channel_type] = {
+            webhookUrl: w.webhook_url,
+            roleMention: w.role_mention || '',
+            isActive: w.is_active,
+          };
+        }
+        return next;
+      });
     } catch (err) {
       setErrorMsg((err as Error).message);
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tournamentId]);
+  }, []);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  async function save(channelType: ChannelType) {
-    if (!tournamentId) return;
+  async function save(channelType: DiscordChannelType) {
     const draft = drafts[channelType];
     if (!draft.webhookUrl.trim()) {
       addToast('URL du webhook requise', 'error');
@@ -113,22 +110,19 @@ function DiscordConfigPage(_: StaffProps) {
 
     setSaving((s) => ({ ...s, [channelType]: true }));
     try {
-      const res = await fetch(
-        `/api/admin/tournament/${tournamentId}/discord-webhooks`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            channelType,
-            webhookUrl: draft.webhookUrl.trim(),
-            roleMention: draft.roleMention.trim() || null,
-            isActive: draft.isActive,
-          }),
-        }
-      );
+      const res = await fetch('/api/admin/site-settings/discord-webhooks', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channelType,
+          webhookUrl: draft.webhookUrl.trim(),
+          roleMention: draft.roleMention.trim() || null,
+          isActive: draft.isActive,
+        }),
+      });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || 'Échec de la sauvegarde');
-      addToast('Webhook enregistré', 'success');
+      if (!res.ok) throw new Error(json.error || 'Echec de la sauvegarde');
+      addToast('Webhook global enregistre', 'success');
       await fetchData();
     } catch (err) {
       addToast((err as Error).message, 'error');
@@ -137,12 +131,11 @@ function DiscordConfigPage(_: StaffProps) {
     }
   }
 
-  async function remove(channelType: ChannelType) {
-    if (!tournamentId) return;
+  async function remove(channelType: DiscordChannelType) {
     const ok = await confirm({
-      title: `Supprimer le webhook "${DISCORD_CHANNEL_META[channelType].label}" pour ce tournoi ?`,
+      title: `Supprimer le webhook global "${DISCORD_CHANNEL_META[channelType].label}" ?`,
       subtitle:
-        'Le webhook maitre (s\'il existe) reprendra la main pour ce channel.',
+        'Les tournois qui n\'ont pas leur propre configuration n\'auront plus aucune notification pour ce type de channel.',
       variant: 'danger',
       confirmLabel: 'Supprimer',
     });
@@ -151,14 +144,14 @@ function DiscordConfigPage(_: StaffProps) {
     setSaving((s) => ({ ...s, [channelType]: true }));
     try {
       const res = await fetch(
-        `/api/admin/tournament/${tournamentId}/discord-webhooks?channelType=${channelType}`,
+        `/api/admin/site-settings/discord-webhooks?channelType=${channelType}`,
         { method: 'DELETE' }
       );
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        throw new Error(j.error || 'Échec de la suppression');
+        throw new Error(j.error || 'Echec de la suppression');
       }
-      addToast('Webhook supprimé', 'success');
+      addToast('Webhook global supprime', 'success');
       setDrafts((d) => ({
         ...d,
         [channelType]: { webhookUrl: '', roleMention: '', isActive: true },
@@ -171,44 +164,33 @@ function DiscordConfigPage(_: StaffProps) {
     }
   }
 
-  async function test(channelType: ChannelType) {
-    if (!tournamentId) return;
+  async function test(channelType: DiscordChannelType) {
     try {
-      const res = await fetch(
-        `/api/admin/tournament/${tournamentId}/discord-test`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ channelType }),
-        }
-      );
+      const res = await fetch('/api/admin/site-settings/discord-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channelType }),
+      });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || 'Échec du test');
-      addToast('Message de test envoyé', 'success');
+      if (!res.ok) throw new Error(json.error || 'Echec du test');
+      addToast('Message de test envoye', 'success');
     } catch (err) {
       addToast((err as Error).message, 'error');
     }
-  }
-
-  function fallbackUrl(channelType: ChannelType): string | null {
-    return (
-      data?.globals.find((g) => g.channel_type === channelType)?.webhook_url ||
-      null
-    );
   }
 
   return (
     <>
       {confirmDialog}
       <Head>
-        <title>Admin – Discord</title>
+        <title>Admin — Webhooks Discord (global)</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
           <button
             type="button"
-            onClick={() => router.push(`/admin/tournament/${tournamentId}`)}
+            onClick={() => router.push('/admin/site-settings')}
             className="mb-4 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors"
           >
             <svg
@@ -224,51 +206,29 @@ function DiscordConfigPage(_: StaffProps) {
                 d="M15 19l-7-7 7-7"
               />
             </svg>
-            Retour au tournoi
+            Retour aux parametres
           </button>
 
           <h1 className="text-3xl font-bold tracking-tight mb-1">
-            Webhooks Discord
+            Webhooks Discord — configuration maitre
           </h1>
-          <p className="text-sm text-neutral-400 mb-4">
-            Configurez un webhook par type de channel. Si rien n&apos;est
-            configuré pour un type, la{' '}
+          <p className="text-sm text-neutral-400 mb-2">
+            Ces webhooks s&apos;appliquent <strong>par defaut</strong> a tous
+            les tournois. Si un tournoi declare son propre webhook pour un
+            channel donne (via{' '}
             <Link
-              href="/admin/site-settings/discord"
+              href="/admin/tournaments"
               className="underline hover:text-white"
             >
-              configuration maître
-            </Link>{' '}
-            sert de fallback. Réservé au rôle{' '}
+              /admin/tournament/:id/discord
+            </Link>
+            ), c&apos;est le webhook du tournoi qui prend la main pour ce
+            channel.
+          </p>
+          <p className="text-xs text-neutral-500 mb-8">
+            Reserve au role{' '}
             <code className="bg-neutral-800 px-1 rounded">admin</code>.
           </p>
-
-          <div className="mb-8 rounded-2xl border border-indigo-500/30 bg-indigo-500/5 p-4 flex items-start gap-3">
-            <svg
-              className="w-5 h-5 text-indigo-300 flex-shrink-0 mt-0.5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <div className="text-xs text-indigo-100/90">
-              Strategie : un webhook configure ici prend la main pour ce
-              tournoi. Sinon, le webhook global declare dans{' '}
-              <Link
-                href="/admin/site-settings/discord"
-                className="underline font-semibold hover:text-white"
-              >
-                Parametres du site &rarr; Webhooks Discord
-              </Link>{' '}
-              s&apos;applique automatiquement.
-            </div>
-          </div>
 
           {loading && (
             <div className="flex items-center justify-center py-20">
@@ -287,8 +247,9 @@ function DiscordConfigPage(_: StaffProps) {
               {data.channelTypes.map((ct) => {
                 const meta = DISCORD_CHANNEL_META[ct];
                 const draft = drafts[ct];
-                const scoped = data.scoped.find((s) => s.channel_type === ct);
-                const fallback = fallbackUrl(ct);
+                const existing = data.globals.find(
+                  (g) => g.channel_type === ct
+                );
 
                 return (
                   <div
@@ -303,26 +264,16 @@ function DiscordConfigPage(_: StaffProps) {
                         </p>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        {scoped ? (
-                          <span
-                            title="Cette configuration override le webhook maitre pour ce tournoi"
-                            className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-600/20 text-emerald-300 border border-emerald-500/30"
-                          >
-                            Override actif
+                        {existing && existing.is_active ? (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
+                            Actif
                           </span>
-                        ) : fallback ? (
-                          <Link
-                            href="/admin/site-settings/discord"
-                            title="Voir / modifier le webhook maitre"
-                            className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-600/20 text-amber-300 border border-amber-500/30 hover:bg-amber-600/30 transition-colors"
-                          >
-                            Maitre (fallback) ↗
-                          </Link>
+                        ) : existing && !existing.is_active ? (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-600/20 text-amber-300 border border-amber-500/30">
+                            Configure (inactif)
+                          </span>
                         ) : (
-                          <span
-                            title="Aucun webhook (ni override ni maitre) — pas de notification pour ce channel"
-                            className="px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-600/20 text-neutral-400 border border-neutral-500/30"
-                          >
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-600/20 text-neutral-400 border border-neutral-500/30">
                             Non configure
                           </span>
                         )}
@@ -367,8 +318,8 @@ function DiscordConfigPage(_: StaffProps) {
 
                     <div className="mb-3">
                       <label className="block text-xs text-neutral-400 mb-1">
-                        Rôle à pinger (optionnel) — ID Discord,
-                        &quot;everyone&quot;, ou &quot;here&quot;
+                        Role a pinger (optionnel) — ID Discord,
+                        &quot;everyone&quot; ou &quot;here&quot;
                       </label>
                       <input
                         type="text"
@@ -382,14 +333,6 @@ function DiscordConfigPage(_: StaffProps) {
                         }
                         className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
                       />
-                      <p className="text-xs text-neutral-500 mt-1">
-                        Astuce : pour récupérer un ID de rôle Discord, tape{' '}
-                        <code className="bg-neutral-900 px-1 rounded">
-                          \@LeRole
-                        </code>{' '}
-                        dans Discord puis envoie le message — il affichera
-                        l&apos;ID brut.
-                      </p>
                     </div>
 
                     <div className="flex flex-wrap gap-2">
@@ -404,12 +347,17 @@ function DiscordConfigPage(_: StaffProps) {
                       <button
                         type="button"
                         onClick={() => test(ct)}
-                        disabled={saving[ct]}
+                        disabled={saving[ct] || !existing}
+                        title={
+                          existing
+                            ? undefined
+                            : 'Enregistre d\'abord la configuration pour pouvoir la tester'
+                        }
                         className="px-4 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors disabled:opacity-50"
                       >
                         Tester
                       </button>
-                      {scoped && (
+                      {existing && (
                         <button
                           type="button"
                           onClick={() => remove(ct)}
@@ -431,4 +379,4 @@ function DiscordConfigPage(_: StaffProps) {
   );
 }
 
-export default DiscordConfigPage;
+export default DiscordGlobalConfigPage;

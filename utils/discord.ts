@@ -6,17 +6,11 @@
 // All helpers are fire-and-forget: errors are logged but never thrown.
 
 import { supabaseAdmin } from './supabase';
-
 import { logger } from './logger';
-export type DiscordChannelType =
-  | 'match_announcements'
-  | 'match_results'
-  | 'bracket_updates'
-  | 'general_announcements'
-  | 'veto_live'
-  | 'checkin_reminders'
-  | 'support_tickets'
-  | 'mvp_polls';
+import type { DiscordChannelType } from './discord/channels';
+
+// Re-export for downstream consumers that still import from '@/utils/discord'.
+export type { DiscordChannelType } from './discord/channels';
 
 type DiscordEmbedField = {
   name: string;
