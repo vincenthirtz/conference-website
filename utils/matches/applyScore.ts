@@ -59,6 +59,36 @@ export async function applyMatchScore(
 
   let { team1Score, team2Score } = input;
 
+  // Marque le match comme NEEDS_REVIEW dans staff_logs : a appeler quand un
+  // rollback echoue (l'etat de la base peut etre incoherent et requiert un audit).
+  const markNeedsReview = async (
+    context: string,
+    rollbackError: unknown,
+    extra: Record<string, unknown> = {}
+  ) => {
+    if (!staffId) return; // pas de contexte staff -> reste en logger.error uniquement
+    try {
+      await logStaffAction({
+        staff_id: staffId,
+        action: 'other',
+        entity_type: 'match',
+        entity_id: matchId,
+        tournament_id: extra.tournamentId as string | null | undefined ?? null,
+        payload: {
+          needs_review: true,
+          context,
+          rollback_error:
+            rollbackError instanceof Error
+              ? rollbackError.message
+              : String(rollbackError),
+          ...extra,
+        },
+      });
+    } catch (logErr) {
+      logger.error('applyMatchScore: needs_review log failed', logErr);
+    }
+  };
+
   // 1) Récupérer le match actuel
   const { data: match, error: fetchErr } = await supabaseAdmin
     .from('matches')
@@ -248,12 +278,15 @@ export async function applyMatchScore(
     } catch (e) {
       // Si le reset échoue, restaurer le snapshot et abandonner
       if (propagationSnapshot) {
-        await restorePropagationSlots(propagationSnapshot).catch((re) =>
+        await restorePropagationSlots(propagationSnapshot).catch(async (re) => {
           logger.error(
             'applyMatchScore: restore after reset failure failed',
             re
-          )
-        );
+          );
+          await markNeedsReview('restore-after-reset-failed', re, {
+            tournamentId: match.tournament_id,
+          });
+        });
       }
       throw new Error(
         `Reset de la propagation échoué. Aucune modification appliquée. Détail : ${
@@ -276,9 +309,15 @@ export async function applyMatchScore(
 
     // Rollback : restaurer les slots de propagation vidés par le reset
     if (propagationSnapshot) {
-      await restorePropagationSlots(propagationSnapshot).catch((re) =>
-        logger.error('applyMatchScore: restore after update failure failed', re)
-      );
+      await restorePropagationSlots(propagationSnapshot).catch(async (re) => {
+        logger.error(
+          'applyMatchScore: restore after update failure failed',
+          re
+        );
+        await markNeedsReview('restore-after-update-failed', re, {
+          tournamentId: match.tournament_id,
+        });
+      });
     }
 
     throw new Error('Erreur lors de la mise à jour du match');
@@ -309,11 +348,19 @@ export async function applyMatchScore(
             .from('matches')
             .update(previousMatchState)
             .eq('id', matchId)
-        ).then(({ error: rollbackErr }) => {
+        ).then(async ({ error: rollbackErr }) => {
           if (rollbackErr) {
             logger.error(
               'applyMatchScore: match rollback failed!',
               rollbackErr
+            );
+            await markNeedsReview(
+              'match-rollback-after-propagation-failed',
+              rollbackErr,
+              {
+                tournamentId: match.tournament_id,
+                attemptedState: previousMatchState,
+              }
             );
           }
         }),
@@ -321,9 +368,17 @@ export async function applyMatchScore(
 
       if (propagationSnapshot) {
         rollbackOps.push(
-          restorePropagationSlots(propagationSnapshot).catch((re) =>
-            logger.error('applyMatchScore: propagation slot restore failed', re)
-          )
+          restorePropagationSlots(propagationSnapshot).catch(async (re) => {
+            logger.error(
+              'applyMatchScore: propagation slot restore failed',
+              re
+            );
+            await markNeedsReview(
+              'propagation-restore-after-propagation-failed',
+              re,
+              { tournamentId: match.tournament_id }
+            );
+          })
         );
       }
 

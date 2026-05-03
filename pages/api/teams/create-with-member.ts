@@ -321,6 +321,32 @@ export default async function handler(
 
   const insertedMembers: MemberResult[] = [];
 
+  // Helper : cleanup d'une team orpheline (members + team).
+  // Si le cleanup lui-meme echoue, on log NEEDS_REVIEW pour qu'un admin
+  // puisse retrouver et nettoyer la donnee a la main.
+  const cleanupOrphanTeam = async (teamId: string, reason: string) => {
+    const { error: delMembersErr } = await supabaseAdmin
+      .from('team_members')
+      .delete()
+      .eq('team_id', teamId);
+    const { error: delTeamErr } = await supabaseAdmin
+      .from('teams')
+      .delete()
+      .eq('id', teamId);
+
+    if (delMembersErr || delTeamErr) {
+      logger.error(
+        '[create-with-member] NEEDS_REVIEW orphan-team cleanup failed',
+        {
+          teamId,
+          reason,
+          delMembersErr: delMembersErr?.message ?? null,
+          delTeamErr: delTeamErr?.message ?? null,
+        }
+      );
+    }
+  };
+
   for (const m of memberRecords) {
     const memberPayload = {
       team_id: createdTeam.id,
@@ -340,11 +366,7 @@ export default async function handler(
         '[/api/teams/create-with-member] add-member error:',
         insertErr
       );
-      await supabaseAdmin
-        .from('team_members')
-        .delete()
-        .eq('team_id', createdTeam.id);
-      await supabaseAdmin.from('teams').delete().eq('id', createdTeam.id);
+      await cleanupOrphanTeam(createdTeam.id, 'member-insert-failed');
 
       const msg = insertErr.message?.toLowerCase() || '';
       const isDuplicate = msg.includes('duplicate') || msg.includes('unique');
@@ -376,10 +398,13 @@ export default async function handler(
         '[/api/teams/create-with-member] captain update error:',
         captainErr
       );
+      // Sans capitaine assigne, l'equipe est inutilisable cote produit
+      // (pas de droits de gestion). Cleanup pour eviter une team orpheline.
+      await cleanupOrphanTeam(createdTeam.id, 'captain-update-failed');
       return res.status(500).json({
         error:
           captainErr.message ||
-          'Members added but failed to set captain (check teams.captain_id)',
+          'Failed to assign team captain. Team rolled back.',
       });
     }
   }
@@ -467,9 +492,15 @@ export default async function handler(
                 stages_count: stages.length,
               };
             } else {
+              // Best-effort : la team est creee, on ne rollback pas.
+              // Marquer NEEDS_REVIEW pour qu'un admin puisse la reinscrire manuellement.
               logger.error(
-                '[create-with-member] tournament registration error:',
-                regError
+                '[create-with-member] NEEDS_REVIEW tournament registration failed',
+                {
+                  teamId: createdTeam.id,
+                  tournamentId,
+                  error: regError.message,
+                }
               );
             }
           }
@@ -477,7 +508,14 @@ export default async function handler(
       }
     } catch (err) {
       // Non-blocking: team is created, registration is best-effort
-      logger.error('[create-with-member] tournament registration error:', err);
+      logger.error(
+        '[create-with-member] NEEDS_REVIEW tournament registration crash',
+        {
+          teamId: createdTeam.id,
+          tournamentId,
+          error: err instanceof Error ? err.message : String(err),
+        }
+      );
     }
   }
 

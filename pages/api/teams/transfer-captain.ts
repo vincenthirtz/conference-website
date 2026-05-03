@@ -6,6 +6,10 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { withAuthRoute } from '@/utils/staff';
+import {
+  isTeamRosterLocked,
+  rosterLockErrorMessage,
+} from '@/utils/teams/rosterLock';
 
 import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
@@ -73,6 +77,15 @@ export default withAuthRoute(async function handler(
     return res.status(400).json({
       error: "Ce joueur n'est pas membre de ton équipe.",
     });
+  }
+
+  // Bloquer si le roster est verrouillé par un tournoi en cours :
+  // changer de capitaine pendant un tournoi modifie qui peut agir
+  // sur les line-ups, scrims, scores… c'est une rupture d'intégrité métier.
+  // Un admin peut toujours forcer via les routes /api/admin/*.
+  const lockStatus = await isTeamRosterLocked(team.id);
+  if (lockStatus.locked) {
+    return res.status(409).json({ error: rosterLockErrorMessage(lockStatus) });
   }
 
   // Transférer
