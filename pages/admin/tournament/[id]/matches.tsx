@@ -381,14 +381,34 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
     setAutoSchedRunning(true);
     setErrorMsg(null);
 
-    try {
-      const res = await fetch(`/api/admin/tournament/${id}/auto-schedule`, {
+    const callAutoSchedule = (acceptConflicts: boolean) =>
+      fetch(`/api/admin/tournament/${id}/auto-schedule`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify(acceptConflicts ? { acceptConflicts: true } : {}),
       });
+
+    try {
+      let res = await callAutoSchedule(false);
+
+      // Le back refuse d'appliquer si des conflits ont ete detectes : on
+      // demande une confirmation explicite avant de renvoyer la requete.
+      if (res.status === 409) {
+        const json = await res.json().catch(() => ({}));
+        if (json.detail === 'SCHEDULE_CONFLICTS_REQUIRE_CONFIRMATION') {
+          const count = json.conflicts?.length ?? 0;
+          const ok = window.confirm(
+            `L'auto-scheduler a detecte ${count} conflit(s) horaire(s) (meme equipe sur deux creneaux qui se chevauchent). Appliquer quand meme ?`
+          );
+          if (!ok) {
+            setAutoSchedRunning(false);
+            return;
+          }
+          res = await callAutoSchedule(true);
+        }
+      }
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -396,10 +416,17 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
       }
 
       const json = await res.json();
-      addToast(
-        `Auto-scheduler termine : ${json.scheduledMatchesCount ?? 0} matches planifies.`,
-        'success'
-      );
+      const scheduledCount =
+        json.scheduled?.length ?? json.scheduledMatchesCount ?? 0;
+      const conflictCount = json.conflicts?.length ?? 0;
+      const warnings: string[] = json.warnings ?? [];
+
+      let toastMsg = `Auto-scheduler termine : ${scheduledCount} matches planifies.`;
+      if (conflictCount > 0)
+        toastMsg += ` ${conflictCount} conflit(s) horaire(s) accepte(s).`;
+      if (warnings.length > 0) toastMsg += ` ${warnings.join(' ')}`;
+
+      addToast(toastMsg, conflictCount > 0 ? 'info' : 'success');
       fetchMatches();
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? "Erreur lors de l'auto-scheduler");

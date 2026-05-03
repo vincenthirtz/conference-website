@@ -20,6 +20,7 @@ const { sendTeamJoinEmail, sendWelcomeEmail, autoScheduleMatches } = vi.hoisted(
     autoScheduleMatches: vi.fn<(...args: any[]) => any>(() => ({
       scheduled: [],
       unscheduledMatchIds: [],
+      conflicts: [],
     })),
   })
 );
@@ -711,6 +712,7 @@ describe('/api/admin/tournament/[id]/auto-schedule', () => {
         },
       ],
       unscheduledMatchIds: [],
+      conflicts: [],
     });
     const res = makeRes();
     await autoScheduleHandler(
@@ -783,6 +785,7 @@ describe('/api/admin/tournament/[id]/auto-schedule', () => {
         },
       ],
       unscheduledMatchIds: [],
+      conflicts: [],
     });
     const res = makeRes();
     await autoScheduleHandler(
@@ -846,7 +849,11 @@ describe('/api/admin/tournament/[id]/auto-schedule', () => {
       // Confirm locked match was forwarded
       const locked = matches.find((m: any) => m.locked === true);
       expect(locked?.id).toBe('m-locked');
-      return { scheduled: [], unscheduledMatchIds: ['m-fresh'] };
+      return {
+        scheduled: [],
+        unscheduledMatchIds: ['m-fresh'],
+        conflicts: [],
+      };
     });
     const res = makeRes();
     await autoScheduleHandler(

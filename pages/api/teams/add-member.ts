@@ -173,9 +173,19 @@ export default withAuthRoute(async function handler(
       .maybeSingle();
 
     if (insertErr) {
-      const msg =
-        insertErr.message?.includes('duplicate') ||
-        insertErr.message?.includes('unique')
+      // Le trigger PG `team_members_enforce_max_players` rejette avec ERRCODE
+      // 23514 (check_violation) si une race a permis de depasser max_players.
+      // C'est notre defense atomique : le pre-check ci-dessus reste en place
+      // pour la majorite des cas (et donne un message friendly), le trigger
+      // ferme la fenetre de race entre 2 requetes concurrentes.
+      const errMsg = insertErr.message?.toLowerCase() || '';
+      const isMaxPlayersViolation =
+        insertErr.code === '23514' || errMsg.includes('max_players');
+
+      const msg = isMaxPlayersViolation
+        ? "L'équipe a atteint la limite de joueur(s) imposée par un tournoi."
+        : insertErr.message?.includes('duplicate') ||
+            insertErr.message?.includes('unique')
           ? 'Ce joueur est déjà dans une équipe'
           : "Échec de l'ajout du membre";
       return res.status(400).json({ error: msg });

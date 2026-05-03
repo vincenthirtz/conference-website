@@ -110,6 +110,15 @@ export default withAuthRoute(async function handler(
 
   if (updateErr) {
     logger.error('[update-member-role] error:', updateErr);
+    // Trigger PG enforce_team_max_players : passer un coach en non-coach peut
+    // depasser max_players. On renvoie un message metier clair.
+    const errMsg = updateErr.message?.toLowerCase() || '';
+    if (updateErr.code === '23514' || errMsg.includes('max_players')) {
+      return res.status(400).json({
+        error:
+          "L'equipe a atteint la limite de joueur(s) imposee par un tournoi : impossible de basculer ce coach en role joueur.",
+      });
+    }
     return res.status(500).json({ error: 'Echec de la mise a jour du role.' });
   }
 

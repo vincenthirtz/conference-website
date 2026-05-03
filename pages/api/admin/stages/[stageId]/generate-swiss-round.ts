@@ -70,6 +70,12 @@ type GenerateSwissRoundBody = {
   scoreConfig?: Partial<SwissScoreConfig>;
   allowRematchesFallback?: boolean;
   dryRun?: boolean;
+  /**
+   * Si le pairing produit des rematches, on n'inserre les matchs que si
+   * l'admin a confirme explicitement (pour eviter les rematches "silencieux").
+   * Mettre a true revient a confirmer apres avoir vu l'avertissement de la preview.
+   */
+  acceptRematches?: boolean;
 };
 
 type GeneratedSwissMatch = {
@@ -455,6 +461,18 @@ async function handler(
     if (pairings.length === 0) {
       return res.status(400).json({
         error: 'Swiss pairing produced no matches',
+      });
+    }
+
+    // 9a) Garde-fou : si le pairing contient des rematches, l'admin doit
+    //      avoir explicitement confirme via acceptRematches=true. Le dryRun,
+    //      lui, a le droit de previsualiser des rematches sans confirmation
+    //      (c'est exactement ce qui sert a alimenter la confirmation UI).
+    if (hasRematches && !body.dryRun && body.acceptRematches !== true) {
+      return res.status(409).json({
+        error:
+          'Le pairing genere contient des rematches. Confirme l’insertion en renvoyant acceptRematches=true.',
+        detail: 'REMATCHES_REQUIRE_CONFIRMATION',
       });
     }
 

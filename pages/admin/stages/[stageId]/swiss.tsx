@@ -236,6 +236,16 @@ function AdminSwissStagePage({ staff }: StaffProps) {
 
   async function handleConfirmGenerate() {
     if (!stageId) return;
+
+    // Si l'apercu signale des rematches, demander une confirmation explicite
+    // avant d'envoyer la requete de generation. Le back exigera acceptRematches=true.
+    if (previewHasRematches) {
+      const ok = window.confirm(
+        'Cet appariement contient des rematches (deux equipes vont se rejouer). Confirmer la generation ?'
+      );
+      if (!ok) return;
+    }
+
     setLoadingGenerate(true);
     setErrorMsg(null);
 
@@ -245,7 +255,9 @@ function AdminSwissStagePage({ staff }: StaffProps) {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({}),
+          body: JSON.stringify({
+            acceptRematches: previewHasRematches || undefined,
+          }),
         }
       );
 

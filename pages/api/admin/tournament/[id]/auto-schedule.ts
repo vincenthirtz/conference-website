@@ -73,18 +73,36 @@ type AutoScheduleBody = {
   resourceGapMinutes?: number;
   teamRestMinutes?: number;
   defaultResourceId?: string;
+  /**
+   * Si le scheduler detecte des conflits (meme equipe sur 2 creneaux qui
+   * se chevauchent), on refuse d'ecrire le planning sauf si l'admin a
+   * confirme explicitement en renvoyant true.
+   */
+  acceptConflicts?: boolean;
+};
+
+type ScheduledEntry = {
+  matchId: string;
+  resourceId: string;
+  startAt: string;
+  endAt: string;
+  format: MatchFormat;
+};
+
+type ConflictEntry = {
+  matchId1: string;
+  matchId2: string;
+  teamId: string;
+  overlapStart: string;
+  overlapEnd: string;
 };
 
 type AutoScheduleResponse = {
   tournamentId: string;
-  scheduled: {
-    matchId: string;
-    resourceId: string;
-    startAt: string;
-    endAt: string;
-    format: MatchFormat;
-  }[];
+  scheduled: ScheduledEntry[];
   unscheduledMatchIds: string[];
+  conflicts?: ConflictEntry[];
+  warnings?: string[];
 };
 
 export default withStaffRoute(handler, 'manager');
@@ -92,7 +110,8 @@ export default withStaffRoute(handler, 'manager');
 async function handler(
   req: NextApiRequest,
   res: NextApiResponse<
-    AutoScheduleResponse | { error: string; detail?: string }
+    | AutoScheduleResponse
+    | { error: string; detail?: string; conflicts?: ConflictEntry[] }
   >,
   ctx: any
 ) {
@@ -250,7 +269,20 @@ async function handler(
       }
     }
 
-    // 6) Appliquer les mises à jour de scheduled_at
+    // 6a) Garde-fou : ne PAS ecrire si le scheduler a produit des conflits
+    //     (meme equipe bookee sur deux creneaux qui se chevauchent), sauf
+    //     si l'admin l'a explicitement accepte. On retourne quand meme le
+    //     planning calcule + les conflits pour que l'UI puisse demander
+    //     confirmation et renvoyer acceptConflicts=true.
+    if (result.conflicts.length > 0 && body.acceptConflicts !== true) {
+      return res.status(409).json({
+        error: `${result.conflicts.length} conflit(s) horaire(s) detecte(s) — confirme l’application en renvoyant acceptConflicts=true.`,
+        detail: 'SCHEDULE_CONFLICTS_REQUIRE_CONFIRMATION',
+        conflicts: result.conflicts,
+      });
+    }
+
+    // 6b) Appliquer les mises à jour de scheduled_at
     const updates = result.scheduled.map((s) =>
       supabaseAdmin
         .from('matches')
@@ -273,7 +305,7 @@ async function handler(
       });
     }
 
-    // 7) Log staff
+    // 7) Log staff (incluant la decision sur les conflits pour audit)
     if (ctx?.staff?.id) {
       try {
         await logStaffAction({
@@ -285,8 +317,12 @@ async function handler(
           payload: {
             scheduled_count: result.scheduled.length,
             unscheduled_count: result.unscheduledMatchIds.length,
+            conflicts_count: result.conflicts.length,
             scheduled_match_ids: result.scheduled.map((s) => s.matchId),
             unscheduled_match_ids: result.unscheduledMatchIds,
+            ...(result.conflicts.length > 0
+              ? { accepted_with_conflicts: true }
+              : {}),
           },
         });
       } catch (e) {
@@ -298,6 +334,7 @@ async function handler(
       tournamentId,
       scheduled: result.scheduled,
       unscheduledMatchIds: result.unscheduledMatchIds,
+      ...(result.conflicts.length > 0 ? { conflicts: result.conflicts } : {}),
       ...(warnings.length > 0 ? { warnings } : {}),
     };
 
