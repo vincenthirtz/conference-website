@@ -35,6 +35,12 @@ export const TEAM_PERMISSION_CATALOG = [
     label: 'Envoyer des messages équipe',
     description: 'Diffuser un message à tous les membres',
   },
+  {
+    value: 'edit_public_page',
+    label: 'Personnaliser la page publique',
+    description:
+      "Modifier la description, le contenu riche et l'apparence de la page publique de l'équipe",
+  },
 ] as const;
 
 export type TeamPermission = (typeof TEAM_PERMISSION_CATALOG)[number]['value'];

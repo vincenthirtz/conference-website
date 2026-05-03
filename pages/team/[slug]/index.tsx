@@ -1,4 +1,4 @@
-// pages/team/[slug].tsx
+// pages/team/[slug]/index.tsx
 
 import { useState } from 'react';
 import { GetServerSideProps } from 'next';
@@ -8,9 +8,14 @@ import Image from 'next/image';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import PublicScrimDialog from '@/components/Team/PublicScrimDialog';
-import { supabaseAdmin } from '@/utils/supabase';
+import { supabaseAdmin, getServerClient } from '@/utils/supabase';
+import { hasTeamPermission } from '@/utils/teams/permissions';
+import {
+  renderTeamPublicMarkdown,
+  normalizeAccentColor,
+} from '@/utils/markdown/teamPublicMarkdown';
 
-import { logger } from '../../utils/logger';
+import { logger } from '../../../utils/logger';
 function safeHref(url: string): string | undefined {
   try {
     const full = url.startsWith('http') ? url : `https://${url}`;
@@ -24,6 +29,7 @@ function safeHref(url: string): string | undefined {
 
 type Team = {
   id: string;
+  slug?: string | null;
   name: string;
   short_name?: string | null;
   logo_url?: string | null;
@@ -31,6 +37,8 @@ type Team = {
   country?: string | null;
   description?: string | null;
   bio?: string | null;
+  public_content?: string | null;
+  accent_color?: string | null;
   twitter?: string | null;
   discord?: string | null;
   website?: string | null;
@@ -93,6 +101,7 @@ type TeamPageProps = {
   tournaments: Tournament[];
   matchStats: MatchStats;
   recentMatches: RecentMatch[];
+  canEdit: boolean;
 };
 
 export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
@@ -341,6 +350,21 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
     }
   );
 
+  // Detect whether the current viewer is allowed to edit this team's
+  // public page (captain or member with `edit_public_page` permission).
+  let canEdit = false;
+  try {
+    const authClient = getServerClient(ctx.req, ctx.res);
+    const {
+      data: { user },
+    } = await authClient.auth.getUser();
+    if (user) {
+      canEdit = await hasTeamPermission(user.id, teamId, 'edit_public_page');
+    }
+  } catch (err) {
+    logger.error('[team page] permission check error:', err);
+  }
+
   return {
     props: {
       team: team as Team,
@@ -348,6 +372,7 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
       tournaments,
       matchStats,
       recentMatches,
+      canEdit,
     },
   };
 };
@@ -358,6 +383,7 @@ export default function TeamPage({
   tournaments,
   matchStats,
   recentMatches,
+  canEdit,
 }: TeamPageProps) {
   const winRate =
     matchStats.total > 0
@@ -374,6 +400,9 @@ export default function TeamPage({
   const hasSocials = team.twitter || team.discord || team.website;
   const description = team.description || team.bio;
   const [scrimDialogOpen, setScrimDialogOpen] = useState(false);
+  const accent = normalizeAccentColor(team.accent_color);
+  const richContent = renderTeamPublicMarkdown(team.public_content);
+  const editHref = `/team/${encodeURIComponent(team.slug || team.id)}/edit`;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
@@ -407,7 +436,12 @@ export default function TeamPage({
             {/* Logo */}
             <div className="flex-shrink-0">
               {team.logo_url ? (
-                <div className="w-28 h-28 md:w-36 md:h-36 rounded-2xl border-4 border-white/10 bg-black/80 overflow-hidden shadow-2xl">
+                <div
+                  className="w-28 h-28 md:w-36 md:h-36 rounded-2xl border-4 bg-black/80 overflow-hidden shadow-2xl"
+                  style={{
+                    borderColor: accent ?? 'rgba(255,255,255,0.1)',
+                  }}
+                >
                   <Image
                     src={team.logo_url}
                     alt={team.name}
@@ -417,7 +451,12 @@ export default function TeamPage({
                   />
                 </div>
               ) : (
-                <div className="w-28 h-28 md:w-36 md:h-36 rounded-2xl border-4 border-white/10 bg-gradient-to-br from-neutral-800 to-neutral-900 flex items-center justify-center shadow-2xl">
+                <div
+                  className="w-28 h-28 md:w-36 md:h-36 rounded-2xl border-4 bg-gradient-to-br from-neutral-800 to-neutral-900 flex items-center justify-center shadow-2xl"
+                  style={{
+                    borderColor: accent ?? 'rgba(255,255,255,0.1)',
+                  }}
+                >
                   <span className="text-4xl font-bold text-neutral-500">
                     {initials(team.short_name || team.name)}
                   </span>
@@ -442,6 +481,27 @@ export default function TeamPage({
                   <span className="px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs">
                     Active
                   </span>
+                )}
+                {canEdit && (
+                  <Link
+                    href={editHref}
+                    className="ml-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-200 hover:bg-cyan-500/30 text-xs"
+                  >
+                    <svg
+                      className="w-3.5 h-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                    Éditer la page
+                  </Link>
                 )}
               </div>
 
@@ -550,6 +610,20 @@ export default function TeamPage({
             </div>
           </div>
         </section>
+
+        {/* Rich content authored by the team */}
+        {richContent && (
+          <section
+            className="mb-6 rounded-2xl border bg-black/40 px-5 py-5"
+            style={{
+              borderColor: accent
+                ? `${accent}40` // ~25% alpha
+                : 'rgba(255,255,255,0.08)',
+            }}
+          >
+            <div className="prose prose-invert max-w-none">{richContent}</div>
+          </section>
+        )}
 
         {/* Public scrim CTA */}
         <section className="mb-6 rounded-2xl border border-cyan-500/20 bg-gradient-to-r from-cyan-500/10 via-cyan-500/5 to-transparent px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

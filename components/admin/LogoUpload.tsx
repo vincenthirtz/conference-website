@@ -9,6 +9,10 @@ type LogoUploadProps = {
   onChange: (url: string) => void;
   label?: string;
   hint?: string;
+  /** Endpoint receiving the upload payload. Defaults to the staff-only
+   *  /api/admin/upload. Team self-service screens can pass a team-scoped
+   *  endpoint that checks team-level permissions instead of staff role. */
+  endpoint?: string;
 };
 
 export default function LogoUpload({
@@ -16,6 +20,7 @@ export default function LogoUpload({
   onChange,
   label = 'Logo',
   hint = 'PNG, JPEG ou WebP, max 2 Mo, idéalement 512×512.',
+  endpoint = '/api/admin/upload',
 }: LogoUploadProps) {
   const [mode, setMode] = useState<'upload' | 'url'>(
     value && !value.startsWith('/img/') && !value.includes('supabase')
@@ -61,7 +66,7 @@ export default function LogoUpload({
         if (!token) throw new Error('Session staff manquante.');
 
         // Envoyer au serveur
-        const res = await fetch('/api/admin/upload', {
+        const res = await fetch(endpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -86,7 +91,7 @@ export default function LogoUpload({
         setUploading(false);
       }
     },
-    [onChange]
+    [onChange, endpoint]
   );
 
   const handleDrop = useCallback(
