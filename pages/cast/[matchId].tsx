@@ -42,7 +42,16 @@ type FlowStep = {
   side: 'team1' | 'team2' | null;
 };
 
+type CastProfile = {
+  id: string;
+  name: string;
+  title: string | null;
+  imageUrl: string | null;
+  twitchUrl: string | null;
+};
+
 type CastData = {
+  castProfile: CastProfile | null;
   match: {
     id: string;
     status: string;
@@ -259,7 +268,8 @@ function CastPage(_: StaffProps) {
 
   if (!data) return null;
 
-  const { match, team1, team2, tournament, stage, veto, h2h } = data;
+  const { castProfile, match, team1, team2, tournament, stage, veto, h2h } =
+    data;
   const badge = statusBadge(match.status);
 
   return (
@@ -300,6 +310,37 @@ function CastPage(_: StaffProps) {
             </div>
 
             <div className="flex items-center gap-3 text-xs text-neutral-500">
+              {castProfile && (
+                <span
+                  className="flex items-center gap-2 px-2 py-1 rounded-full bg-purple-600/15 border border-purple-500/30 text-purple-200"
+                  title={castProfile.title || 'Caster connecté'}
+                >
+                  {castProfile.imageUrl ? (
+                    <Image
+                      src={castProfile.imageUrl}
+                      alt={castProfile.name}
+                      width={20}
+                      height={20}
+                      className="w-5 h-5 rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="w-5 h-5 rounded-full bg-purple-500/40 flex items-center justify-center text-[10px] font-bold text-purple-100">
+                      {castProfile.name.slice(0, 1).toUpperCase()}
+                    </span>
+                  )}
+                  <span className="font-medium">{castProfile.name}</span>
+                  {castProfile.twitchUrl && (
+                    <a
+                      href={castProfile.twitchUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-purple-300 hover:text-purple-100 underline-offset-2 hover:underline"
+                    >
+                      Twitch ↗
+                    </a>
+                  )}
+                </span>
+              )}
               {match.scheduledAt && (
                 <span>{formatDateFr(match.scheduledAt)}</span>
               )}

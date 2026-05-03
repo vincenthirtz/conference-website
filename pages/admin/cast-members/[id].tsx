@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { withStaffPage } from '@/utils/staff';
 import { supabaseClient } from '@/utils/supabase';
 import { useToast } from '@/components/Toast';
+import CastMemberStaffPicker from '@/components/admin/CastMemberStaffPicker';
 
 type Props = {
   staff: {
@@ -30,6 +31,7 @@ function AdminCastMemberEditPage({ staff }: Props) {
     isActive: true,
     isPromo: false,
     sortOrder: '',
+    authUserId: null as string | null,
   });
 
   const [saving, setSaving] = useState(false);
@@ -67,6 +69,7 @@ function AdminCastMemberEditPage({ staff }: Props) {
         isActive: data.is_active ?? true,
         isPromo: data.is_promo ?? false,
         sortOrder: data.sort_order?.toString() || '',
+        authUserId: data.auth_user_id ?? null,
       });
     } catch (err: unknown) {
       setError((err as Error)?.message || 'Erreur de chargement.');
@@ -79,7 +82,10 @@ function AdminCastMemberEditPage({ staff }: Props) {
     fetchMember();
   }, [fetchMember]);
 
-  const updateField = (key: keyof typeof form, value: string | boolean) => {
+  const updateField = (
+    key: keyof typeof form,
+    value: string | boolean | null
+  ) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -110,6 +116,7 @@ function AdminCastMemberEditPage({ staff }: Props) {
         isActive: form.isActive,
         isPromo: form.isPromo,
         sortOrder: form.sortOrder ? parseInt(form.sortOrder, 10) : undefined,
+        authUserId: form.authUserId,
       };
 
       const res = await fetch(`/api/admin/cast-members/${id}`, {
@@ -325,6 +332,12 @@ function AdminCastMemberEditPage({ staff }: Props) {
                       className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm resize-y"
                     />
                   </div>
+
+                  <CastMemberStaffPicker
+                    value={form.authUserId}
+                    currentCastMemberId={typeof id === 'string' ? id : null}
+                    onChange={(next) => updateField('authUserId', next)}
+                  />
 
                   <div className="space-y-3">
                     <div className="flex items-center gap-3">

@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
-import { sanitizeUrl } from '@/utils/apiHelpers';
+import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 
 import { logger } from '../../../../utils/logger';
@@ -15,6 +15,7 @@ type CastMemberPayload = {
   isActive?: boolean;
   isPromo?: boolean;
   sortOrder?: number;
+  authUserId?: string | null;
 };
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -75,6 +76,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     const nextOrder = (maxOrder?.sort_order ?? 0) + 1;
 
+    let authUserId: string | null = null;
+    if ('authUserId' in body && body.authUserId) {
+      if (typeof body.authUserId !== 'string' || !isValidUUID(body.authUserId)) {
+        return res.status(400).json({ error: 'authUserId invalide.' });
+      }
+      authUserId = body.authUserId;
+    }
+
     const insertPayload = {
       name: body.name.trim(),
       title: body.title?.trim() || null,
@@ -85,6 +94,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       is_active: body.isActive ?? true,
       is_promo: body.isPromo ?? false,
       sort_order: body.sortOrder ?? nextOrder,
+      auth_user_id: authUserId,
     };
 
     const { data, error } = await admin
@@ -95,6 +105,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     if (error) {
       logger.error('[admin/cast-members] create error', error);
+      const isCasterRoleError = /role=caster/i.test(error.message || '');
+      const isUniqueError = error.code === '23505';
+      if (isCasterRoleError) {
+        return res.status(400).json({
+          error:
+            'Le compte selectionne doit avoir le role staff "caster".',
+        });
+      }
+      if (isUniqueError) {
+        return res.status(409).json({
+          error: 'Ce compte caster est deja lie a une autre fiche.',
+        });
+      }
       return res
         .status(500)
         .json({ error: 'Failed to create the cast member.' });

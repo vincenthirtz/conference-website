@@ -12,6 +12,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
+import type { StaffContext } from '@/utils/staff';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { VETO_FLOWS } from '@/types/veto';
 import type { VetoStep, VetoFlowStep } from '@/types/veto';
@@ -35,7 +36,11 @@ type H2HMeeting = {
   tournamentName: string | null;
 };
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: StaffContext
+) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });
@@ -192,7 +197,36 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
   }
 
+  // 5) Linked cast_member profile of the connected staff caster (optional)
+  let castProfile: {
+    id: string;
+    name: string;
+    title: string | null;
+    imageUrl: string | null;
+    twitchUrl: string | null;
+  } | null = null;
+
+  if (ctx.user?.id) {
+    const { data: linked } = await supabaseAdmin
+      .from('cast_members')
+      .select('id, name, title, image_url, twitch_url, is_active')
+      .eq('auth_user_id', ctx.user.id)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (linked) {
+      castProfile = {
+        id: linked.id,
+        name: linked.name,
+        title: linked.title,
+        imageUrl: linked.image_url,
+        twitchUrl: linked.twitch_url,
+      };
+    }
+  }
+
   return res.status(200).json({
+    castProfile,
     match: {
       id: match.id,
       status: match.status,

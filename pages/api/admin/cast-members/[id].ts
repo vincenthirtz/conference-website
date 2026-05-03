@@ -15,6 +15,7 @@ type CastMemberPayload = {
   isActive?: boolean;
   isPromo?: boolean;
   sortOrder?: number;
+  authUserId?: string | null;
 };
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -70,6 +71,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     if ('isPromo' in body) updatePayload.is_promo = !!body.isPromo;
     if ('sortOrder' in body && Number.isFinite(body.sortOrder))
       updatePayload.sort_order = Number(body.sortOrder);
+    if ('authUserId' in body) {
+      if (body.authUserId === null || body.authUserId === '') {
+        updatePayload.auth_user_id = null;
+      } else if (
+        typeof body.authUserId === 'string' &&
+        isValidUUID(body.authUserId)
+      ) {
+        updatePayload.auth_user_id = body.authUserId;
+      } else {
+        return res.status(400).json({ error: 'authUserId invalide.' });
+      }
+    }
 
     const { data, error } = await admin
       .from('cast_members')
@@ -80,6 +93,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     if (error) {
       logger.error('[admin/cast-members] update error', error);
+      const isCasterRoleError = /role=caster/i.test(error.message || '');
+      const isUniqueError = error.code === '23505';
+      if (isCasterRoleError) {
+        return res.status(400).json({
+          error: 'Le compte selectionne doit avoir le role staff "caster".',
+        });
+      }
+      if (isUniqueError) {
+        return res.status(409).json({
+          error: 'Ce compte caster est deja lie a une autre fiche.',
+        });
+      }
       return res
         .status(500)
         .json({ error: 'Failed to update the cast member.' });
