@@ -291,7 +291,7 @@ function AdminVetoPage(_: StaffProps) {
     } finally {
       setSubmitting(false);
     }
-  }, [selectedMatchId, addToast]);
+  }, [selectedMatchId, addToast, confirm]);
 
   // Compute used maps in current veto
   const usedMapNames = new Set((vetoState?.steps || []).map((s) => s.map_name));

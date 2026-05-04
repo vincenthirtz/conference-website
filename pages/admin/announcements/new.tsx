@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { supabaseClient } from '@/utils/supabase';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAutoSave } from '@/utils/useAutoSave';
 import DraftBanner from '@/components/admin/DraftBanner';
 import AutoSaveIndicator from '@/components/admin/AutoSaveIndicator';
@@ -30,6 +30,7 @@ export const getServerSideProps = withStaffPage('admin');
 
 function AdminAnnouncementCreatePage({ staff }: Props) {
   const router = useRouter();
+  const { adminFetch } = useAdminFetch();
 
   const [form, setForm] = useState<FormState>({
     title: '',
@@ -78,14 +79,6 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
     setSubmitting(true);
 
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) {
-        throw new Error('Session staff manquante.');
-      }
-
       const payload = {
         title: form.title.trim(),
         message: form.message.trim(),
@@ -97,12 +90,8 @@ function AdminAnnouncementCreatePage({ staff }: Props) {
         priority: Number(form.priority) || 0,
       };
 
-      const res = await fetch('/api/admin/announcements', {
+      const res = await adminFetch('/api/admin/announcements', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify(payload),
       });
 

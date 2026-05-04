@@ -8,7 +8,8 @@ import { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
-import { supabaseAdmin, getServerClient, supabaseClient } from '@/utils/supabase';
+import { supabaseAdmin, getServerClient } from '@/utils/supabase';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { hasTeamPermission } from '@/utils/teams/permissions';
 import {
   TEAM_PUBLIC_CONTENT_MAX_LENGTH,
@@ -176,6 +177,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
 
 export default function TeamPublicEditPage({ team, members }: Props) {
   const { addToast } = useToast();
+  const { adminFetchJson } = useAdminFetch();
 
   const [description, setDescription] = useState(team.description ?? '');
   const [publicContent, setPublicContent] = useState(team.public_content ?? '');
@@ -261,48 +263,36 @@ export default function TeamPublicEditPage({ team, members }: Props) {
     setSaving(true);
 
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session expirée — reconnecte-toi.');
-
-      const res = await fetch(`/api/teams/${team.id}/public-page`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          description,
-          public_content: publicContent,
-          accent_color: accentColor,
-          secondary_color: secondaryColor,
-          banner_overlay: bannerOverlay,
-          banner_focal: bannerFocal,
-          logo_url: logoUrl,
-          banner_url: bannerUrl,
-          twitter,
-          discord,
-          website,
-          youtube,
-          twitch,
-          instagram,
-          tiktok,
-          achievements,
-          sponsors,
-          embed_url: embedUrl || null,
-          pinned_announcement: pinnedAnnouncement,
-          pinned_announcement_until: pinnedUntil
-            ? new Date(pinnedUntil).toISOString()
-            : null,
-        }),
-      });
-
-      const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json.error || 'Échec de la mise à jour.');
-      }
+      const json = await adminFetchJson<{ updatedFields?: unknown[] }>(
+        `/api/teams/${team.id}/public-page`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({
+            description,
+            public_content: publicContent,
+            accent_color: accentColor,
+            secondary_color: secondaryColor,
+            banner_overlay: bannerOverlay,
+            banner_focal: bannerFocal,
+            logo_url: logoUrl,
+            banner_url: bannerUrl,
+            twitter,
+            discord,
+            website,
+            youtube,
+            twitch,
+            instagram,
+            tiktok,
+            achievements,
+            sponsors,
+            embed_url: embedUrl || null,
+            pinned_announcement: pinnedAnnouncement,
+            pinned_announcement_until: pinnedUntil
+              ? new Date(pinnedUntil).toISOString()
+              : null,
+          }),
+        }
+      );
 
       const updatedCount = json.updatedFields?.length ?? 0;
       addToast(

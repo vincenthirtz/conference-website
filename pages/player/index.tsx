@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabaseClient } from '@/utils/supabase';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import ProfileCard from '@/components/player/ProfileCard';
 import TeamCard, { type TeamMemberLite } from '@/components/player/TeamCard';
 import DemandesHistory from '@/components/player/DemandesHistory';
@@ -126,7 +127,8 @@ function buildQuickActions(args: {
 
 export default function PlayerDashboard() {
   const router = useRouter();
-  const { user, token, loading: authLoading, ready } = usePlayerSession();
+  const { user, loading: authLoading, ready } = usePlayerSession();
+  const { adminFetchJson } = useAdminFetch();
   const [loading, setLoading] = useState(true);
   const [team, setTeam] = useState<TeamInfo>(null);
   const [members, setMembers] = useState<TeamMemberLite[]>([]);
@@ -139,52 +141,37 @@ export default function PlayerDashboard() {
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
-  const getToken = useCallback(async () => {
-    if (token) return token;
-    const { data } = await supabaseClient.auth.getSession();
-    return data.session?.access_token ?? null;
-  }, [token]);
-
   const loadData = useCallback(async () => {
-    const accessToken = await getToken();
-    if (!accessToken) return;
-
-    const [teamRes, captainRes, joinRes] = await Promise.all([
-      fetch('/api/admin/teams/my', {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }),
-      fetch('/api/demandes/captain', {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }),
-      fetch('/api/demandes/join', {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }),
+    const [teamData, captainData, joinData] = await Promise.all([
+      adminFetchJson<{
+        team?: TeamInfo;
+        members?: TeamMemberLite[];
+        isCaptain?: boolean;
+        isManager?: boolean;
+      }>('/api/admin/teams/my').catch(() => null),
+      adminFetchJson<{ demandes?: Demande[] }>('/api/demandes/captain').catch(
+        () => null
+      ),
+      adminFetchJson<{ demandes?: Demande[] }>('/api/demandes/join').catch(
+        () => null
+      ),
     ]);
 
     let isCaptainNow = false;
     let isManagerNow = false;
 
-    if (teamRes.ok) {
-      const data = await teamRes.json();
-      setTeam(data.team || null);
-      setMembers(Array.isArray(data.members) ? data.members : []);
-      isCaptainNow = data.isCaptain || false;
-      isManagerNow = data.isManager || false;
+    if (teamData) {
+      setTeam(teamData.team || null);
+      setMembers(Array.isArray(teamData.members) ? teamData.members : []);
+      isCaptainNow = teamData.isCaptain || false;
+      isManagerNow = teamData.isManager || false;
       setIsCaptain(isCaptainNow);
       setIsManager(isManagerNow);
     }
 
     const allDemandes: Demande[] = [];
-
-    if (captainRes.ok) {
-      const data = await captainRes.json();
-      allDemandes.push(...(data.demandes || []));
-    }
-
-    if (joinRes.ok) {
-      const data = await joinRes.json();
-      allDemandes.push(...(data.demandes || []));
-    }
+    if (captainData) allDemandes.push(...(captainData.demandes || []));
+    if (joinData) allDemandes.push(...(joinData.demandes || []));
 
     allDemandes.sort(
       (a, b) =>
@@ -195,30 +182,28 @@ export default function PlayerDashboard() {
 
     // Captain or manager: load pending scrims and unread messages
     if (isCaptainNow || isManagerNow) {
-      const [scrimRes, msgRes] = await Promise.all([
-        fetch('/api/teams/scrim-requests', {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-        fetch('/api/player/messages', {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
+      const [scrimData, msgData] = await Promise.all([
+        adminFetchJson<{ demandes?: PendingScrim[] }>(
+          '/api/teams/scrim-requests'
+        ).catch(() => null),
+        adminFetchJson<{ conversations?: { unreadCount: number }[] }>(
+          '/api/player/messages'
+        ).catch(() => null),
       ]);
 
-      if (scrimRes.ok) {
-        const data = await scrimRes.json();
-        setPendingScrims(data.demandes || []);
+      if (scrimData) {
+        setPendingScrims(scrimData.demandes || []);
       }
 
-      if (msgRes.ok) {
-        const data = await msgRes.json();
-        const total = (data.conversations || []).reduce(
+      if (msgData) {
+        const total = (msgData.conversations || []).reduce(
           (sum: number, c: { unreadCount: number }) => sum + c.unreadCount,
           0
         );
         setUnreadMessages(total);
       }
     }
-  }, [getToken]);
+  }, [adminFetchJson]);
 
   useEffect(() => {
     if (!ready) return;
@@ -243,21 +228,10 @@ export default function PlayerDashboard() {
   };
 
   const handleCancelDemande = async (demandeId: string) => {
-    const token = await getToken();
-    if (!token) throw new Error('Session expiree.');
-
-    const res = await fetch('/api/demandes/cancel', {
+    await adminFetchJson('/api/demandes/cancel', {
       method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
       body: JSON.stringify({ demandeId }),
     });
-
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Echec de l'annulation.");
-
     await loadData();
   };
 
@@ -268,18 +242,10 @@ export default function PlayerDashboard() {
     setScrimError(null);
     setScrimActionId(demandeId);
     try {
-      const t = await getToken();
-      if (!t) throw new Error('Session expirée.');
-      const res = await fetch('/api/teams/scrim-requests', {
+      await adminFetchJson('/api/teams/scrim-requests', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${t}`,
-        },
         body: JSON.stringify({ demandeId, action }),
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || 'Échec.');
       setPendingScrims((prev) => prev.filter((s) => s.id !== demandeId));
     } catch (err) {
       setScrimError((err as Error).message);
@@ -289,16 +255,7 @@ export default function PlayerDashboard() {
   };
 
   const handleLeaveTeam = async () => {
-    const token = await getToken();
-    if (!token) throw new Error('Session expiree.');
-
-    const res = await fetch('/api/teams/leave', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Echec.');
+    await adminFetchJson('/api/teams/leave', { method: 'POST' });
 
     setTeam(null);
     setMembers([]);

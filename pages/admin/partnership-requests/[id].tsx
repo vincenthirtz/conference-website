@@ -3,8 +3,8 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { supabaseClient } from '@/utils/supabase';
 import { useToast } from '@/components/Toast';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 type Props = {
   staff: {
@@ -70,6 +70,7 @@ function AdminPartnershipRequestDetailPage({ staff }: Props) {
   const router = useRouter();
   const { id } = router.query;
   const { addToast } = useToast();
+  const { adminFetchJson } = useAdminFetch();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -85,21 +86,9 @@ function AdminPartnershipRequestDetailPage({ staff }: Props) {
     async function fetchRequest() {
       setLoading(true);
       try {
-        const {
-          data: { session },
-        } = await supabaseClient.auth.getSession();
-        const token = session?.access_token;
-        if (!token) throw new Error('Session staff manquante.');
-
-        const res = await fetch(`/api/admin/partnership-requests/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const json = await res.json();
-
-        if (!res.ok) {
-          throw new Error(json.error || 'Demande introuvable.');
-        }
-
+        const json = await adminFetchJson<RequestData>(
+          `/api/admin/partnership-requests/${id}`
+        );
         setRequest(json);
         setStatus(json.status);
         setAdminNotes(json.admin_notes || '');
@@ -111,6 +100,7 @@ function AdminPartnershipRequestDetailPage({ staff }: Props) {
     }
 
     fetchRequest();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const handleUpdate = async () => {
@@ -118,27 +108,13 @@ function AdminPartnershipRequestDetailPage({ staff }: Props) {
     setSaving(true);
 
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-
-      const res = await fetch(`/api/admin/partnership-requests/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status, adminNotes }),
-      });
-
-      const json = await res.json();
-
-      if (!res.ok) {
-        throw new Error(json.error || 'Erreur lors de la mise à jour.');
-      }
-
+      const json = await adminFetchJson<RequestData>(
+        `/api/admin/partnership-requests/${id}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ status, adminNotes }),
+        }
+      );
       setRequest(json);
       addToast('Mis à jour avec succès.', 'success');
     } catch (err: unknown) {

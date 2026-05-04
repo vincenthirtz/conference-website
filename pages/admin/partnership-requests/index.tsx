@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
-import { supabaseClient } from '@/utils/supabase';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 import { logger } from '../../../utils/logger';
 type RequestRow = {
@@ -73,6 +73,7 @@ function formatDate(d: string | null) {
 }
 
 function AdminPartnershipRequestsPage({ staff }: Props) {
+  const { adminFetchJson } = useAdminFetch();
   const [loading, setLoading] = useState(false);
   const [requests, setRequests] = useState<RequestRow[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
@@ -83,26 +84,14 @@ function AdminPartnershipRequestsPage({ staff }: Props) {
     setLoading(true);
 
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
       const params = new URLSearchParams();
       if (statusFilter) params.set('status', statusFilter);
       if (categoryFilter) params.set('category', categoryFilter);
 
-      const res = await fetch(
-        `/api/admin/partnership-requests?${params.toString()}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      const json = await res.json();
+      const json = await adminFetchJson<{
+        items?: RequestRow[];
+        counts?: Record<string, number>;
+      }>(`/api/admin/partnership-requests?${params.toString()}`);
 
       setRequests(json.items || []);
       setCounts(json.counts || {});
@@ -111,7 +100,7 @@ function AdminPartnershipRequestsPage({ staff }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, categoryFilter]);
+  }, [statusFilter, categoryFilter, adminFetchJson]);
 
   useEffect(() => {
     fetchData();
@@ -120,19 +109,9 @@ function AdminPartnershipRequestsPage({ staff }: Props) {
   const onDelete = async (id: string) => {
     if (!confirm('Supprimer cette demande ?')) return;
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-      const res = await fetch(`/api/admin/partnership-requests/${id}`, {
+      await adminFetchJson(`/api/admin/partnership-requests/${id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) {
-        const json = await res.json().catch(() => null);
-        throw new Error(json?.error || 'Suppression impossible');
-      }
       fetchData();
     } catch (err: unknown) {
       alert((err as Error)?.message || 'Erreur de suppression.');

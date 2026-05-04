@@ -2,8 +2,8 @@ import { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
-import { supabaseClient } from '@/utils/supabase';
 import { withStaffPage } from '@/utils/staff';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 import { logger } from '../../../utils/logger';
 type StaffShape = {
@@ -62,6 +62,7 @@ export const getServerSideProps = withStaffPage('caster');
 
 function MyTeamPage({ staff }: StaffProps) {
   const router = useRouter();
+  const { adminFetch, adminFetchJson } = useAdminFetch();
   const isStaffAdmin =
     staff.role === 'admin' ||
     staff.role === 'owner' ||
@@ -149,32 +150,13 @@ function MyTeamPage({ staff }: StaffProps) {
       setLoading(true);
       setError(null);
       try {
-        const {
-          data: { session },
-        } = await supabaseClient.auth.getSession();
-        if (!session) {
-          router.replace('/admin/login');
-          return;
-        }
-
         // If admin and a specific team is selected, fetch that team
         let url = '/api/admin/teams/my';
         if (isStaffAdmin && teamId) {
           url = `/api/admin/teams/${teamId}`;
         }
 
-        const res = await fetch(url, {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        });
-        const json = await res.json();
-
-        if (!res.ok) {
-          // For admin fetching specific team, format response
-          if (isStaffAdmin && teamId) {
-            throw new Error(json?.error || 'Equipe introuvable');
-          }
-          throw new Error(json?.error || 'Chargement impossible');
-        }
+        const json = await adminFetchJson<any>(url);
 
         // Handle different API response formats
         if (isStaffAdmin && teamId && json.team) {
@@ -212,7 +194,7 @@ function MyTeamPage({ staff }: StaffProps) {
         setLoading(false);
       }
     },
-    [router, isStaffAdmin]
+    [isStaffAdmin, adminFetchJson]
   );
 
   useEffect(() => {
@@ -232,32 +214,18 @@ function MyTeamPage({ staff }: StaffProps) {
     if (!data?.team) return;
     setSaving(true);
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      if (!session) {
-        router.replace('/admin/login');
-        return;
-      }
-
       // Use admin endpoint for staff, captain endpoint for captains
       const url = isStaffAdmin
         ? `/api/admin/teams/${data.team.id}`
         : '/api/admin/teams/my';
 
-      const res = await fetch(url, {
+      await adminFetchJson(url, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
         body: JSON.stringify({
           teamId: data.team.id,
           ...form,
         }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error || 'Enregistrement impossible');
 
       // Reload
       if (isStaffAdmin && selectedTeamId) {
@@ -273,37 +241,31 @@ function MyTeamPage({ staff }: StaffProps) {
   };
 
   // Search players
-  const handleSearchPlayers = useCallback(async (query: string) => {
-    if (query.length < 2) {
-      setSearchResults([]);
-      return;
-    }
-    setSearchLoading(true);
-    try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      if (!session) return;
-
-      const res = await fetch(
-        `/api/teams/search-players?q=${encodeURIComponent(query)}`,
-        {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        }
-      );
-      const json = await res.json();
-      if (res.ok && json.players) {
-        setSearchResults(json.players);
-      } else {
+  const handleSearchPlayers = useCallback(
+    async (query: string) => {
+      if (query.length < 2) {
         setSearchResults([]);
+        return;
       }
-    } catch (err) {
-      logger.error('Search error:', err);
-      setSearchResults([]);
-    } finally {
-      setSearchLoading(false);
-    }
-  }, []);
+      setSearchLoading(true);
+      try {
+        const json = await adminFetchJson<{ players?: SearchResult[] }>(
+          `/api/teams/search-players?q=${encodeURIComponent(query)}`
+        );
+        if (json.players) {
+          setSearchResults(json.players);
+        } else {
+          setSearchResults([]);
+        }
+      } catch (err) {
+        logger.error('Search error:', err);
+        setSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    },
+    [adminFetchJson]
+  );
 
   // Debounced search
   useEffect(() => {
@@ -322,25 +284,13 @@ function MyTeamPage({ staff }: StaffProps) {
     if (!selectedPlayer || !data?.team) return;
     setAddingMember(true);
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      if (!session) {
-        router.replace('/admin/login');
-        return;
-      }
-
       // Use admin endpoint for staff
       const url = isStaffAdmin
         ? '/api/admin/teams/add-member'
         : '/api/teams/add-member';
 
-      const res = await fetch(url, {
+      const res = await adminFetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
         body: JSON.stringify({
           teamId: data.team.id,
           userId: selectedPlayer.id,
@@ -382,40 +332,23 @@ function MyTeamPage({ staff }: StaffProps) {
   const loadJoinRequests = useCallback(async () => {
     setJoinRequestsLoading(true);
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      if (!session) return;
-
-      const res = await fetch('/api/teams/join-requests?status=pending', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      const json = await res.json();
-      if (res.ok) {
-        setJoinRequests(json.demandes || []);
-      }
+      const json = await adminFetchJson<{ demandes?: JoinRequest[] }>(
+        '/api/teams/join-requests?status=pending'
+      );
+      setJoinRequests(json.demandes || []);
     } catch (err) {
       logger.error('Failed to load join requests', err);
     } finally {
       setJoinRequestsLoading(false);
     }
-  }, []);
+  }, [adminFetchJson]);
 
   // Toggle joinable status
   const handleToggleJoinable = async () => {
     setTogglingJoinable(true);
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      if (!session) return;
-
-      const res = await fetch('/api/teams/toggle-joinable', {
+      const res = await adminFetch('/api/teams/toggle-joinable', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
         body: JSON.stringify({ joinable: !isJoinable }),
       });
       const json = await res.json();
@@ -438,17 +371,8 @@ function MyTeamPage({ staff }: StaffProps) {
   ) => {
     setProcessingRequestId(demandeId);
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      if (!session) return;
-
-      const res = await fetch('/api/teams/join-requests', {
+      const res = await adminFetch('/api/teams/join-requests', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
         body: JSON.stringify({ demandeId, action }),
       });
       const json = await res.json();

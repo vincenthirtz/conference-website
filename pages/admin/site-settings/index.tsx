@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
-import { supabaseClient } from '@/utils/supabase';
 import { useToast } from '@/components/Toast';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 import { logger } from '../../../utils/logger';
 type SiteSetting = {
@@ -65,6 +65,7 @@ const KNOWN_SETTINGS = [
 
 function AdminSiteSettingsPage({ staff }: Props) {
   const { addToast } = useToast();
+  const { adminFetchJson } = useAdminFetch();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
   const [settings, setSettings] = useState<Record<string, SiteSetting>>({});
@@ -73,19 +74,9 @@ function AdminSiteSettingsPage({ staff }: Props) {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
-      const res = await fetch('/api/admin/site-settings', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const json = await res.json();
+      const json = await adminFetchJson<{ items?: SiteSetting[] }>(
+        '/api/admin/site-settings'
+      );
 
       const settingsMap: Record<string, SiteSetting> = {};
       const valuesMap: Record<string, string> = {};
@@ -109,7 +100,7 @@ function AdminSiteSettingsPage({ staff }: Props) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [adminFetchJson]);
 
   useEffect(() => {
     fetchData();
@@ -119,32 +110,15 @@ function AdminSiteSettingsPage({ staff }: Props) {
     setSaving(key);
 
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-
       const known = KNOWN_SETTINGS.find((s) => s.key === key);
-
-      const res = await fetch('/api/admin/site-settings', {
+      await adminFetchJson('/api/admin/site-settings', {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           key,
           value: values[key] || '',
           description: known?.description || null,
         }),
       });
-
-      if (!res.ok) {
-        const json = await res.json().catch(() => null);
-        throw new Error(json?.error || 'Erreur de sauvegarde');
-      }
-
       addToast('Paramètre sauvegardé avec succès', 'success');
       fetchData();
     } catch (err: unknown) {

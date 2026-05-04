@@ -3,8 +3,8 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Image from 'next/image';
 import { withStaffPage } from '@/utils/staff';
-import { supabaseClient } from '@/utils/supabase';
 import { useToast } from '@/components/Toast';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 type Props = {
   staff: {
@@ -17,6 +17,7 @@ type Props = {
 function AdminTwitchChannelEditPage({ staff }: Props) {
   const router = useRouter();
   const { addToast } = useToast();
+  const { adminFetchJson } = useAdminFetch();
   const { id } = router.query;
 
   const [loading, setLoading] = useState(true);
@@ -39,21 +40,15 @@ function AdminTwitchChannelEditPage({ staff }: Props) {
     setError(null);
 
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-
-      const res = await fetch(`/api/admin/twitch-channels/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) {
-        throw new Error('Chaîne introuvable.');
-      }
-
-      const data = await res.json();
+      const data = await adminFetchJson<{
+        channel?: string;
+        label?: string;
+        badge?: string;
+        description?: string;
+        background_url?: string;
+        is_active?: boolean;
+        sort_order?: number;
+      }>(`/api/admin/twitch-channels/${id}`);
 
       setForm({
         channel: data.channel || '',
@@ -69,7 +64,7 @@ function AdminTwitchChannelEditPage({ staff }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, adminFetchJson]);
 
   useEffect(() => {
     fetchChannel();
@@ -90,12 +85,6 @@ function AdminTwitchChannelEditPage({ staff }: Props) {
 
     setSaving(true);
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-
       const payload = {
         channel: form.channel.trim(),
         label: form.label.trim(),
@@ -106,21 +95,10 @@ function AdminTwitchChannelEditPage({ staff }: Props) {
         sortOrder: form.sortOrder ? parseInt(form.sortOrder, 10) : undefined,
       };
 
-      const res = await fetch(`/api/admin/twitch-channels/${id}`, {
+      await adminFetchJson(`/api/admin/twitch-channels/${id}`, {
         method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(payload),
       });
-
-      const json = await res.json();
-
-      if (!res.ok) {
-        throw new Error(json?.error || 'Mise à jour impossible.');
-      }
-
       addToast('Chaîne mise à jour avec succès.', 'success');
     } catch (err: unknown) {
       setError((err as Error)?.message || 'Erreur inattendue.');

@@ -3,8 +3,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import slugify from 'slugify';
-import { supabaseClient } from '@/utils/supabase';
 import { withStaffPage } from '@/utils/staff';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import LogoUpload from '@/components/admin/LogoUpload';
 
@@ -34,6 +34,7 @@ const slugifyValue = (value: string) =>
 
 export default function AdminNewsEdit({ staff }: Props) {
   const router = useRouter();
+  const { adminFetchJson } = useAdminFetch();
   const { id } = router.query;
 
   const [form, setForm] = useState<FormState | null>(null);
@@ -50,17 +51,16 @@ export default function AdminNewsEdit({ staff }: Props) {
       setLoading(true);
       setError(null);
       try {
-        const {
-          data: { session },
-        } = await supabaseClient.auth.getSession();
-        const token = session?.access_token;
-        if (!token) throw new Error('Session staff manquante.');
-
-        const res = await fetch(`/api/admin/news/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json?.error || 'Chargement impossible');
+        const json = await adminFetchJson<{
+          title?: string;
+          slug?: string;
+          tag?: string;
+          excerpt?: string;
+          image_url?: string;
+          content?: string;
+          status?: 'draft' | 'published';
+          published_at?: string | null;
+        }>(`/api/admin/news/${id}`);
 
         setForm({
           title: json.title || '',
@@ -81,6 +81,7 @@ export default function AdminNewsEdit({ staff }: Props) {
       }
     };
     fetchItem();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -89,27 +90,15 @@ export default function AdminNewsEdit({ staff }: Props) {
     setSaving(true);
     setError(null);
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-
       const payload = {
         ...form,
         slug: form.slug || slugifyValue(form.title),
       };
 
-      const res = await fetch(`/api/admin/news/${id}`, {
+      await adminFetchJson(`/api/admin/news/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify(payload),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error || 'Mise à jour impossible');
       router.push('/admin/news');
     } catch (err: unknown) {
       setError((err as Error)?.message || 'Erreur inattendue.');

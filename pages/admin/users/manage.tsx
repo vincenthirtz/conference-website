@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
-import { supabaseClient } from '@/utils/supabase';
 import { useToast } from '@/components/Toast';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 import { logger } from '../../../utils/logger';
 type StaffShape = {
@@ -100,6 +100,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
 
   const [updating, setUpdating] = useState<string | null>(null);
   const { addToast } = useToast();
+  const { adminFetchJson } = useAdminFetch();
 
   // Battle tag edit modal
   const [editingBattleTag, setEditingBattleTag] = useState<{
@@ -129,11 +130,6 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
     setLoading(true);
 
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-
       const params = new URLSearchParams();
       params.set('limit', String(limit));
       params.set('offset', String(offset));
@@ -141,14 +137,9 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       if (search.trim()) params.set('search', search);
       if (roleFilter) params.set('role', roleFilter);
 
-      const headers: Record<string, string> = {};
-      if (token) headers.Authorization = `Bearer ${token}`;
-
-      const res = await fetch(`/api/admin/users/manage?${params.toString()}`, {
-        headers,
-        credentials: 'same-origin',
-      });
-      const json: ApiResponse = await res.json();
+      const json = await adminFetchJson<ApiResponse>(
+        `/api/admin/users/manage?${params.toString()}`
+      );
 
       setUsers(json.items || []);
       setTotal(json.total ?? json.items?.length ?? 0);
@@ -158,7 +149,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
     } finally {
       setLoading(false);
     }
-  }, [limit, offset, search, roleFilter]);
+  }, [limit, offset, search, roleFilter, adminFetchJson]);
 
   useEffect(() => {
     fetchData();
@@ -173,24 +164,10 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
   const changeRole = async (userId: string, role: string) => {
     setUpdating(userId);
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-
-      const res = await fetch('/api/admin/users/manage', {
+      await adminFetchJson('/api/admin/users/manage', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({ userId, role }),
       });
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error || 'Mise à jour impossible.');
-      }
 
       setUsers((prev) =>
         prev.map((u) => (u.id === userId ? { ...u, role } : u))
@@ -228,29 +205,14 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
     setBattleTagError(null);
 
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-
-      const res = await fetch('/api/admin/users/manage', {
+      await adminFetchJson('/api/admin/users/manage', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           userId: editingBattleTag.userId,
           teamId: editingBattleTag.teamId,
           battleTag: newBattleTag.trim(),
         }),
       });
-
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error || 'Mise à jour impossible.');
-      }
 
       setUsers((prev) =>
         prev.map((u) => {
@@ -289,28 +251,13 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
     setEditError(null);
 
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-
-      const res = await fetch('/api/admin/users/manage', {
+      await adminFetchJson('/api/admin/users/manage', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           userId: editingUser.id,
           display_name: editDisplayName.trim(),
         }),
       });
-
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error || 'Mise à jour impossible.');
-      }
 
       setUsers((prev) =>
         prev.map((u) =>
@@ -339,25 +286,16 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
 
     setResendingUser(user.id);
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-
-      const res = await fetch('/api/admin/users/manage', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ userId: user.id, action: 'resend_credentials' }),
-      });
-
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error || 'Envoi impossible.');
-      }
+      const json = await adminFetchJson<{ warning?: string }>(
+        '/api/admin/users/manage',
+        {
+          method: 'PATCH',
+          body: JSON.stringify({
+            userId: user.id,
+            action: 'resend_credentials',
+          }),
+        }
+      );
 
       if (json.warning) {
         alert(json.warning);
@@ -381,25 +319,10 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
     setDeleteLoading(true);
 
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-
-      const res = await fetch('/api/admin/users/manage', {
+      await adminFetchJson('/api/admin/users/manage', {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({ userId: deletingUser.id }),
       });
-
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error || 'Suppression impossible.');
-      }
 
       setUsers((prev) => prev.filter((u) => u.id !== deletingUser!.id));
       setTotal((prev) => (prev !== null ? prev - 1 : prev));

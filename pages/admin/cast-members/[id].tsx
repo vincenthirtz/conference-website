@@ -3,7 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Image from 'next/image';
 import { withStaffPage } from '@/utils/staff';
-import { supabaseClient } from '@/utils/supabase';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import CastMemberStaffPicker from '@/components/admin/CastMemberStaffPicker';
 
@@ -19,6 +19,7 @@ function AdminCastMemberEditPage({ staff }: Props) {
   const router = useRouter();
   const { id } = router.query;
   const { addToast } = useToast();
+  const { adminFetchJson } = useAdminFetch();
 
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({
@@ -43,21 +44,7 @@ function AdminCastMemberEditPage({ staff }: Props) {
     setError(null);
 
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-
-      const res = await fetch(`/api/admin/cast-members/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) {
-        throw new Error('Casteuse introuvable.');
-      }
-
-      const data = await res.json();
+      const data = await adminFetchJson<any>(`/api/admin/cast-members/${id}`);
 
       setForm({
         name: data.name || '',
@@ -76,7 +63,7 @@ function AdminCastMemberEditPage({ staff }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, adminFetchJson]);
 
   useEffect(() => {
     fetchMember();
@@ -100,12 +87,6 @@ function AdminCastMemberEditPage({ staff }: Props) {
 
     setSaving(true);
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-
       const payload = {
         name: form.name.trim(),
         title: form.title.trim() || null,
@@ -119,20 +100,10 @@ function AdminCastMemberEditPage({ staff }: Props) {
         authUserId: form.authUserId,
       };
 
-      const res = await fetch(`/api/admin/cast-members/${id}`, {
+      await adminFetchJson(`/api/admin/cast-members/${id}`, {
         method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(payload),
       });
-
-      const json = await res.json();
-
-      if (!res.ok) {
-        throw new Error(json?.error || 'Mise à jour impossible.');
-      }
 
       addToast('Casteuse mise à jour avec succès.', 'success');
     } catch (err: unknown) {

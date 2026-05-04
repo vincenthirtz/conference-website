@@ -3,7 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { supabaseClient } from '@/utils/supabase';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 type Props = {
   staff: {
@@ -76,6 +76,7 @@ type AdherentData = {
 
 function AdminEditAdherentPage({ staff }: Props) {
   const router = useRouter();
+  const { adminFetchJson } = useAdminFetch();
   const { id } = router.query;
 
   const [loading, setLoading] = useState(true);
@@ -114,24 +115,9 @@ function AdminEditAdherentPage({ staff }: Props) {
 
     setLoading(true);
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
-      const res = await fetch(`/api/admin/adherents/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) {
-        throw new Error('Adhérent introuvable');
-      }
-
-      const data: AdherentData = await res.json();
+      const data = await adminFetchJson<AdherentData>(
+        `/api/admin/adherents/${id}`
+      );
       setAdherent(data);
 
       setForm({
@@ -157,10 +143,9 @@ function AdminEditAdherentPage({ staff }: Props) {
       });
 
       // Récupérer le montant de cotisation
-      const settingsRes = await fetch('/api/admin/site-settings', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const settingsJson = await settingsRes.json();
+      const settingsJson = await adminFetchJson<{
+        items?: { key: string; value: string }[];
+      }>('/api/admin/site-settings');
       const cotisation = settingsJson.items?.find(
         (s: { key: string }) => s.key === 'cotisation_amount'
       );
@@ -172,7 +157,7 @@ function AdminEditAdherentPage({ staff }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, adminFetchJson]);
 
   useEffect(() => {
     fetchAdherent();
@@ -206,29 +191,13 @@ function AdminEditAdherentPage({ staff }: Props) {
     setSaving(true);
 
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-
-      const res = await fetch(`/api/admin/adherents/${id}`, {
+      await adminFetchJson(`/api/admin/adherents/${id}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           ...form,
           paymentMethod: form.paymentMethod || null,
         }),
       });
-
-      const json = await res.json();
-
-      if (!res.ok) {
-        throw new Error(json.error || 'Erreur lors de la mise à jour.');
-      }
 
       router.push('/admin/adherents');
     } catch (err: unknown) {

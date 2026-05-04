@@ -4,8 +4,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import { supabaseClient } from '@/utils/supabase';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import CopyButton from '@/components/player/CopyButton';
 
@@ -49,7 +49,8 @@ type JoinRequest = {
 };
 
 export default function ManageTeamPage() {
-  const { token, loading: authLoading, ready } = usePlayerSession();
+  const { loading: authLoading, ready } = usePlayerSession();
+  const { adminFetchJson } = useAdminFetch();
   const [loading, setLoading] = useState(true);
 
   const [team, setTeam] = useState<TeamInfo | null>(null);
@@ -62,41 +63,36 @@ export default function ManageTeamPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const getToken = useCallback(async () => {
-    if (token) return token;
-    const { data } = await supabaseClient.auth.getSession();
-    return data.session?.access_token ?? null;
-  }, [token]);
-
-  const loadData = useCallback(async (accessToken: string) => {
-    const [teamRes, requestsRes] = await Promise.all([
-      fetch('/api/admin/teams/my', {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }),
-      fetch('/api/teams/join-requests', {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }),
+  const loadData = useCallback(async () => {
+    const [teamData, requestsData] = await Promise.all([
+      adminFetchJson<{
+        team?: TeamInfo;
+        members?: Member[];
+        isCaptain?: boolean;
+        isManager?: boolean;
+      }>('/api/admin/teams/my').catch(() => null),
+      adminFetchJson<{ demandes?: JoinRequest[] }>(
+        '/api/teams/join-requests'
+      ).catch(() => null),
     ]);
 
-    if (teamRes.ok) {
-      const data = await teamRes.json();
-      setTeam(data.team || null);
-      setMembers(data.members || []);
-      setIsCaptain(data.isCaptain || false);
-      setIsManager(data.isManager || false);
+    if (teamData) {
+      setTeam(teamData.team || null);
+      setMembers(teamData.members || []);
+      setIsCaptain(teamData.isCaptain || false);
+      setIsManager(teamData.isManager || false);
     }
 
-    if (requestsRes.ok) {
-      const data = await requestsRes.json();
-      setJoinRequests(data.demandes || []);
+    if (requestsData) {
+      setJoinRequests(requestsData.demandes || []);
     }
-  }, []);
+  }, [adminFetchJson]);
 
   useEffect(() => {
-    if (!ready || !token) return;
+    if (!ready) return;
     let cancelled = false;
     setLoading(true);
-    loadData(token)
+    loadData()
       .catch(() => {
         if (!cancelled) setError('Erreur de chargement.');
       })
@@ -106,7 +102,7 @@ export default function ManageTeamPage() {
     return () => {
       cancelled = true;
     };
-  }, [ready, token, loadData]);
+  }, [ready, loadData]);
 
   const showSuccess = (msg: string) => {
     setSuccessMsg(msg);
@@ -114,21 +110,16 @@ export default function ManageTeamPage() {
   };
 
   const handleToggleJoinable = async () => {
-    const t = await getToken();
-    if (!t) return;
     setActionLoading('joinable');
     setError(null);
     try {
-      const res = await fetch('/api/teams/toggle-joinable', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${t}`,
-        },
-        body: JSON.stringify({ joinable: !team?.is_joinable }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const data = await adminFetchJson<{ is_joinable: boolean }>(
+        '/api/teams/toggle-joinable',
+        {
+          method: 'POST',
+          body: JSON.stringify({ joinable: !team?.is_joinable }),
+        }
+      );
       setTeam((prev) =>
         prev ? { ...prev, is_joinable: data.is_joinable } : prev
       );
@@ -143,21 +134,14 @@ export default function ManageTeamPage() {
   };
 
   const handleRemoveMember = async (memberId: string) => {
-    const t = await getToken();
-    if (!t || !team) return;
+    if (!team) return;
     setActionLoading(`remove-${memberId}`);
     setError(null);
     try {
-      const res = await fetch(`/api/teams/${team.id}/members`, {
+      await adminFetchJson(`/api/teams/${team.id}/members`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${t}`,
-        },
         body: JSON.stringify({ memberId }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
       setMembers((prev) => prev.filter((m) => m.id !== memberId));
       showSuccess('Membre retire');
     } catch (err: unknown) {
@@ -168,21 +152,16 @@ export default function ManageTeamPage() {
   };
 
   const handleUpdateRole = async (memberId: string, role: string) => {
-    const t = await getToken();
-    if (!t) return;
     setActionLoading(`role-${memberId}`);
     setError(null);
     try {
-      const res = await fetch('/api/teams/update-member-role', {
+      const data = await adminFetchJson<{
+        newRole: string | null;
+        isSubstitute: boolean;
+      }>('/api/teams/update-member-role', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${t}`,
-        },
         body: JSON.stringify({ memberId, role }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
       setMembers((prev) =>
         prev.map((m) =>
           m.id === memberId
@@ -202,24 +181,16 @@ export default function ManageTeamPage() {
     demandeId: string,
     action: 'approve' | 'reject'
   ) => {
-    const t = await getToken();
-    if (!t) return;
     setActionLoading(`join-${demandeId}`);
     setError(null);
     try {
-      const res = await fetch('/api/teams/join-requests', {
+      await adminFetchJson('/api/teams/join-requests', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${t}`,
-        },
         body: JSON.stringify({ demandeId, action }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
       setJoinRequests((prev) => prev.filter((r) => r.id !== demandeId));
       if (action === 'approve') {
-        await loadData(t);
+        await loadData();
       }
       showSuccess(action === 'approve' ? 'Joueur accepte' : 'Demande rejetee');
     } catch (err: unknown) {

@@ -10,6 +10,10 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import EmptyState from '@/components/admin/EmptyState';
 import { SkeletonListRow } from '@/components/admin/Skeleton';
 import { useUrlFilters } from '@/utils/useUrlFilters';
+import {
+  escapePostgrestValue,
+  sanitizeSearch,
+} from '@/utils/apiHelpers';
 import type { TeamRow } from '@/types/admin';
 
 import { logger } from '../../../utils/logger';
@@ -1323,7 +1327,7 @@ function AdminTeamsListPage({
 
 export const getServerSideProps = withStaffPage('manager', async (ctx) => {
   const { query } = ctx;
-  const search = typeof query.search === 'string' ? query.search.trim() : '';
+  const search = sanitizeSearch(query.search);
   const isActive = typeof query.isActive === 'string' ? query.isActive : '';
   const tournamentId =
     typeof query.tournamentId === 'string' ? query.tournamentId : '';
@@ -1342,7 +1346,7 @@ export const getServerSideProps = withStaffPage('manager', async (ctx) => {
   if (isActive === 'true') q = q.eq('is_active', true);
   if (isActive === 'false') q = q.eq('is_active', false);
   if (search) {
-    const s = `%${search}%`;
+    const s = `%${escapePostgrestValue(search)}%`;
     q = q.or(`name.ilike.${s},slug.ilike.${s},short_name.ilike.${s}`);
   }
   if (tournamentId) {

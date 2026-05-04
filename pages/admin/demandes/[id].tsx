@@ -6,9 +6,9 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
-import { supabaseClient } from '@/utils/supabase';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 type DemandeType =
   | 'join_team'
@@ -168,9 +168,9 @@ type ForwardCandidate = {
 function AdminDemandeDetailPage() {
   const router = useRouter();
   const { addToast } = useToast();
+  const { adminFetchJson } = useAdminFetch();
   const id = typeof router.query.id === 'string' ? router.query.id : null;
 
-  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [demande, setDemande] = useState<Demande | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -182,41 +182,19 @@ function AdminDemandeDetailPage() {
   const [forwarding, setForwarding] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      if (cancelled) return;
-      if (!session?.access_token) {
-        router.push('/admin/login');
-        return;
-      }
-      setToken(session.access_token);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [router]);
-
-  useEffect(() => {
-    if (!token || !id) return;
+    if (!id) return;
     fetchDemande();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, id]);
+  }, [id]);
 
   async function fetchDemande() {
-    if (!token || !id) return;
+    if (!id) return;
     setLoading(true);
     setErrorMsg(null);
     try {
-      const res = await fetch(`/api/admin/demandes/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(json.error || 'Impossible de charger la demande');
-      }
+      const json = await adminFetchJson<{ demande: Demande }>(
+        `/api/admin/demandes/${id}`
+      );
       setDemande(json.demande);
       setStaffNote(json.demande?.staff_note || '');
     } catch (err) {
@@ -227,19 +205,14 @@ function AdminDemandeDetailPage() {
   }
 
   async function openForwardPanel() {
-    if (!token) return;
     setForwardOpen(true);
     setForwardTargetId('');
     if (forwardTeams.length > 0) return;
     try {
-      const res = await fetch(
-        '/api/admin/teams?limit=200&isActive=true&includeTotal=0',
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || 'Échec du chargement.');
+      const json = await adminFetchJson<{
+        teams?: ForwardCandidate[];
+        data?: ForwardCandidate[];
+      }>('/api/admin/teams?limit=200&isActive=true&includeTotal=0');
       const teams = (json.teams || json.data || []).map((t: any) => ({
         id: t.id,
         name: t.name,
@@ -261,22 +234,19 @@ function AdminDemandeDetailPage() {
   }
 
   async function submitForward() {
-    if (!token || !id || !forwardTargetId) return;
+    if (!id || !forwardTargetId) return;
     setForwarding(true);
     try {
-      const res = await fetch('/api/admin/scrims/forward', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          demandeId: id,
-          targetTeamId: forwardTargetId,
-        }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || 'Échec du transfert.');
+      const json = await adminFetchJson<{ targetTeam?: { name?: string } }>(
+        '/api/admin/scrims/forward',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            demandeId: id,
+            targetTeamId: forwardTargetId,
+          }),
+        }
+      );
       addToast(
         `Demande transférée vers ${json.targetTeam?.name || 'l’équipe'}.`,
         'success'
@@ -291,16 +261,12 @@ function AdminDemandeDetailPage() {
   }
 
   async function updateStatus(newStatus: 'approved' | 'rejected') {
-    if (!token || !id) return;
+    if (!id) return;
     setProcessing(true);
     setErrorMsg(null);
     try {
-      const res = await fetch('/api/admin/demandes', {
+      await adminFetchJson('/api/admin/demandes', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           action: 'updateStatus',
           demandeIds: [id],
@@ -308,10 +274,6 @@ function AdminDemandeDetailPage() {
           staffComment: staffNote.trim() || null,
         }),
       });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(json.error || 'Erreur');
-      }
       addToast(
         newStatus === 'approved' ? 'Demande approuvée.' : 'Demande refusée.',
         'success'

@@ -3,7 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { supabaseClient } from '@/utils/supabase';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 type Props = {
   staff: {
@@ -26,6 +26,7 @@ type FormData = {
 
 function AdminNewPartnerPage({ staff }: Props) {
   const router = useRouter();
+  const { adminFetchJson } = useAdminFetch();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -68,27 +69,10 @@ function AdminNewPartnerPage({ staff }: Props) {
     setSaving(true);
 
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-
-      const res = await fetch('/api/admin/partners', {
+      await adminFetchJson('/api/admin/partners', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify(form),
       });
-
-      const json = await res.json();
-
-      if (!res.ok) {
-        throw new Error(json.error || 'Erreur lors de la création.');
-      }
-
       router.push('/admin/partners');
     } catch (err: unknown) {
       setError((err as Error).message || 'Une erreur est survenue.');

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/router';
 import type { User } from '@supabase/supabase-js';
 import { supabaseClient } from '@/utils/supabase';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 import { logger } from '../../utils/logger';
 type Props = {
@@ -16,6 +17,7 @@ export default function ProfileCard({
   onProfileUpdate,
 }: Props) {
   const router = useRouter();
+  const { adminFetch, adminFetchJson } = useAdminFetch();
 
   // Profile edit state
   const [editingProfile, setEditingProfile] = useState(false);
@@ -52,23 +54,13 @@ export default function ProfileCard({
     setProfileError(null);
     setProfileSuccess(null);
     try {
-      const token = await getToken();
-      if (!token) throw new Error('Session expiree.');
-
-      const resp = await fetch('/api/player/update-profile', {
+      await adminFetchJson('/api/player/update-profile', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           display_name: editDisplayName,
           battle_tag: editBattleTag,
         }),
       });
-
-      const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error || 'Erreur');
 
       await supabaseClient.auth.refreshSession();
       setProfileSuccess('Profil mis a jour.');
@@ -143,21 +135,11 @@ export default function ProfileCard({
     }
   };
 
-  const getToken = async () => {
-    const { data } = await supabaseClient.auth.getSession();
-    return data.session?.access_token;
-  };
-
   const handleExportData = async () => {
     setExporting(true);
     setDataError(null);
     try {
-      const token = await getToken();
-      if (!token) throw new Error('Session expirée.');
-
-      const resp = await fetch('/api/player/data-export', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const resp = await adminFetch('/api/player/data-export');
 
       if (!resp.ok) {
         const body = await resp.json().catch(() => null);
@@ -183,19 +165,7 @@ export default function ProfileCard({
     setDeleting(true);
     setDataError(null);
     try {
-      const token = await getToken();
-      if (!token) throw new Error('Session expirée.');
-
-      const resp = await fetch('/api/player/delete-account', {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!resp.ok) {
-        const body = await resp.json().catch(() => null);
-        throw new Error(body?.error || 'Erreur lors de la suppression.');
-      }
-
+      await adminFetchJson('/api/player/delete-account', { method: 'DELETE' });
       await supabaseClient.auth.signOut();
       router.replace('/');
     } catch (err: unknown) {

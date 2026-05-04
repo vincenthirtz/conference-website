@@ -3,8 +3,8 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
 import slugify from 'slugify';
-import { supabaseClient } from '@/utils/supabase';
 import { withStaffPage } from '@/utils/staff';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAutoSave } from '@/utils/useAutoSave';
 import DraftBanner from '@/components/admin/DraftBanner';
 import AutoSaveIndicator from '@/components/admin/AutoSaveIndicator';
@@ -25,6 +25,7 @@ const slugifyValue = (value: string) =>
 
 export default function AdminNewsCreate({ staff }: Props) {
   const router = useRouter();
+  const { adminFetchJson } = useAdminFetch();
   const [form, setForm] = useState({
     title: '',
     slug: '',
@@ -59,27 +60,15 @@ export default function AdminNewsCreate({ staff }: Props) {
     setError(null);
 
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-
       const payload = {
         ...form,
         slug: form.slug || slugifyValue(form.title),
       };
 
-      const res = await fetch('/api/admin/news', {
+      const json = await adminFetchJson<{ id: string }>('/api/admin/news', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify(payload),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error || 'Création impossible');
       clearDraft();
       router.push(`/admin/news/${json.id}`);
     } catch (err: unknown) {

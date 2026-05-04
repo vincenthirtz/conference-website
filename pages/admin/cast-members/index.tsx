@@ -3,7 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import { withStaffPage } from '@/utils/staff';
-import { supabaseClient } from '@/utils/supabase';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 import { logger } from '../../../utils/logger';
 type CastMemberRow = {
@@ -50,24 +50,15 @@ function AdminCastMembersPage({ staff }: Props) {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [overIdx, setOverIdx] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const { adminFetch, adminFetchJson } = useAdminFetch();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
 
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
-      const res = await fetch('/api/admin/cast-members?includeInactive=true', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const json: ApiResponse = await res.json();
+      const json = await adminFetchJson<ApiResponse>(
+        '/api/admin/cast-members?includeInactive=true'
+      );
 
       setMembers(json.items || []);
     } catch (err) {
@@ -75,7 +66,7 @@ function AdminCastMembersPage({ staff }: Props) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [adminFetchJson]);
 
   useEffect(() => {
     fetchData();
@@ -84,14 +75,8 @@ function AdminCastMembersPage({ staff }: Props) {
   const onDelete = async (id: string) => {
     if (!confirm('Supprimer cette casteuse ?')) return;
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-      const res = await fetch(`/api/admin/cast-members/${id}`, {
+      const res = await adminFetch(`/api/admin/cast-members/${id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
         const json = await res.json().catch(() => null);
@@ -105,17 +90,8 @@ function AdminCastMembersPage({ staff }: Props) {
 
   const onToggleActive = async (member: CastMemberRow) => {
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-      const res = await fetch(`/api/admin/cast-members/${member.id}`, {
+      const res = await adminFetch(`/api/admin/cast-members/${member.id}`, {
         method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ isActive: !member.is_active }),
       });
       if (!res.ok) {
@@ -152,20 +128,10 @@ function AdminCastMembersPage({ staff }: Props) {
 
       setSaving(true);
       try {
-        const {
-          data: { session },
-        } = await supabaseClient.auth.getSession();
-        const token = session?.access_token;
-        if (!token) throw new Error('Session staff manquante.');
-
         await Promise.all(
           updates.map((u) =>
-            fetch(`/api/admin/cast-members/${u.id}`, {
+            adminFetch(`/api/admin/cast-members/${u.id}`, {
               method: 'PATCH',
-              headers: {
-                Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json',
-              },
               body: JSON.stringify({ sortOrder: u.sortOrder }),
             })
           )
@@ -178,7 +144,7 @@ function AdminCastMembersPage({ staff }: Props) {
         setSaving(false);
       }
     },
-    [members, fetchData]
+    [members, fetchData, adminFetch]
   );
 
   const filteredMembers = members.filter(

@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
-import { supabaseClient } from '@/utils/supabase';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 import { logger } from '../../../utils/logger';
 type AdherentRow = {
@@ -81,39 +81,30 @@ function AdminAdherentsPage({ staff }: Props) {
   const [syncResult, setSyncResult] = useState<string | null>(null);
 
   const currentYear = new Date().getFullYear();
+  const { adminFetch, adminFetchJson } = useAdminFetch();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
 
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
       const params = new URLSearchParams();
       if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
       if (paymentStatusFilter) params.set('paymentStatus', paymentStatusFilter);
       if (yearFilter) params.set('year', yearFilter);
       if (roleFilter) params.set('role', roleFilter);
 
-      const res = await fetch(`/api/admin/adherents?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const json = await res.json();
+      const json = await adminFetchJson<{
+        items?: AdherentRow[];
+        stats?: Stats;
+      }>(`/api/admin/adherents?${params.toString()}`);
 
       setAdherents(json.items || []);
       setStats(json.stats || null);
 
       // Récupérer le montant de cotisation
-      const settingsRes = await fetch('/api/admin/site-settings', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const settingsJson = await settingsRes.json();
+      const settingsJson = await adminFetchJson<{
+        items?: { key: string; value: string }[];
+      }>('/api/admin/site-settings');
       const cotisation = settingsJson.items?.find(
         (s: { key: string }) => s.key === 'cotisation_amount'
       );
@@ -125,7 +116,13 @@ function AdminAdherentsPage({ staff }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch, paymentStatusFilter, yearFilter, roleFilter]);
+  }, [
+    debouncedSearch,
+    paymentStatusFilter,
+    yearFilter,
+    roleFilter,
+    adminFetchJson,
+  ]);
 
   useEffect(() => {
     fetchData();
@@ -134,14 +131,8 @@ function AdminAdherentsPage({ staff }: Props) {
   const onDelete = async (id: string, name: string) => {
     if (!confirm(`Supprimer l'adhérent "${name}" ?`)) return;
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-      const res = await fetch(`/api/admin/adherents/${id}`, {
+      const res = await adminFetch(`/api/admin/adherents/${id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
         const json = await res.json().catch(() => null);
@@ -159,12 +150,6 @@ function AdminAdherentsPage({ staff }: Props) {
     isPaid: boolean
   ) => {
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-
       const payload: Record<string, unknown> = {
         paymentStatus: newStatus,
       };
@@ -174,12 +159,8 @@ function AdminAdherentsPage({ staff }: Props) {
         payload.paymentDate = new Date().toISOString().split('T')[0];
       }
 
-      const res = await fetch(`/api/admin/adherents/${id}`, {
+      const res = await adminFetch(`/api/admin/adherents/${id}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
@@ -196,21 +177,13 @@ function AdminAdherentsPage({ staff }: Props) {
     setSyncing(true);
     setSyncResult(null);
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-
-      const res = await fetch(
-        '/api/admin/helloasso/sync?formSlug=adhesion-2026-2027-women-s-cup',
-        {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Erreur de synchronisation');
+      const json = await adminFetchJson<{
+        created: number;
+        updated: number;
+        skipped: number;
+      }>('/api/admin/helloasso/sync?formSlug=adhesion-2026-2027-women-s-cup', {
+        method: 'POST',
+      });
 
       setSyncResult(
         `Sync OK : ${json.created} créé(s), ${json.updated} mis à jour, ${json.skipped} déjà sync.`

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { supabaseClient } from '@/utils/supabase';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import CastMemberStaffPicker from '@/components/admin/CastMemberStaffPicker';
 
 type Props = {
@@ -15,6 +15,7 @@ type Props = {
 
 function AdminCastMemberNewPage({ staff }: Props) {
   const router = useRouter();
+  const { adminFetchJson } = useAdminFetch();
 
   const [form, setForm] = useState({
     name: '',
@@ -50,12 +51,6 @@ function AdminCastMemberNewPage({ staff }: Props) {
 
     setSaving(true);
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-
       const payload = {
         name: form.name.trim(),
         title: form.title.trim() || null,
@@ -69,20 +64,10 @@ function AdminCastMemberNewPage({ staff }: Props) {
         authUserId: form.authUserId,
       };
 
-      const res = await fetch('/api/admin/cast-members', {
+      await adminFetchJson('/api/admin/cast-members', {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(payload),
       });
-
-      const json = await res.json();
-
-      if (!res.ok) {
-        throw new Error(json?.error || 'Création impossible.');
-      }
 
       router.push('/admin/cast-members');
     } catch (err: unknown) {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { supabaseClient } from '@/utils/supabase';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { logger } from '../../utils/logger';
 
 type AvailableCaster = {
@@ -23,6 +23,7 @@ export default function CastMemberStaffPicker({
   onChange,
   disabled,
 }: Props) {
+  const { adminFetchJson } = useAdminFetch();
   const [casters, setCasters] = useState<AvailableCaster[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,19 +35,9 @@ export default function CastMemberStaffPicker({
       setLoading(true);
       setError(null);
       try {
-        const {
-          data: { session },
-        } = await supabaseClient.auth.getSession();
-        const token = session?.access_token;
-        if (!token) throw new Error('Session staff manquante.');
-
-        const res = await fetch('/api/admin/cast-members/available-casters', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const json = await res.json();
-        if (!res.ok) {
-          throw new Error(json?.error || 'Chargement impossible.');
-        }
+        const json = await adminFetchJson<{ items?: AvailableCaster[] }>(
+          '/api/admin/cast-members/available-casters'
+        );
         if (!cancelled) {
           setCasters(json.items ?? []);
         }
@@ -64,6 +55,7 @@ export default function CastMemberStaffPicker({
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const selectableCasters = useMemo(() => {

@@ -3,8 +3,8 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { supabaseClient } from '@/utils/supabase';
 import { useToast } from '@/components/Toast';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 type Props = {
   staff: {
@@ -28,6 +28,7 @@ type FormData = {
 function AdminEditPartnerPage({ staff }: Props) {
   const router = useRouter();
   const { addToast } = useToast();
+  const { adminFetchJson } = useAdminFetch();
   const { id } = router.query;
 
   const [loading, setLoading] = useState(true);
@@ -51,20 +52,16 @@ function AdminEditPartnerPage({ staff }: Props) {
     async function fetchPartner() {
       setLoading(true);
       try {
-        const {
-          data: { session },
-        } = await supabaseClient.auth.getSession();
-        const token = session?.access_token;
-        if (!token) throw new Error('Session staff manquante.');
-
-        const res = await fetch(`/api/admin/partners/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const json = await res.json();
-
-        if (!res.ok) {
-          throw new Error(json.error || 'Partenaire introuvable.');
-        }
+        const json = await adminFetchJson<{
+          name?: string;
+          description?: string;
+          category?: FormData['category'];
+          logo_url?: string;
+          website_url?: string;
+          note?: string;
+          display_order?: number;
+          is_active?: boolean;
+        }>(`/api/admin/partners/${id}`);
 
         setForm({
           name: json.name || '',
@@ -84,6 +81,7 @@ function AdminEditPartnerPage({ staff }: Props) {
     }
 
     fetchPartner();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const updateField = <K extends keyof FormData>(
@@ -114,27 +112,10 @@ function AdminEditPartnerPage({ staff }: Props) {
     setSaving(true);
 
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-
-      const res = await fetch(`/api/admin/partners/${id}`, {
+      await adminFetchJson(`/api/admin/partners/${id}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify(form),
       });
-
-      const json = await res.json();
-
-      if (!res.ok) {
-        throw new Error(json.error || 'Erreur lors de la mise à jour.');
-      }
-
       addToast('Partenaire mis à jour avec succès.', 'success');
     } catch (err: unknown) {
       setError((err as Error).message || 'Une erreur est survenue.');

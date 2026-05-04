@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { supabaseClient } from '@/utils/supabase';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import Button from '@/components/Buttons/button';
 import { useToast } from '@/components/Toast';
 import Breadcrumb from '@/components/admin/Breadcrumb';
@@ -56,6 +56,7 @@ export const getServerSideProps = withStaffPage('admin');
 function AdminAnnouncementEditPage({ staff }: Props) {
   const router = useRouter();
   const { addToast } = useToast();
+  const { adminFetch } = useAdminFetch();
   const { id } = router.query;
 
   const [loading, setLoading] = useState(true);
@@ -82,19 +83,7 @@ function AdminAnnouncementEditPage({ staff }: Props) {
     setErrorMsg(null);
 
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) {
-        setErrorMsg('Session staff manquante.');
-        setLoading(false);
-        return;
-      }
-
-      const res = await fetch(`/api/admin/announcements/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await adminFetch(`/api/admin/announcements/${id}`);
 
       if (!res.ok) {
         if (res.status === 404) {
@@ -124,7 +113,7 @@ function AdminAnnouncementEditPage({ staff }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, adminFetch]);
 
   useEffect(() => {
     fetchAnnouncement();
@@ -151,14 +140,6 @@ function AdminAnnouncementEditPage({ staff }: Props) {
     setSubmitting(true);
 
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) {
-        throw new Error('Session staff manquante.');
-      }
-
       const payload = {
         title: form.title.trim(),
         message: form.message.trim(),
@@ -170,12 +151,8 @@ function AdminAnnouncementEditPage({ staff }: Props) {
         priority: Number(form.priority) || 0,
       };
 
-      const res = await fetch(`/api/admin/announcements/${id}`, {
+      const res = await adminFetch(`/api/admin/announcements/${id}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify(payload),
       });
 
@@ -206,17 +183,8 @@ function AdminAnnouncementEditPage({ staff }: Props) {
     setErrorMsg(null);
 
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) {
-        throw new Error('Session staff manquante.');
-      }
-
-      const res = await fetch(`/api/admin/announcements/${id}`, {
+      const res = await adminFetch(`/api/admin/announcements/${id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!res.ok && res.status !== 204) {

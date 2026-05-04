@@ -2,7 +2,7 @@
 // Composant d'upload de logo avec preview, drag & drop, et fallback URL manuelle
 
 import { useState, useRef, useCallback } from 'react';
-import { supabaseClient } from '@/utils/supabase';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 type LogoUploadProps = {
   value: string; // URL actuelle (externe ou locale)
@@ -22,6 +22,7 @@ export default function LogoUpload({
   hint = 'PNG, JPEG ou WebP, max 2 Mo, idéalement 512×512.',
   endpoint = '/api/admin/upload',
 }: LogoUploadProps) {
+  const { adminFetchJson } = useAdminFetch();
   const [mode, setMode] = useState<'upload' | 'url'>(
     value && !value.startsWith('/img/') && !value.includes('supabase')
       ? 'url'
@@ -58,31 +59,14 @@ export default function LogoUpload({
           reader.readAsDataURL(file);
         });
 
-        // Récupérer le token d'auth
-        const {
-          data: { session },
-        } = await supabaseClient.auth.getSession();
-        const token = session?.access_token;
-        if (!token) throw new Error('Session staff manquante.');
-
-        // Envoyer au serveur
-        const res = await fetch(endpoint, {
+        const json = await adminFetchJson<{ url: string }>(endpoint, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
           body: JSON.stringify({
             data: base64,
             mimeType: file.type,
             filename: file.name,
           }),
         });
-
-        const json = await res.json();
-        if (!res.ok) {
-          throw new Error(json.error || "Erreur lors de l'upload");
-        }
 
         onChange(json.url);
       } catch (err: unknown) {
@@ -91,7 +75,7 @@ export default function LogoUpload({
         setUploading(false);
       }
     },
-    [onChange, endpoint]
+    [onChange, endpoint, adminFetchJson]
   );
 
   const handleDrop = useCallback(

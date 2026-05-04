@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import { supabaseClient } from '@/utils/supabase';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 import { logger } from '../../utils/logger';
 type StaffShape = {
@@ -57,6 +58,7 @@ function AdminProfilePage({ staff }: Props) {
   const [dataError, setDataError] = useState<string | null>(null);
 
   const { addToast } = useToast();
+  const { adminFetch, adminFetchJson } = useAdminFetch();
   const router = useRouter();
 
   useEffect(() => {
@@ -65,26 +67,9 @@ function AdminProfilePage({ staff }: Props) {
       setErrorMsg(null);
 
       try {
-        const {
-          data: { session },
-        } = await supabaseClient.auth.getSession();
+        const json = await adminFetchJson<StaffProfile>('/api/admin/me');
 
-        const token = session?.access_token;
-        if (!token) {
-          setErrorMsg('Session staff introuvable. Merci de te reconnecter.');
-          return;
-        }
-
-        const res = await fetch('/api/admin/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        const json = await res.json();
-        if (!res.ok || json?.error) {
-          throw new Error(json?.error || 'Impossible de charger ton profil.');
-        }
-
-        setProfile(json as StaffProfile);
+        setProfile(json);
         setForm({
           displayName: json.display_name || '',
           avatarUrl: json.avatar_url || '',
@@ -98,6 +83,7 @@ function AdminProfilePage({ staff }: Props) {
     };
 
     fetchProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const updateField = (k: 'displayName' | 'avatarUrl', v: string) =>
@@ -178,35 +164,15 @@ function AdminProfilePage({ staff }: Props) {
     setErrorMsg(null);
 
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-
-      const token = session?.access_token;
-      if (!token) {
-        throw new Error('Session staff introuvable. Merci de te reconnecter.');
-      }
-
-      const res = await fetch('/api/admin/me', {
+      const json = await adminFetchJson<StaffProfile>('/api/admin/me', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           displayName: form.displayName,
           avatarUrl: form.avatarUrl,
         }),
       });
 
-      const json = await res.json();
-      if (!res.ok || json?.error) {
-        throw new Error(
-          json?.error || 'Impossible de mettre à jour ton profil.'
-        );
-      }
-
-      setProfile(json as StaffProfile);
+      setProfile(json);
       setForm({
         displayName: json.display_name || '',
         avatarUrl: json.avatar_url || '',
@@ -220,21 +186,11 @@ function AdminProfilePage({ staff }: Props) {
     }
   };
 
-  const getToken = async () => {
-    const { data } = await supabaseClient.auth.getSession();
-    return data.session?.access_token;
-  };
-
   const handleExportData = async () => {
     setExporting(true);
     setDataError(null);
     try {
-      const token = await getToken();
-      if (!token) throw new Error('Session expirée.');
-
-      const resp = await fetch('/api/player/data-export', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const resp = await adminFetch('/api/player/data-export');
 
       if (!resp.ok) {
         const body = await resp.json().catch(() => null);
@@ -260,12 +216,8 @@ function AdminProfilePage({ staff }: Props) {
     setDeleting(true);
     setDataError(null);
     try {
-      const token = await getToken();
-      if (!token) throw new Error('Session expirée.');
-
-      const resp = await fetch('/api/player/delete-account', {
+      const resp = await adminFetch('/api/player/delete-account', {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!resp.ok) {

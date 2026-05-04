@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabaseClient } from '@/utils/supabase';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 import { logger } from '../../utils/logger';
 export default function DiscordMemberRedirect() {
   const router = useRouter();
+  const { adminFetch } = useAdminFetch();
   const [status, setStatus] = useState('Connexion via Discord…');
   const [error, setError] = useState<string | null>(null);
 
@@ -48,10 +50,9 @@ export default function DiscordMemberRedirect() {
         // 3) Si la destination est /admin, vérifier que l'utilisateur a un rôle staff
         if (next.startsWith('/admin')) {
           setStatus('Vérification des permissions…');
-          const token = sessionData.session.access_token;
 
-          const res = await fetch('/api/admin/me', {
-            headers: { Authorization: `Bearer ${token}` },
+          const res = await adminFetch('/api/admin/me', {
+            skipAuthRedirect: true,
           });
 
           if (!res.ok) {
@@ -77,6 +78,7 @@ export default function DiscordMemberRedirect() {
     };
 
     ensureRole();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   return (

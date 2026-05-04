@@ -5,8 +5,8 @@
 // form.
 
 import { useState } from 'react';
-import { supabaseClient } from '@/utils/supabase';
 import { useToast } from '@/components/Toast';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import {
   MEMBER_DISPLAY_NAME_MAX,
   MEMBER_PRONOUNS_MAX,
@@ -48,6 +48,7 @@ export default function MemberProfileEditor({
   member: EditableMember;
 }) {
   const { addToast } = useToast();
+  const { adminFetchJson } = useAdminFetch();
 
   const [displayName, setDisplayName] = useState(member.display_name ?? '');
   const [specialty, setSpecialty] = useState<MemberSpecialty | ''>(
@@ -64,20 +65,10 @@ export default function MemberProfileEditor({
   async function handleSave() {
     setSaving(true);
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session expirée — reconnecte-toi.');
-
-      const res = await fetch(
+      const json = await adminFetchJson<{ updatedFields?: unknown[] }>(
         `/api/teams/${teamId}/members/${member.id}/profile`,
         {
           method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
           body: JSON.stringify({
             display_name: displayName,
             specialty,
@@ -90,9 +81,6 @@ export default function MemberProfileEditor({
           }),
         }
       );
-
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Échec de la mise à jour.');
 
       const updated = json.updatedFields?.length ?? 0;
       addToast(

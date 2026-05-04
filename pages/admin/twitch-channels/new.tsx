@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { supabaseClient } from '@/utils/supabase';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 type Props = {
   staff: {
@@ -14,6 +14,7 @@ type Props = {
 
 function AdminTwitchChannelNewPage({ staff }: Props) {
   const router = useRouter();
+  const { adminFetchJson } = useAdminFetch();
 
   const [form, setForm] = useState({
     channel: '',
@@ -43,12 +44,6 @@ function AdminTwitchChannelNewPage({ staff }: Props) {
 
     setSaving(true);
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-
       const payload = {
         channel: form.channel.trim(),
         label: form.label.trim(),
@@ -59,20 +54,10 @@ function AdminTwitchChannelNewPage({ staff }: Props) {
         sortOrder: form.sortOrder ? parseInt(form.sortOrder, 10) : undefined,
       };
 
-      const res = await fetch('/api/admin/twitch-channels', {
+      await adminFetchJson('/api/admin/twitch-channels', {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(payload),
       });
-
-      const json = await res.json();
-
-      if (!res.ok) {
-        throw new Error(json?.error || 'Création impossible.');
-      }
 
       router.push('/admin/twitch-channels');
     } catch (err: unknown) {

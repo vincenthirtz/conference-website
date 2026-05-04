@@ -6,6 +6,10 @@ import { withStaffPage } from '@/utils/staff';
 import { supabaseAdmin } from '@/utils/supabase';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
 import { useUrlFilters } from '@/utils/useUrlFilters';
+import {
+  escapePostgrestValue,
+  sanitizeSearch,
+} from '@/utils/apiHelpers';
 
 import { logger } from '../../../utils/logger';
 type NewsRow = {
@@ -428,7 +432,7 @@ function AdminNewsPage({ news, total, errorMsg: ssrError }: Props) {
 
 export const getServerSideProps = withStaffPage('admin', async (ctx) => {
   const { query } = ctx;
-  const search = typeof query.search === 'string' ? query.search.trim() : '';
+  const search = sanitizeSearch(query.search);
   const status = typeof query.status === 'string' ? query.status : null;
   const offset = Math.max(0, Number(query.offset) || 0);
 
@@ -448,7 +452,7 @@ export const getServerSideProps = withStaffPage('admin', async (ctx) => {
     q = q.eq('status', status);
   }
   if (search) {
-    const s = `%${search}%`;
+    const s = `%${escapePostgrestValue(search)}%`;
     q = q.or(`title.ilike.${s},slug.ilike.${s}`);
   }
 

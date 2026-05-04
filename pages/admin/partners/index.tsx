@@ -3,8 +3,9 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { supabaseAdmin, supabaseClient } from '@/utils/supabase';
+import { supabaseAdmin } from '@/utils/supabase';
 import { useUrlFilters } from '@/utils/useUrlFilters';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 import { logger } from '../../../utils/logger';
 type PartnerRow = {
@@ -46,6 +47,7 @@ const categoryColors: Record<string, string> = {
 
 function AdminPartnersPage({ partners }: Props) {
   const router = useRouter();
+  const { adminFetchJson } = useAdminFetch();
   const { filters, setFilters } = useUrlFilters(P_FILTER_KEYS);
 
   const categoryFilter = filters.category ?? null;
@@ -59,19 +61,7 @@ function AdminPartnersPage({ partners }: Props) {
   const onDelete = async (id: string) => {
     if (!confirm('Supprimer ce partenaire ?')) return;
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-      const res = await fetch(`/api/admin/partners/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) {
-        const json = await res.json().catch(() => null);
-        throw new Error(json?.error || 'Suppression impossible');
-      }
+      await adminFetchJson(`/api/admin/partners/${id}`, { method: 'DELETE' });
       fetchData();
     } catch (err: unknown) {
       alert((err as Error)?.message || 'Erreur de suppression.');
@@ -80,23 +70,10 @@ function AdminPartnersPage({ partners }: Props) {
 
   const toggleActive = async (partner: PartnerRow) => {
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-      const res = await fetch(`/api/admin/partners/${partner.id}`, {
+      await adminFetchJson(`/api/admin/partners/${partner.id}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({ isActive: !partner.is_active }),
       });
-      if (!res.ok) {
-        const json = await res.json().catch(() => null);
-        throw new Error(json?.error || 'Modification impossible');
-      }
       fetchData();
     } catch (err: unknown) {
       alert((err as Error)?.message || 'Erreur de modification.');

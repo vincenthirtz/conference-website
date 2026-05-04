@@ -5,8 +5,8 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { supabaseClient } from '@/utils/supabase';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 
@@ -54,7 +54,8 @@ type Team = {
 
 export default function MessagesPage() {
   const router = useRouter();
-  const { token, loading: authLoading, ready } = usePlayerSession();
+  const { loading: authLoading, ready } = usePlayerSession();
+  const { adminFetchJson } = useAdminFetch();
   const [loading, setLoading] = useState(true);
   const [isCaptain, setIsCaptain] = useState(false);
   const [isManager, setIsManager] = useState(false);
@@ -90,22 +91,21 @@ export default function MessagesPage() {
   };
 
   useEffect(() => {
-    if (!ready || !token) return;
+    if (!ready) return;
     let cancelled = false;
     setLoading(true);
     (async () => {
       try {
-        const teamRes = await fetch('/api/admin/teams/my', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (teamRes.ok) {
-          const data = await teamRes.json();
-          if (data.team && !cancelled) {
-            setHasTeam(true);
-            setMyTeamId(data.team.id);
-            setIsCaptain(data.isCaptain || false);
-            setIsManager(data.isManager || false);
-          }
+        const data = await adminFetchJson<{
+          team?: { id: string };
+          isCaptain?: boolean;
+          isManager?: boolean;
+        }>('/api/admin/teams/my');
+        if (data.team && !cancelled) {
+          setHasTeam(true);
+          setMyTeamId(data.team.id);
+          setIsCaptain(data.isCaptain || false);
+          setIsManager(data.isManager || false);
         }
       } catch (err) {
         logger.error('[messages] team load error:', err);
@@ -116,42 +116,38 @@ export default function MessagesPage() {
     return () => {
       cancelled = true;
     };
-  }, [ready, token]);
+  }, [ready, adminFetchJson]);
 
   const loadConversations = useCallback(async () => {
-    if (!token) return;
     setConvLoading(true);
     try {
-      const res = await fetch('/api/player/messages', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setConversations(data.conversations || []);
-      }
+      const data = await adminFetchJson<{ conversations?: Conversation[] }>(
+        '/api/player/messages'
+      );
+      setConversations(data.conversations || []);
     } catch (err) {
       logger.error('[messages] load conversations error:', err);
     } finally {
       setConvLoading(false);
     }
-  }, [token]);
+  }, [adminFetchJson]);
 
   const canManage = isCaptain || isManager;
 
   useEffect(() => {
-    if (token && canManage) {
+    if (ready && canManage) {
       loadConversations();
     }
-  }, [token, canManage, loadConversations]);
+  }, [ready, canManage, loadConversations]);
 
   // Open conversation from URL query
   useEffect(() => {
     const convId = router.query.conv as string;
-    if (convId && token && canManage) {
+    if (convId && ready && canManage) {
       openConversation(convId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router.query.conv, token, canManage]);
+  }, [router.query.conv, ready, canManage]);
 
   const openConversation = async (convId: string) => {
     setActiveConvId(convId);
@@ -160,24 +156,19 @@ export default function MessagesPage() {
     setError(null);
 
     try {
-      const res = await fetch(`/api/player/messages/${convId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const data = await adminFetchJson<{
+        messages?: Message[];
+        otherTeam?: OtherTeam;
+        myTeamId: string | null;
+      }>(`/api/player/messages/${convId}`);
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to load conversation.');
-      }
-
-      const data = await res.json();
       setMessages(data.messages || []);
       setOtherTeam(data.otherTeam || null);
       setMyTeamId(data.myTeamId);
 
       // Mark as read
-      await fetch(`/api/player/messages/${convId}`, {
+      await adminFetchJson(`/api/player/messages/${convId}`, {
         method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}` },
       });
 
       // Refresh conversation list to update unread counts
@@ -194,26 +185,23 @@ export default function MessagesPage() {
   // Silent realtime sync — re-fetch the active conversation without
   // toggling the loading skeleton, so new inbound messages just append.
   const silentReloadActive = useCallback(async () => {
-    if (!activeConvId || !token) return;
+    if (!activeConvId) return;
     try {
-      const res = await fetch(`/api/player/messages/${activeConvId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) return;
-      const data = await res.json();
+      const data = await adminFetchJson<{ messages?: Message[] }>(
+        `/api/player/messages/${activeConvId}`
+      );
       setMessages(data.messages || []);
       // Mark inbound messages as read on the fly so the unread counter stays
       // accurate without forcing the user to reopen the conversation.
-      await fetch(`/api/player/messages/${activeConvId}`, {
+      await adminFetchJson(`/api/player/messages/${activeConvId}`, {
         method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}` },
       });
       loadConversations();
       setTimeout(scrollToBottom, 80);
     } catch (err) {
       logger.error('[messages] realtime reload error:', err);
     }
-  }, [activeConvId, token, loadConversations]);
+  }, [activeConvId, adminFetchJson, loadConversations]);
 
   // Subscribe to demandes targeting the captain's team. Postgres only
   // gives us coarse filtering on top-level columns, so we further narrow
@@ -291,21 +279,16 @@ export default function MessagesPage() {
     setError(null);
 
     try {
-      const res = await fetch('/api/player/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          targetTeamId,
-          content: newMessage.trim(),
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok)
-        throw new Error(data.error || "Impossible d'envoyer le message.");
+      const data = await adminFetchJson<{ conversationId: string }>(
+        '/api/player/messages',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            targetTeamId,
+            content: newMessage.trim(),
+          }),
+        }
+      );
 
       setNewMessage('');
 

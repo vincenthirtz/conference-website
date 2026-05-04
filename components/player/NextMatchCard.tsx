@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type JSX } from 'react';
 import Link from 'next/link';
-import { supabaseClient } from '@/utils/supabase';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 import { logger } from '../../utils/logger';
 type NextMatch = {
@@ -56,6 +56,7 @@ function formatRelative(iso: string | null, now: number): string | null {
 }
 
 export default function NextMatchCard(): JSX.Element | null {
+  const { adminFetchJson } = useAdminFetch();
   const [data, setData] = useState<NextMatch | null>(null);
   const [loading, setLoading] = useState(true);
   const [checkinLoading, setCheckinLoading] = useState(false);
@@ -63,27 +64,17 @@ export default function NextMatchCard(): JSX.Element | null {
   const [now, setNow] = useState<number>(() => Date.now());
 
   const load = useCallback(async () => {
-    const {
-      data: { session },
-    } = await supabaseClient.auth.getSession();
-    const token = session?.access_token;
-    if (!token) {
-      setLoading(false);
-      return;
-    }
     try {
-      const res = await fetch('/api/player/next-match', {
-        headers: { Authorization: `Bearer ${token}` },
+      const json = await adminFetchJson<NextMatch>('/api/player/next-match', {
+        skipAuthRedirect: true,
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json: NextMatch = await res.json();
       setData(json);
     } catch (err) {
       logger.error('[NextMatchCard] load error:', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [adminFetchJson]);
 
   useEffect(() => {
     load();

@@ -3,7 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import { withStaffPage } from '@/utils/staff';
-import { supabaseClient } from '@/utils/supabase';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 import { logger } from '../../../utils/logger';
 type TwitchChannelRow = {
@@ -42,6 +42,7 @@ function statusColor(isActive: boolean) {
 }
 
 function AdminTwitchChannelsPage({ staff }: Props) {
+  const { adminFetch, adminFetchJson } = useAdminFetch();
   const [loading, setLoading] = useState(false);
   const [channels, setChannels] = useState<TwitchChannelRow[]>([]);
   const [search, setSearch] = useState('');
@@ -53,30 +54,16 @@ function AdminTwitchChannelsPage({ staff }: Props) {
     setLoading(true);
 
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
-      const res = await fetch(
-        '/api/admin/twitch-channels?includeInactive=true',
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+      const json = await adminFetchJson<ApiResponse>(
+        '/api/admin/twitch-channels?includeInactive=true'
       );
-      const json: ApiResponse = await res.json();
-
       setChannels(json.items || []);
     } catch (err) {
       logger.error('Error fetching twitch channels', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [adminFetchJson]);
 
   useEffect(() => {
     fetchData();
@@ -85,19 +72,9 @@ function AdminTwitchChannelsPage({ staff }: Props) {
   const onDelete = async (id: string) => {
     if (!confirm('Supprimer cette chaîne ?')) return;
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-      const res = await fetch(`/api/admin/twitch-channels/${id}`, {
+      await adminFetchJson(`/api/admin/twitch-channels/${id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) {
-        const json = await res.json().catch(() => null);
-        throw new Error(json?.error || 'Suppression impossible');
-      }
       fetchData();
     } catch (err: unknown) {
       alert((err as Error)?.message || 'Erreur de suppression.');
@@ -106,23 +83,10 @@ function AdminTwitchChannelsPage({ staff }: Props) {
 
   const onToggleActive = async (channel: TwitchChannelRow) => {
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-      const res = await fetch(`/api/admin/twitch-channels/${channel.id}`, {
+      await adminFetchJson(`/api/admin/twitch-channels/${channel.id}`, {
         method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ isActive: !channel.is_active }),
       });
-      if (!res.ok) {
-        const json = await res.json().catch(() => null);
-        throw new Error(json?.error || 'Modification impossible');
-      }
       fetchData();
     } catch (err: unknown) {
       alert((err as Error)?.message || 'Erreur de modification.');
@@ -152,20 +116,10 @@ function AdminTwitchChannelsPage({ staff }: Props) {
 
       setSaving(true);
       try {
-        const {
-          data: { session },
-        } = await supabaseClient.auth.getSession();
-        const token = session?.access_token;
-        if (!token) throw new Error('Session staff manquante.');
-
         await Promise.all(
           updates.map((u) =>
-            fetch(`/api/admin/twitch-channels/${u.id}`, {
+            adminFetch(`/api/admin/twitch-channels/${u.id}`, {
               method: 'PATCH',
-              headers: {
-                Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json',
-              },
               body: JSON.stringify({ sortOrder: u.sortOrder }),
             })
           )
@@ -178,7 +132,7 @@ function AdminTwitchChannelsPage({ staff }: Props) {
         setSaving(false);
       }
     },
-    [channels, fetchData]
+    [channels, fetchData, adminFetch]
   );
 
   const filteredChannels = channels.filter(

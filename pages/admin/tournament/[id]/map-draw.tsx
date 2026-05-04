@@ -7,6 +7,17 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { sanitizeUrl } from '@/utils/apiHelpers';
+
+function escapeHtml(value: string | null | undefined): string {
+  if (value == null) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 type StaffShape = { id: string; role: string; display_name: string | null };
 type StaffProps = { staff: StaffShape };
@@ -264,15 +275,29 @@ function AdminMapDrawPage(_: StaffProps) {
     if (!hasAny) return;
 
     const totalFilled = selectedSlots.flat().filter(Boolean).length;
-    const title = matchLabel.trim()
-      ? `${tournament?.name ?? 'Tournoi'} — ${matchLabel.trim()}`
-      : `${tournament?.name ?? 'Tournoi'} — Tirage ${format.toUpperCase()}`;
+    const tournamentName = tournament?.name ?? 'Tournoi';
+    const trimmedLabel = matchLabel.trim();
+    const title = trimmedLabel
+      ? `${tournamentName} — ${trimmedLabel}`
+      : `${tournamentName} — Tirage ${format.toUpperCase()}`;
+    const safeTitle = escapeHtml(title);
+    const safeFooter = escapeHtml(`${tournamentName} · Tirage de maps`);
+    const safeFormat = escapeHtml(format.toUpperCase());
+    const safeDate = escapeHtml(
+      new Date().toLocaleDateString('fr-FR', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    );
 
     const html = `<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="utf-8"/>
-<title>${title}</title>
+<title>${safeTitle}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 32px; color: #1a1a1a; }
@@ -311,8 +336,8 @@ function AdminMapDrawPage(_: StaffProps) {
 </style>
 </head>
 <body>
-<h1>${title}</h1>
-<p class="subtitle">${format.toUpperCase()} · ${totalFilled} maps · ${new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+<h1>${safeTitle}</h1>
+<p class="subtitle">${safeFormat} · ${totalFilled} maps · ${safeDate}</p>
 
 <div class="slots">
 ${selectedSlots
@@ -323,17 +348,23 @@ ${selectedSlots
     <div class="slot-body">
       ${slot
         .filter(Boolean)
-        .map(
-          (m) => `
+        .map((m) => {
+          const safeName = escapeHtml(m!.map_name);
+          const safeType = escapeHtml(typeLabel(m!.map_type));
+          const safeImg = sanitizeUrl(m!.image_url);
+          const imgTag = safeImg
+            ? `<img class="choice-img" src="${escapeHtml(safeImg)}" alt="${safeName}" />`
+            : '';
+          return `
         <div class="choice">
-          ${m!.image_url ? `<img class="choice-img" src="${m!.image_url}" alt="${m!.map_name}" />` : ''}
+          ${imgTag}
           <div class="choice-info">
-            <div class="choice-name">${m!.map_name}</div>
-            <div class="choice-type">${typeLabel(m!.map_type)}</div>
+            <div class="choice-name">${safeName}</div>
+            <div class="choice-type">${safeType}</div>
           </div>
         </div>
-      `
-        )
+      `;
+        })
         .join('')}
     </div>
   </div>
@@ -342,7 +373,7 @@ ${selectedSlots
   .join('')}
 </div>
 
-<p class="meta">${tournament?.name ?? 'Tournoi'} · Tirage de maps</p>
+<p class="meta">${safeFooter}</p>
 </body></html>`;
 
     const w = window.open('', '_blank');

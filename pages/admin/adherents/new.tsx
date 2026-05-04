@@ -3,7 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { supabaseClient } from '@/utils/supabase';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAutoSave } from '@/utils/useAutoSave';
 import DraftBanner from '@/components/admin/DraftBanner';
 import AutoSaveIndicator from '@/components/admin/AutoSaveIndicator';
@@ -54,6 +54,7 @@ type FormData = {
 
 function AdminNewAdherentPage({ staff }: Props) {
   const router = useRouter();
+  const { adminFetchJson } = useAdminFetch();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cotisationAmount, setCotisationAmount] = useState<number>(0);
@@ -98,16 +99,9 @@ function AdminNewAdherentPage({ staff }: Props) {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const {
-          data: { session },
-        } = await supabaseClient.auth.getSession();
-        const token = session?.access_token;
-        if (!token) return;
-
-        const res = await fetch('/api/admin/site-settings', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const json = await res.json();
+        const json = await adminFetchJson<{
+          items?: { key: string; value: string }[];
+        }>('/api/admin/site-settings');
         const cotisation = json.items?.find(
           (s: { key: string }) => s.key === 'cotisation_amount'
         );
@@ -119,7 +113,7 @@ function AdminNewAdherentPage({ staff }: Props) {
       }
     };
     fetchSettings();
-  }, []);
+  }, [adminFetchJson]);
 
   const updateField = <K extends keyof FormData>(
     field: K,
@@ -149,29 +143,13 @@ function AdminNewAdherentPage({ staff }: Props) {
     setSaving(true);
 
     try {
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session staff manquante.');
-
-      const res = await fetch('/api/admin/adherents', {
+      await adminFetchJson('/api/admin/adherents', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           ...form,
           paymentMethod: form.paymentMethod || null,
         }),
       });
-
-      const json = await res.json();
-
-      if (!res.ok) {
-        throw new Error(json.error || 'Erreur lors de la création.');
-      }
 
       clearDraft();
       router.push('/admin/adherents');

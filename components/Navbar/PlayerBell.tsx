@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState, type JSX } from 'react';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
-import { supabaseClient } from '@/utils/supabase';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 type Notifications = {
   hasTeam: boolean;
@@ -20,24 +20,21 @@ const POLL_MS = 60_000;
 
 export default function PlayerBell(): JSX.Element | null {
   const { user, loading } = useAuthSession();
+  const { adminFetchJson } = useAdminFetch();
   const [data, setData] = useState<Notifications | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const { data: session } = await supabaseClient.auth.getSession();
-      const token = session.session?.access_token;
-      if (!token) return;
-      const res = await fetch('/api/player/notifications', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) return;
-      const json: Notifications = await res.json();
+      const json = await adminFetchJson<Notifications>(
+        '/api/player/notifications',
+        { skipAuthRedirect: true }
+      );
       setData(json);
     } catch {
       /* offline / network — keep last known counts */
     }
-  }, []);
+  }, [adminFetchJson]);
 
   useEffect(() => {
     if (!user) return undefined;

@@ -5,10 +5,11 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
-import { supabaseAdmin, supabaseClient } from '@/utils/supabase';
+import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffPage } from '@/utils/staff';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import { useToast } from '@/components/Toast';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 import { logger } from '../../../utils/logger';
 
@@ -393,6 +394,7 @@ function AdminDemandesPage({
   initialError,
 }: Props) {
   const { addToast } = useToast();
+  const { adminFetch, adminFetchJson } = useAdminFetch();
   const router = useRouter();
   const { filters } = useUrlFilters(D_FILTER_KEYS);
 
@@ -454,13 +456,6 @@ function AdminDemandesPage({
     await router.replace(router.asPath, undefined, { scroll: false });
   }
 
-  async function getToken(): Promise<string | null> {
-    const {
-      data: { session },
-    } = await supabaseClient.auth.getSession();
-    return session?.access_token ?? null;
-  }
-
   function toggleSelect(id: string) {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -482,25 +477,14 @@ function AdminDemandesPage({
     ids: string[],
     newStatus: 'approved' | 'rejected'
   ) {
-    const token = await getToken();
-    const res = await fetch('/api/admin/demandes', {
+    return adminFetchJson<{ updatedCount: number }>('/api/admin/demandes', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
       body: JSON.stringify({
         action: 'updateStatus',
         demandeIds: ids,
         newStatus,
       }),
     });
-
-    if (!res.ok) {
-      const json = await res.json().catch(() => ({}));
-      throw new Error(json.error || 'Erreur');
-    }
-    return res.json();
   }
 
   async function handleBatchAction(newStatus: 'approved' | 'rejected') {
@@ -574,22 +558,15 @@ function AdminDemandesPage({
     if (dateTo) params.set('dateTo', dateTo);
 
     const url = '/api/admin/demandes?' + params.toString();
-    const token = await getToken();
-
-    if (token) {
-      try {
-        const res = await fetch(url, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const blob = await res.blob();
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'demandes.csv';
-        a.click();
-      } catch (e) {
-        logger.error('CSV export error', e);
-      }
-    } else {
+    try {
+      const res = await adminFetch(url);
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'demandes.csv';
+      a.click();
+    } catch (e) {
+      logger.error('CSV export error', e);
       window.location.href = url;
     }
   }
