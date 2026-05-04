@@ -165,6 +165,49 @@ describe('permission', () => {
     expect((store.teams as any[])[0].description).toBeNull();
   });
 
+  it('a staff admin can edit any team even without team membership', async () => {
+    const ADMIN_USER = '55555555-5555-5555-5555-555555555555';
+    setAuthUser({ id: ADMIN_USER });
+    store.staff = [
+      {
+        id: 'staff-1',
+        auth_user_id: ADMIN_USER,
+        email: 'admin@example.com',
+        role: 'admin',
+        display_name: null,
+        avatar_url: null,
+        created_at: '2026-01-01T00:00:00.000Z',
+      },
+    ] as any;
+    const res = makeRes();
+    await handler(
+      makeReq({ body: { description: 'edited by staff' } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect((store.teams as any[])[0].description).toBe('edited by staff');
+  });
+
+  it('a staff caster (lower than admin) is still rejected', async () => {
+    const CASTER_USER = '66666666-6666-6666-6666-666666666666';
+    setAuthUser({ id: CASTER_USER });
+    store.staff = [
+      {
+        id: 'staff-2',
+        auth_user_id: CASTER_USER,
+        email: 'caster@example.com',
+        role: 'caster',
+        display_name: null,
+        avatar_url: null,
+        created_at: '2026-01-01T00:00:00.000Z',
+      },
+    ] as any;
+    const res = makeRes();
+    await handler(makeReq({ body: { description: 'nope' } }), res);
+    expect(res.statusCode).toBe(403);
+    expect((store.teams as any[])[0].description).toBeNull();
+  });
+
   it('returns 404 when team does not exist', async () => {
     const otherTeamId = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
     // Make captain the captain of a non-seeded team to satisfy permission, but

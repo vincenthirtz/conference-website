@@ -241,6 +241,64 @@ describe('permission', () => {
     );
     expect(res.statusCode).toBe(403);
   });
+
+  it('a staff admin can edit any member even without team membership', async () => {
+    const ADMIN_USER = '77777777-7777-7777-7777-777777777777';
+    setAuthUser({ id: ADMIN_USER });
+    store.staff = [
+      {
+        id: 'staff-3',
+        auth_user_id: ADMIN_USER,
+        email: 'admin@example.com',
+        role: 'admin',
+        display_name: null,
+        avatar_url: null,
+        created_at: '2026-01-01T00:00:00.000Z',
+      },
+    ] as any;
+    const res = makeRes();
+    await handler(
+      makeReq({
+        query: { teamId: TEAM_ID, memberId: MEMBER_OTHER },
+        body: { display_name: 'AdminEdit' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect(
+      (store.team_members as any[]).find((m) => m.id === MEMBER_OTHER)
+        .display_name
+    ).toBe('AdminEdit');
+  });
+
+  it('a staff admin can flip is_substitute on any member', async () => {
+    const ADMIN_USER = '88888888-8888-8888-8888-888888888888';
+    setAuthUser({ id: ADMIN_USER });
+    store.staff = [
+      {
+        id: 'staff-4',
+        auth_user_id: ADMIN_USER,
+        email: 'admin@example.com',
+        role: 'admin',
+        display_name: null,
+        avatar_url: null,
+        created_at: '2026-01-01T00:00:00.000Z',
+      },
+    ] as any;
+    const res = makeRes();
+    await handler(
+      makeReq({
+        query: { teamId: TEAM_ID, memberId: MEMBER_OTHER },
+        body: { is_substitute: true },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect(
+      (store.team_members as any[]).find((m) => m.id === MEMBER_OTHER)
+        .is_substitute
+    ).toBe(true);
+  });
 });
 
 /* -----------------------------------------------------------

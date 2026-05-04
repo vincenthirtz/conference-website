@@ -1,4 +1,6 @@
 // Vérification runtime des permissions d'un user sur une team.
+//   - Un staff de niveau >= admin a TOUTES les permissions sur n'importe
+//     quelle team (modération / support).
 //   - Le capitaine de la team a TOUTES les permissions, indépendamment de son
 //     rôle dans team_members.
 //   - Sinon, on lit team_members.role + la config courante des rôles
@@ -6,6 +8,7 @@
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
+import { getStaffRole, hasAtLeastRole } from '@/utils/staff';
 import {
   loadTeamRolesFromSupabase,
   roleHasPermission,
@@ -21,6 +24,13 @@ export async function hasTeamPermission(
   if (!supabaseAdmin) {
     logger.error('[hasTeamPermission] supabaseAdmin unavailable');
     return false;
+  }
+
+  // Staff bypass: admin/owner can edit any team for moderation purposes.
+  // Cached internally with a 5min TTL so this stays cheap on hot paths.
+  const staffRole = await getStaffRole(userId);
+  if (hasAtLeastRole(staffRole, 'admin')) {
+    return true;
   }
 
   const { data: team, error: teamErr } = await supabaseAdmin
