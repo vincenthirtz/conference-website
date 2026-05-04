@@ -17,6 +17,16 @@ import {
   normalizeAccentColor,
   normalizeBannerOverlay,
   normalizeBannerFocal,
+  normalizeAchievement,
+  normalizeSponsor,
+  normalizePinnedAnnouncement,
+  normalizeTimestamp,
+  parseEmbedUrl,
+  ACHIEVEMENTS_MAX,
+  SPONSORS_MAX,
+  type Achievement,
+  type Sponsor,
+  type EmbedProvider,
 } from '@/utils/markdown/teamPublicMarkdown';
 import { logger } from '@/utils/logger';
 
@@ -39,6 +49,12 @@ type Updates = {
   twitch: string | null;
   instagram: string | null;
   tiktok: string | null;
+  achievements: Achievement[];
+  sponsors: Sponsor[];
+  embed_provider: EmbedProvider | null;
+  embed_id: string | null;
+  pinned_announcement: string | null;
+  pinned_announcement_until: string | null;
 };
 
 function normalizeHexInput(
@@ -234,6 +250,71 @@ export default withAuthRoute(async function handler(
     }
   }
 
+  // Achievements: array of {title, date, tournament}, capped at ACHIEVEMENTS_MAX
+  let achievements: Achievement[] = [];
+  if (body.achievements !== undefined && body.achievements !== null) {
+    if (!Array.isArray(body.achievements)) {
+      return res.status(400).json({ error: 'achievements doit être un tableau.' });
+    }
+    if (body.achievements.length > ACHIEVEMENTS_MAX) {
+      return res
+        .status(400)
+        .json({ error: `Trop d'achievements (max ${ACHIEVEMENTS_MAX}).` });
+    }
+    for (const raw of body.achievements) {
+      const r = normalizeAchievement(raw);
+      if (!r.ok) return res.status(400).json({ error: r.error });
+      achievements.push(r.value);
+    }
+  }
+
+  // Sponsors: array of {name, logo_url, url}, capped at SPONSORS_MAX
+  let sponsors: Sponsor[] = [];
+  if (body.sponsors !== undefined && body.sponsors !== null) {
+    if (!Array.isArray(body.sponsors)) {
+      return res.status(400).json({ error: 'sponsors doit être un tableau.' });
+    }
+    if (body.sponsors.length > SPONSORS_MAX) {
+      return res
+        .status(400)
+        .json({ error: `Trop de sponsors (max ${SPONSORS_MAX}).` });
+    }
+    for (const raw of body.sponsors) {
+      const r = normalizeSponsor(raw);
+      if (!r.ok) return res.status(400).json({ error: r.error });
+      sponsors.push(r.value);
+    }
+  }
+
+  // Embed: client sends `embed_url` (or null). We parse it server-side and
+  // store provider+id separately so the iframe URL is deterministic.
+  let embedProvider: EmbedProvider | null = null;
+  let embedId: string | null = null;
+  if (body.embed_url !== undefined && body.embed_url !== null && body.embed_url !== '') {
+    if (typeof body.embed_url !== 'string') {
+      return res.status(400).json({ error: 'embed_url invalide.' });
+    }
+    const trimmed = body.embed_url.trim();
+    if (trimmed) {
+      const parsed = parseEmbedUrl(trimmed);
+      if (!parsed) {
+        return res
+          .status(400)
+          .json({ error: 'embed_url doit être une URL YouTube ou Twitch.' });
+      }
+      embedProvider = parsed.provider;
+      embedId = parsed.id;
+    }
+  }
+
+  const announcement = normalizePinnedAnnouncement(body.pinned_announcement);
+  if (!announcement.ok)
+    return res.status(400).json({ error: announcement.error });
+
+  const announcementUntil = normalizeTimestamp(body.pinned_announcement_until);
+  if (!announcementUntil.ok)
+    return res.status(400).json({ error: announcementUntil.error });
+
   const updates: Updates = {
     description: description.value,
     public_content: publicContent.value,
@@ -250,13 +331,19 @@ export default withAuthRoute(async function handler(
     twitch: twitch.value,
     instagram: instagram.value,
     tiktok: tiktok.value,
+    achievements,
+    sponsors,
+    embed_provider: embedProvider,
+    embed_id: embedId,
+    pinned_announcement: announcement.value,
+    pinned_announcement_until: announcementUntil.value,
   };
 
   // Snapshot previous state for audit
   const { data: before, error: beforeErr } = await supabaseAdmin
     .from('teams')
     .select(
-      'description, public_content, accent_color, secondary_color, banner_overlay, banner_focal, logo_url, banner_url, twitter, discord, website, youtube, twitch, instagram, tiktok'
+      'description, public_content, accent_color, secondary_color, banner_overlay, banner_focal, logo_url, banner_url, twitter, discord, website, youtube, twitch, instagram, tiktok, achievements, sponsors, embed_provider, embed_id, pinned_announcement, pinned_announcement_until'
     )
     .eq('id', teamId)
     .maybeSingle();
@@ -275,12 +362,20 @@ export default withAuthRoute(async function handler(
     return res.status(500).json({ error: 'Échec de la mise à jour.' });
   }
 
-  // Audit log: record only the fields that actually changed
+  // Audit log: record only the fields that actually changed.
+  // JSONB fields (achievements, sponsors) are deep-compared via JSON.stringify
+  // since the snapshot returns fresh references on every read.
+  const JSONB_KEYS = new Set<keyof Updates>(['achievements', 'sponsors']);
   const beforeRecord = before as Record<string, unknown>;
   const diff: Record<string, { from: unknown; to: unknown }> = {};
   for (const key of Object.keys(updates) as (keyof Updates)[]) {
-    if (beforeRecord[key] !== updates[key]) {
-      diff[key] = { from: beforeRecord[key] ?? null, to: updates[key] };
+    const fromVal = beforeRecord[key] ?? null;
+    const toVal = updates[key];
+    const changed = JSONB_KEYS.has(key)
+      ? JSON.stringify(fromVal ?? []) !== JSON.stringify(toVal ?? [])
+      : fromVal !== toVal;
+    if (changed) {
+      diff[key] = { from: fromVal, to: toVal };
     }
   }
 

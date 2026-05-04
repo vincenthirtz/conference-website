@@ -17,6 +17,8 @@ import {
   normalizeBannerFocal,
   type BannerOverlay,
   type BannerFocal,
+  type Achievement,
+  type Sponsor,
 } from '@/utils/markdown/teamPublicMarkdown';
 
 import { logger } from '../../../utils/logger';
@@ -79,6 +81,12 @@ type Team = {
   twitch?: string | null;
   instagram?: string | null;
   tiktok?: string | null;
+  achievements?: Achievement[] | null;
+  sponsors?: Sponsor[] | null;
+  embed_provider?: string | null;
+  embed_id?: string | null;
+  pinned_announcement?: string | null;
+  pinned_announcement_until?: string | null;
   is_active?: boolean;
   captain_id?: string | null;
   created_at: string;
@@ -139,6 +147,8 @@ type TeamPageProps = {
   matchStats: MatchStats;
   recentMatches: RecentMatch[];
   canEdit: boolean;
+  embedHost: string;
+  announcementActive: boolean;
 };
 
 export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
@@ -412,6 +422,19 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
     logger.error('[team page] permission check error:', err);
   }
 
+  // Used by the Twitch embed iframe (`parent` query param). Falls back to
+  // localhost in dev when the host header is missing.
+  const rawHost = (ctx.req.headers.host as string | undefined) ?? 'localhost';
+  const embedHost = rawHost.split(':')[0] || 'localhost';
+
+  // Compute the "is the announcement still active?" flag at request time so
+  // the render is pure (Date.now is forbidden during render by react-hooks
+  // rules). The page is SSR-only, so the freshness window is a single tick.
+  const announcementActive =
+    !!team.pinned_announcement &&
+    (!team.pinned_announcement_until ||
+      new Date(team.pinned_announcement_until).getTime() > Date.now());
+
   return {
     props: {
       team: team as Team,
@@ -420,6 +443,8 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
       matchStats,
       recentMatches,
       canEdit,
+      embedHost,
+      announcementActive,
     },
   };
 };
@@ -431,6 +456,8 @@ export default function TeamPage({
   matchStats,
   recentMatches,
   canEdit,
+  embedHost,
+  announcementActive,
 }: TeamPageProps) {
   const winRate =
     matchStats.total > 0
@@ -463,6 +490,16 @@ export default function TeamPage({
   const editHref = `/team/${encodeURIComponent(team.slug || team.id)}/edit`;
   const gradientStops = secondary && accent ? `${accent}, ${secondary}` : null;
 
+  const achievements = (team.achievements ?? []).filter((a) => a && a.title);
+  const sponsors = (team.sponsors ?? []).filter((s) => s && s.name);
+
+  const embedSrc =
+    team.embed_provider === 'youtube' && team.embed_id
+      ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(team.embed_id)}`
+      : team.embed_provider === 'twitch' && team.embed_id
+        ? `https://player.twitch.tv/?channel=${encodeURIComponent(team.embed_id)}&parent=${encodeURIComponent(embedHost)}`
+        : null;
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <Head>
@@ -472,6 +509,21 @@ export default function TeamPage({
           content={description || `Page de l'équipe ${team.name}`}
         />
       </Head>
+
+      {/* Pinned announcement */}
+      {announcementActive && (
+        <div
+          className="w-full px-4 py-2 text-center text-sm font-medium text-black"
+          style={{
+            backgroundImage: gradientStops
+              ? `linear-gradient(90deg, ${accent}, ${secondary})`
+              : undefined,
+            backgroundColor: gradientStops ? undefined : accent ?? '#fbbf24',
+          }}
+        >
+          {team.pinned_announcement}
+        </div>
+      )}
 
       {/* Banner */}
       {team.banner_url && (
@@ -736,6 +788,89 @@ export default function TeamPage({
               />
             )}
             <div className="prose prose-invert max-w-none">{richContent}</div>
+          </section>
+        )}
+
+        {/* Embed (Twitch/YouTube) */}
+        {embedSrc && (
+          <section
+            className="mb-6 rounded-2xl border border-white/5 bg-black/40 overflow-hidden"
+          >
+            <div className="aspect-video w-full">
+              <iframe
+                src={embedSrc}
+                title={`Stream ${team.name}`}
+                allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                allowFullScreen
+                referrerPolicy="strict-origin-when-cross-origin"
+                className="w-full h-full"
+              />
+            </div>
+          </section>
+        )}
+
+        {/* Achievements */}
+        {achievements.length > 0 && (
+          <section className="mb-6 rounded-2xl border border-white/5 bg-black/60 p-5">
+            <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">
+              Palmarès
+            </p>
+            <ul className="space-y-2">
+              {achievements.map((a, i) => (
+                <li
+                  key={i}
+                  className="flex items-start gap-3 rounded-xl bg-white/5 border border-white/10 px-4 py-3"
+                >
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{
+                      backgroundColor: accent ? `${accent}33` : 'rgba(251,191,36,0.2)',
+                      color: accent ?? '#fbbf24',
+                    }}
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
+                    </svg>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-white truncate">
+                      {a.title}
+                    </p>
+                    {(a.tournament || a.date) && (
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {a.tournament}
+                        {a.tournament && a.date ? ' • ' : ''}
+                        {a.date
+                          ? new Date(a.date).toLocaleDateString('fr-FR', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                            })
+                          : ''}
+                      </p>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/* Sponsors */}
+        {sponsors.length > 0 && (
+          <section className="mb-6 rounded-2xl border border-white/5 bg-black/60 p-5">
+            <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">
+              Sponsors & partenaires
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {sponsors.map((s, i) => (
+                <SponsorTile key={i} sponsor={s} />
+              ))}
+            </div>
           </section>
         )}
 
@@ -1102,6 +1237,36 @@ export default function TeamPage({
 /* ─────────────────────────────────────────────
  * Components & utils
  * ────────────────────────────────────────────*/
+
+function SponsorTile({ sponsor }: { sponsor: Sponsor }) {
+  const safe = sponsor.url ? safeHref(sponsor.url) : undefined;
+  const inner = (
+    <div className="flex items-center gap-3 rounded-xl bg-white/5 border border-white/10 px-3 py-2 hover:border-white/30 transition-colors">
+      {sponsor.logo_url && safeHref(sponsor.logo_url) ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={sponsor.logo_url}
+          alt={sponsor.name}
+          className="w-8 h-8 rounded-md object-contain bg-white/10"
+          loading="lazy"
+        />
+      ) : (
+        <div className="w-8 h-8 rounded-md bg-white/10 flex items-center justify-center text-xs font-semibold text-white">
+          {sponsor.name.slice(0, 2).toUpperCase()}
+        </div>
+      )}
+      <span className="text-sm text-white">{sponsor.name}</span>
+    </div>
+  );
+  if (safe) {
+    return (
+      <a href={safe} target="_blank" rel="noreferrer">
+        {inner}
+      </a>
+    );
+  }
+  return inner;
+}
 
 function SocialLink({
   href,

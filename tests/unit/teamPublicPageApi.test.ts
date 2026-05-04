@@ -78,6 +78,12 @@ function seedTeam(overrides: Record<string, unknown> = {}) {
       twitch: null,
       instagram: null,
       tiktok: null,
+      achievements: [],
+      sponsors: [],
+      embed_provider: null,
+      embed_id: null,
+      pinned_announcement: null,
+      pinned_announcement_until: null,
       is_active: true,
       ...overrides,
     },
@@ -346,6 +352,163 @@ describe('field validation', () => {
     const res = makeRes();
     await handler(
       makeReq({ body: { youtube: 'a'.repeat(81) } }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('persists a list of achievements', async () => {
+    const res = makeRes();
+    await handler(
+      makeReq({
+        body: {
+          achievements: [
+            { title: '1ère place', date: '2026-01-15', tournament: 'Cup #1' },
+            { title: 'MVP', date: null, tournament: null },
+          ],
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const team = (store.teams as any[])[0];
+    expect(team.achievements).toEqual([
+      { title: '1ère place', date: '2026-01-15', tournament: 'Cup #1' },
+      { title: 'MVP', date: null, tournament: null },
+    ]);
+  });
+
+  it('rejects achievements with empty titles', async () => {
+    const res = makeRes();
+    await handler(
+      makeReq({ body: { achievements: [{ title: '   ' }] } }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('rejects achievements with malformed dates', async () => {
+    const res = makeRes();
+    await handler(
+      makeReq({
+        body: { achievements: [{ title: 'Win', date: '15/01/2026' }] },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('rejects more than 12 achievements', async () => {
+    const res = makeRes();
+    await handler(
+      makeReq({
+        body: {
+          achievements: Array.from({ length: 13 }, (_, i) => ({
+            title: `T${i}`,
+          })),
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('persists sponsors with valid URLs', async () => {
+    const res = makeRes();
+    await handler(
+      makeReq({
+        body: {
+          sponsors: [
+            {
+              name: 'Acme',
+              logo_url: 'https://cdn.example.com/acme.png',
+              url: 'https://acme.com',
+            },
+          ],
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect((store.teams as any[])[0].sponsors).toEqual([
+      {
+        name: 'Acme',
+        logo_url: 'https://cdn.example.com/acme.png',
+        url: 'https://acme.com',
+      },
+    ]);
+  });
+
+  it('rejects sponsor logo with javascript: protocol', async () => {
+    const res = makeRes();
+    await handler(
+      makeReq({
+        body: {
+          sponsors: [{ name: 'X', logo_url: 'javascript:alert(1)' }],
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('parses an embed URL into provider+id', async () => {
+    const res = makeRes();
+    await handler(
+      makeReq({ body: { embed_url: 'https://www.twitch.tv/MyChannel' } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const team = (store.teams as any[])[0];
+    expect(team.embed_provider).toBe('twitch');
+    expect(team.embed_id).toBe('mychannel');
+  });
+
+  it('extracts a YouTube video id from a watch URL', async () => {
+    const res = makeRes();
+    await handler(
+      makeReq({
+        body: { embed_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const team = (store.teams as any[])[0];
+    expect(team.embed_provider).toBe('youtube');
+    expect(team.embed_id).toBe('dQw4w9WgXcQ');
+  });
+
+  it('rejects unknown embed providers', async () => {
+    const res = makeRes();
+    await handler(
+      makeReq({ body: { embed_url: 'https://vimeo.com/12345' } }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('persists pinned announcement and expiry', async () => {
+    const res = makeRes();
+    const until = '2099-12-31T00:00:00.000Z';
+    await handler(
+      makeReq({
+        body: {
+          pinned_announcement: 'Recrutement ouvert !',
+          pinned_announcement_until: until,
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const team = (store.teams as any[])[0];
+    expect(team.pinned_announcement).toBe('Recrutement ouvert !');
+    expect(team.pinned_announcement_until).toBe(until);
+  });
+
+  it('rejects pinned announcement longer than 200 chars', async () => {
+    const res = makeRes();
+    await handler(
+      makeReq({ body: { pinned_announcement: 'a'.repeat(201) } }),
       res
     );
     expect(res.statusCode).toBe(400);

@@ -14,10 +14,19 @@ import {
   TEAM_PUBLIC_CONTENT_MAX_LENGTH,
   renderTeamPublicMarkdown,
   normalizeAccentColor,
+  parseEmbedUrl,
   BANNER_OVERLAY_VALUES,
   BANNER_FOCAL_VALUES,
+  ACHIEVEMENTS_MAX,
+  ACHIEVEMENT_TITLE_MAX,
+  ACHIEVEMENT_TOURNAMENT_MAX,
+  SPONSORS_MAX,
+  SPONSOR_NAME_MAX,
+  PINNED_ANNOUNCEMENT_MAX,
   type BannerOverlay,
   type BannerFocal,
+  type Achievement,
+  type Sponsor,
 } from '@/utils/markdown/teamPublicMarkdown';
 import { useToast } from '@/components/Toast';
 import LogoUpload from '@/components/admin/LogoUpload';
@@ -42,6 +51,12 @@ type EditableTeam = {
   twitch: string | null;
   instagram: string | null;
   tiktok: string | null;
+  achievements: Achievement[] | null;
+  sponsors: Sponsor[] | null;
+  embed_provider: string | null;
+  embed_id: string | null;
+  pinned_announcement: string | null;
+  pinned_announcement_until: string | null;
 };
 
 type Props = {
@@ -71,7 +86,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   // Resolve team by slug first, then id/name/short_name (back-compat).
   let team: EditableTeam | null = null;
   const fields =
-    'id, slug, name, short_name, logo_url, banner_url, description, public_content, accent_color, secondary_color, banner_overlay, banner_focal, twitter, discord, website, youtube, twitch, instagram, tiktok';
+    'id, slug, name, short_name, logo_url, banner_url, description, public_content, accent_color, secondary_color, banner_overlay, banner_focal, twitter, discord, website, youtube, twitch, instagram, tiktok, achievements, sponsors, embed_provider, embed_id, pinned_announcement, pinned_announcement_until';
   const isUuid =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
       slug
@@ -150,8 +165,33 @@ export default function TeamPublicEditPage({ team }: Props) {
   const [instagram, setInstagram] = useState(team.instagram ?? '');
   const [tiktok, setTiktok] = useState(team.tiktok ?? '');
 
+  const [achievements, setAchievements] = useState<Achievement[]>(
+    team.achievements ?? []
+  );
+  const [sponsors, setSponsors] = useState<Sponsor[]>(team.sponsors ?? []);
+
+  const [embedUrl, setEmbedUrl] = useState(
+    team.embed_provider === 'youtube' && team.embed_id
+      ? `https://www.youtube.com/watch?v=${team.embed_id}`
+      : team.embed_provider === 'twitch' && team.embed_id
+        ? `https://www.twitch.tv/${team.embed_id}`
+        : ''
+  );
+
+  const [pinnedAnnouncement, setPinnedAnnouncement] = useState(
+    team.pinned_announcement ?? ''
+  );
+  const [pinnedUntil, setPinnedUntil] = useState(
+    team.pinned_announcement_until
+      ? new Date(team.pinned_announcement_until).toISOString().slice(0, 16)
+      : ''
+  );
+
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+
+  const embedParsed = useMemo(() => parseEmbedUrl(embedUrl), [embedUrl]);
+  const embedValid = !embedUrl || embedParsed !== null;
 
   const accentValid = useMemo(() => {
     if (!accentColor) return true;
@@ -178,6 +218,10 @@ export default function TeamPublicEditPage({ team }: Props) {
         'Couleur invalide — utilise un hex (#rgb ou #rrggbb).',
         'error'
       );
+      return;
+    }
+    if (!embedValid) {
+      addToast('Embed: URL YouTube ou Twitch invalide.', 'error');
       return;
     }
     setSaving(true);
@@ -211,6 +255,13 @@ export default function TeamPublicEditPage({ team }: Props) {
           twitch,
           instagram,
           tiktok,
+          achievements,
+          sponsors,
+          embed_url: embedUrl || null,
+          pinned_announcement: pinnedAnnouncement,
+          pinned_announcement_until: pinnedUntil
+            ? new Date(pinnedUntil).toISOString()
+            : null,
         }),
       });
 
@@ -438,6 +489,296 @@ export default function TeamPublicEditPage({ team }: Props) {
                 {publicContent.length}/{TEAM_PUBLIC_CONTENT_MAX_LENGTH}
               </span>
             </div>
+          </section>
+
+          {/* Pinned announcement */}
+          <section className="bg-black/60 border border-white/5 rounded-2xl p-5 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm uppercase tracking-wide text-gray-400">
+                Annonce épinglée
+              </h2>
+              {pinnedAnnouncement && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPinnedAnnouncement('');
+                    setPinnedUntil('');
+                  }}
+                  className="text-xs text-red-400 hover:text-red-300"
+                >
+                  Effacer
+                </button>
+              )}
+            </div>
+            <div>
+              <input
+                type="text"
+                value={pinnedAnnouncement}
+                maxLength={PINNED_ANNOUNCEMENT_MAX}
+                onChange={(e) => setPinnedAnnouncement(e.target.value)}
+                placeholder="Ex: Nous recrutons un support !"
+                className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              />
+              <p className="text-xs text-neutral-500 mt-1">
+                {pinnedAnnouncement.length}/{PINNED_ANNOUNCEMENT_MAX} —
+                bandeau affiché au-dessus de la page tant qu&apos;il y a du
+                texte (vide = caché).
+              </p>
+            </div>
+            <div>
+              <label
+                htmlFor="pinnedUntil"
+                className="block text-sm text-neutral-300 mb-1"
+              >
+                Expire le (optionnel)
+              </label>
+              <input
+                id="pinnedUntil"
+                type="datetime-local"
+                value={pinnedUntil}
+                onChange={(e) => setPinnedUntil(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              />
+              <p className="text-xs text-neutral-500 mt-1">
+                Une fois cette date passée, le bandeau disparaît automatiquement.
+              </p>
+            </div>
+          </section>
+
+          {/* Embed */}
+          <section className="bg-black/60 border border-white/5 rounded-2xl p-5 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm uppercase tracking-wide text-gray-400">
+                Embed Twitch / YouTube
+              </h2>
+              {embedUrl && (
+                <button
+                  type="button"
+                  onClick={() => setEmbedUrl('')}
+                  className="text-xs text-red-400 hover:text-red-300"
+                >
+                  Retirer
+                </button>
+              )}
+            </div>
+            <div>
+              <input
+                type="text"
+                value={embedUrl}
+                onChange={(e) => setEmbedUrl(e.target.value)}
+                placeholder="https://www.twitch.tv/votre-chaine ou https://youtu.be/VIDEO_ID"
+                className={`w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border ${
+                  embedValid ? 'border-neutral-600' : 'border-red-500'
+                } focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm`}
+              />
+              <p className="text-xs text-neutral-500 mt-1">
+                {embedParsed
+                  ? `Détecté : ${embedParsed.provider} (${embedParsed.id})`
+                  : embedUrl
+                    ? 'URL non reconnue — Twitch (twitch.tv/CHAINE) ou YouTube (youtu.be/ID, /watch?v=ID, /embed/ID).'
+                    : 'Laisse vide pour ne pas afficher de lecteur.'}
+              </p>
+            </div>
+          </section>
+
+          {/* Achievements */}
+          <section className="bg-black/60 border border-white/5 rounded-2xl p-5 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm uppercase tracking-wide text-gray-400">
+                Palmarès
+              </h2>
+              <span className="text-xs text-neutral-500">
+                {achievements.length}/{ACHIEVEMENTS_MAX}
+              </span>
+            </div>
+            {achievements.length === 0 && (
+              <p className="text-xs text-neutral-500 italic">
+                Aucun palmarès pour le moment. Ajoute un titre pour le faire
+                apparaître sur la page publique.
+              </p>
+            )}
+            <div className="space-y-3">
+              {achievements.map((a, idx) => (
+                <div
+                  key={idx}
+                  className="rounded-xl border border-white/10 bg-white/5 p-3 space-y-2"
+                >
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={a.title}
+                      maxLength={ACHIEVEMENT_TITLE_MAX}
+                      placeholder="Ex: 1er place"
+                      onChange={(e) =>
+                        setAchievements((prev) =>
+                          prev.map((it, i) =>
+                            i === idx ? { ...it, title: e.target.value } : it
+                          )
+                        )
+                      }
+                      className="flex-1 px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAchievements((prev) =>
+                          prev.filter((_, i) => i !== idx)
+                        )
+                      }
+                      className="px-2 text-xs text-red-400 hover:text-red-300"
+                      aria-label="Supprimer"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <input
+                      type="date"
+                      value={a.date ?? ''}
+                      onChange={(e) =>
+                        setAchievements((prev) =>
+                          prev.map((it, i) =>
+                            i === idx
+                              ? { ...it, date: e.target.value || null }
+                              : it
+                          )
+                        )
+                      }
+                      className="px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
+                    <input
+                      type="text"
+                      value={a.tournament ?? ''}
+                      maxLength={ACHIEVEMENT_TOURNAMENT_MAX}
+                      placeholder="Tournoi (optionnel)"
+                      onChange={(e) =>
+                        setAchievements((prev) =>
+                          prev.map((it, i) =>
+                            i === idx
+                              ? {
+                                  ...it,
+                                  tournament: e.target.value || null,
+                                }
+                              : it
+                          )
+                        )
+                      }
+                      className="px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+            {achievements.length < ACHIEVEMENTS_MAX && (
+              <button
+                type="button"
+                onClick={() =>
+                  setAchievements((prev) => [
+                    ...prev,
+                    { title: '', date: null, tournament: null },
+                  ])
+                }
+                className="w-full px-3 py-2 rounded-lg border border-dashed border-white/15 text-sm text-cyan-300 hover:bg-cyan-500/5"
+              >
+                + Ajouter un palmarès
+              </button>
+            )}
+          </section>
+
+          {/* Sponsors */}
+          <section className="bg-black/60 border border-white/5 rounded-2xl p-5 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm uppercase tracking-wide text-gray-400">
+                Sponsors
+              </h2>
+              <span className="text-xs text-neutral-500">
+                {sponsors.length}/{SPONSORS_MAX}
+              </span>
+            </div>
+            {sponsors.length === 0 && (
+              <p className="text-xs text-neutral-500 italic">
+                Aucun sponsor. Ajoute un nom + lien pour les afficher.
+              </p>
+            )}
+            <div className="space-y-3">
+              {sponsors.map((s, idx) => (
+                <div
+                  key={idx}
+                  className="rounded-xl border border-white/10 bg-white/5 p-3 space-y-2"
+                >
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={s.name}
+                      maxLength={SPONSOR_NAME_MAX}
+                      placeholder="Nom du sponsor"
+                      onChange={(e) =>
+                        setSponsors((prev) =>
+                          prev.map((it, i) =>
+                            i === idx ? { ...it, name: e.target.value } : it
+                          )
+                        )
+                      }
+                      className="flex-1 px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSponsors((prev) => prev.filter((_, i) => i !== idx))
+                      }
+                      className="px-2 text-xs text-red-400 hover:text-red-300"
+                      aria-label="Supprimer"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={s.logo_url ?? ''}
+                    placeholder="URL du logo (https://...)"
+                    onChange={(e) =>
+                      setSponsors((prev) =>
+                        prev.map((it, i) =>
+                          i === idx
+                            ? { ...it, logo_url: e.target.value || null }
+                            : it
+                        )
+                      )
+                    }
+                    className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
+                  />
+                  <input
+                    type="text"
+                    value={s.url ?? ''}
+                    placeholder="Site (https://...)"
+                    onChange={(e) =>
+                      setSponsors((prev) =>
+                        prev.map((it, i) =>
+                          i === idx
+                            ? { ...it, url: e.target.value || null }
+                            : it
+                        )
+                      )
+                    }
+                    className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
+                  />
+                </div>
+              ))}
+            </div>
+            {sponsors.length < SPONSORS_MAX && (
+              <button
+                type="button"
+                onClick={() =>
+                  setSponsors((prev) => [
+                    ...prev,
+                    { name: '', logo_url: null, url: null },
+                  ])
+                }
+                className="w-full px-3 py-2 rounded-lg border border-dashed border-white/15 text-sm text-cyan-300 hover:bg-cyan-500/5"
+              >
+                + Ajouter un sponsor
+              </button>
+            )}
           </section>
 
           {/* Socials */}
