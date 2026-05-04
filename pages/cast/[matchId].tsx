@@ -276,9 +276,7 @@ function CastPage(_: StaffProps) {
   return (
     <>
       <Head>
-        <title>
-          Cast — {team1?.name || '?'} vs {team2?.name || '?'}
-        </title>
+        <title>{`Cast — ${team1?.name || '?'} vs ${team2?.name || '?'}`}</title>
         <meta name="robots" content="noindex" />
       </Head>
 

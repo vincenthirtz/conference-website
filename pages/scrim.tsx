@@ -12,6 +12,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 
 type ScrimTeam = {
   id: string;
+  slug: string | null;
   name: string;
   short_name: string | null;
   logo_url: string | null;
@@ -28,7 +29,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
   if (supabaseAdmin) {
     const { data } = await supabaseAdmin
       .from('teams')
-      .select('id, name, short_name, logo_url, country')
+      .select('id, slug, name, short_name, logo_url, country')
       .eq('is_active', true)
       .order('name', { ascending: true });
     teams = (data || []) as ScrimTeam[];
@@ -120,7 +121,10 @@ function ScrimPage({ teams }: Props) {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {teams.map((team) => (
-                <Link key={team.id} href={`/team/${team.id}`}>
+                <Link
+                  key={team.id}
+                  href={`/team/${encodeURIComponent(team.slug || team.id)}`}
+                >
                   <div className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-black/40 p-4 hover:border-cyan-500/60 hover:bg-cyan-500/5 transition-colors">
                     {team.logo_url ? (
                       <Image

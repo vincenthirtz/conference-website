@@ -76,6 +76,25 @@ test.describe('teams.slug column + auto-generation', () => {
     ).toBeVisible({ timeout: 15000 });
   });
 
+  test('/scrim page links to /team/<slug>', async ({ page }) => {
+    test.skip(!HAS_SUPABASE, 'Supabase service role manquant');
+    test.skip(
+      !migrationApplied,
+      'Migration add_team_slug.sql not applied on this environment'
+    );
+
+    // The scrim page is generated via getStaticProps with revalidate. Hitting
+    // a fresh URL (with cache-buster) forces Next.js to render at request
+    // time and pick up our newly-inserted active team.
+    await page.goto(`/scrim?_=${Date.now()}`);
+
+    const link = page
+      .locator(`a[href="/team/${EXPECTED_SLUG}"]`)
+      .filter({ hasText: TEAM_NAME })
+      .first();
+    await expect(link).toBeVisible({ timeout: 15000 });
+  });
+
   test('slug collisions get a -2 suffix', async ({}) => {
     test.skip(!HAS_SUPABASE, 'Supabase service role manquant');
     test.skip(

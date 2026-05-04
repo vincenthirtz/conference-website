@@ -19,6 +19,7 @@ import { PlayerDashboardSkeleton } from '@/components/player/Skeletons';
 import { logger } from '../../utils/logger';
 type TeamInfo = {
   id: string;
+  slug?: string | null;
   name: string;
   short_name: string | null;
   logo_url: string | null;
@@ -114,7 +115,7 @@ function buildQuickActions(args: {
   }
 
   actions.push({
-    href: `/team/${team.id}`,
+    href: `/team/${encodeURIComponent(team.slug || team.id)}`,
     label: 'Page équipe',
     description: 'Profil public',
     iconPath: SVG_PATHS.publicTeam,

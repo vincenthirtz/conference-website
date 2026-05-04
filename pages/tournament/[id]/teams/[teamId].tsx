@@ -22,6 +22,7 @@ type Tournament = {
 
 type Team = {
   id: string;
+  slug: string | null;
   name: string;
   short_name: string | null;
   logo_url: string | null;
@@ -91,7 +92,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   const { data: team } = await supabaseAdmin
     .from('teams')
     .select(
-      'id, name, short_name, logo_url, banner_url, country, description, twitter, discord, website, captain_id, is_active'
+      'id, slug, name, short_name, logo_url, banner_url, country, description, twitter, discord, website, captain_id, is_active'
     )
     .eq('id', teamId)
     .maybeSingle();
@@ -228,6 +229,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       },
       team: {
         id: team.id,
+        slug: (team as any).slug ?? null,
         name: team.name,
         short_name: team.short_name ?? null,
         logo_url: team.logo_url ?? null,
@@ -289,9 +291,7 @@ export default function TournamentTeamPage({
   return (
     <>
       <Head>
-        <title>
-          {team.name} · {tournament.name}
-        </title>
+        <title>{`${team.name} · ${tournament.name}`}</title>
         <meta
           name="description"
           content={`Roster, stats et résultats de ${team.name} sur le tournoi ${tournament.name}`}
@@ -343,7 +343,9 @@ export default function TournamentTeamPage({
                 )}
               </div>
               <div className="flex flex-wrap gap-2">
-                <Link href={`/team/${team.id}`}>
+                <Link
+                  href={`/team/${encodeURIComponent(team.slug || team.id)}`}
+                >
                   <Button
                     type="button"
                     className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-blue-400"

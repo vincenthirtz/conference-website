@@ -20,6 +20,7 @@ type Member = {
 
 type TeamInfo = {
   id: string;
+  slug?: string | null;
   name: string;
   short_name: string | null;
   logo_url: string | null;
@@ -284,7 +285,7 @@ export default function ManageTeamPage() {
               )}
             </div>
             <Link
-              href={`/team/${team.id}`}
+              href={`/team/${encodeURIComponent(team.slug || team.id)}`}
               className="text-sm text-purple-300 hover:text-purple-200"
             >
               Page publique &rarr;

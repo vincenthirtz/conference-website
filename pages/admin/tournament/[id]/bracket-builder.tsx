@@ -516,9 +516,7 @@ ${day.matches
   return (
     <>
       <Head>
-        <title>
-          {tournament ? `${tournament.name} — Planning` : 'Planning tournoi'}
-        </title>
+        <title>{tournament ? `${tournament.name} — Planning` : 'Planning tournoi'}</title>
       </Head>
 
       <div className="min-h-screen bg-[#0a0a0f] text-white">

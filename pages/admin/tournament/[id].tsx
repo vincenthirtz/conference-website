@@ -945,9 +945,7 @@ function AdminTournamentPage({
   return (
     <>
       <Head>
-        <title>
-          Admin – Tournoi {tournament ? `: ${tournament.name}` : ''}
-        </title>
+        <title>{`Admin – Tournoi${tournament ? ` : ${tournament.name}` : ''}`}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">

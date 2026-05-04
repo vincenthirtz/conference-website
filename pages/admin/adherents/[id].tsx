@@ -269,9 +269,7 @@ function AdminEditAdherentPage({ staff }: Props) {
   return (
     <>
       <Head>
-        <title>
-          Admin - {adherent.first_name} {adherent.last_name}
-        </title>
+        <title>{`Admin - ${adherent.first_name} ${adherent.last_name}`}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">

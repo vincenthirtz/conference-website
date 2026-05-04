@@ -145,10 +145,7 @@ export default function MatchGamesPage({ match }: Props) {
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <Head>
-        <title>
-          Maps – {t1Name} vs {t2Name} | {match.tournament.name} | OW
-          Women&apos;s Cup
-        </title>
+        <title>{`Maps – ${t1Name} vs ${t2Name} | ${match.tournament.name} | OW Women's Cup`}</title>
       </Head>
 
       <main className="container mx-auto px-4 pt-24 pb-16 max-w-5xl">

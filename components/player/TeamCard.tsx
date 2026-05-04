@@ -3,6 +3,7 @@ import Link from 'next/link';
 
 type TeamInfo = {
   id: string;
+  slug?: string | null;
   name: string;
   short_name: string | null;
   logo_url: string | null;
@@ -172,7 +173,7 @@ export default function TeamCard({
             )}
 
             <Link
-              href={`/team/${team.id}`}
+              href={`/team/${encodeURIComponent(team.slug || team.id)}`}
               className="block w-full text-center px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm text-gray-300 transition"
             >
               Voir la page equipe

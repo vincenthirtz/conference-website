@@ -9,6 +9,7 @@ import { supabaseAdmin } from '@/utils/supabase'; // adapte le chemin si besoin
 
 type Team = {
   id: string;
+  slug?: string | null;
   name: string;
   short_name?: string | null;
   logo_url?: string | null;
@@ -74,7 +75,7 @@ const TeamMapsPage: NextPage<Props> = ({ team, mapStats }) => {
           {/* Breadcrumb / retour */}
           <div className="mb-6">
             <Link
-              href={`/team/${team.id}`}
+              href={`/team/${encodeURIComponent(team.slug || team.id)}`}
               className="inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
             >
               <span>←</span>

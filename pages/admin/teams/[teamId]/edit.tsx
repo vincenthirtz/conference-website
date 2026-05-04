@@ -505,9 +505,7 @@ function AdminEditTeamPage({
   return (
     <>
       <Head>
-        <title>
-          Admin – Éditer équipe{team?.name ? ` : ${team.name}` : ''}
-        </title>
+        <title>{`Admin – Éditer équipe${team?.name ? ` : ${team.name}` : ''}`}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -1387,7 +1385,7 @@ function AdminEditTeamPage({
                   </h2>
                   <div className="space-y-2">
                     <Link
-                      href={`/team/${team.id}`}
+                      href={`/team/${encodeURIComponent(team.slug || team.id)}`}
                       target="_blank"
                       className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-neutral-900/50 hover:bg-neutral-700/50 transition-colors group"
                     >

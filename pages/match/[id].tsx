@@ -13,6 +13,7 @@ import type { MatchStatus, BracketSide } from '@/types/admin';
 import { logger } from '../../utils/logger';
 type SimpleTeam = {
   id: string;
+  slug?: string | null;
   name: string;
   short_name?: string | null;
   logo_url?: string | null;
@@ -99,8 +100,8 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       replay_url,
       lobby_code,
       notes,
-      team1:team1_id ( id, name, short_name, logo_url ),
-      team2:team2_id ( id, name, short_name, logo_url ),
+      team1:team1_id ( id, slug, name, short_name, logo_url ),
+      team2:team2_id ( id, slug, name, short_name, logo_url ),
       tournament:tournament_id ( id, name, short_name, game ),
       stage:stage_id ( id, name, stage_type ),
       games (*)
@@ -167,9 +168,7 @@ export default function MatchPage({ match }: Props) {
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <Head>
-        <title>
-          {t1Name} vs {t2Name} – {match.tournament.name} | OW Women&apos;s Cup
-        </title>
+        <title>{`${t1Name} vs ${t2Name} – ${match.tournament.name} | OW Women's Cup`}</title>
       </Head>
 
       <main className="container mx-auto px-4 pt-24 pb-16 max-w-5xl">
@@ -466,7 +465,10 @@ function TeamHeader({
       <div className="flex flex-col">
         <span className="text-sm font-semibold text-white">
           {team ? (
-            <Link href={`/team/${team.id}`} className="hover:text-emerald-300">
+            <Link
+              href={`/team/${encodeURIComponent(team.slug || team.id)}`}
+              className="hover:text-emerald-300"
+            >
               {name}
             </Link>
           ) : (

@@ -21,6 +21,7 @@ type MemberRow = {
 
 type TeamRow = {
   id: string;
+  slug: string | null;
   name: string;
   short_name: string | null;
   logo_url: string | null;
@@ -61,7 +62,7 @@ export default withAuthRoute(async function handler(
     const { data: membership, error: membershipErr } = await supabaseAdmin
       .from('team_members')
       .select(
-        'team_id, teams!inner(id, name, short_name, logo_url, country, description, captain_id, is_joinable)'
+        'team_id, teams!inner(id, slug, name, short_name, logo_url, country, description, captain_id, is_joinable)'
       )
       .eq('user_id', userId)
       .limit(1)
@@ -91,6 +92,7 @@ export default withAuthRoute(async function handler(
     );
     const team: TeamRow & { is_joinable?: boolean } = {
       id: teamRaw.id,
+      slug: teamRaw.slug ?? null,
       name: teamRaw.name,
       short_name: teamRaw.short_name,
       logo_url: teamRaw.logo_url,
