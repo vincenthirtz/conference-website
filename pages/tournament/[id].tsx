@@ -45,6 +45,7 @@ type Stage = {
 
 type SimpleTeam = {
   id: string;
+  slug?: string | null;
   name: string;
   short_name?: string | null;
   logo_url?: string | null;
@@ -689,7 +690,7 @@ export default function TournamentPage({
                 {teams.slice(0, 12).map((team) => (
                   <Link
                     key={team.id}
-                    href={`/tournament/${tournament.id}/teams/${team.id}`}
+                    href={`/team/${encodeURIComponent(team.slug || team.id)}`}
                   >
                     <div className="group flex flex-col items-center gap-2.5 bg-gradient-to-b from-white/5 to-transparent border border-white/8 rounded-2xl px-3 py-4 cursor-pointer hover:border-emerald-400/50 hover:bg-emerald-500/5 transition-all hover:scale-[1.02]">
                       <div className="w-14 h-14 rounded-full bg-gradient-to-br from-white/10 to-white/5 border border-white/10 flex items-center justify-center overflow-hidden group-hover:border-emerald-400/30 transition-colors">
