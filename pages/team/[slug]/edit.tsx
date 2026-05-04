@@ -14,6 +14,10 @@ import {
   TEAM_PUBLIC_CONTENT_MAX_LENGTH,
   renderTeamPublicMarkdown,
   normalizeAccentColor,
+  BANNER_OVERLAY_VALUES,
+  BANNER_FOCAL_VALUES,
+  type BannerOverlay,
+  type BannerFocal,
 } from '@/utils/markdown/teamPublicMarkdown';
 import { useToast } from '@/components/Toast';
 import LogoUpload from '@/components/admin/LogoUpload';
@@ -28,9 +32,16 @@ type EditableTeam = {
   description: string | null;
   public_content: string | null;
   accent_color: string | null;
+  secondary_color: string | null;
+  banner_overlay: string | null;
+  banner_focal: string | null;
   twitter: string | null;
   discord: string | null;
   website: string | null;
+  youtube: string | null;
+  twitch: string | null;
+  instagram: string | null;
+  tiktok: string | null;
 };
 
 type Props = {
@@ -60,7 +71,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   // Resolve team by slug first, then id/name/short_name (back-compat).
   let team: EditableTeam | null = null;
   const fields =
-    'id, slug, name, short_name, logo_url, banner_url, description, public_content, accent_color, twitter, discord, website';
+    'id, slug, name, short_name, logo_url, banner_url, description, public_content, accent_color, secondary_color, banner_overlay, banner_focal, twitter, discord, website, youtube, twitch, instagram, tiktok';
   const isUuid =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
       slug
@@ -120,11 +131,24 @@ export default function TeamPublicEditPage({ team }: Props) {
   const [description, setDescription] = useState(team.description ?? '');
   const [publicContent, setPublicContent] = useState(team.public_content ?? '');
   const [accentColor, setAccentColor] = useState(team.accent_color ?? '');
+  const [secondaryColor, setSecondaryColor] = useState(
+    team.secondary_color ?? ''
+  );
+  const [bannerOverlay, setBannerOverlay] = useState<BannerOverlay | ''>(
+    (team.banner_overlay as BannerOverlay | null) ?? ''
+  );
+  const [bannerFocal, setBannerFocal] = useState<BannerFocal | ''>(
+    (team.banner_focal as BannerFocal | null) ?? ''
+  );
   const [logoUrl, setLogoUrl] = useState(team.logo_url ?? '');
   const [bannerUrl, setBannerUrl] = useState(team.banner_url ?? '');
   const [twitter, setTwitter] = useState(team.twitter ?? '');
   const [discord, setDiscord] = useState(team.discord ?? '');
   const [website, setWebsite] = useState(team.website ?? '');
+  const [youtube, setYoutube] = useState(team.youtube ?? '');
+  const [twitch, setTwitch] = useState(team.twitch ?? '');
+  const [instagram, setInstagram] = useState(team.instagram ?? '');
+  const [tiktok, setTiktok] = useState(team.tiktok ?? '');
 
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -133,6 +157,11 @@ export default function TeamPublicEditPage({ team }: Props) {
     if (!accentColor) return true;
     return normalizeAccentColor(accentColor) !== null;
   }, [accentColor]);
+
+  const secondaryValid = useMemo(() => {
+    if (!secondaryColor) return true;
+    return normalizeAccentColor(secondaryColor) !== null;
+  }, [secondaryColor]);
 
   const previewNode = useMemo(
     () => renderTeamPublicMarkdown(publicContent),
@@ -144,7 +173,7 @@ export default function TeamPublicEditPage({ team }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!accentValid) {
+    if (!accentValid || !secondaryValid) {
       addToast(
         'Couleur invalide — utilise un hex (#rgb ou #rrggbb).',
         'error'
@@ -170,11 +199,18 @@ export default function TeamPublicEditPage({ team }: Props) {
           description,
           public_content: publicContent,
           accent_color: accentColor,
+          secondary_color: secondaryColor,
+          banner_overlay: bannerOverlay,
+          banner_focal: bannerFocal,
           logo_url: logoUrl,
           banner_url: bannerUrl,
           twitter,
           discord,
           website,
+          youtube,
+          twitch,
+          instagram,
+          tiktok,
         }),
       });
 
@@ -247,44 +283,89 @@ export default function TeamPublicEditPage({ team }: Props) {
               endpoint={uploadEndpoint}
             />
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <ColorField
+                id="accentColor"
+                label="Couleur d'accent"
+                value={accentColor}
+                onChange={setAccentColor}
+                valid={accentValid}
+                placeholder="#7c3aed"
+              />
+              <ColorField
+                id="secondaryColor"
+                label="Couleur secondaire"
+                value={secondaryColor}
+                onChange={setSecondaryColor}
+                valid={secondaryValid}
+                placeholder="#22d3ee"
+                hint="Combinée à l'accent pour les dégradés (logo, bannière, win-rate)."
+              />
+            </div>
+
+            {accentColor && secondaryColor && accentValid && secondaryValid && (
+              <div
+                aria-hidden
+                className="h-3 rounded-full border border-white/10"
+                style={{
+                  backgroundImage: `linear-gradient(90deg, ${accentColor}, ${secondaryColor})`,
+                }}
+              />
+            )}
+
             <div>
               <label
-                htmlFor="accentColor"
+                htmlFor="bannerOverlay"
                 className="block text-sm text-neutral-300 mb-1"
               >
-                Couleur d&apos;accent
+                Overlay de bannière
               </label>
-              <div className="flex items-center gap-2">
-                <input
-                  id="accentColor"
-                  type="text"
-                  value={accentColor}
-                  onChange={(e) => setAccentColor(e.target.value)}
-                  placeholder="#7c3aed"
-                  className={`flex-1 px-3 py-2.5 rounded-xl bg-neutral-900/50 border ${
-                    accentValid ? 'border-neutral-600' : 'border-red-500'
-                  } focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono`}
-                />
-                {accentValid && accentColor && (
-                  <span
-                    aria-hidden
-                    className="inline-block w-9 h-9 rounded-lg border border-white/20"
-                    style={{ backgroundColor: accentColor }}
-                  />
-                )}
-                {accentColor && (
-                  <button
-                    type="button"
-                    onClick={() => setAccentColor('')}
-                    className="text-xs text-red-400 hover:text-red-300"
-                  >
-                    Reset
-                  </button>
-                )}
-              </div>
+              <select
+                id="bannerOverlay"
+                value={bannerOverlay}
+                onChange={(e) =>
+                  setBannerOverlay(e.target.value as BannerOverlay | '')
+                }
+                className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              >
+                <option value="">Par défaut (gradient noir)</option>
+                {BANNER_OVERLAY_VALUES.map((value) => (
+                  <option key={value} value={value}>
+                    {OVERLAY_LABELS[value]}
+                  </option>
+                ))}
+              </select>
               <p className="text-xs text-neutral-500 mt-1">
-                Format hex (#rgb ou #rrggbb). Laisse vide pour l&apos;apparence
-                par défaut.
+                Style de la couche posée au-dessus de l&apos;image de bannière.
+              </p>
+            </div>
+
+            <div>
+              <label
+                htmlFor="bannerFocal"
+                className="block text-sm text-neutral-300 mb-1"
+              >
+                Cadrage de la bannière
+              </label>
+              <select
+                id="bannerFocal"
+                value={bannerFocal}
+                onChange={(e) =>
+                  setBannerFocal(e.target.value as BannerFocal | '')
+                }
+                className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              >
+                <option value="">Centré (par défaut)</option>
+                {BANNER_FOCAL_VALUES.filter((v) => v !== 'center').map(
+                  (value) => (
+                    <option key={value} value={value}>
+                      {FOCAL_LABELS[value]}
+                    </option>
+                  )
+                )}
+              </select>
+              <p className="text-xs text-neutral-500 mt-1">
+                Point d&apos;ancrage de l&apos;image quand elle est recadrée.
               </p>
             </div>
           </section>
@@ -388,6 +469,38 @@ export default function TeamPublicEditPage({ team }: Props) {
               onChange={setWebsite}
               max={200}
             />
+            <SocialField
+              id="youtube"
+              label="YouTube"
+              hint="Handle (@chaine), ID ou URL complète"
+              value={youtube}
+              onChange={setYoutube}
+              max={HANDLE_MAX}
+            />
+            <SocialField
+              id="twitch"
+              label="Twitch"
+              hint="Pseudo ou URL complète"
+              value={twitch}
+              onChange={setTwitch}
+              max={HANDLE_MAX}
+            />
+            <SocialField
+              id="instagram"
+              label="Instagram"
+              hint="Handle (@compte) ou URL complète"
+              value={instagram}
+              onChange={setInstagram}
+              max={HANDLE_MAX}
+            />
+            <SocialField
+              id="tiktok"
+              label="TikTok"
+              hint="Handle (@compte) ou URL complète"
+              value={tiktok}
+              onChange={setTiktok}
+              max={HANDLE_MAX}
+            />
           </section>
 
           <div className="flex items-center justify-end gap-3 pt-2">
@@ -442,6 +555,79 @@ export default function TeamPublicEditPage({ team }: Props) {
           </section>
         )}
       </main>
+    </div>
+  );
+}
+
+const OVERLAY_LABELS: Record<BannerOverlay, string> = {
+  gradient: 'Dégradé sombre (recommandé)',
+  dark: 'Noir uni 50%',
+  none: 'Aucun (image pleine)',
+  grid: 'Grille',
+  dots: 'Pointillés',
+};
+
+const FOCAL_LABELS: Record<BannerFocal, string> = {
+  center: 'Centré',
+  top: 'Haut',
+  bottom: 'Bas',
+  left: 'Gauche',
+  right: 'Droite',
+};
+
+function ColorField({
+  id,
+  label,
+  value,
+  onChange,
+  valid,
+  placeholder,
+  hint,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  valid: boolean;
+  placeholder: string;
+  hint?: string;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className="block text-sm text-neutral-300 mb-1">
+        {label}
+      </label>
+      <div className="flex items-center gap-2">
+        <input
+          id={id}
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className={`flex-1 px-3 py-2.5 rounded-xl bg-neutral-900/50 border ${
+            valid ? 'border-neutral-600' : 'border-red-500'
+          } focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono`}
+        />
+        {valid && value && (
+          <span
+            aria-hidden
+            className="inline-block w-9 h-9 rounded-lg border border-white/20"
+            style={{ backgroundColor: value }}
+          />
+        )}
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            className="text-xs text-red-400 hover:text-red-300"
+          >
+            Reset
+          </button>
+        )}
+      </div>
+      <p className="text-xs text-neutral-500 mt-1">
+        {hint ?? 'Format hex (#rgb ou #rrggbb). Laisse vide pour la valeur par défaut.'}
+      </p>
     </div>
   );
 }

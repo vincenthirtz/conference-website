@@ -66,11 +66,18 @@ function seedTeam(overrides: Record<string, unknown> = {}) {
       description: null,
       public_content: null,
       accent_color: null,
+      secondary_color: null,
+      banner_overlay: null,
+      banner_focal: null,
       logo_url: null,
       banner_url: null,
       twitter: null,
       discord: null,
       website: null,
+      youtube: null,
+      twitch: null,
+      instagram: null,
+      tiktok: null,
       is_active: true,
       ...overrides,
     },
@@ -259,6 +266,86 @@ describe('field validation', () => {
     const res = makeRes();
     await handler(
       makeReq({ body: { logo_url: 'javascript:alert(1)' } }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('accepts a valid hex secondary_color and stores it lowercased', async () => {
+    const res = makeRes();
+    await handler(
+      makeReq({ body: { secondary_color: '#22D3EE' } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect((store.teams as any[])[0].secondary_color).toBe('#22d3ee');
+  });
+
+  it('rejects invalid secondary_color', async () => {
+    const res = makeRes();
+    await handler(makeReq({ body: { secondary_color: 'turquoise' } }), res);
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('clears secondary_color when sent as empty string', async () => {
+    (store.teams as any[])[0].secondary_color = '#abcdef';
+    const res = makeRes();
+    await handler(makeReq({ body: { secondary_color: '' } }), res);
+    expect(res.statusCode).toBe(200);
+    expect((store.teams as any[])[0].secondary_color).toBeNull();
+  });
+
+  it('accepts valid banner_overlay values', async () => {
+    const res = makeRes();
+    await handler(makeReq({ body: { banner_overlay: 'grid' } }), res);
+    expect(res.statusCode).toBe(200);
+    expect((store.teams as any[])[0].banner_overlay).toBe('grid');
+  });
+
+  it('rejects unknown banner_overlay values', async () => {
+    const res = makeRes();
+    await handler(makeReq({ body: { banner_overlay: 'sparkles' } }), res);
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('accepts valid banner_focal values', async () => {
+    const res = makeRes();
+    await handler(makeReq({ body: { banner_focal: 'top' } }), res);
+    expect(res.statusCode).toBe(200);
+    expect((store.teams as any[])[0].banner_focal).toBe('top');
+  });
+
+  it('rejects unknown banner_focal values', async () => {
+    const res = makeRes();
+    await handler(makeReq({ body: { banner_focal: 'diagonal' } }), res);
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('persists handle-style social fields verbatim', async () => {
+    const res = makeRes();
+    await handler(
+      makeReq({
+        body: {
+          youtube: '@some-channel',
+          twitch: 'somestreamer',
+          instagram: '@team.gram',
+          tiktok: '@team.tok',
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const team = (store.teams as any[])[0];
+    expect(team.youtube).toBe('@some-channel');
+    expect(team.twitch).toBe('somestreamer');
+    expect(team.instagram).toBe('@team.gram');
+    expect(team.tiktok).toBe('@team.tok');
+  });
+
+  it('rejects social handles longer than 80 chars', async () => {
+    const res = makeRes();
+    await handler(
+      makeReq({ body: { youtube: 'a'.repeat(81) } }),
       res
     );
     expect(res.statusCode).toBe(400);

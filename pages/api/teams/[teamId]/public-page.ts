@@ -15,6 +15,8 @@ import { hasTeamPermission } from '@/utils/teams/permissions';
 import {
   TEAM_PUBLIC_CONTENT_MAX_LENGTH,
   normalizeAccentColor,
+  normalizeBannerOverlay,
+  normalizeBannerFocal,
 } from '@/utils/markdown/teamPublicMarkdown';
 import { logger } from '@/utils/logger';
 
@@ -25,12 +27,40 @@ type Updates = {
   description: string | null;
   public_content: string | null;
   accent_color: string | null;
+  secondary_color: string | null;
+  banner_overlay: string | null;
+  banner_focal: string | null;
   logo_url: string | null;
   banner_url: string | null;
   twitter: string | null;
   discord: string | null;
   website: string | null;
+  youtube: string | null;
+  twitch: string | null;
+  instagram: string | null;
+  tiktok: string | null;
 };
+
+function normalizeHexInput(
+  raw: unknown,
+  fieldName: string
+):
+  | { ok: true; value: string | null }
+  | { ok: false; error: string } {
+  if (raw === undefined || raw === null) return { ok: true, value: null };
+  if (typeof raw !== 'string') {
+    return { ok: false, error: `${fieldName} invalide.` };
+  }
+  if (raw.trim() === '') return { ok: true, value: null };
+  const normalized = normalizeAccentColor(raw);
+  if (!normalized) {
+    return {
+      ok: false,
+      error: `${fieldName} doit être un hex (#rgb ou #rrggbb).`,
+    };
+  }
+  return { ok: true, value: normalized };
+}
 
 function trimOrNull(
   raw: unknown,
@@ -103,22 +133,53 @@ export default withAuthRoute(async function handler(
   if (!publicContent.ok)
     return res.status(400).json({ error: publicContent.error });
 
-  // Accent color: validated only if non-empty
-  let accentColor: string | null = null;
-  if (body.accent_color !== undefined && body.accent_color !== null) {
-    if (typeof body.accent_color !== 'string') {
-      return res.status(400).json({ error: 'accent_color invalide.' });
+  const accentResult = normalizeHexInput(body.accent_color, 'accent_color');
+  if (!accentResult.ok)
+    return res.status(400).json({ error: accentResult.error });
+  const accentColor = accentResult.value;
+
+  const secondaryResult = normalizeHexInput(
+    body.secondary_color,
+    'secondary_color'
+  );
+  if (!secondaryResult.ok)
+    return res.status(400).json({ error: secondaryResult.error });
+  const secondaryColor = secondaryResult.value;
+
+  let bannerOverlay: string | null = null;
+  if (body.banner_overlay !== undefined && body.banner_overlay !== null) {
+    if (typeof body.banner_overlay !== 'string') {
+      return res.status(400).json({ error: 'banner_overlay invalide.' });
     }
-    if (body.accent_color.trim() === '') {
-      accentColor = null;
+    if (body.banner_overlay.trim() === '') {
+      bannerOverlay = null;
     } else {
-      const normalized = normalizeAccentColor(body.accent_color);
+      const normalized = normalizeBannerOverlay(body.banner_overlay);
       if (!normalized) {
         return res.status(400).json({
-          error: 'accent_color doit être un hex (#rgb ou #rrggbb).',
+          error:
+            'banner_overlay doit être gradient, dark, none, grid ou dots.',
         });
       }
-      accentColor = normalized;
+      bannerOverlay = normalized;
+    }
+  }
+
+  let bannerFocal: string | null = null;
+  if (body.banner_focal !== undefined && body.banner_focal !== null) {
+    if (typeof body.banner_focal !== 'string') {
+      return res.status(400).json({ error: 'banner_focal invalide.' });
+    }
+    if (body.banner_focal.trim() === '') {
+      bannerFocal = null;
+    } else {
+      const normalized = normalizeBannerFocal(body.banner_focal);
+      if (!normalized) {
+        return res.status(400).json({
+          error: 'banner_focal doit être center, top, bottom, left ou right.',
+        });
+      }
+      bannerFocal = normalized;
     }
   }
 
@@ -135,6 +196,18 @@ export default withAuthRoute(async function handler(
   // discord: free-form (server invite link or ID), kept short
   const discord = trimOrNull(body.discord, HANDLE_MAX);
   if (!discord.ok) return res.status(400).json({ error: discord.error });
+
+  const youtube = trimOrNull(body.youtube, HANDLE_MAX);
+  if (!youtube.ok) return res.status(400).json({ error: youtube.error });
+
+  const twitch = trimOrNull(body.twitch, HANDLE_MAX);
+  if (!twitch.ok) return res.status(400).json({ error: twitch.error });
+
+  const instagram = trimOrNull(body.instagram, HANDLE_MAX);
+  if (!instagram.ok) return res.status(400).json({ error: instagram.error });
+
+  const tiktok = trimOrNull(body.tiktok, HANDLE_MAX);
+  if (!tiktok.ok) return res.status(400).json({ error: tiktok.error });
 
   // website: must be http(s) URL when provided
   let website: string | null = null;
@@ -165,18 +238,25 @@ export default withAuthRoute(async function handler(
     description: description.value,
     public_content: publicContent.value,
     accent_color: accentColor,
+    secondary_color: secondaryColor,
+    banner_overlay: bannerOverlay,
+    banner_focal: bannerFocal,
     logo_url: logo,
     banner_url: banner,
     twitter: twitter.value,
     discord: discord.value,
     website,
+    youtube: youtube.value,
+    twitch: twitch.value,
+    instagram: instagram.value,
+    tiktok: tiktok.value,
   };
 
   // Snapshot previous state for audit
   const { data: before, error: beforeErr } = await supabaseAdmin
     .from('teams')
     .select(
-      'description, public_content, accent_color, logo_url, banner_url, twitter, discord, website'
+      'description, public_content, accent_color, secondary_color, banner_overlay, banner_focal, logo_url, banner_url, twitter, discord, website, youtube, twitch, instagram, tiktok'
     )
     .eq('id', teamId)
     .maybeSingle();

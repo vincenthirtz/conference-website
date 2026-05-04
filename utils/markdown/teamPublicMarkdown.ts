@@ -310,3 +310,50 @@ export function normalizeAccentColor(
   }
   return null;
 }
+
+export const BANNER_OVERLAY_VALUES = [
+  'gradient',
+  'dark',
+  'none',
+  'grid',
+  'dots',
+] as const;
+export type BannerOverlay = (typeof BANNER_OVERLAY_VALUES)[number];
+
+/**
+ * Validate a banner overlay style. Returns the normalized value or null when
+ * invalid / empty.
+ */
+export function normalizeBannerOverlay(
+  raw: string | null | undefined
+): BannerOverlay | null {
+  if (!raw) return null;
+  const value = raw.trim().toLowerCase();
+  if (!value) return null;
+  return (BANNER_OVERLAY_VALUES as readonly string[]).includes(value)
+    ? (value as BannerOverlay)
+    : null;
+}
+
+export const BANNER_FOCAL_VALUES = [
+  'center',
+  'top',
+  'bottom',
+  'left',
+  'right',
+] as const;
+export type BannerFocal = (typeof BANNER_FOCAL_VALUES)[number];
+
+/**
+ * Validate a banner focal point. Maps to a CSS object-position keyword.
+ */
+export function normalizeBannerFocal(
+  raw: string | null | undefined
+): BannerFocal | null {
+  if (!raw) return null;
+  const value = raw.trim().toLowerCase();
+  if (!value) return null;
+  return (BANNER_FOCAL_VALUES as readonly string[]).includes(value)
+    ? (value as BannerFocal)
+    : null;
+}
