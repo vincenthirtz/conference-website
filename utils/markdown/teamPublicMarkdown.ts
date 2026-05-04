@@ -513,6 +513,33 @@ export function parseEmbedUrl(
   return null;
 }
 
+export const MEMBER_DISPLAY_NAME_MAX = 60;
+export const MEMBER_PRONOUNS_MAX = 20;
+export const MEMBER_TAGLINE_MAX = 120;
+
+export const MEMBER_SPECIALTIES = [
+  'tank',
+  'dps',
+  'support',
+  'flex',
+] as const;
+export type MemberSpecialty = (typeof MEMBER_SPECIALTIES)[number];
+
+/**
+ * Validate a member specialty. Returns the normalized lowercase value or
+ * null when invalid / empty.
+ */
+export function normalizeMemberSpecialty(
+  raw: string | null | undefined
+): MemberSpecialty | null {
+  if (!raw) return null;
+  const value = raw.trim().toLowerCase();
+  if (!value) return null;
+  return (MEMBER_SPECIALTIES as readonly string[]).includes(value)
+    ? (value as MemberSpecialty)
+    : null;
+}
+
 /**
  * Validate a pinned announcement string.
  */

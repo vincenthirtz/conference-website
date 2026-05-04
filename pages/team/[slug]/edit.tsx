@@ -30,6 +30,9 @@ import {
 } from '@/utils/markdown/teamPublicMarkdown';
 import { useToast } from '@/components/Toast';
 import LogoUpload from '@/components/admin/LogoUpload';
+import MemberProfileEditor, {
+  type EditableMember,
+} from '@/components/Team/MemberProfileEditor';
 
 type EditableTeam = {
   id: string;
@@ -57,10 +60,12 @@ type EditableTeam = {
   embed_id: string | null;
   pinned_announcement: string | null;
   pinned_announcement_until: string | null;
+  captain_id: string | null;
 };
 
 type Props = {
   team: EditableTeam;
+  members: EditableMember[];
 };
 
 const DESCRIPTION_MAX = 280;
@@ -86,7 +91,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   // Resolve team by slug first, then id/name/short_name (back-compat).
   let team: EditableTeam | null = null;
   const fields =
-    'id, slug, name, short_name, logo_url, banner_url, description, public_content, accent_color, secondary_color, banner_overlay, banner_focal, twitter, discord, website, youtube, twitch, instagram, tiktok, achievements, sponsors, embed_provider, embed_id, pinned_announcement, pinned_announcement_until';
+    'id, slug, name, short_name, logo_url, banner_url, description, public_content, accent_color, secondary_color, banner_overlay, banner_focal, twitter, discord, website, youtube, twitch, instagram, tiktok, achievements, sponsors, embed_provider, embed_id, pinned_announcement, pinned_announcement_until, captain_id';
   const isUuid =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
       slug
@@ -137,10 +142,39 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     };
   }
 
-  return { props: { team } };
+  // Roster — used by the per-member profile editor.
+  const { data: rawMembers } = await supabaseAdmin
+    .from('team_members')
+    .select(
+      'id, user_id, role, battle_tag, is_substitute, display_name, specialty, avatar_url, pronouns, tagline, twitter, twitch, created_at'
+    )
+    .eq('team_id', team.id)
+    .order('created_at', { ascending: true });
+
+  const teamCaptainId = (team as Record<string, unknown>).captain_id as
+    | string
+    | null
+    | undefined;
+  const members: EditableMember[] = (rawMembers ?? []).map((m: any) => ({
+    id: m.id,
+    user_id: m.user_id,
+    battle_tag: m.battle_tag ?? null,
+    role: m.role ?? null,
+    is_captain: m.user_id === teamCaptainId,
+    is_substitute: !!m.is_substitute,
+    display_name: m.display_name ?? null,
+    specialty: m.specialty ?? null,
+    avatar_url: m.avatar_url ?? null,
+    pronouns: m.pronouns ?? null,
+    tagline: m.tagline ?? null,
+    twitter: m.twitter ?? null,
+    twitch: m.twitch ?? null,
+  }));
+
+  return { props: { team, members } };
 };
 
-export default function TeamPublicEditPage({ team }: Props) {
+export default function TeamPublicEditPage({ team, members }: Props) {
   const { addToast } = useToast();
 
   const [description, setDescription] = useState(team.description ?? '');
@@ -842,6 +876,37 @@ export default function TeamPublicEditPage({ team }: Props) {
               onChange={setTiktok}
               max={HANDLE_MAX}
             />
+          </section>
+
+          {/* Members */}
+          <section className="bg-black/60 border border-white/5 rounded-2xl p-5 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm uppercase tracking-wide text-gray-400">
+                Profils des membres
+              </h2>
+              <span className="text-xs text-neutral-500">
+                {members.length} membre{members.length > 1 ? 's' : ''}
+              </span>
+            </div>
+            <p className="text-xs text-neutral-500">
+              Personnalise comment chaque joueuse apparaît sur la page publique.
+              Chaque profil a son propre bouton « Enregistrer ».
+            </p>
+            {members.length === 0 ? (
+              <p className="text-xs text-neutral-500 italic">
+                Aucun membre dans le roster.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {members.map((m) => (
+                  <MemberProfileEditor
+                    key={m.id}
+                    teamId={team.id}
+                    member={m}
+                  />
+                ))}
+              </div>
+            )}
           </section>
 
           <div className="flex items-center justify-end gap-3 pt-2">

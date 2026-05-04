@@ -98,6 +98,14 @@ type TeamMember = {
   role: string;
   battle_tag?: string | null;
   is_captain?: boolean;
+  is_substitute?: boolean;
+  display_name?: string | null;
+  specialty?: string | null;
+  avatar_url?: string | null;
+  pronouns?: string | null;
+  tagline?: string | null;
+  twitter?: string | null;
+  twitch?: string | null;
   created_at: string;
 };
 
@@ -215,7 +223,9 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
   // 2) Fetch members
   const { data: rawMembers, error: membersError } = await supabaseAdmin
     .from('team_members')
-    .select('id, user_id, role, battle_tag, is_substitute, created_at')
+    .select(
+      'id, user_id, role, battle_tag, is_substitute, display_name, specialty, avatar_url, pronouns, tagline, twitter, twitch, created_at'
+    )
     .eq('team_id', teamId)
     .order('created_at', { ascending: true });
 
@@ -909,9 +919,9 @@ export default function TeamPage({
             <section className="bg-black/60 border border-white/5 rounded-2xl p-5">
               {(() => {
                 const rosterMembers = members.filter(
-                  (m: any) => !m.is_substitute
+                  (m) => !m.is_substitute
                 );
-                const subMembers = members.filter((m: any) => m.is_substitute);
+                const subMembers = members.filter((m) => m.is_substitute);
 
                 return (
                   <>
@@ -920,7 +930,7 @@ export default function TeamPage({
                         Roster
                       </p>
                       <span className="text-xs text-gray-500">
-                        {rosterMembers.length} joueur
+                        {rosterMembers.length} titulaire
                         {rosterMembers.length > 1 ? 's' : ''}
                       </span>
                     </div>
@@ -931,73 +941,12 @@ export default function TeamPage({
                       </Paragraph>
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {rosterMembers.map((member: any) => (
-                          <div
+                        {rosterMembers.map((member) => (
+                          <MemberCard
                             key={member.id}
-                            className={`flex items-center gap-3 rounded-xl px-4 py-3 ${
-                              member.is_captain
-                                ? 'bg-amber-500/10 border border-amber-500/30'
-                                : 'bg-white/5 border border-white/10'
-                            }`}
-                          >
-                            <div
-                              className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                                member.is_captain
-                                  ? 'bg-amber-500/20 border border-amber-500/30'
-                                  : 'bg-gradient-to-br from-neutral-700 to-neutral-800'
-                              }`}
-                            >
-                              {member.is_captain ? (
-                                <svg
-                                  className="w-5 h-5 text-amber-400"
-                                  fill="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
-                                </svg>
-                              ) : (
-                                <svg
-                                  className="w-5 h-5 text-neutral-400"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                                  />
-                                </svg>
-                              )}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2">
-                                <p className="text-sm font-semibold text-white truncate">
-                                  {member.battle_tag || 'Membre'}
-                                </p>
-                                {member.is_captain && (
-                                  <svg
-                                    className="w-4 h-4 text-amber-400 flex-shrink-0"
-                                    fill="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
-                                  </svg>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <p className="text-xs text-gray-400 capitalize">
-                                  {member.role}
-                                </p>
-                                {member.is_captain && (
-                                  <span className="text-[10px] text-amber-400 font-semibold">
-                                    Capitaine
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
+                            member={member}
+                            accent={accent}
+                          />
                         ))}
                       </div>
                     )}
@@ -1006,42 +955,20 @@ export default function TeamPage({
                       <div className="mt-5 pt-4 border-t border-white/5">
                         <div className="flex items-center justify-between mb-3">
                           <p className="text-xs uppercase tracking-wide text-gray-500">
-                            Remplaçants
+                            Remplaçantes
                           </p>
                           <span className="text-xs text-gray-600">
                             {subMembers.length}
                           </span>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {subMembers.map((member: any) => (
-                            <div
+                          {subMembers.map((member) => (
+                            <MemberCard
                               key={member.id}
-                              className="flex items-center gap-3 rounded-xl px-4 py-3 bg-white/[0.02] border border-dashed border-white/10"
-                            >
-                              <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br from-neutral-800 to-neutral-900">
-                                <svg
-                                  className="w-5 h-5 text-neutral-500"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-                                  />
-                                </svg>
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="text-sm font-semibold text-gray-300 truncate">
-                                  {member.battle_tag || 'Membre'}
-                                </p>
-                                <p className="text-xs text-gray-500 capitalize">
-                                  {member.role}
-                                </p>
-                              </div>
-                            </div>
+                              member={member}
+                              accent={accent}
+                              substitute
+                            />
                           ))}
                         </div>
                       </div>
@@ -1237,6 +1164,176 @@ export default function TeamPage({
 /* ─────────────────────────────────────────────
  * Components & utils
  * ────────────────────────────────────────────*/
+
+const SPECIALTY_STYLE: Record<
+  string,
+  { label: string; bg: string; text: string }
+> = {
+  tank: {
+    label: 'Tank',
+    bg: 'bg-orange-500/20 border-orange-500/40',
+    text: 'text-orange-200',
+  },
+  dps: {
+    label: 'DPS',
+    bg: 'bg-red-500/20 border-red-500/40',
+    text: 'text-red-200',
+  },
+  support: {
+    label: 'Support',
+    bg: 'bg-emerald-500/20 border-emerald-500/40',
+    text: 'text-emerald-200',
+  },
+  flex: {
+    label: 'Flex',
+    bg: 'bg-purple-500/20 border-purple-500/40',
+    text: 'text-purple-200',
+  },
+};
+
+function memberInitials(member: TeamMember): string {
+  const source = member.display_name || member.battle_tag || 'M';
+  const parts = source.trim().split(/[\s#-]+/).filter(Boolean);
+  if (parts.length === 0) return 'M';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
+function MemberCard({
+  member,
+  accent,
+  substitute,
+}: {
+  member: TeamMember;
+  accent: string | null;
+  substitute?: boolean;
+}) {
+  const name = member.display_name || member.battle_tag || 'Membre';
+  const specialtyStyle =
+    member.specialty && SPECIALTY_STYLE[member.specialty.toLowerCase()];
+  const avatar =
+    member.avatar_url && safeHref(member.avatar_url) ? member.avatar_url : null;
+  const twitterHref = socialHref('twitter', member.twitter ?? null);
+  const twitchHref = socialHref('twitch', member.twitch ?? null);
+
+  const containerClasses = substitute
+    ? 'bg-white/[0.02] border-dashed border-white/10'
+    : member.is_captain
+      ? 'bg-amber-500/10 border-amber-500/30'
+      : 'bg-white/5 border-white/10';
+
+  return (
+    <div
+      className={`flex items-start gap-3 rounded-xl px-4 py-3 border ${containerClasses}`}
+    >
+      <div className="flex-shrink-0">
+        {avatar ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={avatar}
+            alt=""
+            loading="lazy"
+            className="w-12 h-12 rounded-lg object-cover border border-white/10"
+            style={accent ? { borderColor: `${accent}66` } : undefined}
+          />
+        ) : (
+          <div
+            className={`w-12 h-12 rounded-lg flex items-center justify-center text-sm font-semibold ${
+              member.is_captain
+                ? 'bg-amber-500/20 border border-amber-500/30 text-amber-200'
+                : 'bg-gradient-to-br from-neutral-700 to-neutral-800 text-neutral-200'
+            }`}
+            style={
+              !member.is_captain && accent
+                ? {
+                    borderColor: `${accent}66`,
+                    color: accent,
+                  }
+                : undefined
+            }
+          >
+            {memberInitials(member)}
+          </div>
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <p
+            className={`text-sm font-semibold truncate ${substitute ? 'text-gray-300' : 'text-white'}`}
+          >
+            {name}
+          </p>
+          {member.is_captain && (
+            <svg
+              className="w-4 h-4 text-amber-400 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+              aria-label="Capitaine"
+            >
+              <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
+            </svg>
+          )}
+          {specialtyStyle && (
+            <span
+              className={`text-[10px] uppercase tracking-wide font-semibold px-1.5 py-0.5 rounded border ${specialtyStyle.bg} ${specialtyStyle.text}`}
+            >
+              {specialtyStyle.label}
+            </span>
+          )}
+          {substitute && (
+            <span className="text-[10px] uppercase tracking-wide font-semibold px-1.5 py-0.5 rounded bg-white/10 border border-white/10 text-gray-300">
+              Remplaçante
+            </span>
+          )}
+        </div>
+        {(member.pronouns || member.battle_tag) && (
+          <p className="text-[11px] text-gray-400 mt-0.5 truncate">
+            {member.pronouns}
+            {member.pronouns && member.battle_tag ? ' • ' : ''}
+            {member.battle_tag && member.battle_tag !== name
+              ? member.battle_tag
+              : ''}
+          </p>
+        )}
+        {member.tagline && (
+          <p className="text-xs text-gray-300 italic mt-1 line-clamp-2">
+            {member.tagline}
+          </p>
+        )}
+        {(twitterHref || twitchHref) && (
+          <div className="flex items-center gap-2 mt-1.5">
+            {twitterHref && (
+              <a
+                href={twitterHref}
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Twitter"
+                className="text-gray-400 hover:text-blue-300 transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
+              </a>
+            )}
+            {twitchHref && (
+              <a
+                href={twitchHref}
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Twitch"
+                className="text-gray-400 hover:text-purple-300 transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M2.149 0L.537 4.119v16.836h5.731V24h3.224l3.045-3.045h4.657L23.463 14.9V0H2.149zm1.612 1.612h17.985v12.298l-3.582 3.582h-5.731l-3.045 3.045v-3.045H3.761V1.612zm6.985 11.582h1.612V6.642h-1.612v6.552zm4.478 0h1.612V6.642h-1.612v6.552z" />
+                </svg>
+              </a>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function SponsorTile({ sponsor }: { sponsor: Sponsor }) {
   const safe = sponsor.url ? safeHref(sponsor.url) : undefined;
