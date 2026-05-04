@@ -28,7 +28,7 @@ import siteSettingsKeyHandler from '../../pages/api/admin/site-settings/[key]';
 import adminNewsHandler from '../../pages/api/admin/news/index';
 import deleteAccountHandler from '../../pages/api/player/delete-account';
 import updateProfileHandler from '../../pages/api/player/update-profile';
-import teamsMembersHandler from '../../pages/api/teams/[id]/members';
+import teamsMembersHandler from '../../pages/api/teams/[teamId]/members';
 
 /* -----------------------------------------------------------
  * Helpers
@@ -476,7 +476,7 @@ describe('DELETE /api/teams/[id]/members', () => {
     setAuthUser({ id: 'user-1' });
     const res = makeRes();
     await teamsMembersHandler(
-      makeReq({ method: 'GET', query: { id: teamUuid } }, true),
+      makeReq({ method: 'GET', query: { teamId: teamUuid } }, true),
       res
     );
     expect(res.statusCode).toBe(405);
@@ -486,7 +486,7 @@ describe('DELETE /api/teams/[id]/members', () => {
     setAuthUser({ id: 'user-1' });
     const res = makeRes();
     await teamsMembersHandler(
-      makeReq({ method: 'DELETE', query: { id: 'bogus' } }, true),
+      makeReq({ method: 'DELETE', query: { teamId: 'bogus' } }, true),
       res
     );
     expect(res.statusCode).toBe(400);
@@ -495,7 +495,7 @@ describe('DELETE /api/teams/[id]/members', () => {
   it('returns 401 with no Bearer token', async () => {
     const res = makeRes();
     await teamsMembersHandler(
-      makeReq({ method: 'DELETE', query: { id: teamUuid } }),
+      makeReq({ method: 'DELETE', query: { teamId: teamUuid } }),
       res
     );
     expect(res.statusCode).toBe(401);
@@ -509,7 +509,7 @@ describe('DELETE /api/teams/[id]/members', () => {
       makeReq(
         {
           method: 'DELETE',
-          query: { id: teamUuid },
+          query: { teamId: teamUuid },
           body: { memberId: memberUuid },
         },
         true
@@ -527,7 +527,7 @@ describe('DELETE /api/teams/[id]/members', () => {
       makeReq(
         {
           method: 'DELETE',
-          query: { id: teamUuid },
+          query: { teamId: teamUuid },
           body: { memberId: memberUuid },
         },
         true
@@ -545,7 +545,7 @@ describe('DELETE /api/teams/[id]/members', () => {
       makeReq(
         {
           method: 'DELETE',
-          query: { id: teamUuid },
+          query: { teamId: teamUuid },
           body: { memberId: 'bogus' },
         },
         true
@@ -564,7 +564,7 @@ describe('DELETE /api/teams/[id]/members', () => {
       makeReq(
         {
           method: 'DELETE',
-          query: { id: teamUuid },
+          query: { teamId: teamUuid },
           body: { memberId: memberUuid },
         },
         true
@@ -585,7 +585,7 @@ describe('DELETE /api/teams/[id]/members', () => {
       makeReq(
         {
           method: 'DELETE',
-          query: { id: teamUuid },
+          query: { teamId: teamUuid },
           body: { memberId: memberUuid },
         },
         true
@@ -606,7 +606,7 @@ describe('DELETE /api/teams/[id]/members', () => {
       makeReq(
         {
           method: 'DELETE',
-          query: { id: teamUuid },
+          query: { teamId: teamUuid },
           body: { memberId: memberUuid },
         },
         true

@@ -1,4 +1,4 @@
-// pages/api/teams/[id].ts
+// pages/api/teams/[teamId].ts
 // GET : retourne les informations complètes d'une équipe par id
 
 import type { NextApiRequest, NextApiResponse } from 'next';
@@ -13,13 +13,13 @@ export default async function handler(
 ) {
   if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'team-detail'))
     return;
-  const { id } = req.query;
+  const { teamId } = req.query;
 
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (!id || Array.isArray(id) || !isValidUUID(id)) {
+  if (!teamId || Array.isArray(teamId) || !isValidUUID(teamId)) {
     return res.status(400).json({ error: 'Invalid team id' });
   }
 
@@ -30,7 +30,7 @@ export default async function handler(
   const { data, error } = await supabaseAdmin
     .from('teams')
     .select('*')
-    .eq('id', id)
+    .eq('id', teamId)
     .maybeSingle();
 
   if (error || !data) {

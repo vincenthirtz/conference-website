@@ -36,7 +36,7 @@ export default withAuthRoute(async function handler(
   )
     return;
 
-  const { id: teamId } = req.query;
+  const { teamId } = req.query;
   if (!teamId || Array.isArray(teamId) || !isValidUUID(teamId)) {
     return res.status(400).json({ error: 'Invalid teamId' });
   }
