@@ -178,6 +178,22 @@ async function handlePut(
     return res.status(400).json({ error: 'short_name cannot be empty' });
   }
 
+  // slug format si fourni : lowercase + chiffres + tirets, 1..64 chars
+  if ('slug' in updatePayload && updatePayload.slug != null) {
+    const v = updatePayload.slug;
+    if (
+      typeof v !== 'string' ||
+      v.length === 0 ||
+      v.length > 64 ||
+      !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(v)
+    ) {
+      return res.status(400).json({
+        error:
+          'slug doit contenir uniquement [a-z0-9-] (1 à 64 caractères, sans tirets en bord)',
+      });
+    }
+  }
+
   // discord_role_id: numeric string (Discord snowflake ID) or null
   if (
     'discord_role_id' in updatePayload &&

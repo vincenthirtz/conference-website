@@ -183,7 +183,7 @@ export const getServerSideProps: GetServerSideProps<
     // 4) Teams (via tournament_teams — simpler join, no stage dependency)
     supabaseAdmin
       .from('tournament_teams')
-      .select('team:teams ( id, name, short_name, logo_url )')
+      .select('team:teams ( id, slug, name, short_name, logo_url )')
       .eq('tournament_id', tournamentId),
   ]);
 

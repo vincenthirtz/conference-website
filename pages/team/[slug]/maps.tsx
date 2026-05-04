@@ -238,19 +238,36 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     return { notFound: true };
   }
 
-  // Même logique que ta page fusionnée [id]/[name] : si UUID → on cherche par id, sinon par name
+  // Look up by slug first; fall back to id (UUID) then name for legacy URLs.
   const isUuid =
     /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/.test(
       slug
     );
-  const column = isUuid ? 'id' : 'name';
 
-  // 1) Récupérer l'équipe
-  const { data: team, error: teamError } = await supabaseAdmin
+  let team: any = null;
+  let teamError: any = null;
+
+  ({ data: team, error: teamError } = await supabaseAdmin
     .from('teams')
-    .select<'*, id, name, short_name, logo_url, country, description'>()
-    .eq(column, slug)
-    .maybeSingle();
+    .select<'*, id, slug, name, short_name, logo_url, country, description'>()
+    .eq('slug', slug)
+    .maybeSingle());
+
+  if (!team && isUuid) {
+    ({ data: team, error: teamError } = await supabaseAdmin
+      .from('teams')
+      .select<'*, id, slug, name, short_name, logo_url, country, description'>()
+      .eq('id', slug)
+      .maybeSingle());
+  }
+
+  if (!team) {
+    ({ data: team, error: teamError } = await supabaseAdmin
+      .from('teams')
+      .select<'*, id, slug, name, short_name, logo_url, country, description'>()
+      .ilike('name', slug)
+      .maybeSingle());
+  }
 
   if (teamError || !team) {
     logger.error('Erreur chargement équipe (maps):', teamError);

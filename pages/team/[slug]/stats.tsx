@@ -77,18 +77,33 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     return { notFound: true };
   }
 
-  const teamId = slug as string;
+  const slugStr = slug as string;
+  const isUuid =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      slugStr
+    );
 
-  // 1) Team
-  const { data: team, error: tErr } = await supabaseAdmin
+  // 1) Team — by slug first, fall back to id for legacy UUID URLs
+  let team: any = null;
+  ({ data: team } = await supabaseAdmin
     .from('teams')
     .select('*')
-    .eq('id', teamId)
-    .single();
+    .eq('slug', slugStr)
+    .maybeSingle());
 
-  if (tErr || !team) {
+  if (!team && isUuid) {
+    ({ data: team } = await supabaseAdmin
+      .from('teams')
+      .select('*')
+      .eq('id', slugStr)
+      .maybeSingle());
+  }
+
+  if (!team) {
     return { notFound: true };
   }
+
+  const teamId = team.id as string;
 
   // 2) Stats globales depuis la vue team_stats_view (si elle existe)
   let stats: TeamStatsView | null = null;

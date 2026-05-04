@@ -10,6 +10,7 @@ const TEAM_NAME = `E2E TeamLink ${RUN_ID}`;
 test.describe('Public tournament page → team link', () => {
   let tournamentId: string;
   let teamId: string;
+  let teamSlug: string;
 
   test.beforeAll(async () => {
     test.skip(!HAS_SUPABASE, 'Supabase service role manquant');
@@ -34,10 +35,11 @@ test.describe('Public tournament page → team link', () => {
         name: TEAM_NAME,
         is_active: true,
       })
-      .select('id')
+      .select('id, slug')
       .single();
     if (teamErr) throw teamErr;
     teamId = team!.id;
+    teamSlug = (team as any)!.slug as string;
 
     const { error: ttErr } = await supabaseTestClient!
       .from('tournament_teams')
@@ -79,16 +81,17 @@ test.describe('Public tournament page → team link', () => {
     ).toBeVisible({ timeout: 15000 });
 
     // The team grid renders the team name as inner text on a Link wrapper.
-    // teams.slug is not defined on the schema, so the page falls back to id.
+    // After the slug migration the link uses the slug, not the UUID.
+    const expectedHref = `/team/${teamSlug || teamId}`;
     const teamLink = page
-      .locator(`a[href="/team/${teamId}"]`)
+      .locator(`a[href="${expectedHref}"]`)
       .filter({ hasText: TEAM_NAME })
       .first();
     await expect(teamLink).toBeVisible({ timeout: 15000 });
 
     await teamLink.click();
 
-    await page.waitForURL(`**/team/${teamId}`, { timeout: 10000 });
+    await page.waitForURL(`**${expectedHref}`, { timeout: 10000 });
 
     // The public team page renders the team name as its main heading.
     await expect(

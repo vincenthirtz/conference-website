@@ -112,19 +112,30 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
     return { notFound: true };
   }
 
-  // 1) Try lookup by ID
+  // 1) Try lookup by slug (primary) — falls back to id/name/short_name for
+  //    backwards compat with old URLs.
   let team: Team | null = null;
-  const { data: teamById } = await supabaseAdmin
+  const isUuid =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      slug
+    );
+
+  const { data: teamBySlug } = await supabaseAdmin
     .from('teams')
     .select('*')
-    .eq('id', slug)
-    .single();
+    .eq('slug', slug)
+    .maybeSingle();
+  if (teamBySlug) team = teamBySlug;
 
-  if (teamById) {
-    team = teamById;
+  if (!team && isUuid) {
+    const { data } = await supabaseAdmin
+      .from('teams')
+      .select('*')
+      .eq('id', slug)
+      .maybeSingle();
+    if (data) team = data;
   }
 
-  // 2) Try lookup by name (case-insensitive)
   if (!team) {
     const { data } = await supabaseAdmin
       .from('teams')
@@ -134,7 +145,6 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
     if (data) team = data;
   }
 
-  // 3) Try lookup by short_name
   if (!team) {
     const { data } = await supabaseAdmin
       .from('teams')

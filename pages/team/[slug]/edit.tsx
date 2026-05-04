@@ -57,17 +57,30 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     };
   }
 
-  // Resolve team by id, name or short_name (same as public page)
+  // Resolve team by slug first, then id/name/short_name (back-compat).
   let team: EditableTeam | null = null;
   const fields =
     'id, slug, name, short_name, logo_url, banner_url, description, public_content, accent_color, twitter, discord, website';
+  const isUuid =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      slug
+    );
 
-  const { data: byId } = await supabaseAdmin
+  const { data: bySlug } = await supabaseAdmin
     .from('teams')
     .select(fields)
-    .eq('id', slug)
+    .eq('slug', slug)
     .maybeSingle();
-  if (byId) team = byId as EditableTeam;
+  if (bySlug) team = bySlug as EditableTeam;
+
+  if (!team && isUuid) {
+    const { data } = await supabaseAdmin
+      .from('teams')
+      .select(fields)
+      .eq('id', slug)
+      .maybeSingle();
+    if (data) team = data as EditableTeam;
+  }
 
   if (!team) {
     const { data } = await supabaseAdmin
