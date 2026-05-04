@@ -215,20 +215,30 @@ export default function PublicNav({
       <PlayerBell />
 
       {showStaffLogin && !authUser && (
-        <Link
-          href="/admin/login"
-          className={`group/login ml-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 text-[13px] font-medium text-neutral-200 backdrop-blur-md transition-all hover:border-white/20 hover:bg-white/[0.08] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
+        <div
+          className={`ml-4 flex shrink-0 items-center gap-2 transition-opacity ${
             staffLoading || authLoading
               ? 'pointer-events-none opacity-0'
               : 'opacity-100'
           }`}
         >
-          <span className="relative flex h-1.5 w-1.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-60" />
-            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-rose-500" />
-          </span>
-          <span>Connexion</span>
-        </Link>
+          <Link
+            href="/admin/login"
+            className="group/login inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 text-[13px] font-medium text-neutral-200 backdrop-blur-md transition-all hover:border-white/20 hover:bg-white/[0.08] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+          >
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-60" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-rose-500" />
+            </span>
+            <span>Connexion</span>
+          </Link>
+          <Link
+            href="/register"
+            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-fuchsia-400/30 bg-gradient-to-r from-fuchsia-500/20 to-purple-500/20 px-4 py-1.5 text-[13px] font-semibold text-white backdrop-blur-md transition-all hover:border-fuchsia-400/50 hover:from-fuchsia-500/30 hover:to-purple-500/30 hover:shadow-[0_0_20px_-4px_rgba(217,70,239,0.5)] focus:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-400/40"
+          >
+            <span>Créer un compte</span>
+          </Link>
+        </div>
       )}
     </div>
   );
