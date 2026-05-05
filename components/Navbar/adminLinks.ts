@@ -133,6 +133,23 @@ export const ADMIN_LINKS: AdminLink[] = [
         ],
       },
       {
+        title: 'Pôles de l’asso',
+        ref: '',
+        minRole: 'admin',
+        children: [
+          {
+            title: 'Liste des membres',
+            ref: '/admin/pole-members',
+            minRole: 'admin',
+          },
+          {
+            title: 'Ajouter un membre',
+            ref: '/admin/pole-members/new',
+            minRole: 'admin',
+          },
+        ],
+      },
+      {
         title: 'Partenaires',
         ref: '',
         minRole: 'admin',

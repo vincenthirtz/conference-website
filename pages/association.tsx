@@ -5,6 +5,7 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import Speaker from '@/components/Speaker/speaker';
 import { supabaseAdmin } from '@/utils/supabase';
 import { useSiteSetting } from '@/hooks/useSiteSettings';
+import { POLE_KEYS, type PoleKey } from '@/utils/associationPoles';
 
 const ADHESION_URL =
   'https://www.helloasso.com/associations/women-s-cup/adhesions/adhesion-2026-2027-women-s-cup';
@@ -27,8 +28,18 @@ type CastMember = {
   is_promo: boolean;
 };
 
+type PoleMember = {
+  id: string;
+  pole_key: PoleKey;
+  name: string;
+  title: string | null;
+  image_url: string | null;
+  link_url: string | null;
+};
+
 type Props = {
   castMembers: CastMember[];
+  poleMembers: PoleMember[];
 };
 
 const pillars = [
@@ -183,10 +194,22 @@ const commitments = [
   },
 ];
 
-const teamRoles = [
+const teamRoles: Array<{
+  poleKey: PoleKey;
+  title: string;
+  desc: string;
+  accent: string;
+  iconColor: string;
+  badge: string;
+  icon: React.ReactNode;
+}> = [
   {
+    poleKey: 'direction',
     title: 'Direction & admin',
     desc: 'Organisation g\u00e9n\u00e9rale, partenariats, suivi des budgets.',
+    accent: 'from-purple-500/25 to-purple-600/5',
+    iconColor: 'text-purple-300',
+    badge: 'border-purple-400/30 bg-purple-500/10 text-purple-200',
     icon: (
       <svg
         className="w-6 h-6"
@@ -204,8 +227,12 @@ const teamRoles = [
     ),
   },
   {
+    poleKey: 'tournoi',
     title: 'Tournoi & arbitrage',
     desc: 'R\u00e8gles, lobby settings, gestion des matchs et litiges.',
+    accent: 'from-cyan-500/25 to-cyan-600/5',
+    iconColor: 'text-cyan-300',
+    badge: 'border-cyan-400/30 bg-cyan-500/10 text-cyan-200',
     icon: (
       <svg
         className="w-6 h-6"
@@ -223,8 +250,12 @@ const teamRoles = [
     ),
   },
   {
+    poleKey: 'production',
     title: 'Production & cast',
     desc: 'Overlay, graphismes, casters et mod\u00e9ration live.',
+    accent: 'from-pink-500/25 to-pink-600/5',
+    iconColor: 'text-pink-300',
+    badge: 'border-pink-400/30 bg-pink-500/10 text-pink-200',
     icon: (
       <svg
         className="w-6 h-6"
@@ -242,8 +273,12 @@ const teamRoles = [
     ),
   },
   {
+    poleKey: 'communaute',
     title: 'Communaut\u00e9',
     desc: 'Mentorat, ateliers, communication et support joueuses/\u00e9quipes.',
+    accent: 'from-emerald-500/25 to-emerald-600/5',
+    iconColor: 'text-emerald-300',
+    badge: 'border-emerald-400/30 bg-emerald-500/10 text-emerald-200',
     icon: (
       <svg
         className="w-6 h-6"
@@ -287,7 +322,7 @@ const timeline = [
   },
 ];
 
-function AssociationPage({ castMembers }: Props) {
+function AssociationPage({ castMembers, poleMembers }: Props) {
   const { value: contactEmail } = useSiteSetting('contact_email');
 
   const speakers = castMembers.map((member) => ({
@@ -299,6 +334,27 @@ function AssociationPage({ castMembers }: Props) {
     city: [member.city || ''],
     pub: member.is_promo,
   }));
+
+  const membersByPole = POLE_KEYS.reduce<Record<PoleKey, PoleMember[]>>(
+    (acc, key) => {
+      acc[key] = poleMembers.filter((m) => m.pole_key === key);
+      return acc;
+    },
+    { direction: [], tournoi: [], production: [], communaute: [] }
+  );
+
+  // Le pôle "Production & cast" inclut aussi les casteuses actives (hors carte promo).
+  const castAsPoleMembers: PoleMember[] = castMembers
+    .filter((m) => !m.is_promo)
+    .map((m) => ({
+      id: `cast-${m.id}`,
+      pole_key: 'production',
+      name: m.name,
+      title: m.title,
+      image_url: m.image_url,
+      link_url: m.twitch_url,
+    }));
+  membersByPole.production = [...membersByPole.production, ...castAsPoleMembers];
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
@@ -597,20 +653,75 @@ function AssociationPage({ castMembers }: Props) {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            {teamRoles.map((role) => (
+            {teamRoles.map((role) => {
+              const members = membersByPole[role.poleKey] ?? [];
+              return (
               <div
                 key={role.title}
-                className="group flex items-start gap-4 rounded-2xl border border-white/10 bg-white/[0.04] p-5 transition hover:bg-white/[0.07] hover:border-white/15"
+                className={`group flex flex-col gap-4 rounded-2xl border border-white/10 bg-gradient-to-br ${role.accent} p-5 transition hover:-translate-y-0.5 hover:border-white/20 hover:shadow-lg hover:shadow-black/20`}
               >
-                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-white/10 flex items-center justify-center text-purple-300 flex-shrink-0 group-hover:text-white transition-colors">
-                  {role.icon}
+                <div className="flex items-start gap-4">
+                  <div
+                    className={`w-11 h-11 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center ${role.iconColor} flex-shrink-0 group-hover:text-white transition-colors`}
+                  >
+                    {role.icon}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-white">{role.title}</p>
+                    <p className="mt-1 text-sm text-gray-400">{role.desc}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-semibold text-white">{role.title}</p>
-                  <p className="mt-1 text-sm text-gray-400">{role.desc}</p>
-                </div>
+
+                {members.length > 0 && (
+                  <div className="border-t border-white/5 pt-3">
+                    <p className="mb-2 text-[11px] uppercase tracking-[0.16em] text-gray-500">
+                      Membres
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {members.map((member) => {
+                        const content = (
+                          <span className="inline-flex items-center gap-2">
+                            {member.image_url ? (
+                              <Image
+                                src={member.image_url}
+                                alt=""
+                                width={18}
+                                height={18}
+                                className="h-4.5 w-4.5 rounded-full object-cover"
+                                unoptimized
+                              />
+                            ) : null}
+                            <span className="font-medium">{member.name}</span>
+                            {member.title ? (
+                              <span className="opacity-70">— {member.title}</span>
+                            ) : null}
+                          </span>
+                        );
+                        const className = `inline-flex items-center rounded-full border ${role.badge} px-2.5 py-1 text-xs font-medium ${
+                          member.link_url ? 'transition hover:bg-white/10' : ''
+                        }`;
+                        return member.link_url ? (
+                          <a
+                            key={member.id}
+                            href={member.link_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={className}
+                          >
+                            {content}
+                          </a>
+                        ) : (
+                          <span key={member.id} className={className}>
+                            {content}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
-            ))}
+              );
+            })}
           </div>
         </section>
 
@@ -720,30 +831,37 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
     return {
       props: {
         castMembers: [],
+        poleMembers: [],
       },
       revalidate: 60,
     };
   }
 
-  const { data, error } = await supabaseAdmin
-    .from('cast_members')
-    .select('id, name, title, image_url, twitch_url, city, is_promo')
-    .eq('is_active', true)
-    .order('sort_order', { ascending: true });
+  const [castRes, poleRes] = await Promise.all([
+    supabaseAdmin
+      .from('cast_members')
+      .select('id, name, title, image_url, twitch_url, city, is_promo')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true }),
+    supabaseAdmin
+      .from('association_pole_members')
+      .select('id, pole_key, name, title, image_url, link_url')
+      .eq('is_active', true)
+      .order('pole_key', { ascending: true })
+      .order('sort_order', { ascending: true }),
+  ]);
 
-  if (error) {
-    logger.error('[association] Error fetching cast members:', error);
-    return {
-      props: {
-        castMembers: [],
-      },
-      revalidate: 60,
-    };
+  if (castRes.error) {
+    logger.error('[association] Error fetching cast members:', castRes.error);
+  }
+  if (poleRes.error) {
+    logger.error('[association] Error fetching pole members:', poleRes.error);
   }
 
   return {
     props: {
-      castMembers: data ?? [],
+      castMembers: castRes.data ?? [],
+      poleMembers: (poleRes.data ?? []) as PoleMember[],
     },
     revalidate: 3600,
   };
