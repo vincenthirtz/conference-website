@@ -1,9 +1,20 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import type { GetStaticProps } from 'next';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import Speaker from '@/components/Speaker/speaker';
 import { supabaseAdmin } from '@/utils/supabase';
 import { useSiteSetting } from '@/hooks/useSiteSettings';
+
+const ADHESION_URL =
+  'https://www.helloasso.com/associations/women-s-cup/adhesions/adhesion-2026-2027-women-s-cup';
+
+const adhesionPerks = [
+  'Soutenir financièrement la scène Overwatch féminine francophone.',
+  'Participer aux assemblées générales et voter les orientations.',
+  'Accès prioritaire aux ateliers, scrims et événements communautaires.',
+  'Reçu fiscal HelloAsso dès la finalisation du paiement.',
+];
 
 import { logger } from '../utils/logger';
 type CastMember = {
@@ -317,17 +328,25 @@ function AssociationPage({ castMembers }: Props) {
             et ambitieux pour les talents de la sc&egrave;ne comp&eacute;titive.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-            <Link
-              href="/don"
+            <a
+              href={ADHESION_URL}
+              target="_blank"
+              rel="noopener noreferrer"
               className="group relative rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition-all hover:shadow-xl hover:shadow-purple-900/50 hover:-translate-y-0.5"
             >
-              Soutenir l&apos;asso
-            </Link>
+              Adh&eacute;rer 2026&nbsp;-&nbsp;2027
+            </a>
             <Link
-              href="/rules"
+              href="/don"
               className="rounded-full border border-white/15 bg-white/5 backdrop-blur-sm px-7 py-3.5 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/10"
             >
-              Voir le r&egrave;glement
+              Faire un don
+            </Link>
+            <Link
+              href="#adhesion"
+              className="rounded-full border border-white/15 bg-white/5 backdrop-blur-sm px-7 py-3.5 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/10"
+            >
+              Voir les avantages
             </Link>
           </div>
 
@@ -458,6 +477,109 @@ function AssociationPage({ castMembers }: Props) {
           </div>
         </section>
 
+        {/* ── Adh&eacute;sion 2026-2027 ────────────────────────── */}
+        <section
+          id="adhesion"
+          className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-purple-900/30 via-pink-900/20 to-cyan-900/20 shadow-2xl"
+        >
+          <div className="absolute inset-0 pointer-events-none" aria-hidden>
+            <div className="absolute -left-32 -top-24 h-72 w-72 rounded-full bg-purple-500/20 blur-[100px]" />
+            <div className="absolute right-0 bottom-0 h-72 w-72 rounded-full bg-pink-500/20 blur-[110px]" />
+          </div>
+
+          <div className="relative grid gap-10 p-8 sm:p-12 md:grid-cols-[1fr_auto] md:gap-12 md:items-center">
+            <div>
+              <p className="inline-flex items-center gap-2 rounded-full border border-purple-400/30 bg-purple-500/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-purple-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-pink-400 animate-pulse" />
+                Campagne ouverte
+              </p>
+              <h3 className="mt-4 text-3xl font-bold sm:text-4xl">
+                <span className="block">Devenir adh&eacute;rent&middot;e</span>
+                <span className="block text-gradient">saison 2026 - 2027</span>
+              </h3>
+              <p className="mt-4 max-w-xl text-sm leading-relaxed text-gray-300">
+                Rejoindre l&apos;association, c&apos;est faire vivre la
+                comp&eacute;tition Overwatch f&eacute;minine francophone et
+                soutenir directement nos actions toute la saison. L&apos;adh&eacute;sion
+                est valable jusqu&apos;au 31 ao&ucirc;t 2027.
+              </p>
+
+              <ul className="mt-6 space-y-3">
+                {adhesionPerks.map((perk) => (
+                  <li key={perk} className="flex items-start gap-3">
+                    <svg
+                      className="mt-0.5 h-5 w-5 flex-shrink-0 text-pink-300"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      aria-hidden="true"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"
+                      />
+                    </svg>
+                    <span className="text-sm leading-relaxed text-gray-200">
+                      {perk}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="mt-7 flex flex-wrap items-center gap-4">
+                <a
+                  href={ADHESION_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition-all hover:shadow-xl hover:shadow-purple-900/50 hover:-translate-y-0.5"
+                >
+                  Adh&eacute;rer sur HelloAsso
+                  <svg
+                    className="h-4 w-4 transition-transform group-hover:translate-x-1"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M14 5l7 7m0 0l-7 7m7-7H3"
+                    />
+                  </svg>
+                </a>
+                <span className="text-xs text-gray-400">
+                  Paiement s&eacute;curis&eacute; &middot; Re&ccedil;u fiscal
+                  automatique
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-center md:items-end">
+              <div className="flex flex-col items-center gap-3 rounded-2xl border border-white/15 bg-white/95 p-4 shadow-xl shadow-purple-900/30">
+                <Image
+                  src="/images/qradhesion2026.png"
+                  alt="QR code vers la campagne d'adh&eacute;sion 2026-2027"
+                  width={180}
+                  height={180}
+                  className="rounded-lg"
+                  unoptimized
+                />
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-700">
+                  Scanner pour adh&eacute;rer
+                </p>
+              </div>
+              <p className="mt-3 max-w-[200px] text-center text-[11px] leading-relaxed text-gray-400 md:text-right">
+                Pointe ton t&eacute;l&eacute;phone vers ce QR code pour acc&eacute;der
+                directement au formulaire HelloAsso.
+              </p>
+            </div>
+          </div>
+        </section>
+
         {/* ── P&ocirc;les ─────────────────────────────────────────── */}
         <section>
           <div className="text-center mb-10">
@@ -571,9 +693,17 @@ function AssociationPage({ castMembers }: Props) {
                 </svg>
                 {contactEmail}
               </a>
+              <a
+                href={ADHESION_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition-all hover:shadow-xl hover:shadow-purple-900/50 hover:-translate-y-0.5"
+              >
+                Adh&eacute;rer
+              </a>
               <Link
                 href="/don"
-                className="rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition-all hover:shadow-xl hover:shadow-purple-900/50 hover:-translate-y-0.5"
+                className="rounded-full border border-white/20 bg-white/5 backdrop-blur-sm px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10 hover:border-white/30"
               >
                 Faire un don
               </Link>
