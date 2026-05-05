@@ -5,7 +5,7 @@ import { useSiteSetting } from '@/hooks/useSiteSettings';
 
 type ContactChannel = {
   title: string;
-  desc: string;
+  desc: React.ReactNode;
   cta: {
     label: string;
     href: string;
@@ -32,7 +32,19 @@ function getContactChannels(contactEmail: string): ContactChannel[] {
     },
     {
       title: 'Partenariats & presse',
-      desc: 'Collaborations marque, médias ou bénévolat pro (graphisme, cast, prod).',
+      desc: (
+        <>
+          Collaborations marque, médias ou bénévolat pro (graphisme, cast,
+          prod) — voir nos{' '}
+          <Link
+            href="/partenaires"
+            className="font-medium text-purple-300 underline decoration-purple-400/40 underline-offset-2 hover:text-purple-200 hover:decoration-purple-300"
+          >
+            partenaires actuels
+          </Link>
+          .
+        </>
+      ),
       cta: {
         label: 'Écrire au staff',
         href: `mailto:${contactEmail}?subject=Partenariat%20OW%20Women%27s%20Cup`,

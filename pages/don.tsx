@@ -456,7 +456,14 @@ function DonationPage() {
                 <p className="text-lg font-semibold text-white">Entreprises</p>
                 <p className="mt-2 text-sm text-gray-200">
                   Vous souhaitez soutenir ou sponsoriser ? Parlons visibilité,
-                  ateliers et mécénat.
+                  ateliers et mécénat — voir aussi nos{' '}
+                  <Link
+                    href="/partenaires"
+                    className="font-medium text-purple-300 underline decoration-purple-400/40 underline-offset-2 hover:text-purple-200 hover:decoration-purple-300"
+                  >
+                    partenaires actuels
+                  </Link>
+                  .
                 </p>
                 <Button
                   overlay
