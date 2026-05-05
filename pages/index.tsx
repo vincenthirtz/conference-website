@@ -202,6 +202,20 @@ function Home({
     <div>
       <Header />
 
+      <div
+        className="relative -mt-14 md:-mt-20 -mb-6 md:-mb-10 flex justify-center pointer-events-none select-none"
+        aria-hidden="true"
+      >
+        <div className="hero-connector">
+          <span className="hero-connector__halo hero-connector__halo--top" />
+          <span className="hero-connector__beam" />
+          <span className="hero-connector__pulse" />
+          <span className="hero-connector__pulse hero-connector__pulse--delay" />
+          <span className="hero-connector__diamond" />
+          <span className="hero-connector__halo hero-connector__halo--bottom" />
+        </div>
+      </div>
+
       <HomeCountdown targetDate={countdownTarget} />
       <HomeTwitchEmbed />
       <HomeEvents tournament={upcomingTournament} />

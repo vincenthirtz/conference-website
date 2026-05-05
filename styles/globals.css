@@ -325,6 +325,172 @@ select option {
   }
 }
 
+/* Hero → Countdown connector
+ * Vertical animated beam linking the hero to the countdown card.
+ * Pure CSS, respects prefers-reduced-motion.
+ */
+.hero-connector {
+  position: relative;
+  width: 2px;
+  height: clamp(170px, 22vh, 260px);
+}
+
+.hero-connector__beam {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    var(--color-cyan) 28%,
+    var(--color-magenta) 72%,
+    transparent 100%
+  );
+  background-size: 100% 220%;
+  border-radius: 2px;
+  filter: blur(0.4px);
+  animation: hero-connector-beam 3.4s ease-in-out infinite;
+}
+
+.hero-connector__pulse {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: var(--color-cyan);
+  transform: translate(-50%, -50%);
+  box-shadow:
+    0 0 10px var(--color-cyan),
+    0 0 22px rgba(45, 204, 253, 0.7);
+  animation: hero-connector-travel 2.6s cubic-bezier(0.55, 0, 0.45, 1) infinite;
+}
+
+.hero-connector__pulse--delay {
+  animation-delay: 1.3s;
+  background: var(--color-magenta);
+  box-shadow:
+    0 0 10px var(--color-magenta),
+    0 0 22px rgba(231, 70, 148, 0.7);
+}
+
+.hero-connector__diamond {
+  position: absolute;
+  left: 50%;
+  bottom: -10px;
+  width: 14px;
+  height: 14px;
+  transform: translateX(-50%) rotate(45deg);
+  background: linear-gradient(
+    135deg,
+    var(--color-cyan),
+    var(--color-magenta)
+  );
+  border-radius: 2px;
+  box-shadow:
+    0 0 14px rgba(45, 204, 253, 0.75),
+    0 0 28px rgba(231, 70, 148, 0.55);
+  animation: hero-connector-pulse 2.6s ease-in-out infinite;
+}
+
+.hero-connector__halo {
+  position: absolute;
+  left: 50%;
+  width: 280px;
+  height: 70px;
+  transform: translateX(-50%);
+  border-radius: 9999px;
+  filter: blur(32px);
+  pointer-events: none;
+}
+
+.hero-connector__halo--top {
+  top: -55px;
+  background: radial-gradient(
+    closest-side,
+    rgba(45, 204, 253, 0.55),
+    transparent 70%
+  );
+  opacity: 0.65;
+}
+
+.hero-connector__halo--bottom {
+  bottom: -55px;
+  background: radial-gradient(
+    closest-side,
+    rgba(231, 70, 148, 0.5),
+    transparent 70%
+  );
+  opacity: 0.55;
+  animation: hero-connector-halo 3.4s ease-in-out infinite;
+}
+
+@keyframes hero-connector-beam {
+  0%,
+  100% {
+    background-position: 0% 0%;
+    opacity: 0.75;
+  }
+  50% {
+    background-position: 0% 100%;
+    opacity: 1;
+  }
+}
+
+@keyframes hero-connector-travel {
+  0% {
+    top: -4px;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+  12% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  88% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
+}
+
+@keyframes hero-connector-pulse {
+  0%,
+  100% {
+    transform: translateX(-50%) rotate(45deg) scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: translateX(-50%) rotate(45deg) scale(1.18);
+    filter: brightness(1.4);
+  }
+}
+
+@keyframes hero-connector-halo {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: translateX(-50%) scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: translateX(-50%) scale(1.15);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-connector__beam,
+  .hero-connector__pulse,
+  .hero-connector__diamond,
+  .hero-connector__halo--bottom {
+    animation: none;
+  }
+}
+
 /* title styles */
 .home-title span {
   position: relative;
