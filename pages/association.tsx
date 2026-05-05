@@ -2,7 +2,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { GetStaticProps } from 'next';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
-import Speaker from '@/components/Speaker/speaker';
 import { supabaseAdmin } from '@/utils/supabase';
 import { useSiteSetting } from '@/hooks/useSiteSettings';
 import { POLE_KEYS, type PoleKey } from '@/utils/associationPoles';
@@ -324,16 +323,6 @@ const timeline = [
 
 function AssociationPage({ castMembers, poleMembers }: Props) {
   const { value: contactEmail } = useSiteSetting('contact_email');
-
-  const speakers = castMembers.map((member) => ({
-    id: member.id,
-    name: member.name,
-    title: member.title || '',
-    img: member.image_url || '/img/mic.jpg',
-    link: member.twitch_url || '/contact',
-    city: [member.city || ''],
-    pub: member.is_promo,
-  }));
 
   const membersByPole = POLE_KEYS.reduce<Record<PoleKey, PoleMember[]>>(
     (acc, key) => {
@@ -724,39 +713,6 @@ function AssociationPage({ castMembers, poleMembers }: Props) {
             })}
           </div>
         </section>
-
-        {/* ── Casteuses ───────────────────────────────────── */}
-        {speakers.length > 0 && (
-          <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 sm:p-10 shadow-2xl">
-            <div className="text-center mb-10">
-              <p className="text-xs uppercase tracking-[0.18em] text-pink-300">
-                P&ocirc;le Production &amp; cast
-              </p>
-              <h3 className="mt-2 text-2xl font-bold sm:text-3xl text-white">
-                Les casteuses de l&apos;asso
-              </h3>
-              <p className="mt-3 mx-auto max-w-lg text-sm text-gray-400">
-                Joueuses et streameuses qui pr&ecirc;tent leur voix et leur
-                expertise pour faire vivre les matchs en direct.
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {speakers.map((speaker) => {
-                const location = speaker.city[1]
-                  ? `${speaker.city[0]} & ${speaker.city[1]}`
-                  : speaker.city[0];
-                return (
-                  <Speaker
-                    key={speaker.id}
-                    details={speaker as any}
-                    location={location}
-                    className="mt-4"
-                  />
-                );
-              })}
-            </div>
-          </section>
-        )}
 
         {/* ── CTA Contact ─────────────────────────────────── */}
         <section className="relative overflow-hidden rounded-3xl border border-white/10">

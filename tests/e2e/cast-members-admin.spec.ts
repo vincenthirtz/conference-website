@@ -222,20 +222,11 @@ test.describe('Page association affiche les casteuses', () => {
     expect(res?.status()).toBeLessThan(400);
   });
 
-  test('La section casteuses est présente', async ({ page }) => {
+  test('La carte du pôle "Production & cast" est présente', async ({ page }) => {
     await page.goto('/association');
 
-    // Check section title
-    await expect(
-      page.getByRole('heading', { name: /les casteuses de l'asso/i })
-    ).toBeVisible({ timeout: 5000 });
-  });
-
-  test('La section Pôle Production & cast est présente', async ({ page }) => {
-    await page.goto('/association');
-
-    // Check section label
-    await expect(page.getByText(/pôle production & cast/i)).toBeVisible({
+    // Casteuses are now merged into the "Production & cast" pole card.
+    await expect(page.getByText(/production & cast/i).first()).toBeVisible({
       timeout: 5000,
     });
   });
