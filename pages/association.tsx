@@ -113,9 +113,20 @@ const pillars = [
   },
 ];
 
-const commitments = [
+const commitments: Array<{ text: React.ReactNode; icon: React.ReactNode }> = [
   {
-    text: 'Respect des r\u00e8gles officielles Overwatch et du code de conduite Blizzard.',
+    text: (
+      <>
+        Respect des{' '}
+        <Link
+          href="/rules"
+          className="font-medium text-emerald-300 underline decoration-emerald-400/40 underline-offset-2 hover:text-emerald-200 hover:decoration-emerald-300"
+        >
+          r&egrave;gles officielles Overwatch
+        </Link>{' '}
+        et du code de conduite Blizzard.
+      </>
+    ),
     icon: (
       <svg
         className="w-5 h-5 text-emerald-400 flex-shrink-0"
@@ -133,7 +144,18 @@ const commitments = [
     ),
   },
   {
-    text: 'Charte anti-harc\u00e8lement et proc\u00e9dure de signalement claire (staff d\u00e9di\u00e9).',
+    text: (
+      <>
+        Charte anti-harc&egrave;lement et{' '}
+        <Link
+          href="/support"
+          className="font-medium text-emerald-300 underline decoration-emerald-400/40 underline-offset-2 hover:text-emerald-200 hover:decoration-emerald-300"
+        >
+          proc&eacute;dure de signalement
+        </Link>{' '}
+        claire (staff d&eacute;di&eacute;).
+      </>
+    ),
     icon: (
       <svg
         className="w-5 h-5 text-emerald-400 flex-shrink-0"
@@ -508,9 +530,9 @@ function AssociationPage({ castMembers, poleMembers }: Props) {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            {commitments.map((item) => (
+            {commitments.map((item, idx) => (
               <div
-                key={item.text}
+                key={idx}
                 className="flex items-start gap-3 rounded-xl border border-white/5 bg-white/[0.03] p-4 transition hover:bg-white/[0.06]"
               >
                 {item.icon}
