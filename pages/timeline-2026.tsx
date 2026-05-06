@@ -42,6 +42,7 @@ type DayGroup = {
 
 type Props = {
   matches: SimpleMatch[];
+  tournamentSlug: string | null;
 };
 
 const frenchMonthMap: Record<string, number> = {
@@ -88,12 +89,14 @@ const timeline: TimelineItem[] = [
 
 export const getStaticProps: GetStaticProps<Props> = async () => {
   let matches: SimpleMatch[] = [];
+  let tournamentSlug: string | null = null;
 
   if (supabaseAdmin) {
-    const { data, error } = await supabaseAdmin
-      .from('matches')
-      .select(
-        `
+    const [matchesRes, tournamentRes] = await Promise.all([
+      supabaseAdmin
+        .from('matches')
+        .select(
+          `
         id,
         scheduled_at,
         status,
@@ -106,19 +109,26 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
         team2:team2_id ( id, name, short_name ),
         stage:tournament_stages ( name )
       `
-      )
-      .eq('tournament_id', WOMEN_TOURNAMENT_ID_2026)
-      .neq('status', 'cancelled')
-      .order('scheduled_at', { ascending: true, nullsFirst: false })
-      .order('created_at', { ascending: true });
+        )
+        .eq('tournament_id', WOMEN_TOURNAMENT_ID_2026)
+        .neq('status', 'cancelled')
+        .order('scheduled_at', { ascending: true, nullsFirst: false })
+        .order('created_at', { ascending: true }),
+      supabaseAdmin
+        .from('tournaments')
+        .select('slug')
+        .eq('id', WOMEN_TOURNAMENT_ID_2026)
+        .maybeSingle(),
+    ]);
 
-    if (!error && data) {
-      matches = data as unknown as SimpleMatch[];
+    if (!matchesRes.error && matchesRes.data) {
+      matches = matchesRes.data as unknown as SimpleMatch[];
     }
+    tournamentSlug = tournamentRes.data?.slug ?? null;
   }
 
   return {
-    props: { matches },
+    props: { matches, tournamentSlug },
     revalidate: 300,
   };
 };
@@ -265,7 +275,8 @@ function MatchRow({ match }: { match: SimpleMatch }) {
   );
 }
 
-function Timeline2026Page({ matches }: Props) {
+function Timeline2026Page({ matches, tournamentSlug }: Props) {
+  const tournamentIdentifier = tournamentSlug || WOMEN_TOURNAMENT_ID_2026;
   const now = new Date();
   const currentIdx = timeline.findIndex((item) => {
     const [monthLabel, yearLabel] = item.period.split(' ');
@@ -418,7 +429,7 @@ function Timeline2026Page({ matches }: Props) {
               </p>
             </div>
             <Link
-              href={`/tournament/${WOMEN_TOURNAMENT_ID_2026}/matches`}
+              href={`/tournament/${tournamentIdentifier}/matches`}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border border-white/20 text-white hover:border-pink-400/60 hover:bg-pink-500/10 transition"
             >
               Voir tout le tournoi ↗

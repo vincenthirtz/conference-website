@@ -8,6 +8,7 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
+import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 
 type LeaderboardEntry = {
   memberId: string | null;
@@ -28,7 +29,12 @@ type PerMatchEntry = {
   teamName: string | null;
 };
 
-type Tournament = { id: string; name: string };
+type Tournament = {
+  id: string;
+  slug?: string | null;
+  name: string;
+  is_public?: boolean | null;
+};
 
 type Props = {
   tournament: Tournament;
@@ -47,17 +53,19 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   if (!id || Array.isArray(id)) return { notFound: true, revalidate: 60 };
   if (!supabaseAdmin) return { notFound: true, revalidate: 60 };
 
-  // Phase A : tournoi + matches en parallèle
-  const [tournamentRes, matchesRes] = await Promise.all([
-    supabaseAdmin
-      .from('tournaments')
-      .select('id, name, is_public')
-      .eq('id', id)
-      .maybeSingle(),
-    supabaseAdmin
-      .from('matches')
-      .select(
-        `
+  // Phase A : tournoi (UUID ou slug)
+  const tournament = await findTournamentByIdOrSlug<Tournament>(
+    id,
+    'id, name, slug, is_public'
+  );
+  if (!tournament || !tournament.is_public)
+    return { notFound: true, revalidate: 60 };
+  const tournamentId = tournament.id;
+
+  const matchesRes = await supabaseAdmin
+    .from('matches')
+    .select(
+      `
       id,
       round_name,
       completed_at,
@@ -66,15 +74,10 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       status,
       mvp:match_mvp_polls(winner_member_id, winner_battle_tag)
       `
-      )
-      .eq('tournament_id', id)
-      .eq('status', 'finished')
-      .order('completed_at', { ascending: false }),
-  ]);
-
-  const tournament = tournamentRes.data;
-  if (!tournament || !tournament.is_public)
-    return { notFound: true, revalidate: 60 };
+    )
+    .eq('tournament_id', tournamentId)
+    .eq('status', 'finished')
+    .order('completed_at', { ascending: false });
 
   const finishedMatches = matchesRes.data || [];
 
@@ -175,7 +178,11 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
 
   return {
     props: {
-      tournament: { id: tournament.id, name: tournament.name },
+      tournament: {
+        id: tournament.id,
+        slug: tournament.slug ?? null,
+        name: tournament.name,
+      },
       totalMvpAwards: leaderboard.reduce((sum, l) => sum + l.mvpCount, 0),
       totalFinishedMatches: finishedMatches.length,
       leaderboard,
@@ -215,6 +222,7 @@ export default function TournamentMvpPage({
   perMatch,
 }: Props) {
   const matchesWithMvp = perMatch.filter((m) => m.battleTag || m.memberId);
+  const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
 
   return (
     <>
@@ -254,7 +262,7 @@ export default function TournamentMvpPage({
               </div>
 
               <div className="flex flex-wrap gap-2 justify-end">
-                <Link href={`/tournament/${tournament.id}`}>
+                <Link href={tournamentPath}>
                   <Button
                     type="button"
                     className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-blue-400"
@@ -262,7 +270,7 @@ export default function TournamentMvpPage({
                     ← Retour au tournoi
                   </Button>
                 </Link>
-                <Link href={`/tournament/${tournament.id}/stats`}>
+                <Link href={`${tournamentPath}/stats`}>
                   <Button
                     type="button"
                     className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-emerald-400"
@@ -270,7 +278,7 @@ export default function TournamentMvpPage({
                     Stats équipes
                   </Button>
                 </Link>
-                <Link href={`/tournament/${tournament.id}/matches`}>
+                <Link href={`${tournamentPath}/matches`}>
                   <Button
                     type="button"
                     className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-pink-400"

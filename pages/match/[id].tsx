@@ -21,6 +21,7 @@ type SimpleTeam = {
 
 type Tournament = {
   id: string;
+  slug?: string | null;
   name: string;
   short_name?: string | null;
   game?: string | null;
@@ -106,7 +107,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       notes,
       team1:team1_id ( id, slug, name, short_name, logo_url ),
       team2:team2_id ( id, slug, name, short_name, logo_url ),
-      tournament:tournament_id ( id, name, short_name, game ),
+      tournament:tournament_id ( id, slug, name, short_name, game ),
       stage:stage_id ( id, name, stage_type ),
       games (*)
     `
@@ -163,6 +164,7 @@ export default function MatchPage({ match }: Props) {
   const completedLabel = formatMatchDate(match.completed_at);
 
   const gameCount = match.games.length;
+  const tournamentPath = `/tournament/${match.tournament.slug || match.tournament.id}`;
 
   const scoreLabel =
     match.status === 'finished' &&
@@ -203,7 +205,7 @@ export default function MatchPage({ match }: Props) {
 
               <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-300 mb-1">
                 <Link
-                  href={`/tournament/${match.tournament.id}`}
+                  href={tournamentPath}
                   className="hover:text-white"
                 >
                   {match.tournament.short_name || match.tournament.name}
@@ -235,7 +237,7 @@ export default function MatchPage({ match }: Props) {
             </div>
 
             <div className="flex flex-wrap gap-2 justify-end">
-              <Link href={`/tournament/${match.tournament.id}`}>
+              <Link href={tournamentPath}>
                 <Button
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-blue-400"
@@ -243,7 +245,7 @@ export default function MatchPage({ match }: Props) {
                   ← Tournoi
                 </Button>
               </Link>
-              <Link href={`/tournament/${match.tournament.id}/matches`}>
+              <Link href={`${tournamentPath}/matches`}>
                 <Button
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-emerald-400"
@@ -251,7 +253,7 @@ export default function MatchPage({ match }: Props) {
                   Tous les matchs
                 </Button>
               </Link>
-              <Link href={`/tournament/${match.tournament.id}/bracket`}>
+              <Link href={`${tournamentPath}/bracket`}>
                 <Button
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-purple-400"
@@ -364,7 +366,7 @@ export default function MatchPage({ match }: Props) {
                   label="Tournoi"
                   value={
                     <Link
-                      href={`/tournament/${match.tournament.id}`}
+                      href={tournamentPath}
                       className="text-blue-300 hover:text-blue-100"
                     >
                       {match.tournament.short_name || match.tournament.name}

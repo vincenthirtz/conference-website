@@ -228,6 +228,7 @@ export default function TournamentPage({
   const now = useMemo(() => new Date(), []);
   const finishedMatches = matches.filter((m) => m.status === 'finished');
   const totalMatches = matches.length;
+  const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
 
   const upcomingMatches = useMemo(
     () =>
@@ -402,7 +403,7 @@ export default function TournamentPage({
               </Paragraph>
 
               <div className="mt-6 flex flex-wrap gap-3">
-                <Link href={`/tournament/${tournament.id}/bracket`}>
+                <Link href={`${tournamentPath}/bracket`}>
                   <Button
                     type="button"
                     className="px-6 py-2.5 text-xs font-bold rounded-full bg-white text-black hover:bg-gray-100 shadow-lg shadow-white/10 transition-all hover:shadow-white/20 hover:scale-[1.02]"
@@ -411,7 +412,7 @@ export default function TournamentPage({
                   </Button>
                 </Link>
 
-                <Link href={`/tournament/${tournament.id}/matches`}>
+                <Link href={`${tournamentPath}/matches`}>
                   <Button
                     type="button"
                     className="px-6 py-2.5 text-xs font-semibold rounded-full bg-white/5 backdrop-blur-sm border border-white/20 hover:border-emerald-400/60 hover:bg-emerald-500/10 transition-all"
@@ -420,7 +421,7 @@ export default function TournamentPage({
                   </Button>
                 </Link>
 
-                <Link href={`/tournament/${tournament.id}/maps`}>
+                <Link href={`${tournamentPath}/maps`}>
                   <Button
                     type="button"
                     className="px-6 py-2.5 text-xs font-semibold rounded-full bg-white/5 backdrop-blur-sm border border-white/20 hover:border-blue-400/60 hover:bg-blue-500/10 transition-all"
@@ -588,7 +589,7 @@ export default function TournamentPage({
                         </p>
                       )}
                     </div>
-                    <Link href={`/tournament/${tournament.id}/bracket`}>
+                    <Link href={`${tournamentPath}/bracket`}>
                       <span className="mt-1 inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-purple-400/40 text-purple-200 bg-purple-900/20 hover:bg-purple-900/40 cursor-pointer text-[10px] transition-colors">
                         <svg
                           className="w-2.5 h-2.5"
@@ -618,7 +619,7 @@ export default function TournamentPage({
               <p className="text-[10px] uppercase tracking-widest text-gray-500 font-medium">
                 Matches clés
               </p>
-              <Link href={`/tournament/${tournament.id}/matches`}>
+              <Link href={`${tournamentPath}/matches`}>
                 <span className="text-[11px] text-blue-400 hover:text-blue-300 cursor-pointer transition-colors">
                   Voir tous les matchs →
                 </span>
@@ -735,7 +736,7 @@ export default function TournamentPage({
               <p className="text-[10px] uppercase tracking-widest text-gray-500 font-medium">
                 Aperçu des maps
               </p>
-              <Link href={`/tournament/${tournament.id}/maps`}>
+              <Link href={`${tournamentPath}/maps`}>
                 <span className="text-[11px] text-blue-400 hover:text-blue-300 cursor-pointer transition-colors">
                   Voir toutes les maps →
                 </span>
@@ -755,7 +756,7 @@ export default function TournamentPage({
               <p className="text-[11px] text-gray-400">
                 Les stats détaillées (popularité, overtimes, rounds moyens) sont
                 visibles sur la page{' '}
-                <Link href={`/tournament/${tournament.id}/maps`}>
+                <Link href={`${tournamentPath}/maps`}>
                   <span className="text-blue-400 hover:text-blue-300 cursor-pointer transition-colors font-medium">
                     Top maps
                   </span>

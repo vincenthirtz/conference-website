@@ -9,6 +9,7 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
+import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 import type { MatchStatus as BaseMatchStatus } from '@/types/admin';
 
 import { logger } from '../../../utils/logger';
@@ -16,6 +17,7 @@ type MatchStatus = BaseMatchStatus | 'completed';
 
 type Tournament = {
   id: string;
+  slug?: string | null;
   name: string;
   short_name?: string | null;
   game?: string | null;
@@ -23,6 +25,7 @@ type Tournament = {
   format?: string | null;
   start_date?: string | null;
   end_date?: string | null;
+  visibility?: string | null;
 };
 
 type Stage = {
@@ -74,26 +77,21 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     return { notFound: true, revalidate: 60 };
   }
 
-  // 1) Tournoi
-  const { data: tournament, error: tErr } = await supabaseAdmin
-    .from('tournaments')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  if (tErr || !tournament) {
+  // 1) Tournoi (UUID ou slug)
+  const tournament = await findTournamentByIdOrSlug<Tournament>(id, '*');
+  if (!tournament) {
     return { notFound: true, revalidate: 60 };
   }
-
   if (tournament.visibility && tournament.visibility !== 'public') {
     return { notFound: true, revalidate: 60 };
   }
+  const tournamentId = tournament.id;
 
   // 2) Stages
   const { data: stages, error: sErr } = await supabaseAdmin
     .from('tournament_stages')
     .select('*')
-    .eq('tournament_id', id)
+    .eq('tournament_id', tournamentId)
     .order('created_at', { ascending: true });
 
   if (sErr) {
@@ -119,7 +117,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       stage:tournament_stages ( id, name, stage_type )
     `
     )
-    .eq('tournament_id', id)
+    .eq('tournament_id', tournamentId)
     .neq('status', 'cancelled')
     .order('scheduled_at', { ascending: true })
     .order('created_at', { ascending: true });
@@ -146,6 +144,7 @@ export default function TournamentMatchesPage({
   matches,
 }: Props) {
   const router = useRouter();
+  const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
   const statusFilter =
     typeof router.query.status === 'string' ? router.query.status : 'all';
   const stageFilter =
@@ -184,7 +183,10 @@ export default function TournamentMatchesPage({
     if (value === 'all') delete next[key];
     else next[key] = value;
     router.replace(
-      { pathname: router.pathname, query: { ...next, id: tournament.id } },
+      {
+        pathname: router.pathname,
+        query: { ...next, id: tournament.slug || tournament.id },
+      },
       undefined,
       { shallow: true, scroll: false }
     );
@@ -239,7 +241,7 @@ export default function TournamentMatchesPage({
             </div>
 
             <div className="flex flex-wrap gap-2 justify-end">
-              <Link href={`/tournament/${tournament.id}`}>
+              <Link href={tournamentPath}>
                 <Button
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-blue-400"
@@ -247,7 +249,7 @@ export default function TournamentMatchesPage({
                   ← Retour au tournoi
                 </Button>
               </Link>
-              <Link href={`/tournament/${tournament.id}/bracket`}>
+              <Link href={`${tournamentPath}/bracket`}>
                 <Button
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-purple-400"
@@ -255,7 +257,7 @@ export default function TournamentMatchesPage({
                   Voir le bracket
                 </Button>
               </Link>
-              <Link href={`/tournament/${tournament.id}/maps`}>
+              <Link href={`${tournamentPath}/maps`}>
                 <Button
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-emerald-400"
@@ -313,7 +315,7 @@ export default function TournamentMatchesPage({
 
               {hasFilters && (
                 <div className="flex flex-wrap gap-2 justify-end">
-                  <Link href={`/tournament/${tournament.id}/matches`} shallow>
+                  <Link href={`${tournamentPath}/matches`} shallow>
                     <Button
                       type="button"
                       className="text-xs px-3 py-1.5 bg-transparent border border-white/25 hover:border-red-400 rounded-full"

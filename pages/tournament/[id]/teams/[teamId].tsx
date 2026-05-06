@@ -11,13 +11,16 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
+import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 
 type Tournament = {
   id: string;
+  slug?: string | null;
   name: string;
   game: string | null;
   start_date: string | null;
   end_date: string | null;
+  is_public?: boolean | null;
 };
 
 type Team = {
@@ -86,19 +89,17 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     return { notFound: true, revalidate: 60 };
   if (!supabaseAdmin) return { notFound: true, revalidate: 60 };
 
-  // Phase A : tournament + team + registration + members + matches en parallèle
-  const [
-    tournamentRes,
-    teamRes,
-    registrationRes,
-    membersRes,
-    matchesRes,
-  ] = await Promise.all([
-    supabaseAdmin
-      .from('tournaments')
-      .select('id, name, game, start_date, end_date, is_public')
-      .eq('id', id)
-      .maybeSingle(),
+  // Phase A : tournoi (UUID ou slug)
+  const tournament = await findTournamentByIdOrSlug<Tournament>(
+    id,
+    'id, name, slug, game, start_date, end_date, is_public'
+  );
+  if (!tournament || !tournament.is_public)
+    return { notFound: true, revalidate: 60 };
+  const tournamentId = tournament.id;
+
+  // Phase B : team + registration + members + matches en parallèle
+  const [teamRes, registrationRes, membersRes, matchesRes] = await Promise.all([
     supabaseAdmin
       .from('teams')
       .select(
@@ -109,7 +110,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     supabaseAdmin
       .from('tournament_teams')
       .select('team_id')
-      .eq('tournament_id', id)
+      .eq('tournament_id', tournamentId)
       .eq('team_id', teamId)
       .maybeSingle(),
     supabaseAdmin
@@ -127,15 +128,11 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       mvp:match_mvp_polls(winner_member_id)
       `
       )
-      .eq('tournament_id', id)
+      .eq('tournament_id', tournamentId)
       .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
       .neq('status', 'cancelled')
       .order('scheduled_at', { ascending: true, nullsFirst: false }),
   ]);
-
-  const tournament = tournamentRes.data;
-  if (!tournament || !tournament.is_public)
-    return { notFound: true, revalidate: 60 };
 
   const team = teamRes.data;
   if (!team || team.is_active === false)
@@ -237,6 +234,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     props: {
       tournament: {
         id: tournament.id,
+        slug: tournament.slug ?? null,
         name: tournament.name,
         game: tournament.game ?? null,
         start_date: tournament.start_date ?? null,
@@ -303,6 +301,7 @@ export default function TournamentTeamPage({
   const titulaires = roster.filter((m) => !m.is_substitute);
   const remplacants = roster.filter((m) => m.is_substitute);
   const winrate = stats.played > 0 ? (stats.wins / stats.played) * 100 : 0;
+  const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
 
   return (
     <>
@@ -341,7 +340,7 @@ export default function TournamentTeamPage({
                 </Heading>
                 <p className="text-sm text-gray-300">
                   <Link
-                    href={`/tournament/${tournament.id}`}
+                    href={tournamentPath}
                     className="text-purple-300 hover:text-purple-200 underline"
                   >
                     {tournament.name}
@@ -369,7 +368,7 @@ export default function TournamentTeamPage({
                     Profil global
                   </Button>
                 </Link>
-                <Link href={`/tournament/${tournament.id}`}>
+                <Link href={tournamentPath}>
                   <Button
                     type="button"
                     className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-emerald-400"

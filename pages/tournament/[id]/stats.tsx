@@ -8,10 +8,12 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
+import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 
 import { logger } from '../../../utils/logger';
 type Tournament = {
   id: string;
+  slug?: string | null;
   name: string;
   short_name?: string | null;
   game?: string | null;
@@ -73,28 +75,28 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     return { notFound: true, revalidate: 60 };
   }
 
-  // Phase A : tournoi + stages + matches en parallèle
-  const [tournamentRes, stagesRes, matchesRes] = await Promise.all([
-    supabaseAdmin.from('tournaments').select('*').eq('id', id).single(),
-    supabaseAdmin
-      .from('tournament_stages')
-      .select('id')
-      .eq('tournament_id', id),
-    supabaseAdmin
-      .from('matches')
-      .select('id, status, is_bye, team1_id, team2_id, winner_team_id')
-      .eq('tournament_id', id)
-      .neq('status', 'cancelled'),
-  ]);
-
-  if (tournamentRes.error || !tournamentRes.data) {
+  // Phase A : tournoi (UUID ou slug)
+  const tournament = await findTournamentByIdOrSlug<Tournament>(id, '*');
+  if (!tournament) {
     return { notFound: true, revalidate: 60 };
   }
-
-  const tournament = tournamentRes.data;
   if (tournament.visibility && tournament.visibility !== 'public') {
     return { notFound: true, revalidate: 60 };
   }
+  const tournamentId = tournament.id;
+
+  // Phase B : stages + matches en parallèle
+  const [stagesRes, matchesRes] = await Promise.all([
+    supabaseAdmin
+      .from('tournament_stages')
+      .select('id')
+      .eq('tournament_id', tournamentId),
+    supabaseAdmin
+      .from('matches')
+      .select('id, status, is_bye, team1_id, team2_id, winner_team_id')
+      .eq('tournament_id', tournamentId)
+      .neq('status', 'cancelled'),
+  ]);
 
   if (matchesRes.error) {
     logger.error('stats page matches error:', matchesRes.error);
@@ -188,6 +190,7 @@ export default function TournamentStatsPage({ tournament, teamStats }: Props) {
   const topTeams = sortedByWinrate.slice(0, 3);
 
   const bestMapDiff = [...teamStats].sort((a, b) => b.mapDiff - a.mapDiff)[0];
+  const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
@@ -238,7 +241,7 @@ export default function TournamentStatsPage({ tournament, teamStats }: Props) {
             </div>
 
             <div className="flex flex-wrap gap-2 justify-end">
-              <Link href={`/tournament/${tournament.id}`}>
+              <Link href={tournamentPath}>
                 <Button
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-blue-400"
@@ -246,7 +249,7 @@ export default function TournamentStatsPage({ tournament, teamStats }: Props) {
                   ← Retour au tournoi
                 </Button>
               </Link>
-              <Link href={`/tournament/${tournament.id}/matches`}>
+              <Link href={`${tournamentPath}/matches`}>
                 <Button
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-emerald-400"
@@ -254,7 +257,7 @@ export default function TournamentStatsPage({ tournament, teamStats }: Props) {
                   Tous les matchs
                 </Button>
               </Link>
-              <Link href={`/tournament/${tournament.id}/maps`}>
+              <Link href={`${tournamentPath}/maps`}>
                 <Button
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-purple-400"
@@ -262,7 +265,7 @@ export default function TournamentStatsPage({ tournament, teamStats }: Props) {
                   Top maps
                 </Button>
               </Link>
-              <Link href={`/tournament/${tournament.id}/mvp`}>
+              <Link href={`${tournamentPath}/mvp`}>
                 <Button
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-yellow-400"
@@ -270,7 +273,7 @@ export default function TournamentStatsPage({ tournament, teamStats }: Props) {
                   MVP
                 </Button>
               </Link>
-              <Link href={`/tournament/${tournament.id}/bracket`}>
+              <Link href={`${tournamentPath}/bracket`}>
                 <Button
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-pink-400"

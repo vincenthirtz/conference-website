@@ -19,6 +19,7 @@ type SimpleTeam = {
 
 type Tournament = {
   id: string;
+  slug?: string | null;
   name: string;
   short_name?: string | null;
   game?: string | null;
@@ -95,7 +96,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       team2_score,
       team1:team1_id ( id, name, short_name, logo_url ),
       team2:team2_id ( id, name, short_name, logo_url ),
-      tournament:tournament_id ( id, name, short_name, game ),
+      tournament:tournament_id ( id, slug, name, short_name, game ),
       stage:stage_id ( id, name, stage_type ),
       games (*)
     `
@@ -146,6 +147,7 @@ export default function MatchGamesPage({ match }: Props) {
   const formatLabel = match.match_format?.toUpperCase() || 'BO?';
 
   const roundsSummary = computeRoundsSummary(match.games);
+  const tournamentPath = `/tournament/${match.tournament.slug || match.tournament.id}`;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
@@ -180,7 +182,7 @@ export default function MatchGamesPage({ match }: Props) {
 
               <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-300 mb-1">
                 <Link
-                  href={`/tournament/${match.tournament.id}`}
+                  href={tournamentPath}
                   className="hover:text-white"
                 >
                   {match.tournament.short_name || match.tournament.name}
@@ -224,7 +226,7 @@ export default function MatchGamesPage({ match }: Props) {
                   ← Résumé du match
                 </Button>
               </Link>
-              <Link href={`/tournament/${match.tournament.id}`}>
+              <Link href={tournamentPath}>
                 <Button
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-emerald-400"
@@ -232,7 +234,7 @@ export default function MatchGamesPage({ match }: Props) {
                   Tournoi
                 </Button>
               </Link>
-              <Link href={`/tournament/${match.tournament.id}/maps`}>
+              <Link href={`${tournamentPath}/maps`}>
                 <Button
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-purple-400"
