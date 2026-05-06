@@ -73,32 +73,43 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     return { notFound: true, revalidate: 60 };
   }
 
-  // 1) Tournoi
-  const { data: tournament, error: tErr } = await supabaseAdmin
-    .from('tournaments')
-    .select('*')
-    .eq('id', id)
-    .single();
+  // Phase A : tournoi + stages + matches en parallèle
+  const [tournamentRes, stagesRes, matchesRes] = await Promise.all([
+    supabaseAdmin.from('tournaments').select('*').eq('id', id).single(),
+    supabaseAdmin
+      .from('tournament_stages')
+      .select('id')
+      .eq('tournament_id', id),
+    supabaseAdmin
+      .from('matches')
+      .select('id, status, is_bye, team1_id, team2_id, winner_team_id')
+      .eq('tournament_id', id)
+      .neq('status', 'cancelled'),
+  ]);
 
-  if (tErr || !tournament) {
+  if (tournamentRes.error || !tournamentRes.data) {
     return { notFound: true, revalidate: 60 };
   }
 
+  const tournament = tournamentRes.data;
   if (tournament.visibility && tournament.visibility !== 'public') {
     return { notFound: true, revalidate: 60 };
   }
 
-  // 2) Récupérer les équipes engagées via stage_teams
-  const { data: stages } = await supabaseAdmin
-    .from('tournament_stages')
-    .select('id')
-    .eq('tournament_id', id);
+  if (matchesRes.error) {
+    logger.error('stats page matches error:', matchesRes.error);
+  }
 
-  const stageIds = (stages || []).map((s: any) => s.id);
+  const stageIds = (stagesRes.data || []).map((s: any) => s.id);
+  const matches = ((matchesRes.data || []) as MatchRow[]).filter(
+    (m) => !m.is_bye
+  );
+  const matchIds = matches.map((m) => m.id);
 
-  const { data: stageTeams, error: stErr } =
+  // Phase B : stage_teams + games en parallèle (dépend respectivement de stageIds / matchIds)
+  const [stageTeamsRes, gamesRes] = await Promise.all([
     stageIds.length > 0
-      ? await supabaseAdmin
+      ? supabaseAdmin
           .from('stage_teams')
           .select(
             `
@@ -111,23 +122,30 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
         `
           )
           .in('stage_id', stageIds)
-      : { data: null, error: null };
+      : Promise.resolve({ data: null as any, error: null }),
+    matchIds.length > 0
+      ? supabaseAdmin
+          .from('games')
+          .select('match_id, team1_score, team2_score')
+          .in('match_id', matchIds)
+      : Promise.resolve({ data: [] as GameRow[], error: null }),
+  ]);
 
-  if (stErr) {
-    logger.error('stats page stage_teams error:', stErr);
+  if (stageTeamsRes.error) {
+    logger.error('stats page stage_teams error:', stageTeamsRes.error);
+  }
+  if (gamesRes.error) {
+    logger.error('stats page games error:', gamesRes.error);
   }
 
   const teamMap = new Map<string, SimpleTeam>();
-  (stageTeams || []).forEach((row: any) => {
+  (stageTeamsRes.data || []).forEach((row: any) => {
     if (!row.team) return;
     teamMap.set(row.team.id, row.team);
   });
-
   const teams = Array.from(teamMap.values());
-  const teamIds = teams.map((t) => t.id);
 
-  // S'il n'y a aucune équipe, pas la peine d'aller plus loin
-  if (teamIds.length === 0) {
+  if (teams.length === 0) {
     return {
       props: {
         tournament: tournament as Tournament,
@@ -137,36 +155,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     };
   }
 
-  // 3) Matches du tournoi (on exclut les annulés & BYE des stats "compétitives")
-  const { data: matchesData, error: mErr } = await supabaseAdmin
-    .from('matches')
-    .select('id, status, is_bye, team1_id, team2_id, winner_team_id')
-    .eq('tournament_id', id)
-    .neq('status', 'cancelled');
-
-  if (mErr) {
-    logger.error('stats page matches error:', mErr);
-  }
-
-  const matches = ((matchesData || []) as MatchRow[]).filter((m) => !m.is_bye);
-
-  const matchIds = matches.map((m) => m.id);
-  let games: GameRow[] = [];
-
-  if (matchIds.length > 0) {
-    // 4) Games de ces matches
-    const { data: gamesData, error: gErr } = await supabaseAdmin
-      .from('games')
-      .select('match_id, team1_score, team2_score')
-      .in('match_id', matchIds);
-
-    if (gErr) {
-      logger.error('stats page games error:', gErr);
-    } else {
-      games = (gamesData || []) as GameRow[];
-    }
-  }
-
+  const games = (gamesRes.data || []) as GameRow[];
   const teamStats = computeTeamStats(teams, matches, games);
 
   return {

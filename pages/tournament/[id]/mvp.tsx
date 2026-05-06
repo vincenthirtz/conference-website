@@ -47,21 +47,17 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   if (!id || Array.isArray(id)) return { notFound: true, revalidate: 60 };
   if (!supabaseAdmin) return { notFound: true, revalidate: 60 };
 
-  // 1) Charger le tournoi (verifier visibilite)
-  const { data: tournament } = await supabaseAdmin
-    .from('tournaments')
-    .select('id, name, is_public')
-    .eq('id', id)
-    .maybeSingle();
-
-  if (!tournament || !tournament.is_public)
-    return { notFound: true, revalidate: 60 };
-
-  // 2) Charger les matchs termines + leur poll MVP
-  const { data: matches } = await supabaseAdmin
-    .from('matches')
-    .select(
-      `
+  // Phase A : tournoi + matches en parallèle
+  const [tournamentRes, matchesRes] = await Promise.all([
+    supabaseAdmin
+      .from('tournaments')
+      .select('id, name, is_public')
+      .eq('id', id)
+      .maybeSingle(),
+    supabaseAdmin
+      .from('matches')
+      .select(
+        `
       id,
       round_name,
       completed_at,
@@ -70,12 +66,17 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       status,
       mvp:match_mvp_polls(winner_member_id, winner_battle_tag)
       `
-    )
-    .eq('tournament_id', id)
-    .eq('status', 'finished')
-    .order('completed_at', { ascending: false });
+      )
+      .eq('tournament_id', id)
+      .eq('status', 'finished')
+      .order('completed_at', { ascending: false }),
+  ]);
 
-  const finishedMatches = matches || [];
+  const tournament = tournamentRes.data;
+  if (!tournament || !tournament.is_public)
+    return { notFound: true, revalidate: 60 };
+
+  const finishedMatches = matchesRes.data || [];
 
   type EnrichedRow = {
     matchId: string;

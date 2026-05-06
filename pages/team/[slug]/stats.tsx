@@ -105,39 +105,37 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
 
   const teamId = team.id as string;
 
-  // 2) Stats globales depuis la vue team_stats_view (si elle existe)
-  let stats: TeamStatsView | null = null;
-  try {
-    const { data: statsData, error: sErr } = await supabaseAdmin
+  // Phase A : team_stats_view + matches en parallèle
+  const [statsRes, matchesRes] = await Promise.all([
+    supabaseAdmin
       .from('team_stats_view')
       .select('*')
       .eq('team_id', teamId)
-      .maybeSingle();
+      .maybeSingle(),
+    supabaseAdmin
+      .from('matches')
+      .select('id, status, is_bye, team1_id, team2_id, winner_team_id')
+      .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
+      .neq('status', 'cancelled'),
+  ]);
 
-    if (sErr) {
-      logger.error('team_stats_view error:', sErr);
-    } else if (statsData) {
-      stats = statsData as TeamStatsView;
-    }
-  } catch (e) {
-    logger.error('team_stats_view not available:', e);
+  let stats: TeamStatsView | null = null;
+  if (statsRes.error) {
+    logger.error('team_stats_view error:', statsRes.error);
+  } else if (statsRes.data) {
+    stats = statsRes.data as TeamStatsView;
   }
 
-  // 3) Matches de l'équipe (tous tournois confondus, hors BYE)
-  const { data: matchesData, error: mErr } = await supabaseAdmin
-    .from('matches')
-    .select('id, status, is_bye, team1_id, team2_id, winner_team_id')
-    .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
-    .neq('status', 'cancelled');
-
-  if (mErr) {
-    logger.error('team stats matches error:', mErr);
+  if (matchesRes.error) {
+    logger.error('team stats matches error:', matchesRes.error);
   }
 
-  const matches = ((matchesData || []) as MatchRow[]).filter((m) => !m.is_bye);
+  const matches = ((matchesRes.data || []) as MatchRow[]).filter(
+    (m) => !m.is_bye
+  );
   const matchIds = matches.map((m) => m.id);
 
-  // 4) Games de ces matches, pour calculer les stats par map
+  // Phase B : games (dépend de matchIds)
   let games: GameRow[] = [];
   if (matchIds.length > 0) {
     const { data: gamesData, error: gErr } = await supabaseAdmin

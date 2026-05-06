@@ -103,18 +103,15 @@ async function loadPartners(): Promise<HomePartner[]> {
     }));
 }
 
-async function loadCountdownTarget(
-  fallbackStartDate: string | null
-): Promise<string | null> {
-  if (!supabaseAdmin) return fallbackStartDate;
+async function loadCountdownSetting(): Promise<string | null> {
+  if (!supabaseAdmin) return null;
   const { data } = await supabaseAdmin
     .from('site_settings')
     .select('value')
     .eq('key', 'homepage_event_date')
     .maybeSingle();
   const fromSetting = (data?.value ?? '').trim();
-  if (fromSetting) return fromSetting;
-  return fallbackStartDate;
+  return fromSetting || null;
 }
 
 export const getStaticProps: GetStaticProps<HomeProps> = async () => {
@@ -127,35 +124,37 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
   if (supabaseAdmin) {
     const nowISO = new Date().toISOString();
 
-    const [newsRes, announcementsRes, upcoming, partnersList] =
-      await Promise.all([
-        supabaseAdmin
-          .from('news')
-          .select(
-            'id, title, slug, tag, excerpt, content, image_url, published_at, created_at, updated_at, news_comments(count)'
-          )
-          .eq('status', 'published')
-          .or(`published_at.lte.${nowISO},published_at.is.null`)
-          .order('published_at', { ascending: false, nullsFirst: false })
-          .limit(30),
-        supabaseAdmin
-          .from('announcements')
-          .select(
-            'id, title, message, cta_label, cta_url, priority, created_at'
-          )
-          .eq('is_active', true)
-          .order('priority', { ascending: false, nullsFirst: false })
-          .order('created_at', { ascending: false })
-          .limit(6),
-        loadUpcomingTournament(),
-        loadPartners(),
-      ]);
+    const [
+      newsRes,
+      announcementsRes,
+      upcoming,
+      partnersList,
+      countdownSetting,
+    ] = await Promise.all([
+      supabaseAdmin
+        .from('news')
+        .select(
+          'id, title, slug, tag, excerpt, content, image_url, published_at, created_at, updated_at, news_comments(count)'
+        )
+        .eq('status', 'published')
+        .or(`published_at.lte.${nowISO},published_at.is.null`)
+        .order('published_at', { ascending: false, nullsFirst: false })
+        .limit(30),
+      supabaseAdmin
+        .from('announcements')
+        .select('id, title, message, cta_label, cta_url, priority, created_at')
+        .eq('is_active', true)
+        .order('priority', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false })
+        .limit(6),
+      loadUpcomingTournament(),
+      loadPartners(),
+      loadCountdownSetting(),
+    ]);
 
     upcomingTournament = upcoming;
     partners = partnersList;
-    countdownTarget = await loadCountdownTarget(
-      upcomingTournament?.startDate ?? null
-    );
+    countdownTarget = countdownSetting ?? upcomingTournament?.startDate ?? null;
 
     if (!newsRes.error && newsRes.data) {
       news = newsRes.data.map((row: any) => ({

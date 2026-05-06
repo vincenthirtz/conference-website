@@ -1,6 +1,6 @@
 // pages/match/[id]/games.tsx
 
-import { GetServerSideProps } from 'next';
+import { GetStaticPaths, GetStaticProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import Heading from '@/components/Typography/heading';
@@ -66,10 +66,14 @@ type Props = {
   match: Match | null;
 };
 
-export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
-  const { id } = ctx.query;
+export const getStaticPaths: GetStaticPaths = async () => {
+  return { paths: [], fallback: 'blocking' };
+};
+
+export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
+  const id = ctx.params?.id;
   if (!id || Array.isArray(id)) {
-    return { notFound: true };
+    return { notFound: true, revalidate: 60 };
   }
 
   const { data, error } = await supabaseAdmin
@@ -101,7 +105,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
 
   if (error || !data) {
     logger.error('match games page error:', error);
-    return { notFound: true };
+    return { notFound: true, revalidate: 60 };
   }
 
   const match = data as any as Match;
@@ -117,6 +121,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     props: {
       match,
     },
+    revalidate: 30,
   };
 };
 

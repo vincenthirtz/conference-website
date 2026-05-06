@@ -93,83 +93,79 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     return { notFound: true, revalidate: 60 };
   }
 
-  // 1) Tournoi
-  const { data: tournament, error: tErr } = await supabaseAdmin
-    .from('tournaments')
-    .select('*')
-    .eq('id', id)
-    .single();
+  // 1) Tournoi + matches en parallèle
+  const [tournamentRes, matchesRes] = await Promise.all([
+    supabaseAdmin.from('tournaments').select('*').eq('id', id).single(),
+    supabaseAdmin
+      .from('matches')
+      .select('id, status, is_bye, team1_id, team2_id')
+      .eq('tournament_id', id)
+      .neq('status', 'cancelled'),
+  ]);
 
-  if (tErr || !tournament) {
+  if (tournamentRes.error || !tournamentRes.data) {
     return { notFound: true, revalidate: 60 };
   }
 
+  const tournament = tournamentRes.data;
   if (tournament.visibility && tournament.visibility !== 'public') {
     return { notFound: true, revalidate: 60 };
   }
 
-  // 2) Matches du tournoi (on exclut les annulés & bye)
-  const { data: matchesData, error: mErr } = await supabaseAdmin
-    .from('matches')
-    .select('id, status, is_bye, team1_id, team2_id')
-    .eq('tournament_id', id)
-    .neq('status', 'cancelled');
-
-  if (mErr) {
-    logger.error('maps page matches error:', mErr);
+  if (matchesRes.error) {
+    logger.error('maps page matches error:', matchesRes.error);
   }
 
-  const allMatches = (matchesData || []) as MatchRow[];
+  const allMatches = (matchesRes.data || []) as MatchRow[];
   const matches = allMatches.filter((m) => !m.is_bye);
   const matchIds = matches.map((m) => m.id);
+
+  const teamIdSet = new Set<string>();
+  for (const m of matches) {
+    if (m.team1_id) teamIdSet.add(m.team1_id);
+    if (m.team2_id) teamIdSet.add(m.team2_id);
+  }
 
   let maps: MapStat[] = [];
   let hasVetoData = false;
 
   if (matchIds.length > 0) {
-    // 3) Games de ces matchs
-    const { data: gamesData, error: gErr } = await supabaseAdmin
-      .from('games')
-      .select(
-        'match_id, map_name, team1_score, team2_score, is_tiebreaker, went_overtime'
-      )
-      .in('match_id', matchIds);
+    // 2) Games + vetos + teams en parallèle
+    const [gamesRes, vetoRes, teamsRes] = await Promise.all([
+      supabaseAdmin
+        .from('games')
+        .select(
+          'match_id, map_name, team1_score, team2_score, is_tiebreaker, went_overtime'
+        )
+        .in('match_id', matchIds),
+      supabaseAdmin
+        .from('match_map_vetos')
+        .select('match_id, action, team_id, map_name')
+        .in('match_id', matchIds),
+      teamIdSet.size > 0
+        ? supabaseAdmin
+            .from('teams')
+            .select('id, name')
+            .in('id', Array.from(teamIdSet))
+        : Promise.resolve({ data: [] as TeamMini[], error: null }),
+    ]);
 
-    // 4) Veto data
     let vetos: VetoRow[] = [];
-    const { data: vetoData, error: vErr } = await supabaseAdmin
-      .from('match_map_vetos')
-      .select('match_id, action, team_id, map_name')
-      .in('match_id', matchIds);
-
-    if (!vErr && vetoData) {
-      vetos = vetoData as VetoRow[];
+    if (!vetoRes.error && vetoRes.data) {
+      vetos = vetoRes.data as VetoRow[];
       hasVetoData = vetos.length > 0;
     }
 
-    // 5) Fetch team names for winrates
-    const teamIdSet = new Set<string>();
-    for (const m of matches) {
-      if (m.team1_id) teamIdSet.add(m.team1_id);
-      if (m.team2_id) teamIdSet.add(m.team2_id);
-    }
     const teamNames = new Map<string, string>();
-    if (teamIdSet.size > 0) {
-      const { data: teamsData } = await supabaseAdmin
-        .from('teams')
-        .select('id, name')
-        .in('id', Array.from(teamIdSet));
-      for (const t of (teamsData || []) as TeamMini[]) {
-        teamNames.set(t.id, t.name);
-      }
+    for (const t of (teamsRes.data || []) as TeamMini[]) {
+      teamNames.set(t.id, t.name);
     }
 
-    // Build match lookup
     const matchById = new Map<string, MatchRow>();
     matches.forEach((m) => matchById.set(m.id, m));
 
-    if (!gErr) {
-      const games = (gamesData || []) as GameRow[];
+    if (!gamesRes.error) {
+      const games = (gamesRes.data || []) as GameRow[];
       maps = computeMapStats(games, vetos, matchById, teamNames);
     }
   }

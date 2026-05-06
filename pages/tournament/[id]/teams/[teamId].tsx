@@ -86,61 +86,68 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     return { notFound: true, revalidate: 60 };
   if (!supabaseAdmin) return { notFound: true, revalidate: 60 };
 
-  // 1) Tournament (verifier visibilite)
-  const { data: tournament } = await supabaseAdmin
-    .from('tournaments')
-    .select('id, name, game, start_date, end_date, is_public')
-    .eq('id', id)
-    .maybeSingle();
-  if (!tournament || !tournament.is_public)
-    return { notFound: true, revalidate: 60 };
-
-  // 2) Team
-  const { data: team } = await supabaseAdmin
-    .from('teams')
-    .select(
-      'id, slug, name, short_name, logo_url, banner_url, country, description, twitter, discord, website, captain_id, is_active'
-    )
-    .eq('id', teamId)
-    .maybeSingle();
-  if (!team || team.is_active === false)
-    return { notFound: true, revalidate: 60 };
-
-  // 3) Verifier que la team est bien inscrite a ce tournoi
-  const { data: registration } = await supabaseAdmin
-    .from('tournament_teams')
-    .select('team_id')
-    .eq('tournament_id', id)
-    .eq('team_id', teamId)
-    .maybeSingle();
-  if (!registration) return { notFound: true, revalidate: 60 };
-
-  // 4) Roster (sans donnees sensibles)
-  const { data: members } = await supabaseAdmin
-    .from('team_members')
-    .select('id, battle_tag, role, is_substitute, user_id, created_at')
-    .eq('team_id', teamId)
-    .order('is_substitute', { ascending: true })
-    .order('created_at', { ascending: true });
-
-  // 5) Matchs du tournoi pour cette team
-  const { data: matchesData } = await supabaseAdmin
-    .from('matches')
-    .select(
-      `
+  // Phase A : tournament + team + registration + members + matches en parallèle
+  const [
+    tournamentRes,
+    teamRes,
+    registrationRes,
+    membersRes,
+    matchesRes,
+  ] = await Promise.all([
+    supabaseAdmin
+      .from('tournaments')
+      .select('id, name, game, start_date, end_date, is_public')
+      .eq('id', id)
+      .maybeSingle(),
+    supabaseAdmin
+      .from('teams')
+      .select(
+        'id, slug, name, short_name, logo_url, banner_url, country, description, twitter, discord, website, captain_id, is_active'
+      )
+      .eq('id', teamId)
+      .maybeSingle(),
+    supabaseAdmin
+      .from('tournament_teams')
+      .select('team_id')
+      .eq('tournament_id', id)
+      .eq('team_id', teamId)
+      .maybeSingle(),
+    supabaseAdmin
+      .from('team_members')
+      .select('id, battle_tag, role, is_substitute, user_id, created_at')
+      .eq('team_id', teamId)
+      .order('is_substitute', { ascending: true })
+      .order('created_at', { ascending: true }),
+    supabaseAdmin
+      .from('matches')
+      .select(
+        `
       id, status, round_name, scheduled_at, completed_at,
       team1_id, team2_id, team1_score, team2_score, winner_team_id,
       mvp:match_mvp_polls(winner_member_id)
       `
-    )
-    .eq('tournament_id', id)
-    .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
-    .neq('status', 'cancelled')
-    .order('scheduled_at', { ascending: true, nullsFirst: false });
+      )
+      .eq('tournament_id', id)
+      .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
+      .neq('status', 'cancelled')
+      .order('scheduled_at', { ascending: true, nullsFirst: false }),
+  ]);
 
-  const matches = matchesData || [];
+  const tournament = tournamentRes.data;
+  if (!tournament || !tournament.is_public)
+    return { notFound: true, revalidate: 60 };
 
-  // 6) Adversaires
+  const team = teamRes.data;
+  if (!team || team.is_active === false)
+    return { notFound: true, revalidate: 60 };
+
+  if (!registrationRes.data)
+    return { notFound: true, revalidate: 60 };
+
+  const members = membersRes.data;
+  const matches = matchesRes.data || [];
+
+  // Phase B : adversaires (dépend des matches)
   const opponentIds = new Set<string>();
   for (const m of matches) {
     const opp = m.team1_id === teamId ? m.team2_id : m.team1_id;
