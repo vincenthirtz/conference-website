@@ -1,19 +1,24 @@
 import type { GetStaticProps } from 'next';
+import dynamic from 'next/dynamic';
 import Header from '@/components/Header/header';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import HomeNewsSection, {
   HomeNewsItem,
 } from '@/components/News/HomeNewsSection';
 import AnnouncementsTicker, {
-  Announcement,
+  type Announcement,
 } from '@/components/Ads/AnnouncementsTicker';
 import PressSection from '@/components/Press/PressSection';
 import HomeCountdown from '@/components/Home/HomeCountdown';
 import { type UpcomingTournament } from '@/components/Home/HomeUpcomingTournament';
 import HomeEvents from '@/components/Home/HomeEvents';
-import HomeTwitchEmbed from '@/components/Home/HomeTwitchEmbed';
 import HomeSponsors, { HomePartner } from '@/components/Home/HomeSponsors';
 import { supabaseAdmin } from '@/utils/supabase';
+
+const HomeTwitchEmbed = dynamic(
+  () => import('@/components/Home/HomeTwitchEmbed'),
+  { ssr: false }
+);
 
 type HomeProps = {
   news: HomeNewsItem[];

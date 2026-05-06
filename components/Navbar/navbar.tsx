@@ -1,13 +1,15 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
-import { useEffect, useMemo, useRef, useState, type JSX } from 'react';
+import { useEffect, useMemo, useState, type JSX } from 'react';
 import { supabaseClient } from '@/utils/supabase';
 import { useStaffSession } from '@/hooks/useStaffSession';
-import AdminTopBar from './AdminTopBar';
 import PublicNav from './PublicNav';
-import NavDrop from './navDrop';
 import { ADMIN_LINKS, filterAdminLinks } from './adminLinks';
+
+const AdminTopBar = dynamic(() => import('./AdminTopBar'), { ssr: false });
+const NavDrop = dynamic(() => import('./navDrop'), { ssr: false });
 
 const NAV_HEIGHT = 75;
 const ADMIN_BAR_HEIGHT = 44;
@@ -19,7 +21,6 @@ function Navbar(): JSX.Element {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const drawerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -164,7 +165,6 @@ function Navbar(): JSX.Element {
             {drawerOpen && (
               <NavDrop
                 setDrop={setDrawerOpen}
-                ref={drawerRef}
                 isStaff={isStaff}
                 staffName={staffName}
                 adminLinks={visibleAdminLinks}

@@ -1,8 +1,10 @@
 // pages/tournament/[id]/matches.tsx
 
-import { GetServerSideProps } from 'next';
+import { GetStaticPaths, GetStaticProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { useMemo } from 'react';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
@@ -60,19 +62,17 @@ type Props = {
   tournament: Tournament;
   stages: Stage[];
   matches: SimpleMatch[];
-  statusFilter: string;
-  stageFilter: string;
 };
 
-export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
-  const { id, status, stageId } = ctx.query;
+export const getStaticPaths: GetStaticPaths = async () => {
+  return { paths: [], fallback: 'blocking' };
+};
 
+export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
+  const id = ctx.params?.id;
   if (!id || Array.isArray(id)) {
-    return { notFound: true };
+    return { notFound: true, revalidate: 60 };
   }
-
-  const statusFilter = typeof status === 'string' ? status : 'all';
-  const stageFilter = typeof stageId === 'string' ? stageId : 'all';
 
   // 1) Tournoi
   const { data: tournament, error: tErr } = await supabaseAdmin
@@ -82,11 +82,11 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     .single();
 
   if (tErr || !tournament) {
-    return { notFound: true };
+    return { notFound: true, revalidate: 60 };
   }
 
   if (tournament.visibility && tournament.visibility !== 'public') {
-    return { notFound: true };
+    return { notFound: true, revalidate: 60 };
   }
 
   // 2) Stages
@@ -100,8 +100,8 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     logger.error('matches page stages error:', sErr);
   }
 
-  // 3) Matches avec filtres
-  let q = supabaseAdmin
+  // 3) Tous les matchs non annulés (filtrage côté client)
+  const { data: matchesData, error: mErr } = await supabaseAdmin
     .from('matches')
     .select(
       `
@@ -120,25 +120,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     `
     )
     .eq('tournament_id', id)
-    .neq('status', 'cancelled');
-
-  if (
-    statusFilter === 'pending' ||
-    statusFilter === 'ongoing' ||
-    statusFilter === 'finished'
-  ) {
-    if (statusFilter === 'finished') {
-      q = q.in('status', ['finished', 'completed']);
-    } else {
-      q = q.eq('status', statusFilter);
-    }
-  }
-
-  if (stageFilter !== 'all') {
-    q = q.eq('stage_id', stageFilter);
-  }
-
-  const { data: matchesData, error: mErr } = await q
+    .neq('status', 'cancelled')
     .order('scheduled_at', { ascending: true })
     .order('created_at', { ascending: true });
 
@@ -153,9 +135,8 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       tournament: tournament as Tournament,
       stages: (stages || []) as Stage[],
       matches,
-      statusFilter,
-      stageFilter,
     },
+    revalidate: 60,
   };
 };
 
@@ -163,9 +144,13 @@ export default function TournamentMatchesPage({
   tournament,
   stages,
   matches,
-  statusFilter,
-  stageFilter,
 }: Props) {
+  const router = useRouter();
+  const statusFilter =
+    typeof router.query.status === 'string' ? router.query.status : 'all';
+  const stageFilter =
+    typeof router.query.stageId === 'string' ? router.query.stageId : 'all';
+
   const dateRangeLabel = formatTournamentDates(
     tournament.start_date,
     tournament.end_date
@@ -173,9 +158,37 @@ export default function TournamentMatchesPage({
   const statusLabel = getStatusLabel(tournament.status);
   const statusColor = getStatusChipColor(tournament.status);
 
-  const grouped = groupMatchesByDay(matches);
+  const filteredMatches = useMemo(() => {
+    return matches.filter((m) => {
+      if (statusFilter === 'pending' && m.status !== 'pending') return false;
+      if (statusFilter === 'ongoing' && m.status !== 'ongoing') return false;
+      if (
+        statusFilter === 'finished' &&
+        m.status !== 'finished' &&
+        m.status !== 'completed'
+      )
+        return false;
+      if (stageFilter !== 'all' && m.stage?.id !== stageFilter) return false;
+      return true;
+    });
+  }, [matches, statusFilter, stageFilter]);
+
+  const grouped = groupMatchesByDay(filteredMatches);
 
   const hasFilters = statusFilter !== 'all' || stageFilter !== 'all';
+
+  const updateFilter = (key: 'status' | 'stageId', value: string) => {
+    const next: Record<string, string> = {
+      ...(router.query as Record<string, string>),
+    };
+    if (value === 'all') delete next[key];
+    else next[key] = value;
+    router.replace(
+      { pathname: router.pathname, query: { ...next, id: tournament.id } },
+      undefined,
+      { shallow: true, scroll: false }
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
@@ -257,10 +270,7 @@ export default function TournamentMatchesPage({
         {/* Filters */}
         <section className="mb-4">
           <div className="bg-black/60 border border-white/5 rounded-2xl p-3">
-            <form
-              method="get"
-              className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-[11px]"
-            >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-[11px]">
               <div className="flex flex-wrap gap-2 items-center">
                 <span className="text-gray-400 uppercase tracking-wide">
                   Filtres
@@ -271,7 +281,8 @@ export default function TournamentMatchesPage({
                   <span className="text-gray-400">Statut :</span>
                   <select
                     name="status"
-                    defaultValue={statusFilter}
+                    value={statusFilter}
+                    onChange={(e) => updateFilter('status', e.target.value)}
                     className="bg-black border border-white/15 rounded-lg px-2 py-1 text-[11px] text-gray-100"
                   >
                     <option value="all">Tous</option>
@@ -286,7 +297,8 @@ export default function TournamentMatchesPage({
                   <span className="text-gray-400">Phase :</span>
                   <select
                     name="stageId"
-                    defaultValue={stageFilter}
+                    value={stageFilter}
+                    onChange={(e) => updateFilter('stageId', e.target.value)}
                     className="bg-black border border-white/15 rounded-lg px-2 py-1 text-[11px] text-gray-100 max-w-[180px]"
                   >
                     <option value="all">Toutes</option>
@@ -299,15 +311,9 @@ export default function TournamentMatchesPage({
                 </label>
               </div>
 
-              <div className="flex flex-wrap gap-2 justify-end">
-                <Button
-                  type="submit"
-                  className="text-xs px-3 py-1.5 bg-white text-black hover:bg-gray-100 rounded-full"
-                >
-                  Appliquer
-                </Button>
-                {hasFilters && (
-                  <Link href={`/tournament/${tournament.id}/matches`}>
+              {hasFilters && (
+                <div className="flex flex-wrap gap-2 justify-end">
+                  <Link href={`/tournament/${tournament.id}/matches`} shallow>
                     <Button
                       type="button"
                       className="text-xs px-3 py-1.5 bg-transparent border border-white/25 hover:border-red-400 rounded-full"
@@ -315,22 +321,22 @@ export default function TournamentMatchesPage({
                       Réinitialiser
                     </Button>
                   </Link>
-                )}
-              </div>
-            </form>
+                </div>
+              )}
+            </div>
           </div>
         </section>
 
         {/* Matches list */}
         <section>
           <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
-            {matches.length === 0 && (
+            {filteredMatches.length === 0 && (
               <Paragraph typeStyle="body-sm" textColor="text-gray-300">
                 Aucun match ne correspond aux filtres actuels.
               </Paragraph>
             )}
 
-            {matches.length > 0 && (
+            {filteredMatches.length > 0 && (
               <div className="space-y-4">
                 {grouped.map((day) => (
                   <div key={day.key}>

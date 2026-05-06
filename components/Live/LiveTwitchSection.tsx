@@ -4,7 +4,7 @@ import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
 
 import { logger } from '../../utils/logger';
-type TwitchChannel = {
+export type TwitchChannel = {
   channel: string;
   label: string;
   badge: string | null;
@@ -12,16 +12,23 @@ type TwitchChannel = {
   background: string | null;
 };
 
-export default function LiveTwitchSection() {
-  const [twitchChannels, setTwitchChannels] = useState<TwitchChannel[]>([]);
-  const [loadingChannels, setLoadingChannels] = useState(true);
+type Props = {
+  initialChannels?: TwitchChannel[];
+};
+
+export default function LiveTwitchSection({ initialChannels }: Props = {}) {
+  const [twitchChannels, setTwitchChannels] = useState<TwitchChannel[]>(
+    initialChannels ?? []
+  );
+  const [loadingChannels, setLoadingChannels] = useState(!initialChannels);
   const [liveStatus, setLiveStatus] = useState<Record<string, boolean>>({});
   const [loadingStatus, setLoadingStatus] = useState(false);
   const [page, setPage] = useState(0);
   const pageSize = 6;
 
-  // Charger les chaînes depuis l'API
+  // Charger les chaînes depuis l'API si pas fournies en SSR
   useEffect(() => {
+    if (initialChannels) return;
     const fetchChannels = async () => {
       setLoadingChannels(true);
       try {
@@ -38,7 +45,7 @@ export default function LiveTwitchSection() {
     };
 
     fetchChannels();
-  }, []);
+  }, [initialChannels]);
 
   // Charger les statuts live
   useEffect(() => {
