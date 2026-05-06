@@ -11,17 +11,34 @@ type LiveInfo = {
   viewer_count?: number;
 };
 
+function scheduleIdle(cb: () => void): () => void {
+  if (typeof window === 'undefined') return () => {};
+  const w = window as Window & {
+    requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+    cancelIdleCallback?: (id: number) => void;
+  };
+  if (w.requestIdleCallback) {
+    const id = w.requestIdleCallback(cb, { timeout: 2000 });
+    return () => w.cancelIdleCallback?.(id);
+  }
+  const id = window.setTimeout(cb, 1500);
+  return () => window.clearTimeout(id);
+}
+
 export default function HomeTwitchEmbed(): JSX.Element | null {
   const [info, setInfo] = useState<LiveInfo | null>(null);
   const [parent, setParent] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setParent(window.location.hostname);
     }
+    return scheduleIdle(() => setReady(true));
   }, []);
 
   useEffect(() => {
+    if (!ready) return;
     let cancelled = false;
     const load = async () => {
       try {
@@ -40,7 +57,7 @@ export default function HomeTwitchEmbed(): JSX.Element | null {
       cancelled = true;
       clearInterval(id);
     };
-  }, []);
+  }, [ready]);
 
   if (!info?.live || !parent) return null;
 

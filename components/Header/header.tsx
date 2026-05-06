@@ -1,5 +1,4 @@
-import React, { JSX } from 'react';
-import Image from 'next/image';
+import { JSX } from 'react';
 import Heading from '../Typography/heading';
 import Paragraph from '../Typography/paragraph';
 import Link from 'next/link';
@@ -9,16 +8,28 @@ function Header(): JSX.Element {
 
   return (
     <header className="hero-section relative isolate overflow-hidden">
-      <Image
-        src="/img/illustra.png"
-        alt=""
-        aria-hidden
-        fill
-        priority
-        sizes="(max-width: 768px) 640px, (max-width: 1280px) 1024px, 1024px"
-        quality={60}
-        className="hero-glow"
-      />
+      <picture aria-hidden="true">
+        <source
+          type="image/avif"
+          srcSet="/img/illustra-640.avif 640w, /img/illustra-1024.avif 1024w"
+          sizes="(max-width: 768px) 640px, 1024px"
+        />
+        <source
+          type="image/webp"
+          srcSet="/img/illustra-640.webp 640w, /img/illustra-1024.webp 1024w"
+          sizes="(max-width: 768px) 640px, 1024px"
+        />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/img/illustra.png"
+          alt=""
+          width={1024}
+          height={1024}
+          decoding="async"
+          fetchPriority="high"
+          className="hero-glow"
+        />
+      </picture>
 
       <div className="container w-full flex items-center justify-center">
         <div
