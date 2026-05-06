@@ -458,7 +458,7 @@ describe('/api/admin/users/manage extras', () => {
 // that file's logStaffAction expectation).
 
 /* -----------------------------------------------------------
- * /api/blizzard-news — with mocked axios
+ * /api/blizzard-news
  * ---------------------------------------------------------*/
 
 describe('/api/blizzard-news', () => {
