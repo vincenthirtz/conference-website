@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { useState } from 'react';
 import type { GetStaticProps } from 'next';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
@@ -259,16 +260,22 @@ function AboutPage({ videoUrl }: AboutPageProps) {
                     className="group relative w-full h-full"
                     aria-label="Lancer la vid\u00e9o"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={
-                        youtubeId
-                          ? `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`
-                          : '/img/fourplayers.png'
-                      }
-                      alt="Aper\u00e7u vid\u00e9o OW Women's Cup"
-                      className="absolute inset-0 w-full h-full object-cover"
-                    />
+                    {youtubeId ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={`https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`}
+                        alt="Aper\u00e7u vid\u00e9o OW Women's Cup"
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Image
+                        src="/img/fourplayers.jpg"
+                        alt="Aper\u00e7u vid\u00e9o OW Women's Cup"
+                        fill
+                        sizes="(max-width: 768px) 100vw, 720px"
+                        className="object-cover"
+                      />
+                    )}
                     <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition" />
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -473,12 +480,12 @@ function AboutPage({ videoUrl }: AboutPageProps) {
               </div>
             </div>
             <div className="flex-1 relative min-h-[280px] md:min-h-0">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/img/fourplayers.png"
+              <Image
+                src="/img/fourplayers.jpg"
                 alt="L'\u00e9quipe OW Women's Cup"
-                className="absolute inset-0 w-full h-full object-cover"
-                loading="lazy"
+                fill
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-r from-neutral-950/80 via-neutral-950/30 to-transparent md:bg-gradient-to-r md:from-neutral-950 md:via-neutral-950/40 md:to-transparent" />
             </div>

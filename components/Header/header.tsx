@@ -1,5 +1,5 @@
-/* eslint-disable @next/next/no-img-element */
 import React, { JSX } from 'react';
+import Image from 'next/image';
 import Heading from '../Typography/heading';
 import Paragraph from '../Typography/paragraph';
 import Link from 'next/link';
@@ -9,10 +9,13 @@ function Header(): JSX.Element {
 
   return (
     <header className="hero-section relative isolate overflow-hidden">
-      <img
+      <Image
         src="/img/illustra.png"
         alt=""
-        aria-hidden="true"
+        aria-hidden
+        fill
+        priority
+        sizes="100vw"
         className="hero-glow"
       />
 

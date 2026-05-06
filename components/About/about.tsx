@@ -1,5 +1,6 @@
 /* eslint-disable react/no-unescaped-entities */
 import React, { JSX, useEffect, useState } from 'react';
+import Image from 'next/image';
 import Heading from '../Typography/heading';
 import Paragraph from '../Typography/paragraph';
 import Button from '../Buttons/button';
@@ -46,12 +47,12 @@ function About(): JSX.Element {
     >
       <div className="w-full max-w-[1120px] mx-auto flex flex-col items-center justify-between gap-10 min-[1024px]:flex-row min-[1024px]:items-start min-[1024px]:gap-12">
         <div className="relative w-full max-w-[480px] h-[320px] md:h-[420px] min-[1100px]:h-[550px] rounded-[30px] overflow-hidden">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/img/fourplayers.png"
+          <Image
+            src="/img/fourplayers.jpg"
             alt="Joueuses Overwatch"
-            className="absolute inset-0 h-full w-full object-cover md:hidden"
-            loading="lazy"
+            fill
+            sizes="(max-width: 768px) 100vw, 480px"
+            className="object-cover md:hidden"
             draggable={false}
           />
           <div className="absolute inset-0 w-full h-full hidden md:block">
@@ -73,7 +74,7 @@ function About(): JSX.Element {
                 <video
                   className="absolute inset-0 w-full h-full object-cover"
                   src={aboutVideoUrl}
-                  poster="/img/fourplayers.png"
+                  poster="/img/fourplayers.jpg"
                   autoPlay
                   loop
                   muted
