@@ -9,7 +9,7 @@
   },
   {
     "title": "Tournoi",
-    "ref": "/tournament/e8fa740c-d92b-49d8-a654-05a37d0eea3b"
+    "ref": "/tournament/ow-womens-cup-2026"
   },
   {
     "title": "Éditions",
@@ -17,7 +17,7 @@
       { "title": "2025", "ref": "/tournoi" },
       {
         "title": "2026",
-        "ref": "/tournament/e8fa740c-d92b-49d8-a654-05a37d0eea3b",
+        "ref": "/tournament/ow-womens-cup-2026",
         "badge": "soon"
       }
     ]
