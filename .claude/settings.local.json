@@ -76,7 +76,21 @@
       "Bash(find c:Usershirtzdepotconference-websitehooks -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\) ! -path */.next/* ! -path */.history/*)",
       "Bash(find /c/Users/hirtz/depot/conference-website -path ./node_modules -prune -o -type f \\\\\\(-name *middleware* -o -name *auth* \\\\\\) -print)",
       "Bash(npm ls:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(sips --help)",
+      "Bash(sips -g pixelWidth -g pixelHeight /Users/Alicia/Documents/Vincent/conference-website/public/img/illustra.png /Users/Alicia/Documents/Vincent/conference-website/public/img/fourplayers.png /Users/Alicia/Documents/Vincent/conference-website/public/img/sun.png /Users/Alicia/Documents/Vincent/conference-website/public/img/ring.png)",
+      "Bash(ffmpeg -y -i illustra.png -vf \"scale=1280:-1\" -c:v libwebp -quality 78 -compression_level 6 illustra.webp)",
+      "Bash(ffmpeg -encoders)",
+      "Read(//opt/homebrew/**)",
+      "Read(//usr/local/bin/**)",
+      "Bash(sw_vers)",
+      "Bash(sips -s format webp /Users/Alicia/Documents/Vincent/conference-website/public/img/illustra.png --out /tmp/test_illustra.webp)",
+      "Bash(sips -g hasAlpha -g format /Users/Alicia/Documents/Vincent/conference-website/public/img/illustra.png /Users/Alicia/Documents/Vincent/conference-website/public/img/fourplayers.png)",
+      "Bash(cp illustra.png /tmp/illustra.png.bak)",
+      "Bash(cp fourplayers.png /tmp/fourplayers.png.bak)",
+      "Bash(sips --resampleWidth 1280 illustra.png --out illustra.png)",
+      "Bash(sips -s format jpeg -s formatOptions 82 --resampleWidth 1280 fourplayers.png --out fourplayers.jpg)",
+      "WebFetch(domain:pagespeed.web.dev)"
     ]
   }
 }

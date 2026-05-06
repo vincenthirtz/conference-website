@@ -82,11 +82,17 @@
       "Bash(rm -rf /tmp/*)",
       "Bash(rm -f /tmp/*)",
       "Read(//Users/Alicia/.claude/**)",
-      "Bash(date -j -f \"%Y-%m-%d\" \"2026-05-17\" \"+%A %d %B %Y\")"
+      "Bash(date -j -f \"%Y-%m-%d\" \"2026-05-17\" \"+%A %d %B %Y\")",
+      "Bash(lsof -i :3000 -sTCP:LISTEN)",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(git mv *)",
+      "Bash(mv pages/api/teams/\\\\[id\\\\]/members.ts pages/api/teams/\\\\[teamId\\\\]/members.ts)",
+      "Bash(rmdir pages/api/teams/\\\\[id\\\\])"
     ],
     "additionalDirectories": [
       "/Users/Alicia/.claude",
-      "/Users/Alicia/Documents/Vincent/conference-website/pages/api/admin/broadcast"
+      "/Users/Alicia/Documents/Vincent/conference-website/pages/api/admin/broadcast",
+      "/Users/Alicia/Documents/Vincent/conference-website/pages/api/teams"
     ]
   }
 }
