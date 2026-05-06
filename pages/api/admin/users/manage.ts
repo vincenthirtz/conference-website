@@ -56,35 +56,51 @@ async function handler(
   }
 
   if (req.method === 'GET') {
-    const { search, limit = '200', page = '1' } = req.query;
-    const perPage = Math.max(1, Math.min(200, Number(limit) || 200));
-    const pageNum = Math.max(1, Number(page) || 1);
+    const {
+      search,
+      role: roleFilter,
+      limit = '20',
+      offset = '0',
+    } = req.query;
+    const lim = Math.max(1, Math.min(200, Number(limit) || 20));
+    const off = Math.max(0, Number(offset) || 0);
 
-    const { data, error } = await supabaseAdmin.auth.admin.listUsers({
-      page: pageNum,
-      perPage,
-    });
-
-    if (error) {
-      logger.error('[admin/users/manage] list error:', error);
-      return res.status(500).json({ error: 'Failed to load users.' });
+    // Aggregate every auth user — listUsers paginates at perPage max 1000.
+    // Loop until we get a short page (or empty), with a safety cap.
+    type AuthUser = Awaited<
+      ReturnType<typeof supabaseAdmin.auth.admin.listUsers>
+    >['data']['users'][number];
+    const allUsers: AuthUser[] = [];
+    const perPage = 200;
+    for (let pageNum = 1; pageNum <= 50; pageNum++) {
+      const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+        page: pageNum,
+        perPage,
+      });
+      if (error) {
+        logger.error('[admin/users/manage] list error:', error);
+        return res.status(500).json({ error: 'Failed to load users.' });
+      }
+      const batch = data?.users ?? [];
+      if (!batch.length) break;
+      allUsers.push(...batch);
+      if (batch.length < perPage) break;
     }
 
-    const items =
-      data?.users?.map((u) => ({
-        id: u.id,
-        email: u.email ?? null,
-        role:
-          ((u.user_metadata as any)?.role as string | null)?.toLowerCase() ??
-          null,
-        display_name: (u.user_metadata as any)?.display_name ?? null,
-        created_at: u.created_at ?? null,
-      })) ?? [];
+    const items: UserLite[] = allUsers.map((u) => ({
+      id: u.id,
+      email: u.email ?? null,
+      role:
+        ((u.user_metadata as any)?.role as string | null)?.toLowerCase() ??
+        null,
+      display_name: (u.user_metadata as any)?.display_name ?? null,
+      created_at: u.created_at ?? null,
+    }));
 
     // Auto-fix roles with wrong casing in user_metadata
     for (const item of items) {
       const raw = (
-        data?.users?.find((u) => u.id === item.id)?.user_metadata as any
+        allUsers.find((u) => u.id === item.id)?.user_metadata as any
       )?.role;
       if (typeof raw === 'string' && raw !== raw.toLowerCase()) {
         await supabaseAdmin.auth.admin.updateUserById(item.id, {
@@ -128,26 +144,41 @@ async function handler(
       }
     }
 
-    const filtered = items
-      .map((u) => ({
-        ...u,
-        team_memberships: teamMembershipsMap.get(u.id) || [],
-      }))
-      .filter((u) => {
-        if (!search || Array.isArray(search)) return true;
+    const enriched = items.map((u) => ({
+      ...u,
+      team_memberships: teamMembershipsMap.get(u.id) || [],
+    }));
+
+    const filtered = enriched.filter((u) => {
+      if (roleFilter && typeof roleFilter === 'string' && roleFilter.trim()) {
+        if ((u.role || '').toLowerCase() !== roleFilter.toLowerCase()) {
+          return false;
+        }
+      }
+      if (search && typeof search === 'string' && search.trim()) {
         const term = search.toLowerCase();
         const battleTagMatch = u.team_memberships?.some((tm) =>
           (tm.battle_tag || '').toLowerCase().includes(term)
         );
-        return (
+        const matched =
           (u.email || '').toLowerCase().includes(term) ||
           (u.display_name || '').toLowerCase().includes(term) ||
           (u.role || '').toLowerCase().includes(term) ||
-          battleTagMatch
-        );
-      });
+          battleTagMatch;
+        if (!matched) return false;
+      }
+      return true;
+    });
 
-    return res.status(200).json({ items: filtered, total: filtered.length });
+    // Stable order: most recent first
+    filtered.sort((a, b) => {
+      const ta = a.created_at ? Date.parse(a.created_at) : 0;
+      const tb = b.created_at ? Date.parse(b.created_at) : 0;
+      return tb - ta;
+    });
+
+    const paged = filtered.slice(off, off + lim);
+    return res.status(200).json({ items: paged, total: filtered.length });
   }
 
   if (req.method === 'PATCH') {
