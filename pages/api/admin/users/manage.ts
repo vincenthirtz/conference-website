@@ -20,6 +20,7 @@ type UserLite = {
   role: string | null;
   display_name: string | null;
   created_at: string | null;
+  last_sign_in_at: string | null;
   team_memberships?: TeamMembership[];
 };
 
@@ -95,6 +96,8 @@ async function handler(
         null,
       display_name: (u.user_metadata as any)?.display_name ?? null,
       created_at: u.created_at ?? null,
+      last_sign_in_at: (u as { last_sign_in_at?: string | null })
+        .last_sign_in_at ?? null,
     }));
 
     // Auto-fix roles with wrong casing in user_metadata
@@ -301,6 +304,8 @@ async function handler(
           role: (u.user_metadata as any)?.role ?? null,
           display_name: (u.user_metadata as any)?.display_name ?? null,
           created_at: u.created_at ?? null,
+          last_sign_in_at:
+            (u as { last_sign_in_at?: string | null }).last_sign_in_at ?? null,
         },
       });
     }
@@ -391,6 +396,8 @@ async function handler(
       email: u.email ?? null,
       role: (u.user_metadata as any)?.role ?? null,
       display_name: (u.user_metadata as any)?.display_name ?? null,
+      last_sign_in_at:
+        (u as { last_sign_in_at?: string | null }).last_sign_in_at ?? null,
       created_at: u.created_at ?? null,
     };
 

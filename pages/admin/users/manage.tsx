@@ -25,6 +25,7 @@ type UserLite = {
   role: string | null;
   display_name: string | null;
   created_at: string | null;
+  last_sign_in_at: string | null;
   team_memberships?: TeamMembership[];
 };
 
@@ -524,6 +525,16 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                         )}
                         <span>•</span>
                         <span>Inscrit le {formatDate(u.created_at)}</span>
+                        <span>•</span>
+                        <span
+                          className={
+                            u.last_sign_in_at ? '' : 'text-neutral-500 italic'
+                          }
+                        >
+                          {u.last_sign_in_at
+                            ? `Dernière connexion ${formatDate(u.last_sign_in_at)}`
+                            : 'Jamais connecté'}
+                        </span>
                       </div>
                       {/* Team memberships */}
                       {u.team_memberships && u.team_memberships.length > 0 && (
