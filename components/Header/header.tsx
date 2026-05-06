@@ -15,7 +15,8 @@ function Header(): JSX.Element {
         aria-hidden
         fill
         priority
-        sizes="100vw"
+        sizes="(max-width: 768px) 640px, (max-width: 1280px) 1024px, 1024px"
+        quality={60}
         className="hero-glow"
       />
 
