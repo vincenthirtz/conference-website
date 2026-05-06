@@ -174,7 +174,7 @@ function Footer(): JSX.Element {
           </div>
         </div>
 
-        <div className="flex flex-col items-center gap-3 border-t border-white/5 pt-6 text-xs text-gray-500 md:flex-row md:justify-between">
+        <div className="flex flex-col items-center gap-3 border-t border-white/5 pt-6 text-xs text-gray-400 md:flex-row md:justify-between">
           <span className="text-center md:text-left">
             Association WOMEN&apos;S CUP &mdash; Tous droits réservés &mdash;
             Fait avec ❤️ par{' '}
@@ -182,7 +182,7 @@ function Footer(): JSX.Element {
               href="https://www.twitch.tv/arukdo"
               target="_blank"
               rel="noreferrer"
-              className="text-gray-400 hover:text-white transition-colors"
+              className="text-gray-300 underline underline-offset-2 hover:text-white transition-colors"
             >
               Arukdo
             </a>
