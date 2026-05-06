@@ -137,6 +137,8 @@ function ActualitesPage({ patchNotes, news }: ActualitesProps) {
                             src={hero.icon}
                             alt={hero.name}
                             title={hero.name}
+                            loading="lazy"
+                            decoding="async"
                             className="h-7 w-7 rounded-full border-2 border-neutral-900 object-contain bg-white/10"
                           />
                         ) : null

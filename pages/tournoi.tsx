@@ -409,6 +409,8 @@ function Tournoi() {
             className="w-7 h-7 rounded border-2"
             style={{ borderColor: color }}
             alt={team.name}
+            loading="lazy"
+            decoding="async"
           />
         ) : (
           <div

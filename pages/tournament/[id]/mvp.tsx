@@ -1,7 +1,7 @@
 // pages/tournament/[id]/mvp.tsx
 // Page publique : leaderboard MVP du tournoi (agregation des winners de match_mvp_polls).
 
-import { GetServerSideProps } from 'next';
+import { GetStaticPaths, GetStaticProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import Heading from '@/components/Typography/heading';
@@ -38,10 +38,14 @@ type Props = {
   perMatch: PerMatchEntry[];
 };
 
-export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
-  const { id } = ctx.query;
-  if (!id || Array.isArray(id)) return { notFound: true };
-  if (!supabaseAdmin) return { notFound: true };
+export const getStaticPaths: GetStaticPaths = async () => {
+  return { paths: [], fallback: 'blocking' };
+};
+
+export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
+  const id = ctx.params?.id;
+  if (!id || Array.isArray(id)) return { notFound: true, revalidate: 60 };
+  if (!supabaseAdmin) return { notFound: true, revalidate: 60 };
 
   // 1) Charger le tournoi (verifier visibilite)
   const { data: tournament } = await supabaseAdmin
@@ -50,7 +54,8 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     .eq('id', id)
     .maybeSingle();
 
-  if (!tournament || !tournament.is_public) return { notFound: true };
+  if (!tournament || !tournament.is_public)
+    return { notFound: true, revalidate: 60 };
 
   // 2) Charger les matchs termines + leur poll MVP
   const { data: matches } = await supabaseAdmin
@@ -175,6 +180,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       leaderboard,
       perMatch,
     },
+    revalidate: 60,
   };
 };
 

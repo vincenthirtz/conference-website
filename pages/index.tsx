@@ -187,7 +187,7 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
       partners,
       countdownTarget,
     },
-    revalidate: 300,
+    revalidate: 900,
   };
 };
 

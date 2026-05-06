@@ -1,6 +1,6 @@
 // pages/tournament/[id]/stats.tsx
 
-import { GetServerSideProps } from 'next';
+import { GetStaticPaths, GetStaticProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -63,10 +63,14 @@ type Props = {
   teamStats: TeamStat[];
 };
 
-export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
-  const { id } = ctx.query;
+export const getStaticPaths: GetStaticPaths = async () => {
+  return { paths: [], fallback: 'blocking' };
+};
+
+export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
+  const id = ctx.params?.id;
   if (!id || Array.isArray(id)) {
-    return { notFound: true };
+    return { notFound: true, revalidate: 60 };
   }
 
   // 1) Tournoi
@@ -77,11 +81,11 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     .single();
 
   if (tErr || !tournament) {
-    return { notFound: true };
+    return { notFound: true, revalidate: 60 };
   }
 
   if (tournament.visibility && tournament.visibility !== 'public') {
-    return { notFound: true };
+    return { notFound: true, revalidate: 60 };
   }
 
   // 2) Récupérer les équipes engagées via stage_teams
@@ -129,6 +133,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
         tournament: tournament as Tournament,
         teamStats: [],
       },
+      revalidate: 60,
     };
   }
 
@@ -169,6 +174,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       tournament: tournament as Tournament,
       teamStats,
     },
+    revalidate: 60,
   };
 };
 

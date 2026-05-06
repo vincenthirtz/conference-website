@@ -1,6 +1,6 @@
 // pages/tournament/[id].tsx
 
-import { GetServerSideProps } from 'next';
+import { GetStaticPaths, GetStaticProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useMemo } from 'react';
@@ -92,12 +92,16 @@ function formatStageType(stageType: string | null | undefined) {
   return STAGE_TYPES[stageType] || stageType;
 }
 
-export const getServerSideProps: GetServerSideProps<
-  TournamentPageProps
-> = async (ctx) => {
-  const { id: rawId } = ctx.query;
+export const getStaticPaths: GetStaticPaths = async () => {
+  return { paths: [], fallback: 'blocking' };
+};
+
+export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
+  ctx
+) => {
+  const rawId = ctx.params?.id;
   if (!rawId || Array.isArray(rawId)) {
-    return { notFound: true };
+    return { notFound: true, revalidate: 60 };
   }
 
   const asString = String(rawId);
@@ -135,12 +139,12 @@ export const getServerSideProps: GetServerSideProps<
   }
 
   if (!tournament) {
-    return { notFound: true };
+    return { notFound: true, revalidate: 60 };
   }
 
   // Si visibilité non publique, tu peux choisir de renvoyer 404
   if (tournament.visibility && tournament.visibility !== 'public') {
-    return { notFound: true };
+    return { notFound: true, revalidate: 60 };
   }
 
   const tournamentId = tournament.id;
@@ -203,12 +207,6 @@ export const getServerSideProps: GetServerSideProps<
   });
   const teams = Array.from(teamMap.values());
 
-  // Cache SSR response for 60s, serve stale for 120s while revalidating
-  ctx.res.setHeader(
-    'Cache-Control',
-    'public, s-maxage=60, stale-while-revalidate=120'
-  );
-
   return {
     props: {
       tournament,
@@ -216,6 +214,7 @@ export const getServerSideProps: GetServerSideProps<
       teams,
       matches,
     },
+    revalidate: 60,
   };
 };
 
@@ -699,6 +698,8 @@ export default function TournamentPage({
                           <img
                             src={team.logo_url}
                             alt={team.name}
+                            loading="lazy"
+                            decoding="async"
                             className="w-full h-full object-cover"
                           />
                         ) : (

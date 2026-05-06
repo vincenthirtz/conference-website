@@ -1,6 +1,6 @@
 // pages/tournament/[id]/maps.tsx
 
-import { GetServerSideProps } from 'next';
+import { GetStaticPaths, GetStaticProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import Heading from '@/components/Typography/heading';
@@ -83,10 +83,14 @@ type Props = {
   hasVetoData: boolean;
 };
 
-export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
-  const { id } = ctx.query;
+export const getStaticPaths: GetStaticPaths = async () => {
+  return { paths: [], fallback: 'blocking' };
+};
+
+export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
+  const id = ctx.params?.id;
   if (!id || Array.isArray(id)) {
-    return { notFound: true };
+    return { notFound: true, revalidate: 60 };
   }
 
   // 1) Tournoi
@@ -97,11 +101,11 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     .single();
 
   if (tErr || !tournament) {
-    return { notFound: true };
+    return { notFound: true, revalidate: 60 };
   }
 
   if (tournament.visibility && tournament.visibility !== 'public') {
-    return { notFound: true };
+    return { notFound: true, revalidate: 60 };
   }
 
   // 2) Matches du tournoi (on exclut les annulés & bye)
@@ -176,6 +180,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       maps,
       hasVetoData,
     },
+    revalidate: 60,
   };
 };
 

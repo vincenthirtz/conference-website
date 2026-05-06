@@ -1,9 +1,9 @@
 import Head from 'next/head';
-import { GetServerSideProps } from 'next';
+import { GetStaticPaths, GetStaticProps } from 'next';
 import Heading from '@/components/Typography/heading';
 import Button from '@/components/Buttons/button';
 import Link from 'next/link';
-import { supabaseAdmin, getServerClient } from '@/utils/supabase';
+import { supabaseAdmin } from '@/utils/supabase';
 import { useEffect, useState, Fragment, type ReactNode } from 'react';
 
 import { logger } from '../../utils/logger';
@@ -62,17 +62,19 @@ type NewsPageProps = {
   error?: string | null;
 };
 
-export const getServerSideProps: GetServerSideProps<NewsPageProps> = async (
+export const getStaticPaths: GetStaticPaths = async () => {
+  return { paths: [], fallback: 'blocking' };
+};
+
+export const getStaticProps: GetStaticProps<NewsPageProps> = async (
   context
 ) => {
   const slug = context.params?.slug;
-  if (!slug || Array.isArray(slug)) {
-    return { notFound: true, props: { title: '', content: '' } };
+  if (!slug || Array.isArray(slug) || !supabaseAdmin) {
+    return { notFound: true, revalidate: 60 };
   }
 
-  const client = supabaseAdmin ?? getServerClient(context.req, context.res);
-
-  const { data, error } = await client
+  const { data, error } = await supabaseAdmin
     .from('news')
     .select('*')
     .eq('slug', slug)
@@ -86,11 +88,12 @@ export const getServerSideProps: GetServerSideProps<NewsPageProps> = async (
         content: '',
         error: 'Impossible de charger cette news.',
       },
+      revalidate: 60,
     };
   }
 
   if (!data) {
-    return { notFound: true, props: { title: '', content: '' } };
+    return { notFound: true, revalidate: 60 };
   }
 
   return {
@@ -106,6 +109,7 @@ export const getServerSideProps: GetServerSideProps<NewsPageProps> = async (
       updatedAt: data.updated_at || null,
       newsId: data.id || null,
     },
+    revalidate: 300,
   };
 };
 

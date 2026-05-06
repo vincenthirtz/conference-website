@@ -63,7 +63,7 @@ export const getStaticProps: GetStaticProps<
     props: {
       tournaments: (data || []) as Tournament[],
     },
-    revalidate: 300, // Rebuild every 5 minutes
+    revalidate: 600, // Rebuild every 10 minutes
   };
 };
 
