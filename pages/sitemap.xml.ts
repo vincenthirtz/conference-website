@@ -41,6 +41,17 @@ type TournamentItem = {
   updated_at?: string | null;
 };
 
+type TeamItem = {
+  slug: string;
+  updated_at?: string | null;
+};
+
+type MatchItem = {
+  id: string;
+  completed_at?: string | null;
+  updated_at?: string | null;
+};
+
 function getBaseUrl(req: Parameters<GetServerSideProps>[0]['req']) {
   const env = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '');
   if (env) return env;
@@ -63,7 +74,9 @@ function escapeXml(str: string): string {
 function generateSiteMap(
   baseUrl: string,
   newsItems: NewsItem[],
-  tournaments: TournamentItem[]
+  tournaments: TournamentItem[],
+  teams: TeamItem[],
+  matches: MatchItem[]
 ) {
   const today = new Date().toISOString();
 
@@ -113,11 +126,41 @@ function generateSiteMap(
     })
     .join('\n');
 
+  // Dynamic team pages
+  const teamUrls = teams
+    .map((team) => {
+      const loc = escapeXml(`${baseUrl}/team/${team.slug}`);
+      const lastmod = team.updated_at || today;
+      return `  <url>
+    <loc>${loc}</loc>
+    <lastmod>${new Date(lastmod).toISOString()}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>`;
+    })
+    .join('\n');
+
+  // Dynamic match pages (completed matches only)
+  const matchUrls = matches
+    .map((match) => {
+      const loc = escapeXml(`${baseUrl}/match/${match.id}`);
+      const lastmod = match.updated_at || match.completed_at || today;
+      return `  <url>
+    <loc>${loc}</loc>
+    <lastmod>${new Date(lastmod).toISOString()}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>`;
+    })
+    .join('\n');
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${staticUrls}
 ${newsUrls}
 ${tournamentUrls}
+${teamUrls}
+${matchUrls}
 </urlset>`;
 }
 
@@ -156,7 +199,45 @@ export const getServerSideProps: GetServerSideProps = async ({ res, req }) => {
     logger.error('[sitemap] Error fetching tournaments:', err);
   }
 
-  const sitemap = generateSiteMap(baseUrl, newsItems, tournaments);
+  // Fetch teams with a public slug
+  let teams: TeamItem[] = [];
+  try {
+    const { data } = await client
+      .from('teams')
+      .select('slug, updated_at')
+      .not('slug', 'is', null)
+      .order('updated_at', { ascending: false })
+      .limit(500);
+
+    teams = (data || [])
+      .filter((t) => Boolean(t.slug))
+      .map((t) => ({ slug: t.slug as string, updated_at: t.updated_at }));
+  } catch (err) {
+    logger.error('[sitemap] Error fetching teams:', err);
+  }
+
+  // Fetch completed matches (the only ones with stable archive value)
+  let matches: MatchItem[] = [];
+  try {
+    const { data } = await client
+      .from('matches')
+      .select('id, completed_at, updated_at')
+      .eq('status', 'completed')
+      .order('completed_at', { ascending: false })
+      .limit(500);
+
+    matches = (data || []) as MatchItem[];
+  } catch (err) {
+    logger.error('[sitemap] Error fetching matches:', err);
+  }
+
+  const sitemap = generateSiteMap(
+    baseUrl,
+    newsItems,
+    tournaments,
+    teams,
+    matches
+  );
 
   res.setHeader('Content-Type', 'application/xml');
   res.setHeader(

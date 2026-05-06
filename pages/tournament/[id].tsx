@@ -314,12 +314,12 @@ export default function TournamentPage({
                   'https://schema.org/OnlineEventAttendanceMode',
                 location: {
                   '@type': 'VirtualLocation',
-                  url: `https://owwomenscup.com/tournament/${tournament.slug || tournament.id}`,
+                  url: `https://owwomenscup.fr/tournament/${tournament.slug || tournament.id}`,
                 },
                 organizer: {
                   '@type': 'Organization',
                   name: "OW Women's Cup",
-                  url: 'https://owwomenscup.com',
+                  url: 'https://owwomenscup.fr',
                 },
                 sport: tournament.game || 'Overwatch',
                 inLanguage: 'fr-FR',

@@ -12,10 +12,11 @@ export type SeoProps = {
 };
 
 const SITE_NAME = "OW Women's Cup";
-const DEFAULT_TITLE = `${SITE_NAME} – Tournoi Overwatch 100% féminin`;
+const DEFAULT_TITLE = `${SITE_NAME} – Tournoi Overwatch féminin & esport 100% féminin`;
 const DEFAULT_DESCRIPTION =
   "Tournoi Overwatch et communauté 100% féminine : staff inclusif, matchs commentés et actions pour rendre l'esport plus accessible.";
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || '';
+const CANONICAL_URL = BASE_URL || 'https://owwomenscup.fr';
 const DEFAULT_IMAGE = '/img/logos/2025-logo.png';
 
 // JSON-LD Organization Schema
@@ -23,10 +24,22 @@ const organizationSchema = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
   name: SITE_NAME,
-  url: BASE_URL || 'https://owwomenscup.fr',
-  logo: `${BASE_URL || 'https://owwomenscup.fr'}/img/logos/2025-logo.png`,
+  url: CANONICAL_URL,
+  logo: `${CANONICAL_URL}/img/logos/2025-logo.png`,
   description: DEFAULT_DESCRIPTION,
   foundingDate: '2025',
+  foundingLocation: {
+    '@type': 'Place',
+    address: { '@type': 'PostalAddress', addressCountry: 'FR' },
+  },
+  address: { '@type': 'PostalAddress', addressCountry: 'FR' },
+  areaServed: { '@type': 'Country', name: 'France' },
+  knowsAbout: [
+    'Overwatch',
+    'Esport féminin',
+    'Tournoi esport',
+    'Inclusion dans le jeu vidéo',
+  ],
   sameAs: [
     'https://twitter.com/OWWomensCup',
     'https://discord.gg/gERSsjC3Vd',
@@ -45,7 +58,7 @@ const websiteSchema = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
   name: SITE_NAME,
-  url: BASE_URL || 'https://owwomenscup.fr',
+  url: CANONICAL_URL,
   description: DEFAULT_DESCRIPTION,
   inLanguage: 'fr-FR',
   publisher: {
@@ -77,6 +90,7 @@ export default function DefaultSeo({
   const metaTitle = title ? `${title} | ${SITE_NAME}` : DEFAULT_TITLE;
   const metaDescription = description || DEFAULT_DESCRIPTION;
   const canonical = BASE_URL ? `${BASE_URL}${pathname}` : undefined;
+  const hasExplicitImage = Boolean(image);
   const ogImage = toAbsoluteUrl(image || DEFAULT_IMAGE);
 
   // BreadcrumbList JSON-LD (all pages except homepage)
@@ -115,6 +129,12 @@ export default function DefaultSeo({
       <title>{metaTitle}</title>
       <meta name="description" content={metaDescription} />
       {canonical && <link rel="canonical" href={canonical} />}
+      {canonical && (
+        <link rel="alternate" hrefLang="fr-FR" href={canonical} />
+      )}
+      {canonical && (
+        <link rel="alternate" hrefLang="x-default" href={canonical} />
+      )}
 
       {/* Robots directive */}
       {noindex ? (
@@ -132,8 +152,12 @@ export default function DefaultSeo({
       {canonical && <meta property="og:url" content={canonical} />}
       {ogImage && <meta property="og:image" content={ogImage} />}
       {ogImage && <meta property="og:image:alt" content={title || SITE_NAME} />}
-      <meta property="og:image:width" content="1200" />
-      <meta property="og:image:height" content="630" />
+      {hasExplicitImage && (
+        <>
+          <meta property="og:image:width" content="1200" />
+          <meta property="og:image:height" content="630" />
+        </>
+      )}
 
       {/* Article specific Open Graph */}
       {type === 'article' && publishedTime && (

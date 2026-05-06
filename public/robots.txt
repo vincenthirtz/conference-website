@@ -10,4 +10,4 @@ Disallow: /api/
 Disallow: /_next/
 
 # Sitemap location
-Sitemap: https://owwomenscup.com/sitemap.xml
+Sitemap: https://owwomenscup.fr/sitemap.xml

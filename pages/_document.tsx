@@ -31,6 +31,14 @@ export default class MyDocument extends Document<MyDocumentProps> {
             href="/api/news/rss"
           />
 
+          {/* Sitemap discovery */}
+          <link
+            rel="sitemap"
+            type="application/xml"
+            title="Sitemap"
+            href="/sitemap.xml"
+          />
+
           {/* Apple touch icon and web app meta */}
           <link
             rel="apple-touch-icon"
