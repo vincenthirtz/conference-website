@@ -8,12 +8,14 @@ import {
   TwitchIcon,
   YouTubeIcon,
   RssIcon,
+  DonationIcon,
 } from '@/components/Icons';
 
 type SocialLink = {
   name: string;
   href: string;
   Icon: (props: Readonly<SVGTypes>) => JSX.Element;
+  hoverColor: string;
 };
 
 const SOCIALS: SocialLink[] = [
@@ -21,72 +23,112 @@ const SOCIALS: SocialLink[] = [
     name: 'TikTok',
     href: 'https://www.tiktok.com/@ow_womenscup',
     Icon: TikTokIcon,
+    hoverColor: 'group-hover:text-[#FF0050]',
   },
   {
     name: 'Instagram',
     href: 'https://www.instagram.com/womenscup_asso',
     Icon: InstagramIcon,
+    hoverColor: 'group-hover:text-[#E1306C]',
   },
   {
     name: 'Twitch',
     href: 'https://www.twitch.tv/womens_cup',
     Icon: TwitchIcon,
+    hoverColor: 'group-hover:text-[#9146FF]',
   },
   {
     name: 'YouTube',
     href: 'https://www.youtube.com/@owwomenscup',
     Icon: YouTubeIcon,
+    hoverColor: 'group-hover:text-[#FF0000]',
   },
-  { name: 'RSS', href: '/api/news/rss', Icon: RssIcon },
+  {
+    name: 'RSS',
+    href: '/api/news/rss',
+    Icon: RssIcon,
+    hoverColor: 'group-hover:text-[#F26522]',
+  },
 ];
 
 function FloatingSocials(): JSX.Element {
   return (
-    <div className="fixed left-5 top-1/2 -translate-y-1/2 z-40 hidden lg:flex flex-col gap-1.5">
-      <div className="flex flex-col gap-1.5 rounded-2xl bg-white/[0.03] backdrop-blur-md border border-white/[0.08] p-2 shadow-xl shadow-black/20">
-        {SOCIALS.map(({ name, href, Icon }) => (
-          <a
-            key={name}
-            href={href}
-            target="_blank"
-            rel="noreferrer"
-            title={name}
-            className="group relative w-10 h-10 flex items-center justify-center rounded-xl text-gray-500 hover:text-white hover:bg-white/10 transition-all duration-200"
+    <div className="fixed left-5 top-1/2 -translate-y-1/2 z-40 hidden lg:block">
+      <div className="relative">
+        {/* Gradient glow */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -inset-1 rounded-3xl bg-gradient-to-b from-purple-500/25 via-pink-500/15 to-transparent opacity-70 blur-lg"
+        />
+
+        {/* Container */}
+        <div className="relative flex flex-col rounded-2xl border border-white/10 bg-white/[0.04] p-2 shadow-2xl shadow-black/30 backdrop-blur-xl">
+          {/* Socials */}
+          <div className="flex flex-col gap-1">
+            {SOCIALS.map(({ name, href, Icon, hoverColor }) => (
+              <a
+                key={name}
+                href={href}
+                target="_blank"
+                rel="noreferrer"
+                title={name}
+                aria-label={name}
+                className="group relative flex h-10 w-10 items-center justify-center rounded-xl text-gray-400 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/[0.08]"
+              >
+                <Icon
+                  className={`h-[18px] w-[18px] transition-all duration-200 group-hover:scale-110 ${hoverColor}`}
+                  fill="currentColor"
+                />
+                <span className="pointer-events-none absolute left-full ml-3 -translate-x-2 whitespace-nowrap rounded-lg border border-white/10 bg-neutral-900/95 px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg backdrop-blur-md transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100">
+                  {name}
+                  <span
+                    aria-hidden="true"
+                    className="absolute right-full top-1/2 -translate-y-1/2 border-y-4 border-r-4 border-y-transparent border-r-neutral-900/95"
+                  />
+                </span>
+              </a>
+            ))}
+          </div>
+
+          {/* Divider */}
+          <div
+            aria-hidden="true"
+            className="my-2 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent"
+          />
+
+          {/* Donate */}
+          <Link
+            href="/don"
+            title="Faire un don"
+            aria-label="Faire un don"
+            className="group relative flex h-10 w-10 items-center justify-center rounded-xl text-pink-300 transition-all duration-200 hover:-translate-y-0.5 hover:bg-pink-500/15"
           >
-            <Icon
-              className="w-[18px] h-[18px] transition-transform duration-200 group-hover:scale-110"
+            <DonationIcon
+              className="h-[18px] w-[18px] transition-all duration-200 group-hover:scale-110 group-hover:text-pink-400"
               fill="currentColor"
             />
-            <span className="pointer-events-none absolute left-full ml-3 px-2.5 py-1 rounded-lg bg-white/10 backdrop-blur-md border border-white/10 text-xs font-medium text-white whitespace-nowrap opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200">
-              {name}
-            </span>
-          </a>
-        ))}
-      </div>
-      <div className="group relative mt-1.5 flex flex-col items-center gap-1 rounded-2xl bg-white/[0.03] backdrop-blur-md border border-white/[0.08] p-2 shadow-xl shadow-black/20 hover:bg-white/10 transition-all duration-200 cursor-pointer overflow-visible">
-        <Link href="/don" title="Faire un don">
-          <Image
-            src="/images/qr.png"
-            alt="QR code pour faire un don"
-            width={40}
-            height={40}
-            className="rounded"
-          />
-        </Link>
-        <span className="text-[9px] font-medium text-gray-400">
-          Faire un Don
-        </span>
-        <div className="pointer-events-none absolute left-full ml-3 bottom-0 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 group-hover:pointer-events-auto transition-all duration-200 w-max rounded-2xl bg-neutral-900/95 backdrop-blur-md border border-white/10 p-4 shadow-2xl">
-          <Image
-            src="/images/qr.png"
-            alt="QR code pour faire un don"
-            width={128}
-            height={128}
-            className="rounded-lg"
-          />
-          <p className="mt-2 text-center text-xs font-medium text-gray-300">
-            Scannez ce QR code avec votre téléphone
-          </p>
+
+            {/* QR popover on hover */}
+            <div className="pointer-events-none absolute bottom-0 left-full ml-3 w-max -translate-x-2 rounded-2xl border border-white/10 bg-neutral-900/95 p-4 opacity-0 shadow-2xl backdrop-blur-md transition-all duration-200 group-hover:pointer-events-auto group-hover:translate-x-0 group-hover:opacity-100">
+              <p className="mb-2 text-center text-sm font-semibold text-white">
+                Faire un don
+              </p>
+              <Image
+                src="/images/qr.png"
+                alt="QR code pour faire un don"
+                width={128}
+                height={128}
+                className="rounded-lg"
+              />
+              <p className="mt-2 text-center text-xs text-gray-400">
+                Scanne avec ton téléphone
+              </p>
+              <span
+                aria-hidden="true"
+                className="absolute right-full top-1/2 -translate-y-1/2 border-y-4 border-r-4 border-y-transparent border-r-neutral-900/95"
+              />
+            </div>
+          </Link>
         </div>
       </div>
     </div>
