@@ -246,9 +246,8 @@ function Home({
 }
 
 const homeSeo: SeoProps = {
-  title: "OW Women's Cup 2026",
   description:
-    "Tournoi Overwatch 100% féminin : cast, équipes, inscriptions et infos clés de l'édition 2026 de l'OW Women's Cup.",
+    "Tournoi Overwatch 100% féminin : suis l'édition 2026 — équipes, casts, inscriptions et calendrier des matchs en direct.",
 };
 
 Home.seo = homeSeo;

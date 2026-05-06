@@ -460,7 +460,7 @@ function EspaceCapitainePage() {
 }
 
 const espaceCapitaineSeo: SeoProps = {
-  title: 'Espace capitaine',
+  title: 'Espace capitaine — gérer ton équipe',
   description:
     "Présentation de l'espace capitaine OW Women's Cup : roster, recrutement, scrims, messagerie et transferts pour gérer ton équipe en tournoi.",
 };

@@ -325,9 +325,9 @@ function ActualitesPage({ patchNotes, news }: ActualitesProps) {
 }
 
 const actualitesSeo: SeoProps = {
-  title: 'Actualités Overwatch',
+  title: 'Actualités Overwatch & esport féminin',
   description:
-    "Dernières actualités, patch notes et mises à jour d'Overwatch par Blizzard.",
+    "Patch notes Overwatch, news Blizzard et actualités de l'OW Women's Cup : suis l'actu du tournoi et de l'esport 100% féminin.",
 };
 
 ActualitesPage.seo = actualitesSeo;

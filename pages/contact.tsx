@@ -192,7 +192,7 @@ function ContactPage() {
 }
 
 const contactSeo: SeoProps = {
-  title: 'Contact',
+  title: 'Contact — équipes, staff & partenariats',
   description:
     "Contacte l'association Women's Cup : email, Discord et formulaire pour les demandes d'équipes, de staff ou de partenariats.",
 };

@@ -307,7 +307,7 @@ function PartnersPage({ partners }: PartnersPageProps) {
 }
 
 const partnersSeo: SeoProps = {
-  title: "Partenaires OW Women's Cup 2026",
+  title: 'Partenaires & sponsors — édition 2026',
   description:
     "Découvrez les catégories de soutien de la prochaine édition de l'OW Women's Cup : super partenaire titre, partenaires majeurs et partenaires culturels.",
 };

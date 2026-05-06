@@ -846,7 +846,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 };
 
 const associationSeo: SeoProps = {
-  title: "L'association Women's Cup",
+  title: "L'association — staff bénévole de l'esport féminin",
   description:
     "D\u00e9couvre l'\u00e9quipe qui organise le tournoi Overwatch f\u00e9minin OW Women's Cup : missions, engagements et p\u00f4les b\u00e9n\u00e9voles.",
 };

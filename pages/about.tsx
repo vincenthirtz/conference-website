@@ -570,7 +570,7 @@ function AboutPage({ videoUrl }: AboutPageProps) {
 }
 
 const aboutSeo: SeoProps = {
-  title: "\u00c0 propos \u2013 OW Women's Cup 2026",
+  title: '\u00c0 propos \u2014 notre mission',
   description:
     "D\u00e9couvrez l'OW Women's Cup, tournoi Overwatch 100% f\u00e9minin : notre mission, nos valeurs et comment participer.",
 };

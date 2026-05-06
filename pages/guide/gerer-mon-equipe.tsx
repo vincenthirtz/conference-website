@@ -264,7 +264,7 @@ function GuidePage(): JSX.Element {
 }
 
 const guideSeo: SeoProps = {
-  title: 'Gérer mon équipe — guide capitaine | OW Women’s Cup',
+  title: 'Gérer mon équipe — guide capitaine',
   description:
     "Aperçu pas-à-pas de l'espace capitaine OW Women's Cup : inscription d'équipe, candidatures, roster, messagerie, scrims et check-in.",
 };

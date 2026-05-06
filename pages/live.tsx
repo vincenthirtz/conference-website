@@ -49,7 +49,7 @@ function LivePage({ channels }: Props) {
 }
 
 const liveSeo: SeoProps = {
-  title: "Live | OW Women's Cup 2026",
+  title: 'Live — Twitch & casts officiels',
   description:
     "Retrouvez nos chaînes partenaires, casts et analyses en direct pour l'OW Women's Cup 2026.",
 };

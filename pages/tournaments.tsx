@@ -356,7 +356,7 @@ function TournamentCard({ tournament, status }: TournamentCardProps) {
 }
 
 const tournamentsSeo: SeoProps = {
-  title: 'Tournois',
+  title: 'Tournois Overwatch féminins — toutes les éditions',
   description:
     "Découvrez tous les tournois OW Women's Cup : passés, en cours et à venir. Brackets, résultats et équipes.",
 };

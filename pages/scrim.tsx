@@ -170,7 +170,7 @@ function ScrimPage({ teams }: Props) {
 }
 
 const scrimSeo: SeoProps = {
-  title: "Scrims | OW Women's Cup",
+  title: 'Proposer un scrim',
   description:
     'Propose un scrim à une équipe de l’OW Women’s Cup. Formulaire ouvert, pas besoin de compte — le capitaine te recontactera directement.',
 };

@@ -467,7 +467,7 @@ function Timeline2026Page({ matches }: Props) {
 }
 
 const timelineSeo: SeoProps = {
-  title: 'Timeline 2026',
+  title: 'Timeline 2026 — calendrier du tournoi',
   description:
     "Feuille de route OW Women's Cup 2026 : journée contre la transphobie, préparation estivale, calendrier des matchs et grandes finales.",
 };
