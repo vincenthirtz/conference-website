@@ -158,5 +158,16 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
     return res.status(500).json({ error: 'Failed to create the article.' });
   }
 
+  if (status === 'published') {
+    const paths = ['/', '/actualites', `/news/${data.slug}`];
+    await Promise.all(
+      paths.map((path) =>
+        res.revalidate(path).catch((err) => {
+          logger.error(`[news] revalidate ${path} failed`, err);
+        })
+      )
+    );
+  }
+
   return res.status(201).json(data);
 }
