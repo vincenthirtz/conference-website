@@ -11,6 +11,7 @@ import { useUrlFilters } from '@/utils/useUrlFilters';
 type Severity = 'low' | 'medium' | 'high';
 type Category = 'dispute' | 'behavior' | 'technical' | 'other';
 type Status = 'open' | 'in_progress' | 'resolved' | 'closed';
+type Source = 'web' | 'discord_bot';
 
 type Ticket = {
   id: string;
@@ -25,6 +26,9 @@ type Ticket = {
   status: Status;
   resolved_at: string | null;
   resolution_note: string | null;
+  source: Source | null;
+  discord_user_id: string | null;
+  discord_username: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -291,6 +295,11 @@ function AdminSupportPage(_: StaffProps) {
                         <span className="text-xs text-neutral-500">
                           {formatDateFr(t.created_at)}
                         </span>
+                        {t.source === 'discord_bot' && (
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-700/30 text-indigo-200 border border-indigo-500/40">
+                            Discord
+                          </span>
+                        )}
                         {t.is_anonymous && (
                           <span className="text-xs text-purple-300">
                             _anonyme_
@@ -301,12 +310,19 @@ function AdminSupportPage(_: StaffProps) {
                         {t.subject || t.message.slice(0, 100)}
                       </div>
                       {!t.is_anonymous &&
-                        (t.reporter_name || t.reporter_email) && (
+                        (t.reporter_name ||
+                          t.reporter_email ||
+                          t.discord_username) && (
                           <div className="text-xs text-neutral-500 mt-0.5 truncate">
-                            {t.reporter_name || ''}{' '}
+                            {t.reporter_name || t.discord_username || ''}{' '}
                             {t.reporter_email && (
                               <span className="font-mono">
                                 ({t.reporter_email})
+                              </span>
+                            )}
+                            {!t.reporter_email && t.discord_username && (
+                              <span className="font-mono">
+                                (@{t.discord_username})
                               </span>
                             )}
                           </div>
@@ -384,15 +400,35 @@ function AdminSupportPage(_: StaffProps) {
                   <span className="text-purple-300 italic">Anonyme</span>
                 ) : (
                   <>
-                    {selected.reporter_name || '_(pas de nom)_'}
+                    {selected.reporter_name ||
+                      selected.discord_username ||
+                      '_(pas de nom)_'}
                     {selected.reporter_email && (
                       <span className="block text-xs text-neutral-400 font-mono mt-0.5">
                         {selected.reporter_email}
                       </span>
                     )}
+                    {selected.discord_username && (
+                      <span className="block text-xs text-indigo-300 font-mono mt-0.5">
+                        Discord: @{selected.discord_username}
+                        {selected.discord_user_id && (
+                          <span className="text-neutral-500">
+                            {' '}
+                            (ID: {selected.discord_user_id})
+                          </span>
+                        )}
+                      </span>
+                    )}
                   </>
                 )}
               </Field>
+              {selected.source && (
+                <Field label="Source">
+                  {selected.source === 'discord_bot'
+                    ? '🤖 Bot Discord'
+                    : '🌐 Formulaire web'}
+                </Field>
+              )}
               <Field label="Créé le">{formatDateFr(selected.created_at)}</Field>
               <Field label="Message">
                 <div className="bg-neutral-900/50 border border-neutral-700 rounded-xl p-3 text-sm whitespace-pre-wrap leading-relaxed">

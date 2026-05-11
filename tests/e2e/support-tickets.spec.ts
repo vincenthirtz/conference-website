@@ -239,4 +239,154 @@ test.describe.serial('Support tickets — public API', () => {
     expect(row!.subject).toBe(`Bug E2E ${TS}`);
     expect(row!.message.endsWith('chars.')).toBe(true);
   });
+
+  test('ignore les champs Discord en mode web (pas de x-api-key)', async ({
+    request,
+  }) => {
+    const res = await request.post('/api/support/ticket', {
+      data: {
+        category: 'other',
+        severity: 'low',
+        message: 'Web submission with Discord fields that should be ignored.',
+        isAnonymous: true,
+        discordUserId: '123456789012345678',
+        discordUsername: 'should-be-ignored',
+      },
+    });
+    expect(res.status()).toBe(201);
+    const body = await res.json();
+    createdTicketIds.push(body.ticketId);
+
+    const { data: row } = await supabaseTestClient!
+      .from('support_tickets')
+      .select('source, discord_user_id, discord_username')
+      .eq('id', body.ticketId)
+      .maybeSingle();
+
+    expect(row!.source).toBe('web');
+    expect(row!.discord_user_id).toBeNull();
+    expect(row!.discord_username).toBeNull();
+  });
+});
+
+/* ============================================================
+ * Bot mode — requests authenticated via x-api-key header.
+ * ============================================================ */
+
+const BOT_KEY = process.env.SUPPORT_INGEST_API_KEY;
+const HAS_BOT_KEY = Boolean(BOT_KEY);
+const botCreatedTicketIds: string[] = [];
+
+test.describe.serial('Support tickets — bot API (x-api-key)', () => {
+  test.skip(
+    !HAS_BOT_KEY || !HAS_SUPABASE,
+    'SUPPORT_INGEST_API_KEY ou Supabase service role manquant'
+  );
+
+  test.afterAll(async () => {
+    if (!supabaseTestClient || botCreatedTicketIds.length === 0) return;
+    await supabaseTestClient
+      .from('support_tickets')
+      .delete()
+      .in('id', botCreatedTicketIds);
+  });
+
+  test('rejette discordUserId manquant en mode bot', async ({ request }) => {
+    const res = await request.post('/api/support/ticket', {
+      headers: { 'x-api-key': BOT_KEY! },
+      data: {
+        category: 'other',
+        severity: 'low',
+        message: 'Bot submission without discordUserId should fail.',
+        isAnonymous: false,
+      },
+    });
+    expect(res.status()).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/discordUserId invalide/);
+  });
+
+  test('rejette un discordUserId non-snowflake', async ({ request }) => {
+    const res = await request.post('/api/support/ticket', {
+      headers: { 'x-api-key': BOT_KEY! },
+      data: {
+        category: 'other',
+        severity: 'low',
+        message: 'Bot submission with invalid discordUserId.',
+        isAnonymous: false,
+        discordUserId: 'not-a-snowflake',
+        discordUsername: 'alice',
+      },
+    });
+    expect(res.status()).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/discordUserId invalide/);
+  });
+
+  test('crée un ticket non-anonyme sans email grâce à l’identité Discord', async ({
+    request,
+  }) => {
+    const discordId = `${1000000000000000000n + BigInt(TS % 1_000_000_000)}`;
+    const res = await request.post('/api/support/ticket', {
+      headers: { 'x-api-key': BOT_KEY! },
+      data: {
+        category: 'behavior',
+        severity: 'medium',
+        subject: `E2E bot named ${TS}`,
+        message: 'Discord bot submission with reporter identity attached.',
+        isAnonymous: false,
+        discordUserId: discordId,
+        discordUsername: `alice_${TS}`,
+      },
+    });
+    expect(res.status()).toBe(201);
+    const body = await res.json();
+    botCreatedTicketIds.push(body.ticketId);
+
+    const { data: row } = await supabaseTestClient!
+      .from('support_tickets')
+      .select(
+        'source, discord_user_id, discord_username, reporter_email, is_anonymous'
+      )
+      .eq('id', body.ticketId)
+      .maybeSingle();
+
+    expect(row!.source).toBe('discord_bot');
+    expect(row!.discord_user_id).toBe(discordId);
+    expect(row!.discord_username).toBe(`alice_${TS}`);
+    expect(row!.reporter_email).toBeNull();
+    expect(row!.is_anonymous).toBe(false);
+  });
+
+  test('ne stocke pas l’identité Discord si isAnonymous=true', async ({
+    request,
+  }) => {
+    const discordId = `${1000000000000000001n + BigInt(TS % 1_000_000_000)}`;
+    const res = await request.post('/api/support/ticket', {
+      headers: { 'x-api-key': BOT_KEY! },
+      data: {
+        category: 'behavior',
+        severity: 'high',
+        message: 'Anonymous Discord submission. Identity must be dropped.',
+        isAnonymous: true,
+        discordUserId: discordId,
+        discordUsername: 'anon-bob',
+      },
+    });
+    expect(res.status()).toBe(201);
+    const body = await res.json();
+    botCreatedTicketIds.push(body.ticketId);
+
+    const { data: row } = await supabaseTestClient!
+      .from('support_tickets')
+      .select('source, discord_user_id, discord_username, is_anonymous')
+      .eq('id', body.ticketId)
+      .maybeSingle();
+
+    expect(row!.is_anonymous).toBe(true);
+    // source still flags the channel, but the Discord identity is dropped.
+    expect(row!.source).toBe('discord_bot');
+    expect(row!.discord_user_id).toBeNull();
+    expect(row!.discord_username).toBeNull();
+  });
 });

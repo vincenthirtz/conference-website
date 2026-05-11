@@ -2,7 +2,13 @@
 // Public endpoint: anyone (anonymously or not) can submit a support ticket
 // (litige, comportement, technique, autre) for a tournament. Severity HIGH
 // triggers a moderation ping in Discord.
+//
+// Also accepts authenticated calls from the Discord bot via the
+// `x-api-key` header (validated against SUPPORT_INGEST_API_KEY). In bot mode,
+// the IP rate-limit is replaced by a per-Discord-user rate-limit and the
+// Discord identity is stored alongside the ticket (unless isAnonymous=true).
 
+import crypto from 'crypto';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
@@ -30,6 +36,54 @@ function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+const DISCORD_ID_RE = /^[0-9]{15,25}$/;
+
+function verifyBotApiKey(req: NextApiRequest): boolean {
+  const expected = process.env.SUPPORT_INGEST_API_KEY;
+  if (!expected) return false;
+  const provided = req.headers['x-api-key'];
+  if (typeof provided !== 'string' || provided.length === 0) return false;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
+// Per-Discord-user rate limit: 5 tickets / hour. Reuses the same
+// in-memory store mechanism as `applyRateLimit` but keyed on the Discord
+// user ID rather than the bot's IP (which would be a single shared host).
+const botUserRateStore = new Map<string, number[]>();
+
+function applyBotUserRateLimit(
+  discordUserId: string,
+  res: NextApiResponse
+): boolean {
+  const max = 5;
+  const windowMs = 60 * 60_000;
+  const now = Date.now();
+  const timestamps = (botUserRateStore.get(discordUserId) ?? []).filter(
+    (t) => now - t < windowMs
+  );
+  if (timestamps.length >= max) {
+    res.setHeader('Retry-After', String(Math.ceil(windowMs / 1000)));
+    res.status(429).json({
+      error: 'Trop de signalements depuis ce compte Discord. Réessaye plus tard.',
+    });
+    return true;
+  }
+  timestamps.push(now);
+  botUserRateStore.set(discordUserId, timestamps);
+  if (botUserRateStore.size > 10_000) {
+    for (const [k, ts] of botUserRateStore) {
+      const fresh = ts.filter((t) => now - t < windowMs);
+      if (fresh.length === 0) botUserRateStore.delete(k);
+      else botUserRateStore.set(k, fresh);
+      if (botUserRateStore.size <= 8_000) break;
+    }
+  }
+  return false;
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -39,16 +93,20 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Rate limit: 5 submissions per hour per IP
-  if (
-    applyRateLimit(
-      req,
-      res,
-      { max: 5, windowMs: 60 * 60_000 },
-      'support-ticket'
-    )
-  ) {
-    return;
+  const isBotRequest = verifyBotApiKey(req);
+
+  if (!isBotRequest) {
+    // Web mode: rate-limit per IP (5/h).
+    if (
+      applyRateLimit(
+        req,
+        res,
+        { max: 5, windowMs: 60 * 60_000 },
+        'support-ticket'
+      )
+    ) {
+      return;
+    }
   }
 
   if (!supabaseAdmin) {
@@ -65,6 +123,8 @@ export default async function handler(
     isAnonymous,
     name,
     email,
+    discordUserId: rawDiscordUserId,
+    discordUsername: rawDiscordUsername,
   } = body;
 
   // Validation
@@ -125,13 +185,40 @@ export default async function handler(
       ? email.trim().toLowerCase()
       : null;
 
-  // If non-anonymous, we strongly encourage an email so we can follow up
-  if (!anon && !cleanEmail) {
+  // Discord identity validation (only in bot mode; ignored otherwise).
+  let cleanDiscordUserId: string | null = null;
+  let cleanDiscordUsername: string | null = null;
+  if (isBotRequest) {
+    if (
+      typeof rawDiscordUserId !== 'string' ||
+      !DISCORD_ID_RE.test(rawDiscordUserId)
+    ) {
+      return res.status(400).json({ error: 'discordUserId invalide' });
+    }
+    cleanDiscordUserId = rawDiscordUserId;
+    if (typeof rawDiscordUsername === 'string') {
+      cleanDiscordUsername =
+        rawDiscordUsername.trim().slice(0, 100) || null;
+    }
+
+    // Bot-mode rate-limit is per Discord user, not per IP.
+    if (applyBotUserRateLimit(cleanDiscordUserId, res)) return;
+  }
+
+  // In bot mode, the Discord identity replaces the email requirement for
+  // non-anonymous tickets (we can ping back via DM). Web mode still requires
+  // an email when not anonymous.
+  if (!anon && !cleanEmail && !cleanDiscordUserId) {
     return res.status(400).json({
       error:
         'Email requis pour les signalements non anonymes (ou cochez "rester anonyme")',
     });
   }
+
+  // Privacy: when the reporter chose anonymous, drop the Discord identity
+  // before persisting, even though the bot sent it.
+  const storedDiscordUserId = anon ? null : cleanDiscordUserId;
+  const storedDiscordUsername = anon ? null : cleanDiscordUsername;
 
   // Create the ticket
   const { data: ticket, error: insertErr } = await supabaseAdmin
@@ -146,6 +233,9 @@ export default async function handler(
       subject: subject ? subject.trim() : null,
       message: message.trim(),
       status: 'open',
+      source: isBotRequest ? 'discord_bot' : 'web',
+      discord_user_id: storedDiscordUserId,
+      discord_username: storedDiscordUsername,
     })
     .select('*')
     .single();
