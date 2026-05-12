@@ -4,7 +4,7 @@
 // triggers a moderation ping in Discord.
 //
 // Also accepts authenticated calls from the Discord bot via the
-// `x-api-key` header (validated against SUPPORT_INGEST_API_KEY). In bot mode,
+// `x-api-key` header (validated against BOT_API_KEY). In bot mode,
 // the IP rate-limit is replaced by a per-Discord-user rate-limit and the
 // Discord identity is stored alongside the ticket (unless isAnonymous=true).
 
@@ -39,7 +39,7 @@ function isValidEmail(value: string): boolean {
 const DISCORD_ID_RE = /^[0-9]{15,25}$/;
 
 function verifyBotApiKey(req: NextApiRequest): boolean {
-  const expected = process.env.SUPPORT_INGEST_API_KEY;
+  const expected = process.env.BOT_API_KEY;
   if (!expected) return false;
   const provided = req.headers['x-api-key'];
   if (typeof provided !== 'string' || provided.length === 0) return false;

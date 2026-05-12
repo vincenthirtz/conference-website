@@ -12,7 +12,7 @@
 import { test, expect } from '@playwright/test';
 import { supabaseTestClient } from '../utils/supabaseTestClient';
 
-const API_KEY = process.env.NEWS_INGEST_API_KEY;
+const API_KEY = process.env.BOT_API_KEY;
 const HAS_KEY = Boolean(API_KEY);
 const HAS_SUPABASE = Boolean(supabaseTestClient);
 const TS = Date.now();
@@ -22,7 +22,7 @@ const createdIds: string[] = [];
 test.describe.serial('News ingest — POST /api/news', () => {
   test.skip(
     !HAS_KEY || !HAS_SUPABASE,
-    'NEWS_INGEST_API_KEY ou Supabase service role manquant'
+    'BOT_API_KEY ou Supabase service role manquant'
   );
 
   test.afterAll(async () => {

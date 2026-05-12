@@ -273,14 +273,14 @@ test.describe.serial('Support tickets — public API', () => {
  * Bot mode — requests authenticated via x-api-key header.
  * ============================================================ */
 
-const BOT_KEY = process.env.SUPPORT_INGEST_API_KEY;
+const BOT_KEY = process.env.BOT_API_KEY;
 const HAS_BOT_KEY = Boolean(BOT_KEY);
 const botCreatedTicketIds: string[] = [];
 
 test.describe.serial('Support tickets — bot API (x-api-key)', () => {
   test.skip(
     !HAS_BOT_KEY || !HAS_SUPABASE,
-    'SUPPORT_INGEST_API_KEY ou Supabase service role manquant'
+    'BOT_API_KEY ou Supabase service role manquant'
   );
 
   test.afterAll(async () => {

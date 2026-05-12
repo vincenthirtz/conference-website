@@ -30,7 +30,7 @@ function normalizeSlug(title: string, slug?: string) {
 }
 
 function verifyApiKey(req: NextApiRequest): boolean {
-  const expected = process.env.NEWS_INGEST_API_KEY;
+  const expected = process.env.BOT_API_KEY;
   if (!expected) return false;
 
   const provided = req.headers['x-api-key'];
@@ -108,8 +108,8 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
   if (applyRateLimit(req, res, { max: 10, windowMs: 60_000 }, 'news-ingest'))
     return;
 
-  if (!process.env.NEWS_INGEST_API_KEY) {
-    logger.error('[news] ingest endpoint called but NEWS_INGEST_API_KEY is unset');
+  if (!process.env.BOT_API_KEY) {
+    logger.error('[news] ingest endpoint called but BOT_API_KEY is unset');
     return res.status(500).json({ error: 'Ingest endpoint not configured.' });
   }
 
