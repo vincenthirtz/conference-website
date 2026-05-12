@@ -36,6 +36,28 @@ export const ADMIN_LINKS: AdminLink[] = [
     ],
   },
   {
+    title: 'Scrims',
+    ref: '',
+    minRole: 'manager',
+    children: [
+      {
+        title: 'Scrims – liste',
+        ref: '/admin/scrims',
+        minRole: 'manager',
+      },
+      {
+        title: 'Créer un scrim',
+        ref: '/admin/scrims/create',
+        minRole: 'manager',
+      },
+      {
+        title: 'Demandes de scrim',
+        ref: '/admin/demandes?type=scrim',
+        minRole: 'manager',
+      },
+    ],
+  },
+  {
     title: 'Équipes',
     ref: '',
     minRole: 'manager',
