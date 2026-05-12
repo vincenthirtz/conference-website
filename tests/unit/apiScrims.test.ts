@@ -27,10 +27,10 @@ import adminScrimIdHandler from '../../pages/api/admin/scrims/[scrimId]/index';
 import adminScrimMatchesHandler from '../../pages/api/admin/scrims/[scrimId]/matches';
 import publicScrimsHandler from '../../pages/api/scrims/index';
 import publicScrimIdHandler from '../../pages/api/scrims/[id]';
-import botScrimsHandler from '../../pages/api/bot/scrims/index';
-import botScrimIdHandler from '../../pages/api/bot/scrims/[scrimId]/index';
-import botScrimMatchesHandler from '../../pages/api/bot/scrims/[scrimId]/matches';
-import botScrimMatchPatchHandler from '../../pages/api/bot/scrims/[scrimId]/matches/[matchId]';
+import botScrimsHandler from '../../pages/api/bot/v1/scrims/index';
+import botScrimIdHandler from '../../pages/api/bot/v1/scrims/[scrimId]/index';
+import botScrimMatchesHandler from '../../pages/api/bot/v1/scrims/[scrimId]/matches';
+import botScrimMatchPatchHandler from '../../pages/api/bot/v1/scrims/[scrimId]/matches/[matchId]';
 
 /* -----------------------------------------------------------
  * Helpers

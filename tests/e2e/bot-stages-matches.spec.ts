@@ -1,12 +1,12 @@
 /**
  * Tests E2E — Bot stages & matches creation
  *
- *  POST /api/bot/tournaments/[tournamentId]/stages
+ *  POST /api/bot/v1/tournaments/[tournamentId]/stages
  *   - 403 si actor pas admin
  *   - 400 sur name manquant / stage_type invalide
  *   - 201 création + audit log + auto order_index
  *
- *  POST /api/bot/tournaments/[tournamentId]/matches
+ *  POST /api/bot/v1/tournaments/[tournamentId]/matches
  *   - 403 si actor pas admin
  *   - 400 sur body sans match/matches
  *   - 400 sur stage_id/team1_id non-UUID
@@ -123,7 +123,7 @@ test.describe.serial('Bot stages & matches', () => {
     request,
   }) => {
     const res = await request.post(
-      `/api/bot/tournaments/${tournamentId}/stages`,
+      `/api/bot/v1/tournaments/${tournamentId}/stages`,
       {
         headers: { 'x-api-key': API_KEY! },
         data: {
@@ -137,7 +137,7 @@ test.describe.serial('Bot stages & matches', () => {
 
   test('Stage: 400 si name manquant', async ({ request }) => {
     const res = await request.post(
-      `/api/bot/tournaments/${tournamentId}/stages`,
+      `/api/bot/v1/tournaments/${tournamentId}/stages`,
       {
         headers: { 'x-api-key': API_KEY! },
         data: { actorDiscordUserId: ADMIN_DISCORD },
@@ -148,7 +148,7 @@ test.describe.serial('Bot stages & matches', () => {
 
   test('Stage: 400 si stage_type invalide', async ({ request }) => {
     const res = await request.post(
-      `/api/bot/tournaments/${tournamentId}/stages`,
+      `/api/bot/v1/tournaments/${tournamentId}/stages`,
       {
         headers: { 'x-api-key': API_KEY! },
         data: {
@@ -163,7 +163,7 @@ test.describe.serial('Bot stages & matches', () => {
 
   test('Stage: 201 avec auto order_index', async ({ request }) => {
     const res = await request.post(
-      `/api/bot/tournaments/${tournamentId}/stages`,
+      `/api/bot/v1/tournaments/${tournamentId}/stages`,
       {
         headers: { 'x-api-key': API_KEY! },
         data: {
@@ -183,7 +183,7 @@ test.describe.serial('Bot stages & matches', () => {
 
   test('Stage: 201 et order_index auto-incrémenté', async ({ request }) => {
     const res = await request.post(
-      `/api/bot/tournaments/${tournamentId}/stages`,
+      `/api/bot/v1/tournaments/${tournamentId}/stages`,
       {
         headers: { 'x-api-key': API_KEY! },
         data: {
@@ -212,7 +212,7 @@ test.describe.serial('Bot stages & matches', () => {
 
   test('Match: 403 si actor pas admin', async ({ request }) => {
     const res = await request.post(
-      `/api/bot/tournaments/${tournamentId}/matches`,
+      `/api/bot/v1/tournaments/${tournamentId}/matches`,
       {
         headers: { 'x-api-key': API_KEY! },
         data: {
@@ -228,7 +228,7 @@ test.describe.serial('Bot stages & matches', () => {
     request,
   }) => {
     const res = await request.post(
-      `/api/bot/tournaments/${tournamentId}/matches`,
+      `/api/bot/v1/tournaments/${tournamentId}/matches`,
       {
         headers: { 'x-api-key': API_KEY! },
         data: { actorDiscordUserId: ADMIN_DISCORD },
@@ -239,7 +239,7 @@ test.describe.serial('Bot stages & matches', () => {
 
   test('Match: 400 sur status invalide', async ({ request }) => {
     const res = await request.post(
-      `/api/bot/tournaments/${tournamentId}/matches`,
+      `/api/bot/v1/tournaments/${tournamentId}/matches`,
       {
         headers: { 'x-api-key': API_KEY! },
         data: {
@@ -255,7 +255,7 @@ test.describe.serial('Bot stages & matches', () => {
 
   test('Match: 400 sur team1_id non-UUID', async ({ request }) => {
     const res = await request.post(
-      `/api/bot/tournaments/${tournamentId}/matches`,
+      `/api/bot/v1/tournaments/${tournamentId}/matches`,
       {
         headers: { 'x-api-key': API_KEY! },
         data: {
@@ -270,7 +270,7 @@ test.describe.serial('Bot stages & matches', () => {
   test('Match: 201 single avec deux teams', async ({ request }) => {
     const scheduledAt = new Date(Date.now() + 3600_000).toISOString();
     const res = await request.post(
-      `/api/bot/tournaments/${tournamentId}/matches`,
+      `/api/bot/v1/tournaments/${tournamentId}/matches`,
       {
         headers: { 'x-api-key': API_KEY! },
         data: {
@@ -299,7 +299,7 @@ test.describe.serial('Bot stages & matches', () => {
 
   test('Match: 201 batch sans teams (placeholders)', async ({ request }) => {
     const res = await request.post(
-      `/api/bot/tournaments/${tournamentId}/matches`,
+      `/api/bot/v1/tournaments/${tournamentId}/matches`,
       {
         headers: { 'x-api-key': API_KEY! },
         data: {
@@ -324,7 +324,7 @@ test.describe.serial('Bot stages & matches', () => {
 
   test('Match: 400 si > 100 matchs', async ({ request }) => {
     const res = await request.post(
-      `/api/bot/tournaments/${tournamentId}/matches`,
+      `/api/bot/v1/tournaments/${tournamentId}/matches`,
       {
         headers: { 'x-api-key': API_KEY! },
         data: {
@@ -338,7 +338,7 @@ test.describe.serial('Bot stages & matches', () => {
 
   test('Match: 404 si tournoi introuvable', async ({ request }) => {
     const res = await request.post(
-      `/api/bot/tournaments/00000000-0000-0000-0000-000000000000/matches`,
+      `/api/bot/v1/tournaments/00000000-0000-0000-0000-000000000000/matches`,
       {
         headers: { 'x-api-key': API_KEY! },
         data: {

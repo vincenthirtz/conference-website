@@ -1,5 +1,5 @@
 /**
- * Tests E2E — Bot user registration (POST /api/bot/register-user)
+ * Tests E2E — Bot user registration (POST /api/bot/v1/register-user)
  *
  * Couvre auth + validations + happy paths (player + staff role) + rollback
  * sur lien Discord déjà utilisé.
@@ -24,14 +24,14 @@ function discordId(suffix: number): string {
 
 test.describe.serial('Bot register-user — auth & validation', () => {
   test('rejette sans x-api-key', async ({ request }) => {
-    const res = await request.post('/api/bot/register-user', {
+    const res = await request.post('/api/bot/v1/register-user', {
       data: { email: `x-${TS}@test.local`, discordUserId: discordId(0) },
     });
     expect([401, 500]).toContain(res.status());
   });
 
   test('rejette avec mauvaise x-api-key', async ({ request }) => {
-    const res = await request.post('/api/bot/register-user', {
+    const res = await request.post('/api/bot/v1/register-user', {
       headers: { 'x-api-key': 'wrong' },
       data: { email: `x-${TS}@test.local`, discordUserId: discordId(1) },
     });
@@ -39,7 +39,7 @@ test.describe.serial('Bot register-user — auth & validation', () => {
   });
 
   test('refuse les méthodes autres que POST', async ({ request }) => {
-    const res = await request.get('/api/bot/register-user', {
+    const res = await request.get('/api/bot/v1/register-user', {
       headers: { 'x-api-key': API_KEY ?? '' },
     });
     expect(res.status()).toBe(405);
@@ -49,7 +49,7 @@ test.describe.serial('Bot register-user — auth & validation', () => {
     test.skip(!HAS_KEY, 'BOT_API_KEY manquant');
 
     test('rejette un email invalide', async ({ request }) => {
-      const res = await request.post('/api/bot/register-user', {
+      const res = await request.post('/api/bot/v1/register-user', {
         headers: { 'x-api-key': API_KEY! },
         data: { email: 'not-an-email', discordUserId: discordId(2) },
       });
@@ -59,7 +59,7 @@ test.describe.serial('Bot register-user — auth & validation', () => {
     });
 
     test('rejette un discordUserId invalide', async ({ request }) => {
-      const res = await request.post('/api/bot/register-user', {
+      const res = await request.post('/api/bot/v1/register-user', {
         headers: { 'x-api-key': API_KEY! },
         data: {
           email: `x-${TS}-bad-id@test.local`,
@@ -72,7 +72,7 @@ test.describe.serial('Bot register-user — auth & validation', () => {
     });
 
     test('rejette le rôle owner', async ({ request }) => {
-      const res = await request.post('/api/bot/register-user', {
+      const res = await request.post('/api/bot/v1/register-user', {
         headers: { 'x-api-key': API_KEY! },
         data: {
           email: `x-${TS}-owner@test.local`,
@@ -86,7 +86,7 @@ test.describe.serial('Bot register-user — auth & validation', () => {
     });
 
     test('rejette un rôle inconnu', async ({ request }) => {
-      const res = await request.post('/api/bot/register-user', {
+      const res = await request.post('/api/bot/v1/register-user', {
         headers: { 'x-api-key': API_KEY! },
         data: {
           email: `x-${TS}-badrole@test.local`,
@@ -128,7 +128,7 @@ test.describe.serial('Bot register-user — création', () => {
   }) => {
     const email = `bot-reg-player-${TS}@test.local`;
     const dId = discordId(10);
-    const res = await request.post('/api/bot/register-user', {
+    const res = await request.post('/api/bot/v1/register-user', {
       headers: { 'x-api-key': API_KEY! },
       data: {
         email,
@@ -170,7 +170,7 @@ test.describe.serial('Bot register-user — création', () => {
   }) => {
     const email = `bot-reg-caster-${TS}@test.local`;
     const dId = discordId(11);
-    const res = await request.post('/api/bot/register-user', {
+    const res = await request.post('/api/bot/v1/register-user', {
       headers: { 'x-api-key': API_KEY! },
       data: {
         email,
@@ -201,7 +201,7 @@ test.describe.serial('Bot register-user — création', () => {
   test('409 si l’identité Discord est déjà liée', async ({ request }) => {
     // Réutilise le Discord ID du test "player" (déjà lié).
     const dId = discordId(10);
-    const res = await request.post('/api/bot/register-user', {
+    const res = await request.post('/api/bot/v1/register-user', {
       headers: { 'x-api-key': API_KEY! },
       data: {
         email: `bot-reg-dupe-${TS}@test.local`,
@@ -218,7 +218,7 @@ test.describe.serial('Bot register-user — création', () => {
   test('409 si l’email est déjà utilisé', async ({ request }) => {
     // Réutilise l'email du test "player".
     const dId = discordId(20);
-    const res = await request.post('/api/bot/register-user', {
+    const res = await request.post('/api/bot/v1/register-user', {
       headers: { 'x-api-key': API_KEY! },
       data: {
         email: `bot-reg-player-${TS}@test.local`,

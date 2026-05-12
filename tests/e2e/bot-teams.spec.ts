@@ -1,14 +1,14 @@
 /**
  * Tests E2E — Bot team creation & tournament registration
  *
- *  POST /api/bot/teams
+ *  POST /api/bot/v1/teams
  *   - auth + method
  *   - validation (name, captainDiscordUserId)
  *   - 404 si capitaine non lié
  *   - 201 happy path + team_members row insérée
  *   - 409 sur slug doublon
  *
- *  POST /api/bot/tournaments/[tournamentId]/teams
+ *  POST /api/bot/v1/tournaments/[tournamentId]/teams
  *   - 403 sans actor admin
  *   - 400 sur tournament non publié
  *   - 201 happy path avec stage + audit log
@@ -46,12 +46,12 @@ let draftTournamentId: string;
 
 test.describe.serial('Bot teams — auth & method', () => {
   test('POST sans clé → 401/500', async ({ request }) => {
-    const res = await request.post('/api/bot/teams', { data: { name: 'x' } });
+    const res = await request.post('/api/bot/v1/teams', { data: { name: 'x' } });
     expect([401, 500]).toContain(res.status());
   });
 
   test('GET → 405', async ({ request }) => {
-    const res = await request.get('/api/bot/teams', {
+    const res = await request.get('/api/bot/v1/teams', {
       headers: { 'x-api-key': API_KEY ?? '' },
     });
     expect(res.status()).toBe(405);
@@ -92,7 +92,7 @@ test.describe.serial('Bot teams — POST création', () => {
   });
 
   test('400 si name manquant', async ({ request }) => {
-    const res = await request.post('/api/bot/teams', {
+    const res = await request.post('/api/bot/v1/teams', {
       headers: { 'x-api-key': API_KEY! },
       data: { captainDiscordUserId: CAPTAIN_DISCORD },
     });
@@ -100,7 +100,7 @@ test.describe.serial('Bot teams — POST création', () => {
   });
 
   test('400 si captainDiscordUserId manquant', async ({ request }) => {
-    const res = await request.post('/api/bot/teams', {
+    const res = await request.post('/api/bot/v1/teams', {
       headers: { 'x-api-key': API_KEY! },
       data: { name: `Team ${TS}` },
     });
@@ -108,7 +108,7 @@ test.describe.serial('Bot teams — POST création', () => {
   });
 
   test('404 si captain Discord pas lié', async ({ request }) => {
-    const res = await request.post('/api/bot/teams', {
+    const res = await request.post('/api/bot/v1/teams', {
       headers: { 'x-api-key': API_KEY! },
       data: {
         name: `Team Unlinked ${TS}`,
@@ -122,7 +122,7 @@ test.describe.serial('Bot teams — POST création', () => {
 
   test('201 happy path : team + team_member capitaine', async ({ request }) => {
     const name = `Bot Created Team ${TS}`;
-    const res = await request.post('/api/bot/teams', {
+    const res = await request.post('/api/bot/v1/teams', {
       headers: { 'x-api-key': API_KEY! },
       data: {
         name,
@@ -149,7 +149,7 @@ test.describe.serial('Bot teams — POST création', () => {
   });
 
   test('409 sur slug doublon', async ({ request }) => {
-    const res = await request.post('/api/bot/teams', {
+    const res = await request.post('/api/bot/v1/teams', {
       headers: { 'x-api-key': API_KEY! },
       data: {
         name: `Bot Created Team ${TS}`, // même slug
@@ -237,7 +237,7 @@ test.describe.serial('Bot tournament registration', () => {
 
   test('403 si actor non admin', async ({ request }) => {
     const res = await request.post(
-      `/api/bot/tournaments/${publishedTournamentId}/teams`,
+      `/api/bot/v1/tournaments/${publishedTournamentId}/teams`,
       {
         headers: { 'x-api-key': API_KEY! },
         data: {
@@ -251,7 +251,7 @@ test.describe.serial('Bot tournament registration', () => {
 
   test('400 si actor non lié', async ({ request }) => {
     const res = await request.post(
-      `/api/bot/tournaments/${publishedTournamentId}/teams`,
+      `/api/bot/v1/tournaments/${publishedTournamentId}/teams`,
       {
         headers: { 'x-api-key': API_KEY! },
         data: { teamId: createdTeamIds[0] },
@@ -262,7 +262,7 @@ test.describe.serial('Bot tournament registration', () => {
 
   test('400 si tournoi pas publié', async ({ request }) => {
     const res = await request.post(
-      `/api/bot/tournaments/${draftTournamentId}/teams`,
+      `/api/bot/v1/tournaments/${draftTournamentId}/teams`,
       {
         headers: { 'x-api-key': API_KEY! },
         data: {
@@ -280,7 +280,7 @@ test.describe.serial('Bot tournament registration', () => {
     request,
   }) => {
     const res = await request.post(
-      `/api/bot/tournaments/${publishedTournamentId}/teams`,
+      `/api/bot/v1/tournaments/${publishedTournamentId}/teams`,
       {
         headers: { 'x-api-key': API_KEY! },
         data: {
@@ -317,7 +317,7 @@ test.describe.serial('Bot tournament registration', () => {
 
   test('409 sur double registration', async ({ request }) => {
     const res = await request.post(
-      `/api/bot/tournaments/${publishedTournamentId}/teams`,
+      `/api/bot/v1/tournaments/${publishedTournamentId}/teams`,
       {
         headers: { 'x-api-key': API_KEY! },
         data: {

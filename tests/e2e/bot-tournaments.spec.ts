@@ -1,5 +1,5 @@
 /**
- * Tests E2E — /api/bot/tournaments
+ * Tests E2E — /api/bot/v1/tournaments
  *
  *  - Auth + method check
  *  - GET filtre les drafts par défaut, accepte ?status=, ?includeDrafts=1
@@ -38,19 +38,19 @@ const createdTournamentIds: string[] = [];
 
 test.describe.serial('Bot tournaments — auth & method', () => {
   test('rejette sans x-api-key', async ({ request }) => {
-    const res = await request.get('/api/bot/tournaments');
+    const res = await request.get('/api/bot/v1/tournaments');
     expect([401, 500]).toContain(res.status());
   });
 
   test('rejette avec mauvaise x-api-key', async ({ request }) => {
-    const res = await request.get('/api/bot/tournaments', {
+    const res = await request.get('/api/bot/v1/tournaments', {
       headers: { 'x-api-key': 'wrong' },
     });
     expect([401, 500]).toContain(res.status());
   });
 
   test('refuse PUT', async ({ request }) => {
-    const res = await request.fetch('/api/bot/tournaments', {
+    const res = await request.fetch('/api/bot/v1/tournaments', {
       method: 'PUT',
       headers: { 'x-api-key': API_KEY ?? '' },
     });
@@ -91,7 +91,7 @@ test.describe.serial('Bot tournaments — GET (list)', () => {
   });
 
   test('GET cache les drafts par défaut', async ({ request }) => {
-    const res = await request.get('/api/bot/tournaments', {
+    const res = await request.get('/api/bot/v1/tournaments', {
       headers: { 'x-api-key': API_KEY! },
     });
     expect(res.status()).toBe(200);
@@ -103,7 +103,7 @@ test.describe.serial('Bot tournaments — GET (list)', () => {
 
   test('GET ?includeDrafts=1 inclut les drafts', async ({ request }) => {
     const res = await request.get(
-      '/api/bot/tournaments?includeDrafts=1&limit=100',
+      '/api/bot/v1/tournaments?includeDrafts=1&limit=100',
       { headers: { 'x-api-key': API_KEY! } }
     );
     expect(res.status()).toBe(200);
@@ -115,7 +115,7 @@ test.describe.serial('Bot tournaments — GET (list)', () => {
   test('GET ?status=draft renvoie uniquement les drafts', async ({
     request,
   }) => {
-    const res = await request.get('/api/bot/tournaments?status=draft', {
+    const res = await request.get('/api/bot/v1/tournaments?status=draft', {
       headers: { 'x-api-key': API_KEY! },
     });
     expect(res.status()).toBe(200);
@@ -126,7 +126,7 @@ test.describe.serial('Bot tournaments — GET (list)', () => {
   });
 
   test('GET ?status=invalid → 400', async ({ request }) => {
-    const res = await request.get('/api/bot/tournaments?status=notastatus', {
+    const res = await request.get('/api/bot/v1/tournaments?status=notastatus', {
       headers: { 'x-api-key': API_KEY! },
     });
     expect(res.status()).toBe(400);
@@ -179,7 +179,7 @@ test.describe.serial('Bot tournaments — POST (create)', () => {
   });
 
   test('POST rejette actorDiscordUserId manquant', async ({ request }) => {
-    const res = await request.post('/api/bot/tournaments', {
+    const res = await request.post('/api/bot/v1/tournaments', {
       headers: { 'x-api-key': API_KEY! },
       data: { name: `Whatever ${TS}` },
     });
@@ -189,7 +189,7 @@ test.describe.serial('Bot tournaments — POST (create)', () => {
   });
 
   test('POST 403 si actor non lié à un staff admin', async ({ request }) => {
-    const res = await request.post('/api/bot/tournaments', {
+    const res = await request.post('/api/bot/v1/tournaments', {
       headers: { 'x-api-key': API_KEY! },
       data: {
         actorDiscordUserId: PLAYER_DISCORD,
@@ -202,7 +202,7 @@ test.describe.serial('Bot tournaments — POST (create)', () => {
   });
 
   test('POST 403 si Discord inconnu (pas lié)', async ({ request }) => {
-    const res = await request.post('/api/bot/tournaments', {
+    const res = await request.post('/api/bot/v1/tournaments', {
       headers: { 'x-api-key': API_KEY! },
       data: {
         actorDiscordUserId: discordId(99),
@@ -213,7 +213,7 @@ test.describe.serial('Bot tournaments — POST (create)', () => {
   });
 
   test('POST 400 si name manquant', async ({ request }) => {
-    const res = await request.post('/api/bot/tournaments', {
+    const res = await request.post('/api/bot/v1/tournaments', {
       headers: { 'x-api-key': API_KEY! },
       data: { actorDiscordUserId: ADMIN_DISCORD },
     });
@@ -222,7 +222,7 @@ test.describe.serial('Bot tournaments — POST (create)', () => {
 
   test('POST 201 par un admin', async ({ request }) => {
     const name = `Bot Created ${TS}`;
-    const res = await request.post('/api/bot/tournaments', {
+    const res = await request.post('/api/bot/v1/tournaments', {
       headers: { 'x-api-key': API_KEY! },
       data: {
         actorDiscordUserId: ADMIN_DISCORD,
@@ -252,7 +252,7 @@ test.describe.serial('Bot tournaments — POST (create)', () => {
   });
 
   test('POST 409 sur slug doublon', async ({ request }) => {
-    const res = await request.post('/api/bot/tournaments', {
+    const res = await request.post('/api/bot/v1/tournaments', {
       headers: { 'x-api-key': API_KEY! },
       data: {
         actorDiscordUserId: ADMIN_DISCORD,
@@ -263,7 +263,7 @@ test.describe.serial('Bot tournaments — POST (create)', () => {
   });
 
   test('POST 400 sur dates invalides', async ({ request }) => {
-    const res = await request.post('/api/bot/tournaments', {
+    const res = await request.post('/api/bot/v1/tournaments', {
       headers: { 'x-api-key': API_KEY! },
       data: {
         actorDiscordUserId: ADMIN_DISCORD,

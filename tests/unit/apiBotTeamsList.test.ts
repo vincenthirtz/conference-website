@@ -5,8 +5,8 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
-import botTeamsHandler from '../../pages/api/bot/teams/index';
-import botTeamIdHandler from '../../pages/api/bot/teams/[teamId]';
+import botTeamsHandler from '../../pages/api/bot/v1/teams/index';
+import botTeamIdHandler from '../../pages/api/bot/v1/teams/[teamId]';
 
 const TEAM_A = '550e8400-e29b-41d4-a716-446655440b01';
 const TEAM_B = '550e8400-e29b-41d4-a716-446655440b02';

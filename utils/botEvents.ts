@@ -2,7 +2,7 @@
 //
 // Push sortant signe HMAC vers le bot Discord (repo separe).
 //
-// Le bot poll deja /api/bot/reminders, mais le polling est trop lent pour les
+// Le bot poll deja /api/bot/v1/reminders, mais le polling est trop lent pour les
 // evenements latence-sensibles (annonce de match qui commence, dispute ouverte,
 // news qui sort). Cet emetteur permet au site de pousser ces evenements en
 // quelques ms.
@@ -91,7 +91,12 @@ export async function emitBotEvent(
       lastErr = `HTTP ${res.status}`;
 
       // 4xx (sauf 408/429) : pas de retry, le bot rejette explicitement.
-      if (res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429) {
+      if (
+        res.status >= 400 &&
+        res.status < 500 &&
+        res.status !== 408 &&
+        res.status !== 429
+      ) {
         logger.error(`[botEvents] ${event} rejected by bot (${res.status})`);
         return {
           delivered: false,

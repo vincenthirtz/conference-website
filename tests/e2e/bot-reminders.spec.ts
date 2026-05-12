@@ -1,5 +1,5 @@
 /**
- * Tests E2E — Bot reminders feed (GET /api/bot/reminders)
+ * Tests E2E — Bot reminders feed (GET /api/bot/v1/reminders)
  *
  * - Auth & contrat (toutes envs)
  * - Smoke fonctionnel match_checkin avec seed minimal (skip si pas de
@@ -20,20 +20,20 @@ const HAS_SUPABASE = Boolean(supabaseTestClient);
 
 test.describe('Bot reminders — auth & contrat', () => {
   test('rejette une requête sans x-api-key', async ({ request }) => {
-    const res = await request.get('/api/bot/reminders');
+    const res = await request.get('/api/bot/v1/reminders');
     // 401 si la clé est configurée côté serveur, 500 si elle ne l'est pas.
     expect([401, 500]).toContain(res.status());
   });
 
   test('rejette une mauvaise x-api-key', async ({ request }) => {
-    const res = await request.get('/api/bot/reminders', {
+    const res = await request.get('/api/bot/v1/reminders', {
       headers: { 'x-api-key': 'wrong-key' },
     });
     expect([401, 500]).toContain(res.status());
   });
 
   test('refuse les méthodes autres que GET', async ({ request }) => {
-    const res = await request.post('/api/bot/reminders', {
+    const res = await request.post('/api/bot/v1/reminders', {
       headers: { 'x-api-key': API_KEY ?? '' },
     });
     expect(res.status()).toBe(405);
@@ -43,7 +43,7 @@ test.describe('Bot reminders — auth & contrat', () => {
     request,
   }) => {
     test.skip(!HAS_KEY, 'BOT_API_KEY manquant');
-    const res = await request.get('/api/bot/reminders', {
+    const res = await request.get('/api/bot/v1/reminders', {
       headers: { 'x-api-key': API_KEY! },
     });
     expect(res.status()).toBe(200);
@@ -167,7 +167,7 @@ test.describe.serial('Bot reminders — match_checkin fonctionnel', () => {
   test('retourne un reminder match_checkin pour le capitaine lié', async ({
     request,
   }) => {
-    const res = await request.get('/api/bot/reminders', {
+    const res = await request.get('/api/bot/v1/reminders', {
       headers: { 'x-api-key': API_KEY! },
     });
     expect(res.status()).toBe(200);
@@ -188,7 +188,7 @@ test.describe.serial('Bot reminders — match_checkin fonctionnel', () => {
   test('un second appel ne renvoie plus le même reminder (claim atomique)', async ({
     request,
   }) => {
-    const res = await request.get('/api/bot/reminders', {
+    const res = await request.get('/api/bot/v1/reminders', {
       headers: { 'x-api-key': API_KEY! },
     });
     expect(res.status()).toBe(200);
@@ -339,7 +339,7 @@ test.describe.serial('Bot reminders — tournament_j1 fonctionnel', () => {
   test('retourne un reminder tournament_j1 pour le capitaine lié', async ({
     request,
   }) => {
-    const res = await request.get('/api/bot/reminders', {
+    const res = await request.get('/api/bot/v1/reminders', {
       headers: { 'x-api-key': API_KEY! },
     });
     expect(res.status()).toBe(200);
@@ -365,7 +365,7 @@ test.describe.serial('Bot reminders — tournament_j1 fonctionnel', () => {
   test('un second appel ne renvoie plus le tournoi (mark per-tournament)', async ({
     request,
   }) => {
-    const res = await request.get('/api/bot/reminders', {
+    const res = await request.get('/api/bot/v1/reminders', {
       headers: { 'x-api-key': API_KEY! },
     });
     const body = await res.json();
@@ -515,7 +515,7 @@ test.describe.serial('Bot reminders — cast_briefing fonctionnel', () => {
   test('retourne un reminder cast_briefing pour le caster lié', async ({
     request,
   }) => {
-    const res = await request.get('/api/bot/reminders', {
+    const res = await request.get('/api/bot/v1/reminders', {
       headers: { 'x-api-key': API_KEY! },
     });
     expect(res.status()).toBe(200);
@@ -537,7 +537,7 @@ test.describe.serial('Bot reminders — cast_briefing fonctionnel', () => {
   });
 
   test('un second appel ne renvoie plus l’assignment', async ({ request }) => {
-    const res = await request.get('/api/bot/reminders', {
+    const res = await request.get('/api/bot/v1/reminders', {
       headers: { 'x-api-key': API_KEY! },
     });
     const body = await res.json();
