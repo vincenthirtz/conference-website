@@ -184,6 +184,8 @@ export function formatStaffLog(log: StaffLog) {
     cancel_match_dispute: 'Annulation dispute match',
     auto_advance_stage: 'Avancement automatique phase',
     generate_group_matches: 'Génération matchs de poule',
+    create_cast_assignment: 'Assignment caster créé',
+    delete_cast_assignment: 'Assignment caster supprimé',
     other: 'Action staff',
   };
 

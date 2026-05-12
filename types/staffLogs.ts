@@ -39,6 +39,8 @@ export type StaffLogAction =
   | 'cancel_match_dispute'
   | 'auto_advance_stage'
   | 'generate_group_matches'
+  | 'create_cast_assignment'
+  | 'delete_cast_assignment'
   | 'other';
 
 export type StaffLog = {

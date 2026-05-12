@@ -9,6 +9,7 @@ import { supabaseClient } from '@/utils/supabase';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import ProfileCard from '@/components/player/ProfileCard';
+import DiscordLinkCard from '@/components/player/DiscordLinkCard';
 import TeamCard, { type TeamMemberLite } from '@/components/player/TeamCard';
 import DemandesHistory from '@/components/player/DemandesHistory';
 import QuickAction, {
@@ -336,6 +337,8 @@ export default function PlayerDashboard() {
               members={members}
             />
           </div>
+
+          <DiscordLinkCard />
 
           <NextMatchCard />
 

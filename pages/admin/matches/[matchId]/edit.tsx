@@ -10,6 +10,7 @@ import Breadcrumb from '@/components/admin/Breadcrumb';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import MatchReadinessChecklist from '@/components/admin/MatchReadinessChecklist';
 import MatchTimeline from '@/components/admin/MatchTimeline';
+import MatchCastAssignments from '@/components/admin/MatchCastAssignments';
 import { useToast } from '@/components/Toast';
 import type {
   StaffProps,
@@ -1077,6 +1078,8 @@ function AdminMatchEditPage({ staff }: StaffProps) {
               {(match.status === 'finished' || match.status === 'walkover') && (
                 <MvpSection matchId={match.id} />
               )}
+
+              <MatchCastAssignments matchId={match.id} />
 
               <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5">
                 <h2 className="text-lg font-semibold mb-3">Historique</h2>

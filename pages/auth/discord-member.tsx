@@ -47,6 +47,20 @@ export default function DiscordMemberRedirect() {
           });
         }
 
+        // Persist the Discord identity so the bot can DM the user later.
+        // Best-effort: a failure here must not block the OAuth flow.
+        try {
+          await fetch('/api/auth/link-discord', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${sessionData.session.access_token}`,
+            },
+          });
+        } catch (linkErr) {
+          logger.warn('[discord-member] link-discord failed', linkErr);
+        }
+
         // 3) Si la destination est /admin, vérifier que l'utilisateur a un rôle staff
         if (next.startsWith('/admin')) {
           setStatus('Vérification des permissions…');
