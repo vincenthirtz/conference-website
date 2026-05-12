@@ -10,6 +10,7 @@
 
 import { supabaseAdmin } from '../supabase';
 import { logger } from '../logger';
+import { emitBotEvent } from '../botEvents';
 import {
   findOrCreateUserByEmail,
   listUsersEmailMap,
@@ -236,6 +237,15 @@ export async function insertTeamMember(
     };
   }
 
+  void emitBotEvent('team.member.added', {
+    authUserId: input.userId,
+    teamId: input.teamId,
+    role: input.role,
+    battleTag: input.battleTag ?? null,
+  }).catch((e) =>
+    logger.error('[botEvents] team.member.added emit error:', e)
+  );
+
   return { ok: true, memberId: member?.id ?? null };
 }
 
@@ -260,6 +270,15 @@ export async function setTeamCaptain(
     return { ok: false, error: 'Service unavailable.', status: 503 };
   }
 
+  // Capture previous captain so we can emit a useful event payload
+  // (the bot needs to remove the role from the old captain).
+  const { data: before } = await supabaseAdmin
+    .from('teams')
+    .select('captain_id')
+    .eq('id', teamId)
+    .maybeSingle();
+  const previousCaptainAuthUserId = before?.captain_id ?? null;
+
   const { error: captainErr } = await supabaseAdmin
     .from('teams')
     .update({ captain_id: userId })
@@ -274,6 +293,16 @@ export async function setTeamCaptain(
         captainErr.message ||
         'Member added but failed to set as captain (check teams.captain_id column)',
     };
+  }
+
+  if (previousCaptainAuthUserId !== userId) {
+    void emitBotEvent('team.captain.changed', {
+      teamId,
+      previousCaptainAuthUserId,
+      newCaptainAuthUserId: userId,
+    }).catch((e) =>
+      logger.error('[botEvents] team.captain.changed emit error:', e)
+    );
   }
 
   return { ok: true };

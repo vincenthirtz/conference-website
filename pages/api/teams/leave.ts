@@ -10,6 +10,7 @@ import {
   rosterLockErrorMessage,
 } from '@/utils/teams/rosterLock';
 import { withAuthRoute } from '@/utils/staff';
+import { emitBotEvent } from '@/utils/botEvents';
 
 import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
@@ -76,6 +77,13 @@ export default withAuthRoute(async function handler(
     logger.error('[teams/leave] delete error:', deleteErr);
     return res.status(500).json({ error: 'Failed to leave team.' });
   }
+
+  void emitBotEvent('team.member.removed', {
+    authUserId: userId,
+    teamId: membership.team_id,
+  }).catch((e) =>
+    logger.error('[botEvents] team.member.removed emit error:', e)
+  );
 
   return res.status(200).json({
     success: true,

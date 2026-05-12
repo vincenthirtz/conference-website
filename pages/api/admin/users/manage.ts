@@ -5,6 +5,7 @@ import type { StaffContext } from '@/utils/staff';
 import { sendAccountDeletedEmail, sendWelcomeEmail } from '@/utils/email';
 import crypto from 'crypto';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { emitBotEvent } from '@/utils/botEvents';
 
 import { logger } from '../../../../utils/logger';
 type TeamMembership = {
@@ -366,11 +367,15 @@ async function handler(
 
     const { data: existingStaff } = await supabaseAdmin
       .from('staff')
-      .select('id')
+      .select('id, role')
       .eq('auth_user_id', userId)
       .maybeSingle();
 
+    const previousStaffRole = existingStaff?.role ?? null;
+    let newStaffRole: string | null = null;
+
     if (isStaffRole) {
+      newStaffRole = role;
       // Ajouter ou mettre à jour l'entrée staff
       if (existingStaff?.id) {
         await supabaseAdmin
@@ -388,6 +393,16 @@ async function handler(
     } else if (existingStaff?.id) {
       // Supprimer l'entrée staff si le rôle n'est plus un rôle staff
       await supabaseAdmin.from('staff').delete().eq('auth_user_id', userId);
+    }
+
+    if (previousStaffRole !== newStaffRole) {
+      void emitBotEvent('staff.role.changed', {
+        authUserId: userId,
+        previousRole: previousStaffRole,
+        newRole: newStaffRole,
+      }).catch((e) =>
+        logger.error('[botEvents] staff.role.changed emit error:', e)
+      );
     }
 
     const u = data.user;

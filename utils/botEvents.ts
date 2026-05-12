@@ -21,7 +21,11 @@ export type BotEventName =
   | 'match.starting'
   | 'match.disputed'
   | 'match.finished'
-  | 'news.published';
+  | 'news.published'
+  | 'team.member.added'
+  | 'team.member.removed'
+  | 'team.captain.changed'
+  | 'staff.role.changed';
 
 export type BotEventPayload = Record<string, unknown>;
 
