@@ -1,0 +1,259 @@
+// POST /api/bot/tournaments/[tournamentId]/matches
+//
+// Create one or more matches in a tournament via the Discord bot.
+// Admin-only via actorDiscordUserId (must map to staff admin/owner).
+//
+// Body accepts either:
+//   { actorDiscordUserId, match:  {...} }       // single
+//   { actorDiscordUserId, matches: [{...}, ...] } // batch
+//
+// All match fields except tournament_id are optional — teams may be null
+// (placeholder match), stage may be null (free-floating match), etc.
+
+import crypto from 'crypto';
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { supabaseAdmin } from '@/utils/supabase';
+import { applyRateLimit } from '@/utils/rateLimit';
+import { logStaffAction } from '@/utils/staffLogs';
+import { isValidUUID } from '@/utils/apiHelpers';
+import { logger } from '../../../../../utils/logger';
+
+const VALID_STATUSES = [
+  'pending',
+  'ongoing',
+  'finished',
+  'cancelled',
+  'walkover',
+  'disputed',
+  'postponed',
+] as const;
+
+const VALID_BRACKET_SIDES = ['wb', 'lb', 'final', 'none'] as const;
+
+function verifyBotApiKey(req: NextApiRequest): boolean {
+  const expected = process.env.BOT_API_KEY;
+  if (!expected) return false;
+  const provided = req.headers['x-api-key'];
+  if (typeof provided !== 'string' || provided.length === 0) return false;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
+async function resolveActorStaff(
+  discordUserId: string
+): Promise<{ staffId: string | null; role: string | null }> {
+  if (!supabaseAdmin) return { staffId: null, role: null };
+  const { data: link } = await supabaseAdmin
+    .from('user_discord_links')
+    .select('auth_user_id')
+    .eq('discord_user_id', discordUserId)
+    .maybeSingle();
+  if (!link) return { staffId: null, role: null };
+  const { data: staff } = await supabaseAdmin
+    .from('staff')
+    .select('id, role')
+    .eq('auth_user_id', link.auth_user_id)
+    .maybeSingle();
+  return { staffId: staff?.id ?? null, role: staff?.role ?? null };
+}
+
+type MatchInput = {
+  stage_id?: string | null;
+  status?: string;
+  is_bye?: boolean;
+  match_format?: string | null;
+  round_name?: string | null;
+  round_number?: number | null;
+  bracket_side?: string | null;
+  group_key?: string | null;
+  team1_id?: string | null;
+  team2_id?: string | null;
+  scheduled_at?: string | null;
+  stream_url?: string | null;
+  lobby_code?: string | null;
+  notes?: string | null;
+};
+
+function normalizeMatch(
+  tournamentId: string,
+  input: MatchInput
+): { row?: Record<string, unknown>; error?: string } {
+  if (input.stage_id && !isValidUUID(input.stage_id)) {
+    return { error: 'stage_id invalide' };
+  }
+  if (input.team1_id && !isValidUUID(input.team1_id)) {
+    return { error: 'team1_id invalide' };
+  }
+  if (input.team2_id && !isValidUUID(input.team2_id)) {
+    return { error: 'team2_id invalide' };
+  }
+  const status = input.status ?? 'pending';
+  if (!(VALID_STATUSES as readonly string[]).includes(status)) {
+    return {
+      error: `status invalide. Valeurs : ${VALID_STATUSES.join(', ')}.`,
+    };
+  }
+  if (
+    input.bracket_side &&
+    !(VALID_BRACKET_SIDES as readonly string[]).includes(input.bracket_side)
+  ) {
+    return {
+      error: `bracket_side invalide. Valeurs : ${VALID_BRACKET_SIDES.join(', ')}.`,
+    };
+  }
+  if (input.scheduled_at && Number.isNaN(Date.parse(input.scheduled_at))) {
+    return { error: 'scheduled_at invalide' };
+  }
+  if (
+    input.round_number !== undefined &&
+    input.round_number !== null &&
+    (!Number.isInteger(input.round_number) || input.round_number < 0)
+  ) {
+    return { error: 'round_number doit être un entier >= 0' };
+  }
+
+  return {
+    row: {
+      tournament_id: tournamentId,
+      stage_id: input.stage_id ?? null,
+      status,
+      is_bye: input.is_bye ?? false,
+      match_format: input.match_format ?? null,
+      round_name: input.round_name ?? null,
+      round_number:
+        typeof input.round_number === 'number' ? input.round_number : null,
+      bracket_side: input.bracket_side ?? null,
+      group_key: input.group_key ?? null,
+      team1_id: input.team1_id ?? null,
+      team2_id: input.team2_id ?? null,
+      scheduled_at: input.scheduled_at ?? null,
+      stream_url: input.stream_url ?? null,
+      lobby_code: input.lobby_code ?? null,
+      notes: input.notes ?? null,
+    },
+  };
+}
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  if (
+    applyRateLimit(req, res, { max: 30, windowMs: 60_000 }, 'bot-matches')
+  )
+    return;
+
+  if (!process.env.BOT_API_KEY) {
+    logger.error('[bot/matches] BOT_API_KEY is unset');
+    return res.status(500).json({ error: 'Endpoint not configured.' });
+  }
+  if (!verifyBotApiKey(req)) {
+    return res.status(401).json({ error: 'Invalid or missing API key.' });
+  }
+  if (!supabaseAdmin) {
+    return res.status(500).json({ error: 'Database unavailable.' });
+  }
+
+  const { tournamentId } = req.query;
+  if (
+    !tournamentId ||
+    Array.isArray(tournamentId) ||
+    !isValidUUID(tournamentId)
+  ) {
+    return res.status(400).json({ error: 'tournamentId invalide' });
+  }
+
+  const body = (req.body ?? {}) as Record<string, unknown>;
+
+  const actorDiscordUserId =
+    typeof body.actorDiscordUserId === 'string'
+      ? body.actorDiscordUserId.trim()
+      : '';
+  if (!/^[0-9]{15,25}$/.test(actorDiscordUserId)) {
+    return res.status(400).json({ error: 'actorDiscordUserId requis' });
+  }
+  const actor = await resolveActorStaff(actorDiscordUserId);
+  if (!actor.role || (actor.role !== 'admin' && actor.role !== 'owner')) {
+    return res.status(403).json({
+      error:
+        "Action réservée aux admins/owners. Ton compte Discord n'est pas lié à un staff de ce niveau.",
+    });
+  }
+
+  // Accept either { match: {...} } or { matches: [...] }.
+  let inputs: MatchInput[];
+  if (Array.isArray(body.matches)) {
+    inputs = body.matches as MatchInput[];
+  } else if (body.match && typeof body.match === 'object') {
+    inputs = [body.match as MatchInput];
+  } else {
+    return res.status(400).json({
+      error: "Body doit contenir 'match' (objet) ou 'matches' (tableau).",
+    });
+  }
+  if (inputs.length === 0) {
+    return res.status(400).json({ error: 'Aucun match à créer' });
+  }
+  if (inputs.length > 100) {
+    return res.status(400).json({ error: 'Maximum 100 matchs par requête' });
+  }
+
+  // Verify tournament exists
+  const { data: tournament } = await supabaseAdmin
+    .from('tournaments')
+    .select('id, name')
+    .eq('id', tournamentId)
+    .maybeSingle();
+  if (!tournament) {
+    return res.status(404).json({ error: 'Tournoi introuvable' });
+  }
+
+  // Normalize + validate each match
+  const rows: Record<string, unknown>[] = [];
+  for (let i = 0; i < inputs.length; i++) {
+    const { row, error } = normalizeMatch(tournamentId, inputs[i]);
+    if (error) {
+      return res.status(400).json({ error: `match[${i}]: ${error}` });
+    }
+    if (row) rows.push(row);
+  }
+
+  const { data: inserted, error: insErr } = await supabaseAdmin
+    .from('matches')
+    .insert(rows)
+    .select('*');
+
+  if (insErr || !inserted) {
+    logger.error('[bot/matches] insert error', insErr);
+    return res.status(500).json({ error: 'Échec de création des matchs' });
+  }
+
+  if (actor.staffId) {
+    try {
+      await logStaffAction({
+        staff_id: actor.staffId,
+        action: 'create_match',
+        entity_type: 'match',
+        entity_id: inserted.length === 1 ? inserted[0].id : null,
+        tournament_id: tournamentId,
+        payload: {
+          batch: inserted.length > 1,
+          count: inserted.length,
+          match_ids: inserted.map((m) => m.id),
+          via: 'discord_bot',
+        },
+      });
+    } catch (e) {
+      logger.error('[bot/matches] log error', e);
+    }
+  }
+
+  return res.status(201).json({ matches: inserted, count: inserted.length });
+}
