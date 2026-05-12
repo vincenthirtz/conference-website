@@ -123,6 +123,48 @@ export type StageMini = {
 };
 
 /* -----------------------------------------------------------
+ * Scrim
+ * ---------------------------------------------------------*/
+
+export type ScrimStatus =
+  | 'draft'
+  | 'scheduled'
+  | 'running'
+  | 'completed'
+  | 'cancelled';
+
+export type Scrim = {
+  id: string;
+  name: string;
+  slug: string | null;
+  game: string | null;
+  status: ScrimStatus | string;
+  team1_id: string | null;
+  team2_id: string | null;
+  scheduled_date: string | null;
+  timezone: string | null;
+  is_public: boolean;
+  logo_url: string | null;
+  banner_url: string | null;
+  description: string | null;
+  stream_url: string | null;
+  source_demande_id: string | null;
+  created_at: string;
+  updated_at: string | null;
+};
+
+/** Version legere pour les listes */
+export type ScrimSummary = {
+  id: string;
+  name: string;
+  slug: string | null;
+  status: ScrimStatus | string;
+  scheduled_date: string | null;
+  team1_id: string | null;
+  team2_id: string | null;
+};
+
+/* -----------------------------------------------------------
  * Match
  * ---------------------------------------------------------*/
 
@@ -139,7 +181,10 @@ export type BracketSide = 'wb' | 'lb' | 'final' | 'none';
 
 export type Match = {
   id: string;
+  // Pour les matchs lies a un scrim, tournament_id sera NULL en base ; les
+  // consommateurs cote tournoi peuvent continuer a le traiter comme string.
   tournament_id: string;
+  scrim_id: string | null;
   stage_id: string | null;
   stage?: StageSummary | null;
   round_number: number | null;

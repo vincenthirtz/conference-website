@@ -483,7 +483,8 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
 
   // 3a-bis) Side-effects: when approving a scrim demande, create a notification
   // demande for the target team (mirrors the captain-driven flow in
-  // pages/api/teams/scrim-requests.ts).
+  // pages/api/teams/scrim-requests.ts) AND create a draft scrim entity that
+  // staff can flesh out (date, matchs, etc.) before publishing.
   if (newStatus === 'approved' && afterList) {
     for (const d of afterList as DemandeRow[]) {
       if (d.type !== 'scrim') continue;
@@ -532,6 +533,41 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
 
       if (notifErr) {
         logger.error('admin scrim accept notification error:', notifErr);
+      }
+
+      // Cree un scrim draft pour cette demande s'il n'en existe pas deja un.
+      try {
+        const { data: existingScrim } = await supabaseAdmin
+          .from('scrims')
+          .select('id')
+          .eq('source_demande_id', d.id)
+          .maybeSingle();
+
+        if (!existingScrim) {
+          const scrimName = `${fromTeamName} vs ${targetLabel}`;
+          const slugBase = `${fromTeamName}-vs-${targetLabel}-${d.id.slice(0, 8)}`
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+
+          const { error: scrimErr } = await supabaseAdmin.from('scrims').insert({
+            name: scrimName,
+            slug: slugBase || null,
+            status: 'draft',
+            team1_id: fromTeamId,
+            team2_id: d.team_id,
+            scheduled_date: preferredDate,
+            is_public: false,
+            source_demande_id: d.id,
+            description: d.comment ?? null,
+          });
+
+          if (scrimErr) {
+            logger.error('admin scrim auto-create error:', scrimErr);
+          }
+        }
+      } catch (scrimEx) {
+        logger.error('admin scrim auto-create exception:', scrimEx);
       }
     }
   }
