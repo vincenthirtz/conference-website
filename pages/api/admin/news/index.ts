@@ -3,6 +3,7 @@ import slugify from 'slugify';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, type StaffContext } from '@/utils/staff';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { emitBotEvent } from '@/utils/botEvents';
 
 import { logger } from '../../../../utils/logger';
 type NewsPayload = {
@@ -103,6 +104,20 @@ async function handler(
     if (error) {
       logger.error('[admin/news] create error', error);
       return res.status(500).json({ error: 'Failed to create the article.' });
+    }
+
+    if (body.status === 'published') {
+      void emitBotEvent('news.published', {
+        newsId: data.id,
+        slug: data.slug,
+        title: data.title,
+        tag: data.tag,
+        excerpt: data.excerpt,
+        imageUrl: data.image_url,
+        publishedAt: data.published_at,
+      }).catch((e) =>
+        logger.error('[botEvents] news.published emit error', e)
+      );
     }
 
     return res.status(201).json(data);

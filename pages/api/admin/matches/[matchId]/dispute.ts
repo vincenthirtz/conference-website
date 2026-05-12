@@ -14,6 +14,7 @@ import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { applyMatchScore } from '@/utils/matches/applyScore';
+import { emitBotEvent } from '@/utils/botEvents';
 import type { MatchStatus } from '@/types/admin';
 
 import { logger } from '../../../../../utils/logger';
@@ -142,6 +143,15 @@ async function openDispute(
       },
     });
   }
+
+  void emitBotEvent('match.disputed', {
+    matchId,
+    tournamentId: match.tournament_id ?? null,
+    previousStatus,
+    reason: reason.trim(),
+    openedBy: 'staff',
+    openedByStaffId: ctx?.staff?.id ?? null,
+  }).catch((e) => logger.error('[botEvents] match.disputed emit error:', e));
 
   return res.status(200).json({ match: updated });
 }

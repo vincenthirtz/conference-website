@@ -4,6 +4,7 @@ import slugify from 'slugify';
 import { supabaseAdmin, getServerClient } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { parsePagination } from '@/utils/apiHelpers';
+import { emitBotEvent } from '@/utils/botEvents';
 
 import { logger } from '../../../utils/logger';
 
@@ -167,6 +168,16 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
         })
       )
     );
+
+    void emitBotEvent('news.published', {
+      newsId: data.id,
+      slug: data.slug,
+      title: data.title,
+      tag: data.tag,
+      excerpt: data.excerpt,
+      imageUrl: data.image_url,
+      publishedAt: data.published_at,
+    }).catch((e) => logger.error('[botEvents] news.published emit error', e));
   }
 
   return res.status(201).json(data);

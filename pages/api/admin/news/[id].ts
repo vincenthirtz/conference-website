@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { emitBotEvent } from '@/utils/botEvents';
 
 import { logger } from '../../../../utils/logger';
 type NewsPayload = {
@@ -117,6 +118,23 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (error) {
       logger.error('[admin/news/id] update error', error);
       return res.status(500).json({ error: 'Failed to update the article.' });
+    }
+
+    if (
+      body.status === 'published' &&
+      existing?.status !== 'published'
+    ) {
+      void emitBotEvent('news.published', {
+        newsId: data.id,
+        slug: data.slug,
+        title: data.title,
+        tag: data.tag,
+        excerpt: data.excerpt,
+        imageUrl: data.image_url,
+        publishedAt: data.published_at,
+      }).catch((e) =>
+        logger.error('[botEvents] news.published emit error', e)
+      );
     }
 
     return res.status(200).json(data);

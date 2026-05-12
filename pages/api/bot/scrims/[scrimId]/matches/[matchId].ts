@@ -18,6 +18,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
+import { emitBotEvent } from '@/utils/botEvents';
 import { logger } from '../../../../../../utils/logger';
 
 const VALID_STATUSES = [
@@ -293,6 +294,21 @@ export default async function handler(
     } catch (e) {
       logger.error('[bot/scrim-match] log error:', e);
     }
+  }
+
+  if (after.status === 'ongoing' && match.status !== 'ongoing') {
+    void emitBotEvent('match.starting', {
+      matchId,
+      tournamentId: null,
+      scrimId,
+      team1Id: after.team1_id ?? null,
+      team2Id: after.team2_id ?? null,
+      scheduledAt: after.scheduled_at ?? null,
+      startedAt: after.started_at ?? null,
+      matchFormat: after.match_format ?? null,
+      lobbyCode: after.lobby_code ?? null,
+      streamUrl: after.stream_url ?? null,
+    }).catch((e) => logger.error('[botEvents] match.starting emit error:', e));
   }
 
   return res.status(200).json({ success: true, match: after });

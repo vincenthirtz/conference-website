@@ -11,6 +11,7 @@ import { applyMatchScore } from '@/utils/matches/applyScore';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { notifyMatchStarting } from '@/utils/discord';
+import { emitBotEvent } from '@/utils/botEvents';
 
 import { logger } from '../../../../utils/logger';
 export default withStaffRoute(handler, 'manager'); // rôle min : manager
@@ -447,6 +448,18 @@ async function handlePut(
     void notifyMatchStartingForMatch(matchId).catch((e) =>
       logger.error('[discord] notifyMatchStarting error:', e)
     );
+    void emitBotEvent('match.starting', {
+      matchId,
+      tournamentId: updated.tournament_id ?? null,
+      scrimId: updated.scrim_id ?? null,
+      team1Id: updated.team1_id ?? null,
+      team2Id: updated.team2_id ?? null,
+      scheduledAt: updated.scheduled_at ?? null,
+      startedAt: updated.started_at ?? null,
+      matchFormat: updated.match_format ?? null,
+      lobbyCode: updated.lobby_code ?? null,
+      streamUrl: updated.stream_url ?? null,
+    }).catch((e) => logger.error('[botEvents] match.starting emit error:', e));
   }
 
   return res.status(200).json({
