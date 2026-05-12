@@ -1,13 +1,17 @@
-// POST /api/bot/teams
+// /api/bot/teams
 //
-// Creates a team via the Discord bot.
+// GET   — Liste les equipes (filtres : search, isActive, isJoinable, country,
+//         limit). Utile pour les autocompletions du bot (commande /scrim
+//         create, /tournament register, etc.).
+// POST  — Cree une equipe via le bot Discord.
 //
 // Auth: x-api-key (BOT_API_KEY).
-// Required: name, captainDiscordUserId (must already be in user_discord_links).
-// Optional: slug, shortName, logoUrl, description, country, discord, website.
 //
-// The captain becomes both the team's captain (teams.captain_id) and the
-// first team_members row. Rolls back the team if the member insert fails.
+// POST required: name, captainDiscordUserId (lie dans user_discord_links).
+// POST optional: slug, shortName, logoUrl, description, country, discord, website.
+//
+// Le capitaine devient le captain_id et la 1ere ligne team_members. Si
+// l'insertion du membre echoue, l'equipe est supprimee (rollback).
 
 import crypto from 'crypto';
 import slugify from 'slugify';
@@ -33,16 +37,59 @@ function verifyBotApiKey(req: NextApiRequest): boolean {
   return crypto.timingSafeEqual(a, b);
 }
 
+async function handleList(req: NextApiRequest, res: NextApiResponse) {
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+  const offset = Math.max(0, Number(req.query.offset) || 0);
+
+  const search =
+    typeof req.query.search === 'string' ? req.query.search.trim() : '';
+  const country =
+    typeof req.query.country === 'string' ? req.query.country.trim() : '';
+  const isActive =
+    req.query.isActive === undefined ? true : req.query.isActive === 'true';
+  const isJoinable =
+    req.query.isJoinable === '1' || req.query.isJoinable === 'true';
+
+  let query = supabaseAdmin!
+    .from('teams')
+    .select(
+      'id, name, slug, short_name, logo_url, country, is_active, is_joinable, discord_role_id, captain_id, created_at'
+    )
+    .order('name', { ascending: true })
+    .range(offset, offset + limit - 1);
+
+  if (typeof isActive === 'boolean') {
+    query = query.eq('is_active', isActive);
+  }
+  if (isJoinable) {
+    query = query.eq('is_joinable', true);
+  }
+  if (country) {
+    query = query.eq('country', country);
+  }
+  if (search) {
+    const s = `%${search.replace(/[%_]/g, (m) => `\\${m}`)}%`;
+    query = query.or(`name.ilike.${s},slug.ilike.${s},short_name.ilike.${s}`);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    logger.error('[bot/teams] list error', error);
+    return res.status(500).json({ error: 'Failed to list teams' });
+  }
+  return res.status(200).json({ teams: data ?? [] });
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    res.setHeader('Allow', 'GET,POST');
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (applyRateLimit(req, res, { max: 20, windowMs: 60_000 }, 'bot-teams'))
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'bot-teams'))
     return;
 
   if (!process.env.BOT_API_KEY) {
@@ -55,6 +102,8 @@ export default async function handler(
   if (!supabaseAdmin) {
     return res.status(500).json({ error: 'Database unavailable.' });
   }
+
+  if (req.method === 'GET') return handleList(req, res);
 
   const body = (req.body ?? {}) as Record<string, unknown>;
 
