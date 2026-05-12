@@ -759,6 +759,66 @@ export async function notifyVetoStep(
 }
 
 /* -----------------------------------------------------------
+ * Score report dispute (bot Discord)
+ * ---------------------------------------------------------*/
+
+export type ScoreReportDisputeNotification = {
+  matchId: string;
+  tournamentId: string | null;
+  tournamentName?: string | null;
+  team1Name: string;
+  team2Name: string;
+  team1Report: { team1Score: number; team2Score: number };
+  team2Report: { team1Score: number; team2Score: number };
+  adminUrl?: string;
+};
+
+export async function notifyScoreReportDispute(
+  data: ScoreReportDisputeNotification
+): Promise<void> {
+  const cfg = await resolveWebhook(data.tournamentId, 'support_tickets');
+  if (!cfg) return;
+
+  const channelPing = formatRoleMention(cfg.roleMention);
+  const fields: DiscordEmbedField[] = [
+    {
+      name: `Report ${data.team1Name}`,
+      value: `${data.team1Report.team1Score} – ${data.team1Report.team2Score}`,
+      inline: true,
+    },
+    {
+      name: `Report ${data.team2Name}`,
+      value: `${data.team2Report.team1Score} – ${data.team2Report.team2Score}`,
+      inline: true,
+    },
+  ];
+  if (data.tournamentName) {
+    fields.push({
+      name: 'Tournoi',
+      value: data.tournamentName,
+      inline: false,
+    });
+  }
+
+  await postToDiscordWebhook(cfg.url, {
+    username: "OW Women's Cup — Score reports",
+    content: channelPing || undefined,
+    embeds: [
+      {
+        title: '⚖️ Désaccord de score entre capitaines',
+        description: `**${data.team1Name}** vs **${data.team2Name}** — les deux reports diffèrent. Le match est passé en \`disputed\` ; arbitrage requis.`,
+        color: COLORS.supportMedium,
+        fields,
+        timestamp: new Date().toISOString(),
+        footer: { text: `Match ${data.matchId.slice(0, 8)}` },
+        ...(data.adminUrl ? { url: data.adminUrl } : {}),
+      },
+    ],
+    allowed_mentions: buildAllowedMentions(cfg.roleMention),
+  });
+}
+
+/* -----------------------------------------------------------
  * Support ticket notification
  * ---------------------------------------------------------*/
 
