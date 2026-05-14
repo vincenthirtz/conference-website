@@ -18,6 +18,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
 import { sanitizeUrl } from '@/utils/apiHelpers';
+import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 
 const DISCORD_ID_RE = /^[0-9]{15,25}$/;
@@ -182,13 +183,21 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .json({ error: 'Échec de création (rollback effectué)' });
   }
 
-  // Trace player-driven mutation. No staff actor here (captain is a player),
-  // so we use structured logger.info rather than staff_logs.
+  // Trace player-driven mutation. Logger.info for ops, bot_player_actions
+  // for support audit trail. logPlayerAction is fire-and-forget.
   logger.info('[bot/teams] team created via bot', {
     teamId: created.id,
     slug: created.slug,
     captainAuthId,
     captainDiscordUserId,
+  });
+  void logPlayerAction({
+    actorAuthUserId: captainAuthId,
+    actorDiscordUserId: captainDiscordUserId,
+    action: 'create_team',
+    entityType: 'team',
+    entityId: created.id,
+    payload: { name: created.name, slug: created.slug },
   });
 
   return res.status(201).json({ team: created });

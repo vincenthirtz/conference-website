@@ -21,6 +21,7 @@ import {
   resolveActorPlayer,
   resolveActorStaff,
 } from '@/utils/botActor';
+import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 
 const DISCORD_ID_RE = /^[0-9]{15,25}$/;
@@ -173,6 +174,20 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       logger.error('[bot/profile] team_members battle_tag propagation error', tmErr);
     }
   }
+
+  void logPlayerAction({
+    actorAuthUserId: actor.authUserId,
+    actorDiscordUserId: actor.discordUserId,
+    action: 'update_profile',
+    entityType: 'profile',
+    entityId: target.authUserId,
+    targetAuthUserId: isStaffOverride ? target.authUserId : null,
+    targetDiscordUserId: isStaffOverride ? targetDiscordUserId : null,
+    payload: {
+      fields: Object.keys(metaUpdates),
+      edited_by: isStaffOverride ? 'staff' : 'self',
+    },
+  });
 
   return res.status(200).json({
     success: true,

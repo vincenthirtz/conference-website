@@ -18,6 +18,7 @@ import {
   rosterLockErrorMessage,
 } from '@/utils/teams/rosterLock';
 import { emitBotEvent } from '@/utils/botEvents';
+import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 
 const DISCORD_ID_RE = /^[0-9]{15,25}$/;
@@ -111,6 +112,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }).catch((e) =>
     logger.error('[botEvents] team.captain.changed emit error:', e)
   );
+
+  void logPlayerAction({
+    actorAuthUserId: actor.authUserId,
+    actorDiscordUserId: actor.discordUserId,
+    action: 'transfer_captain',
+    entityType: 'team',
+    entityId: team.id,
+    targetAuthUserId: newCaptain.authUserId,
+    targetDiscordUserId: newCaptainDiscordUserId,
+  });
 
   return res.status(200).json({
     success: true,

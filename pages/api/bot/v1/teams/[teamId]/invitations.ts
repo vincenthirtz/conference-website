@@ -16,6 +16,7 @@ import { withBotRoute } from '@/utils/botAuth';
 import { requireBotPlayer, resolveActorPlayer } from '@/utils/botActor';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { createInvitation } from '@/utils/teams/invitations';
+import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 
 const DISCORD_ID_RE = /^[0-9]{15,25}$/;
@@ -187,6 +188,17 @@ async function handleCreate(
   if (!result.ok) {
     return res.status(result.status).json({ error: result.error });
   }
+
+  void logPlayerAction({
+    actorAuthUserId: actor.authUserId,
+    actorDiscordUserId: actor.discordUserId,
+    action: 'invite_create',
+    entityType: 'invitation',
+    entityId: result.data.id,
+    targetAuthUserId: target.authUserId,
+    targetDiscordUserId: targetDiscordUserId,
+    payload: { team_id: team.id, role, has_comment: !!comment },
+  });
 
   return res.status(201).json({
     success: true,

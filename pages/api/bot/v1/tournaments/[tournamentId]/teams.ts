@@ -25,6 +25,7 @@ import {
   resolveActorStaff,
 } from '@/utils/botActor';
 import { isValidUUID } from '@/utils/apiHelpers';
+import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 
 const DISCORD_ID_RE = /^[0-9]{15,25}$/;
@@ -355,12 +356,20 @@ async function handleRegister(
         stage_ids: targetStageIds,
       },
     });
-  } else if (isCaptain) {
+  } else if (isCaptain && captainAuthUserId) {
     logger.info('[bot/tournaments/teams] captain self-registration', {
       teamId,
       tournamentId,
       captainAuthUserId,
       actorDiscordUserId,
+    });
+    void logPlayerAction({
+      actorAuthUserId: captainAuthUserId,
+      actorDiscordUserId,
+      action: 'register_team',
+      entityType: 'tournament',
+      entityId: tournamentId,
+      payload: { team_id: teamId, stage_ids: targetStageIds },
     });
   }
 

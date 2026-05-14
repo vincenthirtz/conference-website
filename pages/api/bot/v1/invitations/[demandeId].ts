@@ -16,6 +16,7 @@ import {
   cancelInvitation,
   rejectInvitation,
 } from '@/utils/teams/invitations';
+import { logPlayerAction } from '@/utils/botPlayerLogs';
 
 const ACTIONS = new Set(['accept', 'reject', 'cancel']);
 
@@ -44,6 +45,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (!result.ok) {
       return res.status(result.status).json({ error: result.error });
     }
+    void logPlayerAction({
+      actorAuthUserId: actor.authUserId,
+      actorDiscordUserId: actor.discordUserId,
+      action: 'invite_accept',
+      entityType: 'invitation',
+      entityId: demandeId,
+      payload: { team_id: result.data.teamId },
+    });
     return res.status(200).json({
       success: true,
       action: 'accept',
@@ -57,6 +66,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (!result.ok) {
       return res.status(result.status).json({ error: result.error });
     }
+    void logPlayerAction({
+      actorAuthUserId: actor.authUserId,
+      actorDiscordUserId: actor.discordUserId,
+      action: 'invite_reject',
+      entityType: 'invitation',
+      entityId: demandeId,
+    });
     return res.status(200).json({ success: true, action: 'reject' });
   }
 
@@ -65,6 +81,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!result.ok) {
     return res.status(result.status).json({ error: result.error });
   }
+  void logPlayerAction({
+    actorAuthUserId: actor.authUserId,
+    actorDiscordUserId: actor.discordUserId,
+    action: 'invite_cancel',
+    entityType: 'invitation',
+    entityId: demandeId,
+  });
   return res.status(200).json({ success: true, action: 'cancel' });
 }
 

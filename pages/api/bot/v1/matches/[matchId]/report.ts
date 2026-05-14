@@ -28,6 +28,7 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import { notifyScoreReportDispute } from '@/utils/discord';
 import { emitBotEvent } from '@/utils/botEvents';
+import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 
 const DISCORD_ID_RE = /^[0-9]{15,25}$/;
@@ -185,6 +186,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     team2Score,
     discordUserId,
     captainAuthId: reportingAuthId,
+  });
+
+  void logPlayerAction({
+    actorAuthUserId: reportingAuthId,
+    actorDiscordUserId: discordUserId,
+    action: 'report_score',
+    entityType: 'match',
+    entityId: matchId,
+    payload: {
+      my_side: mySide,
+      team1_score: team1Score,
+      team2_score: team2Score,
+    },
   });
 
   // 4) Look up both reports after the upsert

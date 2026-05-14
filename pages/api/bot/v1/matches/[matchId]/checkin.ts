@@ -16,6 +16,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { redeemCheckinToken } from '@/utils/checkin';
+import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 
 const DISCORD_ID_RE = /^[0-9]{15,25}$/;
@@ -116,6 +117,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       teamSlot: result.teamSlot,
       discordUserId,
       captainAuthId: matchedCaptainAuthId,
+    });
+    void logPlayerAction({
+      actorAuthUserId: matchedCaptainAuthId,
+      actorDiscordUserId: discordUserId,
+      action: 'checkin',
+      entityType: 'match',
+      entityId: result.matchId,
+      payload: { team_slot: result.teamSlot },
     });
   }
 

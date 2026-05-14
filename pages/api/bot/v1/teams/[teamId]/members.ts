@@ -18,6 +18,7 @@ import {
   rosterLockErrorMessage,
 } from '@/utils/teams/rosterLock';
 import { emitBotEvent } from '@/utils/botEvents';
+import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 
 const DISCORD_ID_RE = /^[0-9]{15,25}$/;
@@ -115,6 +116,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }).catch((e) =>
     logger.error('[botEvents] team.member.removed emit error:', e)
   );
+
+  void logPlayerAction({
+    actorAuthUserId: actor.authUserId,
+    actorDiscordUserId: actor.discordUserId,
+    action: 'kick_member',
+    entityType: 'team',
+    entityId: team.id,
+    targetAuthUserId: target.authUserId,
+    targetDiscordUserId: targetDiscordUserId,
+  });
 
   return res.status(200).json({
     success: true,

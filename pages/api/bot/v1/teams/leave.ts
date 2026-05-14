@@ -17,6 +17,7 @@ import {
   rosterLockErrorMessage,
 } from '@/utils/teams/rosterLock';
 import { emitBotEvent } from '@/utils/botEvents';
+import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -75,6 +76,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }).catch((e) =>
     logger.error('[botEvents] team.member.removed emit error:', e)
   );
+
+  void logPlayerAction({
+    actorAuthUserId: actor.authUserId,
+    actorDiscordUserId: actor.discordUserId,
+    action: 'leave_team',
+    entityType: 'team',
+    entityId: membership.team_id,
+  });
 
   return res.status(200).json({
     success: true,
