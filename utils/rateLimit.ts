@@ -93,3 +93,36 @@ export function applyRateLimit(
 
   return false;
 }
+
+/**
+ * Per-actor rate limit. Keyed on an arbitrary string (typically a Discord
+ * user id) rather than the request IP. Useful in /api/bot/v1/* where every
+ * request comes from the bot's IP — a per-IP cap would treat all users as
+ * one bucket. Pair with applyRateLimit for combined IP + actor limits.
+ *
+ * Returns true if the request should be blocked.
+ */
+export function applyActorRateLimit(
+  res: NextApiResponse,
+  actorKey: string,
+  config: RateLimitConfig,
+  storeName: string
+): boolean {
+  if (!actorKey) return false;
+  const store = getStore(`${storeName}:actor`);
+  const now = Date.now();
+  const timestamps = (store.get(actorKey) ?? []).filter(
+    (t) => now - t < config.windowMs
+  );
+  if (timestamps.length >= config.max) {
+    res.setHeader('Retry-After', String(Math.ceil(config.windowMs / 1000)));
+    res.status(429).json({
+      error: 'Trop de requêtes pour ton compte. Réessaye plus tard.',
+      code: 'ACTOR_RATE_LIMIT',
+    });
+    return true;
+  }
+  timestamps.push(now);
+  store.set(actorKey, timestamps);
+  return false;
+}

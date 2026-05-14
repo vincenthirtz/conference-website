@@ -121,6 +121,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
 export default withBotRoute(handler, {
   methods: ['POST'],
-  rateLimit: { max: 20, key: 'bot-announcements' },
+  rateLimit: {
+    max: 20,
+    key: 'bot-announcements',
+    perActor: { max: 3, windowMs: 60_000 },
+  },
   idempotent: true,
 });

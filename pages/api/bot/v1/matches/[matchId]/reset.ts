@@ -133,6 +133,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
 export default withBotRoute(handler, {
   methods: ['POST'],
-  rateLimit: { max: 20, key: 'bot-match-reset' },
+  rateLimit: {
+    max: 20,
+    key: 'bot-match-reset',
+    perActor: { max: 5, windowMs: 60_000 },
+  },
   idempotent: true,
 });

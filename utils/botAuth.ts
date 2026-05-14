@@ -15,8 +15,9 @@
 
 import crypto from 'crypto';
 import type { NextApiHandler, NextApiRequest, NextApiResponse } from 'next';
-import { applyRateLimit } from './rateLimit';
+import { applyActorRateLimit, applyRateLimit } from './rateLimit';
 import { supabaseAdmin } from './supabase';
+import { isBotMaintenanceMode } from './maintenance';
 import { logger } from './logger';
 
 export function verifyBotApiKey(req: NextApiRequest): boolean {
@@ -90,6 +91,16 @@ export type BotRouteOptions = {
     windowMs?: number;
     /** Unique store name so each route has its own bucket. */
     key: string;
+    /**
+     * Optional per-actor sub-limit. Read body.actorDiscordUserId at request
+     * time. If present, applies an extra cap keyed on the actor — useful so
+     * one Discord user spamming /forfait doesn't drain the global IP bucket
+     * for everyone. Pair with the global max for combined protection.
+     */
+    perActor?: {
+      max: number;
+      windowMs?: number;
+    };
   };
   /**
    * Honor `Idempotency-Key` request header on non-GET methods. Cached responses
@@ -100,6 +111,7 @@ export type BotRouteOptions = {
 };
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+const DISCORD_ID_RE = /^[0-9]{15,25}$/;
 
 export function withBotRoute(
   handler: (
@@ -141,6 +153,49 @@ export function withBotRoute(
     }
     if (!supabaseAdmin) {
       return res.status(500).json({ error: 'Database unavailable.' });
+    }
+
+    // Maintenance mode : si actif, on bloque tous les writes (POST/PATCH/
+    // DELETE/PUT). Les GET continuent de fonctionner pour ne pas casser
+    // le polling reminders / snapshot pendant un deploiement.
+    if (!SAFE_METHODS.has(method)) {
+      if (await isBotMaintenanceMode()) {
+        res.setHeader('Retry-After', '60');
+        return res.status(503).json({
+          error: 'Site en maintenance, les écritures bot sont temporairement désactivées.',
+          code: 'MAINTENANCE_MODE',
+        });
+      }
+    }
+
+    // Per-actor rate limit : on lit actorDiscordUserId dans le body OU la
+    // query si fourni en options. Compatible avec les routes qui lisent
+    // l'acteur en query (GET) et celles qui le lisent en body (POST/PATCH).
+    if (options.rateLimit.perActor) {
+      const actorFromBody =
+        typeof (req.body as Record<string, unknown> | null)?.actorDiscordUserId === 'string'
+          ? ((req.body as Record<string, unknown>).actorDiscordUserId as string).trim()
+          : '';
+      const actorFromQuery =
+        typeof req.query.actorDiscordUserId === 'string'
+          ? req.query.actorDiscordUserId.trim()
+          : '';
+      const actorKey = actorFromBody || actorFromQuery;
+      if (actorKey && DISCORD_ID_RE.test(actorKey)) {
+        if (
+          applyActorRateLimit(
+            res,
+            actorKey,
+            {
+              max: options.rateLimit.perActor.max,
+              windowMs: options.rateLimit.perActor.windowMs ?? 60_000,
+            },
+            options.rateLimit.key
+          )
+        ) {
+          return;
+        }
+      }
     }
 
     // Idempotency: only honored for unsafe methods.
