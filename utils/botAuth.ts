@@ -6,12 +6,12 @@
 //   - rate limit (429)
 //   - BOT_API_KEY presence + constant-time compare (401/500)
 //   - supabaseAdmin availability (500)
+//   - maintenance mode gate (503)
 //   - optional Idempotency-Key honoring (replays cached response)
 //
-// The idempotency cache is in-memory, ~5 min TTL. Acceptable trade-off given
-// Netlify currently runs as a single Lambda instance per region and the bot's
-// retry-after-timeout window is short. If we move to multi-instance, swap the
-// cache for a Supabase table without touching call sites.
+// Idempotency cache : persiste dans la table Supabase `bot_idempotency`
+// (TTL 5min cote app). Survit aux cold starts et est partage entre Lambdas
+// si Netlify scale. Voir database/migrations/add_bot_idempotency_table.sql.
 
 import crypto from 'crypto';
 import type { NextApiHandler, NextApiRequest, NextApiResponse } from 'next';
@@ -32,33 +32,53 @@ export function verifyBotApiKey(req: NextApiRequest): boolean {
 }
 
 /* ---------------------------------------------------------------------------
- * Idempotency cache (in-memory)
+ * Idempotency cache (Supabase-backed)
  * ------------------------------------------------------------------------- */
+
+const IDEMPOTENCY_TTL_MS = 5 * 60 * 1000;
+const IDEMPOTENCY_KEY_MAX_LEN = 200;
 
 type CachedResponse = {
   status: number;
   body: unknown;
-  expiresAt: number;
 };
 
-const IDEMPOTENCY_TTL_MS = 5 * 60 * 1000;
-const IDEMPOTENCY_MAX_ENTRIES = 1000;
-const IDEMPOTENCY_KEY_MAX_LEN = 200;
+async function readIdempotencyCache(
+  cacheKey: string
+): Promise<CachedResponse | null> {
+  if (!supabaseAdmin) return null;
+  const { data, error } = await supabaseAdmin
+    .from('bot_idempotency')
+    .select('status, body, expires_at')
+    .eq('cache_key', cacheKey)
+    .maybeSingle();
+  if (error || !data) return null;
+  const exp = Date.parse(data.expires_at as string);
+  if (!Number.isFinite(exp) || exp <= Date.now()) return null;
+  return {
+    status: data.status as number,
+    body: data.body as unknown,
+  };
+}
 
-const idempotencyCache = new Map<string, CachedResponse>();
-
-function pruneIdempotencyCache(now: number) {
-  for (const [k, v] of idempotencyCache) {
-    if (v.expiresAt <= now) idempotencyCache.delete(k);
-  }
-  if (idempotencyCache.size > IDEMPOTENCY_MAX_ENTRIES) {
-    // Map preserves insertion order; drop the oldest until back under cap.
-    const overflow = idempotencyCache.size - IDEMPOTENCY_MAX_ENTRIES;
-    let i = 0;
-    for (const k of idempotencyCache.keys()) {
-      if (i++ >= overflow) break;
-      idempotencyCache.delete(k);
-    }
+async function writeIdempotencyCache(
+  cacheKey: string,
+  status: number,
+  body: unknown
+): Promise<void> {
+  if (!supabaseAdmin) return;
+  const expires_at = new Date(Date.now() + IDEMPOTENCY_TTL_MS).toISOString();
+  // Upsert : remplace une row potentiellement expiree avec la meme cle.
+  const { error } = await supabaseAdmin
+    .from('bot_idempotency')
+    .upsert(
+      { cache_key: cacheKey, status, body, expires_at },
+      { onConflict: 'cache_key' }
+    );
+  if (error) {
+    // On log mais on ne bloque pas : echec d'ecriture cache = pire UX
+    // (le retry refera le travail) mais pas de corruption.
+    logger.error('[bot/idempotency] upsert error', error);
   }
 }
 
@@ -202,26 +222,24 @@ export function withBotRoute(
     if (options.idempotent && !SAFE_METHODS.has(method)) {
       const userKey = readIdempotencyKey(req);
       if (userKey) {
-        const now = Date.now();
-        pruneIdempotencyCache(now);
         const cacheKey = idempotencyCacheKey(req, userKey);
-        const cached = idempotencyCache.get(cacheKey);
-        if (cached && cached.expiresAt > now) {
+        const cached = await readIdempotencyCache(cacheKey);
+        if (cached) {
           res.setHeader('Idempotency-Replay', 'true');
           return res.status(cached.status).json(cached.body);
         }
 
         // Wrap res.json so we capture the *eventual* status + body to replay.
         // Only cache success responses (2xx) so a transient 500 can be retried.
+        // Write is fire-and-forget : si elle echoue on a juste un retry qui
+        // refera le travail, pas de corruption.
         const originalJson = res.json.bind(res);
         res.json = ((body: unknown) => {
           const status = res.statusCode || 200;
           if (status >= 200 && status < 300) {
-            idempotencyCache.set(cacheKey, {
-              status,
-              body,
-              expiresAt: Date.now() + IDEMPOTENCY_TTL_MS,
-            });
+            void writeIdempotencyCache(cacheKey, status, body).catch((e) =>
+              logger.error('[bot/idempotency] async write error', e)
+            );
           }
           return originalJson(body);
         }) as typeof res.json;
@@ -243,6 +261,10 @@ export function withBotRoute(
  * Test-only: clear the cache between scenarios.
  * ------------------------------------------------------------------------- */
 
-export function __resetBotIdempotencyCache() {
-  idempotencyCache.clear();
+export async function __resetBotIdempotencyCache() {
+  if (!supabaseAdmin) return;
+  // Truncate-like cleanup pour les tests : delete sur une condition toujours
+  // vraie (delete().neq('id', 0) etc.). On utilise gt('id', 0) — toutes les
+  // rows ont id >= 1 (BIGSERIAL).
+  await supabaseAdmin.from('bot_idempotency').delete().gt('id', 0);
 }
