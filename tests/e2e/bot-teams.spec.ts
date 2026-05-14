@@ -235,13 +235,16 @@ test.describe.serial('Bot tournament registration', () => {
     await deleteTestStaff(ADMIN_EMAIL);
   });
 
-  test('403 si actor non admin', async ({ request }) => {
+  test('403 si actor ni admin ni capitaine de la team ciblée', async ({
+    request,
+  }) => {
+    // Discord ID en format valide mais non lie au site -> ni staff ni captain.
     const res = await request.post(
       `/api/bot/v1/tournaments/${publishedTournamentId}/teams`,
       {
         headers: { 'x-api-key': API_KEY! },
         data: {
-          actorDiscordUserId: CAPTAIN_DISCORD, // player, pas admin
+          actorDiscordUserId: discordId(50),
           teamId: createdTeamIds[0],
         },
       }

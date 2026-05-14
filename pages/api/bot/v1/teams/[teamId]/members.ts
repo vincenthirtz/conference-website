@@ -1,0 +1,131 @@
+// DELETE /api/bot/v1/teams/[teamId]/members
+//
+// Commande /kicker @membre : le capitaine retire une joueuse de son équipe.
+// L'ajout est désormais géré par le flow d'invitation
+// (POST /api/bot/v1/teams/[teamId]/invitations) qui passe par une demande
+// pending acceptée par la joueuse via DM Discord.
+//
+// Auth : x-api-key + actorDiscordUserId doit etre le capitaine de la team.
+// Cible : targetDiscordUserId (compte Discord lie au site).
+
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { supabaseAdmin } from '@/utils/supabase';
+import { withBotRoute } from '@/utils/botAuth';
+import { requireBotPlayer, resolveActorPlayer } from '@/utils/botActor';
+import { isValidUUID } from '@/utils/apiHelpers';
+import {
+  isTeamRosterLocked,
+  rosterLockErrorMessage,
+} from '@/utils/teams/rosterLock';
+import { emitBotEvent } from '@/utils/botEvents';
+import { logger } from '@/utils/logger';
+
+const DISCORD_ID_RE = /^[0-9]{15,25}$/;
+
+async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const raw = req.query.teamId;
+  const teamId = Array.isArray(raw) ? raw[0] : raw;
+  if (!teamId || !isValidUUID(teamId)) {
+    return res.status(400).json({ error: 'teamId invalide' });
+  }
+
+  const body = (req.body ?? {}) as Record<string, unknown>;
+
+  const actor = await requireBotPlayer(req, res, body);
+  if (!actor) return;
+
+  const { data: team, error: teamErr } = await supabaseAdmin
+    .from('teams')
+    .select('id, name, captain_id')
+    .eq('id', teamId)
+    .maybeSingle();
+  if (teamErr) {
+    logger.error('[bot/teams/members] team lookup error', teamErr);
+    return res.status(500).json({ error: 'Erreur de chargement de l’équipe' });
+  }
+  if (!team) {
+    return res.status(404).json({ error: 'Équipe introuvable' });
+  }
+  if (team.captain_id !== actor.authUserId) {
+    return res
+      .status(403)
+      .json({ error: 'Action réservée au capitaine de cette équipe.' });
+  }
+
+  const targetDiscordUserId =
+    typeof body.targetDiscordUserId === 'string'
+      ? body.targetDiscordUserId.trim()
+      : '';
+  if (!DISCORD_ID_RE.test(targetDiscordUserId)) {
+    return res.status(400).json({ error: 'targetDiscordUserId requis' });
+  }
+
+  const target = await resolveActorPlayer(targetDiscordUserId);
+  if (!target) {
+    return res
+      .status(404)
+      .json({ error: "La joueuse ciblée n'est pas liée au site." });
+  }
+
+  if (target.authUserId === team.captain_id) {
+    return res.status(400).json({
+      error:
+        "Le capitaine ne peut pas être retiré. Transfère le capitanat d'abord.",
+    });
+  }
+  if (target.authUserId === actor.authUserId) {
+    return res.status(400).json({
+      error: 'Utilise /quitter-equipe pour partir toi-même.',
+    });
+  }
+
+  const lockStatus = await isTeamRosterLocked(team.id);
+  if (lockStatus.locked) {
+    return res.status(409).json({ error: rosterLockErrorMessage(lockStatus) });
+  }
+
+  const { data: member, error: fetchErr } = await supabaseAdmin
+    .from('team_members')
+    .select('id')
+    .eq('team_id', team.id)
+    .eq('user_id', target.authUserId)
+    .maybeSingle();
+  if (fetchErr) {
+    logger.error('[bot/teams/members] member lookup error', fetchErr);
+    return res.status(500).json({ error: 'Erreur de chargement du membre' });
+  }
+  if (!member) {
+    return res
+      .status(404)
+      .json({ error: "Cette joueuse n'est pas dans ton équipe." });
+  }
+
+  const { error: deleteErr } = await supabaseAdmin
+    .from('team_members')
+    .delete()
+    .eq('id', member.id);
+  if (deleteErr) {
+    logger.error('[bot/teams/members] delete error', deleteErr);
+    return res.status(500).json({ error: 'Échec du retrait' });
+  }
+
+  void emitBotEvent('team.member.removed', {
+    authUserId: target.authUserId,
+    teamId: team.id,
+  }).catch((e) =>
+    logger.error('[botEvents] team.member.removed emit error:', e)
+  );
+
+  return res.status(200).json({
+    success: true,
+    teamId: team.id,
+    removedAuthUserId: target.authUserId,
+    targetDiscordUserId,
+  });
+}
+
+export default withBotRoute(handler, {
+  methods: ['DELETE'],
+  rateLimit: { max: 20, key: 'bot-team-members-kick' },
+  idempotent: true,
+});

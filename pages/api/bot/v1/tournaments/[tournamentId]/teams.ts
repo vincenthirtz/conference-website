@@ -1,8 +1,13 @@
 // POST /api/bot/v1/tournaments/[tournamentId]/teams
 //
 // Registers an existing team in a tournament (inserts into stage_teams).
-// Admin-only: actorDiscordUserId must map (via user_discord_links → staff)
-// to a staff row with role 'admin' or 'owner'.
+//
+// Deux modes d'acteur :
+//  - staff (admin/owner) : inscrit n'importe quelle equipe (commande
+//    /inscrire-equipe).
+//  - capitaine : auto-inscription de sa propre equipe (commande
+//    /inscrire-mon-equipe). Le teamId fourni doit correspondre a une equipe
+//    dont l'acteur est captain_id.
 //
 // Mirrors the validation of the human-staff route
 // (/api/admin/teams/[teamId]/tournaments): tournament must be 'published',
@@ -11,9 +16,16 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
-import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
+import {
+  logBotStaffAction,
+  resolveActorPlayer,
+  resolveActorStaff,
+} from '@/utils/botActor';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
+
+const DISCORD_ID_RE = /^[0-9]{15,25}$/;
+const STAFF_PRIVILEGED = new Set(['admin', 'owner']);
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { tournamentId } = req.query;
@@ -27,12 +39,48 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   const body = (req.body ?? {}) as Record<string, unknown>;
 
-  const actor = await requireBotStaff(req, res, body);
-  if (!actor) return;
+  const actorDiscordUserId =
+    typeof body.actorDiscordUserId === 'string'
+      ? body.actorDiscordUserId.trim()
+      : '';
+  if (!DISCORD_ID_RE.test(actorDiscordUserId)) {
+    return res.status(400).json({ error: 'actorDiscordUserId requis' });
+  }
 
   const teamId = typeof body.teamId === 'string' ? body.teamId.trim() : '';
   if (!isValidUUID(teamId)) {
     return res.status(400).json({ error: 'teamId invalide' });
+  }
+
+  // Resolve actor : staff (admin/owner) OR captain of the target team.
+  // Captain self-registration (/inscrire-mon-equipe) limits the action to
+  // their own team; staff (/inscrire-equipe) can register any team.
+  const staffActor = await resolveActorStaff(actorDiscordUserId);
+  const isStaff =
+    !!staffActor.role && STAFF_PRIVILEGED.has(staffActor.role);
+
+  let isCaptain = false;
+  let captainAuthUserId: string | null = null;
+  if (!isStaff) {
+    const playerActor = await resolveActorPlayer(actorDiscordUserId);
+    if (playerActor) {
+      const { data: teamCaptainRow } = await supabaseAdmin
+        .from('teams')
+        .select('captain_id')
+        .eq('id', teamId)
+        .maybeSingle();
+      if (teamCaptainRow?.captain_id === playerActor.authUserId) {
+        isCaptain = true;
+        captainAuthUserId = playerActor.authUserId;
+      }
+    }
+  }
+
+  if (!isStaff && !isCaptain) {
+    return res.status(403).json({
+      error:
+        "Action réservée aux admins/owners ou au capitaine de l'équipe ciblée.",
+    });
   }
   const stageId =
     typeof body.stageId === 'string' && body.stageId.trim()
@@ -167,19 +215,30 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(500).json({ error: 'Échec de l’inscription' });
   }
 
-  await logBotStaffAction({
-    staffId: actor.staffId,
-    action: 'update_team',
-    entity_type: 'team',
-    entity_id: teamId,
-    tournament_id: tournamentId,
-    payload: {
-      action_type: 'tournament_registration',
-      team_name: team.name,
-      tournament_name: tournament.name,
-      stage_ids: targetStageIds,
-    },
-  });
+  // Audit log : only when a staff is the actor. Captain self-registration is
+  // already covered by the stage_teams row + logger.info below.
+  if (isStaff && staffActor.staffId) {
+    await logBotStaffAction({
+      staffId: staffActor.staffId,
+      action: 'update_team',
+      entity_type: 'team',
+      entity_id: teamId,
+      tournament_id: tournamentId,
+      payload: {
+        action_type: 'tournament_registration',
+        team_name: team.name,
+        tournament_name: tournament.name,
+        stage_ids: targetStageIds,
+      },
+    });
+  } else if (isCaptain) {
+    logger.info('[bot/tournaments/teams] captain self-registration', {
+      teamId,
+      tournamentId,
+      captainAuthUserId,
+      actorDiscordUserId,
+    });
+  }
 
   return res.status(201).json({
     success: true,
