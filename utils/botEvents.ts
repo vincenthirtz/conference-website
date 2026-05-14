@@ -10,11 +10,15 @@
 // Auth : HMAC-SHA256 du body (raw JSON string) avec BOT_WEBHOOK_SECRET. Le bot
 // recalcule la signature cote receveur et compare en constant-time.
 //
-// Livraison : 3 tentatives, backoff lineaire 500/1000/1500 ms. Echec apres
-// 3 tentatives -> log d'erreur uniquement (pas de persistance/replay en v1 ;
-// pose les bases, ajouter une outbox si besoin de garanties at-least-once).
+// Livraison at-least-once :
+//   1. Chaque event est insere dans bot_event_outbox (status='pending').
+//   2. On tente le push HTTP (3 retries, backoff lineaire).
+//   3. Sur succes : status='delivered', delivered_at=now().
+//   4. Sur echec : row reste 'pending' ; le bot peut la rattraper via
+//      GET /api/bot/v1/events/pending puis POST /api/bot/v1/events/[id]/ack.
 
 import crypto from 'crypto';
+import { supabaseAdmin } from './supabase';
 import { logger } from './logger';
 
 export type BotEventName =
@@ -43,25 +47,95 @@ function isConfigured(): boolean {
   return Boolean(process.env.BOT_WEBHOOK_URL && process.env.BOT_WEBHOOK_SECRET);
 }
 
+async function persistOutbox(params: {
+  eventId: string;
+  eventName: BotEventName;
+  payload: unknown;
+}): Promise<number | null> {
+  if (!supabaseAdmin) return null;
+  const { data, error } = await supabaseAdmin
+    .from('bot_event_outbox')
+    .insert({
+      event_id: params.eventId,
+      event_name: params.eventName,
+      payload: params.payload,
+      status: 'pending',
+    })
+    .select('id')
+    .maybeSingle();
+  if (error) {
+    logger.error('[botEvents] outbox insert error', error);
+    return null;
+  }
+  return (data?.id as number | undefined) ?? null;
+}
+
+async function markDelivered(outboxId: number): Promise<void> {
+  if (!supabaseAdmin) return;
+  const { error } = await supabaseAdmin
+    .from('bot_event_outbox')
+    .update({
+      status: 'delivered',
+      delivered_at: new Date().toISOString(),
+    })
+    .eq('id', outboxId);
+  if (error) {
+    logger.error('[botEvents] outbox markDelivered error', error);
+  }
+}
+
+async function recordPushAttempt(
+  outboxId: number,
+  errorMessage: string | null
+): Promise<void> {
+  if (!supabaseAdmin) return;
+  const updates: Record<string, unknown> = {
+    last_push_at: new Date().toISOString(),
+    last_push_error: errorMessage,
+  };
+  // push_attempts increment : on lit puis incremente. La concurrence n'est
+  // pas critique ici (compteur best-effort, pas un verrou).
+  const { data } = await supabaseAdmin
+    .from('bot_event_outbox')
+    .select('push_attempts')
+    .eq('id', outboxId)
+    .maybeSingle();
+  updates.push_attempts = ((data?.push_attempts as number) ?? 0) + 1;
+  await supabaseAdmin
+    .from('bot_event_outbox')
+    .update(updates)
+    .eq('id', outboxId);
+}
+
 export async function emitBotEvent(
   event: BotEventName,
   data: BotEventPayload
 ): Promise<EmitResult> {
+  const eventId = crypto.randomUUID();
+  const fullPayload = {
+    id: eventId,
+    event,
+    timestamp: new Date().toISOString(),
+    data,
+  };
+
+  // Persist d'abord — meme si le push HTTP rate, l'outbox permettra au bot
+  // de rattraper via polling.
+  const outboxId = await persistOutbox({
+    eventId,
+    eventName: event,
+    payload: fullPayload,
+  });
+
   if (!isConfigured()) {
-    // Not an error : in dev / staging, the bot endpoint can simply be unset.
+    // Dev/staging : pas de webhook configure. L'outbox suffit ; le bot pollera.
     return { delivered: false, error: 'not_configured', attempts: 0 };
   }
 
   const url = process.env.BOT_WEBHOOK_URL as string;
   const secret = process.env.BOT_WEBHOOK_SECRET as string;
 
-  const body = JSON.stringify({
-    id: crypto.randomUUID(),
-    event,
-    timestamp: new Date().toISOString(),
-    data,
-  });
-
+  const body = JSON.stringify(fullPayload);
   const signature = crypto
     .createHmac('sha256', secret)
     .update(body)
@@ -84,6 +158,7 @@ export async function emitBotEvent(
       });
 
       if (res.ok) {
+        if (outboxId !== null) await markDelivered(outboxId);
         return { delivered: true, status: res.status, attempts: attempt };
       }
 
@@ -91,6 +166,8 @@ export async function emitBotEvent(
       lastErr = `HTTP ${res.status}`;
 
       // 4xx (sauf 408/429) : pas de retry, le bot rejette explicitement.
+      // On marque l'echec dans l'outbox mais l'event reste 'pending' — un
+      // operateur peut decider de re-pousser manuellement apres correction.
       if (
         res.status >= 400 &&
         res.status < 500 &&
@@ -98,6 +175,7 @@ export async function emitBotEvent(
         res.status !== 429
       ) {
         logger.error(`[botEvents] ${event} rejected by bot (${res.status})`);
+        if (outboxId !== null) await recordPushAttempt(outboxId, lastErr);
         return {
           delivered: false,
           status: res.status,
@@ -117,6 +195,9 @@ export async function emitBotEvent(
   logger.error(
     `[botEvents] ${event} delivery failed after ${MAX_ATTEMPTS} attempts: ${lastErr}`
   );
+  if (outboxId !== null) {
+    await recordPushAttempt(outboxId, lastErr ?? 'unknown');
+  }
   return {
     delivered: false,
     status: lastStatus,
