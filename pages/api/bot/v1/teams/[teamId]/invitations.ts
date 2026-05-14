@@ -1,12 +1,14 @@
-// POST /api/bot/v1/teams/[teamId]/invitations
+// /api/bot/v1/teams/[teamId]/invitations
 //
-// Commande /inviter @membre : le capitaine cree une invitation pending pour
-// une joueuse. Pas d'add direct -- la joueuse doit accepter via le DM du bot
-// (POST /api/bot/v1/invitations/[demandeId] { action: 'accept' }).
+//  GET  : liste les invitations emises par la team. Filtres : status (defaut
+//         'pending'), type (defaut 'invite'), limit. Sert pour l'autocomplete
+//         /inviter cancel cote bot et le tableau de bord capitaine.
+//  POST : commande /inviter @membre — le capitaine cree une invitation
+//         pending pour une joueuse. La joueuse accepte via DM du bot
+//         (POST /api/bot/v1/invitations/[demandeId] { action: 'accept' }).
 //
-// Auth   : x-api-key + actorDiscordUserId doit etre captain_id de la team.
-// Cible  : targetDiscordUserId, doit etre lie au site (sinon 404 -> le bot
-//          peut DM la joueuse pour lui demander /inscription).
+// Auth   : x-api-key. POST exige aussi actorDiscordUserId = capitaine de la
+//          team. GET est public a la cle (x-api-key sur le bot suffit).
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
@@ -18,14 +20,110 @@ import { logger } from '@/utils/logger';
 
 const DISCORD_ID_RE = /^[0-9]{15,25}$/;
 const COMMENT_MAX = 1000;
+const MAX_LIMIT = 100;
+const DEFAULT_LIMIT = 25;
+const VALID_STATUSES = new Set([
+  'pending',
+  'approved',
+  'rejected',
+  'cancelled',
+  'all',
+]);
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const raw = req.query.teamId;
-  const teamId = Array.isArray(raw) ? raw[0] : raw;
-  if (!teamId || !isValidUUID(teamId)) {
-    return res.status(400).json({ error: 'teamId invalide' });
+async function handleList(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  teamId: string
+) {
+  const rawStatus =
+    typeof req.query.status === 'string' ? req.query.status.trim() : 'pending';
+  const status = rawStatus.toLowerCase();
+  if (!VALID_STATUSES.has(status)) {
+    return res.status(400).json({
+      error: `status invalide. Valeurs : ${[...VALID_STATUSES].join(', ')}.`,
+    });
   }
 
+  const type =
+    typeof req.query.type === 'string' && req.query.type.trim()
+      ? req.query.type.trim()
+      : 'invite';
+
+  const rawLimit = Number(req.query.limit);
+  const limit =
+    Number.isInteger(rawLimit) && rawLimit > 0
+      ? Math.min(rawLimit, MAX_LIMIT)
+      : DEFAULT_LIMIT;
+
+  let query = supabaseAdmin
+    .from('demandes')
+    .select(
+      `id, user_id, team_id, type, status, comment, source, payload,
+       created_at, processed_at`
+    )
+    .eq('team_id', teamId)
+    .eq('type', type)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (status !== 'all') query = query.eq('status', status);
+
+  const { data, error } = await query;
+  if (error) {
+    logger.error('[bot/team-invitations] list error', error);
+    return res.status(500).json({ error: 'Erreur de lecture' });
+  }
+
+  const invitations = (data ?? []).map((row) => {
+    const r = row as {
+      id: string;
+      user_id: string;
+      type: string;
+      status: string;
+      comment: string | null;
+      created_at: string;
+      processed_at: string | null;
+      payload: Record<string, unknown> | null;
+    };
+    const p = r.payload ?? {};
+    return {
+      id: r.id,
+      type: r.type,
+      status: r.status,
+      createdAt: r.created_at,
+      processedAt: r.processed_at,
+      comment: r.comment,
+      inviteeAuthUserId: r.user_id,
+      inviteeDiscordUserId:
+        typeof p.invitee_discord_user_id === 'string'
+          ? (p.invitee_discord_user_id as string)
+          : null,
+      captainAuthUserId:
+        typeof p.captain_auth_user_id === 'string'
+          ? (p.captain_auth_user_id as string)
+          : null,
+      captainDiscordUserId:
+        typeof p.captain_discord_user_id === 'string'
+          ? (p.captain_discord_user_id as string)
+          : null,
+      desiredRole:
+        typeof p.desired_role === 'string' ? (p.desired_role as string) : null,
+      battleTag:
+        typeof p.battle_tag === 'string' ? (p.battle_tag as string) : null,
+      expiresAt:
+        typeof p.expires_at === 'string' ? (p.expires_at as string) : null,
+    };
+  });
+
+  return res
+    .status(200)
+    .json({ invitations, count: invitations.length, teamId });
+}
+
+async function handleCreate(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  teamId: string
+) {
   const body = (req.body ?? {}) as Record<string, unknown>;
 
   const actor = await requireBotPlayer(req, res, body);
@@ -97,8 +195,22 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   });
 }
 
+async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const raw = req.query.teamId;
+  const teamId = Array.isArray(raw) ? raw[0] : raw;
+  if (!teamId || !isValidUUID(teamId)) {
+    return res.status(400).json({ error: 'teamId invalide' });
+  }
+
+  if (req.method === 'GET') return handleList(req, res, teamId);
+  if (req.method === 'POST') return handleCreate(req, res, teamId);
+
+  res.setHeader('Allow', 'GET,POST');
+  return res.status(405).json({ error: 'Method not allowed' });
+}
+
 export default withBotRoute(handler, {
-  methods: ['POST'],
-  rateLimit: { max: 20, key: 'bot-team-invitations-create' },
+  methods: ['GET', 'POST'],
+  rateLimit: { max: 60, key: 'bot-team-invitations' },
   idempotent: true,
 });
