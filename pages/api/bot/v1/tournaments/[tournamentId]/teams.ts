@@ -1,13 +1,16 @@
-// POST /api/bot/v1/tournaments/[tournamentId]/teams
+// /api/bot/v1/tournaments/[tournamentId]/teams
 //
-// Registers an existing team in a tournament (inserts into stage_teams).
+// GET  — Liste les equipes inscrites au tournoi (commande /participants).
+//        Dedup par team_id (une team peut etre dans plusieurs stages).
+//        Renvoie le capitaine + son discordUserId si lie.
 //
-// Deux modes d'acteur :
-//  - staff (admin/owner) : inscrit n'importe quelle equipe (commande
-//    /inscrire-equipe).
-//  - capitaine : auto-inscription de sa propre equipe (commande
-//    /inscrire-mon-equipe). Le teamId fourni doit correspondre a une equipe
-//    dont l'acteur est captain_id.
+// POST — Inscrit une equipe dans le tournoi (commandes /inscrire-equipe pour
+//        staff et /inscrire-mon-equipe pour le capitaine).
+//
+// Deux modes d'acteur POST :
+//  - staff (admin/owner) : inscrit n'importe quelle equipe.
+//  - capitaine : auto-inscription de sa propre equipe (teamId doit etre la
+//    sienne).
 //
 // Mirrors the validation of the human-staff route
 // (/api/admin/teams/[teamId]/tournaments): tournament must be 'published',
@@ -27,16 +30,137 @@ import { logger } from '@/utils/logger';
 const DISCORD_ID_RE = /^[0-9]{15,25}$/;
 const STAFF_PRIVILEGED = new Set(['admin', 'owner']);
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { tournamentId } = req.query;
-  if (
-    !tournamentId ||
-    Array.isArray(tournamentId) ||
-    !isValidUUID(tournamentId)
-  ) {
-    return res.status(400).json({ error: 'tournamentId invalide' });
+async function handleList(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  tournamentId: string
+) {
+  // Verify tournament exists (cheap, gives a better error than empty list).
+  const { data: tournament, error: tErr } = await supabaseAdmin
+    .from('tournaments')
+    .select('id, name, slug, status')
+    .eq('id', tournamentId)
+    .maybeSingle();
+  if (tErr) {
+    logger.error('[bot/tournaments/teams] tournament lookup error', tErr);
+    return res.status(500).json({ error: 'Erreur de chargement du tournoi' });
+  }
+  if (!tournament) {
+    return res.status(404).json({ error: 'Tournoi introuvable' });
   }
 
+  // List all stage_teams rows for this tournament (join via tournament_stages).
+  const { data: rows, error: rowsErr } = await supabaseAdmin
+    .from('stage_teams')
+    .select(
+      `team_id,
+       team:team_id (id, name, slug, short_name, logo_url, country, captain_id),
+       tournament_stages!inner(tournament_id)`
+    )
+    .eq('tournament_stages.tournament_id', tournamentId);
+  if (rowsErr) {
+    logger.error('[bot/tournaments/teams] stage_teams error', rowsErr);
+    return res.status(500).json({ error: 'Erreur de lecture des équipes' });
+  }
+
+  // Dedup by team_id.
+  const teamsById = new Map<
+    string,
+    {
+      id: string;
+      name: string;
+      slug: string | null;
+      shortName: string | null;
+      logoUrl: string | null;
+      country: string | null;
+      captainAuthUserId: string | null;
+    }
+  >();
+  for (const r of rows ?? []) {
+    const t = Array.isArray((r as any).team)
+      ? (r as any).team[0]
+      : (r as any).team;
+    if (!t?.id || teamsById.has(t.id)) continue;
+    teamsById.set(t.id, {
+      id: t.id,
+      name: t.name ?? '',
+      slug: t.slug ?? null,
+      shortName: t.short_name ?? null,
+      logoUrl: t.logo_url ?? null,
+      country: t.country ?? null,
+      captainAuthUserId: t.captain_id ?? null,
+    });
+  }
+
+  if (teamsById.size === 0) {
+    return res.status(200).json({ tournament, teams: [] });
+  }
+
+  // Member counts + Discord links of captains, both in batch.
+  const captainAuthIds = [...teamsById.values()]
+    .map((t) => t.captainAuthUserId)
+    .filter((x): x is string => !!x);
+
+  const [{ data: members }, { data: links }] = await Promise.all([
+    supabaseAdmin
+      .from('team_members')
+      .select('team_id')
+      .in('team_id', [...teamsById.keys()]),
+    captainAuthIds.length > 0
+      ? supabaseAdmin
+          .from('user_discord_links')
+          .select('auth_user_id, discord_user_id, discord_username')
+          .in('auth_user_id', captainAuthIds)
+      : Promise.resolve({ data: [] as any[] }),
+  ]);
+
+  const memberCountByTeam = new Map<string, number>();
+  for (const m of members ?? []) {
+    memberCountByTeam.set(
+      (m as any).team_id,
+      (memberCountByTeam.get((m as any).team_id) ?? 0) + 1
+    );
+  }
+  const linkByAuthId = new Map<
+    string,
+    { discordUserId: string; discordUsername: string | null }
+  >();
+  for (const l of links ?? []) {
+    linkByAuthId.set((l as any).auth_user_id, {
+      discordUserId: (l as any).discord_user_id,
+      discordUsername: (l as any).discord_username ?? null,
+    });
+  }
+
+  const teams = [...teamsById.values()]
+    .map((t) => ({
+      id: t.id,
+      name: t.name,
+      slug: t.slug,
+      shortName: t.shortName,
+      logoUrl: t.logoUrl,
+      country: t.country,
+      memberCount: memberCountByTeam.get(t.id) ?? 0,
+      captain: t.captainAuthUserId
+        ? {
+            authUserId: t.captainAuthUserId,
+            ...(linkByAuthId.get(t.captainAuthUserId) ?? {
+              discordUserId: null,
+              discordUsername: null,
+            }),
+          }
+        : null,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  return res.status(200).json({ tournament, teams });
+}
+
+async function handleRegister(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  tournamentId: string
+) {
   const body = (req.body ?? {}) as Record<string, unknown>;
 
   const actorDiscordUserId =
@@ -249,8 +373,25 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   });
 }
 
+async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const { tournamentId } = req.query;
+  if (
+    !tournamentId ||
+    Array.isArray(tournamentId) ||
+    !isValidUUID(tournamentId)
+  ) {
+    return res.status(400).json({ error: 'tournamentId invalide' });
+  }
+
+  if (req.method === 'GET') return handleList(req, res, tournamentId);
+  if (req.method === 'POST') return handleRegister(req, res, tournamentId);
+
+  res.setHeader('Allow', 'GET,POST');
+  return res.status(405).json({ error: 'Method not allowed' });
+}
+
 export default withBotRoute(handler, {
-  methods: ['POST'],
+  methods: ['GET', 'POST'],
   rateLimit: { max: 30, key: 'bot-tournament-teams' },
   idempotent: true,
 });
