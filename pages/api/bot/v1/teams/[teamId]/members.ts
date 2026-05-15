@@ -17,7 +17,7 @@ import {
   isTeamRosterLocked,
   rosterLockErrorMessage,
 } from '@/utils/teams/rosterLock';
-import { emitBotEvent } from '@/utils/botEvents';
+import { emitRoleSyncEvent } from '@/utils/botRoleSync';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 
@@ -110,12 +110,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(500).json({ error: 'Échec du retrait' });
   }
 
-  void emitBotEvent('team.member.removed', {
-    authUserId: target.authUserId,
-    teamId: team.id,
-  }).catch((e) =>
-    logger.error('[botEvents] team.member.removed emit error:', e)
-  );
+  void emitRoleSyncEvent('team.member.removed', target.authUserId, {
+    previousTeamId: team.id,
+    extras: { teamId: team.id },
+  });
 
   void logPlayerAction({
     actorAuthUserId: actor.authUserId,

@@ -17,7 +17,7 @@ import {
   isTeamRosterLocked,
   rosterLockErrorMessage,
 } from '@/utils/teams/rosterLock';
-import { emitBotEvent } from '@/utils/botEvents';
+import { emitRoleSyncEvent } from '@/utils/botRoleSync';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 
@@ -105,13 +105,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(500).json({ error: 'Échec du transfert' });
   }
 
-  void emitBotEvent('team.captain.changed', {
-    teamId: team.id,
-    previousCaptainAuthUserId: actor.authUserId,
-    newCaptainAuthUserId: newCaptain.authUserId,
-  }).catch((e) =>
-    logger.error('[botEvents] team.captain.changed emit error:', e)
-  );
+  // 2 events : ancien capitaine (perd le rôle captain) puis nouveau (le gagne).
+  // syncSingleUser fait 1 sync par event — plus simple et idempotent.
+  void emitRoleSyncEvent('team.captain.changed', actor.authUserId, {
+    extras: { teamId: team.id, role: 'previous' },
+  });
+  void emitRoleSyncEvent('team.captain.changed', newCaptain.authUserId, {
+    extras: { teamId: team.id, role: 'new' },
+  });
 
   void logPlayerAction({
     actorAuthUserId: actor.authUserId,

@@ -10,7 +10,7 @@
 
 import { supabaseAdmin } from '../supabase';
 import { logger } from '../logger';
-import { emitBotEvent } from '../botEvents';
+import { emitRoleSyncEvent } from '../botRoleSync';
 import {
   findOrCreateUserByEmail,
   listUsersEmailMap,
@@ -237,14 +237,13 @@ export async function insertTeamMember(
     };
   }
 
-  void emitBotEvent('team.member.added', {
-    authUserId: input.userId,
-    teamId: input.teamId,
-    role: input.role,
-    battleTag: input.battleTag ?? null,
-  }).catch((e) =>
-    logger.error('[botEvents] team.member.added emit error:', e)
-  );
+  void emitRoleSyncEvent('team.member.added', input.userId, {
+    extras: {
+      teamId: input.teamId,
+      role: input.role,
+      battleTag: input.battleTag ?? null,
+    },
+  });
 
   return { ok: true, memberId: member?.id ?? null };
 }
@@ -295,14 +294,18 @@ export async function setTeamCaptain(
     };
   }
 
+  if (previousCaptainAuthUserId && previousCaptainAuthUserId !== userId) {
+    // Émet un event pour l'ancien capitaine (perd le rôle captain) et un pour
+    // le nouveau (gagne le rôle). Le bot fait 1 sync par event — c'est plus
+    // simple et idempotent que de packager 2 users dans un seul payload.
+    void emitRoleSyncEvent('team.captain.changed', previousCaptainAuthUserId, {
+      extras: { teamId, role: 'previous' },
+    });
+  }
   if (previousCaptainAuthUserId !== userId) {
-    void emitBotEvent('team.captain.changed', {
-      teamId,
-      previousCaptainAuthUserId,
-      newCaptainAuthUserId: userId,
-    }).catch((e) =>
-      logger.error('[botEvents] team.captain.changed emit error:', e)
-    );
+    void emitRoleSyncEvent('team.captain.changed', userId, {
+      extras: { teamId, role: 'new' },
+    });
   }
 
   return { ok: true };
