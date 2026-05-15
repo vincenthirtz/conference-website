@@ -107,7 +107,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   let query = supabaseAdmin
     .from('matches')
     .select(
-      `id, status, round_number, round_name, scheduled_at,
+      `id, status, round_number, round_name, scheduled_at, scrim_id,
        team1:team1_id (id, name, short_name),
        team2:team2_id (id, name, short_name)`
     )
@@ -149,7 +149,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       ((m as any).round_number != null ? `R${(m as any).round_number}` : null);
     const sched = formatScheduled((m as any).scheduled_at);
     const teams = `${t1?.name ?? '?'} vs ${t2?.name ?? '?'}`;
-    const tail = [round, sched].filter(Boolean).join(' · ');
+    const isScrim = !!(m as any).scrim_id;
+    const tail = [isScrim ? 'Scrim' : null, round, sched]
+      .filter(Boolean)
+      .join(' · ');
     const label = tail ? `${teams} — ${tail}` : teams;
     return { value: (m as any).id, label: trimLabel(label) };
   });

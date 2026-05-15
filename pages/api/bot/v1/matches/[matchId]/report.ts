@@ -80,11 +80,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     });
   }
 
-  // 1) Match + captains
+  // 1) Match + captains.
+  //    scrim_id est lu pour distinguer les matches de scrim (pas de bracket
+  //    a propager, pas de notification dispute-forum tournoi, payload event
+  //    enrichi avec scrimId).
   const { data: match, error: matchErr } = await supabaseAdmin
     .from('matches')
     .select(
-      `id, tournament_id, status, is_bye,
+      `id, tournament_id, scrim_id, status, is_bye,
        team1_id, team2_id,
        team1:team1_id (id, name, captain_id),
        team2:team2_id (id, name, captain_id),
@@ -253,17 +256,24 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     try {
+      // Scrim match : pas de bracket a propager (pas de tournament_id),
+      // applyMatchScore est appele avec propagateBracket=false. La logique
+      // de notifications Discord interne a applyMatchScore est elle aussi
+      // tournament-aware (tryAutoAdvanceFromMatch est gate sur stage_id,
+      // sendMatchResultDiscord ne fait rien si tournament_id manque).
+      const isScrim = !!match.scrim_id;
       const result = await applyMatchScore({
         matchId,
         team1Score: mine.team1_score,
         team2Score: mine.team2_score,
         markFinished: true,
         staffId: null,
-        propagateBracket: true,
+        propagateBracket: !isScrim,
       });
       return res.status(200).json({
         status: 'finalized',
         matchId,
+        scrimId: match.scrim_id ?? null,
         team1Score: mine.team1_score,
         team2Score: mine.team2_score,
         winnerTeamId: result.winnerTeamId,
@@ -318,6 +328,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       await emitBotEvent('match.disputed', {
         matchId,
         tournamentId: match.tournament_id ?? null,
+        scrimId: match.scrim_id ?? null,
         previousStatus: match.status,
         reason: reasonParts,
         openedBy: 'bot',
@@ -329,10 +340,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     );
   }
 
-  // Fire-and-forget Discord notification
+  // Fire-and-forget Discord notification — uniquement pour les matchs de
+  // tournoi. Les scrims utilisent leur propre flow admin (cf. /scrim score)
+  // pour la resolution manuelle et n'ont pas besoin du canal staff support.
   const t1Report = bothReports?.find((r) => r.team_side === 1);
   const t2Report = bothReports?.find((r) => r.team_side === 2);
-  if (t1Report && t2Report) {
+  if (t1Report && t2Report && !match.scrim_id) {
     void notifyScoreReportDispute({
       matchId,
       tournamentId: match.tournament_id ?? null,
@@ -356,6 +369,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   return res.status(200).json({
     status: 'disputed',
     matchId,
+    scrimId: match.scrim_id ?? null,
     mySide,
     myReport: mine,
     opponentReport: opponent,

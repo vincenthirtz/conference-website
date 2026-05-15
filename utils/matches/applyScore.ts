@@ -92,6 +92,11 @@ export async function applyMatchScore(
   };
 
   // 1) Récupérer le match actuel
+  //    updated_at est lu pour servir de jeton d'optimistic lock plus bas
+  //    (cf. step 9). Si une autre transaction écrit le match entre cette
+  //    lecture et notre UPDATE, le `updated_at` aura changé et le UPDATE
+  //    ne matchera 0 ligne -> on déclenche le rollback proprement plutôt
+  //    que d'appliquer deux fois la propagation bracket.
   const { data: match, error: fetchErr } = await supabaseAdmin
     .from('matches')
     .select(
@@ -109,6 +114,7 @@ export async function applyMatchScore(
       winner_team_id,
       forfeit_team_id,
       completed_at,
+      updated_at,
       next_match_win_id,
       next_match_win_slot,
       next_match_lose_id,
@@ -233,6 +239,41 @@ export async function applyMatchScore(
     newCompletedAt = completedAt || new Date().toISOString();
   }
 
+  // 4b) Fast-path idempotent : si le match est déjà dans un état terminal
+  //     identique (mêmes scores, même winner, même forfeit), on sort tout
+  //     de suite sans toucher au bracket, au cache standings, ni aux
+  //     notifications Discord. Couvre les rejeux (retry après timeout,
+  //     double-submit capitaine, ré-application admin idempotente).
+  //     Sans ce garde, on émettrait à nouveau match.finished + on
+  //     re-propagerait dans le bracket → progression dupliquée.
+  const sameStatus = newStatus === currentStatus;
+  const sameScores =
+    match.team1_score === team1Score && match.team2_score === team2Score;
+  const sameWinner = (match.winner_team_id ?? null) === (newWinnerTeamId ?? null);
+  const sameForfeit =
+    resolvedForfeitTeamId === null
+      ? !match.forfeit_team_id
+      : match.forfeit_team_id === resolvedForfeitTeamId;
+
+  if (
+    sameStatus &&
+    PROPAGATION_STATUSES.includes(currentStatus) &&
+    sameScores &&
+    sameWinner &&
+    sameForfeit
+  ) {
+    logger.info('applyMatchScore: no-op idempotent (match déjà appliqué)', {
+      matchId,
+      status: currentStatus,
+    });
+    return {
+      matchId,
+      updated: false,
+      match,
+      winnerTeamId: match.winner_team_id ?? null,
+    };
+  }
+
   // 5) Préparer la payload d'update
   const updatePayload: Record<string, any> = {
     team1_score: team1Score,
@@ -298,16 +339,34 @@ export async function applyMatchScore(
     }
   }
 
-  // 9) Update du match
+  // 9) Update du match avec optimistic lock sur updated_at.
+  //    Si une autre transaction a modifié le match entre l'étape 1 (fetch)
+  //    et maintenant, le `eq('updated_at', match.updated_at)` ne matche plus
+  //    et `updated` revient null → on bascule sur le chemin rollback ci-dessous.
+  //    Le nouveau updated_at est positionné explicitement pour donner aux
+  //    consommateurs un repère temporel de la modification.
+  const updatePayloadFinal: Record<string, any> = {
+    ...updatePayload,
+    updated_at: new Date().toISOString(),
+  };
   const { data: updated, error: updateErr } = await supabaseAdmin
     .from('matches')
-    .update(updatePayload)
+    .update(updatePayloadFinal)
     .eq('id', matchId)
+    .eq('updated_at', match.updated_at)
     .select('*')
     .maybeSingle();
 
   if (updateErr || !updated) {
-    logger.error('applyMatchScore: update match error', updateErr);
+    const concurrent = !updateErr && !updated;
+    if (concurrent) {
+      logger.warn('applyMatchScore: optimistic lock conflict', {
+        matchId,
+        expectedUpdatedAt: match.updated_at,
+      });
+    } else {
+      logger.error('applyMatchScore: update match error', updateErr);
+    }
 
     // Rollback : restaurer les slots de propagation vidés par le reset
     if (propagationSnapshot) {
@@ -322,6 +381,11 @@ export async function applyMatchScore(
       });
     }
 
+    if (!updateErr && !updated) {
+      throw new Error(
+        'Le match a été modifié par une autre opération depuis le début de cet appel. Aucune modification appliquée — relire et réessayer.'
+      );
+    }
     throw new Error('Erreur lors de la mise à jour du match');
   }
 
