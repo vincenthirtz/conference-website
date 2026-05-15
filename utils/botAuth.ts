@@ -93,9 +93,17 @@ function readIdempotencyKey(req: NextApiRequest): string | null {
 }
 
 function idempotencyCacheKey(req: NextApiRequest, key: string): string {
-  // Scope by method + path so the same Idempotency-Key on a different endpoint
-  // doesn't collide (RFC-style scoping).
-  return `${req.method ?? 'POST'} ${req.url ?? ''} ${key}`;
+  // Scope by method + path + body. The body hash protects against the bot
+  // reusing the same Idempotency-Key with a different payload (e.g. corrected
+  // score) and silently replaying the previous response — that would lose
+  // data without surfacing an error. Different body → different cache key
+  // → request is processed normally.
+  const bodyHash = crypto
+    .createHash('sha256')
+    .update(JSON.stringify(req.body ?? null))
+    .digest('hex')
+    .slice(0, 8);
+  return `${req.method ?? 'POST'} ${req.url ?? ''} ${key} ${bodyHash}`;
 }
 
 /* ---------------------------------------------------------------------------

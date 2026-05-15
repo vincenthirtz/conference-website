@@ -298,6 +298,71 @@ test.describe.serial('P4.3 — Idempotency Supabase-backed', () => {
     // Cleanup
     await supabaseTestClient!.from('announcements').delete().eq('id', annId);
   });
+
+  test("même Idempotency-Key + body différent → pas de replay, requête traitée", async ({
+    request,
+  }) => {
+    // Garde-fou contre le replay silencieux d'une correction. Si le bot
+    // renvoie un score corrigé en oubliant de régénérer la clé, le serveur
+    // doit faire passer la nouvelle requête au lieu de rendre l'ancienne
+    // réponse (et donc perdre la correction).
+    const idempKey = `p4-idemp-bodydiff-${TS}-${Math.random().toString(36).slice(2)}`;
+
+    const res1 = await request.post(`/api/bot/v1/announcements`, {
+      headers: { 'x-api-key': API_KEY!, 'Idempotency-Key': idempKey },
+      data: {
+        actorDiscordUserId: ADMIN_DISCORD,
+        title: `P4 BodyDiff A ${TS}`,
+        message: 'A',
+        isActive: false,
+      },
+    });
+    expect(res1.status()).toBe(201);
+    expect(res1.headers()['idempotency-replay']).toBeUndefined();
+    const ann1 = (await res1.json()).announcement.id;
+
+    // Même body → replay (sanity check : la clé fonctionne toujours).
+    const res2 = await request.post(`/api/bot/v1/announcements`, {
+      headers: { 'x-api-key': API_KEY!, 'Idempotency-Key': idempKey },
+      data: {
+        actorDiscordUserId: ADMIN_DISCORD,
+        title: `P4 BodyDiff A ${TS}`,
+        message: 'A',
+        isActive: false,
+      },
+    });
+    expect(res2.status()).toBe(201);
+    expect(res2.headers()['idempotency-replay']).toBe('true');
+    expect((await res2.json()).announcement.id).toBe(ann1);
+
+    // Body différent → traité comme une nouvelle requête, pas de replay.
+    const res3 = await request.post(`/api/bot/v1/announcements`, {
+      headers: { 'x-api-key': API_KEY!, 'Idempotency-Key': idempKey },
+      data: {
+        actorDiscordUserId: ADMIN_DISCORD,
+        title: `P4 BodyDiff B ${TS}`,
+        message: 'B',
+        isActive: false,
+      },
+    });
+    expect(res3.status()).toBe(201);
+    expect(res3.headers()['idempotency-replay']).toBeUndefined();
+    const ann2 = (await res3.json()).announcement.id;
+    expect(ann2).not.toBe(ann1);
+
+    // Deux annonces distinctes en DB.
+    const { data: anns } = await supabaseTestClient!
+      .from('announcements')
+      .select('id')
+      .in('id', [ann1, ann2]);
+    expect(anns?.length).toBe(2);
+
+    // Cleanup
+    await supabaseTestClient!
+      .from('announcements')
+      .delete()
+      .in('id', [ann1, ann2]);
+  });
 });
 
 /* ------------------------------------------------------------------------- */
