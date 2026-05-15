@@ -19,6 +19,13 @@
 [functions."broadcast-cron"]
   schedule = "0 10 * * *"
 
+# Scheduled function: hourly maintenance of bot_event_outbox.
+# Mark poison-pill 'pending' events as 'failed' (default >6h old), delete
+# 'delivered'/'failed' rows older than N days (default 7), log delivery latency
+# stats (p50/p95). Configurable via OUTBOX_FAILED_AFTER_HOURS / OUTBOX_DELETE_AFTER_DAYS.
+[functions."outbox-maintenance-cron"]
+  schedule = "0 * * * *"
+
 [[headers]]
   for = "/*"
   [headers.values]
