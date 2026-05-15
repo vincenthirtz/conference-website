@@ -5,7 +5,7 @@ import type { StaffContext } from '@/utils/staff';
 import { sendAccountDeletedEmail, sendWelcomeEmail } from '@/utils/email';
 import crypto from 'crypto';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { emitBotEvent } from '@/utils/botEvents';
+import { emitRoleSyncEvent } from '@/utils/botRoleSync';
 
 import { logger } from '../../../../utils/logger';
 type TeamMembership = {
@@ -396,13 +396,12 @@ async function handler(
     }
 
     if (previousStaffRole !== newStaffRole) {
-      void emitBotEvent('staff.role.changed', {
-        authUserId: userId,
-        previousRole: previousStaffRole,
-        newRole: newStaffRole,
-      }).catch((e) =>
-        logger.error('[botEvents] staff.role.changed emit error:', e)
-      );
+      // emitRoleSyncEvent enrichit le payload avec discordUserId + team +
+      // staffRole résolus depuis la DB (voir utils/botRoleSync.ts).
+      // No-op si l'utilisateur n'a pas lié son Discord.
+      void emitRoleSyncEvent('staff.role.changed', userId, {
+        extras: { previousRole: previousStaffRole, newRole: newStaffRole },
+      });
     }
 
     const u = data.user;
@@ -458,8 +457,18 @@ async function handler(
     // Remove team memberships
     await supabaseAdmin.from('team_members').delete().eq('user_id', userId);
 
-    // Remove staff entry if exists
+    // Remove staff entry if exists — émet staff.role.changed (newRole=null)
+    // si l'utilisateur était staff, pour que le bot retire le rôle Discord.
+    // L'emit DOIT être fait AVANT le delete des liens Discord (le auth user
+    // delete cascade éventuellement les rows user_discord_links), sinon
+    // emitRoleSyncEvent ne pourra plus résoudre le discordUserId.
+    const wasStaffRole = targetStaffRole;
     await supabaseAdmin.from('staff').delete().eq('auth_user_id', userId);
+    if (wasStaffRole) {
+      void emitRoleSyncEvent('staff.role.changed', userId, {
+        extras: { previousRole: wasStaffRole, newRole: null },
+      });
+    }
 
     // Send account deleted email before deleting (non-blocking)
     const deletedEmail = target.user.email;

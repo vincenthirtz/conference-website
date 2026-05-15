@@ -13,6 +13,7 @@ import { logger } from './logger';
 
 export type PlayerAction =
   | 'create_team'
+  | 'update_team'
   | 'invite_create'
   | 'invite_accept'
   | 'invite_reject'

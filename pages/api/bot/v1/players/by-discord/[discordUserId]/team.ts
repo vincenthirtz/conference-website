@@ -66,7 +66,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       supabaseAdmin
         .from('teams')
         .select(
-          'id, name, slug, short_name, logo_url, banner_url, country, captain_id, is_joinable, discord, discord_role_id'
+          'id, name, slug, short_name, logo_url, banner_url, country, captain_id, is_joinable, discord, discord_role_id, description, website'
         )
         .eq('id', membership.team_id)
         .maybeSingle(),
@@ -110,6 +110,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       isJoinable: team.is_joinable,
       discord: team.discord,
       discordRoleId: team.discord_role_id,
+      description: team.description,
+      website: team.website,
     },
     teammates: (teammates ?? []).map((m: any) => ({
       id: m.id,
