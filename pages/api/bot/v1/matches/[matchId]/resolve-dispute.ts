@@ -22,6 +22,7 @@ import { withBotRoute } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { applyMatchScore } from '@/utils/matches/applyScore';
+import { emitBotEvent } from '@/utils/botEvents';
 import { logger } from '@/utils/logger';
 
 const VALID_RESUME = new Set(['pending', 'ongoing', 'finished', 'walkover']);
@@ -166,6 +167,25 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         },
       });
 
+      void (async () => {
+        const { data: row } = await supabaseAdmin
+          .from('matches')
+          .select('discord_dispute_thread_id')
+          .eq('id', matchId)
+          .maybeSingle();
+        await emitBotEvent('match.dispute.resolved', {
+          matchId,
+          tournamentId: match.tournament_id ?? null,
+          resolution,
+          resumeStatus,
+          resolvedByStaffId: actor.staffId,
+          cancelled: false,
+          discordDisputeThreadId: row?.discord_dispute_thread_id ?? null,
+        });
+      })().catch((err) =>
+        logger.error('[botEvents] match.dispute.resolved emit error:', err)
+      );
+
       return res.status(200).json({
         success: true,
         matchId,
@@ -220,6 +240,25 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       applied_score: null,
     },
   });
+
+  void (async () => {
+    const { data: row } = await supabaseAdmin
+      .from('matches')
+      .select('discord_dispute_thread_id')
+      .eq('id', matchId)
+      .maybeSingle();
+    await emitBotEvent('match.dispute.resolved', {
+      matchId,
+      tournamentId: match.tournament_id ?? null,
+      resolution,
+      resumeStatus,
+      resolvedByStaffId: actor.staffId,
+      cancelled: false,
+      discordDisputeThreadId: row?.discord_dispute_thread_id ?? null,
+    });
+  })().catch((err) =>
+    logger.error('[botEvents] match.dispute.resolved emit error:', err)
+  );
 
   return res.status(200).json({
     success: true,

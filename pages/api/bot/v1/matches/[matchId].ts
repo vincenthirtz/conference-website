@@ -19,6 +19,8 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
+import { emitBotEvent } from '@/utils/botEvents';
+import { enrichMatchEvent } from '@/utils/matches/botEventEnrich';
 import { logger } from '@/utils/logger';
 
 const NOTES_MAX = 2000;
@@ -114,7 +116,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Verify match exists + tournament not completed (mirror admin behaviour).
   const { data: match, error: mErr } = await supabaseAdmin
     .from('matches')
-    .select('id, tournament_id, status, is_bye')
+    .select('id, tournament_id, scrim_id, status, is_bye, scheduled_at')
     .eq('id', matchId)
     .maybeSingle();
   if (mErr) {
@@ -163,6 +165,34 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     tournament_id: match.tournament_id ?? null,
     payload: { mode: 'meta', fields: Object.keys(updates).filter((k) => k !== 'updated_at') },
   });
+
+  // Scheduled event natif Discord : si /planifier vient de poser ou clearer
+  // scheduled_at, le bot doit creer/mettre a jour/supprimer son scheduled
+  // event. Mirror du comportement de pages/api/admin/matches/[matchId].ts.
+  if ('scheduled_at' in updates) {
+    const prev = match.scheduled_at ?? null;
+    const next = (updates.scheduled_at ?? null) as string | null;
+    if (prev !== next) {
+      if (next) {
+        void (async () => {
+          const enriched = await enrichMatchEvent(matchId);
+          await emitBotEvent('match.scheduled', {
+            matchId,
+            tournamentId: match.tournament_id ?? null,
+            scrimId: match.scrim_id ?? null,
+            scheduledAt: next,
+            enriched,
+          });
+        })().catch((e) =>
+          logger.error('[botEvents] match.scheduled emit error:', e)
+        );
+      } else {
+        void emitBotEvent('match.unscheduled', { matchId }).catch((e) =>
+          logger.error('[botEvents] match.unscheduled emit error:', e)
+        );
+      }
+    }
+  }
 
   return res.status(200).json({ success: true, match: updated });
 }

@@ -28,6 +28,7 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import { notifyScoreReportDispute } from '@/utils/discord';
 import { emitBotEvent } from '@/utils/botEvents';
+import { enrichMatchEvent } from '@/utils/matches/botEventEnrich';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 
@@ -312,14 +313,20 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         .json({ error: "Echec de l'ouverture de la dispute" });
     }
 
-    void emitBotEvent('match.disputed', {
-      matchId,
-      tournamentId: match.tournament_id ?? null,
-      previousStatus: match.status,
-      reason: reasonParts,
-      openedBy: 'bot',
-      openedByStaffId: null,
-    }).catch((e) => logger.error('[botEvents] match.disputed emit error', e));
+    void (async () => {
+      const enriched = await enrichMatchEvent(matchId);
+      await emitBotEvent('match.disputed', {
+        matchId,
+        tournamentId: match.tournament_id ?? null,
+        previousStatus: match.status,
+        reason: reasonParts,
+        openedBy: 'bot',
+        openedByStaffId: null,
+        enriched,
+      });
+    })().catch((e) =>
+      logger.error('[botEvents] match.disputed emit error', e)
+    );
   }
 
   // Fire-and-forget Discord notification

@@ -8,6 +8,7 @@ import {
 import { sendTeamJoinEmail } from '@/utils/email';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { sanitizeUrl, validateRole } from '@/utils/apiHelpers';
+import { emitBotEvent } from '@/utils/botEvents';
 
 import { logger } from '../../../utils/logger';
 type Body = {
@@ -531,6 +532,28 @@ export default async function handler(
       "L'inscription au tournoi n'a pas pu être effectuée (nombre de joueurs insuffisant ou tournoi complet). Vous pourrez vous inscrire plus tard."
     );
   }
+
+  // Bot push : team.created -> le bot cree le salon vocal natif de l'equipe
+  // (chantier voice par equipe). Idempotent cote bot via teams.discord_voice_channel_id.
+  void (async () => {
+    let captainDiscordUserId: string | null = null;
+    if (captainUserId) {
+      const { data: link } = await supabaseAdmin
+        .from('user_discord_links')
+        .select('discord_user_id')
+        .eq('user_id', captainUserId)
+        .maybeSingle();
+      captainDiscordUserId = (link?.discord_user_id as string | undefined) ?? null;
+    }
+    await emitBotEvent('team.created', {
+      teamId: createdTeam.id,
+      name: createdTeam.name,
+      slug: createdTeam.slug ?? null,
+      captainAuthUserId: captainUserId,
+      captainDiscordUserId,
+      discordRoleId: createdTeam.discord_role_id ?? null,
+    });
+  })().catch((e) => logger.error('[botEvents] team.created emit error:', e));
 
   return res.status(201).json({
     team: createdTeam,

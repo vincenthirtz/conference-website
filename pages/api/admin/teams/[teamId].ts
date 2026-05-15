@@ -9,6 +9,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
+import { emitBotEvent } from '@/utils/botEvents';
 
 import { logger } from '../../../../utils/logger';
 export type TeamRow = {
@@ -23,6 +24,8 @@ export type TeamRow = {
   twitter: string | null;
   discord: string | null;
   discord_role_id: string | null;
+  discord_channel_id: string | null;
+  discord_voice_channel_id: string | null;
   website: string | null;
   is_active: boolean;
   captain_id: string | null;
@@ -370,6 +373,17 @@ async function handleDelete(
       }
     }
 
+    void emitBotEvent('team.dissolved', {
+      teamId: id,
+      name: (before as TeamRow).name,
+      hardDelete: true,
+      discordRoleId: (before as TeamRow).discord_role_id ?? null,
+      discordChannelId: (before as TeamRow).discord_channel_id ?? null,
+      discordVoiceChannelId: (before as TeamRow).discord_voice_channel_id ?? null,
+    }).catch((e) =>
+      logger.error('[botEvents] team.dissolved emit error:', e)
+    );
+
     return res.status(200).json({
       success: true,
       hardDeleted: true,
@@ -413,6 +427,15 @@ async function handleDelete(
       logger.error('admin soft delete team logStaffAction error:', e);
     }
   }
+
+  void emitBotEvent('team.dissolved', {
+    teamId: id,
+    name: (before as TeamRow).name,
+    hardDelete: false,
+    discordRoleId: (before as TeamRow).discord_role_id ?? null,
+    discordChannelId: (before as TeamRow).discord_channel_id ?? null,
+    discordVoiceChannelId: (before as TeamRow).discord_voice_channel_id ?? null,
+  }).catch((e) => logger.error('[botEvents] team.dissolved emit error:', e));
 
   return res.status(200).json({
     success: true,

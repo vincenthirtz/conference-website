@@ -15,6 +15,7 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import { emitBotEvent } from '@/utils/botEvents';
+import { enrichMatchEvent } from '@/utils/matches/botEventEnrich';
 import type { MatchStatus } from '@/types/admin';
 
 import { logger } from '../../../../../utils/logger';
@@ -144,14 +145,22 @@ async function openDispute(
     });
   }
 
-  void emitBotEvent('match.disputed', {
-    matchId,
-    tournamentId: match.tournament_id ?? null,
-    previousStatus,
-    reason: reason.trim(),
-    openedBy: 'staff',
-    openedByStaffId: ctx?.staff?.id ?? null,
-  }).catch((e) => logger.error('[botEvents] match.disputed emit error:', e));
+  // Enrich pour le forum disputes : noms equipes + tournoi + role IDs pour
+  // pinger les capitaines dans le thread forum (chantier 5).
+  void (async () => {
+    const enriched = await enrichMatchEvent(matchId);
+    await emitBotEvent('match.disputed', {
+      matchId,
+      tournamentId: match.tournament_id ?? null,
+      previousStatus,
+      reason: reason.trim(),
+      openedBy: 'staff',
+      openedByStaffId: ctx?.staff?.id ?? null,
+      enriched,
+    });
+  })().catch((e) =>
+    logger.error('[botEvents] match.disputed emit error:', e)
+  );
 
   return res.status(200).json({ match: updated });
 }
@@ -295,6 +304,21 @@ async function resolveDispute(
         });
       }
 
+      void (async () => {
+        const enriched = await enrichMatchEvent(matchId);
+        await emitBotEvent('match.dispute.resolved', {
+          matchId,
+          tournamentId: match.tournament_id ?? null,
+          resolution: trimmedResolution,
+          resumeStatus,
+          resolvedByStaffId: resolverId,
+          cancelled: false,
+          discordDisputeThreadId: enriched?.discordDisputeThreadId ?? null,
+        });
+      })().catch((err) =>
+        logger.error('[botEvents] match.dispute.resolved emit error:', err)
+      );
+
       return res.status(200).json({ match: result.match });
     } catch (e: unknown) {
       // Rollback: rebascule en disputed pour ne pas perdre la dispute en cours
@@ -350,6 +374,21 @@ async function resolveDispute(
       },
     });
   }
+
+  void (async () => {
+    const enriched = await enrichMatchEvent(matchId);
+    await emitBotEvent('match.dispute.resolved', {
+      matchId,
+      tournamentId: match.tournament_id ?? null,
+      resolution: trimmedResolution,
+      resumeStatus,
+      resolvedByStaffId: resolverId,
+      cancelled: false,
+      discordDisputeThreadId: enriched?.discordDisputeThreadId ?? null,
+    });
+  })().catch((err) =>
+    logger.error('[botEvents] match.dispute.resolved emit error:', err)
+  );
 
   return res.status(200).json({ match: updated });
 }
@@ -432,6 +471,23 @@ async function cancelDispute(
       },
     });
   }
+
+  // Lock du forum thread cote bot meme quand la dispute est annulee sans
+  // resolution (cancelled=true distingue ce cas dans les logs bot).
+  void (async () => {
+    const enriched = await enrichMatchEvent(matchId);
+    await emitBotEvent('match.dispute.resolved', {
+      matchId,
+      tournamentId: match.tournament_id ?? null,
+      resolution: null,
+      resumeStatus,
+      resolvedByStaffId: ctx?.staff?.id ?? null,
+      cancelled: true,
+      discordDisputeThreadId: enriched?.discordDisputeThreadId ?? null,
+    });
+  })().catch((err) =>
+    logger.error('[botEvents] match.dispute.resolved emit error:', err)
+  );
 
   return res.status(200).json({ match: updated });
 }

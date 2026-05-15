@@ -23,9 +23,14 @@ import { logger } from './logger';
 
 export type BotEventName =
   | 'match.starting'
+  | 'match.scheduled'
+  | 'match.unscheduled'
   | 'match.disputed'
+  | 'match.dispute.resolved'
   | 'match.finished'
   | 'news.published'
+  | 'team.created'
+  | 'team.dissolved'
   | 'team.member.added'
   | 'team.member.removed'
   | 'team.captain.changed'

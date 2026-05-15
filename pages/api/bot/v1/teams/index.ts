@@ -19,6 +19,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
 import { sanitizeUrl } from '@/utils/apiHelpers';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
+import { emitBotEvent } from '@/utils/botEvents';
 import { logger } from '@/utils/logger';
 
 const DISCORD_ID_RE = /^[0-9]{15,25}$/;
@@ -199,6 +200,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     entityId: created.id,
     payload: { name: created.name, slug: created.slug },
   });
+
+  // team.created -> chantier voice par equipe : le bot cree le salon vocal.
+  void emitBotEvent('team.created', {
+    teamId: created.id,
+    name: created.name,
+    slug: created.slug ?? null,
+    captainAuthUserId: captainAuthId,
+    captainDiscordUserId,
+    discordRoleId: created.discord_role_id ?? null,
+  }).catch((e) => logger.error('[botEvents] team.created emit error:', e));
 
   return res.status(201).json({ team: created });
 }

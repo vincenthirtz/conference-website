@@ -18,6 +18,7 @@ import { withBotRoute } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { emitBotEvent } from '@/utils/botEvents';
+import { enrichMatchEvent } from '@/utils/matches/botEventEnrich';
 import { logger } from '@/utils/logger';
 
 const VALID_STATUSES = [
@@ -223,18 +224,24 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   });
 
   if (after.status === 'ongoing' && match.status !== 'ongoing') {
-    void emitBotEvent('match.starting', {
-      matchId,
-      tournamentId: null,
-      scrimId,
-      team1Id: after.team1_id ?? null,
-      team2Id: after.team2_id ?? null,
-      scheduledAt: after.scheduled_at ?? null,
-      startedAt: after.started_at ?? null,
-      matchFormat: after.match_format ?? null,
-      lobbyCode: after.lobby_code ?? null,
-      streamUrl: after.stream_url ?? null,
-    }).catch((e) => logger.error('[botEvents] match.starting emit error:', e));
+    void (async () => {
+      const enriched = await enrichMatchEvent(matchId);
+      await emitBotEvent('match.starting', {
+        matchId,
+        tournamentId: null,
+        scrimId,
+        team1Id: after.team1_id ?? null,
+        team2Id: after.team2_id ?? null,
+        scheduledAt: after.scheduled_at ?? null,
+        startedAt: after.started_at ?? null,
+        matchFormat: after.match_format ?? null,
+        lobbyCode: after.lobby_code ?? null,
+        streamUrl: after.stream_url ?? null,
+        enriched,
+      });
+    })().catch((e) =>
+      logger.error('[botEvents] match.starting emit error:', e)
+    );
   }
 
   return res.status(200).json({ success: true, match: after });

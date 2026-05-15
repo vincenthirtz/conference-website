@@ -19,6 +19,7 @@ import {
   postMvpPoll,
 } from '../discord';
 import { emitBotEvent } from '../botEvents';
+import { enrichMatchEvent } from './botEventEnrich';
 import type { PropagationResult } from '../../types/bracket';
 import { logger } from '../logger';
 import type {
@@ -437,27 +438,36 @@ export async function applyMatchScore(
 
     // Bot push : "match.finished" — laisse le bot crosspost/reformatter
     // l'annonce (le webhook Discord direct reste, le bot vient en sus).
-    void emitBotEvent('match.finished', {
-      matchId,
-      tournamentId: match.tournament_id ?? null,
-      stageId: match.stage_id ?? null,
-      team1Id: match.team1_id ?? null,
-      team2Id: match.team2_id ?? null,
-      team1Score,
-      team2Score,
-      winnerTeamId: newWinnerTeamId,
-      isForfeit: !!resolvedForfeitTeamId,
-      forfeitTeamId: resolvedForfeitTeamId,
-      status: newStatus,
-      propagation: propagationResult
-        ? {
-            winnerTeamId: propagationResult.winnerTeamId ?? null,
-            loserTeamId: propagationResult.loserTeamId ?? null,
-            nextWinMatchId: propagationResult.updatedWinMatchId ?? null,
-            nextLoseMatchId: propagationResult.updatedLoseMatchId ?? null,
-          }
-        : null,
-    }).catch((e) => logger.error('[botEvents] match.finished emit error:', e));
+    // Enrich pour le rafraichissement du thread #matchs-live (couleur verte +
+    // score final + archive). Si le fetch echoue, on emit avec enriched=null
+    // et le bot saura le gerer (le payload de base contient deja les scores).
+    void (async () => {
+      const enriched = await enrichMatchEvent(matchId);
+      await emitBotEvent('match.finished', {
+        matchId,
+        tournamentId: match.tournament_id ?? null,
+        stageId: match.stage_id ?? null,
+        team1Id: match.team1_id ?? null,
+        team2Id: match.team2_id ?? null,
+        team1Score,
+        team2Score,
+        winnerTeamId: newWinnerTeamId,
+        isForfeit: !!resolvedForfeitTeamId,
+        forfeitTeamId: resolvedForfeitTeamId,
+        status: newStatus,
+        propagation: propagationResult
+          ? {
+              winnerTeamId: propagationResult.winnerTeamId ?? null,
+              loserTeamId: propagationResult.loserTeamId ?? null,
+              nextWinMatchId: propagationResult.updatedWinMatchId ?? null,
+              nextLoseMatchId: propagationResult.updatedLoseMatchId ?? null,
+            }
+          : null,
+        enriched,
+      });
+    })().catch((e) =>
+      logger.error('[botEvents] match.finished emit error:', e)
+    );
 
     // MVP poll: only on real finishes (not forfeits — there's no game to vote
     // an MVP for). Fire-and-forget; failures are logged but don't block.
