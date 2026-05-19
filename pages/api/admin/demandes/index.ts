@@ -15,6 +15,7 @@ import {
   isValidUUID,
 } from '@/utils/apiHelpers';
 import { emitScrimEvent } from '@/utils/scrimEvents';
+import { validateDemandeBatchTransitions } from '@/utils/demandes/stateMachine';
 
 export type DemandeType =
   | 'join'
@@ -399,6 +400,25 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
     logger.error('admin demandes batch fetch error:', fetchErr);
     return res.status(500).json({
       error: 'Failed to fetch demandes before update',
+    });
+  }
+
+  // 1b) State machine : refuser tout le batch s'il contient au moins une
+  // transition interdite (ex: re-cancel d'une approved, re-approve d'une
+  // rejected). Réponse avec la liste des IDs problématiques pour que la UI
+  // puisse les retirer du lot. Approche all-or-nothing pour éviter un état
+  // partiel ambigu côté admin.
+  const beforeRowsArr = (beforeList ?? []) as DemandeRow[];
+  const invalidTransitions = validateDemandeBatchTransitions(
+    beforeRowsArr.map((r) => ({ id: r.id, fromStatus: r.status })),
+    newStatus
+  );
+  if (invalidTransitions.length > 0) {
+    return res.status(409).json({
+      error:
+        'Transitions de statut invalides dans le lot. Aucune demande modifiée.',
+      code: 'INVALID_DEMANDE_TRANSITION',
+      invalidTransitions,
     });
   }
 

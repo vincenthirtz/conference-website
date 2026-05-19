@@ -410,6 +410,24 @@ async function handlePut(
     }
   }
 
+  // Garde "match engagé" : changer le match_format d'un match qui a quitté
+  // pending peut casser l'historique (BO3 finished re-passé en BO5 par ex).
+  // On refuse strictement — pour corriger un format erroné après coup, il
+  // faut reset le match en pending d'abord.
+  if (
+    'match_format' in updatePayload &&
+    updatePayload.match_format !== before.match_format &&
+    before.status !== 'pending' &&
+    before.status !== 'cancelled'
+  ) {
+    return res.status(409).json({
+      error:
+        `Impossible de modifier le format d'un match dont le statut est "${before.status}". Repassez le match en pending (ou annulez-le) d'abord.`,
+      code: 'MATCH_FORMAT_LOCKED',
+      currentStatus: before.status,
+    });
+  }
+
   // Auto-lock du veto au passage en 'ongoing' : empeche un caster de modifier
   // les bans/picks une fois la game commencee. Reset possible par un admin
   // via PATCH /api/admin/matches/[matchId]/veto { unlock: true }.

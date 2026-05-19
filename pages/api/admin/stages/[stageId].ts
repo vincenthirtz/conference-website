@@ -10,6 +10,7 @@ import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { validateStageSettings } from '@/utils/stageSettings';
 import { isValidUUID } from '@/utils/apiHelpers';
+import { getStageLockSnapshot } from '@/utils/stages/stageLockStatus';
 import type { StageSettings } from '@/types/stages';
 
 import { logger } from '../../../../utils/logger';
@@ -235,6 +236,26 @@ async function handlePut(
     const settingsResult = validateStageSettings(resolvedType, body.settings);
     if (!settingsResult.valid) {
       return res.status(400).json({ error: settingsResult.error });
+    }
+  }
+
+  // Garde "stage engagé" : on refuse de changer settings.match_format dès
+  // qu'au moins un match du stage a quitté pending/cancelled. Sinon on
+  // peut rétro-modifier le format d'un match déjà joué.
+  if ('settings' in body && body.settings && typeof body.settings === 'object') {
+    const beforeFormat = (before.settings as StageSettings | null)?.match_format ?? null;
+    const newFormat =
+      (body.settings as StageSettings | null)?.match_format ?? null;
+    if (beforeFormat !== newFormat) {
+      const snap = await getStageLockSnapshot(id);
+      if (snap.locked) {
+        return res.status(409).json({
+          error:
+            `Impossible de modifier le format de la phase : ${snap.lockedMatchCount} match(s) ont déjà démarré ou sont terminés. Pour changer le format, annuler / réinitialiser ces matchs d'abord.`,
+          code: 'STAGE_FORMAT_LOCKED',
+          lockedMatchCount: snap.lockedMatchCount,
+        });
+      }
     }
   }
 
