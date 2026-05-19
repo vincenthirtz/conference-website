@@ -33,6 +33,28 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(400).json({ error: 'matchId invalide' });
   }
 
+  // GET : lecture des metadonnees minimales (team names + statut) sans
+  // auth d'acteur Discord — utilise par le bot pour afficher des labels
+  // exacts (modal report-score) au lieu de parser le DM via regex.
+  if (req.method === 'GET') {
+    const { data, error } = await supabaseAdmin
+      .from('matches')
+      .select(
+        `id, status, is_bye, scheduled_at, match_format,
+         tournament_id, scrim_id, stage_id,
+         team1:teams!matches_team1_id_fkey(id, name, short_name),
+         team2:teams!matches_team2_id_fkey(id, name, short_name)`
+      )
+      .eq('id', matchId)
+      .maybeSingle();
+    if (error) {
+      logger.error('[bot/matches GET] error', error);
+      return res.status(500).json({ error: 'Erreur de chargement' });
+    }
+    if (!data) return res.status(404).json({ error: 'Match introuvable' });
+    return res.status(200).json({ match: data });
+  }
+
   const body = (req.body ?? {}) as Record<string, unknown>;
 
   const actor = await requireBotStaff(req, res, body);
@@ -198,7 +220,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 }
 
 export default withBotRoute(handler, {
-  methods: ['PATCH'],
+  methods: ['GET', 'PATCH'],
   rateLimit: { max: 30, key: 'bot-match-meta' },
   idempotent: true,
 });
