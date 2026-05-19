@@ -17,7 +17,9 @@ type DeletedItem = {
     | 'announcement'
     | 'partner'
     | 'cast_member'
-    | 'adherent';
+    | 'adherent'
+    | 'staff'
+    | 'scrim';
   name: string;
   details: string | null;
   deleted_at: string | null;
@@ -230,6 +232,48 @@ async function handleGet(
     }
   }
 
+  // 8b) Soft-deleted scrims
+  if (!typeFilter || typeFilter === 'scrim') {
+    const { data: scrims } = await supabaseAdmin!
+      .from('scrims')
+      .select('id, name, slug, status, deleted_at')
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false })
+      .limit(100);
+
+    for (const s of scrims || []) {
+      items.push({
+        id: s.id,
+        type: 'scrim',
+        name: s.name,
+        details: `${s.status} · ${s.slug}`,
+        deleted_at: s.deleted_at,
+        tournament_id: null,
+      });
+    }
+  }
+
+  // 8) Soft-deleted staff (is_active=false OR deleted_at IS NOT NULL)
+  if (!typeFilter || typeFilter === 'staff') {
+    const { data: staffRows } = await supabaseAdmin!
+      .from('staff')
+      .select('id, display_name, email, role, deleted_at')
+      .or('is_active.eq.false,deleted_at.not.is.null')
+      .order('deleted_at', { ascending: false })
+      .limit(100);
+
+    for (const s of staffRows || []) {
+      items.push({
+        id: s.id,
+        type: 'staff',
+        name: s.display_name || s.email || 'Staff sans nom',
+        details: s.role || null,
+        deleted_at: s.deleted_at,
+        tournament_id: null,
+      });
+    }
+  }
+
   // Sort all by deleted_at descending
   items.sort((a, b) => {
     const da = a.deleted_at ? new Date(a.deleted_at).getTime() : 0;
@@ -320,6 +364,27 @@ async function handleRestore(
           .update({ is_active: true, deleted_at: null, updated_at: nowIso })
           .eq('id', id);
 
+        if (error) throw error;
+        break;
+      }
+      case 'staff': {
+        // Restore d'un staff soft-delete : réactive is_active + clear
+        // deleted_at. Le rôle d'origine est conservé (la row reste). Le
+        // user_metadata.role côté auth doit être resync côté UI si nécessaire
+        // (out of scope du restore brut).
+        const { error } = await supabaseAdmin!
+          .from('staff')
+          .update({ is_active: true, deleted_at: null })
+          .eq('id', id);
+
+        if (error) throw error;
+        break;
+      }
+      case 'scrim': {
+        const { error } = await supabaseAdmin!
+          .from('scrims')
+          .update({ deleted_at: null, updated_at: nowIso })
+          .eq('id', id);
         if (error) throw error;
         break;
       }

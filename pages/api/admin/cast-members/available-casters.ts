@@ -11,7 +11,12 @@ type AvailableCaster = {
   email: string;
   avatarUrl: string | null;
   linkedCastMemberId: string | null;
+  /** True si le caster a deja un cast_assignment dans la fenetre demandee. */
+  conflictsWithWindow?: boolean;
 };
+
+const WINDOW_HOURS_DEFAULT = 2;
+const WINDOW_HOURS_MAX = 12;
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (
@@ -67,15 +72,60 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     );
   }
 
-  const items: AvailableCaster[] = (casters ?? []).map((c) => ({
-    authUserId: c.auth_user_id,
-    displayName: c.display_name,
-    email: c.email,
-    avatarUrl: c.avatar_url,
-    linkedCastMemberId: linkedMap.get(c.auth_user_id) ?? null,
-  }));
+  // Optionnel : si matchScheduledAt est fourni, on cherche les cast_assignments
+  // existants des cast_members liés dont le match est planifié dans la
+  // fenêtre [scheduledAt - windowHours, scheduledAt + windowHours]. Ces
+  // casters sont marqués conflictsWithWindow=true pour que la UI les
+  // grise ou les retire.
+  const matchScheduledAtParam = req.query.matchScheduledAt;
+  const matchScheduledAt =
+    typeof matchScheduledAtParam === 'string' ? matchScheduledAtParam : null;
+  const windowHoursParam = req.query.windowHours;
+  const windowHoursRaw =
+    typeof windowHoursParam === 'string' ? Number(windowHoursParam) : NaN;
+  const windowHours = Number.isFinite(windowHoursRaw)
+    ? Math.min(Math.max(windowHoursRaw, 0.5), WINDOW_HOURS_MAX)
+    : WINDOW_HOURS_DEFAULT;
 
-  return res.status(200).json({ items });
+  let conflictingCastMemberIds = new Set<string>();
+  if (matchScheduledAt && !Number.isNaN(Date.parse(matchScheduledAt))) {
+    const t = new Date(matchScheduledAt).getTime();
+    const lo = new Date(t - windowHours * 3_600_000).toISOString();
+    const hi = new Date(t + windowHours * 3_600_000).toISOString();
+
+    // On fetch les cast_assignments + match.scheduled_at via join, filtrés
+    // sur la fenêtre. PostgREST permet le filtre sur la relation imbriquée.
+    const { data: busy, error: busyErr } = await admin
+      .from('cast_assignments')
+      .select('cast_member_id, match:match_id!inner(id, scheduled_at)')
+      .gte('match.scheduled_at', lo)
+      .lte('match.scheduled_at', hi);
+    if (busyErr) {
+      logger.error('[admin/available-casters] busy lookup error', busyErr);
+      // On ne fait pas planter la route — on continue sans flag conflict.
+    } else if (busy) {
+      conflictingCastMemberIds = new Set(
+        busy
+          .map((b: { cast_member_id: string }) => b.cast_member_id)
+          .filter(Boolean)
+      );
+    }
+  }
+
+  const items: AvailableCaster[] = (casters ?? []).map((c) => {
+    const linkedId = linkedMap.get(c.auth_user_id) ?? null;
+    return {
+      authUserId: c.auth_user_id,
+      displayName: c.display_name,
+      email: c.email,
+      avatarUrl: c.avatar_url,
+      linkedCastMemberId: linkedId,
+      conflictsWithWindow:
+        linkedId !== null && conflictingCastMemberIds.has(linkedId),
+    };
+  });
+
+  return res.status(200).json({ items, windowHours });
 }
 
 export default withStaffRoute(handler, 'admin');

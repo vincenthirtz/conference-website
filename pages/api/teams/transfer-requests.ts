@@ -5,7 +5,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { applyRateLimit } from '@/utils/rateLimit';
+import { applyRateLimit, applyActorRateLimit } from '@/utils/rateLimit';
 import { isValidUUID, validateRole } from '@/utils/apiHelpers';
 import { withAuthRoute } from '@/utils/staff';
 import {
@@ -25,6 +25,17 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
+
+  // Per-user cap : transfert touche 2 teams, plus impactant qu'un join.
+  if (
+    applyActorRateLimit(
+      res,
+      userId,
+      { max: 5, windowMs: 60_000 },
+      'transfer-requests'
+    )
+  )
+    return;
 
   // Check if user can manage a team (captain or manager)
   const access = await getManagedTeam(userId);

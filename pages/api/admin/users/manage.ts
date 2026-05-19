@@ -435,11 +435,12 @@ async function handler(
 
     if (isStaffRole) {
       newStaffRole = role;
-      // Ajouter ou mettre à jour l'entrée staff
+      // Ajouter ou mettre à jour l'entrée staff. Si elle existait soft-deleted,
+      // on la réactive (is_active=true, deleted_at=null).
       if (existingStaff?.id) {
         await supabaseAdmin
           .from('staff')
-          .update({ role })
+          .update({ role, is_active: true, deleted_at: null })
           .eq('auth_user_id', userId);
       } else {
         await supabaseAdmin.from('staff').insert({
@@ -450,8 +451,16 @@ async function handler(
         });
       }
     } else if (existingStaff?.id) {
-      // Supprimer l'entrée staff si le rôle n'est plus un rôle staff
-      await supabaseAdmin.from('staff').delete().eq('auth_user_id', userId);
+      // Soft-delete : on conserve la row pour préserver staff_logs.staff_id.
+      // La row sera filtrée par getStaffByUserId via is_active/deleted_at.
+      // Restore possible via /admin/recycle-bin.
+      await supabaseAdmin
+        .from('staff')
+        .update({
+          is_active: false,
+          deleted_at: new Date().toISOString(),
+        })
+        .eq('auth_user_id', userId);
     }
 
     if (previousStaffRole !== newStaffRole) {

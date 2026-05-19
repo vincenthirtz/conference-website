@@ -37,6 +37,7 @@ const PATCHABLE_FIELDS = [
   'banner_url',
   'description',
   'stream_url',
+  'settings',
 ] as const;
 type PatchField = (typeof PATCHABLE_FIELDS)[number];
 
@@ -256,7 +257,15 @@ async function handleDelete(
     .maybeSingle();
   if (!before) return res.status(404).json({ error: 'Scrim not found' });
 
-  const { error } = await supabaseAdmin!.from('scrims').delete().eq('id', id);
+  // Soft-delete : conserve la row + ses matches liés pour restauration via
+  // /admin/recycle-bin. Idempotent : delete une scrim déjà soft-deleted no-op.
+  const { error } = await supabaseAdmin!
+    .from('scrims')
+    .update({
+      deleted_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id);
   if (error) {
     logger.error('[admin/scrims/:id] DELETE error:', error);
     return res.status(500).json({ error: 'Failed to delete scrim' });

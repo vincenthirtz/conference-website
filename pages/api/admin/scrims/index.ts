@@ -97,7 +97,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
       team1_id, team2_id,
       scheduled_date, timezone,
       is_public, logo_url, banner_url, description, stream_url,
-      source_demande_id, created_at, updated_at,
+      source_demande_id, settings, created_at, updated_at,
       team1:teams!scrims_team1_id_fkey(id, name, short_name, logo_url),
       team2:teams!scrims_team2_id_fkey(id, name, short_name, logo_url)
     `,
@@ -106,6 +106,14 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
         includeTotal === '1' || includeTotal === 'true' ? 'exact' : undefined,
     }
   );
+
+  // Filtre soft-delete : par défaut on cache les scrims supprimés. Pour
+  // l'admin "recycle bin", passer includeDeleted=1.
+  const includeDeleted =
+    req.query.includeDeleted === '1' || req.query.includeDeleted === 'true';
+  if (!includeDeleted) {
+    query = query.is('deleted_at', null);
+  }
 
   if (status && !Array.isArray(status)) {
     if (!(VALID_STATUSES as readonly string[]).includes(status as string)) {

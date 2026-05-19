@@ -6,7 +6,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { applyRateLimit } from '@/utils/rateLimit';
+import { applyRateLimit, applyActorRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { withAuthRoute } from '@/utils/staff';
 import {
@@ -24,6 +24,18 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
+
+  // Per-user cap : refuser le spam de scrim accept/reject (a chaque
+  // accept, on cree un scrim draft cote /admin/demandes auto-process).
+  if (
+    applyActorRateLimit(
+      res,
+      userId,
+      { max: 5, windowMs: 60_000 },
+      'scrim-requests'
+    )
+  )
+    return;
 
   // Check if user can manage a team (captain or manager)
   const access = await getManagedTeam(userId);

@@ -130,7 +130,20 @@ export async function getStaffByUserId(
     return null;
   }
 
-  const result = (data as StaffMember) ?? null;
+  // Soft-delete filtering : un staff is_active=false (ou deleted_at non-null,
+  // pour les anciens enregistrements pré-migration) est traité comme s'il
+  // n'existait pas → plus de droits. La row reste pour préserver l'audit
+  // staff_logs.
+  let result: StaffMember | null = (data as StaffMember) ?? null;
+  if (result) {
+    const r = result as StaffMember & {
+      is_active?: boolean | null;
+      deleted_at?: string | null;
+    };
+    if (r.is_active === false || r.deleted_at) {
+      result = null;
+    }
+  }
   staffCache.set(userId, { data: result, expiresAt: now + STAFF_CACHE_TTL });
   return result;
 }
