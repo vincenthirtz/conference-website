@@ -100,17 +100,19 @@ export default function HomeIdahobitScrim() {
           </Paragraph>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30 shadow-2xl">
-          <div className="relative w-full" style={{ aspectRatio: '16 / 9' }}>
-            <iframe
-              src={`https://www.youtube.com/embed/${VIDEO_ID}`}
-              title="Scrim IDAHOBIT 17 mai"
-              className="absolute inset-0 h-full w-full"
-              loading="lazy"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-            />
-          </div>
+        <div
+          className="relative aspect-video w-full overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl"
+          style={{ aspectRatio: '16 / 9' }}
+        >
+          <iframe
+            src={`https://www.youtube.com/embed/${VIDEO_ID}`}
+            title="Scrim IDAHOBIT 17 mai"
+            className="absolute inset-0 h-full w-full"
+            loading="lazy"
+            referrerPolicy="strict-origin-when-cross-origin"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+          />
         </div>
 
         <div className="mt-6 space-y-3">
