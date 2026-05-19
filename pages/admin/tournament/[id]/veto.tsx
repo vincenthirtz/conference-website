@@ -104,10 +104,11 @@ function sideLabel(
 
 export const getServerSideProps = withStaffPage('manager');
 
-function AdminVetoPage(_: StaffProps) {
+function AdminVetoPage({ staff }: StaffProps) {
   const router = useRouter();
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;
+  const canUnlockVeto = staff.role === 'owner' || staff.role === 'admin';
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -202,6 +203,10 @@ function AdminVetoPage(_: StaffProps) {
   const handleSelectMap = useCallback(
     async (mapName: string, mapType: string | null) => {
       if (!vetoState || !selectedMatchId || vetoState.isComplete) return;
+      if (vetoState.vetoLockedAt) {
+        addToast('Veto verrouillé : impossible de modifier.', 'error');
+        return;
+      }
 
       setSubmitting(true);
       setErrorMsg(null);
@@ -234,6 +239,16 @@ function AdminVetoPage(_: StaffProps) {
 
         if (!res.ok) {
           const json = await res.json().catch(() => ({}));
+          // 409 VETO_LOCKED : le match a démarré pendant qu'on cliquait. On
+          // refresh pour afficher le badge "verrouillé" et désactiver l'UI.
+          if (res.status === 409 && json.code === 'VETO_LOCKED') {
+            await fetchVetoState(selectedMatchId);
+            addToast(
+              json.error || 'Le veto est verrouillé (match commencé).',
+              'error'
+            );
+            return;
+          }
           throw new Error(json.error || 'Erreur lors du veto');
         }
 
@@ -281,6 +296,14 @@ function AdminVetoPage(_: StaffProps) {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
+        if (res.status === 409 && json.code === 'VETO_LOCKED') {
+          await fetchVetoState(selectedMatchId);
+          addToast(
+            json.error || 'Le veto est verrouillé (match commencé).',
+            'error'
+          );
+          return;
+        }
         throw new Error(json.error || 'Erreur');
       }
 
@@ -293,6 +316,46 @@ function AdminVetoPage(_: StaffProps) {
     }
   }, [selectedMatchId, addToast, confirm]);
 
+  const handleUnlock = useCallback(async () => {
+    if (!selectedMatchId || !canUnlockVeto) return;
+
+    const ok = await confirm({
+      title: 'Déverrouiller le veto ?',
+      subtitle:
+        'Action exceptionnelle : permet de remodifier le veto même après le début du match. Toutes les actions seront tracées dans staff_logs.',
+      variant: 'danger',
+      confirmLabel: 'Déverrouiller',
+    });
+    if (!ok) return;
+
+    const reason = window
+      .prompt(
+        'Raison du déverrouillage (optionnel, max 500 chars) :',
+        ''
+      )
+      ?.trim();
+
+    setSubmitting(true);
+    setErrorMsg(null);
+    try {
+      const res = await fetch(`/api/admin/matches/${selectedMatchId}/veto`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ unlock: true, reason: reason || undefined }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || 'Échec du déverrouillage');
+      }
+      await fetchVetoState(selectedMatchId);
+      addToast('Veto déverrouillé.', 'success');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message || 'Erreur');
+    } finally {
+      setSubmitting(false);
+    }
+  }, [selectedMatchId, addToast, confirm, canUnlockVeto]);
+
   // Compute used maps in current veto
   const usedMapNames = new Set((vetoState?.steps || []).map((s) => s.map_name));
 
@@ -301,6 +364,17 @@ function AdminVetoPage(_: StaffProps) {
     vetoState && !vetoState.isComplete
       ? (vetoState.flow[vetoState.currentStepIndex] ?? null)
       : null;
+
+  const isLocked = !!vetoState?.vetoLockedAt;
+  const lockedLabel = vetoState?.vetoLockedAt
+    ? new Date(vetoState.vetoLockedAt).toLocaleString('fr-FR', {
+        timeZone: 'Europe/Paris',
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : null;
 
   return (
     <>
@@ -385,6 +459,39 @@ function AdminVetoPage(_: StaffProps) {
               {/* Veto flow */}
               {vetoState && (
                 <>
+                  {/* Lock banner : visible des qu'un match a passe ongoing */}
+                  {isLocked && (
+                    <div className="mb-6 p-5 rounded-xl bg-amber-900/30 border border-amber-500/40">
+                      <div className="flex items-center justify-between gap-4 flex-wrap">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <span className="text-2xl leading-none">🔒</span>
+                          <div className="min-w-0">
+                            <p className="text-base font-semibold text-amber-100">
+                              Veto verrouillé
+                            </p>
+                            <p className="text-sm text-amber-200/80 mt-0.5">
+                              Le match a commencé ou est terminé. Aucune
+                              modification possible.
+                              {lockedLabel
+                                ? ` Verrouillé le ${lockedLabel} (Paris).`
+                                : ''}
+                            </p>
+                          </div>
+                        </div>
+                        {canUnlockVeto && (
+                          <button
+                            onClick={handleUnlock}
+                            disabled={submitting}
+                            className="px-3 py-1.5 rounded-lg bg-amber-600/40 border border-amber-400/50 text-amber-50 text-sm hover:bg-amber-600/60 disabled:opacity-50 whitespace-nowrap"
+                            title="Action exceptionnelle (admin only) — tracée dans staff_logs."
+                          >
+                            Déverrouiller
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Current step indicator */}
                   {currentFlowStep && !vetoState.isComplete && (
                     <div className="mb-6 p-5 rounded-xl bg-white/5 border border-white/10">
@@ -417,8 +524,9 @@ function AdminVetoPage(_: StaffProps) {
                         </div>
                         <button
                           onClick={handleReset}
-                          disabled={submitting}
-                          className="px-3 py-1.5 rounded-lg bg-red-600/30 border border-red-500/40 text-red-200 text-sm hover:bg-red-600/50 disabled:opacity-50"
+                          disabled={submitting || isLocked}
+                          title={isLocked ? 'Veto verrouillé' : undefined}
+                          className="px-3 py-1.5 rounded-lg bg-red-600/30 border border-red-500/40 text-red-200 text-sm hover:bg-red-600/50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           Réinitialiser
                         </button>
@@ -440,8 +548,9 @@ function AdminVetoPage(_: StaffProps) {
                         </div>
                         <button
                           onClick={handleReset}
-                          disabled={submitting}
-                          className="px-3 py-1.5 rounded-lg bg-red-600/30 border border-red-500/40 text-red-200 text-sm hover:bg-red-600/50 disabled:opacity-50"
+                          disabled={submitting || isLocked}
+                          title={isLocked ? 'Veto verrouillé' : undefined}
+                          className="px-3 py-1.5 rounded-lg bg-red-600/30 border border-red-500/40 text-red-200 text-sm hover:bg-red-600/50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           Recommencer
                         </button>
@@ -568,11 +677,19 @@ function AdminVetoPage(_: StaffProps) {
                                 onClick={() =>
                                   !isUsed &&
                                   !submitting &&
+                                  !isLocked &&
                                   handleSelectMap(m.map_name, m.map_type)
                                 }
-                                disabled={isUsed || submitting}
+                                disabled={isUsed || submitting || isLocked}
+                                title={
+                                  isLocked
+                                    ? 'Veto verrouillé'
+                                    : isUsed
+                                      ? 'Map déjà utilisée'
+                                      : undefined
+                                }
                                 className={`rounded-lg border overflow-hidden text-left transition-all ${
-                                  isUsed
+                                  isUsed || isLocked
                                     ? 'border-white/5 opacity-30 cursor-not-allowed'
                                     : 'border-white/10 hover:border-purple-400/60 hover:bg-white/5 cursor-pointer'
                                 }`}

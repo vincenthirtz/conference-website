@@ -83,4 +83,10 @@ export type MatchVetoState = {
     map_type: string | null;
     picked_by: string | null;
   }[];
+  /**
+   * Timestamp du verrouillage du veto. Non-null = veto immuable.
+   * Set automatiquement au passage en ongoing/finished/walkover.
+   * Reset par PATCH /veto { unlock: true } (admin+ only).
+   */
+  vetoLockedAt: string | null;
 };

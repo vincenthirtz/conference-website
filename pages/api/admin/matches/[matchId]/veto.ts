@@ -6,7 +6,11 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
+import {
+  withStaffRoute,
+  AuthenticatedStaffContext,
+  hasAtLeastRole,
+} from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import type { VetoStep, VetoStepInput, VetoAction } from '@/types/veto';
 import { VETO_FLOWS } from '@/types/veto';
@@ -29,9 +33,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
         return await handleGet(matchId, res);
       case 'POST':
         return await handlePost(matchId, req, res, ctx);
+      case 'PATCH':
+        return await handlePatch(matchId, req, res, ctx);
       case 'DELETE':
         return await handleDelete(matchId, res, ctx);
       default:
+        res.setHeader('Allow', 'GET,POST,PATCH,DELETE');
         return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (err: unknown) {
@@ -43,18 +50,36 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
 }
 
 /* -----------------------------------------------------------
+ * Fetch match info incl. veto_locked_at (utilisé par POST/DELETE/PATCH)
+ * ---------------------------------------------------------*/
+
+type MatchForVeto = {
+  id: string;
+  tournament_id: string | null;
+  match_format: string | null;
+  team1_id: string | null;
+  team2_id: string | null;
+  veto_locked_at: string | null;
+};
+
+async function fetchMatchForVeto(matchId: string): Promise<MatchForVeto | null> {
+  const { data, error } = await supabaseAdmin
+    .from('matches')
+    .select('id, tournament_id, match_format, team1_id, team2_id, veto_locked_at')
+    .eq('id', matchId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as MatchForVeto;
+}
+
+/* -----------------------------------------------------------
  * GET : fetch veto state for a match
  * ---------------------------------------------------------*/
 
 async function handleGet(matchId: string, res: NextApiResponse) {
   // Fetch match info
-  const { data: match, error: mErr } = await supabaseAdmin
-    .from('matches')
-    .select('id, tournament_id, match_format, team1_id, team2_id')
-    .eq('id', matchId)
-    .maybeSingle();
-
-  if (mErr || !match) {
+  const match = await fetchMatchForVeto(matchId);
+  if (!match) {
     return res.status(404).json({ error: 'Match not found' });
   }
 
@@ -107,6 +132,7 @@ async function handleGet(matchId: string, res: NextApiResponse) {
     currentStepIndex: vetoSteps.length,
     isComplete: vetoSteps.length >= flow.length,
     pickedMaps,
+    vetoLockedAt: match.veto_locked_at,
   });
 }
 
@@ -135,14 +161,20 @@ async function handlePost(
   }
 
   // Fetch match to validate
-  const { data: match, error: mErr } = await supabaseAdmin
-    .from('matches')
-    .select('id, tournament_id, match_format, team1_id, team2_id')
-    .eq('id', matchId)
-    .maybeSingle();
-
-  if (mErr || !match) {
+  const match = await fetchMatchForVeto(matchId);
+  if (!match) {
     return res.status(404).json({ error: 'Match not found' });
+  }
+
+  // Verrou : impossible de modifier le veto une fois le match commence.
+  // Un admin peut deverrouiller via PATCH /veto { unlock: true }.
+  if (match.veto_locked_at) {
+    return res.status(409).json({
+      error:
+        'Le veto est verrouille (match commence ou termine). Un admin peut deverrouiller via PATCH /veto { unlock: true }.',
+      code: 'VETO_LOCKED',
+      vetoLockedAt: match.veto_locked_at,
+    });
   }
 
   // Get current step count
@@ -332,6 +364,20 @@ async function sendVetoStepDiscord(params: {
  * ---------------------------------------------------------*/
 
 async function handleDelete(matchId: string, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
+  // Verrou : meme garde que POST. Le reset est aussi destructeur.
+  const match = await fetchMatchForVeto(matchId);
+  if (!match) {
+    return res.status(404).json({ error: 'Match not found' });
+  }
+  if (match.veto_locked_at) {
+    return res.status(409).json({
+      error:
+        'Le veto est verrouille. Un admin peut deverrouiller via PATCH /veto { unlock: true } avant de reset.',
+      code: 'VETO_LOCKED',
+      vetoLockedAt: match.veto_locked_at,
+    });
+  }
+
   // Also delete auto-created games to stay in sync
   const { data: vetoSteps } = await supabaseAdmin
     .from('match_map_vetos')
@@ -348,20 +394,13 @@ async function handleDelete(matchId: string, res: NextApiResponse, ctx: Authenti
     return res.status(500).json({ error: 'Failed to reset veto' });
   }
 
-  // Fetch match tournament_id for logging
-  const { data: match } = await supabaseAdmin
-    .from('matches')
-    .select('tournament_id')
-    .eq('id', matchId)
-    .maybeSingle();
-
   if (ctx?.staff?.id) {
     await logStaffAction({
       staff_id: ctx.staff.id,
       action: 'map_veto',
       entity_type: 'match',
       entity_id: matchId,
-      tournament_id: match?.tournament_id ?? null,
+      tournament_id: match.tournament_id,
       payload: {
         reset: true,
         steps_deleted: (vetoSteps || []).length,
@@ -370,4 +409,72 @@ async function handleDelete(matchId: string, res: NextApiResponse, ctx: Authenti
   }
 
   return res.status(200).json({ success: true });
+}
+
+/* -----------------------------------------------------------
+ * PATCH : admin unlock du veto (cas exceptionnel)
+ * body: { unlock: true }
+ * ---------------------------------------------------------*/
+
+async function handlePatch(
+  matchId: string,
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
+  const body = (req.body ?? {}) as { unlock?: unknown; reason?: unknown };
+
+  if (body.unlock !== true) {
+    return res
+      .status(400)
+      .json({ error: "PATCH requiert { unlock: true } (admin only)." });
+  }
+
+  // Unlock = action exceptionnelle, reservee aux admins+. Manager n'a pas le
+  // droit (cf. plan P0 staff escalade : actions sensibles bornees par rang).
+  if (!hasAtLeastRole(ctx.role, 'admin')) {
+    return res
+      .status(403)
+      .json({ error: 'Seul un admin peut deverrouiller un veto.' });
+  }
+
+  const match = await fetchMatchForVeto(matchId);
+  if (!match) {
+    return res.status(404).json({ error: 'Match not found' });
+  }
+  if (!match.veto_locked_at) {
+    return res
+      .status(200)
+      .json({ success: true, vetoLockedAt: null, alreadyUnlocked: true });
+  }
+
+  const previousLockedAt = match.veto_locked_at;
+
+  const { error } = await supabaseAdmin
+    .from('matches')
+    .update({ veto_locked_at: null, updated_at: new Date().toISOString() })
+    .eq('id', matchId);
+
+  if (error) {
+    logger.error('PATCH veto unlock error:', error);
+    return res.status(500).json({ error: 'Failed to unlock veto' });
+  }
+
+  await logStaffAction({
+    staff_id: ctx.staff.id,
+    action: 'map_veto',
+    entity_type: 'match',
+    entity_id: matchId,
+    tournament_id: match.tournament_id,
+    payload: {
+      unlock: true,
+      previous_locked_at: previousLockedAt,
+      reason:
+        typeof body.reason === 'string' && body.reason.trim()
+          ? body.reason.trim().slice(0, 500)
+          : null,
+    },
+  });
+
+  return res.status(200).json({ success: true, vetoLockedAt: null });
 }

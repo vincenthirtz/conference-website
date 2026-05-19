@@ -115,6 +115,7 @@ export async function applyMatchScore(
       forfeit_team_id,
       completed_at,
       updated_at,
+      veto_locked_at,
       next_match_win_id,
       next_match_win_slot,
       next_match_lose_id,
@@ -293,6 +294,17 @@ export async function applyMatchScore(
     updatePayload.completed_at = newCompletedAt;
   }
 
+  // Auto-lock du veto au passage en statut terminal (finished/walkover) :
+  // une fois le match termine, le veto ne doit plus pouvoir etre modifie.
+  // Si deja locke (ex: passe par 'ongoing' d'abord), on garde le timestamp
+  // d'origine pour preserver l'historique reel du verrouillage.
+  if (
+    PROPAGATION_STATUSES.includes(newStatus) &&
+    !match.veto_locked_at
+  ) {
+    updatePayload.veto_locked_at = newCompletedAt;
+  }
+
   // 6) Sauvegarder l'état précédent pour rollback éventuel
   const previousMatchState = {
     team1_score: match.team1_score,
@@ -301,6 +313,7 @@ export async function applyMatchScore(
     forfeit_team_id: match.forfeit_team_id,
     status: match.status,
     completed_at: match.completed_at,
+    veto_locked_at: match.veto_locked_at,
   };
 
   // Statuses qui bloquent la propagation

@@ -410,6 +410,18 @@ async function handlePut(
     }
   }
 
+  // Auto-lock du veto au passage en 'ongoing' : empeche un caster de modifier
+  // les bans/picks une fois la game commencee. Reset possible par un admin
+  // via PATCH /api/admin/matches/[matchId]/veto { unlock: true }.
+  if (
+    'status' in updatePayload &&
+    updatePayload.status === 'ongoing' &&
+    before.status !== 'ongoing' &&
+    !before.veto_locked_at
+  ) {
+    updatePayload.veto_locked_at = new Date().toISOString();
+  }
+
   const { data: updated, error: updErr } = await supabaseAdmin
     .from('matches')
     .update(updatePayload)
