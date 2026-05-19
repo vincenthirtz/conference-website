@@ -14,6 +14,7 @@ import {
   escapePostgrestValue,
   isValidUUID,
 } from '@/utils/apiHelpers';
+import { emitScrimEvent } from '@/utils/scrimEvents';
 
 export type DemandeType =
   | 'join'
@@ -550,20 +551,28 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
             .replace(/[^a-z0-9]+/g, '-')
             .replace(/^-+|-+$/g, '');
 
-          const { error: scrimErr } = await supabaseAdmin.from('scrims').insert({
-            name: scrimName,
-            slug: slugBase || null,
-            status: 'draft',
-            team1_id: fromTeamId,
-            team2_id: d.team_id,
-            scheduled_date: preferredDate,
-            is_public: false,
-            source_demande_id: d.id,
-            description: d.comment ?? null,
-          });
+          const { data: createdScrim, error: scrimErr } = await supabaseAdmin
+            .from('scrims')
+            .insert({
+              name: scrimName,
+              slug: slugBase || null,
+              status: 'draft',
+              team1_id: fromTeamId,
+              team2_id: d.team_id,
+              scheduled_date: preferredDate,
+              is_public: false,
+              source_demande_id: d.id,
+              description: d.comment ?? null,
+            })
+            .select('*')
+            .maybeSingle();
 
           if (scrimErr) {
             logger.error('admin scrim auto-create error:', scrimErr);
+          } else if (createdScrim) {
+            void emitScrimEvent('scrim.created', createdScrim, {
+              autoCreatedFromDemande: true,
+            });
           }
         }
       } catch (scrimEx) {

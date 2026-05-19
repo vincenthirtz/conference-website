@@ -9,6 +9,10 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
+import {
+  emitScrimEvent,
+  statusTransitionEvent,
+} from '@/utils/scrimEvents';
 import { logger } from '../../../../../utils/logger';
 
 const VALID_STATUSES = [
@@ -222,6 +226,18 @@ async function handlePatch(
     }
   }
 
+  // Émet un bot event sur transition de status. On utilise `after` (la row
+  // post-update) pour avoir le slug + équipes à jour si elles ont changé
+  // dans le même PATCH.
+  const beforeStatus = (before.status as string) || 'draft';
+  const afterStatus = (after.status as string) || beforeStatus;
+  const transitionEvent = statusTransitionEvent(beforeStatus, afterStatus);
+  if (transitionEvent) {
+    void emitScrimEvent(transitionEvent, after, {
+      previousStatus: beforeStatus,
+    });
+  }
+
   return res.status(200).json({ success: true, scrim: after });
 }
 
@@ -230,9 +246,12 @@ async function handleDelete(
   id: string,
   ctx: AuthenticatedStaffContext
 ) {
+  // Snapshot complet AVANT delete : on en a besoin pour l'event scrim.deleted
+  // (le bot peut vouloir cleaner un thread / annonce associé via les ids
+  // team1/team2 ou le slug).
   const { data: before } = await supabaseAdmin!
     .from('scrims')
-    .select('id, name, slug')
+    .select('*')
     .eq('id', id)
     .maybeSingle();
   if (!before) return res.status(404).json({ error: 'Scrim not found' });
@@ -257,6 +276,10 @@ async function handleDelete(
       logger.error('[admin/scrims/:id] log error:', e);
     }
   }
+
+  void emitScrimEvent('scrim.deleted', before, {
+    previousStatus: before.status,
+  });
 
   return res.status(200).json({ success: true });
 }

@@ -34,7 +34,16 @@ export type BotEventName =
   | 'team.member.added'
   | 'team.member.removed'
   | 'team.captain.changed'
-  | 'staff.role.changed';
+  | 'staff.role.changed'
+  | 'scrim.created'
+  | 'scrim.scheduled'
+  | 'scrim.starting'
+  | 'scrim.finished'
+  | 'scrim.cancelled'
+  | 'scrim.deleted'
+  | 'cast.assigned'
+  | 'cast.unassigned'
+  | 'cast.briefing.rescheduled';
 
 export type BotEventPayload = Record<string, unknown>;
 

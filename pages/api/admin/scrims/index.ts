@@ -8,11 +8,13 @@ import slugify from 'slugify';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
+import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import {
   parsePagination,
   sanitizeSearch,
   isValidUUID,
 } from '@/utils/apiHelpers';
+import { emitScrimEvent } from '@/utils/scrimEvents';
 import { logger } from '../../../../utils/logger';
 
 const VALID_STATUSES = [
@@ -38,7 +40,10 @@ export type ScrimCreateInput = {
   stream_url?: string | null;
 };
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(
+  withAdminIdempotency(handler, { key: 'admin-scrims' }),
+  'manager'
+);
 
 async function handler(
   req: NextApiRequest,
@@ -243,6 +248,15 @@ async function handlePost(
     } catch (e) {
       logger.error('[admin/scrims] log error:', e);
     }
+  }
+
+  void emitScrimEvent('scrim.created', data);
+  // Si on naît directement en 'scheduled', le bot doit aussi pouvoir s'accrocher
+  // à l'event de programmation (annonce dans #scrims, etc.).
+  if (data.status === 'scheduled') {
+    void emitScrimEvent('scrim.scheduled', data, {
+      previousStatus: 'draft',
+    });
   }
 
   return res.status(201).json({ scrim: data });
