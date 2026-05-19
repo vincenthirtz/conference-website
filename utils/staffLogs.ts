@@ -186,6 +186,8 @@ export function formatStaffLog(log: StaffLog) {
     generate_group_matches: 'Génération matchs de poule',
     create_cast_assignment: 'Assignment caster créé',
     delete_cast_assignment: 'Assignment caster supprimé',
+    update_staff_role: 'Modification rôle staff',
+    delete_staff_account: 'Suppression compte staff',
     other: 'Action staff',
   };
 

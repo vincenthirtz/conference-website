@@ -1,11 +1,20 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
-import type { StaffContext } from '@/utils/staff';
+import {
+  withStaffRoute,
+  invalidateStaffCache,
+  STAFF_ROLE_RANK,
+  STAFF_ROLES,
+} from '@/utils/staff';
+import type {
+  AuthenticatedStaffContext,
+  StaffRole,
+} from '@/utils/staff';
 import { sendAccountDeletedEmail, sendWelcomeEmail } from '@/utils/email';
 import crypto from 'crypto';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { emitRoleSyncEvent } from '@/utils/botRoleSync';
+import { logStaffAction } from '@/utils/staffLogs';
 
 import { logger } from '../../../../utils/logger';
 type TeamMembership = {
@@ -42,7 +51,7 @@ export default withStaffRoute(handler, 'admin');
 async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ListResponse | UpdateResponse | { error: string }>,
-  ctx: StaffContext
+  ctx: AuthenticatedStaffContext
 ) {
   if (
     applyRateLimit(
@@ -294,6 +303,7 @@ async function handler(
           .from('staff')
           .update({ display_name: req.body.display_name.trim() || null })
           .eq('auth_user_id', userId);
+        invalidateStaffCache(userId);
       }
 
       const u = data.user;
@@ -313,6 +323,14 @@ async function handler(
 
     if (!userId || typeof role !== 'string') {
       return res.status(400).json({ error: 'userId and role required.' });
+    }
+
+    // Self role change interdit (un admin ne peut pas se rétrograder lui-même,
+    // ce qui le déconnecterait du back-office en plein milieu d'une action).
+    if (userId === ctx.user.id) {
+      return res
+        .status(403)
+        .json({ error: 'You cannot change your own role.' });
     }
 
     // Récupérer le compte cible (pour vérifier son rôle actuel)
@@ -349,6 +367,48 @@ async function handler(
       });
     }
 
+    // Anti-escalade: empêche un non-owner d'octroyer un rôle staff >= au sien.
+    // Un rôle non-staff (ex: 'player', 'member', '') sort de STAFF_ROLE_RANK
+    // et passe librement — c'est le comportement voulu (révocation autorisée).
+    const isStaffTargetRole = (STAFF_ROLES as readonly string[]).includes(role);
+    if (isStaffTargetRole && requesterRole !== 'owner') {
+      const newRank = STAFF_ROLE_RANK[role as StaffRole];
+      const requesterRank = requesterRole
+        ? STAFF_ROLE_RANK[requesterRole as StaffRole]
+        : -1;
+      if (newRank >= requesterRank) {
+        return res.status(403).json({
+          error:
+            'You cannot grant a role equal to or above your own. Action denied.',
+        });
+      }
+    }
+
+    // Garde "last owner": si la cible est owner et qu'on la dégrade,
+    // refuser si c'est le dernier owner restant.
+    const targetWasOwner = targetStaffRole === 'owner';
+    if (targetWasOwner && role !== 'owner') {
+      const { count: ownerCount, error: ownerCountErr } = await supabaseAdmin
+        .from('staff')
+        .select('id', { count: 'exact', head: true })
+        .eq('role', 'owner');
+      if (ownerCountErr) {
+        logger.error(
+          '[admin/users/manage] owner count error:',
+          ownerCountErr
+        );
+        return res
+          .status(500)
+          .json({ error: 'Failed to verify owner count.' });
+      }
+      if ((ownerCount ?? 0) <= 1) {
+        return res.status(409).json({
+          error:
+            'Cannot demote the last owner. Promote another user to owner first.',
+        });
+      }
+    }
+
     const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
       userId,
       {
@@ -362,8 +422,7 @@ async function handler(
     }
 
     // Synchroniser la table staff selon le rôle
-    const STAFF_ROLES = ['caster', 'manager', 'admin', 'owner'];
-    const isStaffRole = STAFF_ROLES.includes(role);
+    const isStaffRole = (STAFF_ROLES as readonly string[]).includes(role);
 
     const { data: existingStaff } = await supabaseAdmin
       .from('staff')
@@ -404,6 +463,24 @@ async function handler(
       });
     }
 
+    // Invalide le cache pour que le staff dégradé/promu voie son nouveau rang
+    // dès la prochaine requête (sans attendre les 5min du TTL).
+    invalidateStaffCache(userId);
+
+    void logStaffAction({
+      staff_id: ctx.staff.id,
+      action: 'update_staff_role',
+      entity_type: 'user',
+      entity_id: userId,
+      payload: {
+        targetEmail: data.user.email ?? null,
+        previousMetadataRole: targetRole,
+        newMetadataRole: role,
+        previousStaffRole,
+        newStaffRole,
+      },
+    });
+
     const u = data.user;
     const userLite: UserLite = {
       id: u.id,
@@ -423,6 +500,13 @@ async function handler(
 
     if (!userId || typeof userId !== 'string') {
       return res.status(400).json({ error: 'userId required.' });
+    }
+
+    // Self-delete interdit (un admin ne peut pas se supprimer lui-même).
+    if (userId === ctx.user.id) {
+      return res
+        .status(403)
+        .json({ error: 'You cannot delete your own account.' });
     }
 
     // Fetch target to check protection
@@ -452,6 +536,29 @@ async function handler(
       return res.status(403).json({
         error: 'Only an owner can delete an owner or admin account.',
       });
+    }
+
+    // Garde "last owner": refuser de supprimer le dernier owner.
+    if (targetStaffRole === 'owner') {
+      const { count: ownerCount, error: ownerCountErr } = await supabaseAdmin
+        .from('staff')
+        .select('id', { count: 'exact', head: true })
+        .eq('role', 'owner');
+      if (ownerCountErr) {
+        logger.error(
+          '[admin/users/manage] owner count error:',
+          ownerCountErr
+        );
+        return res
+          .status(500)
+          .json({ error: 'Failed to verify owner count.' });
+      }
+      if ((ownerCount ?? 0) <= 1) {
+        return res.status(409).json({
+          error:
+            'Cannot delete the last owner. Promote another user to owner first.',
+        });
+      }
     }
 
     // Remove team memberships
@@ -485,6 +592,21 @@ async function handler(
       logger.error('[admin/users/manage] delete error:', deleteErr);
       return res.status(500).json({ error: 'Failed to delete user.' });
     }
+
+    // Le compte est supprimé : invalide tout cache résiduel (staff + token).
+    invalidateStaffCache(userId);
+
+    void logStaffAction({
+      staff_id: ctx.staff.id,
+      action: 'delete_staff_account',
+      entity_type: 'user',
+      entity_id: userId,
+      payload: {
+        targetEmail: deletedEmail ?? null,
+        previousMetadataRole: targetRole,
+        previousStaffRole: wasStaffRole,
+      },
+    });
 
     return res.status(200).json({ success: true });
   }

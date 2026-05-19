@@ -41,6 +41,8 @@ export type StaffLogAction =
   | 'generate_group_matches'
   | 'create_cast_assignment'
   | 'delete_cast_assignment'
+  | 'update_staff_role'
+  | 'delete_staff_account'
   | 'other';
 
 export type StaffLog = {
