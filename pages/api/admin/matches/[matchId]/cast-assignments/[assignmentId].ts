@@ -6,6 +6,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
+import { emitCastEvent } from '@/utils/castEvents';
 import { logger } from '../../../../../../utils/logger';
 
 export default withStaffRoute(handler, 'manager');
@@ -40,6 +41,22 @@ async function handler(
     if (Number.isNaN(briefingDate.getTime())) {
       return res.status(400).json({ error: 'briefingAt invalide' });
     }
+    // Reprogrammer dans le passé n'a pas de sens (le DM ne serait jamais
+    // envoyé). Tolérance 1 minute pour rattraper les décalages d'horloge.
+    if (briefingDate.getTime() < Date.now() - 60_000) {
+      return res
+        .status(400)
+        .json({ error: 'briefingAt doit être dans le futur.' });
+    }
+
+    // Snapshot du briefing_at précédent pour enrichir l'event (le bot peut
+    // ainsi savoir si son reminder déjà programmé doit être annulé).
+    const { data: previous } = await supabaseAdmin
+      .from('cast_assignments')
+      .select('briefing_at, cast_member_id')
+      .eq('id', assignmentId)
+      .eq('match_id', matchId)
+      .maybeSingle();
 
     // Rescheduling resets the reminder flag so the bot DMs again at the new time.
     const { data, error } = await supabaseAdmin
@@ -58,10 +75,30 @@ async function handler(
       logger.error('[admin/cast-assignments/id] patch error', error);
       return res.status(500).json({ error: 'Échec de la mise à jour' });
     }
+
+    void emitCastEvent('cast.briefing.rescheduled', {
+      assignmentId: String(assignmentId),
+      matchId: String(matchId),
+      castMemberId: data.cast_member_id as string,
+      briefingAt: data.briefing_at ?? briefingDate.toISOString(),
+    }, {
+      previousBriefingAt: previous?.briefing_at ?? null,
+    });
+
     return res.status(200).json({ assignment: data });
   }
 
   if (req.method === 'DELETE') {
+    // Snapshot AVANT delete : on a besoin du cast_member_id et du briefing_at
+    // pour que le bot puisse annuler son reminder programmé / retirer le
+    // caster des embeds. Sinon l'event cast.unassigned est vide.
+    const { data: before } = await supabaseAdmin
+      .from('cast_assignments')
+      .select('cast_member_id, briefing_at')
+      .eq('id', assignmentId)
+      .eq('match_id', matchId)
+      .maybeSingle();
+
     const { error } = await supabaseAdmin
       .from('cast_assignments')
       .delete()
@@ -83,6 +120,16 @@ async function handler(
         payload: { match_id: matchId },
       });
     }
+
+    if (before?.cast_member_id) {
+      void emitCastEvent('cast.unassigned', {
+        assignmentId: String(assignmentId),
+        matchId: String(matchId),
+        castMemberId: before.cast_member_id as string,
+        briefingAt: (before.briefing_at as string | null) ?? null,
+      });
+    }
+
     return res.status(200).json({ success: true });
   }
 

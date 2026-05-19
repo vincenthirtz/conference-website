@@ -8,6 +8,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
+import { emitCastEvent } from '@/utils/castEvents';
 import { logger } from '../../../../../../utils/logger';
 
 export default withStaffRoute(handler, 'manager');
@@ -60,6 +61,34 @@ async function handler(
     if (Number.isNaN(briefingDate.getTime())) {
       return res.status(400).json({ error: 'briefingAt invalide' });
     }
+    // Un briefing dans le passé n'a pas de sens (le bot doit pouvoir DM en
+    // amont). On garde 1 minute de tolérance pour les requêtes lentes /
+    // décalages d'horloge entre le client admin et le serveur.
+    if (briefingDate.getTime() < Date.now() - 60_000) {
+      return res
+        .status(400)
+        .json({ error: 'briefingAt doit être dans le futur.' });
+    }
+
+    // Vérifie que le cast_member existe et est actif. Sans ce check on peut
+    // assigner un caster désactivé, qui ne recevra pas son rappel.
+    const { data: castMember, error: castMemberErr } = await supabaseAdmin
+      .from('cast_members')
+      .select('id, is_active')
+      .eq('id', castMemberId)
+      .maybeSingle();
+    if (castMemberErr) {
+      logger.error('[admin/cast-assignments] cast_member lookup error', castMemberErr);
+      return res.status(500).json({ error: 'Échec de la vérification' });
+    }
+    if (!castMember) {
+      return res.status(404).json({ error: 'Caster introuvable.' });
+    }
+    if (castMember.is_active === false) {
+      return res
+        .status(409)
+        .json({ error: 'Ce caster est désactivé.' });
+    }
 
     const { data, error } = await supabaseAdmin
       .from('cast_assignments')
@@ -96,6 +125,13 @@ async function handler(
         payload: { match_id: matchId, cast_member_id: castMemberId },
       });
     }
+
+    void emitCastEvent('cast.assigned', {
+      assignmentId: data.id,
+      matchId,
+      castMemberId,
+      briefingAt: data.briefing_at ?? briefingDate.toISOString(),
+    });
 
     return res.status(201).json({ assignment: data });
   }
