@@ -14,6 +14,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
+import { createBracketSnapshot } from '@/utils/bracket/snapshot';
 import {
   computeStageStandings,
   computeGroupedStandings,
@@ -229,6 +230,14 @@ async function handler(
         seedMap.set(id, null);
       }
     }
+
+    // Snapshot du stage cible avant insertion (rollback admin possible).
+    // Best-effort : si l'insert échoue côté snapshot, on continue.
+    void createBracketSnapshot({
+      stageId: targetStageId,
+      reason: 'advance_teams',
+      staffId: ctx.staff?.id ?? null,
+    }).catch((e) => logger.error('advance: createBracketSnapshot failed', e));
 
     // Insert into stage_teams
     const inserts = toAdvance.map((teamId: string) => ({

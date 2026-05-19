@@ -9,6 +9,7 @@ import {
   restorePropagationSlots,
 } from '../bracket/propagate';
 import type { PropagationSnapshot } from '../bracket/propagate';
+import { createBracketSnapshot } from '../bracket/snapshot';
 import { logStaffAction } from '../staffLogs';
 import { computeRequiredWins } from './computeRequiredWins';
 import { invalidateStandingsCache } from '../stages/standingsCache';
@@ -319,6 +320,21 @@ export async function applyMatchScore(
   // Statuses qui bloquent la propagation
   const shouldPropagate =
     propagateBracket && PROPAGATION_STATUSES.includes(newStatus);
+
+  // 7a) Snapshot bracket complet (persistant en DB) AVANT toute mutation
+  //     propagante. Permet à un admin de rollback large via
+  //     /admin/stages/[id]/snapshots. Best-effort : si l'insert échoue,
+  //     on log côté snapshot.ts et on continue (le rollback in-memory
+  //     reste actif via snapshotPropagationSlots ci-dessous).
+  if (shouldPropagate && match.stage_id) {
+    void createBracketSnapshot({
+      stageId: match.stage_id,
+      reason: 'apply_score',
+      staffId: staffId ?? null,
+    }).catch((e) =>
+      logger.error('applyMatchScore: createBracketSnapshot failed', e)
+    );
+  }
 
   // 7) Snapshot des slots de propagation AVANT le reset,
   //    pour pouvoir restaurer l'état complet en cas d'échec.

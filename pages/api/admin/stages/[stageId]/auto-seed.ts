@@ -13,6 +13,7 @@ import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { computeStageStandings } from '@/utils/stages/standings';
+import { createBracketSnapshot } from '@/utils/bracket/snapshot';
 import { isValidUUID } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../../utils/logger';
@@ -132,6 +133,16 @@ async function handler(
     const seedOrder = buildSeedOrder(
       bracketMatches.length,
       seedingPattern as 'standard' | 'sequential'
+    );
+
+    // Snapshot bracket avant mutation (rollback admin via
+    // /admin/stages/[id]/snapshots). Best-effort.
+    void createBracketSnapshot({
+      stageId: targetStageId,
+      reason: 'auto_seed',
+      staffId: ctx.staff?.id ?? null,
+    }).catch((e) =>
+      logger.error('auto-seed: createBracketSnapshot failed', e)
     );
 
     // Assign teams to match slots
