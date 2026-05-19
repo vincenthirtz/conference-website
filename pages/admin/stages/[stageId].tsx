@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
+import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import type { StaffProps, Stage, StageType, Tournament } from '@/types/admin';
 import AdvancementRulesEditor from '@/components/admin/AdvancementRulesEditor';
@@ -162,6 +163,7 @@ function stageTypeIcon(type: StageType | null) {
 function AdminStagePage({ staff }: StaffProps) {
   const router = useRouter();
   const { stageId } = router.query;
+  const { mutate: mutateIdempotent } = useIdempotentMutation();
 
   const [stage, setStage] = useState<Stage | null>(null);
   const [tournament, setTournament] = useState<Tournament | null>(null);
@@ -458,11 +460,10 @@ function AdminStagePage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await fetch(
+      const res = await mutateIdempotent(
         `/api/admin/stages/${stageId}/generate-swiss-round`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({}),
         }
       );
@@ -667,9 +668,8 @@ function AdminStagePage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await fetch(`/api/admin/stages/${stageId}/auto-seed`, {
+      const res = await mutateIdempotent(`/api/admin/stages/${stageId}/auto-seed`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sourceStageId: autoSeedSourceStageId,
           seedingPattern: autoSeedPattern,
@@ -702,9 +702,8 @@ function AdminStagePage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await fetch(`/api/admin/stages/${stageId}/clone`, {
+      const res = await mutateIdempotent(`/api/admin/stages/${stageId}/clone`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ includeMatches }),
       });
 

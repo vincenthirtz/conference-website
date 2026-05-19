@@ -8,6 +8,7 @@ import {
   type TournamentTemplate,
 } from '@/config/tournament-templates';
 import { useAutoSave } from '@/utils/useAutoSave';
+import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import DraftBanner from '@/components/admin/DraftBanner';
 import AutoSaveIndicator from '@/components/admin/AutoSaveIndicator';
 
@@ -58,6 +59,7 @@ export const getServerSideProps = withStaffPage('manager');
 
 function AdminTournamentCreatePage({ staff }: Props) {
   const router = useRouter();
+  const { mutate: mutateIdempotent } = useIdempotentMutation();
   const [customTemplates, setCustomTemplates] = useState<TournamentTemplate[]>(
     []
   );
@@ -190,11 +192,10 @@ function AdminTournamentCreatePage({ staff }: Props) {
         // Apply template if selected
         if (selectedTemplate) {
           try {
-            const tplRes = await fetch(
+            const tplRes = await mutateIdempotent(
               `/api/admin/tournament/${created.id}/apply-template`,
               {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ templateId: selectedTemplate.id }),
               }
             );

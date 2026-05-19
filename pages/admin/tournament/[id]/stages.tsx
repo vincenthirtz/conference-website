@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
+import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import {
   TOURNAMENT_TEMPLATES,
@@ -47,6 +48,7 @@ function StagesPage(_: StaffProps) {
   const router = useRouter();
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;
+  const { mutate: mutateIdempotent } = useIdempotentMutation();
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -176,11 +178,10 @@ function StagesPage(_: StaffProps) {
     setApplyingTemplate(true);
     setErrorMsg(null);
     try {
-      const res = await fetch(
+      const res = await mutateIdempotent(
         `/api/admin/tournament/${tournamentId}/apply-template`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             templateId: selectedTemplate.id,
             append: true,

@@ -13,6 +13,7 @@ import {
 } from '@/utils/staff';
 import { supabaseAdmin } from '@/utils/supabase';
 import { isValidUUID } from '@/utils/apiHelpers';
+import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import { useToast } from '@/components/Toast';
@@ -464,6 +465,7 @@ function AdminTournamentPage({
 }: StaffProps & { initialData: InitialData | null }) {
   const router = useRouter();
   const { id } = router.query;
+  const { mutate: mutateIdempotent } = useIdempotentMutation();
 
   const [loading, setLoading] = useState(!initialData);
   const [tournament, setTournament] = useState<Tournament | null>(
@@ -719,9 +721,8 @@ function AdminTournamentPage({
     setCloning(true);
     setErrorMsg(null);
     try {
-      const res = await fetch(`/api/admin/tournament/${id}/clone`, {
+      const res = await mutateIdempotent(`/api/admin/tournament/${id}/clone`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
       });
       if (!res.ok) {

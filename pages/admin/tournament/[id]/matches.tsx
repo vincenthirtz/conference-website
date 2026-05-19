@@ -8,6 +8,7 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import type {
@@ -101,6 +102,7 @@ function stageLabel(stage: StageSummary | null | undefined) {
 function AdminTournamentMatchesPage({ staff }: StaffProps) {
   const router = useRouter();
   const { id } = router.query;
+  const { mutate: mutateIdempotent } = useIdempotentMutation();
 
   const [loading, setLoading] = useState(true);
   const [matches, setMatches] = useState<Match[]>([]);
@@ -384,11 +386,8 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     const callAutoSchedule = (acceptConflicts: boolean) =>
-      fetch(`/api/admin/tournament/${id}/auto-schedule`, {
+      mutateIdempotent(`/api/admin/tournament/${id}/auto-schedule`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(acceptConflicts ? { acceptConflicts: true } : {}),
       });
 
@@ -541,9 +540,8 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await fetch(`/api/admin/stages/${stageFilter}/bulk-matches`, {
+      const res = await mutateIdempotent(`/api/admin/stages/${stageFilter}/bulk-matches`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ schedules }),
       });
 
@@ -594,9 +592,8 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await fetch(`/api/admin/stages/${stageFilter}/bulk-matches`, {
+      const res = await mutateIdempotent(`/api/admin/stages/${stageFilter}/bulk-matches`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           matchIds: Array.from(selectedMatchIds),
           hard,
@@ -649,9 +646,8 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await fetch(`/api/admin/stages/${stageFilter}/bulk-matches`, {
+      const res = await mutateIdempotent(`/api/admin/stages/${stageFilter}/bulk-matches`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           matchIds: Array.from(selectedMatchIds),
           fields,

@@ -7,6 +7,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
+import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { isValidUUID } from '@/utils/apiHelpers';
 import slugify from 'slugify';
 
@@ -15,7 +16,10 @@ type ApiResponse =
   | { tournament: any; stages: any[]; maps: number }
   | { error: string };
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(
+  withAdminIdempotency(handler, { key: 'tournament-clone' }),
+  'manager'
+);
 
 async function handler(
   req: NextApiRequest,

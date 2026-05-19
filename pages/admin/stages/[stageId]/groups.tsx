@@ -9,6 +9,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
+import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import type { StaffProps } from '@/types/admin';
 
 type TeamInfo = {
@@ -52,6 +53,7 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
   const router = useRouter();
   const { stageId } = router.query;
   const { addToast } = useToast();
+  const { mutate: mutateIdempotent } = useIdempotentMutation();
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -163,11 +165,10 @@ function AdminStageGroupsPage({ staff }: StaffProps) {
     setGenerating(true);
     setErrorMsg(null);
     try {
-      const res = await fetch(
+      const res = await mutateIdempotent(
         `/api/admin/stages/${stageId}/generate-group-matches`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             rounds: genRounds,
             matchFormat: genMatchFormat,

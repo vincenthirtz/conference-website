@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { withStaffPage } from '@/utils/staff';
 import type { StaffProps, Scrim } from '@/types/admin';
 
@@ -15,6 +16,7 @@ export const getServerSideProps = withStaffPage('manager');
 function AdminScrimCreatePage(_props: StaffProps) {
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
+  const { mutateJson } = useIdempotentMutation();
 
   const [teams, setTeams] = useState<TeamOption[]>([]);
   const [form, setForm] = useState({
@@ -67,7 +69,7 @@ function AdminScrimCreatePage(_props: StaffProps) {
         description: form.description.trim() || null,
         stream_url: form.stream_url.trim() || null,
       };
-      const json = await adminFetchJson<{ scrim: Scrim }>('/api/admin/scrims', {
+      const json = await mutateJson<{ scrim: Scrim }>('/api/admin/scrims', {
         method: 'POST',
         body: JSON.stringify(body),
       });

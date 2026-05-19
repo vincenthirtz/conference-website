@@ -11,6 +11,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
+import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { computeStageStandings } from '@/utils/stages/standings';
 import { isValidUUID } from '@/utils/apiHelpers';
 
@@ -26,7 +27,10 @@ type ApiResponse =
   | { seeded: SeededSlot[]; totalMatches: number }
   | { error: string };
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(
+  withAdminIdempotency(handler, { key: 'stage-auto-seed' }),
+  'manager'
+);
 
 async function handler(
   req: NextApiRequest,

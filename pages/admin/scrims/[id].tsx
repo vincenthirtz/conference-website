@@ -6,6 +6,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { withStaffPage } from '@/utils/staff';
 import type { StaffProps, Scrim } from '@/types/admin';
 
@@ -49,6 +50,7 @@ function toLocalInput(iso: string | null): string {
 function AdminScrimEditPage(_props: StaffProps) {
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
+  const { mutateJson } = useIdempotentMutation();
   const id = typeof router.query.id === 'string' ? router.query.id : '';
 
   const [scrim, setScrim] = useState<ScrimWithTeams | null>(null);
@@ -120,7 +122,7 @@ function AdminScrimEditPage(_props: StaffProps) {
     setCreatingMatch(true);
     setError(null);
     try {
-      await adminFetchJson(`/api/admin/scrims/${id}/matches`, {
+      await mutateJson(`/api/admin/scrims/${id}/matches`, {
         method: 'POST',
         body: JSON.stringify({ match: { best_of: 1 } }),
       });

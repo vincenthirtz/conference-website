@@ -7,6 +7,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
+import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '../../../../../utils/logger';
 
@@ -81,7 +82,10 @@ function normalizeMatch(
   };
 }
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(
+  withAdminIdempotency(handler, { key: 'scrim-matches-batch' }),
+  'manager'
+);
 
 async function handler(
   req: NextApiRequest,

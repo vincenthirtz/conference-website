@@ -8,6 +8,7 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import type { MatchStatus } from '@/types/admin';
 
 type StaffShape = {
@@ -139,6 +140,7 @@ function AdminSwissStagePage({ staff }: StaffProps) {
   const { stageId } = router.query;
   const { addToast } = useToast();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
+  const { mutate: mutateIdempotent } = useIdempotentMutation();
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -209,11 +211,10 @@ function AdminSwissStagePage({ staff }: StaffProps) {
     setPreview(null);
 
     try {
-      const res = await fetch(
+      const res = await mutateIdempotent(
         `/api/admin/stages/${stageId}/generate-swiss-round`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ dryRun: true }),
         }
       );
@@ -256,11 +257,10 @@ function AdminSwissStagePage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await fetch(
+      const res = await mutateIdempotent(
         `/api/admin/stages/${stageId}/generate-swiss-round`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             acceptRematches: previewHasRematches || undefined,
           }),
