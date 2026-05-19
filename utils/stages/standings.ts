@@ -101,24 +101,30 @@ export async function computeStageStandings(
   const matches = (matchesData || []) as DbMatch[];
   const finishedMatches = matches.filter((m) => m.status === 'finished');
 
+  let raw: StageStanding[];
+  let cacheHit = false;
   switch (stageType) {
     case 'swiss': {
       // Check cache first — Buchholz computation can be expensive for 30+ teams
       const cached = getCachedStandings(stageId);
-      if (cached) return cached;
-
-      const result = computeSwissStageStandings(stageTeams, finishedMatches);
-      setCachedStandings(stageId, result);
-      return result;
+      if (cached) {
+        // Le cache contient déjà le résultat post-override (cf. set ci-dessous).
+        return cached;
+      }
+      raw = computeSwissStageStandings(stageTeams, finishedMatches);
+      cacheHit = false;
+      break;
     }
     case 'group':
     case 'round_robin':
-      return computeGroupStandings(stageTeams, finishedMatches);
+      raw = computeGroupStandings(stageTeams, finishedMatches);
+      break;
     case 'bracket':
-      return computeBracketStandings(stageTeams, finishedMatches, matches);
+      raw = computeBracketStandings(stageTeams, finishedMatches, matches);
+      break;
     default:
       // showmatch, other: just return by seed
-      return stageTeams
+      raw = stageTeams
         .sort((a, b) => (a.seed ?? 999) - (b.seed ?? 999))
         .map((st, idx) => ({
           teamId: st.team_id,
@@ -131,6 +137,64 @@ export async function computeStageStandings(
           seed: st.seed,
         }));
   }
+
+  const final = await applyTiebreakerOverrides(stageId, raw);
+  // Cache uniquement les stages swiss (calcul coûteux, cf. case 'swiss').
+  if (stageType === 'swiss' && !cacheHit) {
+    setCachedStandings(stageId, final);
+  }
+  return final;
+}
+
+/**
+ * Applique les overrides admin de tie-break post-tri : si une row
+ * stage_tiebreaker_overrides existe pour deux équipes adjacentes ayant
+ * le même score, swap leurs positions. Si l'override pointe vers une
+ * paire non-adjacente ou de scores différents, on log un warning et on
+ * skip — l'admin doit corriger le score d'abord.
+ *
+ * Re-numérote les ranks après les swaps appliqués.
+ */
+async function applyTiebreakerOverrides(
+  stageId: string,
+  standings: StageStanding[]
+): Promise<StageStanding[]> {
+  if (!supabaseAdmin || standings.length < 2) return standings;
+
+  const { data: overrides, error } = await supabaseAdmin
+    .from('stage_tiebreaker_overrides')
+    .select('winner_team_id, loser_team_id')
+    .eq('stage_id', stageId);
+  if (error || !overrides || overrides.length === 0) return standings;
+
+  const list = standings.slice();
+  const idx = new Map(list.map((s, i) => [s.teamId, i]));
+
+  for (const o of overrides as {
+    winner_team_id: string;
+    loser_team_id: string;
+  }[]) {
+    const wi = idx.get(o.winner_team_id);
+    const li = idx.get(o.loser_team_id);
+    if (wi === undefined || li === undefined) continue;
+    if (wi < li) continue; // déjà dans le bon ordre
+
+    // On n'autorise le swap que si les scores sont égaux. Sinon ça
+    // bypass la logique de tri normal — ce qui n'est pas l'intention
+    // d'un "tiebreaker".
+    if (list[wi].score !== list[li].score) continue;
+
+    // Swap simple (peut traverser plus d'une position si écart) : on
+    // déplace winner juste avant loser.
+    const [item] = list.splice(wi, 1);
+    list.splice(li, 0, item);
+
+    // Mettre à jour l'index pour les overrides suivants.
+    list.forEach((s, i) => idx.set(s.teamId, i));
+  }
+
+  // Re-rank
+  return list.map((s, i) => ({ ...s, rank: i + 1 }));
 }
 
 /**
