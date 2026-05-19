@@ -13,6 +13,7 @@ import PressSection from '@/components/Press/PressSection';
 import HomeCountdown from '@/components/Home/HomeCountdown';
 import { type UpcomingTournament } from '@/components/Home/HomeUpcomingTournament';
 import HomeEvents from '@/components/Home/HomeEvents';
+import HomeIdahobitScrim from '@/components/Home/HomeIdahobitScrim';
 import HomeSponsors, { HomePartner } from '@/components/Home/HomeSponsors';
 import { supabaseAdmin } from '@/utils/supabase';
 
@@ -233,6 +234,7 @@ function Home({
 
       <HomeCountdown targetDate={countdownTarget} />
       <HomeTwitchEmbed />
+      <HomeIdahobitScrim />
       <HomeEvents tournament={upcomingTournament} />
       <HomeNewsSection initialNews={news} />
       <HomeSponsors partners={partners} />
