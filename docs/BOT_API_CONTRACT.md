@@ -258,11 +258,54 @@ Le caster clique le bouton "Je confirme" du DM T-30. Marque
 | [`matches/[matchId].ts`](../pages/api/bot/v1/matches/[matchId].ts) | GET, PATCH | yes | `bot-match-meta` |
 | [`matches/[matchId]/checkin.ts`](../pages/api/bot/v1/matches/[matchId]/checkin.ts) | POST | yes | `bot-match-checkin` |
 | [`matches/[matchId]/discord.ts`](../pages/api/bot/v1/matches/[matchId]/discord.ts) | PATCH | yes | `bot-match-discord` |
+| [`matches/[matchId]/dispute.ts`](../pages/api/bot/v1/matches/[matchId]/dispute.ts) | GET | — | `bot-match-dispute` |
 | [`matches/[matchId]/forfeit.ts`](../pages/api/bot/v1/matches/[matchId]/forfeit.ts) | POST | yes | `bot-match-forfeit` |
 | [`matches/[matchId]/report.ts`](../pages/api/bot/v1/matches/[matchId]/report.ts) | POST | yes | `bot-match-report` |
 | [`matches/[matchId]/reset.ts`](../pages/api/bot/v1/matches/[matchId]/reset.ts) | POST | yes | `bot-match-reset` |
 | [`matches/[matchId]/resolve-dispute.ts`](../pages/api/bot/v1/matches/[matchId]/resolve-dispute.ts) | POST | yes | `bot-match-resolve-dispute` |
 | [`matches/[matchId]/veto.ts`](../pages/api/bot/v1/matches/[matchId]/veto.ts) | GET, POST, DELETE | yes | `bot-match-veto` |
+
+#### `GET /api/bot/v1/matches/:matchId/dispute`
+
+Vue *capitaine* (commande `/ma-dispute`) d'une dispute en cours sur un de
+ses matches. Filtre explicitement les champs internes staff (audit log, IPs,
+dispute_reason interne, UUIDs internes) — seul ce qui est utile au capitaine
+sort.
+
+**Auth** : `x-api-key` + `actorDiscordUserId` (query) doit etre capitaine
+d'une des deux equipes (resolu via `user_discord_links` puis
+`teams.captain_id`).
+
+**Query**
+- `actorDiscordUserId` (requis) — Discord user id du capitaine
+
+**Response 200**
+```json
+{
+  "matchId": "uuid",
+  "status": "disputed",
+  "openedAt": "2026-05-19T22:00:00.000Z",
+  "reports": [
+    {
+      "teamId": "uuid",
+      "teamName": "Chaos Theory",
+      "submittedBy": "9000…",
+      "scoreA": 3,
+      "scoreB": 1,
+      "submittedAt": "2026-05-19T21:55:00.000Z"
+    }
+  ],
+  "staffNote": null,
+  "resolution": null
+}
+```
+
+Quand la dispute est resolue, `resolution` est `{ resolvedAt, decidedScoreA,
+decidedScoreB }` et `staffNote` peut contenir la note finale.
+
+**Errors** : `400` (matchId/actorDiscordUserId invalide), `401`,
+`403` (non capitaine), `404` (match introuvable ou pas de dispute).
+**Rate limit** : 60/min global. **Idempotency** : non (GET).
 
 ### Players (by Discord ID lookups)
 
@@ -513,6 +556,7 @@ sa ligne ici **et** dans la fixture.
 | `/demandes` | admin | `GET /api/bot/v1/demandes` |
 | `/me` / `/next-match` / `/stats` / `/historique` / `/rappels` / `/mes-invitations` / `/profil` / `/profil-admin` | player | `GET/PATCH /api/bot/v1/players/by-discord/:discordUserId/*` |
 | `/mes-actions` + bouton `snooze:<actionKey>` | player | `GET /api/bot/v1/players/by-discord/:discordUserId/actions-todo`, `POST /api/bot/v1/players/by-discord/:discordUserId/actions/snooze` |
+| `/ma-dispute` | captain | `GET /api/bot/v1/matches/:matchId/dispute` |
 | `/scrim create / show / start / finish / score` | admin | `GET`/`POST`/`PATCH /api/bot/v1/scrims*` |
 | Autocomplete (tournois, équipes, matchs, phases, cast-members) | — | `GET /api/bot/v1/autocomplete/*` |
 | `outbox-poller` (jobs internes) | — | `GET /api/bot/v1/events/pending`, `POST /api/bot/v1/events/handled`, `POST /api/bot/v1/events/:id/ack` |
