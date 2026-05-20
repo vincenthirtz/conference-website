@@ -30,6 +30,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(400).json({ error: 'name invalide (≤ 64 chars).' });
   }
 
+  // Multi-tenant (S3 / Phase 1c) : le lock est scope par tenant. Aujourd'hui
+  // le UNIQUE est encore (name) global, mais phase 3 le transformera en
+  // PK (tenant_id, name) — on filtre + ecrit deja tenant_id pour preparer
+  // cette transition sans rupture.
+  const tenantId = req.botContext!.tenantId;
+
   const body = (req.body ?? {}) as {
     holder?: unknown;
     ttlSeconds?: unknown;
@@ -49,6 +55,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { error } = await supabaseAdmin
       .from('bot_locks')
       .delete()
+      .eq('tenant_id', tenantId)
       .eq('name', name)
       .eq('holder', holder);
     if (error) {
@@ -70,6 +77,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: existing } = await supabaseAdmin
     .from('bot_locks')
     .select('holder, expires_at')
+    .eq('tenant_id', tenantId)
     .eq('name', name)
     .maybeSingle();
   if (existing) {
@@ -91,6 +99,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         acquired_at: new Date().toISOString(),
         expires_at: expiresAt,
       })
+      .eq('tenant_id', tenantId)
       .eq('name', name);
     if (updErr) {
       logger.error('[bot/locks] update error', updErr);
@@ -100,18 +109,20 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   // Pas de row → INSERT. Race : si un autre process insert en même temps,
-  // on rattrape via 23505 et on relit.
+  // on rattrape via 23505 et on relit (filtre par tenant_id).
   const { error: insErr } = await supabaseAdmin.from('bot_locks').insert({
     name,
     holder,
     acquired_at: new Date().toISOString(),
     expires_at: expiresAt,
+    tenant_id: tenantId,
   });
   if (insErr) {
     if ((insErr as { code?: string }).code === '23505') {
       const { data: now2 } = await supabaseAdmin
         .from('bot_locks')
         .select('holder, expires_at')
+        .eq('tenant_id', tenantId)
         .eq('name', name)
         .maybeSingle();
       return res.status(200).json({

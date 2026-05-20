@@ -29,6 +29,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from './supabase';
 import { logger } from './logger';
 import type { AuthenticatedStaffContext } from './staff';
+import { DEFAULT_TENANT_ID } from './tenant';
 
 const IDEMPOTENCY_TTL_MS = 5 * 60 * 1000;
 const IDEMPOTENCY_KEY_MAX_LEN = 200;
@@ -39,11 +40,19 @@ type CachedResponse = {
   body: unknown;
 };
 
-async function readCache(cacheKey: string): Promise<CachedResponse | null> {
+async function readCache(
+  cacheKey: string,
+  tenantId: string
+): Promise<CachedResponse | null> {
   if (!supabaseAdmin) return null;
+  // Scope multi-tenant (S3 / Phase 1c) : on filtre par tenant_id. Admin
+  // staff n'a pas encore de contexte tenant (mono-tenant aujourd'hui), on
+  // passe donc DEFAULT_TENANT_ID depuis le wrapper. Defense-in-depth pour
+  // quand S5/Phase 3 introduira un staff multi-tenant.
   const { data, error } = await supabaseAdmin
     .from('admin_idempotency')
     .select('status, body, expires_at')
+    .eq('tenant_id', tenantId)
     .eq('cache_key', cacheKey)
     .maybeSingle();
   if (error || !data) return null;
@@ -58,14 +67,17 @@ async function readCache(cacheKey: string): Promise<CachedResponse | null> {
 async function writeCache(
   cacheKey: string,
   status: number,
-  body: unknown
+  body: unknown,
+  tenantId: string
 ): Promise<void> {
   if (!supabaseAdmin) return;
   const expires_at = new Date(Date.now() + IDEMPOTENCY_TTL_MS).toISOString();
+  // On stocke tenant_id pour le scope cache. onConflict reste sur cache_key
+  // tant que phase 3 n'a pas pose le UNIQUE composite (tenant_id, cache_key).
   const { error } = await supabaseAdmin
     .from('admin_idempotency')
     .upsert(
-      { cache_key: cacheKey, status, body, expires_at },
+      { cache_key: cacheKey, status, body, expires_at, tenant_id: tenantId },
       { onConflict: 'cache_key' }
     );
   if (error) {
@@ -139,7 +151,13 @@ export function withAdminIdempotency(
     }
 
     const cacheKey = buildCacheKey(req, ctx.staff.id, options.key, userKey);
-    const cached = await readCache(cacheKey);
+    // Admin staff n'a pas (encore) de contexte tenant — on utilise
+    // DEFAULT_TENANT_ID. Cela equivaut a aujourd'hui d'un point de vue
+    // comportemental (toutes les rows actuelles portent ce tenant_id) mais
+    // ecrit la colonne explicitement pour rester compatible avec la phase 3
+    // (NOT NULL + UNIQUE composite).
+    const tenantId = DEFAULT_TENANT_ID;
+    const cached = await readCache(cacheKey, tenantId);
     if (cached) {
       res.setHeader('Idempotency-Replay', 'true');
       res.status(cached.status).json(cached.body);
@@ -153,7 +171,7 @@ export function withAdminIdempotency(
     res.json = ((body: unknown) => {
       const status = res.statusCode || 200;
       if (status >= 200 && status < 300) {
-        void writeCache(cacheKey, status, body).catch((e) =>
+        void writeCache(cacheKey, status, body, tenantId).catch((e) =>
           logger.error('[admin/idempotency] async write error', e)
         );
       }

@@ -45,12 +45,19 @@ type CachedResponse = {
 };
 
 async function readIdempotencyCache(
-  cacheKey: string
+  cacheKey: string,
+  tenantId: string
 ): Promise<CachedResponse | null> {
   if (!supabaseAdmin) return null;
+  // Multi-tenant scoping (S3 / Phase 1c) : on filtre par tenant_id pour
+  // que deux tenants utilisant la meme Idempotency-Key (collision plausible
+  // sur des keys courtes type UUIDv4 tronques) n'entrent pas en collision
+  // de cache. Defense-in-depth : aujourd'hui UNIQUE(cache_key) est global
+  // mais phase 3 le transformera en UNIQUE(tenant_id, cache_key).
   const { data, error } = await supabaseAdmin
     .from('bot_idempotency')
     .select('status, body, expires_at')
+    .eq('tenant_id', tenantId)
     .eq('cache_key', cacheKey)
     .maybeSingle();
   if (error || !data) return null;
@@ -65,15 +72,20 @@ async function readIdempotencyCache(
 async function writeIdempotencyCache(
   cacheKey: string,
   status: number,
-  body: unknown
+  body: unknown,
+  tenantId: string
 ): Promise<void> {
   if (!supabaseAdmin) return;
   const expires_at = new Date(Date.now() + IDEMPOTENCY_TTL_MS).toISOString();
   // Upsert : remplace une row potentiellement expiree avec la meme cle.
+  // On stocke tenant_id pour le scope multi-tenant. onConflict reste sur
+  // cache_key tant que la migration phase 3 n'a pas pose le UNIQUE composite
+  // (tenant_id, cache_key) — c'est suffisant aujourd'hui car le sweep S3
+  // garantit qu'on n'ecrit que des rows scoping par tenant a la lecture.
   const { error } = await supabaseAdmin
     .from('bot_idempotency')
     .upsert(
-      { cache_key: cacheKey, status, body, expires_at },
+      { cache_key: cacheKey, status, body, expires_at, tenant_id: tenantId },
       { onConflict: 'cache_key' }
     );
   if (error) {
@@ -248,7 +260,10 @@ export function withBotRoute(
       const userKey = readIdempotencyKey(req);
       if (userKey) {
         const cacheKey = idempotencyCacheKey(req, userKey);
-        const cached = await readIdempotencyCache(cacheKey);
+        // Scope cache lookup + write par tenant (S3 / Phase 1c) — pas de leak
+        // si deux tenants utilisent par hasard la meme Idempotency-Key.
+        const tenantIdForCache = req.botContext!.tenantId;
+        const cached = await readIdempotencyCache(cacheKey, tenantIdForCache);
         if (cached) {
           res.setHeader('Idempotency-Replay', 'true');
           return res.status(cached.status).json(cached.body);
@@ -262,7 +277,12 @@ export function withBotRoute(
         res.json = ((body: unknown) => {
           const status = res.statusCode || 200;
           if (status >= 200 && status < 300) {
-            void writeIdempotencyCache(cacheKey, status, body).catch((e) =>
+            void writeIdempotencyCache(
+              cacheKey,
+              status,
+              body,
+              tenantIdForCache
+            ).catch((e) =>
               logger.error('[bot/idempotency] async write error', e)
             );
           }

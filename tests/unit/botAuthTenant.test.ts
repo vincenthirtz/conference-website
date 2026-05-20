@@ -10,8 +10,14 @@
 // GET is used to skip the maintenance check (only non-safe methods hit it).
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { resetSupabaseMock } from './__helpers__/supabaseMock';
-import { withBotRoute } from '../../utils/botAuth';
+import {
+  resetSupabaseMock,
+  store,
+} from './__helpers__/supabaseMock';
+import {
+  withBotRoute,
+  __resetBotIdempotencyCache,
+} from '../../utils/botAuth';
 import { DEFAULT_TENANT_ID, resolveTenantId } from '../../utils/tenant';
 import { logger } from '../../utils/logger';
 
@@ -188,5 +194,160 @@ describe('withBotRoute → req.botContext.tenantId', () => {
 
     expect(res.statusCode).toBe(401);
     expect(called).toBe(false);
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * withBotRoute() — idempotency cache is tenant-scoped
+ *
+ * Two tenants using the same Idempotency-Key on the same path must NOT
+ * collide. We exercise this by sending the same POST twice (same key, same
+ * body) from two different tenants and asserting:
+ *   - both calls execute the handler (no replay cross-tenant)
+ *   - both rows are persisted with the right tenant_id
+ *   - a third call from tenant A *does* hit the cache (replay) — proves
+ *     the cache is still active, just scoped.
+ * ------------------------------------------------------------------------- */
+
+const TENANT_A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const TENANT_B = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+
+const POST_OPTS = {
+  methods: ['POST'] as const,
+  rateLimit: { max: 100, key: 'idempotency-tenant-test' },
+  idempotent: true,
+};
+
+describe('withBotRoute → idempotency cache is tenant-scoped', () => {
+  beforeEach(async () => {
+    await __resetBotIdempotencyCache();
+  });
+
+  it('same Idempotency-Key on two tenants does NOT collide', async () => {
+    let calls = 0;
+    const handler = withBotRoute((_req, res) => {
+      calls += 1;
+      res.status(200).json({ calls });
+    }, POST_OPTS);
+
+    // Tenant A — first call
+    const resA = makeRes();
+    await handler(
+      makeReq(
+        {
+          headers: {
+            host: 'h',
+            'x-api-key': 'test-key',
+            'x-tenant-id': TENANT_A,
+            'idempotency-key': 'shared-key-123',
+          },
+          body: { payload: 'same' },
+        },
+        'POST'
+      ),
+      resA
+    );
+    expect(resA.statusCode).toBe(200);
+    expect(resA.body).toEqual({ calls: 1 });
+    expect(resA.headers['Idempotency-Replay']).toBeUndefined();
+
+    // Tenant B — same key, same body, different tenant → executes (no replay).
+    const resB = makeRes();
+    await handler(
+      makeReq(
+        {
+          headers: {
+            host: 'h',
+            'x-api-key': 'test-key',
+            'x-tenant-id': TENANT_B,
+            'idempotency-key': 'shared-key-123',
+          },
+          body: { payload: 'same' },
+        },
+        'POST'
+      ),
+      resB
+    );
+    expect(resB.statusCode).toBe(200);
+    // Handler ran again — counter is 2, not a replay of {calls: 1}.
+    expect(resB.body).toEqual({ calls: 2 });
+    expect(resB.headers['Idempotency-Replay']).toBeUndefined();
+  });
+
+  it('persists tenant_id alongside cache_key in bot_idempotency', async () => {
+    const handler = withBotRoute((_req, res) => {
+      res.status(201).json({ ok: true });
+    }, POST_OPTS);
+
+    await handler(
+      makeReq(
+        {
+          headers: {
+            host: 'h',
+            'x-api-key': 'test-key',
+            'x-tenant-id': TENANT_A,
+            'idempotency-key': 'persistence-key',
+          },
+          body: { foo: 'bar' },
+        },
+        'POST'
+      ),
+      makeRes()
+    );
+
+    const rows = (store['bot_idempotency'] ?? []) as Array<{
+      tenant_id?: string;
+    }>;
+    expect(rows.length).toBeGreaterThanOrEqual(1);
+    expect(rows.every((r) => r.tenant_id === TENANT_A)).toBe(true);
+  });
+
+  it('still replays for the same tenant + same key (cache works, scoped)', async () => {
+    let calls = 0;
+    const handler = withBotRoute((_req, res) => {
+      calls += 1;
+      res.status(200).json({ calls });
+    }, POST_OPTS);
+
+    // First call — executes.
+    const res1 = makeRes();
+    await handler(
+      makeReq(
+        {
+          headers: {
+            host: 'h',
+            'x-api-key': 'test-key',
+            'x-tenant-id': TENANT_A,
+            'idempotency-key': 'replay-key',
+          },
+          body: { same: 'body' },
+        },
+        'POST'
+      ),
+      res1
+    );
+    expect(res1.body).toEqual({ calls: 1 });
+
+    // Second call — same tenant, same key, same body → replay (no handler run).
+    const res2 = makeRes();
+    await handler(
+      makeReq(
+        {
+          headers: {
+            host: 'h',
+            'x-api-key': 'test-key',
+            'x-tenant-id': TENANT_A,
+            'idempotency-key': 'replay-key',
+          },
+          body: { same: 'body' },
+        },
+        'POST'
+      ),
+      res2
+    );
+    // Cache hit → body is the previous response, handler didn't increment.
+    expect(res2.body).toEqual({ calls: 1 });
+    expect(res2.headers['Idempotency-Replay']).toBe('true');
+    expect(calls).toBe(1);
   });
 });
