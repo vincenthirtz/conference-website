@@ -8,6 +8,10 @@ import {
 } from '../../utils/stages/standings';
 import { invalidateAllStandingsCache } from '../../utils/stages/standingsCache';
 
+// Tenant test constant — la valeur exacte importe peu, le mock supabase ne
+// filtre pas reellement par tenant_id ; on verifie juste la signature.
+const TEST_TENANT = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
+
 /* -----------------------------------------------------------
  * Helpers — produce shapes matching what Supabase returns after the join
  * ---------------------------------------------------------*/
@@ -68,7 +72,7 @@ describe('computeStageStandings — dispatcher', () => {
   it('returns an empty array when the stage has no teams', async () => {
     seedStageTeams('stage-x', []);
     seedMatches([]);
-    expect(await computeStageStandings('stage-x', 'group')).toEqual([]);
+    expect(await computeStageStandings(TEST_TENANT, 'stage-x', 'group')).toEqual([]);
   });
 
   it('dispatches to group computation for stage_type=group', async () => {
@@ -88,7 +92,7 @@ describe('computeStageStandings — dispatcher', () => {
       },
     ]);
 
-    const standings = await computeStageStandings('s1', 'group');
+    const standings = await computeStageStandings(TEST_TENANT, 's1', 'group');
     expect(standings[0].teamId).toBe('t1');
     expect(standings[0].wins).toBe(1);
     expect(standings[1].teamId).toBe('t2');
@@ -112,7 +116,7 @@ describe('computeStageStandings — dispatcher', () => {
       },
     ]);
 
-    const standings = await computeStageStandings('s1', 'round_robin');
+    const standings = await computeStageStandings(TEST_TENANT, 's1', 'round_robin');
     expect(standings[0].teamId).toBe('t2');
   });
 
@@ -132,7 +136,7 @@ describe('computeStageStandings — dispatcher', () => {
       },
     ]);
 
-    const standings = await computeStageStandings('s1', 'bracket');
+    const standings = await computeStageStandings(TEST_TENANT, 's1', 'bracket');
     expect(standings[0].teamId).toBe('t1');
     expect(standings[0].score).toBe(2); // lastWinRound = 2
   });
@@ -153,7 +157,7 @@ describe('computeStageStandings — dispatcher', () => {
       },
     ]);
 
-    const standings = await computeStageStandings('s1', 'swiss');
+    const standings = await computeStageStandings(TEST_TENANT, 's1', 'swiss');
     expect(standings[0].teamId).toBe('t1');
     expect(standings[0].wins).toBeGreaterThanOrEqual(1);
   });
@@ -166,7 +170,7 @@ describe('computeStageStandings — dispatcher', () => {
     ]);
     seedMatches([]);
 
-    const standings = await computeStageStandings('s1', 'showmatch');
+    const standings = await computeStageStandings(TEST_TENANT, 's1', 'showmatch');
     expect(standings.map((s) => s.teamId)).toEqual(['t2', 't3', 't1']);
     for (const s of standings) {
       expect(s.wins).toBe(0);
@@ -190,11 +194,11 @@ describe('computeStageStandings — dispatcher', () => {
       },
     ]);
 
-    const first = await computeStageStandings('s1', 'swiss');
+    const first = await computeStageStandings(TEST_TENANT, 's1', 'swiss');
 
     // Wipe the matches table so a cache miss would clearly produce different output
     store.matches = [];
-    const second = await computeStageStandings('s1', 'swiss');
+    const second = await computeStageStandings(TEST_TENANT, 's1', 'swiss');
 
     expect(second).toEqual(first);
   });
@@ -217,7 +221,7 @@ describe('computeStageStandings — dispatcher', () => {
       },
     ]);
 
-    const standings = await computeStageStandings('s1', 'group');
+    const standings = await computeStageStandings(TEST_TENANT, 's1', 'group');
     // Cancelled match must not contribute to wins
     for (const s of standings) {
       expect(s.wins).toBe(0);
@@ -232,7 +236,7 @@ describe('computeStageStandings — dispatcher', () => {
 describe('computeGroupedStandings', () => {
   it('throws when the stage does not exist', async () => {
     store.tournament_stages = [] as any;
-    await expect(computeGroupedStandings('missing')).rejects.toThrow(
+    await expect(computeGroupedStandings(TEST_TENANT, 'missing')).rejects.toThrow(
       /not found/
     );
   });
@@ -274,7 +278,7 @@ describe('computeGroupedStandings', () => {
       },
     ]);
 
-    const out = await computeGroupedStandings('s1');
+    const out = await computeGroupedStandings(TEST_TENANT, 's1');
     expect(Object.keys(out.groups).sort()).toEqual(['A', 'B']);
     expect(out.groups.A[0].teamId).toBe('t1');
     expect(out.groups.A[0].groupKey).toBe('A');
@@ -303,7 +307,7 @@ describe('computeGroupedStandings', () => {
       },
     ]);
 
-    const out = await computeGroupedStandings('s1');
+    const out = await computeGroupedStandings(TEST_TENANT, 's1');
     expect(out.groups.A).toHaveLength(2);
     expect(out.unassigned).toEqual([]);
   });
@@ -322,7 +326,7 @@ describe('computeGroupedStandings', () => {
     ]);
     seedMatches([]);
 
-    const out = await computeGroupedStandings('s1');
+    const out = await computeGroupedStandings(TEST_TENANT, 's1');
     expect(out.groups.A.map((s) => s.teamId)).toEqual(['t1']);
     expect(out.unassigned.map((s) => s.teamId)).toEqual(['t2']);
     expect(out.unassigned[0].groupKey).toBeNull();

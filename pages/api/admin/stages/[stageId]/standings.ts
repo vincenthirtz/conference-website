@@ -63,13 +63,17 @@ async function handler(
     }
 
     const stageType = stage.stage_type || 'other';
-    const standings = await computeStageStandings(id, stageType);
+    const standings = await computeStageStandings(
+      ctx.tenantId,
+      id,
+      stageType
+    );
 
     // Pour les stages 'group', on retourne aussi un decoupage par poule
     let grouped: GroupedStandings | undefined;
     if (stageType === 'group') {
       try {
-        grouped = await computeGroupedStandings(id);
+        grouped = await computeGroupedStandings(ctx.tenantId, id);
       } catch (e) {
         logger.error('grouped standings error:', e);
       }

@@ -100,7 +100,10 @@ async function handler(
 
       if (hasPerGroup && sourceStage.stage_type === 'group') {
         // Top N par poule
-        const grouped = await computeGroupedStandings(sourceStageId);
+        const grouped = await computeGroupedStandings(
+          ctx.tenantId,
+          sourceStageId
+        );
         const perGroup = Number(rules.advance_per_group);
         teamIds = [];
         for (const ids of Object.values(grouped.groups)) {
@@ -109,6 +112,7 @@ async function handler(
       } else {
         // Top N global
         const standings = await computeStageStandings(
+          ctx.tenantId,
           sourceStageId,
           sourceStage.stage_type || 'other'
         );
@@ -215,6 +219,7 @@ async function handler(
 
     if (seedModeForRank === 'rank') {
       const standings = await computeStageStandings(
+        ctx.tenantId,
         sourceStageId,
         sourceStage.stage_type || 'other'
       );

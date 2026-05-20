@@ -35,6 +35,7 @@ export type ImportSourceLabel =
   | 'startgg_import';
 
 export type ImportTeamsOptions = {
+  tenantId: string;
   tournamentId?: string;
   sourceLabel: ImportSourceLabel;
   staffId?: string | null;
@@ -100,6 +101,7 @@ export async function importTeams(
       .from('teams')
       .select('id')
       .ilike('name', name)
+      .eq('tenant_id', opts.tenantId)
       .maybeSingle();
 
     if (existing) {
@@ -116,6 +118,7 @@ export async function importTeams(
     const { data: team, error: teamErr } = await admin
       .from('teams')
       .insert({
+        tenant_id: opts.tenantId,
         name,
         short_name: shortName,
         slug,
@@ -140,6 +143,7 @@ export async function importTeams(
     for (const rawBt of players) {
       const bt = rawBt.slice(0, MAX_BATTLE_TAG);
       const { error: memberErr } = await admin.from('team_members').insert({
+        tenant_id: opts.tenantId,
         team_id: team.id,
         role: 'player',
         battle_tag: bt,
@@ -156,6 +160,7 @@ export async function importTeams(
     if (opts.tournamentId) {
       const { error: ttErr } = await admin.from('tournament_teams').upsert(
         {
+          tenant_id: opts.tenantId,
           tournament_id: opts.tournamentId,
           team_id: team.id,
           status: 'registered',

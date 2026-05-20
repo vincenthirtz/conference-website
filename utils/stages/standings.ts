@@ -49,8 +49,13 @@ type StageTeamRow = {
 
 /**
  * Calcule le classement d'un stage. Retourne un tableau trie par performance.
+ *
+ * @param tenantId Scope multi-tenant — applique a stage_teams et matches pour
+ *   eviter toute fuite cross-tenant si jamais un stage_id collisionne entre
+ *   deux tenants (peu probable avec des UUIDs mais defense-in-depth S5b-bis).
  */
 export async function computeStageStandings(
+  tenantId: string,
   stageId: string,
   stageType: string
 ): Promise<StageStanding[]> {
@@ -62,7 +67,8 @@ export async function computeStageStandings(
   const { data: stageTeamsData, error: teamsErr } = await supabaseAdmin
     .from('stage_teams')
     .select('team_id, seed, team:teams(id, name, short_name)')
-    .eq('stage_id', stageId);
+    .eq('stage_id', stageId)
+    .eq('tenant_id', tenantId);
 
   if (teamsErr) {
     throw new Error(`Failed to fetch stage teams: ${teamsErr.message}`);
@@ -92,6 +98,7 @@ export async function computeStageStandings(
       'id, status, is_bye, round_number, team1_id, team2_id, winner_team_id, team1_score, team2_score'
     )
     .eq('stage_id', stageId)
+    .eq('tenant_id', tenantId)
     .neq('status', 'cancelled');
 
   if (matchesErr) {
@@ -138,7 +145,7 @@ export async function computeStageStandings(
         }));
   }
 
-  const final = await applyTiebreakerOverrides(stageId, raw);
+  const final = await applyTiebreakerOverrides(tenantId, stageId, raw);
   // Cache uniquement les stages swiss (calcul coûteux, cf. case 'swiss').
   if (stageType === 'swiss' && !cacheHit) {
     setCachedStandings(stageId, final);
@@ -156,6 +163,7 @@ export async function computeStageStandings(
  * Re-numérote les ranks après les swaps appliqués.
  */
 async function applyTiebreakerOverrides(
+  tenantId: string,
   stageId: string,
   standings: StageStanding[]
 ): Promise<StageStanding[]> {
@@ -164,7 +172,8 @@ async function applyTiebreakerOverrides(
   const { data: overrides, error } = await supabaseAdmin
     .from('stage_tiebreaker_overrides')
     .select('winner_team_id, loser_team_id')
-    .eq('stage_id', stageId);
+    .eq('stage_id', stageId)
+    .eq('tenant_id', tenantId);
   if (error || !overrides || overrides.length === 0) return standings;
 
   const list = standings.slice();
@@ -205,6 +214,7 @@ async function applyTiebreakerOverrides(
  * pas dans group_assignments (cas degrade — devrait etre vide en prod).
  */
 export async function computeGroupedStandings(
+  tenantId: string,
   stageId: string
 ): Promise<GroupedStandings> {
   if (!supabaseAdmin) {
@@ -216,6 +226,7 @@ export async function computeGroupedStandings(
     .from('tournament_stages')
     .select('id, stage_type, settings')
     .eq('id', stageId)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
 
   if (stageErr || !stage) {
@@ -229,7 +240,8 @@ export async function computeGroupedStandings(
   const { data: stageTeamsData } = await supabaseAdmin
     .from('stage_teams')
     .select('team_id, seed, team:teams(id, name, short_name)')
-    .eq('stage_id', stageId);
+    .eq('stage_id', stageId)
+    .eq('tenant_id', tenantId);
 
   const stageTeams: StageTeamRow[] = (stageTeamsData || []).map((row: any) => ({
     team_id: row.team_id,
@@ -243,6 +255,7 @@ export async function computeGroupedStandings(
       'id, status, is_bye, round_number, team1_id, team2_id, winner_team_id, team1_score, team2_score, group_key'
     )
     .eq('stage_id', stageId)
+    .eq('tenant_id', tenantId)
     .neq('status', 'cancelled');
 
   type GroupedMatchRow = DbMatch & { group_key: string | null };

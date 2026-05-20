@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { sanitizeSearch, escapePostgrestValue } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../utils/logger';
@@ -68,7 +68,8 @@ function normalizeSortDir(value: string | null | undefined): 'asc' | 'desc' {
 
 async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<ResponseData>
+  res: NextApiResponse<ResponseData>,
+  ctx: AuthenticatedStaffContext
 ) {
   if (!supabaseAdmin) {
     return res.status(500).json({ error: 'Database service unavailable.' });
@@ -88,6 +89,15 @@ async function handler(
     sortDir,
     export: exportFormat,
   } = req.query;
+
+  // TODO(S5c+): la vue materialisee team_stats_view n'a pas de tenant_id.
+  // En attendant, on borne les tournament_id eligibles aux tournois du tenant
+  // courant pour eviter la fuite cross-tenant.
+  const { data: tenantTournaments } = await supabaseAdmin
+    .from('tournaments')
+    .select('id')
+    .eq('tenant_id', ctx.tenantId);
+  const tenantTournamentIds = (tenantTournaments || []).map((t) => t.id);
 
   const limitNum = Math.max(1, Math.min(1000, Number(limit) || 100));
   const offsetNum = Math.max(0, Number(offset) || 0);
@@ -132,7 +142,15 @@ async function handler(
     .range(offsetNum, offsetNum + limitNum - 1);
 
   if (tournamentId && typeof tournamentId === 'string') {
+    // Reject explicit tournamentId from another tenant
+    if (!tenantTournamentIds.includes(tournamentId)) {
+      return res.status(200).json({ stats: [], total: 0 });
+    }
     query = query.eq('tournament_id', tournamentId);
+  } else if (tenantTournamentIds.length > 0) {
+    query = query.in('tournament_id', tenantTournamentIds);
+  } else {
+    return res.status(200).json({ stats: [], total: 0 });
   }
 
   if (search) {

@@ -22,6 +22,9 @@ import {
   formatStaffLog,
 } from '../../utils/staffLogs';
 
+// Tenant test constant — la valeur exacte importe peu pour les mocks.
+const TEST_TENANT = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
+
 beforeEach(() => {
   resetSupabaseMock();
   computeStageStandings.mockClear();
@@ -51,12 +54,13 @@ describe('importTeams', () => {
   it('throws when too many rows', async () => {
     const rows = Array.from({ length: 250 }, (_, i) => ({ name: `T${i}` }));
     await expect(
-      importTeams(rows, { sourceLabel: 'csv_import' })
+      importTeams(rows, { tenantId: TEST_TENANT, sourceLabel: 'csv_import' })
     ).rejects.toThrow(/Trop de lignes/);
   });
 
   it('records error rows for missing names', async () => {
     const result = await importTeams([{ name: '' }, { name: 'OK' }], {
+      tenantId: TEST_TENANT,
       sourceLabel: 'csv_import',
     });
     expect(result.created).toBe(1);
@@ -66,6 +70,7 @@ describe('importTeams', () => {
 
   it('records error rows for too-long names', async () => {
     const result = await importTeams([{ name: 'a'.repeat(150) }], {
+      tenantId: TEST_TENANT,
       sourceLabel: 'csv_import',
     });
     expect(result.created).toBe(0);
@@ -75,6 +80,7 @@ describe('importTeams', () => {
   it('skips duplicates (case-insensitive)', async () => {
     store.teams = [{ id: 't-existing', name: 'Alpha' }] as any;
     const result = await importTeams([{ name: 'alpha' }, { name: 'Beta' }], {
+      tenantId: TEST_TENANT,
       sourceLabel: 'csv_import',
     });
     expect(result.skipped).toBe(1);
@@ -91,7 +97,7 @@ describe('importTeams', () => {
           players: ['P1#1234', 'P2#5678', '   '],
         },
       ],
-      { sourceLabel: 'csv_import' }
+      { tenantId: TEST_TENANT, sourceLabel: 'csv_import' }
     );
     expect(result.created).toBe(1);
     // 2 non-empty players inserted
@@ -100,6 +106,7 @@ describe('importTeams', () => {
 
   it('upserts into tournament_teams when tournamentId provided', async () => {
     const result = await importTeams([{ name: 'Squad' }], {
+      tenantId: TEST_TENANT,
       sourceLabel: 'toornament_import',
       tournamentId: 't-tour',
       staffId: 's-1',

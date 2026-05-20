@@ -586,6 +586,7 @@ export async function applyMatchScore(
     // Fire-and-forget : ne doit pas bloquer la reponse au client.
     if (match.stage_id) {
       void tryAutoAdvanceFromMatch({
+        tenantId,
         stageId: match.stage_id,
         staffId: staffId ?? null,
       }).catch((e: unknown) => logger.error('[autoAdvance] error:', e));

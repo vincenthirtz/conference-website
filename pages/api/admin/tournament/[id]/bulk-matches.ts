@@ -103,11 +103,12 @@ async function handleShiftRound(
       .json({ error: 'offsetMinutes cannot be 0 (no shift to apply)' });
   }
 
-  // Verifier que le stage appartient au tournoi
+  // Verifier que le stage appartient au tournoi (scoped to current tenant)
   const { data: stage } = await supabaseAdmin
     .from('tournament_stages')
     .select('id, tournament_id')
     .eq('id', stageId)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (!stage || stage.tournament_id !== tournamentId) {
@@ -121,6 +122,7 @@ async function handleShiftRound(
     .from('matches')
     .select('id, scheduled_at, status')
     .eq('stage_id', stageId)
+    .eq('tenant_id', ctx.tenantId)
     .eq('round_number', roundNumber)
     .neq('status', 'cancelled');
 
@@ -155,7 +157,8 @@ async function handleShiftRound(
     const { error: updErr } = await supabaseAdmin
       .from('matches')
       .update({ scheduled_at: newDate, updated_at: new Date().toISOString() })
-      .eq('id', m.id);
+      .eq('id', m.id)
+      .eq('tenant_id', ctx.tenantId);
 
     if (updErr) {
       // Rollback
@@ -163,7 +166,8 @@ async function handleShiftRound(
         await supabaseAdmin
           .from('matches')
           .update({ scheduled_at: prev.previous })
-          .eq('id', prev.id);
+          .eq('id', prev.id)
+          .eq('tenant_id', ctx.tenantId);
       }
       return res.status(500).json({
         error: `Echec sur le match ${m.id}. Rollback effectue.`,
@@ -227,11 +231,12 @@ async function handleReassignStage(
     return res.status(400).json({ error: 'Invalid targetStageId' });
   }
 
-  // Verifier que le stage cible appartient au tournoi
+  // Verifier que le stage cible appartient au tournoi (scoped to current tenant)
   const { data: targetStage } = await supabaseAdmin
     .from('tournament_stages')
     .select('id, tournament_id')
     .eq('id', targetStageId)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (!targetStage || targetStage.tournament_id !== tournamentId) {
@@ -240,13 +245,14 @@ async function handleReassignStage(
       .json({ error: 'Target stage not found in this tournament' });
   }
 
-  // Charger les matchs cibles
+  // Charger les matchs cibles (scoped to current tenant)
   const { data: matches, error: matchErr } = await supabaseAdmin
     .from('matches')
     .select(
       'id, tournament_id, stage_id, status, next_match_win_id, next_match_lose_id'
     )
-    .in('id', matchIds);
+    .in('id', matchIds)
+    .eq('tenant_id', ctx.tenantId);
 
   if (matchErr) {
     return res.status(500).json({ error: 'Failed to fetch matches' });
@@ -289,7 +295,8 @@ async function handleReassignStage(
         group_key: null,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', id);
+      .eq('id', id)
+      .eq('tenant_id', ctx.tenantId);
 
     if (updErr) {
       skipped.push({ matchId: id, reason: 'update_failed' });

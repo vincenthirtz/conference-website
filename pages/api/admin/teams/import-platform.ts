@@ -122,6 +122,7 @@ async function handler(
     }
 
     const result = await importTeams(rows, {
+      tenantId: ctx.tenantId,
       tournamentId:
         typeof tournamentId === 'string' && tournamentId
           ? tournamentId

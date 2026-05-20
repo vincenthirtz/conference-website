@@ -75,11 +75,12 @@ async function handler(
         .json({ error: `Template "${templateId}" not found` });
     }
 
-    // Verify tournament exists
+    // Verify tournament exists (scoped to current tenant)
     const { data: tournament, error: tournamentErr } = await supabaseAdmin
       .from('tournaments')
       .select('id, name')
       .eq('id', tournamentId)
+      .eq('tenant_id', ctx.tenantId)
       .maybeSingle();
 
     if (tournamentErr || !tournament) {
@@ -91,6 +92,7 @@ async function handler(
       .from('tournament_stages')
       .select('id, order_index')
       .eq('tournament_id', tournamentId)
+      .eq('tenant_id', ctx.tenantId)
       .order('order_index', { ascending: false });
 
     const hasExisting = existingStages && existingStages.length > 0;
@@ -109,6 +111,7 @@ async function handler(
 
     // Create stages from template
     const stageInserts = template.stages.map((s, idx) => ({
+      tenant_id: ctx.tenantId,
       tournament_id: tournamentId,
       name: s.name,
       slug: s.name

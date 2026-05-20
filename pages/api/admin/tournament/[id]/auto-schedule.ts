@@ -163,6 +163,7 @@ async function handler(
         `
       )
       .eq('tournament_id', tournamentId)
+      .eq('tenant_id', ctx.tenantId)
       .neq('status', 'cancelled');
 
     if (mErr) {
@@ -247,6 +248,7 @@ async function handler(
         .from('tournaments')
         .select('start_date, end_date')
         .eq('id', tournamentId)
+        .eq('tenant_id', ctx.tenantId)
         .maybeSingle();
 
       if (tournament) {
@@ -294,6 +296,7 @@ async function handler(
           scheduled_at: s.startAt,
         })
         .eq('id', s.matchId)
+        .eq('tenant_id', ctx.tenantId)
     );
 
     if (updates.length > 0) {

@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { sanitizeSearch } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../utils/logger';
@@ -58,9 +58,11 @@ function normalizeSortDir(value: string | null | undefined): 'asc' | 'desc' {
   return value === 'asc' ? 'asc' : 'desc';
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<ResponseData>
+  res: NextApiResponse<ResponseData>,
+  _ctx: AuthenticatedStaffContext
 ) {
   if (!supabaseAdmin) {
     return res.status(500).json({ error: 'Database service unavailable.' });
@@ -70,6 +72,11 @@ async function handler(
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  // TODO(S5c+): map_stats_view ne carry pas de tenant_id ni de tournament_id ;
+  // l'agregation est globale toutes-tenants. En mono-tenant production (S5b)
+  // ce n'est pas exploitable, mais il faudra augmenter la vue (ajouter
+  // tenant_id) avant de basculer en multi-tenant reel (S7).
 
   const {
     limit = '100',

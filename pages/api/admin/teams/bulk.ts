@@ -67,6 +67,7 @@ async function handler(
           .from('teams')
           .update({ is_active: false, deleted_at: nowIso, updated_at: nowIso })
           .in('id', teamIds)
+          .eq('tenant_id', ctx.tenantId)
           .select('id');
 
         if (error) throw error;
@@ -79,6 +80,7 @@ async function handler(
           .from('teams')
           .update({ is_active: true, deleted_at: null, updated_at: nowIso })
           .in('id', teamIds)
+          .eq('tenant_id', ctx.tenantId)
           .select('id');
 
         if (error) throw error;
@@ -91,6 +93,7 @@ async function handler(
           .from('teams')
           .update({ is_active: false, deleted_at: nowIso, updated_at: nowIso })
           .in('id', teamIds)
+          .eq('tenant_id', ctx.tenantId)
           .select('id');
 
         if (error) throw error;
@@ -105,11 +108,12 @@ async function handler(
           });
         }
 
-        // Verify tournament exists
+        // Verify tournament exists (scoped to current tenant)
         const { data: tournament } = await supabaseAdmin
           .from('tournaments')
           .select('id')
           .eq('id', tournamentId)
+          .eq('tenant_id', ctx.tenantId)
           .maybeSingle();
 
         if (!tournament) {
@@ -118,6 +122,7 @@ async function handler(
 
         // Upsert to safely handle concurrent requests (ignore duplicates)
         const rows = teamIds.map((tid) => ({
+          tenant_id: ctx.tenantId,
           tournament_id: tournamentId,
           team_id: tid,
           status: 'registered',

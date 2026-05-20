@@ -4,7 +4,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { isValidUUID } from '@/utils/apiHelpers';
 import type { MatchStatus } from '@/types/admin';
 
@@ -43,7 +43,11 @@ type GameRow = {
 // Rôle minimum : manager
 export default withStaffRoute(handler, 'manager');
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   const { id } = req.query;
 
   if (!id || Array.isArray(id) || !isValidUUID(id)) {
@@ -57,11 +61,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const tournamentId = String(id);
 
   try {
-    // 1) Vérifier que le tournoi existe
+    // 1) Vérifier que le tournoi existe (scoped to current tenant)
     const { data: tournament, error: tErr } = await supabaseAdmin
       .from('tournaments')
       .select('id, name, slug')
       .eq('id', tournamentId)
+      .eq('tenant_id', ctx.tenantId)
       .maybeSingle();
 
     if (tErr) {
@@ -73,7 +78,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       return res.status(404).json({ error: 'Tournament not found' });
     }
 
-    // 2) Récupérer les matchs du tournoi
+    // 2) Récupérer les matchs du tournoi (scoped to current tenant)
     const { data: matchesData, error: mErr } = await supabaseAdmin
       .from('matches')
       .select(
@@ -82,6 +87,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          stage:stage_id(name)`
       )
       .eq('tournament_id', tournamentId)
+      .eq('tenant_id', ctx.tenantId)
       .neq('status', 'cancelled');
 
     if (mErr) {
@@ -96,7 +102,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data: teamsData, error: teErr } = await supabaseAdmin
       .from('tournament_teams')
       .select('team:team_id(id, name, short_name, logo_url)')
-      .eq('tournament_id', tournamentId);
+      .eq('tournament_id', tournamentId)
+      .eq('tenant_id', ctx.tenantId);
 
     if (teErr) {
       logger.error('admin stats teams error:', teErr);
@@ -119,7 +126,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         .select(
           'match_id, map_name, team1_score, team2_score, is_tiebreaker, went_overtime'
         )
-        .in('match_id', matchIds);
+        .in('match_id', matchIds)
+        .eq('tenant_id', ctx.tenantId);
 
       if (gErr) {
         logger.error('admin stats games error:', gErr);

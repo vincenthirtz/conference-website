@@ -3,13 +3,17 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { isValidUUID } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../../utils/logger';
 export default withStaffRoute(handler, 'manager');
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -27,11 +31,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const format = req.query.format === 'json' ? 'json' : 'csv';
 
   try {
-    // Fetch tournament
+    // Fetch tournament (scoped to current tenant)
     const { data: tournament, error: tournamentErr } = await supabaseAdmin
       .from('tournaments')
       .select('id, name, slug, game, status')
       .eq('id', tournamentId)
+      .eq('tenant_id', ctx.tenantId)
       .maybeSingle();
 
     if (tournamentErr || !tournament) {
@@ -43,6 +48,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .from('tournament_stages')
       .select('id, name, stage_type, order_index')
       .eq('tournament_id', tournamentId)
+      .eq('tenant_id', ctx.tenantId)
       .order('order_index', { ascending: true });
 
     const stageMap = new Map<string, { name: string; stage_type: string }>();
@@ -50,13 +56,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       stageMap.set(s.id, { name: s.name, stage_type: s.stage_type });
     }
 
-    // Fetch all matches (non-cancelled)
+    // Fetch all matches (non-cancelled, scoped to current tenant)
     const { data: matches } = await supabaseAdmin
       .from('matches')
       .select(
         'id, stage_id, status, round_number, round_name, bracket_side, team1_id, team2_id, team1_score, team2_score, winner_team_id, scheduled_at, completed_at, match_format, best_of, is_bye'
       )
       .eq('tournament_id', tournamentId)
+      .eq('tenant_id', ctx.tenantId)
       .neq('status', 'cancelled')
       .order('scheduled_at', { ascending: true, nullsFirst: false });
 
@@ -72,7 +79,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       const { data: teamsData } = await supabaseAdmin
         .from('teams')
         .select('id, name')
-        .in('id', Array.from(teamIds));
+        .in('id', Array.from(teamIds))
+        .eq('tenant_id', ctx.tenantId);
 
       for (const t of teamsData || []) {
         teamNameMap.set(t.id, t.name);

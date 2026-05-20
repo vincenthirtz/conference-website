@@ -4,7 +4,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { postToDiscordWebhook } from '@/utils/discord';
 
@@ -21,7 +21,11 @@ const VALID_CHANNEL_TYPES = [
 
 export default withStaffRoute(handler, 'admin');
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -43,11 +47,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(500).json({ error: 'Database service unavailable' });
   }
 
-  // Lookup webhook (tournament-scoped first, then global fallback)
+  // Lookup webhook (tournament-scoped first, then tenant-global fallback)
   const { data: scoped } = await supabaseAdmin
     .from('discord_webhooks')
     .select('webhook_url, role_mention, tournament_id')
     .eq('tournament_id', id)
+    .eq('tenant_id', ctx.tenantId)
     .eq('channel_type', channelType)
     .eq('is_active', true)
     .maybeSingle();
@@ -58,6 +63,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .from('discord_webhooks')
       .select('webhook_url, role_mention, tournament_id')
       .is('tournament_id', null)
+      .eq('tenant_id', ctx.tenantId)
       .eq('channel_type', channelType)
       .eq('is_active', true)
       .maybeSingle();

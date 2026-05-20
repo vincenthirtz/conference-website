@@ -62,7 +62,7 @@ export default withStaffRoute(handler, 'manager');
 async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse>,
-  _ctx: AuthenticatedStaffContext
+  ctx: AuthenticatedStaffContext
 ) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -99,6 +99,7 @@ async function handler(
       `
       )
       .eq('tournament_id', tournamentId)
+      .eq('tenant_id', ctx.tenantId)
       .neq('status', 'cancelled')
       .not('scheduled_at', 'is', null);
 
@@ -111,7 +112,8 @@ async function handler(
     const { data: stagesData } = await supabaseAdmin
       .from('tournament_stages')
       .select('id, name')
-      .eq('tournament_id', tournamentId);
+      .eq('tournament_id', tournamentId)
+      .eq('tenant_id', ctx.tenantId);
 
     const stageMap = new Map<string, string>();
     if (stagesData) {

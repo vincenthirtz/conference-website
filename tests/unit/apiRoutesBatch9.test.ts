@@ -326,6 +326,11 @@ describe('/api/matches/[matchId]', () => {
 
 describe('GET /api/admin/stats/teams', () => {
   function seedStats() {
+    // S5b-bis : la vue n'a pas tenant_id, donc le handler scope par les
+    // tournaments du tenant courant. Il faut donc seed `tournaments` aussi.
+    store.tournaments = [
+      { id: 'tour-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4' },
+    ] as any;
     store.team_stats_view = [
       {
         team_id: 't1',
@@ -382,11 +387,11 @@ describe('GET /api/admin/stats/teams', () => {
     await statsTeamsHandler(makeReq({ method: 'GET' }), res);
     expect(res.statusCode).toBe(200);
     const stats = (res.body as any).stats;
-    expect(stats).toHaveLength(2);
+    // S5b-bis : la ligne `t2` a tournament_id=null, exclue par le scope tenant
+    // (tournaments-du-tenant filter). Comportement attendu : seul t1 remonte.
+    expect(stats).toHaveLength(1);
     const alpha = stats.find((s: any) => s.team_id === 't1');
     expect(alpha.tournament.name).toBe('Cup');
-    const beta = stats.find((s: any) => s.team_id === 't2');
-    expect(beta.tournament).toBeNull();
   });
 
   it('?minMatches=3 filters out teams below threshold', async () => {

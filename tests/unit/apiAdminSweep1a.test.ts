@@ -488,6 +488,11 @@ describe('/api/admin/tournament/[id]/dashboard', () => {
   });
 
   it('GET returns the dashboard payload with cache headers', async () => {
+    // S5b-bis : tenant-gate ajoute, le handler verifie l'existence du tournoi
+    // dans le tenant courant avant de deleguer au helper.
+    store.tournaments = [
+      { id: VALID_UUID, tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4' },
+    ] as any;
     const res = makeRes();
     await dashboardHandler(
       makeAuthedReq({ method: 'GET', query: { id: VALID_UUID } }),
@@ -498,6 +503,10 @@ describe('/api/admin/tournament/[id]/dashboard', () => {
   });
 
   it('404 when fetch returns not ok', async () => {
+    // tenant-gate : seed le tournoi pour passer le check
+    store.tournaments = [
+      { id: VALID_UUID, tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4' },
+    ] as any;
     fetchDashboardData.mockResolvedValueOnce({
       ok: false,
       status: 404,

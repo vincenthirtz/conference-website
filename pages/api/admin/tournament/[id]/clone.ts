@@ -42,11 +42,12 @@ async function handler(
   const sourceId = String(id);
 
   try {
-    // 1) Fetch source tournament
+    // 1) Fetch source tournament (scoped to current tenant)
     const { data: source, error: srcErr } = await supabaseAdmin
       .from('tournaments')
       .select('*')
       .eq('id', sourceId)
+      .eq('tenant_id', ctx.tenantId)
       .maybeSingle();
 
     if (srcErr || !source) {
@@ -65,11 +66,12 @@ async function handler(
         ? body.slug.trim()
         : slugify(cloneName, { lower: true, strict: true });
 
-    // Ensure slug uniqueness
+    // Ensure slug uniqueness (within tenant)
     const { data: existingSlug } = await supabaseAdmin
       .from('tournaments')
       .select('id')
       .eq('slug', cloneSlug)
+      .eq('tenant_id', ctx.tenantId)
       .maybeSingle();
 
     if (existingSlug) {
@@ -80,6 +82,7 @@ async function handler(
     const { data: cloned, error: createErr } = await supabaseAdmin
       .from('tournaments')
       .insert({
+        tenant_id: ctx.tenantId,
         name: cloneName,
         slug: cloneSlug,
         game: source.game,
@@ -111,11 +114,13 @@ async function handler(
       .from('tournament_stages')
       .select('name, slug, stage_type, order_index, settings')
       .eq('tournament_id', sourceId)
+      .eq('tenant_id', ctx.tenantId)
       .order('order_index', { ascending: true });
 
     let createdStages: any[] = [];
     if (sourceStages && sourceStages.length > 0) {
       const stageInserts = sourceStages.map((s: any) => ({
+        tenant_id: ctx.tenantId,
         tournament_id: cloned.id,
         name: s.name,
         slug: s.slug,
@@ -145,11 +150,13 @@ async function handler(
       .from('tournament_maps')
       .select('map_name, map_slug, map_type, image_url, enabled, order_index')
       .eq('tournament_id', sourceId)
+      .eq('tenant_id', ctx.tenantId)
       .order('order_index', { ascending: true });
 
     let copiedMapsCount = 0;
     if (sourceMaps && sourceMaps.length > 0) {
       const mapInserts = sourceMaps.map((m: any) => ({
+        tenant_id: ctx.tenantId,
         tournament_id: cloned.id,
         map_name: m.map_name,
         map_slug: m.map_slug,

@@ -99,6 +99,7 @@ async function handler(
 
     // Get standings from source stage
     const standings = await computeStageStandings(
+      ctx.tenantId,
       sourceStageId,
       sourceStage.stage_type || 'other'
     );

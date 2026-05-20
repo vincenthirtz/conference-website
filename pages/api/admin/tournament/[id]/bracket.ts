@@ -40,7 +40,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
     } else if (action === 'save') {
       return await handleSave(tournamentId, req, res, ctx);
     } else if (action === 'validate') {
-      return await handleValidate(tournamentId, req, res);
+      return await handleValidate(tournamentId, req, res, ctx);
     } else {
       return res.status(400).json({
         error:
@@ -144,6 +144,7 @@ async function handleGenerate(
   // Step 1: Insert all matches without linkages
   // Only include columns that exist in the DB (aligned with matches.ts POST)
   const payload = drafts.map((d) => ({
+    tenant_id: ctx.tenantId,
     tournament_id: tournamentId,
     stage_id: stageId ?? null,
     status: 'pending' as const,
@@ -240,7 +241,8 @@ async function handleGenerate(
           next_match_win_id: u.next_match_win_id,
           next_match_win_slot: u.next_match_win_slot,
         })
-        .eq('id', u.id);
+        .eq('id', u.id)
+        .eq('tenant_id', ctx.tenantId);
 
       if (linkError) {
         linkErrors.push(`Match ${u.id}: ${linkError.message}`);
@@ -250,7 +252,11 @@ async function handleGenerate(
     if (linkErrors.length > 0) {
       logger.error('bracket linkage errors, rolling back:', linkErrors);
       const matchIds = rows.map((r) => r.id);
-      await supabaseAdmin.from('matches').delete().in('id', matchIds);
+      await supabaseAdmin
+        .from('matches')
+        .delete()
+        .in('id', matchIds)
+        .eq('tenant_id', ctx.tenantId);
       return res.status(500).json({
         error: 'Failed to link bracket matches, all matches rolled back',
         detail: linkErrors,
@@ -332,7 +338,8 @@ async function handleSave(
       .from('matches')
       .update(updateData)
       .eq('id', m.id)
-      .eq('tournament_id', tournamentId);
+      .eq('tournament_id', tournamentId)
+      .eq('tenant_id', ctx.tenantId);
 
     if (error) {
       errors.push(`Match ${m.id}: update failed`);
@@ -383,7 +390,8 @@ async function handleSave(
 async function handleValidate(
   tournamentId: string,
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
 ) {
   const { stageId } = req.body;
 
@@ -393,6 +401,7 @@ async function handleValidate(
       'id, tournament_id, round_number, bracket_side, group_key, next_match_win_id, next_match_lose_id'
     )
     .eq('tournament_id', tournamentId)
+    .eq('tenant_id', ctx.tenantId)
     .neq('status', 'cancelled');
 
   if (stageId && typeof stageId === 'string') {
@@ -606,6 +615,7 @@ async function handleGenerateDoubleElim(
 
   // Insert all matches
   const payload = drafts.map((d) => ({
+    tenant_id: ctx.tenantId,
     tournament_id: tournamentId,
     stage_id: stageId ?? null,
     status: 'pending' as const,
@@ -851,7 +861,8 @@ async function handleGenerateDoubleElim(
     const { error: linkError } = await supabaseAdmin
       .from('matches')
       .update(u.data)
-      .eq('id', u.id);
+      .eq('id', u.id)
+      .eq('tenant_id', ctx.tenantId);
 
     if (linkError) {
       linkErrors.push(`Match ${u.id}: ${linkError.message}`);
@@ -861,7 +872,11 @@ async function handleGenerateDoubleElim(
   if (linkErrors.length > 0) {
     logger.error('double elim linkage errors, rolling back:', linkErrors);
     const matchIds = rows.map((r) => r.id);
-    await supabaseAdmin.from('matches').delete().in('id', matchIds);
+    await supabaseAdmin
+      .from('matches')
+      .delete()
+      .in('id', matchIds)
+      .eq('tenant_id', ctx.tenantId);
     return res.status(500).json({
       error:
         'Failed to link double elimination bracket, all matches rolled back',

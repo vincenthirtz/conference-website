@@ -32,7 +32,7 @@ export default withStaffRoute(handler, 'manager');
 async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse>,
-  _ctx: AuthenticatedStaffContext
+  ctx: AuthenticatedStaffContext
 ) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -50,11 +50,12 @@ async function handler(
   const tournamentId = String(id);
 
   try {
-    // Fetch tournament
+    // Fetch tournament (scoped to current tenant)
     const { data: tournament } = await supabaseAdmin
       .from('tournaments')
       .select('id, status')
       .eq('id', tournamentId)
+      .eq('tenant_id', ctx.tenantId)
       .maybeSingle();
 
     if (!tournament) {
@@ -63,20 +64,23 @@ async function handler(
 
     const currentStatus = tournament.status ?? 'draft';
 
-    // Fetch counts in parallel
+    // Fetch counts in parallel (scoped to current tenant)
     const [stagesRes, teamsRes, matchesRes] = await Promise.all([
       supabaseAdmin
         .from('tournament_stages')
         .select('id', { count: 'exact', head: true })
-        .eq('tournament_id', tournamentId),
+        .eq('tournament_id', tournamentId)
+        .eq('tenant_id', ctx.tenantId),
       supabaseAdmin
         .from('tournament_teams')
         .select('id', { count: 'exact', head: true })
-        .eq('tournament_id', tournamentId),
+        .eq('tournament_id', tournamentId)
+        .eq('tenant_id', ctx.tenantId),
       supabaseAdmin
         .from('matches')
         .select('id', { count: 'exact', head: true })
         .eq('tournament_id', tournamentId)
+        .eq('tenant_id', ctx.tenantId)
         .neq('status', 'cancelled'),
     ]);
 

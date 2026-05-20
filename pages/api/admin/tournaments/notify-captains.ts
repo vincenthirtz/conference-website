@@ -34,6 +34,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
     .from('tournaments')
     .select('id, name, slug, start_date, status')
     .eq('id', tournamentId)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (tErr || !tournament) {
@@ -44,7 +45,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
   const { data: teams, error: teamsErr } = await supabaseAdmin!
     .from('teams')
     .select('id, name, captain_id')
-    .eq('is_active', true);
+    .eq('is_active', true)
+    .eq('tenant_id', ctx.tenantId);
 
   if (teamsErr) {
     logger.error('[notify-captains] teams error:', teamsErr);
@@ -65,6 +67,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
     .from('team_members')
     .select('team_id, user_id')
     .eq('role', 'manager')
+    .eq('tenant_id', ctx.tenantId)
     .in('team_id', teamIds);
 
   if (mgrErr) {
@@ -108,6 +111,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
 
     // Un seul message interne par team (la conversation est ancree sur l'equipe)
     const { error: msgErr } = await supabaseAdmin!.from('demandes').insert({
+      tenant_id: ctx.tenantId,
       user_id: null,
       team_id: team.id,
       type: 'captain_message',

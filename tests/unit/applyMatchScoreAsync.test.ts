@@ -399,6 +399,7 @@ describe('applyMatchScore — side effects', () => {
     });
     await new Promise((r) => setImmediate(r));
     expect(tryAutoAdvanceFromMatch).toHaveBeenCalledWith({
+      tenantId: TENANT_ID,
       stageId: 'stage-1',
       staffId: null,
     });

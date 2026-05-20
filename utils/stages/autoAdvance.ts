@@ -8,6 +8,7 @@
 import { supabaseAdmin } from '../supabase';
 import { computeStageStandings } from './standings';
 import { logStaffAction } from '../staffLogs';
+import { DEFAULT_TENANT_ID } from '../tenant';
 
 import { logger } from '../logger';
 export type AdvancementRules = {
@@ -35,21 +36,30 @@ export type AutoAdvanceResult = {
  *   - on saute si l'equipe est deja dans le stage cible (gere par advance.ts logic)
  */
 export async function tryAutoAdvanceFromMatch(params: {
+  tenantId?: string | null;
   stageId: string | null;
   staffId: string | null;
 }): Promise<AutoAdvanceResult> {
-  const { stageId, staffId } = params;
+  const { tenantId, stageId, staffId } = params;
 
   if (!stageId) {
     return { triggered: false, reason: 'no_stage' };
   }
 
+  // tenantId optionnel pour preserver la compat des tests / call-sites legacy.
+  // Quand fourni, on scope toutes les queries au tenant ; sinon comportement legacy.
+  // (typage volontairement large : Supabase builder chains ne s'auto-resolvent
+  // pas correctement quand on les passe via generique.)
+  const scoped = (q: any): any =>
+    tenantId ? q.eq('tenant_id', tenantId) : q;
+
   // 1) Charger le stage source
-  const { data: stage, error: stageErr } = await supabaseAdmin
-    .from('tournament_stages')
-    .select('id, tournament_id, stage_type, is_active, settings')
-    .eq('id', stageId)
-    .maybeSingle();
+  const { data: stage, error: stageErr } = await scoped(
+    supabaseAdmin
+      .from('tournament_stages')
+      .select('id, tournament_id, stage_type, is_active, settings')
+      .eq('id', stageId)
+  ).maybeSingle();
 
   if (stageErr || !stage) {
     return { triggered: false, reason: 'stage_not_found' };
@@ -71,17 +81,19 @@ export async function tryAutoAdvanceFromMatch(params: {
   }
 
   // 2) Verifier que tous les matchs du stage sont termines
-  const { data: matches, error: matchesErr } = await supabaseAdmin
-    .from('matches')
-    .select('id, status')
-    .eq('stage_id', stageId)
-    .neq('status', 'cancelled');
+  const { data: matches, error: matchesErr } = await scoped(
+    supabaseAdmin
+      .from('matches')
+      .select('id, status')
+      .eq('stage_id', stageId)
+      .neq('status', 'cancelled')
+  );
 
   if (matchesErr) {
     return { triggered: false, reason: 'matches_fetch_error' };
   }
 
-  const list = matches || [];
+  const list = (matches as { id: string; status: string }[]) || [];
   if (list.length === 0) {
     return { triggered: false, reason: 'no_matches' };
   }
@@ -94,11 +106,12 @@ export async function tryAutoAdvanceFromMatch(params: {
   }
 
   // 3) Verifier que la phase cible existe et appartient au meme tournoi
-  const { data: target, error: tgtErr } = await supabaseAdmin
-    .from('tournament_stages')
-    .select('id, tournament_id')
-    .eq('id', rules.target_stage_id)
-    .maybeSingle();
+  const { data: target, error: tgtErr } = await scoped(
+    supabaseAdmin
+      .from('tournament_stages')
+      .select('id, tournament_id')
+      .eq('id', rules.target_stage_id)
+  ).maybeSingle();
 
   if (tgtErr || !target) {
     return { triggered: false, reason: 'target_stage_not_found' };
@@ -109,7 +122,10 @@ export async function tryAutoAdvanceFromMatch(params: {
   }
 
   // 4) Calculer les standings et choisir les equipes a avancer
+  // Fallback DEFAULT_TENANT_ID si tenantId pas fourni : preserve la compat
+  // des tests existants. En prod, applyScore passe maintenant le tenantId.
   const standings = await computeStageStandings(
+    tenantId ?? DEFAULT_TENANT_ID,
     stageId,
     stage.stage_type || 'other'
   );
@@ -152,10 +168,12 @@ export async function tryAutoAdvanceFromMatch(params: {
   }
 
   // 5) Filtrer celles deja presentes dans le stage cible
-  const { data: existingTarget } = await supabaseAdmin
-    .from('stage_teams')
-    .select('team_id')
-    .eq('stage_id', rules.target_stage_id);
+  const { data: existingTarget } = await scoped(
+    supabaseAdmin
+      .from('stage_teams')
+      .select('team_id')
+      .eq('stage_id', rules.target_stage_id)
+  );
 
   const existingIds = new Set(
     (existingTarget || []).map((r: any) => r.team_id)
@@ -165,10 +183,12 @@ export async function tryAutoAdvanceFromMatch(params: {
   if (newTeams.length === 0) {
     // Toutes les equipes ciblees sont deja avancees : on considere que le travail
     // a deja ete fait, on desactive le stage source pour respecter l'idempotence.
-    await supabaseAdmin
-      .from('tournament_stages')
-      .update({ is_active: false })
-      .eq('id', stageId);
+    await scoped(
+      supabaseAdmin
+        .from('tournament_stages')
+        .update({ is_active: false })
+        .eq('id', stageId)
+    );
     return {
       triggered: false,
       reason: 'already_advanced',
@@ -191,6 +211,7 @@ export async function tryAutoAdvanceFromMatch(params: {
   }
 
   const inserts = newTeams.map((teamId) => ({
+    ...(tenantId ? { tenant_id: tenantId } : {}),
     stage_id: rules.target_stage_id,
     team_id: teamId,
     seed: seedMap.get(teamId) ?? null,
@@ -208,10 +229,12 @@ export async function tryAutoAdvanceFromMatch(params: {
   }
 
   // 7) Desactiver le stage source (idempotence)
-  await supabaseAdmin
-    .from('tournament_stages')
-    .update({ is_active: false })
-    .eq('id', stageId);
+  await scoped(
+    supabaseAdmin
+      .from('tournament_stages')
+      .update({ is_active: false })
+      .eq('id', stageId)
+  );
 
   // 8) Log staff
   if (staffId) {

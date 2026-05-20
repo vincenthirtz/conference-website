@@ -64,7 +64,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
   try {
     switch (req.method) {
       case 'GET':
-        return await handleGet(tournamentId, res);
+        return await handleGet(tournamentId, res, ctx);
       case 'PUT':
         return await handlePut(tournamentId, req, res, ctx);
       case 'DELETE':
@@ -78,10 +78,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
   }
 }
 
-async function handleGet(tournamentId: string, res: NextApiResponse) {
+async function handleGet(
+  tournamentId: string,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
+  // tenant-scoped : only this tenant's webhooks (scoped to the tournament or
+  // tenant-global fallback). Cross-tenant globals are not visible from here.
   const { data, error } = await supabaseAdmin
     .from('discord_webhooks')
     .select('*')
+    .eq('tenant_id', ctx.tenantId)
     .or(`tournament_id.eq.${tournamentId},tournament_id.is.null`)
     .order('channel_type', { ascending: true });
 
@@ -129,11 +136,12 @@ async function handlePut(
       ? roleMention.trim()
       : null;
 
-  // Upsert: try update first, then insert
+  // Upsert: try update first, then insert (scoped to current tenant)
   const { data: existing } = await supabaseAdmin
     .from('discord_webhooks')
     .select('id')
     .eq('tournament_id', tournamentId)
+    .eq('tenant_id', ctx.tenantId)
     .eq('channel_type', channelType)
     .maybeSingle();
 
@@ -148,6 +156,7 @@ async function handlePut(
         updated_at: new Date().toISOString(),
       })
       .eq('id', existing.id)
+      .eq('tenant_id', ctx.tenantId)
       .select('*')
       .maybeSingle();
 
@@ -160,6 +169,7 @@ async function handlePut(
     const { data, error } = await supabaseAdmin
       .from('discord_webhooks')
       .insert({
+        tenant_id: ctx.tenantId,
         tournament_id: tournamentId,
         channel_type: channelType,
         webhook_url: cleanUrl,
@@ -210,6 +220,7 @@ async function handleDelete(
     .from('discord_webhooks')
     .delete()
     .eq('tournament_id', tournamentId)
+    .eq('tenant_id', ctx.tenantId)
     .eq('channel_type', channelType);
 
   if (error) {
