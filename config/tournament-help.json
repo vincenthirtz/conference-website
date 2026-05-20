@@ -1,0 +1,890 @@
+{
+  "version": "2026-05-20.1",
+  "sections": [
+    {
+      "id": "setup",
+      "title": "1. Création & configuration d'un tournoi",
+      "description": "Créer le tournoi côté site, ajouter une ou plusieurs phases (Swiss, élim, RR…), et générer un bracket vide pour pouvoir y inscrire des équipes.",
+      "commands": [
+        {
+          "name": "creer-tournoi",
+          "signature": "/creer-tournoi nom:<str> [statut] [debut] [fin] [equipes-max] [jeu]",
+          "role": "admin",
+          "phase": "setup",
+          "prereqs": ["Rôle staff Discord (admin ou manager)"],
+          "endpoint": "POST /api/bot/v1/tournaments",
+          "impact": {
+            "db": ["tournaments (insert)"],
+            "ui": ["/admin/tournois", "/tournois"]
+          },
+          "examples": [
+            {
+              "label": "Brouillon Overwatch 8 équipes",
+              "payload": {
+                "actorDiscordUserId": "<staff discord id>",
+                "name": "OW Women's Cup S2",
+                "status": "draft",
+                "maxTeams": 8,
+                "game": "overwatch"
+              },
+              "expected": "Tournoi créé en brouillon, visible dans /admin/tournois."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#creer-tournoi"
+        },
+        {
+          "name": "publier-tournoi",
+          "signature": "/publier-tournoi tournoi-id:<uuid> [status:published|registration_open|in_progress|completed|cancelled|draft]",
+          "role": "admin",
+          "phase": "setup",
+          "prereqs": ["Tournoi existant", "Rôle staff"],
+          "endpoint": "POST /api/bot/v1/tournaments/:tournamentId/status",
+          "impact": {
+            "db": ["tournaments (update status)"],
+            "ui": ["/tournois", "/admin/tournois"]
+          },
+          "examples": [
+            {
+              "label": "Passer en inscriptions ouvertes",
+              "payload": {
+                "actorDiscordUserId": "<staff discord id>",
+                "status": "registration_open"
+              },
+              "expected": "Le tournoi devient visible publiquement, inscriptions activées."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#publier-tournoi"
+        },
+        {
+          "name": "cloner-tournoi",
+          "signature": "/cloner-tournoi tournoi-id:<uuid> [nom] [slug]",
+          "role": "admin",
+          "phase": "setup",
+          "prereqs": ["Tournoi source existant", "Rôle staff"],
+          "endpoint": "POST /api/bot/v1/tournaments/:tournamentId/clone",
+          "impact": {
+            "db": [
+              "tournaments (insert)",
+              "stages (insert)",
+              "tournament_maps (insert)"
+            ],
+            "ui": ["/admin/tournois"]
+          },
+          "examples": [
+            {
+              "label": "Cloner un tournoi terminé pour la saison suivante",
+              "payload": {
+                "actorDiscordUserId": "<staff discord id>",
+                "name": "OW Women's Cup S3",
+                "slug": "owwc-s3"
+              },
+              "expected": "Nouveau tournoi en brouillon avec stages + map pool copiés depuis la source."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#cloner-tournoi"
+        },
+        {
+          "name": "creer-phase",
+          "signature": "/creer-phase tournoi:<autocomplete> nom:<str> [type:swiss|single-elim|double-elim|round-robin|other]",
+          "role": "admin",
+          "phase": "setup",
+          "prereqs": ["Tournoi existant", "Rôle staff"],
+          "endpoint": "POST /api/bot/v1/tournaments/:tournamentId/stages",
+          "impact": {
+            "db": ["stages (insert)"],
+            "ui": ["/tournoi/<slug>", "/admin/tournois"]
+          },
+          "examples": [
+            {
+              "label": "Quart de finale single-elim",
+              "payload": {
+                "actorDiscordUserId": "<staff discord id>",
+                "name": "Quart de finale",
+                "type": "single-elim"
+              },
+              "expected": "Phase créée, son ID est retourné pour les commandes suivantes."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#creer-phase"
+        },
+        {
+          "name": "generer-bracket-vide",
+          "signature": "/generer-bracket-vide tournoi:<autocomplete> phase:<uuid> nombre:<int>",
+          "role": "admin",
+          "phase": "setup",
+          "prereqs": ["Phase existante", "Rôle staff"],
+          "endpoint": "POST /api/bot/v1/tournaments/:tournamentId/matches",
+          "impact": {
+            "db": ["matches (insert)"],
+            "ui": ["/tournoi/<slug>", "/admin/tournois"]
+          },
+          "examples": [
+            {
+              "label": "8 matchs placeholder pour quart de finale",
+              "payload": {
+                "actorDiscordUserId": "<staff discord id>",
+                "stageId": "<phase uuid>",
+                "count": 8
+              },
+              "expected": "8 matchs placeholder créés dans la phase, prêts à recevoir des équipes."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#generer-bracket-vide"
+        }
+      ]
+    },
+    {
+      "id": "equipes",
+      "title": "2. Équipes & inscriptions",
+      "description": "Créer une équipe, la rattacher à un tournoi, gérer roster, invitations, et changements de capitaine.",
+      "commands": [
+        {
+          "name": "creer-mon-equipe",
+          "signature": "/creer-mon-equipe (modal: nom, short_name, description)",
+          "role": "captain",
+          "phase": "equipes",
+          "prereqs": ["Compte site lié (cf. /inscription)"],
+          "endpoint": "POST /api/bot/v1/teams",
+          "impact": {
+            "db": ["teams (insert)", "team_members (insert capitaine)"],
+            "ui": ["/equipes", "/equipe/<slug>"]
+          },
+          "examples": [
+            {
+              "label": "Création d'une équipe par sa future capitaine",
+              "payload": {
+                "actorDiscordUserId": "<captain discord id>",
+                "name": "Les Phoenix",
+                "shortName": "PHX",
+                "description": "Équipe pour OWWC S2"
+              },
+              "expected": "Équipe créée, l'acteur en devient capitaine."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#creer-mon-equipe"
+        },
+        {
+          "name": "modifier-equipe",
+          "signature": "/modifier-equipe (modal éditable : nom, short_name, description, country, logo_url)",
+          "role": "captain",
+          "phase": "equipes",
+          "prereqs": ["Être capitaine de l'équipe"],
+          "endpoint": "PATCH /api/bot/v1/teams/:teamId",
+          "impact": {
+            "db": ["teams (update)"],
+            "ui": ["/equipe/<slug>"]
+          },
+          "examples": [
+            {
+              "label": "Mise à jour du logo et du pays",
+              "payload": {
+                "actorDiscordUserId": "<captain discord id>",
+                "logo_url": "https://...",
+                "country": "FR"
+              },
+              "expected": "Champs mis à jour côté site, audit-log staff inscrit."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#modifier-equipe"
+        },
+        {
+          "name": "inscrire-equipe",
+          "signature": "/inscrire-equipe tournoi:<autocomplete> equipe:<autocomplete> [phase]",
+          "role": "admin",
+          "phase": "equipes",
+          "prereqs": ["Tournoi + équipe existants", "Rôle staff"],
+          "endpoint": "POST /api/bot/v1/tournaments/:tournamentId/teams",
+          "impact": {
+            "db": ["tournament_teams (insert)", "matches (update si phase précisée)"],
+            "ui": ["/tournoi/<slug>", "/admin/tournois"]
+          },
+          "examples": [
+            {
+              "label": "Inscription d'une équipe en phase Swiss",
+              "payload": {
+                "actorDiscordUserId": "<staff discord id>",
+                "teamId": "<team uuid>",
+                "stageId": "<phase uuid>"
+              },
+              "expected": "L'équipe est rattachée au tournoi (et à la phase si fournie)."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#inscrire-equipe"
+        },
+        {
+          "name": "inscrire-membre",
+          "signature": "/inscrire-membre membre:<discord user> [role:player|substitute|coach|staff]",
+          "role": "admin",
+          "phase": "equipes",
+          "prereqs": ["Rôle staff"],
+          "endpoint": "POST /api/bot/v1/register-user",
+          "impact": {
+            "db": ["profiles (insert/update)", "discord_links (insert)"],
+            "ui": ["/profil/<slug>"]
+          },
+          "examples": [
+            {
+              "label": "Pré-inscription d'une joueuse par le staff",
+              "payload": {
+                "actorDiscordUserId": "<staff discord id>",
+                "discordUserId": "<member discord id>",
+                "email": "joueuse@example.com",
+                "role": "player"
+              },
+              "expected": "Compte site créé/lié, lien Discord ↔ profil enregistré."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#inscrire-membre"
+        },
+        {
+          "name": "inscription",
+          "signature": "/inscription (modal: email) [role]",
+          "role": "player",
+          "phase": "equipes",
+          "prereqs": ["Aucun"],
+          "endpoint": "POST /api/bot/v1/register-user",
+          "impact": {
+            "db": ["profiles (insert/update)", "discord_links (insert)"],
+            "ui": ["/profil/<slug>"]
+          },
+          "examples": [
+            {
+              "label": "Une joueuse se crée un compte depuis Discord",
+              "payload": {
+                "actorDiscordUserId": "<self discord id>",
+                "discordUserId": "<self discord id>",
+                "email": "moi@example.com",
+                "role": "player"
+              },
+              "expected": "Compte site créé, lien Discord ↔ profil enregistré."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#inscription"
+        },
+        {
+          "name": "inviter send",
+          "signature": "/inviter send membre:<user> [role:player|substitute|coach] [battletag] [message]",
+          "role": "captain",
+          "phase": "equipes",
+          "prereqs": ["Être capitaine d'une équipe"],
+          "endpoint": "POST /api/bot/v1/teams/:teamId/invitations",
+          "impact": {
+            "db": ["team_invitations (insert)", "demandes (insert)"],
+            "ui": ["/equipe/<slug>", "/profil/<slug>"]
+          },
+          "examples": [
+            {
+              "label": "Inviter une joueuse en tant que titulaire",
+              "payload": {
+                "actorDiscordUserId": "<captain discord id>",
+                "discordUserId": "<invited member discord id>",
+                "role": "player",
+                "battletag": "Player#1234",
+                "message": "On t'attend !"
+              },
+              "expected": "Invitation envoyée, DM à la joueuse avec boutons Accepter/Refuser."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#inviter-send"
+        },
+        {
+          "name": "inviter cancel",
+          "signature": "/inviter cancel invitation-id:<uuid>",
+          "role": "captain",
+          "phase": "equipes",
+          "prereqs": ["Avoir envoyé l'invitation OU être staff"],
+          "endpoint": "POST /api/bot/v1/invitations/:demandeId",
+          "impact": {
+            "db": ["team_invitations (update status='cancelled')", "demandes (update)"],
+            "ui": ["/equipe/<slug>"]
+          },
+          "examples": [
+            {
+              "label": "Annuler une invitation en attente",
+              "payload": {
+                "actorDiscordUserId": "<captain discord id>",
+                "action": "cancel"
+              },
+              "expected": "L'invitation est marquée annulée."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#inviter-cancel"
+        },
+        {
+          "name": "invite:accept | invite:reject (boutons DM)",
+          "signature": "Boutons sur DM d'invitation (customId `invite:accept:<demandeId>` / `invite:reject:<demandeId>`)",
+          "role": "player",
+          "phase": "equipes",
+          "prereqs": ["Avoir reçu l'invitation en DM"],
+          "endpoint": "POST /api/bot/v1/invitations/:demandeId",
+          "impact": {
+            "db": ["team_invitations (update status)", "team_members (insert si accept)"],
+            "ui": ["/equipe/<slug>"]
+          },
+          "examples": [
+            {
+              "label": "Accepter l'invitation",
+              "payload": {
+                "actorDiscordUserId": "<invited discord id>",
+                "action": "accept"
+              },
+              "expected": "La joueuse rejoint l'équipe, audit-log inscrit."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#invite-buttons"
+        },
+        {
+          "name": "quitter-equipe",
+          "signature": "/quitter-equipe",
+          "role": "player",
+          "phase": "equipes",
+          "prereqs": ["Faire partie d'une équipe et ne pas en être la capitaine"],
+          "endpoint": "POST /api/bot/v1/teams/leave",
+          "impact": {
+            "db": ["team_members (delete)"],
+            "ui": ["/equipe/<slug>"]
+          },
+          "examples": [
+            {
+              "label": "Une joueuse quitte son équipe",
+              "payload": { "actorDiscordUserId": "<player discord id>" },
+              "expected": "Joueuse retirée du roster, audit-log inscrit."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#quitter-equipe"
+        },
+        {
+          "name": "team show / member / roster",
+          "signature": "/team show id_ou_slug:<str> [roster:bool]  •  /team member membre:<user>  •  /roster equipe:<autocomplete>",
+          "role": "public",
+          "phase": "equipes",
+          "prereqs": ["Aucun (lecture)"],
+          "endpoint": "GET /api/bot/v1/teams/:teamId",
+          "impact": {
+            "db": [],
+            "ui": ["/equipe/<slug>"]
+          },
+          "examples": [
+            {
+              "label": "Lecture du roster d'une équipe",
+              "payload": null,
+              "expected": "Embed Discord listant capitaine + roster + slug + logo."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#team-show"
+        },
+        {
+          "name": "tournois",
+          "signature": "/tournois [statut]",
+          "role": "public",
+          "phase": "equipes",
+          "prereqs": ["Aucun"],
+          "endpoint": "GET /api/bot/v1/tournaments",
+          "impact": {
+            "db": [],
+            "ui": ["/tournois"]
+          },
+          "examples": [
+            {
+              "label": "Lister tous les tournois non-brouillons",
+              "payload": null,
+              "expected": "Liste paginée des tournois publiés / en cours / terminés."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#tournois"
+        }
+      ]
+    },
+    {
+      "id": "casts",
+      "title": "3. Casts & assignations",
+      "description": "Assigner des casteurs à des matchs, lister les casts à venir, retirer un cast.",
+      "commands": [
+        {
+          "name": "casters",
+          "signature": "/casters [hours:int] [tournoi-id:<uuid>]",
+          "role": "public",
+          "phase": "casts",
+          "prereqs": ["Aucun"],
+          "endpoint": "GET /api/bot/v1/cast/assignments",
+          "impact": {
+            "db": [],
+            "ui": ["/casts"]
+          },
+          "examples": [
+            {
+              "label": "Casts dans les 24h",
+              "payload": null,
+              "expected": "Embed avec les matchs castés à venir + caster + briefing."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#casters"
+        },
+        {
+          "name": "assigner-cast",
+          "signature": "/assigner-cast match-id:<uuid> cast-member-id:<autocomplete> [briefing:datetime]",
+          "role": "admin",
+          "phase": "casts",
+          "prereqs": ["Match existant", "Rôle staff"],
+          "endpoint": "POST /api/bot/v1/matches/:matchId/cast",
+          "impact": {
+            "db": ["match_casts (insert)"],
+            "ui": ["/casts", "/admin/casts"]
+          },
+          "examples": [
+            {
+              "label": "Assigner une casteuse à un quart de finale",
+              "payload": {
+                "actorDiscordUserId": "<staff discord id>",
+                "castMemberId": "<cast uuid>",
+                "briefingAt": "2026-05-22T18:00:00Z"
+              },
+              "expected": "Cast assigné, DM au caster avec briefing."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#assigner-cast"
+        },
+        {
+          "name": "retirer-cast",
+          "signature": "/retirer-cast match-id:<uuid> cast-member-id:<autocomplete>",
+          "role": "admin",
+          "phase": "casts",
+          "prereqs": ["Cast existant", "Rôle staff"],
+          "endpoint": "DELETE /api/bot/v1/matches/:matchId/cast",
+          "impact": {
+            "db": ["match_casts (delete)"],
+            "ui": ["/casts", "/admin/casts"]
+          },
+          "examples": [
+            {
+              "label": "Retirer un cast déjà assigné",
+              "payload": {
+                "actorDiscordUserId": "<staff discord id>",
+                "castMemberId": "<cast uuid>"
+              },
+              "expected": "Cast retiré, DM au caster pour info."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#retirer-cast"
+        }
+      ]
+    },
+    {
+      "id": "matchs",
+      "title": "4. Matchs : check-in, score, métadonnées",
+      "description": "Le cycle de vie d'un match : check-in capitaine, veto cartes, report score, métadonnées (lobby/stream/notes).",
+      "commands": [
+        {
+          "name": "checkin",
+          "signature": "/checkin match-id:<uuid>  •  Bouton DM `checkin:<matchId>`",
+          "role": "captain",
+          "phase": "matchs",
+          "prereqs": ["Être capitaine d'une des 2 équipes du match"],
+          "endpoint": "POST /api/bot/v1/matches/:matchId/checkin",
+          "impact": {
+            "db": ["matches (update checked_in_team1/team2)"],
+            "ui": ["/tournoi/<slug>", "/match/<id>"]
+          },
+          "examples": [
+            {
+              "label": "Check-in capitaine 30 min avant match",
+              "payload": { "actorDiscordUserId": "<captain discord id>" },
+              "expected": "La capitaine est marquée présente. Quand les 2 sont prêtes, status passe ready."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#checkin"
+        },
+        {
+          "name": "veto (bouton DM `veto:<matchId>`)",
+          "signature": "Bouton DM rappel veto → ouvre la vue veto cartes (read GET + write POST/DELETE selon action)",
+          "role": "captain",
+          "phase": "matchs",
+          "prereqs": ["Match avec map pool configuré"],
+          "endpoint": "POST /api/bot/v1/matches/:matchId/veto",
+          "impact": {
+            "db": ["match_vetoes (insert/delete)"],
+            "ui": ["/match/<id>"]
+          },
+          "examples": [
+            {
+              "label": "Ban d'une map par la capitaine team1",
+              "payload": {
+                "actorDiscordUserId": "<captain discord id>",
+                "action": "ban",
+                "mapId": "<map uuid>"
+              },
+              "expected": "Veto enregistré, état du veto rafraîchi pour les deux capitaines."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#veto"
+        },
+        {
+          "name": "report-score",
+          "signature": "/report-score match-id:<uuid> score-team1:<int> score-team2:<int>  •  Bouton DM `report:<matchId>` (modal)",
+          "role": "captain",
+          "phase": "matchs",
+          "prereqs": ["Être capitaine d'une des 2 équipes du match"],
+          "endpoint": "POST /api/bot/v1/matches/:matchId/report",
+          "impact": {
+            "db": ["matches (update score + status)", "match_reports (insert)"],
+            "ui": ["/tournoi/<slug>", "/match/<id>"]
+          },
+          "examples": [
+            {
+              "label": "Capitaine team1 reporte 3-1",
+              "payload": {
+                "actorDiscordUserId": "<captain discord id>",
+                "team1Score": 3,
+                "team2Score": 1
+              },
+              "expected": "Score enregistré. Si les 2 capitaines reportent la même chose, match.finished. Sinon, dispute."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#report-score"
+        },
+        {
+          "name": "match-meta",
+          "signature": "/match-meta match-id:<uuid> [date] [lobby] [stream] [notes]",
+          "role": "admin",
+          "phase": "matchs",
+          "prereqs": ["Rôle staff"],
+          "endpoint": "PATCH /api/bot/v1/matches/:matchId",
+          "impact": {
+            "db": ["matches (update scheduled_at/lobby_code/stream_url/notes)"],
+            "ui": ["/tournoi/<slug>", "/match/<id>"]
+          },
+          "examples": [
+            {
+              "label": "Mettre à jour code lobby + stream",
+              "payload": {
+                "actorDiscordUserId": "<staff discord id>",
+                "lobbyCode": "OWWC#42",
+                "streamUrl": "https://twitch.tv/owwomenscup"
+              },
+              "expected": "Métadonnées mises à jour, thread match rafraîchi."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#match-meta"
+        },
+        {
+          "name": "participants",
+          "signature": "/participants tournoi-id:<uuid>",
+          "role": "public",
+          "phase": "matchs",
+          "prereqs": ["Aucun"],
+          "endpoint": "GET /api/bot/v1/tournaments/:tournamentId/teams",
+          "impact": {
+            "db": [],
+            "ui": ["/tournoi/<slug>"]
+          },
+          "examples": [
+            {
+              "label": "Liste des équipes d'un tournoi",
+              "payload": null,
+              "expected": "Embed Discord avec les équipes inscrites + capitaines."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#participants"
+        },
+        {
+          "name": "bracket",
+          "signature": "/bracket tournoi-id:<uuid> [phase-id:<uuid>]",
+          "role": "public",
+          "phase": "matchs",
+          "prereqs": ["Aucun"],
+          "endpoint": "GET /api/bot/v1/tournaments/:tournamentId/bracket",
+          "impact": {
+            "db": [],
+            "ui": ["/tournoi/<slug>"]
+          },
+          "examples": [
+            {
+              "label": "Bracket courant",
+              "payload": null,
+              "expected": "Embed avec le bracket courant + lien deep-link site."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#bracket"
+        },
+        {
+          "name": "next-round",
+          "signature": "/next-round phase-id:<uuid>",
+          "role": "admin",
+          "phase": "matchs",
+          "prereqs": ["Phase à élimination ou Swiss avec round courant terminé"],
+          "endpoint": "POST /api/bot/v1/stages/:stageId/next-round",
+          "impact": {
+            "db": ["matches (insert next round)"],
+            "ui": ["/tournoi/<slug>"]
+          },
+          "examples": [
+            {
+              "label": "Générer demi-finales depuis quarts terminés",
+              "payload": { "actorDiscordUserId": "<staff discord id>" },
+              "expected": "Matchs du round suivant créés à partir des winners du round précédent."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#next-round"
+        }
+      ]
+    },
+    {
+      "id": "disputes",
+      "title": "5. Litiges, forfaits & resets",
+      "description": "Quand le report-score diverge, ou qu'une équipe ne se présente pas : forum dispute, forfait staff, reset match, résolution officielle.",
+      "commands": [
+        {
+          "name": "disputes",
+          "signature": "/disputes [tournoi-id:<uuid>]",
+          "role": "admin",
+          "phase": "disputes",
+          "prereqs": ["Rôle staff"],
+          "endpoint": "GET /api/bot/v1/disputes",
+          "impact": {
+            "db": [],
+            "ui": ["/admin/litiges"]
+          },
+          "examples": [
+            {
+              "label": "Lister les disputes ouvertes",
+              "payload": null,
+              "expected": "Liste des matchs status='disputed' avec liens thread forum."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#disputes"
+        },
+        {
+          "name": "resoudre-dispute",
+          "signature": "/resoudre-dispute match-id:<uuid> resolution:<str> [score-team1] [score-team2] [forfait-team-id] [resume-status]",
+          "role": "admin",
+          "phase": "disputes",
+          "prereqs": ["Match en status='disputed'", "Rôle staff"],
+          "endpoint": "POST /api/bot/v1/matches/:matchId/resolve-dispute",
+          "impact": {
+            "db": [
+              "matches (update score+status)",
+              "match_disputes (update resolved_at)",
+              "staff_logs (insert)"
+            ],
+            "ui": ["/match/<id>", "/admin/litiges"]
+          },
+          "examples": [
+            {
+              "label": "Trancher 3-2 en faveur de team1 + closer thread",
+              "payload": {
+                "actorDiscordUserId": "<staff discord id>",
+                "resolution": "Replays vérifiés, team1 gagne 3-2",
+                "team1Score": 3,
+                "team2Score": 2,
+                "resumeStatus": "finished"
+              },
+              "expected": "Match finalisé, thread forum tagué resolved + archive."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#resoudre-dispute"
+        },
+        {
+          "name": "forfait",
+          "signature": "/forfait match-id:<uuid> team-id:<uuid>",
+          "role": "admin",
+          "phase": "disputes",
+          "prereqs": ["Rôle staff"],
+          "endpoint": "POST /api/bot/v1/matches/:matchId/forfeit",
+          "impact": {
+            "db": ["matches (update status='walkover', winner_team_id)"],
+            "ui": ["/tournoi/<slug>", "/match/<id>"]
+          },
+          "examples": [
+            {
+              "label": "Team2 ne s'est pas présentée",
+              "payload": {
+                "actorDiscordUserId": "<staff discord id>",
+                "forfeitingTeamId": "<team2 uuid>"
+              },
+              "expected": "Match walkover, winner = team1, propagé au bracket."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#forfait"
+        },
+        {
+          "name": "reset-match",
+          "signature": "/reset-match match-id:<uuid>",
+          "role": "admin",
+          "phase": "disputes",
+          "prereqs": ["Rôle staff"],
+          "endpoint": "POST /api/bot/v1/matches/:matchId/reset",
+          "impact": {
+            "db": ["matches (clear score, status→scheduled)", "match_reports (delete)"],
+            "ui": ["/tournoi/<slug>", "/match/<id>"]
+          },
+          "examples": [
+            {
+              "label": "Reset après faux report",
+              "payload": { "actorDiscordUserId": "<staff discord id>" },
+              "expected": "Score effacé, status redevient scheduled, capitaines doivent re-reporter."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#reset-match"
+        },
+        {
+          "name": "signalement",
+          "signature": "/signalement categorie:<litige|comportement|technique|autre> severite:<low|medium|high|critical> [anonyme]",
+          "role": "public",
+          "phase": "disputes",
+          "prereqs": ["Aucun"],
+          "endpoint": null,
+          "impact": {
+            "db": [],
+            "ui": ["#staff-modération (Discord uniquement)"]
+          },
+          "examples": [
+            {
+              "label": "Signaler un problème de comportement anonymement",
+              "payload": null,
+              "expected": "Le bot post un embed dans un canal staff dédié, sans toucher au site."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#signalement"
+        }
+      ]
+    },
+    {
+      "id": "cloture",
+      "title": "6. Clôture & post-tournoi",
+      "description": "Finaliser une phase, clore le tournoi, syncer les rôles Discord et publier le classement.",
+      "commands": [
+        {
+          "name": "finaliser-phase",
+          "signature": "/finaliser-phase phase-id:<uuid> [force:bool]",
+          "role": "admin",
+          "phase": "cloture",
+          "prereqs": ["Tous les matchs de la phase terminés (sauf si force=true)", "Rôle staff"],
+          "endpoint": "POST /api/bot/v1/stages/:stageId/finalize",
+          "impact": {
+            "db": ["stages (update finalized_at)", "tournament_teams (update standings)"],
+            "ui": ["/tournoi/<slug>"]
+          },
+          "examples": [
+            {
+              "label": "Finaliser la phase Swiss",
+              "payload": {
+                "actorDiscordUserId": "<staff discord id>",
+                "force": false
+              },
+              "expected": "Phase verrouillée, classements gelés, qualifiés extraits."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#finaliser-phase"
+        },
+        {
+          "name": "auto-byes",
+          "signature": "(POST direct — pas de slash dédié) phase-id:<uuid>",
+          "role": "admin",
+          "phase": "cloture",
+          "prereqs": ["Phase Swiss avec round courant", "Rôle staff"],
+          "endpoint": "POST /api/bot/v1/stages/:stageId/auto-byes",
+          "impact": {
+            "db": ["matches (insert byes)"],
+            "ui": ["/tournoi/<slug>"]
+          },
+          "examples": [
+            {
+              "label": "Générer les byes automatiques",
+              "payload": { "actorDiscordUserId": "<staff discord id>" },
+              "expected": "Matchs bye créés pour les équipes en attente."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#auto-byes"
+        },
+        {
+          "name": "classement",
+          "signature": "/classement [periode:all|month] [tournoi-id:<uuid>]",
+          "role": "public",
+          "phase": "cloture",
+          "prereqs": ["Aucun"],
+          "endpoint": "GET /api/bot/v1/leaderboards/teams",
+          "impact": {
+            "db": [],
+            "ui": ["/classement"]
+          },
+          "examples": [
+            {
+              "label": "Classement global toutes périodes",
+              "payload": null,
+              "expected": "Top 25 équipes par wins, embed Discord paginé."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#classement"
+        },
+        {
+          "name": "sync-roles (alias /rs)",
+          "signature": "/sync-roles  •  /rs",
+          "role": "admin",
+          "phase": "cloture",
+          "prereqs": ["Rôle staff"],
+          "endpoint": "GET /api/bot/v1/role-sync/snapshot",
+          "impact": {
+            "db": [],
+            "ui": ["Discord (rôles serveur)"]
+          },
+          "examples": [
+            {
+              "label": "Synchroniser les rôles Discord après finale",
+              "payload": null,
+              "expected": "Snapshot des appartenances site → application des rôles capitaine/joueuse/champion."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#sync-roles"
+        },
+        {
+          "name": "annoncer",
+          "signature": "/annoncer [cta-label] [cta-url] [active:bool] [priorite:int] (modal: titre + message)",
+          "role": "admin",
+          "phase": "cloture",
+          "prereqs": ["Rôle staff"],
+          "endpoint": "POST /api/bot/v1/announcements",
+          "impact": {
+            "db": ["announcements (insert)"],
+            "ui": ["/ (bannière site-wide)"]
+          },
+          "examples": [
+            {
+              "label": "Annonce post-finale avec CTA replay",
+              "payload": {
+                "actorDiscordUserId": "<staff discord id>",
+                "title": "OWWC S2 — Les Phoenix championnes !",
+                "message": "Bravo à toutes...",
+                "ctaLabel": "Voir le replay",
+                "ctaUrl": "https://youtube.com/...",
+                "active": true,
+                "priority": 10
+              },
+              "expected": "Annonce créée et sticky en haut du site."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#annoncer"
+        },
+        {
+          "name": "repost-news",
+          "signature": "/repost-news",
+          "role": "admin",
+          "phase": "cloture",
+          "prereqs": ["Rôle staff"],
+          "endpoint": null,
+          "impact": {
+            "db": [],
+            "ui": ["Discord (channel news)"]
+          },
+          "examples": [
+            {
+              "label": "Re-poster manuellement la dernière news non relayée",
+              "payload": null,
+              "expected": "Le bot republie le dernier item news-forwarder, sans toucher au site."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#repost-news"
+        }
+      ]
+    }
+  ]
+}
