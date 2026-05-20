@@ -41,6 +41,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     .select(
       'id, status, discord_thread_id, discord_scheduled_event_id, discord_dispute_thread_id'
     )
+    .eq('tenant_id', req.botContext!.tenantId)
     .or(
       'discord_thread_id.not.is.null,discord_scheduled_event_id.not.is.null,discord_dispute_thread_id.not.is.null'
     )
@@ -57,6 +58,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: teams, error: teamErr } = await supabaseAdmin
     .from('teams')
     .select('id, name, discord_voice_channel_id')
+    .eq('tenant_id', req.botContext!.tenantId)
     .not('discord_voice_channel_id', 'is', null)
     .order('id', { ascending: true })
     .range(offset, offset + limit - 1);

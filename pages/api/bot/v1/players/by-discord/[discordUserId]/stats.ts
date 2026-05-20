@@ -51,6 +51,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: memberRows, error: memberErr } = await supabaseAdmin
     .from('team_members')
     .select('id, team_id')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('user_id', link.auth_user_id);
 
   if (memberErr) {
@@ -64,6 +65,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { count: mvpCnt, error: mvpErr } = await supabaseAdmin
       .from('match_mvp_polls')
       .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', req.botContext!.tenantId)
       .in('winner_member_id', memberIds);
     if (mvpErr) {
       logger.error('[bot/player/stats] mvp count error', mvpErr);
@@ -93,6 +95,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data: team } = await supabaseAdmin
       .from('teams')
       .select('id, name, slug')
+      .eq('tenant_id', req.botContext!.tenantId)
       .eq('id', currentTeamId)
       .maybeSingle();
     if (team) teamMeta = team;

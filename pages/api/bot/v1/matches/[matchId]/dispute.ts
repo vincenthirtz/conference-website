@@ -80,6 +80,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
        team1:team1_id (id, name, captain_id),
        team2:team2_id (id, name, captain_id)`
     )
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', matchId)
     .maybeSingle();
   if (mErr) {
@@ -132,6 +133,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     .select(
       'team_side, team1_score, team2_score, discord_user_id, reported_at, updated_at'
     )
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('match_id', matchId);
 
   const reports = (reportRows ?? []).map((row) => {

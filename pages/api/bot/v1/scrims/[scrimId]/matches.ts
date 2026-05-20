@@ -84,7 +84,11 @@ function normalizeMatch(
   };
 }
 
-async function handleList(res: NextApiResponse, scrimId: string) {
+async function handleList(
+  res: NextApiResponse,
+  scrimId: string,
+  tenantId: string
+) {
   const { data, error } = await supabaseAdmin!
     .from('matches')
     .select(
@@ -96,6 +100,7 @@ async function handleList(res: NextApiResponse, scrimId: string) {
       created_at, updated_at
     `
     )
+    .eq('tenant_id', tenantId)
     .eq('scrim_id', scrimId)
     .order('scheduled_at', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: true });
@@ -113,7 +118,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(400).json({ error: 'scrimId invalide' });
   }
 
-  if (req.method === 'GET') return handleList(res, scrimId);
+  if (req.method === 'GET') return handleList(res, scrimId, req.botContext!.tenantId);
 
   const body = (req.body ?? {}) as Record<string, unknown>;
 

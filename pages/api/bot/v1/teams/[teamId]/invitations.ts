@@ -62,6 +62,7 @@ async function handleList(
       `id, user_id, team_id, type, status, comment, source, payload,
        created_at, processed_at`
     )
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('team_id', teamId)
     .eq('type', type)
     .order('created_at', { ascending: false })

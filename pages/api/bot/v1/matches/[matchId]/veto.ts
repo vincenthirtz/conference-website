@@ -22,10 +22,15 @@ import { VETO_FLOWS } from '@/types/veto';
 import type { VetoStep, VetoAction } from '@/types/veto';
 import { logger } from '@/utils/logger';
 
-async function handleGet(res: NextApiResponse, matchId: string) {
+async function handleGet(
+  res: NextApiResponse,
+  matchId: string,
+  tenantId: string
+) {
   const { data: match, error: mErr } = await supabaseAdmin
     .from('matches')
     .select('id, tournament_id, match_format, team1_id, team2_id')
+    .eq('tenant_id', tenantId)
     .eq('id', matchId)
     .maybeSingle();
   if (mErr || !match) {
@@ -35,6 +40,7 @@ async function handleGet(res: NextApiResponse, matchId: string) {
   const { data: stepsRaw, error: sErr } = await supabaseAdmin
     .from('match_map_vetos')
     .select('*')
+    .eq('tenant_id', tenantId)
     .eq('match_id', matchId)
     .order('step_number', { ascending: true });
   if (sErr) {
@@ -50,6 +56,7 @@ async function handleGet(res: NextApiResponse, matchId: string) {
     const { data: teams } = await supabaseAdmin
       .from('teams')
       .select('id, name')
+      .eq('tenant_id', tenantId)
       .in('id', teamIds);
     for (const t of teams ?? []) teamNames[(t as any).id] = (t as any).name;
   }
@@ -284,7 +291,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(400).json({ error: 'matchId invalide' });
   }
 
-  if (req.method === 'GET') return handleGet(res, matchId);
+  if (req.method === 'GET') return handleGet(res, matchId, req.botContext!.tenantId);
   if (req.method === 'POST') return handlePost(req, res, matchId);
   if (req.method === 'DELETE') return handleDelete(req, res, matchId);
 

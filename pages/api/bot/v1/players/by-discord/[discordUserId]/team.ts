@@ -41,6 +41,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: membership, error: memErr } = await supabaseAdmin
     .from('team_members')
     .select('id, team_id, role, battle_tag, is_substitute, created_at')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('user_id', link.auth_user_id)
     .maybeSingle();
 
@@ -68,11 +69,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         .select(
           'id, name, slug, short_name, logo_url, banner_url, country, captain_id, is_joinable, discord, discord_role_id, description, website'
         )
+        .eq('tenant_id', req.botContext!.tenantId)
         .eq('id', membership.team_id)
         .maybeSingle(),
       supabaseAdmin
         .from('team_members')
         .select('id, user_id, role, battle_tag, is_substitute, created_at')
+        .eq('tenant_id', req.botContext!.tenantId)
         .eq('team_id', membership.team_id)
         .order('is_substitute', { ascending: true })
         .order('created_at', { ascending: true }),

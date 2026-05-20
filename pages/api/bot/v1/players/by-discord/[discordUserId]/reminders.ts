@@ -65,6 +65,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: captainedTeams, error: teamsErr } = await supabaseAdmin
     .from('teams')
     .select('id, name')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('captain_id', player.authUserId);
   if (teamsErr) {
     logger.error('[bot/player/reminders] teams error', teamsErr);
@@ -92,6 +93,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          team2:team2_id (id, name),
          tournament:tournament_id (id, name)`
       )
+      .eq('tenant_id', req.botContext!.tenantId)
       .or(
         `team1_id.in.(${captainedTeamIds.join(',')}),team2_id.in.(${captainedTeamIds.join(',')})`
       )
@@ -158,6 +160,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
            tournament:tournament_id (id, name, start_date, status)
          )`
       )
+      .eq('tenant_id', req.botContext!.tenantId)
       .in('team_id', captainedTeamIds);
     if (srErr) {
       logger.error('[bot/player/reminders] stage_teams error', srErr);

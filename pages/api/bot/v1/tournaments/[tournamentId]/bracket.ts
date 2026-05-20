@@ -106,6 +106,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: tournament, error: tErr } = await supabaseAdmin
     .from('tournaments')
     .select('id, name, slug, status, start_date, end_date')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', tournamentId)
     .maybeSingle();
   if (tErr) {
@@ -121,6 +122,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     .select(
       'id, name, slug, stage_type, order_index, start_date, end_date'
     )
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('tournament_id', tournamentId)
     .order('order_index', { ascending: true });
   if (stageFilter) stagesQuery = stagesQuery.eq('id', stageFilter);
@@ -143,6 +145,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
        team1:team1_id (id, name, short_name, logo_url),
        team2:team2_id (id, name, short_name, logo_url)`
     )
+    .eq('tenant_id', req.botContext!.tenantId)
     .in('stage_id', stageIds)
     .order('round_number', { ascending: true, nullsFirst: false });
   if (matchesErr) {
@@ -184,6 +187,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data: stageTeams, error: stErr } = await supabaseAdmin
       .from('stage_teams')
       .select('stage_id, team:team_id (id, name, short_name, logo_url)')
+      .eq('tenant_id', req.botContext!.tenantId)
       .in('stage_id', swissStageIds);
     if (stErr) {
       logger.error('[bot/bracket] stage_teams error', stErr);

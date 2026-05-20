@@ -45,6 +45,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          team1:teams!matches_team1_id_fkey(id, name, short_name),
          team2:teams!matches_team2_id_fkey(id, name, short_name)`
       )
+      .eq('tenant_id', req.botContext!.tenantId)
       .eq('id', matchId)
       .maybeSingle();
     if (error) {

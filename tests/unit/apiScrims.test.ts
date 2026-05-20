@@ -41,6 +41,11 @@ const SCRIM_ID_2 = '550e8400-e29b-41d4-a716-446655440aa2';
 const TEAM_A = '550e8400-e29b-41d4-a716-446655440b01';
 const TEAM_B = '550e8400-e29b-41d4-a716-446655440b02';
 const DISCORD_ID = '123456789012345678';
+// Conference tenant UUID — match DEFAULT_TENANT_ID in utils/tenant.ts. The
+// fallback resolveTenantId() injects this value into req.botContext.tenantId
+// when the bot doesn't send x-tenant-id, so fixtures must carry it too for
+// the S3 sweep tenant_id filters to match.
+const CONFERENCE_TENANT_ID = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
 
 function makeStaffRow(
   role: 'owner' | 'admin' | 'manager' | 'caster' = 'admin'
@@ -556,8 +561,20 @@ describe('/api/bot/scrims', () => {
 
   it('GET lists scrims, hides drafts by default', async () => {
     store.scrims = [
-      { id: SCRIM_ID, name: 'Pub', slug: 'p', status: 'scheduled' },
-      { id: SCRIM_ID_2, name: 'Draft', slug: 'd', status: 'draft' },
+      {
+        id: SCRIM_ID,
+        tenant_id: CONFERENCE_TENANT_ID,
+        name: 'Pub',
+        slug: 'p',
+        status: 'scheduled',
+      },
+      {
+        id: SCRIM_ID_2,
+        tenant_id: CONFERENCE_TENANT_ID,
+        name: 'Draft',
+        slug: 'd',
+        status: 'draft',
+      },
     ] as any;
     const res = makeRes();
     await botScrimsHandler(makeBotReq({}, 'GET'), res);
@@ -618,6 +635,7 @@ describe('/api/bot/scrims/[scrimId]', () => {
     store.scrims = [
       {
         id: SCRIM_ID,
+        tenant_id: CONFERENCE_TENANT_ID,
         name: 'Bot scrim',
         slug: 'bot-scrim',
         status: 'scheduled',
@@ -653,7 +671,12 @@ describe('/api/bot/scrims/[scrimId]', () => {
 
   it('GET returns scrim + matches', async () => {
     store.matches = [
-      { id: 'm1', scrim_id: SCRIM_ID, status: 'pending' },
+      {
+        id: 'm1',
+        tenant_id: CONFERENCE_TENANT_ID,
+        scrim_id: SCRIM_ID,
+        status: 'pending',
+      },
     ] as any;
     const res = makeRes();
     await botScrimIdHandler(makeBotReq(), res);
@@ -932,8 +955,18 @@ describe('/api/bot/scrims/[scrimId]/matches', () => {
 
   it('GET returns matches for the scrim', async () => {
     store.matches = [
-      { id: 'm1', scrim_id: SCRIM_ID, status: 'pending' },
-      { id: 'm2', scrim_id: 'other', status: 'pending' },
+      {
+        id: 'm1',
+        tenant_id: CONFERENCE_TENANT_ID,
+        scrim_id: SCRIM_ID,
+        status: 'pending',
+      },
+      {
+        id: 'm2',
+        tenant_id: CONFERENCE_TENANT_ID,
+        scrim_id: 'other',
+        status: 'pending',
+      },
     ] as any;
     const res = makeRes();
     await botScrimMatchesHandler(makeBotReq({ method: 'GET' }), res);

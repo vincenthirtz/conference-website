@@ -42,6 +42,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   let query = supabaseAdmin
     .from('tournaments')
     .select('id, name, slug, status')
+    .eq('tenant_id', req.botContext!.tenantId)
     .order('created_at', { ascending: false })
     .limit(limit);
 

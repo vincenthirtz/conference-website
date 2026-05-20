@@ -38,8 +38,9 @@ type SnapshotUser = {
   staffRole: string | null;
 };
 
-async function handler(_req: NextApiRequest, res: NextApiResponse) {
-  // 1) Tous les liens Discord
+async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const tenantId = req.botContext!.tenantId;
+  // 1) Tous les liens Discord (global table, pas de tenant_id)
   const { data: links, error: linksErr } = await supabaseAdmin!
     .from('user_discord_links')
     .select('auth_user_id, discord_user_id, discord_username');
@@ -62,6 +63,7 @@ async function handler(_req: NextApiRequest, res: NextApiResponse) {
     .select(
       'user_id, team_id, role, is_substitute, team:team_id(id, name, captain_id, discord_role_id)'
     )
+    .eq('tenant_id', tenantId)
     .in('user_id', authIds);
   if (memErr) {
     logger.error('[bot/role-sync/snapshot] memberships error', memErr);

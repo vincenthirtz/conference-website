@@ -91,6 +91,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: snoozeRows } = await supabaseAdmin
     .from('player_action_snoozes')
     .select('action_key, snoozed_until')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('discord_user_id', discordUserId);
   const snoozedUntilByKey = new Map<string, string>();
   for (const row of snoozeRows ?? []) {
@@ -104,6 +105,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: captainedTeams, error: teamsErr } = await supabaseAdmin
     .from('teams')
     .select('id, name')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('captain_id', player.authUserId);
   if (teamsErr) {
     logger.error('[bot/player/actions-todo] teams error', teamsErr);
@@ -127,6 +129,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          team1:team1_id (id, name),
          team2:team2_id (id, name)`
       )
+      .eq('tenant_id', req.botContext!.tenantId)
       .or(
         `team1_id.in.(${captainedTeamIds.join(',')}),team2_id.in.(${captainedTeamIds.join(',')})`
       )
@@ -192,6 +195,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data: latedMatches } = await supabaseAdmin
       .from('matches')
       .select('id, scheduled_at, status, team1_id, team2_id')
+      .eq('tenant_id', req.botContext!.tenantId)
       .or(
         `team1_id.in.(${captainedTeamIds.join(',')}),team2_id.in.(${captainedTeamIds.join(',')})`
       )
@@ -209,6 +213,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       const { data: reports } = await supabaseAdmin
         .from('match_score_reports')
         .select('match_id, team_side')
+        .eq('tenant_id', req.botContext!.tenantId)
         .in('match_id', lateMatchIds);
       const reportedBy = new Set<string>();
       for (const r of reports ?? []) {

@@ -39,13 +39,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(400).json({ error: 'scrimId requis' });
   }
 
-  if (req.method === 'GET') return handleGet(res, idOrSlug);
+  if (req.method === 'GET') return handleGet(res, idOrSlug, req.botContext!.tenantId);
   return handlePatch(req, res, idOrSlug);
 }
 
-async function handleGet(res: NextApiResponse, idOrSlug: string) {
-  let q = supabaseAdmin!.from('scrims').select(
-    `
+async function handleGet(
+  res: NextApiResponse,
+  idOrSlug: string,
+  tenantId: string
+) {
+  let q = supabaseAdmin!
+    .from('scrims')
+    .select(
+      `
       id, name, slug, game, status,
       team1_id, team2_id,
       scheduled_date, timezone,
@@ -54,7 +60,8 @@ async function handleGet(res: NextApiResponse, idOrSlug: string) {
       team1:teams!scrims_team1_id_fkey(id, name, short_name, slug, logo_url),
       team2:teams!scrims_team2_id_fkey(id, name, short_name, slug, logo_url)
     `
-  );
+    )
+    .eq('tenant_id', tenantId);
   q = isValidUUID(idOrSlug) ? q.eq('id', idOrSlug) : q.eq('slug', idOrSlug);
 
   const { data: scrim, error } = await q.maybeSingle();
@@ -75,6 +82,7 @@ async function handleGet(res: NextApiResponse, idOrSlug: string) {
       created_at, updated_at
     `
     )
+    .eq('tenant_id', tenantId)
     .eq('scrim_id', scrim.id)
     .order('scheduled_at', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: true });

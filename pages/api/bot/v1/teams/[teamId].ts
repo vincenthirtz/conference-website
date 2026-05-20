@@ -29,8 +29,11 @@ const SHORT_NAME_MAX = 20;
 const DESCRIPTION_MAX = 2000;
 const DISCORD_MAX = 200;
 
-async function loadTeam(idOrSlug: string) {
-  let q = supabaseAdmin.from('teams').select(TEAM_SELECT_COLUMNS);
+async function loadTeam(idOrSlug: string, tenantId: string) {
+  let q = supabaseAdmin
+    .from('teams')
+    .select(TEAM_SELECT_COLUMNS)
+    .eq('tenant_id', tenantId);
   q = isValidUUID(idOrSlug) ? q.eq('id', idOrSlug) : q.eq('slug', idOrSlug);
   return q.maybeSingle();
 }
@@ -45,7 +48,10 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
   const includeMembers =
     req.query.includeMembers === '1' || req.query.includeMembers === 'true';
 
-  const { data: team, error } = await loadTeam(idOrSlug);
+  const { data: team, error } = await loadTeam(
+    idOrSlug,
+    req.botContext!.tenantId
+  );
   if (error) {
     logger.error('[bot/team] fetch error', error);
     return res.status(500).json({ error: 'Failed to load team' });
@@ -57,6 +63,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
     const { data: m, error: mErr } = await supabaseAdmin
       .from('team_members')
       .select('id, user_id, role, battle_tag, is_substitute, created_at')
+      .eq('tenant_id', req.botContext!.tenantId)
       .eq('team_id', team.id)
       .order('created_at', { ascending: true });
     if (mErr) {
@@ -80,7 +87,10 @@ async function handlePatch(req: NextApiRequest, res: NextApiResponse) {
   const actor = await requireBotPlayer(req, res, body);
   if (!actor) return;
 
-  const { data: team, error: teamErr } = await loadTeam(idOrSlug);
+  const { data: team, error: teamErr } = await loadTeam(
+    idOrSlug,
+    req.botContext!.tenantId
+  );
   if (teamErr) {
     logger.error('[bot/team PATCH] fetch error', teamErr);
     return res.status(500).json({ error: 'Failed to load team' });

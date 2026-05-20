@@ -41,6 +41,7 @@ async function handleList(req: NextApiRequest, res: NextApiResponse) {
     .select(
       'id, name, slug, game, status, start_date, end_date, max_teams, created_at'
     )
+    .eq('tenant_id', req.botContext!.tenantId)
     .order('start_date', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false })
     .limit(limit);

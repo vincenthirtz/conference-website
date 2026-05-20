@@ -36,10 +36,12 @@ async function handleList(
   res: NextApiResponse,
   tournamentId: string
 ) {
+  const tenantId = req.botContext!.tenantId;
   // Verify tournament exists (cheap, gives a better error than empty list).
   const { data: tournament, error: tErr } = await supabaseAdmin
     .from('tournaments')
     .select('id, name, slug, status')
+    .eq('tenant_id', tenantId)
     .eq('id', tournamentId)
     .maybeSingle();
   if (tErr) {
@@ -58,6 +60,7 @@ async function handleList(
        team:team_id (id, name, slug, short_name, logo_url, country, captain_id),
        tournament_stages!inner(tournament_id)`
     )
+    .eq('tenant_id', tenantId)
     .eq('tournament_stages.tournament_id', tournamentId);
   if (rowsErr) {
     logger.error('[bot/tournaments/teams] stage_teams error', rowsErr);
@@ -106,6 +109,7 @@ async function handleList(
     supabaseAdmin
       .from('team_members')
       .select('team_id')
+      .eq('tenant_id', tenantId)
       .in('team_id', [...teamsById.keys()]),
     captainAuthIds.length > 0
       ? supabaseAdmin

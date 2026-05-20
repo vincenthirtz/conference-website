@@ -49,6 +49,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   let query = supabaseAdmin
     .from('tournament_stages')
     .select('id, name, slug, stage_type, order_index')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('tournament_id', tournamentId)
     .order('order_index', { ascending: true })
     .limit(limit);

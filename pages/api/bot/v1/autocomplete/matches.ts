@@ -93,6 +93,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data: memberships, error: mErr } = await supabaseAdmin
       .from('team_members')
       .select('team_id')
+      .eq('tenant_id', req.botContext!.tenantId)
       .eq('user_id', player.authUserId);
     if (mErr) {
       logger.error('[bot/autocomplete/matches] memberships error', mErr);
@@ -111,6 +112,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
        team1:team1_id (id, name, short_name),
        team2:team2_id (id, name, short_name)`
     )
+    .eq('tenant_id', req.botContext!.tenantId)
     .order('scheduled_at', { ascending: true, nullsFirst: false })
     .limit(limit);
 

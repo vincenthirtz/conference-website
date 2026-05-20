@@ -45,6 +45,7 @@ async function handleList(req: NextApiRequest, res: NextApiResponse) {
     .select(
       'id, name, slug, short_name, logo_url, country, is_active, is_joinable, discord_role_id, captain_id, created_at'
     )
+    .eq('tenant_id', req.botContext!.tenantId)
     .order('name', { ascending: true })
     .range(offset, offset + limit - 1);
 

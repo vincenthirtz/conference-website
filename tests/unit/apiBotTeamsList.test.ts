@@ -10,6 +10,11 @@ import botTeamIdHandler from '../../pages/api/bot/v1/teams/[teamId]';
 
 const TEAM_A = '550e8400-e29b-41d4-a716-446655440b01';
 const TEAM_B = '550e8400-e29b-41d4-a716-446655440b02';
+// Conference tenant UUID — match DEFAULT_TENANT_ID in utils/tenant.ts. The
+// fallback resolveTenantId() injects this value into req.botContext.tenantId
+// when the bot doesn't send x-tenant-id, so fixtures must carry it too for
+// the S3 sweep tenant_id filters to match.
+const CONFERENCE_TENANT_ID = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
 
 function makeBotReq(over: Partial<any> = {}, method = 'GET'): any {
   return {
@@ -41,6 +46,7 @@ beforeEach(() => {
   store.teams = [
     {
       id: TEAM_A,
+      tenant_id: CONFERENCE_TENANT_ID,
       name: 'Phoenix',
       slug: 'phoenix',
       short_name: 'PHX',
@@ -51,6 +57,7 @@ beforeEach(() => {
     },
     {
       id: TEAM_B,
+      tenant_id: CONFERENCE_TENANT_ID,
       name: 'Dragons',
       slug: 'dragons',
       short_name: 'DRG',
@@ -146,6 +153,7 @@ describe('GET /api/bot/teams/[teamId]', () => {
     store.team_members = [
       {
         id: 'tm1',
+        tenant_id: CONFERENCE_TENANT_ID,
         team_id: TEAM_A,
         user_id: 'user-1',
         role: 'captain',
@@ -165,6 +173,7 @@ describe('GET /api/bot/teams/[teamId]', () => {
     store.team_members = [
       {
         id: 'tm1',
+        tenant_id: CONFERENCE_TENANT_ID,
         team_id: TEAM_A,
         user_id: 'user-1',
         role: 'captain',

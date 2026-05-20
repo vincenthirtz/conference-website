@@ -38,10 +38,15 @@ function pickCastMember(rel: unknown): {
   };
 }
 
-async function handleList(res: NextApiResponse, matchId: string) {
+async function handleList(
+  res: NextApiResponse,
+  matchId: string,
+  tenantId: string
+) {
   const { data, error } = await supabaseAdmin
     .from('cast_assignments')
     .select(SELECT)
+    .eq('tenant_id', tenantId)
     .eq('match_id', matchId)
     .order('briefing_at', { ascending: true });
   if (error) {
@@ -234,7 +239,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(400).json({ error: 'matchId invalide' });
   }
 
-  if (req.method === 'GET') return handleList(res, matchId);
+  if (req.method === 'GET') return handleList(res, matchId, req.botContext!.tenantId);
   if (req.method === 'POST') return handleAssign(req, res, matchId);
   if (req.method === 'DELETE') return handleUnassign(req, res, matchId);
 

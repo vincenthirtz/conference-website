@@ -10,6 +10,11 @@ const PLAYER_DISCORD = '900000000000000001';
 const TEAM_ID = '550e8400-e29b-41d4-a716-446655440b01';
 const OTHER_TEAM = '550e8400-e29b-41d4-a716-446655440b02';
 const MATCH_ID = '550e8400-e29b-41d4-a716-446655440a01';
+// Conference tenant UUID — match DEFAULT_TENANT_ID in utils/tenant.ts. The
+// fallback resolveTenantId() injects this value into req.botContext.tenantId
+// when the bot doesn't send x-tenant-id, so fixtures must carry it too for
+// the S3 sweep tenant_id filters to match.
+const CONFERENCE_TENANT_ID = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
 
 function makeReq(over: Partial<any> = {}): any {
   return {
@@ -48,6 +53,7 @@ beforeEach(() => {
   store.teams = [
     {
       id: TEAM_ID,
+      tenant_id: CONFERENCE_TENANT_ID,
       name: 'Captained Team',
       captain_id: PLAYER_AUTH,
     },
@@ -55,6 +61,7 @@ beforeEach(() => {
   store.matches = [
     {
       id: MATCH_ID,
+      tenant_id: CONFERENCE_TENANT_ID,
       scheduled_at: inOneHour,
       status: 'pending',
       is_bye: false,
@@ -123,6 +130,7 @@ describe('GET /api/bot/v1/players/by-discord/[id]/actions-todo', () => {
     const key = `checkin:match:${MATCH_ID}`;
     store.player_action_snoozes = [
       {
+        tenant_id: CONFERENCE_TENANT_ID,
         discord_user_id: PLAYER_DISCORD,
         action_key: key,
         snoozed_until: new Date(Date.now() + 30 * 60_000).toISOString(),
@@ -139,6 +147,7 @@ describe('GET /api/bot/v1/players/by-discord/[id]/actions-todo', () => {
     const key = `checkin:match:${MATCH_ID}`;
     store.player_action_snoozes = [
       {
+        tenant_id: CONFERENCE_TENANT_ID,
         discord_user_id: PLAYER_DISCORD,
         action_key: key,
         snoozed_until: new Date(Date.now() - 60_000).toISOString(),

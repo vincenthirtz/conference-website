@@ -41,6 +41,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: membership } = await supabaseAdmin
     .from('team_members')
     .select('team_id')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('user_id', link.auth_user_id)
     .maybeSingle();
 
@@ -70,6 +71,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
        team2:team2_id(id, name),
        tournament:tournament_id(id, name, slug)`
     )
+    .eq('tenant_id', req.botContext!.tenantId)
     .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
     .in('status', ['pending', 'ongoing'])
     .gte('scheduled_at', cutoffISO)

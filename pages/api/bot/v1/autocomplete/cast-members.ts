@@ -37,6 +37,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   let query = supabaseAdmin
     .from('cast_members')
     .select('id, name')
+    .eq('tenant_id', req.botContext!.tenantId)
     .order('name', { ascending: true })
     .limit(limit);
 

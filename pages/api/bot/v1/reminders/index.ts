@@ -72,12 +72,13 @@ type Reminder =
   | TournamentJ1Reminder
   | CastBriefingReminder;
 
-async function handler(_req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const tenantId = req.botContext!.tenantId;
   const reminders: Reminder[] = [];
   const errors: string[] = [];
 
   try {
-    const matchReminders = await collectMatchCheckinReminders();
+    const matchReminders = await collectMatchCheckinReminders(tenantId);
     reminders.push(...matchReminders);
   } catch (e) {
     logger.error('[bot/reminders] match_checkin error', e);
@@ -85,7 +86,7 @@ async function handler(_req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
-    const j1 = await collectTournamentJ1Reminders();
+    const j1 = await collectTournamentJ1Reminders(tenantId);
     reminders.push(...j1);
   } catch (e) {
     logger.error('[bot/reminders] tournament_j1 error', e);
@@ -93,7 +94,7 @@ async function handler(_req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
-    const cast = await collectCastBriefingReminders();
+    const cast = await collectCastBriefingReminders(tenantId);
     reminders.push(...cast);
   } catch (e) {
     logger.error('[bot/reminders] cast_briefing error', e);
@@ -107,7 +108,9 @@ async function handler(_req: NextApiRequest, res: NextApiResponse) {
  * match_checkin
  * ------------------------------------------------------------------------- */
 
-async function collectMatchCheckinReminders(): Promise<MatchCheckinReminder[]> {
+async function collectMatchCheckinReminders(
+  tenantId: string
+): Promise<MatchCheckinReminder[]> {
   const now = Date.now();
   const windowStart = new Date(now + WINDOW_MIN * 60_000).toISOString();
   const windowEnd = new Date(now + WINDOW_MAX * 60_000).toISOString();
@@ -124,6 +127,7 @@ async function collectMatchCheckinReminders(): Promise<MatchCheckinReminder[]> {
        team2:team2_id (id, name, captain_id),
        tournament:tournament_id (id, name)`
     )
+    .eq('tenant_id', tenantId)
     .gte('scheduled_at', windowStart)
     .lte('scheduled_at', windowEnd)
     .eq('status', 'pending')
@@ -180,7 +184,7 @@ async function collectMatchCheckinReminders(): Promise<MatchCheckinReminder[]> {
       if (!link) continue;
 
       // Atomic claim: only proceed if we can flip the column from NULL to now().
-      const claimed = await claimMatchSide(m.id, sentField);
+      const claimed = await claimMatchSide(tenantId, m.id, sentField);
       if (!claimed) continue;
 
       reminders.push({
@@ -202,12 +206,14 @@ async function collectMatchCheckinReminders(): Promise<MatchCheckinReminder[]> {
 }
 
 async function claimMatchSide(
+  tenantId: string,
   matchId: string,
   field: 'team1_captain_dm_30_sent_at' | 'team2_captain_dm_30_sent_at'
 ): Promise<boolean> {
   const { data, error } = await supabaseAdmin!
     .from('matches')
     .update({ [field]: new Date().toISOString() })
+    .eq('tenant_id', tenantId)
     .eq('id', matchId)
     .is(field, null)
     .select('id');
@@ -222,7 +228,9 @@ async function claimMatchSide(
  * tournament_j1
  * ------------------------------------------------------------------------- */
 
-async function collectTournamentJ1Reminders(): Promise<TournamentJ1Reminder[]> {
+async function collectTournamentJ1Reminders(
+  tenantId: string
+): Promise<TournamentJ1Reminder[]> {
   // Tomorrow's date in YYYY-MM-DD form (server timezone).
   const tomorrow = new Date();
   tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
@@ -231,6 +239,7 @@ async function collectTournamentJ1Reminders(): Promise<TournamentJ1Reminder[]> {
   const { data: tournaments, error } = await supabaseAdmin!
     .from('tournaments')
     .select('id, name, start_date, j1_reminder_sent_at')
+    .eq('tenant_id', tenantId)
     .gte('start_date', `${tomorrowDate}T00:00:00.000Z`)
     .lt('start_date', `${tomorrowDate}T23:59:59.999Z`)
     .is('j1_reminder_sent_at', null);
@@ -245,6 +254,7 @@ async function collectTournamentJ1Reminders(): Promise<TournamentJ1Reminder[]> {
     const { data: stages, error: stagesErr } = await supabaseAdmin!
       .from('tournament_stages')
       .select('id')
+      .eq('tenant_id', tenantId)
       .eq('tournament_id', t.id);
     if (stagesErr) throw stagesErr;
     const stageIds = (stages ?? []).map((s) => s.id);
@@ -253,6 +263,7 @@ async function collectTournamentJ1Reminders(): Promise<TournamentJ1Reminder[]> {
     const { data: stageTeams, error: stError } = await supabaseAdmin!
       .from('stage_teams')
       .select('team:team_id (id, name, captain_id)')
+      .eq('tenant_id', tenantId)
       .in('stage_id', stageIds);
     if (stError) throw stError;
 
@@ -282,7 +293,7 @@ async function collectTournamentJ1Reminders(): Promise<TournamentJ1Reminder[]> {
     // doesn't repeat the whole batch. The mark is per-tournament; if some
     // captains lack a Discord link, we just skip them (no retry path,
     // accepted trade-off — they'd never receive the DM anyway).
-    const claimed = await claimTournamentJ1(t.id);
+    const claimed = await claimTournamentJ1(tenantId, t.id);
     if (!claimed) continue;
 
     for (const entry of captainByTeam.values()) {
@@ -304,10 +315,14 @@ async function collectTournamentJ1Reminders(): Promise<TournamentJ1Reminder[]> {
   return reminders;
 }
 
-async function claimTournamentJ1(tournamentId: string): Promise<boolean> {
+async function claimTournamentJ1(
+  tenantId: string,
+  tournamentId: string
+): Promise<boolean> {
   const { data, error } = await supabaseAdmin!
     .from('tournaments')
     .update({ j1_reminder_sent_at: new Date().toISOString() })
+    .eq('tenant_id', tenantId)
     .eq('id', tournamentId)
     .is('j1_reminder_sent_at', null)
     .select('id');
@@ -322,7 +337,9 @@ async function claimTournamentJ1(tournamentId: string): Promise<boolean> {
  * cast_briefing
  * ------------------------------------------------------------------------- */
 
-async function collectCastBriefingReminders(): Promise<CastBriefingReminder[]> {
+async function collectCastBriefingReminders(
+  tenantId: string
+): Promise<CastBriefingReminder[]> {
   const now = Date.now();
   const windowStart = new Date(now + WINDOW_MIN * 60_000).toISOString();
   const windowEnd = new Date(now + WINDOW_MAX * 60_000).toISOString();
@@ -336,6 +353,7 @@ async function collectCastBriefingReminders(): Promise<CastBriefingReminder[]> {
          team1:team1_id (name),
          team2:team2_id (name))`
     )
+    .eq('tenant_id', tenantId)
     .gte('briefing_at', windowStart)
     .lte('briefing_at', windowEnd)
     .is('briefing_reminder_sent_at', null);
@@ -358,7 +376,7 @@ async function collectCastBriefingReminders(): Promise<CastBriefingReminder[]> {
     const link = linksByUser.get(authId);
     if (!link) continue;
 
-    const claimed = await claimCastBriefing(a.id);
+    const claimed = await claimCastBriefing(tenantId, a.id);
     if (!claimed) continue;
 
     reminders.push({
@@ -377,10 +395,14 @@ async function collectCastBriefingReminders(): Promise<CastBriefingReminder[]> {
   return reminders;
 }
 
-async function claimCastBriefing(assignmentId: string): Promise<boolean> {
+async function claimCastBriefing(
+  tenantId: string,
+  assignmentId: string
+): Promise<boolean> {
   const { data, error } = await supabaseAdmin!
     .from('cast_assignments')
     .update({ briefing_reminder_sent_at: new Date().toISOString() })
+    .eq('tenant_id', tenantId)
     .eq('id', assignmentId)
     .is('briefing_reminder_sent_at', null)
     .select('id');

@@ -55,6 +55,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
        team2:team2_id (id, name, short_name),
        tournament:tournament_id (id, name, slug)`
     )
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('status', 'disputed')
     .order('dispute_opened_at', { ascending: false })
     .limit(limit);
@@ -75,6 +76,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: reports } = await supabaseAdmin
     .from('match_score_reports')
     .select('match_id, team_side, team1_score, team2_score, reported_at, updated_at')
+    .eq('tenant_id', req.botContext!.tenantId)
     .in('match_id', matchIds);
 
   const reportsByMatch = new Map<

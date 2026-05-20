@@ -47,6 +47,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data: rows, error: stErr } = await supabaseAdmin
       .from('stage_teams')
       .select('team_id, tournament_stages!inner(tournament_id)')
+      .eq('tenant_id', req.botContext!.tenantId)
       .eq('tournament_stages.tournament_id', tournamentId);
     if (stErr) {
       logger.error('[bot/autocomplete/teams] stage_teams error', stErr);
@@ -63,6 +64,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   let query = supabaseAdmin
     .from('teams')
     .select('id, name, short_name, slug, country')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('is_active', true)
     .order('name', { ascending: true })
     .limit(limit);

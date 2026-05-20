@@ -63,6 +63,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          tournament:tournament_id (id, name, slug)
        )`
     )
+    .eq('tenant_id', req.botContext!.tenantId)
     .is('acked_at', null)
     .order('briefing_at', { ascending: true });
 

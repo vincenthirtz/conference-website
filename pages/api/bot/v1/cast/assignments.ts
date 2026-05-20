@@ -70,6 +70,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          tournament:tournament_id (id, name, slug)
        )`
     )
+    .eq('tenant_id', req.botContext!.tenantId)
     .order('briefing_at', { ascending: true })
     .limit(limit);
 

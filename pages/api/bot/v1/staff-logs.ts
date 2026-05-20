@@ -59,6 +59,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       `id, action, entity_type, entity_id, tournament_id, payload, created_at,
        staff:staff!fk_staff_logs_staff(id, display_name, role)`
     )
+    .eq('tenant_id', req.botContext!.tenantId)
     .order('created_at', { ascending: false })
     .limit(limit);
 

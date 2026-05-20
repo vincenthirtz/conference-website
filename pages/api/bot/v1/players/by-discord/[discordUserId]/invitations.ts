@@ -44,6 +44,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data: teams, error: teamsErr } = await supabaseAdmin
       .from('teams')
       .select('id, name, slug')
+      .eq('tenant_id', req.botContext!.tenantId)
       .in('id', teamIds);
     if (teamsErr) {
       logger.error('[bot/player/invitations] teams enrich error', teamsErr);

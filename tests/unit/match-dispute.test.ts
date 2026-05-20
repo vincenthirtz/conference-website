@@ -15,6 +15,11 @@ const OTHER_AUTH = 'auth-other';
 const STAFF_INTERNAL_ID = 'staff-internal-uuid'; // should NOT leak
 const CAPTAIN_DISCORD = '900000000000000001';
 const NON_CAPTAIN_DISCORD = '900000000000000002';
+// Conference tenant UUID — match DEFAULT_TENANT_ID in utils/tenant.ts. The
+// fallback resolveTenantId() injects this value into req.botContext.tenantId
+// when the bot doesn't send x-tenant-id, so fixtures must carry it too for
+// the S3 sweep tenant_id filters to match.
+const CONFERENCE_TENANT_ID = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
 
 function makeReq(over: Partial<any> = {}): any {
   return {
@@ -52,6 +57,7 @@ beforeEach(() => {
   store.matches = [
     {
       id: MATCH_ID,
+      tenant_id: CONFERENCE_TENANT_ID,
       status: 'disputed',
       dispute_opened_at: '2026-05-19T22:00:00.000Z',
       dispute_resolution: null,
@@ -68,6 +74,7 @@ beforeEach(() => {
     },
     {
       id: MATCH_NO_DISPUTE,
+      tenant_id: CONFERENCE_TENANT_ID,
       status: 'pending',
       dispute_opened_at: null,
       dispute_resolution: null,
@@ -83,6 +90,7 @@ beforeEach(() => {
 
   store.match_score_reports = [
     {
+      tenant_id: CONFERENCE_TENANT_ID,
       match_id: MATCH_ID,
       team_side: 1,
       team1_score: 3,
@@ -92,6 +100,7 @@ beforeEach(() => {
       updated_at: '2026-05-19T21:55:00.000Z',
     },
     {
+      tenant_id: CONFERENCE_TENANT_ID,
       match_id: MATCH_ID,
       team_side: 2,
       team1_score: 2,

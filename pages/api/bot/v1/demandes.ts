@@ -73,6 +73,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
        team:teams!team_id(id, name, slug, logo_url),
        tournament:tournaments!tournament_id(id, name, slug)`
     )
+    .eq('tenant_id', req.botContext!.tenantId)
     .order('created_at', { ascending: false })
     .limit(limit);
 

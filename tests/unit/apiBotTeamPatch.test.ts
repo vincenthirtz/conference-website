@@ -14,6 +14,11 @@ const CAPTAIN_USER_ID = 'user-captain-1';
 const CAPTAIN_DISCORD = '900000000000000001';
 const OTHER_USER_ID = 'user-member-1';
 const OTHER_DISCORD = '900000000000000002';
+// Conference tenant UUID — match DEFAULT_TENANT_ID in utils/tenant.ts. The
+// fallback resolveTenantId() injects this value into req.botContext.tenantId
+// when the bot doesn't send x-tenant-id, so fixtures must carry it too for
+// the S3 sweep tenant_id filters to match.
+const CONFERENCE_TENANT_ID = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
 
 function makeReq(over: Partial<any> = {}): any {
   return {
@@ -45,6 +50,7 @@ beforeEach(() => {
   store.teams = [
     {
       id: TEAM_ID,
+      tenant_id: CONFERENCE_TENANT_ID,
       name: 'Phoenix',
       slug: 'phoenix',
       short_name: 'PHX',

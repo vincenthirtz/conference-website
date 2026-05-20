@@ -47,6 +47,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     .select(
       'team1_id, team2_id, winner_team_id, is_bye, completed_at, tournament_id'
     )
+    .eq('tenant_id', req.botContext!.tenantId)
     .in('status', ['finished', 'walkover']);
   if (tournamentFilter) q = q.eq('tournament_id', tournamentFilter);
   if (period === 'month') {
@@ -108,6 +109,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: teamsData, error: tErr } = await supabaseAdmin
     .from('teams')
     .select('id, name, short_name, slug, logo_url, country')
+    .eq('tenant_id', req.botContext!.tenantId)
     .in('id', teamIds);
   if (tErr) {
     logger.error('[bot/leaderboards/teams] teams error', tErr);

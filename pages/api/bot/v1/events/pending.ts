@@ -31,6 +31,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     .select(
       'id, event_id, event_name, payload, push_attempts, last_push_error, last_push_at, created_at'
     )
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('status', 'pending')
     .order('created_at', { ascending: true })
     .limit(limit);

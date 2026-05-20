@@ -22,6 +22,11 @@ const CASTER_DISCORD_B = '900000000000000002';
 const TEAM_1 = '550e8400-e29b-41d4-a716-446655440d01';
 const TEAM_2 = '550e8400-e29b-41d4-a716-446655440d02';
 const TOURNAMENT = '550e8400-e29b-41d4-a716-446655440e01';
+// Conference tenant UUID — match DEFAULT_TENANT_ID in utils/tenant.ts. The
+// fallback resolveTenantId() injects this value into req.botContext.tenantId
+// when the bot doesn't send x-tenant-id, so fixtures must carry it too for
+// the S3 sweep tenant_id filters to match.
+const CONFERENCE_TENANT_ID = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
 
 function makeReq(over: Partial<any> = {}): any {
   return {
@@ -64,6 +69,7 @@ beforeEach(() => {
   store.cast_assignments = [
     {
       id: ASSIGN_A,
+      tenant_id: CONFERENCE_TENANT_ID,
       match_id: MATCH_A,
       cast_member_id: CAST_MEMBER_A,
       briefing_at: inTenMin,
@@ -82,6 +88,7 @@ beforeEach(() => {
     },
     {
       id: ASSIGN_B,
+      tenant_id: CONFERENCE_TENANT_ID,
       match_id: MATCH_B,
       cast_member_id: CAST_MEMBER_B,
       briefing_at: inTwentyMin,
@@ -99,6 +106,7 @@ beforeEach(() => {
     },
     {
       id: ASSIGN_FINISHED,
+      tenant_id: CONFERENCE_TENANT_ID,
       match_id: MATCH_FINISHED,
       cast_member_id: CAST_MEMBER_A,
       briefing_at: inPast,
@@ -116,6 +124,7 @@ beforeEach(() => {
     },
     {
       id: ASSIGN_ACKED,
+      tenant_id: CONFERENCE_TENANT_ID,
       match_id: MATCH_A,
       cast_member_id: CAST_MEMBER_B,
       briefing_at: inTenMin,

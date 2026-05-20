@@ -98,6 +98,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
        actor_auth_user_id, actor_discord_user_id,
        target_auth_user_id, target_discord_user_id, payload`
     )
+    .eq('tenant_id', req.botContext!.tenantId)
     .order('created_at', { ascending: false })
     .limit(limit);
 

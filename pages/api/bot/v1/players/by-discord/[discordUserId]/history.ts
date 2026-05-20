@@ -51,6 +51,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: memberships, error: mErr } = await supabaseAdmin
     .from('team_members')
     .select('team_id')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('user_id', player.authUserId);
   if (mErr) {
     logger.error('[bot/history] memberships error', mErr);
@@ -77,6 +78,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
        team2:team2_id (id, name, short_name),
        tournament:tournament_id (id, name, slug)`
     )
+    .eq('tenant_id', req.botContext!.tenantId)
     .in('status', ['finished', 'walkover'])
     .or(
       `team1_id.in.(${playerTeamIds.join(',')}),team2_id.in.(${playerTeamIds.join(',')})`
