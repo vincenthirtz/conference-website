@@ -174,7 +174,67 @@ body shapes live there. `Idem.` means the route honours `Idempotency-Key`.
 | Route | Methods | Idem. | Rate-key |
 |---|---|---|---|
 | [`cast/assignments.ts`](../pages/api/bot/v1/cast/assignments.ts) | GET | — | `bot-cast-assignments` |
+| [`cast/upcoming.ts`](../pages/api/bot/v1/cast/upcoming.ts) | GET | — | `bot-cast-upcoming` |
+| [`cast/[assignmentId]/ack.ts`](../pages/api/bot/v1/cast/[assignmentId]/ack.ts) | POST | yes | `cast.ack` |
 | [`matches/[matchId]/cast.ts`](../pages/api/bot/v1/matches/[matchId]/cast.ts) | GET, POST, DELETE | yes | `bot-match-cast` |
+
+#### `GET /api/bot/v1/cast/upcoming`
+
+Liste les `cast_assignments` dont le match commence dans la fenetre `[now,
+now+withinMinutes]`, non annules, `acked_at IS NULL`. Sert au bot pour DM les
+casters a T-30 avec un bouton "Je confirme" (qui POST `/cast/:id/ack`).
+
+**Auth** : `x-api-key`
+
+**Query**
+- `withinMinutes` (optionnel, int, 5..120, defaut 30) — taille de la fenetre
+
+**Response 200**
+```json
+{
+  "assignments": [
+    {
+      "assignmentId": "uuid",
+      "matchId": "uuid",
+      "matchStartsAt": "2026-05-20T20:00:00.000Z",
+      "casterDiscordUserId": "9000…",
+      "role": "Streameuse Overwatch",
+      "teamA": { "id": "uuid", "name": "Chaos Theory" },
+      "teamB": { "id": "uuid", "name": "Nova Storm" },
+      "tournamentName": "Spring Cup 2026",
+      "ackedAt": null
+    }
+  ],
+  "count": 1,
+  "withinMinutes": 30
+}
+```
+
+**Errors** : `400` (withinMinutes hors plage), `401`, `500`.
+**Rate limit** : 60/min global. **Idempotency** : non.
+
+#### `POST /api/bot/v1/cast/:assignmentId/ack`
+
+Le caster clique le bouton "Je confirme" du DM T-30. Marque
+`cast_assignments.acked_at = now()`. Idempotent : un 2eme appel renvoie
+`200` sans rechanger `acked_at` (la valeur initiale est conservee).
+
+**Auth** : `x-api-key` + `actorDiscordUserId` doit etre le caster lui-meme
+(resolu via `cast_members.auth_user_id` + `user_discord_links`).
+
+**Body**
+```json
+{ "actorDiscordUserId": "9000…" }
+```
+
+**Response 200**
+```json
+{ "assignmentId": "uuid", "ackedAt": "2026-05-20T19:45:00.000Z", "alreadyAcked": false }
+```
+
+**Errors** : `400` (uuid/discord id invalide), `401`, `403` (pas le caster),
+`404` (assignment introuvable), `503` (maintenance).
+**Rate limit** : 30/min global, bucket `cast.ack`. **Idempotency** : oui.
 
 ### Events queue (bot ↔ site eventual-consistency channel)
 
@@ -354,6 +414,7 @@ sa ligne ici **et** dans la fixture.
 | `/casters` | public | `GET /api/bot/v1/cast/assignments` |
 | `/assigner-cast` | admin | `POST /api/bot/v1/matches/:matchId/cast` |
 | `/retirer-cast` | admin | `DELETE /api/bot/v1/matches/:matchId/cast` |
+| Job DM T-30 caster + bouton `cast:ack:<id>` | caster | `GET /api/bot/v1/cast/upcoming`, `POST /api/bot/v1/cast/:assignmentId/ack` |
 | `/checkin` + bouton DM `checkin:<matchId>` | captain | `POST /api/bot/v1/matches/:matchId/checkin` |
 | Bouton DM `veto:<matchId>` | captain | `GET`/`POST`/`DELETE /api/bot/v1/matches/:matchId/veto` |
 | `/report-score` + bouton DM `report:<matchId>` | captain | `POST /api/bot/v1/matches/:matchId/report` |
