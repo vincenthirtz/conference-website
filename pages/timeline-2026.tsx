@@ -208,8 +208,7 @@ function MatchRow({ match }: { match: SimpleMatch }) {
     match.team2?.name ||
     (match.is_bye ? '(bye)' : 'Équipe 2');
 
-  const isFinished =
-    match.status === 'finished' || match.status === 'completed';
+  const isFinished = match.status === 'finished';
   const hasScores =
     match.team1_score !== null &&
     match.team1_score !== undefined &&

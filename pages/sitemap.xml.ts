@@ -216,13 +216,13 @@ export const getServerSideProps: GetServerSideProps = async ({ res, req }) => {
     logger.error('[sitemap] Error fetching teams:', err);
   }
 
-  // Fetch completed matches (the only ones with stable archive value)
+  // Fetch finished matches (the only ones with stable archive value)
   let matches: MatchItem[] = [];
   try {
     const { data } = await client
       .from('matches')
       .select('id, completed_at, updated_at')
-      .eq('status', 'completed')
+      .eq('status', 'finished')
       .order('completed_at', { ascending: false })
       .limit(500);
 

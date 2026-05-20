@@ -161,11 +161,7 @@ export default function TournamentMatchesPage({
     return matches.filter((m) => {
       if (statusFilter === 'pending' && m.status !== 'pending') return false;
       if (statusFilter === 'ongoing' && m.status !== 'ongoing') return false;
-      if (
-        statusFilter === 'finished' &&
-        m.status !== 'finished' &&
-        m.status !== 'completed'
-      )
+      if (statusFilter === 'finished' && m.status !== 'finished')
         return false;
       if (stageFilter !== 'all' && m.stage?.id !== stageFilter) return false;
       return true;
@@ -382,8 +378,7 @@ function MatchRow({ match }: { match: SimpleMatch }) {
   const statusLabel = getMatchStatusShort(match.status);
   const statusColor = getMatchStatusColor(match.status);
 
-  const isFinished =
-    match.status === 'finished' || match.status === 'completed';
+  const isFinished = match.status === 'finished';
   const hasScores =
     match.team1_score !== null &&
     match.team1_score !== undefined &&

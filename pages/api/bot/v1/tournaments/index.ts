@@ -18,9 +18,9 @@ import { logger } from '@/utils/logger';
 const VALID_STATUSES = [
   'draft',
   'published',
-  'upcoming',
   'running',
-  'finished',
+  'completed',
+  'archived',
   'cancelled',
 ] as const;
 type Status = (typeof VALID_STATUSES)[number];

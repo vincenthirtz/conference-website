@@ -1483,10 +1483,9 @@ function StatCard({
 }
 
 function MatchCard({ match, teamId }: { match: RecentMatch; teamId: string }) {
-  // Consider match finished if status contains 'finish' or 'complete' or 'done'
+  // Consider match finished if status is 'finished' or 'done'
   const isFinished =
     match.status === 'finished' ||
-    match.status === 'completed' ||
     match.status === 'done' ||
     match.status?.toLowerCase().includes('finish');
 
