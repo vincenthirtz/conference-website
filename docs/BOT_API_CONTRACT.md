@@ -269,6 +269,8 @@ Le caster clique le bouton "Je confirme" du DM T-30. Marque
 | Route | Methods | Idem. | Rate-key |
 |---|---|---|---|
 | [`players/by-discord/[discordUserId]/actions.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/actions.ts) | GET | — | `bot-player-actions` |
+| [`players/by-discord/[discordUserId]/actions-todo.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/actions-todo.ts) | GET | — | `bot-player-actions-todo` |
+| [`players/by-discord/[discordUserId]/actions/snooze.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/actions/snooze.ts) | POST | yes | `actions.snooze` |
 | [`players/by-discord/[discordUserId]/history.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/history.ts) | GET | — | `bot-player-history` |
 | [`players/by-discord/[discordUserId]/invitations.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/invitations.ts) | GET | — | `bot-player-invitations` |
 | [`players/by-discord/[discordUserId]/next-match.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/next-match.ts) | GET | — | `bot-player-next-match` |
@@ -277,6 +279,79 @@ Le caster clique le bouton "Je confirme" du DM T-30. Marque
 | [`players/by-discord/[discordUserId]/stats.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/stats.ts) | GET | — | `bot-player-stats` |
 | [`players/by-discord/[discordUserId]/team.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/team.ts) | GET | — | `bot-player-team` |
 | [`player-actions.ts`](../pages/api/bot/v1/player-actions.ts) | GET | — | `bot-player-actions` *(shares bucket with the by-discord variant)* |
+
+#### `GET /api/bot/v1/players/by-discord/:discordUserId/actions-todo`
+
+Liste agregee des "actions a faire" pour une joueuse (commande Discord
+`/mes-actions` et hub DM T-30). Vue derivee de l'etat DB courant (matches en
+attente de check-in, vetos pending, score reports manquants, invitations team
+pending). Different de `…/actions` qui est un audit log staff.
+
+**Auth** : `x-api-key`.
+
+**Response 200**
+```json
+{
+  "player": { "authUserId": "uuid", "discordUserId": "9000…" },
+  "actions": [
+    {
+      "actionKey": "checkin:match:abc-…",
+      "type": "checkin",
+      "entity": "match",
+      "entityId": "abc-…",
+      "variant": "teamA",
+      "refAt": "2026-05-20T20:00:00.000Z",
+      "snoozedUntil": null,
+      "group": "today",
+      "meta": { "side": 1, "matchId": "abc-…" }
+    }
+  ],
+  "count": 1
+}
+```
+
+**Champs ajoutes / comportement** :
+- `actionKey` : cle STABLE et deterministe, forme
+  `<type>:<entity>:<id>[:<variant>]`. Derivee purement d'IDs DB (pas un index
+  de tableau). Sert au snooze pour identifier l'action.
+- `snoozedUntil` : ISO ou `null`. Une action encore snoozee (snoozed_until
+  > now()) est **filtree par l'API** (LEFT JOIN cote app sur
+  `player_action_snoozes` + `WHERE snoozed_until IS NULL OR snoozed_until
+  <= now()`). Les actions retournees avec `snoozedUntil` non-null
+  correspondent a un snooze deja expire (info pour l'UX "tu avais snooze ca").
+- `group` : `urgent` (refAt < 15min), `today` (meme jour calendaire serveur),
+  `later`. Le tri global respecte cet ordre puis `refAt` ascendant.
+
+**Errors** : `400`, `401`, `404` (compte non lie), `500`.
+**Rate limit** : 60/min global. **Idempotency** : non.
+
+#### `POST /api/bot/v1/players/by-discord/:discordUserId/actions/snooze`
+
+Le joueur snooze une de ses actions pour qu'elle disparaisse temporairement
+de sa liste `/mes-actions`. Upsert sur `player_action_snoozes` (PK
+`(discord_user_id, action_key)`).
+
+**Auth** : `x-api-key` + `actorDiscordUserId` (body) doit etre egal au
+`:discordUserId` du path (un joueur ne snooze que ses propres actions).
+
+**Body**
+```json
+{ "actorDiscordUserId": "9000…", "actionKey": "checkin:match:abc-…", "minutes": 60 }
+```
+- `minutes` : optionnel, entier 15..1440 (defaut 60).
+- `actionKey` : la cle retournee par `actions-todo`.
+
+**Response 200**
+```json
+{ "discordUserId": "9000…", "actionKey": "checkin:match:abc-…", "snoozedUntil": "2026-05-20T21:00:00.000Z", "minutes": 60 }
+```
+
+Idempotent : un 2eme POST avec la meme `actionKey` UPDATE
+`snoozed_until` (le snooze est etendu/raccourci selon la nouvelle valeur).
+
+**Errors** : `400` (champs invalides), `401`, `403` (actor != path),
+`503` (maintenance).
+**Rate limit** : 30/min global, bucket `actions.snooze`. **Idempotency** : oui.
 
 ### Registration / linking
 
@@ -437,6 +512,7 @@ sa ligne ici **et** dans la fixture.
 | `/logs` | admin | `GET /api/bot/v1/staff-logs` |
 | `/demandes` | admin | `GET /api/bot/v1/demandes` |
 | `/me` / `/next-match` / `/stats` / `/historique` / `/rappels` / `/mes-invitations` / `/profil` / `/profil-admin` | player | `GET/PATCH /api/bot/v1/players/by-discord/:discordUserId/*` |
+| `/mes-actions` + bouton `snooze:<actionKey>` | player | `GET /api/bot/v1/players/by-discord/:discordUserId/actions-todo`, `POST /api/bot/v1/players/by-discord/:discordUserId/actions/snooze` |
 | `/scrim create / show / start / finish / score` | admin | `GET`/`POST`/`PATCH /api/bot/v1/scrims*` |
 | Autocomplete (tournois, équipes, matchs, phases, cast-members) | — | `GET /api/bot/v1/autocomplete/*` |
 | `outbox-poller` (jobs internes) | — | `GET /api/bot/v1/events/pending`, `POST /api/bot/v1/events/handled`, `POST /api/bot/v1/events/:id/ack` |
