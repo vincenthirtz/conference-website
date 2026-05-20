@@ -19,6 +19,7 @@ import { applyActorRateLimit, applyRateLimit } from './rateLimit';
 import { supabaseAdmin } from './supabase';
 import { isBotMaintenanceMode } from './maintenance';
 import { logger } from './logger';
+import { resolveTenantId } from './tenant';
 
 export function verifyBotApiKey(req: NextApiRequest): boolean {
   const expected = process.env.BOT_API_KEY;
@@ -183,6 +184,18 @@ export function withBotRoute(
       return res.status(500).json({ error: 'Database unavailable.' });
     }
 
+    // Multi-tenant plumbing (Phase 1 / S2) : on resout l'identite du tenant
+    // pour ce call (x-tenant-id header) et on l'attache au contexte pour
+    // que les handlers (sweep S3-S4) puissent scoper leurs requetes avec
+    // .eq('tenant_id', tenantId). Pas de validation contre la table
+    // `tenants` ici — c'est juste un passe-plat (la validation arrive en
+    // Phase 3 / S6). Header absent ou malforme → fallback
+    // DEFAULT_TENANT_ID (utils/tenant.ts).
+    req.botContext = {
+      ...(req.botContext ?? {}),
+      tenantId: resolveTenantId(req),
+    };
+
     // Maintenance mode : si actif, on bloque tous les writes (POST/PATCH/
     // DELETE/PUT). Les GET continuent de fonctionner pour ne pas casser
     // le polling reminders / snapshot pendant un deploiement.
@@ -190,7 +203,8 @@ export function withBotRoute(
       if (await isBotMaintenanceMode()) {
         res.setHeader('Retry-After', '60');
         return res.status(503).json({
-          error: 'Site en maintenance, les écritures bot sont temporairement désactivées.',
+          error:
+            'Site en maintenance, les écritures bot sont temporairement désactivées.',
           code: 'MAINTENANCE_MODE',
         });
       }
@@ -201,8 +215,11 @@ export function withBotRoute(
     // l'acteur en query (GET) et celles qui le lisent en body (POST/PATCH).
     if (options.rateLimit.perActor) {
       const actorFromBody =
-        typeof (req.body as Record<string, unknown> | null)?.actorDiscordUserId === 'string'
-          ? ((req.body as Record<string, unknown>).actorDiscordUserId as string).trim()
+        typeof (req.body as Record<string, unknown> | null)
+          ?.actorDiscordUserId === 'string'
+          ? (
+              (req.body as Record<string, unknown>).actorDiscordUserId as string
+            ).trim()
           : '';
       const actorFromQuery =
         typeof req.query.actorDiscordUserId === 'string'

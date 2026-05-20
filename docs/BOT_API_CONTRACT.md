@@ -22,9 +22,9 @@ endpoint so the bot side can be code-reviewed against a single page.
 
 ## Authentication
 
-| Header      | Value                                                                 |
-|-------------|-----------------------------------------------------------------------|
-| `x-api-key` | The shared secret `BOT_API_KEY` (set in both repos' env)              |
+| Header      | Value                                                    |
+| ----------- | -------------------------------------------------------- |
+| `x-api-key` | The shared secret `BOT_API_KEY` (set in both repos' env) |
 
 - Comparison is constant-time (`crypto.timingSafeEqual`).
 - Missing/empty header → `401 { error: "Invalid or missing API key." }`.
@@ -33,6 +33,47 @@ endpoint so the bot side can be code-reviewed against a single page.
 - The bot identifies the **acting user** via `actorDiscordUserId` in the
   body (writes) or query string (reads) — this is separate from auth and
   feeds the per-actor rate-limit and audit logs.
+
+## Tenant identification
+
+The site is in the middle of a single-tenant → multi-tenant migration. The
+bot is expected to declare which tenant a call targets via a header. The API
+resolves that header in [`utils/tenant.ts`](../utils/tenant.ts) and stashes
+the result on `req.botContext.tenantId` for every `/api/bot/v1/*` route.
+
+| Header        | Value                                                      |
+| ------------- | ---------------------------------------------------------- |
+| `x-tenant-id` | The tenant UUID (RFC 4122, any version). Case-insensitive. |
+
+- **Format**: must match `^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`.
+- **V1 (current — S2)**: the header is **optional**. Absent or malformed →
+  fallback to `DEFAULT_TENANT_ID` (env var, defaults to the conference
+  tenant UUID `ce69a726-773e-4d12-b5eb-d2503aa752b4`). A malformed value
+  is logged with a `warn` so misbehaving clients are easy to find. **No
+  call breaks** because of this rollout phase.
+- **V2 (post Phase 3)**: the header becomes **required**. Missing → `400`
+  with `code: "MISSING_TENANT_ID"`. Unknown tenant (no row in `tenants`)
+  → `404` with `code: "UNKNOWN_TENANT"`.
+- **Discord guild mapping**: the bot resolves the right UUID locally from
+  `discord_guilds.guild_id` → `tenant_id`. It is not the site's job to
+  guess the tenant from a Discord context.
+- **Not yet enforced on data**: handlers don't yet add
+  `.eq('tenant_id', tenantId)` to their queries — that sweep arrives in
+  S3-S4. For V1, the tenant id is plumbed only.
+
+Example:
+
+```http
+GET /api/bot/v1/teams HTTP/1.1
+x-api-key: <BOT_API_KEY>
+x-tenant-id: ce69a726-773e-4d12-b5eb-d2503aa752b4
+```
+
+```bash
+curl -sS https://site.example/api/bot/v1/teams \
+  -H "x-api-key: $BOT_API_KEY" \
+  -H "x-tenant-id: ce69a726-773e-4d12-b5eb-d2503aa752b4"
+```
 
 ## Idempotency
 
@@ -82,19 +123,19 @@ Default window is 60 s. The bot should respect `Retry-After` when it appears.
 
 ## Standard response codes
 
-| Code | When                                                                  |
-|------|-----------------------------------------------------------------------|
-| 200  | OK / replayed cache                                                   |
-| 201  | Resource created (some POST endpoints)                                |
-| 400  | Validation error (missing field, malformed UUID/Discord ID, etc.)     |
-| 401  | Missing/invalid `x-api-key`                                           |
-| 403  | Actor not allowed to perform the action (e.g. non-captain)            |
-| 404  | Target resource not found                                             |
-| 405  | Method not allowed — response includes `Allow` header                 |
-| 409  | Business-state conflict (already finished, already disputed, etc.)    |
-| 429  | Rate limit hit (global or per-actor)                                  |
-| 500  | Server config (key unset / DB unavailable) or unhandled exception     |
-| 503  | Maintenance mode (writes only) — see above                            |
+| Code | When                                                               |
+| ---- | ------------------------------------------------------------------ |
+| 200  | OK / replayed cache                                                |
+| 201  | Resource created (some POST endpoints)                             |
+| 400  | Validation error (missing field, malformed UUID/Discord ID, etc.)  |
+| 401  | Missing/invalid `x-api-key`                                        |
+| 403  | Actor not allowed to perform the action (e.g. non-captain)         |
+| 404  | Target resource not found                                          |
+| 405  | Method not allowed — response includes `Allow` header              |
+| 409  | Business-state conflict (already finished, already disputed, etc.) |
+| 429  | Rate limit hit (global or per-actor)                               |
+| 500  | Server config (key unset / DB unavailable) or unhandled exception  |
+| 503  | Maintenance mode (writes only) — see above                         |
 
 Error body shape (consistent across handlers):
 
@@ -153,30 +194,30 @@ body shapes live there. `Idem.` means the route honours `Idempotency-Key`.
 
 ### Announcements & moderation
 
-| Route | Methods | Idem. | Rate-key |
-|---|---|---|---|
-| [`announcements.ts`](../pages/api/bot/v1/announcements.ts) | POST | yes | `bot-announcements` |
-| [`disputes.ts`](../pages/api/bot/v1/disputes.ts) | GET | — | `bot-disputes` |
-| [`staff-logs.ts`](../pages/api/bot/v1/staff-logs.ts) | GET | — | `bot-staff-logs` |
+| Route                                                      | Methods | Idem. | Rate-key            |
+| ---------------------------------------------------------- | ------- | ----- | ------------------- |
+| [`announcements.ts`](../pages/api/bot/v1/announcements.ts) | POST    | yes   | `bot-announcements` |
+| [`disputes.ts`](../pages/api/bot/v1/disputes.ts)           | GET     | —     | `bot-disputes`      |
+| [`staff-logs.ts`](../pages/api/bot/v1/staff-logs.ts)       | GET     | —     | `bot-staff-logs`    |
 
 ### Autocomplete (Discord choice-pickers)
 
-| Route | Methods | Idem. | Rate-key |
-|---|---|---|---|
-| [`autocomplete/cast-members.ts`](../pages/api/bot/v1/autocomplete/cast-members.ts) | GET | — | `bot-ac-cast-members` |
-| [`autocomplete/matches.ts`](../pages/api/bot/v1/autocomplete/matches.ts) | GET | — | `bot-ac-matches` |
-| [`autocomplete/stages.ts`](../pages/api/bot/v1/autocomplete/stages.ts) | GET | — | `bot-ac-stages` |
-| [`autocomplete/teams.ts`](../pages/api/bot/v1/autocomplete/teams.ts) | GET | — | `bot-ac-teams` |
-| [`autocomplete/tournaments.ts`](../pages/api/bot/v1/autocomplete/tournaments.ts) | GET | — | `bot-ac-tournaments` |
+| Route                                                                              | Methods | Idem. | Rate-key              |
+| ---------------------------------------------------------------------------------- | ------- | ----- | --------------------- |
+| [`autocomplete/cast-members.ts`](../pages/api/bot/v1/autocomplete/cast-members.ts) | GET     | —     | `bot-ac-cast-members` |
+| [`autocomplete/matches.ts`](../pages/api/bot/v1/autocomplete/matches.ts)           | GET     | —     | `bot-ac-matches`      |
+| [`autocomplete/stages.ts`](../pages/api/bot/v1/autocomplete/stages.ts)             | GET     | —     | `bot-ac-stages`       |
+| [`autocomplete/teams.ts`](../pages/api/bot/v1/autocomplete/teams.ts)               | GET     | —     | `bot-ac-teams`        |
+| [`autocomplete/tournaments.ts`](../pages/api/bot/v1/autocomplete/tournaments.ts)   | GET     | —     | `bot-ac-tournaments`  |
 
 ### Cast assignments
 
-| Route | Methods | Idem. | Rate-key |
-|---|---|---|---|
-| [`cast/assignments.ts`](../pages/api/bot/v1/cast/assignments.ts) | GET | — | `bot-cast-assignments` |
-| [`cast/upcoming.ts`](../pages/api/bot/v1/cast/upcoming.ts) | GET | — | `bot-cast-upcoming` |
-| [`cast/[assignmentId]/ack.ts`](../pages/api/bot/v1/cast/[assignmentId]/ack.ts) | POST | yes | `cast.ack` |
-| [`matches/[matchId]/cast.ts`](../pages/api/bot/v1/matches/[matchId]/cast.ts) | GET, POST, DELETE | yes | `bot-match-cast` |
+| Route                                                                          | Methods           | Idem. | Rate-key               |
+| ------------------------------------------------------------------------------ | ----------------- | ----- | ---------------------- |
+| [`cast/assignments.ts`](../pages/api/bot/v1/cast/assignments.ts)               | GET               | —     | `bot-cast-assignments` |
+| [`cast/upcoming.ts`](../pages/api/bot/v1/cast/upcoming.ts)                     | GET               | —     | `bot-cast-upcoming`    |
+| [`cast/[assignmentId]/ack.ts`](../pages/api/bot/v1/cast/[assignmentId]/ack.ts) | POST              | yes   | `cast.ack`             |
+| [`matches/[matchId]/cast.ts`](../pages/api/bot/v1/matches/[matchId]/cast.ts)   | GET, POST, DELETE | yes   | `bot-match-cast`       |
 
 #### `GET /api/bot/v1/cast/upcoming`
 
@@ -187,9 +228,11 @@ casters a T-30 avec un bouton "Je confirme" (qui POST `/cast/:id/ack`).
 **Auth** : `x-api-key`
 
 **Query**
+
 - `withinMinutes` (optionnel, int, 5..120, defaut 30) — taille de la fenetre
 
 **Response 200**
+
 ```json
 {
   "assignments": [
@@ -223,13 +266,19 @@ Le caster clique le bouton "Je confirme" du DM T-30. Marque
 (resolu via `cast_members.auth_user_id` + `user_discord_links`).
 
 **Body**
+
 ```json
 { "actorDiscordUserId": "9000…" }
 ```
 
 **Response 200**
+
 ```json
-{ "assignmentId": "uuid", "ackedAt": "2026-05-20T19:45:00.000Z", "alreadyAcked": false }
+{
+  "assignmentId": "uuid",
+  "ackedAt": "2026-05-20T19:45:00.000Z",
+  "alreadyAcked": false
+}
 ```
 
 **Errors** : `400` (uuid/discord id invalide), `401`, `403` (pas le caster),
@@ -238,36 +287,36 @@ Le caster clique le bouton "Je confirme" du DM T-30. Marque
 
 ### Events queue (bot ↔ site eventual-consistency channel)
 
-| Route | Methods | Idem. | Rate-key |
-|---|---|---|---|
-| [`events/pending.ts`](../pages/api/bot/v1/events/pending.ts) | GET | — | `bot-events-pending` |
-| [`events/handled.ts`](../pages/api/bot/v1/events/handled.ts) | POST | no | `bot-events-handled` |
-| [`events/[id]/ack.ts`](../pages/api/bot/v1/events/[id]/ack.ts) | POST | yes | `bot-events-ack` |
-| [`reconcile/discord-orphans.ts`](../pages/api/bot/v1/reconcile/discord-orphans.ts) | GET | — | `bot-reconcile-orphans` |
+| Route                                                                              | Methods | Idem. | Rate-key                |
+| ---------------------------------------------------------------------------------- | ------- | ----- | ----------------------- |
+| [`events/pending.ts`](../pages/api/bot/v1/events/pending.ts)                       | GET     | —     | `bot-events-pending`    |
+| [`events/handled.ts`](../pages/api/bot/v1/events/handled.ts)                       | POST    | no    | `bot-events-handled`    |
+| [`events/[id]/ack.ts`](../pages/api/bot/v1/events/[id]/ack.ts)                     | POST    | yes   | `bot-events-ack`        |
+| [`reconcile/discord-orphans.ts`](../pages/api/bot/v1/reconcile/discord-orphans.ts) | GET     | —     | `bot-reconcile-orphans` |
 
 ### Locks (distributed cron / fullSync coordination)
 
-| Route | Methods | Idem. | Rate-key |
-|---|---|---|---|
-| [`locks/[name].ts`](../pages/api/bot/v1/locks/[name].ts) | POST | no | `bot-locks` |
+| Route                                                    | Methods | Idem. | Rate-key    |
+| -------------------------------------------------------- | ------- | ----- | ----------- |
+| [`locks/[name].ts`](../pages/api/bot/v1/locks/[name].ts) | POST    | no    | `bot-locks` |
 
 ### Matches
 
-| Route | Methods | Idem. | Rate-key |
-|---|---|---|---|
-| [`matches/[matchId].ts`](../pages/api/bot/v1/matches/[matchId].ts) | GET, PATCH | yes | `bot-match-meta` |
-| [`matches/[matchId]/checkin.ts`](../pages/api/bot/v1/matches/[matchId]/checkin.ts) | POST | yes | `bot-match-checkin` |
-| [`matches/[matchId]/discord.ts`](../pages/api/bot/v1/matches/[matchId]/discord.ts) | PATCH | yes | `bot-match-discord` |
-| [`matches/[matchId]/dispute.ts`](../pages/api/bot/v1/matches/[matchId]/dispute.ts) | GET | — | `bot-match-dispute` |
-| [`matches/[matchId]/forfeit.ts`](../pages/api/bot/v1/matches/[matchId]/forfeit.ts) | POST | yes | `bot-match-forfeit` |
-| [`matches/[matchId]/report.ts`](../pages/api/bot/v1/matches/[matchId]/report.ts) | POST | yes | `bot-match-report` |
-| [`matches/[matchId]/reset.ts`](../pages/api/bot/v1/matches/[matchId]/reset.ts) | POST | yes | `bot-match-reset` |
-| [`matches/[matchId]/resolve-dispute.ts`](../pages/api/bot/v1/matches/[matchId]/resolve-dispute.ts) | POST | yes | `bot-match-resolve-dispute` |
-| [`matches/[matchId]/veto.ts`](../pages/api/bot/v1/matches/[matchId]/veto.ts) | GET, POST, DELETE | yes | `bot-match-veto` |
+| Route                                                                                              | Methods           | Idem. | Rate-key                    |
+| -------------------------------------------------------------------------------------------------- | ----------------- | ----- | --------------------------- |
+| [`matches/[matchId].ts`](../pages/api/bot/v1/matches/[matchId].ts)                                 | GET, PATCH        | yes   | `bot-match-meta`            |
+| [`matches/[matchId]/checkin.ts`](../pages/api/bot/v1/matches/[matchId]/checkin.ts)                 | POST              | yes   | `bot-match-checkin`         |
+| [`matches/[matchId]/discord.ts`](../pages/api/bot/v1/matches/[matchId]/discord.ts)                 | PATCH             | yes   | `bot-match-discord`         |
+| [`matches/[matchId]/dispute.ts`](../pages/api/bot/v1/matches/[matchId]/dispute.ts)                 | GET               | —     | `bot-match-dispute`         |
+| [`matches/[matchId]/forfeit.ts`](../pages/api/bot/v1/matches/[matchId]/forfeit.ts)                 | POST              | yes   | `bot-match-forfeit`         |
+| [`matches/[matchId]/report.ts`](../pages/api/bot/v1/matches/[matchId]/report.ts)                   | POST              | yes   | `bot-match-report`          |
+| [`matches/[matchId]/reset.ts`](../pages/api/bot/v1/matches/[matchId]/reset.ts)                     | POST              | yes   | `bot-match-reset`           |
+| [`matches/[matchId]/resolve-dispute.ts`](../pages/api/bot/v1/matches/[matchId]/resolve-dispute.ts) | POST              | yes   | `bot-match-resolve-dispute` |
+| [`matches/[matchId]/veto.ts`](../pages/api/bot/v1/matches/[matchId]/veto.ts)                       | GET, POST, DELETE | yes   | `bot-match-veto`            |
 
 #### `GET /api/bot/v1/matches/:matchId/dispute`
 
-Vue *capitaine* (commande `/ma-dispute`) d'une dispute en cours sur un de
+Vue _capitaine_ (commande `/ma-dispute`) d'une dispute en cours sur un de
 ses matches. Filtre explicitement les champs internes staff (audit log, IPs,
 dispute_reason interne, UUIDs internes) — seul ce qui est utile au capitaine
 sort.
@@ -277,9 +326,11 @@ d'une des deux equipes (resolu via `user_discord_links` puis
 `teams.captain_id`).
 
 **Query**
+
 - `actorDiscordUserId` (requis) — Discord user id du capitaine
 
 **Response 200**
+
 ```json
 {
   "matchId": "uuid",
@@ -309,19 +360,19 @@ decidedScoreB }` et `staffNote` peut contenir la note finale.
 
 ### Players (by Discord ID lookups)
 
-| Route | Methods | Idem. | Rate-key |
-|---|---|---|---|
-| [`players/by-discord/[discordUserId]/actions.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/actions.ts) | GET | — | `bot-player-actions` |
-| [`players/by-discord/[discordUserId]/actions-todo.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/actions-todo.ts) | GET | — | `bot-player-actions-todo` |
-| [`players/by-discord/[discordUserId]/actions/snooze.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/actions/snooze.ts) | POST | yes | `actions.snooze` |
-| [`players/by-discord/[discordUserId]/history.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/history.ts) | GET | — | `bot-player-history` |
-| [`players/by-discord/[discordUserId]/invitations.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/invitations.ts) | GET | — | `bot-player-invitations` |
-| [`players/by-discord/[discordUserId]/next-match.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/next-match.ts) | GET | — | `bot-player-next-match` |
-| [`players/by-discord/[discordUserId]/profile.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/profile.ts) | PATCH | yes | `bot-player-profile` |
-| [`players/by-discord/[discordUserId]/reminders.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/reminders.ts) | GET | — | `bot-player-reminders` |
-| [`players/by-discord/[discordUserId]/stats.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/stats.ts) | GET | — | `bot-player-stats` |
-| [`players/by-discord/[discordUserId]/team.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/team.ts) | GET | — | `bot-player-team` |
-| [`player-actions.ts`](../pages/api/bot/v1/player-actions.ts) | GET | — | `bot-player-actions` *(shares bucket with the by-discord variant)* |
+| Route                                                                                                                              | Methods | Idem. | Rate-key                                                           |
+| ---------------------------------------------------------------------------------------------------------------------------------- | ------- | ----- | ------------------------------------------------------------------ |
+| [`players/by-discord/[discordUserId]/actions.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/actions.ts)               | GET     | —     | `bot-player-actions`                                               |
+| [`players/by-discord/[discordUserId]/actions-todo.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/actions-todo.ts)     | GET     | —     | `bot-player-actions-todo`                                          |
+| [`players/by-discord/[discordUserId]/actions/snooze.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/actions/snooze.ts) | POST    | yes   | `actions.snooze`                                                   |
+| [`players/by-discord/[discordUserId]/history.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/history.ts)               | GET     | —     | `bot-player-history`                                               |
+| [`players/by-discord/[discordUserId]/invitations.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/invitations.ts)       | GET     | —     | `bot-player-invitations`                                           |
+| [`players/by-discord/[discordUserId]/next-match.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/next-match.ts)         | GET     | —     | `bot-player-next-match`                                            |
+| [`players/by-discord/[discordUserId]/profile.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/profile.ts)               | PATCH   | yes   | `bot-player-profile`                                               |
+| [`players/by-discord/[discordUserId]/reminders.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/reminders.ts)           | GET     | —     | `bot-player-reminders`                                             |
+| [`players/by-discord/[discordUserId]/stats.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/stats.ts)                   | GET     | —     | `bot-player-stats`                                                 |
+| [`players/by-discord/[discordUserId]/team.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/team.ts)                     | GET     | —     | `bot-player-team`                                                  |
+| [`player-actions.ts`](../pages/api/bot/v1/player-actions.ts)                                                                       | GET     | —     | `bot-player-actions` _(shares bucket with the by-discord variant)_ |
 
 #### `GET /api/bot/v1/players/by-discord/:discordUserId/actions-todo`
 
@@ -333,6 +384,7 @@ pending). Different de `…/actions` qui est un audit log staff.
 **Auth** : `x-api-key`.
 
 **Response 200**
+
 ```json
 {
   "player": { "authUserId": "uuid", "discordUserId": "9000…" },
@@ -354,14 +406,15 @@ pending). Different de `…/actions` qui est un audit log staff.
 ```
 
 **Champs ajoutes / comportement** :
+
 - `actionKey` : cle STABLE et deterministe, forme
   `<type>:<entity>:<id>[:<variant>]`. Derivee purement d'IDs DB (pas un index
   de tableau). Sert au snooze pour identifier l'action.
 - `snoozedUntil` : ISO ou `null`. Une action encore snoozee (snoozed_until
   > now()) est **filtree par l'API** (LEFT JOIN cote app sur
-  `player_action_snoozes` + `WHERE snoozed_until IS NULL OR snoozed_until
-  <= now()`). Les actions retournees avec `snoozedUntil` non-null
-  correspondent a un snooze deja expire (info pour l'UX "tu avais snooze ca").
+  > `player_action_snoozes` + `WHERE snoozed_until IS NULL OR snoozed_until
+<= now()`). Les actions retournees avec `snoozedUntil` non-null
+  > correspondent a un snooze deja expire (info pour l'UX "tu avais snooze ca").
 - `group` : `urgent` (refAt < 15min), `today` (meme jour calendaire serveur),
   `later`. Le tri global respecte cet ordre puis `refAt` ascendant.
 
@@ -378,15 +431,27 @@ de sa liste `/mes-actions`. Upsert sur `player_action_snoozes` (PK
 `:discordUserId` du path (un joueur ne snooze que ses propres actions).
 
 **Body**
+
 ```json
-{ "actorDiscordUserId": "9000…", "actionKey": "checkin:match:abc-…", "minutes": 60 }
+{
+  "actorDiscordUserId": "9000…",
+  "actionKey": "checkin:match:abc-…",
+  "minutes": 60
+}
 ```
+
 - `minutes` : optionnel, entier 15..1440 (defaut 60).
 - `actionKey` : la cle retournee par `actions-todo`.
 
 **Response 200**
+
 ```json
-{ "discordUserId": "9000…", "actionKey": "checkin:match:abc-…", "snoozedUntil": "2026-05-20T21:00:00.000Z", "minutes": 60 }
+{
+  "discordUserId": "9000…",
+  "actionKey": "checkin:match:abc-…",
+  "snoozedUntil": "2026-05-20T21:00:00.000Z",
+  "minutes": 60
+}
 ```
 
 Idempotent : un 2eme POST avec la meme `actionKey` UPDATE
@@ -398,26 +463,26 @@ Idempotent : un 2eme POST avec la meme `actionKey` UPDATE
 
 ### Registration / linking
 
-| Route | Methods | Idem. | Rate-key |
-|---|---|---|---|
-| [`register-user.ts`](../pages/api/bot/v1/register-user.ts) | POST | yes | `bot-register` |
-| [`role-sync/snapshot.ts`](../pages/api/bot/v1/role-sync/snapshot.ts) | GET | — | `bot-role-sync-snapshot` |
+| Route                                                                | Methods | Idem. | Rate-key                 |
+| -------------------------------------------------------------------- | ------- | ----- | ------------------------ |
+| [`register-user.ts`](../pages/api/bot/v1/register-user.ts)           | POST    | yes   | `bot-register`           |
+| [`role-sync/snapshot.ts`](../pages/api/bot/v1/role-sync/snapshot.ts) | GET     | —     | `bot-role-sync-snapshot` |
 
 ### Demandes & invitations
 
-| Route | Methods | Idem. | Rate-key |
-|---|---|---|---|
-| [`demandes.ts`](../pages/api/bot/v1/demandes.ts) | GET | — | `bot-demandes` |
-| [`invitations/[demandeId].ts`](../pages/api/bot/v1/invitations/[demandeId].ts) | POST | yes | `bot-invitations-action` |
+| Route                                                                          | Methods | Idem. | Rate-key                 |
+| ------------------------------------------------------------------------------ | ------- | ----- | ------------------------ |
+| [`demandes.ts`](../pages/api/bot/v1/demandes.ts)                               | GET     | —     | `bot-demandes`           |
+| [`invitations/[demandeId].ts`](../pages/api/bot/v1/invitations/[demandeId].ts) | POST    | yes   | `bot-invitations-action` |
 
 ### Reminders & live data
 
-| Route | Methods | Idem. | Rate-key |
-|---|---|---|---|
-| [`reminders/index.ts`](../pages/api/bot/v1/reminders/index.ts) | GET | — | `bot-reminders` |
-| [`leaderboards/teams.ts`](../pages/api/bot/v1/leaderboards/teams.ts) | GET | — | `bot-leaderboards-teams` |
-| [`twitch/live.ts`](../pages/api/bot/v1/twitch/live.ts) | GET | — | `bot-twitch-live` |
-| [`tournament-help/inventory.ts`](../pages/api/bot/v1/tournament-help/inventory.ts) | GET | — | `bot-tournament-help-inventory` |
+| Route                                                                              | Methods | Idem. | Rate-key                        |
+| ---------------------------------------------------------------------------------- | ------- | ----- | ------------------------------- |
+| [`reminders/index.ts`](../pages/api/bot/v1/reminders/index.ts)                     | GET     | —     | `bot-reminders`                 |
+| [`leaderboards/teams.ts`](../pages/api/bot/v1/leaderboards/teams.ts)               | GET     | —     | `bot-leaderboards-teams`        |
+| [`twitch/live.ts`](../pages/api/bot/v1/twitch/live.ts)                             | GET     | —     | `bot-twitch-live`               |
+| [`tournament-help/inventory.ts`](../pages/api/bot/v1/tournament-help/inventory.ts) | GET     | —     | `bot-tournament-help-inventory` |
 
 #### `GET /api/bot/v1/tournament-help/inventory`
 
@@ -462,44 +527,44 @@ Response shape (truncated):
 
 ### Scrims
 
-| Route | Methods | Idem. | Rate-key |
-|---|---|---|---|
-| [`scrims/index.ts`](../pages/api/bot/v1/scrims/index.ts) | GET, POST | yes | `bot-scrims` |
-| [`scrims/[scrimId]/index.ts`](../pages/api/bot/v1/scrims/[scrimId]/index.ts) | GET, PATCH | yes | `bot-scrim-id` |
-| [`scrims/[scrimId]/matches.ts`](../pages/api/bot/v1/scrims/[scrimId]/matches.ts) | GET, POST | yes | `bot-scrim-matches` |
-| [`scrims/[scrimId]/matches/[matchId].ts`](../pages/api/bot/v1/scrims/[scrimId]/matches/[matchId].ts) | PATCH | yes | `bot-scrim-match-patch` |
+| Route                                                                                                | Methods    | Idem. | Rate-key                |
+| ---------------------------------------------------------------------------------------------------- | ---------- | ----- | ----------------------- |
+| [`scrims/index.ts`](../pages/api/bot/v1/scrims/index.ts)                                             | GET, POST  | yes   | `bot-scrims`            |
+| [`scrims/[scrimId]/index.ts`](../pages/api/bot/v1/scrims/[scrimId]/index.ts)                         | GET, PATCH | yes   | `bot-scrim-id`          |
+| [`scrims/[scrimId]/matches.ts`](../pages/api/bot/v1/scrims/[scrimId]/matches.ts)                     | GET, POST  | yes   | `bot-scrim-matches`     |
+| [`scrims/[scrimId]/matches/[matchId].ts`](../pages/api/bot/v1/scrims/[scrimId]/matches/[matchId].ts) | PATCH      | yes   | `bot-scrim-match-patch` |
 
 ### Stages
 
-| Route | Methods | Idem. | Rate-key |
-|---|---|---|---|
-| [`stages/[stageId]/auto-byes.ts`](../pages/api/bot/v1/stages/[stageId]/auto-byes.ts) | POST | yes | `bot-stage-auto-byes` |
-| [`stages/[stageId]/finalize.ts`](../pages/api/bot/v1/stages/[stageId]/finalize.ts) | POST | yes | `bot-stage-finalize` |
-| [`stages/[stageId]/next-round.ts`](../pages/api/bot/v1/stages/[stageId]/next-round.ts) | POST | yes | `bot-stage-next-round` |
+| Route                                                                                  | Methods | Idem. | Rate-key               |
+| -------------------------------------------------------------------------------------- | ------- | ----- | ---------------------- |
+| [`stages/[stageId]/auto-byes.ts`](../pages/api/bot/v1/stages/[stageId]/auto-byes.ts)   | POST    | yes   | `bot-stage-auto-byes`  |
+| [`stages/[stageId]/finalize.ts`](../pages/api/bot/v1/stages/[stageId]/finalize.ts)     | POST    | yes   | `bot-stage-finalize`   |
+| [`stages/[stageId]/next-round.ts`](../pages/api/bot/v1/stages/[stageId]/next-round.ts) | POST    | yes   | `bot-stage-next-round` |
 
 ### Teams
 
-| Route | Methods | Idem. | Rate-key |
-|---|---|---|---|
-| [`teams/index.ts`](../pages/api/bot/v1/teams/index.ts) | GET, POST | yes | `bot-teams` |
-| [`teams/[teamId].ts`](../pages/api/bot/v1/teams/[teamId].ts) | GET, PATCH | — | `bot-team-id` |
-| [`teams/[teamId]/discord.ts`](../pages/api/bot/v1/teams/[teamId]/discord.ts) | PATCH | yes | `bot-team-discord` |
-| [`teams/[teamId]/invitations.ts`](../pages/api/bot/v1/teams/[teamId]/invitations.ts) | GET, POST | yes | `bot-team-invitations` |
-| [`teams/[teamId]/members.ts`](../pages/api/bot/v1/teams/[teamId]/members.ts) | DELETE | yes | `bot-team-members-kick` |
-| [`teams/[teamId]/transfer-captain.ts`](../pages/api/bot/v1/teams/[teamId]/transfer-captain.ts) | POST | yes | `bot-team-transfer-captain` |
-| [`teams/leave.ts`](../pages/api/bot/v1/teams/leave.ts) | POST | yes | `bot-team-leave` |
+| Route                                                                                          | Methods    | Idem. | Rate-key                    |
+| ---------------------------------------------------------------------------------------------- | ---------- | ----- | --------------------------- |
+| [`teams/index.ts`](../pages/api/bot/v1/teams/index.ts)                                         | GET, POST  | yes   | `bot-teams`                 |
+| [`teams/[teamId].ts`](../pages/api/bot/v1/teams/[teamId].ts)                                   | GET, PATCH | —     | `bot-team-id`               |
+| [`teams/[teamId]/discord.ts`](../pages/api/bot/v1/teams/[teamId]/discord.ts)                   | PATCH      | yes   | `bot-team-discord`          |
+| [`teams/[teamId]/invitations.ts`](../pages/api/bot/v1/teams/[teamId]/invitations.ts)           | GET, POST  | yes   | `bot-team-invitations`      |
+| [`teams/[teamId]/members.ts`](../pages/api/bot/v1/teams/[teamId]/members.ts)                   | DELETE     | yes   | `bot-team-members-kick`     |
+| [`teams/[teamId]/transfer-captain.ts`](../pages/api/bot/v1/teams/[teamId]/transfer-captain.ts) | POST       | yes   | `bot-team-transfer-captain` |
+| [`teams/leave.ts`](../pages/api/bot/v1/teams/leave.ts)                                         | POST       | yes   | `bot-team-leave`            |
 
 ### Tournaments
 
-| Route | Methods | Idem. | Rate-key |
-|---|---|---|---|
-| [`tournaments/index.ts`](../pages/api/bot/v1/tournaments/index.ts) | GET, POST | yes | `bot-tournaments` |
-| [`tournaments/[tournamentId]/bracket.ts`](../pages/api/bot/v1/tournaments/[tournamentId]/bracket.ts) | GET | — | `bot-tournament-bracket` |
-| [`tournaments/[tournamentId]/clone.ts`](../pages/api/bot/v1/tournaments/[tournamentId]/clone.ts) | POST | yes | `bot-tournament-clone` |
-| [`tournaments/[tournamentId]/matches.ts`](../pages/api/bot/v1/tournaments/[tournamentId]/matches.ts) | POST | yes | `bot-matches` |
-| [`tournaments/[tournamentId]/stages.ts`](../pages/api/bot/v1/tournaments/[tournamentId]/stages.ts) | POST | yes | `bot-stages` |
-| [`tournaments/[tournamentId]/status.ts`](../pages/api/bot/v1/tournaments/[tournamentId]/status.ts) | POST | yes | `bot-tournament-status` |
-| [`tournaments/[tournamentId]/teams.ts`](../pages/api/bot/v1/tournaments/[tournamentId]/teams.ts) | GET, POST | yes | `bot-tournament-teams` |
+| Route                                                                                                | Methods   | Idem. | Rate-key                 |
+| ---------------------------------------------------------------------------------------------------- | --------- | ----- | ------------------------ |
+| [`tournaments/index.ts`](../pages/api/bot/v1/tournaments/index.ts)                                   | GET, POST | yes   | `bot-tournaments`        |
+| [`tournaments/[tournamentId]/bracket.ts`](../pages/api/bot/v1/tournaments/[tournamentId]/bracket.ts) | GET       | —     | `bot-tournament-bracket` |
+| [`tournaments/[tournamentId]/clone.ts`](../pages/api/bot/v1/tournaments/[tournamentId]/clone.ts)     | POST      | yes   | `bot-tournament-clone`   |
+| [`tournaments/[tournamentId]/matches.ts`](../pages/api/bot/v1/tournaments/[tournamentId]/matches.ts) | POST      | yes   | `bot-matches`            |
+| [`tournaments/[tournamentId]/stages.ts`](../pages/api/bot/v1/tournaments/[tournamentId]/stages.ts)   | POST      | yes   | `bot-stages`             |
+| [`tournaments/[tournamentId]/status.ts`](../pages/api/bot/v1/tournaments/[tournamentId]/status.ts)   | POST      | yes   | `bot-tournament-status`  |
+| [`tournaments/[tournamentId]/teams.ts`](../pages/api/bot/v1/tournaments/[tournamentId]/teams.ts)     | GET, POST | yes   | `bot-tournament-teams`   |
 
 ---
 
@@ -511,58 +576,58 @@ Mapping de chaque commande slash / interaction du bot vers son endpoint
 rester en phase avec la fixture — si tu ajoutes une commande au bot, ajoute
 sa ligne ici **et** dans la fixture.
 
-| Commande / interaction | Rôle | Endpoint |
-|---|---|---|
-| `/creer-tournoi` | admin | `POST /api/bot/v1/tournaments` |
-| `/publier-tournoi` | admin | `POST /api/bot/v1/tournaments/:tournamentId/status` |
-| `/cloner-tournoi` | admin | `POST /api/bot/v1/tournaments/:tournamentId/clone` |
-| `/creer-phase` | admin | `POST /api/bot/v1/tournaments/:tournamentId/stages` |
-| `/generer-bracket-vide` | admin | `POST /api/bot/v1/tournaments/:tournamentId/matches` |
-| `/tournois` | public | `GET /api/bot/v1/tournaments` |
-| `/creer-mon-equipe` | captain | `POST /api/bot/v1/teams` |
-| `/modifier-equipe` | captain | `PATCH /api/bot/v1/teams/:teamId` |
-| `/inscrire-equipe` | admin | `POST /api/bot/v1/tournaments/:tournamentId/teams` |
-| `/inscrire-membre` | admin | `POST /api/bot/v1/register-user` |
-| `/inscription` | player | `POST /api/bot/v1/register-user` |
-| `/inviter send` | captain | `POST /api/bot/v1/teams/:teamId/invitations` |
-| `/inviter cancel` | captain | `POST /api/bot/v1/invitations/:demandeId` |
-| Bouton DM `invite:accept:<id>` / `invite:reject:<id>` | player | `POST /api/bot/v1/invitations/:demandeId` |
-| `/quitter-equipe` | player | `POST /api/bot/v1/teams/leave` |
-| `/team show` / `/team member` / `/roster` | public | `GET /api/bot/v1/teams/:teamId` |
-| `/casters` | public | `GET /api/bot/v1/cast/assignments` |
-| `/assigner-cast` | admin | `POST /api/bot/v1/matches/:matchId/cast` |
-| `/retirer-cast` | admin | `DELETE /api/bot/v1/matches/:matchId/cast` |
-| Job DM T-30 caster + bouton `cast:ack:<id>` | caster | `GET /api/bot/v1/cast/upcoming`, `POST /api/bot/v1/cast/:assignmentId/ack` |
-| `/checkin` + bouton DM `checkin:<matchId>` | captain | `POST /api/bot/v1/matches/:matchId/checkin` |
-| Bouton DM `veto:<matchId>` | captain | `GET`/`POST`/`DELETE /api/bot/v1/matches/:matchId/veto` |
-| `/report-score` + bouton DM `report:<matchId>` | captain | `POST /api/bot/v1/matches/:matchId/report` |
-| `/match-meta` | admin | `PATCH /api/bot/v1/matches/:matchId` |
-| `/participants` | public | `GET /api/bot/v1/tournaments/:tournamentId/teams` |
-| `/bracket` | public | `GET /api/bot/v1/tournaments/:tournamentId/bracket` |
-| `/next-round` | admin | `POST /api/bot/v1/stages/:stageId/next-round` |
-| `/disputes` | admin | `GET /api/bot/v1/disputes` |
-| `/resoudre-dispute` | admin | `POST /api/bot/v1/matches/:matchId/resolve-dispute` |
-| `/forfait` | admin | `POST /api/bot/v1/matches/:matchId/forfeit` |
-| `/reset-match` | admin | `POST /api/bot/v1/matches/:matchId/reset` |
-| `/signalement` | public | _(pas d'endpoint — Discord-only, post staff channel)_ |
-| `/finaliser-phase` | admin | `POST /api/bot/v1/stages/:stageId/finalize` |
-| `auto-byes` _(pas de slash, appel direct)_ | admin | `POST /api/bot/v1/stages/:stageId/auto-byes` |
-| `/classement` | public | `GET /api/bot/v1/leaderboards/teams` |
-| `/sync-roles` / `/rs` | admin | `GET /api/bot/v1/role-sync/snapshot` |
-| `/annoncer` | admin | `POST /api/bot/v1/announcements` |
-| `/repost-news` | admin | _(pas d'endpoint — re-poste depuis l'état interne du bot)_ |
-| `/lives` | public | `GET /api/bot/v1/twitch/live` |
-| `/logs` | admin | `GET /api/bot/v1/staff-logs` |
-| `/demandes` | admin | `GET /api/bot/v1/demandes` |
-| `/me` / `/next-match` / `/stats` / `/historique` / `/rappels` / `/mes-invitations` / `/profil` / `/profil-admin` | player | `GET/PATCH /api/bot/v1/players/by-discord/:discordUserId/*` |
-| `/mes-actions` + bouton `snooze:<actionKey>` | player | `GET /api/bot/v1/players/by-discord/:discordUserId/actions-todo`, `POST /api/bot/v1/players/by-discord/:discordUserId/actions/snooze` |
-| `/ma-dispute` | captain | `GET /api/bot/v1/matches/:matchId/dispute` |
-| `/scrim create / show / start / finish / score` | admin | `GET`/`POST`/`PATCH /api/bot/v1/scrims*` |
-| Autocomplete (tournois, équipes, matchs, phases, cast-members) | — | `GET /api/bot/v1/autocomplete/*` |
-| `outbox-poller` (jobs internes) | — | `GET /api/bot/v1/events/pending`, `POST /api/bot/v1/events/handled`, `POST /api/bot/v1/events/:id/ack` |
-| `reconciliation` (jobs internes) | — | `GET /api/bot/v1/reconcile/discord-orphans` |
-| `match-thread` / `team-voice` / `dispute-forum` (event-driven, pas de slash) | — | `PATCH /api/bot/v1/matches/:matchId/discord`, `PATCH /api/bot/v1/teams/:teamId/discord` |
-| `/aide-tournoi` _(à venir, conso de cette fixture)_ | public | `GET /api/bot/v1/tournament-help/inventory` |
+| Commande / interaction                                                                                           | Rôle    | Endpoint                                                                                                                              |
+| ---------------------------------------------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `/creer-tournoi`                                                                                                 | admin   | `POST /api/bot/v1/tournaments`                                                                                                        |
+| `/publier-tournoi`                                                                                               | admin   | `POST /api/bot/v1/tournaments/:tournamentId/status`                                                                                   |
+| `/cloner-tournoi`                                                                                                | admin   | `POST /api/bot/v1/tournaments/:tournamentId/clone`                                                                                    |
+| `/creer-phase`                                                                                                   | admin   | `POST /api/bot/v1/tournaments/:tournamentId/stages`                                                                                   |
+| `/generer-bracket-vide`                                                                                          | admin   | `POST /api/bot/v1/tournaments/:tournamentId/matches`                                                                                  |
+| `/tournois`                                                                                                      | public  | `GET /api/bot/v1/tournaments`                                                                                                         |
+| `/creer-mon-equipe`                                                                                              | captain | `POST /api/bot/v1/teams`                                                                                                              |
+| `/modifier-equipe`                                                                                               | captain | `PATCH /api/bot/v1/teams/:teamId`                                                                                                     |
+| `/inscrire-equipe`                                                                                               | admin   | `POST /api/bot/v1/tournaments/:tournamentId/teams`                                                                                    |
+| `/inscrire-membre`                                                                                               | admin   | `POST /api/bot/v1/register-user`                                                                                                      |
+| `/inscription`                                                                                                   | player  | `POST /api/bot/v1/register-user`                                                                                                      |
+| `/inviter send`                                                                                                  | captain | `POST /api/bot/v1/teams/:teamId/invitations`                                                                                          |
+| `/inviter cancel`                                                                                                | captain | `POST /api/bot/v1/invitations/:demandeId`                                                                                             |
+| Bouton DM `invite:accept:<id>` / `invite:reject:<id>`                                                            | player  | `POST /api/bot/v1/invitations/:demandeId`                                                                                             |
+| `/quitter-equipe`                                                                                                | player  | `POST /api/bot/v1/teams/leave`                                                                                                        |
+| `/team show` / `/team member` / `/roster`                                                                        | public  | `GET /api/bot/v1/teams/:teamId`                                                                                                       |
+| `/casters`                                                                                                       | public  | `GET /api/bot/v1/cast/assignments`                                                                                                    |
+| `/assigner-cast`                                                                                                 | admin   | `POST /api/bot/v1/matches/:matchId/cast`                                                                                              |
+| `/retirer-cast`                                                                                                  | admin   | `DELETE /api/bot/v1/matches/:matchId/cast`                                                                                            |
+| Job DM T-30 caster + bouton `cast:ack:<id>`                                                                      | caster  | `GET /api/bot/v1/cast/upcoming`, `POST /api/bot/v1/cast/:assignmentId/ack`                                                            |
+| `/checkin` + bouton DM `checkin:<matchId>`                                                                       | captain | `POST /api/bot/v1/matches/:matchId/checkin`                                                                                           |
+| Bouton DM `veto:<matchId>`                                                                                       | captain | `GET`/`POST`/`DELETE /api/bot/v1/matches/:matchId/veto`                                                                               |
+| `/report-score` + bouton DM `report:<matchId>`                                                                   | captain | `POST /api/bot/v1/matches/:matchId/report`                                                                                            |
+| `/match-meta`                                                                                                    | admin   | `PATCH /api/bot/v1/matches/:matchId`                                                                                                  |
+| `/participants`                                                                                                  | public  | `GET /api/bot/v1/tournaments/:tournamentId/teams`                                                                                     |
+| `/bracket`                                                                                                       | public  | `GET /api/bot/v1/tournaments/:tournamentId/bracket`                                                                                   |
+| `/next-round`                                                                                                    | admin   | `POST /api/bot/v1/stages/:stageId/next-round`                                                                                         |
+| `/disputes`                                                                                                      | admin   | `GET /api/bot/v1/disputes`                                                                                                            |
+| `/resoudre-dispute`                                                                                              | admin   | `POST /api/bot/v1/matches/:matchId/resolve-dispute`                                                                                   |
+| `/forfait`                                                                                                       | admin   | `POST /api/bot/v1/matches/:matchId/forfeit`                                                                                           |
+| `/reset-match`                                                                                                   | admin   | `POST /api/bot/v1/matches/:matchId/reset`                                                                                             |
+| `/signalement`                                                                                                   | public  | _(pas d'endpoint — Discord-only, post staff channel)_                                                                                 |
+| `/finaliser-phase`                                                                                               | admin   | `POST /api/bot/v1/stages/:stageId/finalize`                                                                                           |
+| `auto-byes` _(pas de slash, appel direct)_                                                                       | admin   | `POST /api/bot/v1/stages/:stageId/auto-byes`                                                                                          |
+| `/classement`                                                                                                    | public  | `GET /api/bot/v1/leaderboards/teams`                                                                                                  |
+| `/sync-roles` / `/rs`                                                                                            | admin   | `GET /api/bot/v1/role-sync/snapshot`                                                                                                  |
+| `/annoncer`                                                                                                      | admin   | `POST /api/bot/v1/announcements`                                                                                                      |
+| `/repost-news`                                                                                                   | admin   | _(pas d'endpoint — re-poste depuis l'état interne du bot)_                                                                            |
+| `/lives`                                                                                                         | public  | `GET /api/bot/v1/twitch/live`                                                                                                         |
+| `/logs`                                                                                                          | admin   | `GET /api/bot/v1/staff-logs`                                                                                                          |
+| `/demandes`                                                                                                      | admin   | `GET /api/bot/v1/demandes`                                                                                                            |
+| `/me` / `/next-match` / `/stats` / `/historique` / `/rappels` / `/mes-invitations` / `/profil` / `/profil-admin` | player  | `GET/PATCH /api/bot/v1/players/by-discord/:discordUserId/*`                                                                           |
+| `/mes-actions` + bouton `snooze:<actionKey>`                                                                     | player  | `GET /api/bot/v1/players/by-discord/:discordUserId/actions-todo`, `POST /api/bot/v1/players/by-discord/:discordUserId/actions/snooze` |
+| `/ma-dispute`                                                                                                    | captain | `GET /api/bot/v1/matches/:matchId/dispute`                                                                                            |
+| `/scrim create / show / start / finish / score`                                                                  | admin   | `GET`/`POST`/`PATCH /api/bot/v1/scrims*`                                                                                              |
+| Autocomplete (tournois, équipes, matchs, phases, cast-members)                                                   | —       | `GET /api/bot/v1/autocomplete/*`                                                                                                      |
+| `outbox-poller` (jobs internes)                                                                                  | —       | `GET /api/bot/v1/events/pending`, `POST /api/bot/v1/events/handled`, `POST /api/bot/v1/events/:id/ack`                                |
+| `reconciliation` (jobs internes)                                                                                 | —       | `GET /api/bot/v1/reconcile/discord-orphans`                                                                                           |
+| `match-thread` / `team-voice` / `dispute-forum` (event-driven, pas de slash)                                     | —       | `PATCH /api/bot/v1/matches/:matchId/discord`, `PATCH /api/bot/v1/teams/:teamId/discord`                                               |
+| `/aide-tournoi` _(à venir, conso de cette fixture)_                                                              | public  | `GET /api/bot/v1/tournament-help/inventory`                                                                                           |
 
 ---
 
