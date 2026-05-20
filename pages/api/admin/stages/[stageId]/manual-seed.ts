@@ -154,6 +154,7 @@ async function handler(
       .from('tournament_stages')
       .select('id, tournament_id, stage_type')
       .eq('id', targetStageId)
+      .eq('tenant_id', ctx.tenantId)
       .maybeSingle();
     if (stageErr || !stage) {
       return res.status(404).json({ error: 'Stage cible introuvable.' });
@@ -169,6 +170,7 @@ async function handler(
     const { data: matches, error: matchErr } = await supabaseAdmin
       .from('matches')
       .select('id, stage_id, round_number, team1_id, team2_id')
+      .eq('tenant_id', ctx.tenantId)
       .in('id', matchIds);
     if (matchErr) {
       logger.error('[manual-seed] fetch matches error', matchErr);
@@ -230,6 +232,7 @@ async function handler(
     const { data: teams, error: teamsErr } = await supabaseAdmin
       .from('teams')
       .select('id')
+      .eq('tenant_id', ctx.tenantId)
       .in('id', teamIds);
     if (teamsErr) {
       logger.error('[manual-seed] fetch teams error', teamsErr);
@@ -252,7 +255,8 @@ async function handler(
       const { error: updErr } = await supabaseAdmin
         .from('matches')
         .update({ [field]: a.teamId, updated_at: new Date().toISOString() })
-        .eq('id', a.matchId);
+        .eq('id', a.matchId)
+        .eq('tenant_id', ctx.tenantId);
       if (updErr) {
         logger.error('[manual-seed] update match error', updErr);
         continue;
@@ -269,6 +273,7 @@ async function handler(
     const { data: existing } = await supabaseAdmin
       .from('stage_teams')
       .select('team_id')
+      .eq('tenant_id', ctx.tenantId)
       .eq('stage_id', targetStageId);
     const existingIds = new Set(
       (existing ?? []).map((r: { team_id: string }) => r.team_id)
@@ -276,6 +281,7 @@ async function handler(
     const inserts = assignments
       .filter((a) => !existingIds.has(a.teamId))
       .map((a) => ({
+        tenant_id: ctx.tenantId,
         stage_id: targetStageId,
         team_id: a.teamId,
         seed: a.seed ?? null,

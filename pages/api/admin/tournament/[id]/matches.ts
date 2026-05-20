@@ -79,7 +79,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
   try {
     switch (req.method) {
       case 'GET':
-        return await handleGet(tournamentId, req, res);
+        return await handleGet(tournamentId, req, res, ctx);
       case 'POST':
         return await handlePost(tournamentId, req, res, ctx);
       default:
@@ -112,7 +112,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
 async function handleGet(
   tournamentId: string,
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
 ) {
   const {
     stageId,
@@ -190,6 +191,7 @@ async function handleGet(
   let query = supabaseAdmin
     .from('matches')
     .select(baseSelect)
+    .eq('tenant_id', ctx.tenantId)
     .eq('tournament_id', tournamentId);
 
   if (stageId && !Array.isArray(stageId)) {
@@ -273,6 +275,7 @@ async function handlePost(
   const nowIso = new Date().toISOString();
 
   const payload = matches.map((m) => ({
+    tenant_id: ctx.tenantId,
     tournament_id: tournamentId,
     stage_id: m.stage_id ?? null,
     status: m.status ?? 'pending',

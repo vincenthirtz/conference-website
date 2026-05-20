@@ -8,6 +8,7 @@ import type {
 } from 'next';
 import type { User } from '@supabase/supabase-js';
 import { supabaseAdmin, getServerClient } from './supabase';
+import { DEFAULT_TENANT_ID } from './tenant';
 import type { StaffRole } from '@/types/admin';
 import type {
   StaffMember,
@@ -298,7 +299,16 @@ export async function requireStaffRoleFromRequest(
   }
 
   // Apres ces checks, user / staff / role sont tous garantis non-null.
-  return { user: ctx.user, staff: ctx.staff, role: ctx.role };
+  return {
+    user: ctx.user,
+    staff: ctx.staff,
+    role: ctx.role,
+    // TODO(S7): remplacer par le tenant selectionne via le switcher
+    // /admin/tenants (cookie/session). En S5b on reste sur DEFAULT_TENANT_ID
+    // partout : toujours mono-tenant en prod, defense-in-depth dans les
+    // handlers.
+    tenantId: DEFAULT_TENANT_ID,
+  };
 }
 
 /* -----------------------------------------------------------

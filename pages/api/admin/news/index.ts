@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import slugify from 'slugify';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute, type StaffContext } from '@/utils/staff';
+import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { emitBotEvent } from '@/utils/botEvents';
 
@@ -31,7 +31,7 @@ function normalizeTag(tag?: string) {
 async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: StaffContext
+  ctx: AuthenticatedStaffContext
 ) {
   if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-news'))
     return;
@@ -49,6 +49,7 @@ async function handler(
     let query = admin
       .from('news')
       .select('*')
+      .eq('tenant_id', ctx.tenantId)
       .order('published_at', { ascending: false, nullsFirst: false })
       .limit(limitNum);
 
@@ -84,6 +85,7 @@ async function handler(
         : null;
 
     const insertPayload = {
+      tenant_id: ctx.tenantId,
       title: body.title,
       slug,
       tag: normalizeTag(body.tag),

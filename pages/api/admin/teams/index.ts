@@ -3,7 +3,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { parsePagination, sanitizeSearch } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../utils/logger';
@@ -25,12 +25,13 @@ export default withStaffRoute(handler, 'manager');
 
 async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<TeamsApiResponse>
+  res: NextApiResponse<TeamsApiResponse>,
+  ctx: AuthenticatedStaffContext
 ) {
   try {
     switch (req.method) {
       case 'GET':
-        return await handleGet(req, res);
+        return await handleGet(req, res, ctx);
       default:
         return res.status(405).json({ error: 'Method not allowed' });
     }
@@ -44,7 +45,8 @@ async function handler(
 
 async function handleGet(
   req: NextApiRequest,
-  res: NextApiResponse<TeamsApiResponse>
+  res: NextApiResponse<TeamsApiResponse>,
+  ctx: AuthenticatedStaffContext
 ) {
   const { isActive, includeTotal, tournamentId } = req.query;
 
@@ -62,6 +64,7 @@ async function handleGet(
       count:
         includeTotal === '1' || includeTotal === 'true' ? 'exact' : undefined,
     })
+    .eq('tenant_id', ctx.tenantId)
     .order('created_at', { ascending: false })
     .range(offsetNum, offsetNum + limitNum - 1);
 
@@ -79,6 +82,7 @@ async function handleGet(
     const { data: ttRows } = await supabaseAdmin
       .from('tournament_teams')
       .select('team_id')
+      .eq('tenant_id', ctx.tenantId)
       .eq('tournament_id', tournamentId);
 
     const teamIds = (ttRows || []).map((r: any) => r.team_id);

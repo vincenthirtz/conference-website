@@ -85,7 +85,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
   try {
     switch (req.method) {
       case 'GET':
-        return await handleGet(req, res);
+        return await handleGet(req, res, ctx);
       case 'POST':
         return await handlePost(req, res, ctx);
       default:
@@ -123,7 +123,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
 
 async function handleGet(
   req: NextApiRequest,
-  res: NextApiResponse<GetDemandesResponse | { error: string }>
+  res: NextApiResponse<GetDemandesResponse | { error: string }>,
+  ctx: AuthenticatedStaffContext
 ) {
   const {
     type,
@@ -205,10 +206,13 @@ async function handleGet(
     return res.status(500).json({ error: 'Supabase admin not configured' });
   }
 
-  let query = supabaseAdmin.from('demandes').select(select, {
-    count:
-      includeTotal === '1' || includeTotal === 'true' ? 'exact' : undefined,
-  });
+  let query = supabaseAdmin
+    .from('demandes')
+    .select(select, {
+      count:
+        includeTotal === '1' || includeTotal === 'true' ? 'exact' : undefined,
+    })
+    .eq('tenant_id', ctx.tenantId);
 
   if (type && !Array.isArray(type)) {
     query = query.eq('type', type);
@@ -394,6 +398,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
   const { data: beforeList, error: fetchErr } = await supabaseAdmin
     .from('demandes')
     .select('*')
+    .eq('tenant_id', ctx.tenantId)
     .in('id', demandeIds);
 
   if (fetchErr) {
@@ -438,6 +443,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
   const { data: afterList, error: updErr } = await supabaseAdmin
     .from('demandes')
     .update(updatePayload)
+    .eq('tenant_id', ctx.tenantId)
     .in('id', demandeIds)
     .select('*');
 
@@ -456,6 +462,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
         const { data: existingReg } = await supabaseAdmin
           .from('tournament_teams')
           .select('id')
+          .eq('tenant_id', ctx.tenantId)
           .eq('tournament_id', d.tournament_id)
           .eq('team_id', d.team_id)
           .maybeSingle();
@@ -464,6 +471,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
           const { error: regErr } = await supabaseAdmin
             .from('tournament_teams')
             .insert({
+              tenant_id: ctx.tenantId,
               tournament_id: d.tournament_id,
               team_id: d.team_id,
               status: 'registered',
@@ -480,10 +488,12 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
               const { data: teamData } = await supabaseAdmin
                 .from('teams')
                 .select('logo_url')
+                .eq('tenant_id', ctx.tenantId)
                 .eq('id', d.team_id)
                 .maybeSingle();
               const newsSlug = `tournament-${d.tournament_id}-team-${d.team_id}-${Date.now().toString(36)}`;
               await supabaseAdmin.from('news').insert({
+                tenant_id: ctx.tenantId,
                 title: `${teamName} rejoint le tournoi ${tournamentName}`,
                 slug: newsSlug,
                 tag: 'tournaments',
@@ -520,6 +530,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
         const { data: targetTeam } = await supabaseAdmin
           .from('teams')
           .select('name')
+          .eq('tenant_id', ctx.tenantId)
           .eq('id', d.team_id)
           .maybeSingle();
         targetTeamName = targetTeam?.name ?? null;
@@ -532,6 +543,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
       const commentSuffix = d.comment ? ` — "${d.comment}"` : '';
 
       const { error: notifErr } = await supabaseAdmin.from('demandes').insert({
+        tenant_id: ctx.tenantId,
         user_id: null,
         team_id: d.team_id,
         type: 'other',
@@ -561,6 +573,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
         const { data: existingScrim } = await supabaseAdmin
           .from('scrims')
           .select('id')
+          .eq('tenant_id', ctx.tenantId)
           .eq('source_demande_id', d.id)
           .maybeSingle();
 
@@ -574,6 +587,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
           const { data: createdScrim, error: scrimErr } = await supabaseAdmin
             .from('scrims')
             .insert({
+              tenant_id: ctx.tenantId,
               name: scrimName,
               slug: slugBase || null,
               status: 'draft',
@@ -609,6 +623,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
         const { data: existingMember } = await supabaseAdmin
           .from('team_members')
           .select('id')
+          .eq('tenant_id', ctx.tenantId)
           .eq('team_id', d.team_id)
           .eq('user_id', d.user_id)
           .maybeSingle();
@@ -620,6 +635,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
           const { error: memberErr } = await supabaseAdmin
             .from('team_members')
             .insert({
+              tenant_id: ctx.tenantId,
               team_id: d.team_id,
               user_id: d.user_id,
               role: desiredRole,
@@ -638,10 +654,12 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
               const { data: teamData } = await supabaseAdmin
                 .from('teams')
                 .select('logo_url')
+                .eq('tenant_id', ctx.tenantId)
                 .eq('id', d.team_id)
                 .maybeSingle();
               const newsSlug = `team-${d.team_id}-join-${Date.now().toString(36)}`;
               await supabaseAdmin.from('news').insert({
+                tenant_id: ctx.tenantId,
                 title: `${playerName} rejoint ${teamName}`,
                 slug: newsSlug,
                 tag: 'teams',

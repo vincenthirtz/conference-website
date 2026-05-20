@@ -59,7 +59,7 @@ async function handler(
 
   switch (req.method) {
     case 'GET':
-      return handleGet(res, id);
+      return handleGet(res, id, ctx);
     case 'PATCH':
     case 'PUT':
       return handlePatch(req, res, id, ctx);
@@ -71,7 +71,11 @@ async function handler(
   }
 }
 
-async function handleGet(res: NextApiResponse, id: string) {
+async function handleGet(
+  res: NextApiResponse,
+  id: string,
+  ctx: AuthenticatedStaffContext
+) {
   const { data, error } = await supabaseAdmin!
     .from('scrims')
     .select(
@@ -86,6 +90,7 @@ async function handleGet(res: NextApiResponse, id: string) {
     `
     )
     .eq('id', id)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (error) {
@@ -99,6 +104,7 @@ async function handleGet(res: NextApiResponse, id: string) {
   const { count: matchesCount } = await supabaseAdmin!
     .from('matches')
     .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', ctx.tenantId)
     .eq('scrim_id', id);
 
   return res.status(200).json({
@@ -165,6 +171,7 @@ async function handlePatch(
     const { data: dup } = await supabaseAdmin!
       .from('scrims')
       .select('id')
+      .eq('tenant_id', ctx.tenantId)
       .eq('slug', slug)
       .neq('id', id)
       .maybeSingle();
@@ -179,6 +186,7 @@ async function handlePatch(
     .from('scrims')
     .select('*')
     .eq('id', id)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
   if (!before) return res.status(404).json({ error: 'Scrim not found' });
 
@@ -201,6 +209,7 @@ async function handlePatch(
     .from('scrims')
     .update(updatePayload)
     .eq('id', id)
+    .eq('tenant_id', ctx.tenantId)
     .select('*')
     .single();
 
@@ -254,6 +263,7 @@ async function handleDelete(
     .from('scrims')
     .select('*')
     .eq('id', id)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
   if (!before) return res.status(404).json({ error: 'Scrim not found' });
 
@@ -265,7 +275,8 @@ async function handleDelete(
       deleted_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('tenant_id', ctx.tenantId);
   if (error) {
     logger.error('[admin/scrims/:id] DELETE error:', error);
     return res.status(500).json({ error: 'Failed to delete scrim' });

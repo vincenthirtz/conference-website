@@ -2,7 +2,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { logger } from '../../../../utils/logger';
 import {
   parsePagination,
@@ -32,15 +32,16 @@ export default withStaffRoute(handler, 'manager');
 
 async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<ListResponse | MutateResponse>
+  res: NextApiResponse<ListResponse | MutateResponse>,
+  ctx: AuthenticatedStaffContext
 ) {
   switch (req.method) {
     case 'GET':
-      return listComments(req, res);
+      return listComments(req, res, ctx);
     case 'PATCH':
-      return updateComment(req, res);
+      return updateComment(req, res, ctx);
     case 'DELETE':
-      return deleteComment(req, res);
+      return deleteComment(req, res, ctx);
     default:
       return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -48,7 +49,8 @@ async function handler(
 
 async function listComments(
   req: NextApiRequest,
-  res: NextApiResponse<ListResponse>
+  res: NextApiResponse<ListResponse>,
+  ctx: AuthenticatedStaffContext
 ) {
   const { limit, offset } = parsePagination(req, { limit: 50, maxLimit: 200 });
   const search = sanitizeSearch(req.query.search);
@@ -67,6 +69,7 @@ async function listComments(
       `,
       { count: 'exact' }
     )
+    .eq('tenant_id', ctx.tenantId)
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
@@ -94,7 +97,8 @@ async function listComments(
 
 async function updateComment(
   req: NextApiRequest,
-  res: NextApiResponse<MutateResponse>
+  res: NextApiResponse<MutateResponse>,
+  ctx: AuthenticatedStaffContext
 ) {
   const { id, content, author_name } = req.body || {};
   if (!id || typeof id !== 'string') {
@@ -114,6 +118,7 @@ async function updateComment(
     .from('news_comments')
     .update(payload)
     .eq('id', id)
+    .eq('tenant_id', ctx.tenantId)
     .select(
       `
         id,
@@ -136,7 +141,8 @@ async function updateComment(
 
 async function deleteComment(
   req: NextApiRequest,
-  res: NextApiResponse<MutateResponse>
+  res: NextApiResponse<MutateResponse>,
+  ctx: AuthenticatedStaffContext
 ) {
   const { id } = req.body || {};
   if (!id || typeof id !== 'string') {
@@ -146,7 +152,8 @@ async function deleteComment(
   const { error } = await supabaseAdmin
     .from('news_comments')
     .delete()
-    .eq('id', id);
+    .eq('id', id)
+    .eq('tenant_id', ctx.tenantId);
 
   if (error) {
     logger.error('admin comments DELETE error:', error);

@@ -50,6 +50,7 @@ async function handler(
     .from('tournament_stages')
     .select('id, tournament_id, name')
     .eq('id', stageIdStr)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
   if (!stage) {
     return res.status(404).json({ error: 'Stage introuvable.' });
@@ -57,7 +58,7 @@ async function handler(
 
   switch (req.method) {
     case 'GET':
-      return handleList(req, res, stageIdStr);
+      return handleList(req, res, stageIdStr, ctx);
     case 'POST':
       return handleCreate(req, res, stageIdStr, stage.tournament_id, ctx);
     case 'PATCH':
@@ -71,7 +72,8 @@ async function handler(
 async function handleList(
   req: NextApiRequest,
   res: NextApiResponse,
-  stageId: string
+  stageId: string,
+  ctx: AuthenticatedStaffContext
 ) {
   const limitRaw = Number(req.query.limit);
   const limit = Number.isFinite(limitRaw)
@@ -84,6 +86,7 @@ async function handleList(
       `id, stage_id, taken_at, taken_by_staff_id, reason, match_count,
        staff:staff!bracket_snapshots_taken_by_staff_id_fkey(id, display_name, role)`
     )
+    .eq('tenant_id', ctx.tenantId)
     .eq('stage_id', stageId)
     .order('taken_at', { ascending: false })
     .limit(limit);
@@ -113,6 +116,7 @@ async function handleCreate(
     stageId,
     reason,
     staffId: ctx.staff.id,
+    tenantId: ctx.tenantId,
   });
   if (!result) {
     return res
@@ -169,6 +173,7 @@ async function handleRestore(
     .select('id, stage_id, taken_at, reason, match_count')
     .eq('id', snapshotId)
     .eq('stage_id', stageId)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
   if (!snap) {
     return res
@@ -182,6 +187,7 @@ async function handleRestore(
     stageId,
     reason: 'pre_restore',
     staffId: ctx.staff.id,
+    tenantId: ctx.tenantId,
   }).catch((e) =>
     logger.error('[snapshots/restore] pre_restore snapshot failed', e)
   );

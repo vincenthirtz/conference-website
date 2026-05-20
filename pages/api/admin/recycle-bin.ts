@@ -46,7 +46,7 @@ async function handler(
 
   switch (req.method) {
     case 'GET':
-      return handleGet(req, res);
+      return handleGet(req, res, ctx);
     case 'PATCH':
       return handleRestore(req, res, ctx);
     default:
@@ -56,7 +56,8 @@ async function handler(
 
 async function handleGet(
   req: NextApiRequest,
-  res: NextApiResponse<ApiResponse>
+  res: NextApiResponse<ApiResponse>,
+  ctx: AuthenticatedStaffContext
 ) {
   const typeFilter = req.query.type as string | undefined;
   const items: DeletedItem[] = [];
@@ -66,6 +67,7 @@ async function handleGet(
     const { data: stages } = await supabaseAdmin!
       .from('tournament_stages')
       .select('id, name, stage_type, tournament_id, deleted_at')
+      .eq('tenant_id', ctx.tenantId)
       .not('deleted_at', 'is', null)
       .order('deleted_at', { ascending: false })
       .limit(100);
@@ -87,6 +89,7 @@ async function handleGet(
     const { data: teams } = await supabaseAdmin!
       .from('teams')
       .select('id, name, short_name, deleted_at')
+      .eq('tenant_id', ctx.tenantId)
       .not('deleted_at', 'is', null)
       .order('deleted_at', { ascending: false })
       .limit(100);
@@ -110,6 +113,7 @@ async function handleGet(
       .select(
         'id, tournament_id, stage_id, round_number, team1_id, team2_id, deleted_at'
       )
+      .eq('tenant_id', ctx.tenantId)
       .not('deleted_at', 'is', null)
       .order('deleted_at', { ascending: false })
       .limit(100);
@@ -126,6 +130,7 @@ async function handleGet(
       const { data: teamsData } = await supabaseAdmin!
         .from('teams')
         .select('id, name')
+        .eq('tenant_id', ctx.tenantId)
         .in('id', Array.from(teamIds));
 
       for (const t of teamsData || []) {
@@ -152,6 +157,7 @@ async function handleGet(
     const { data: announcements } = await supabaseAdmin!
       .from('announcements')
       .select('id, title, message, deleted_at')
+      .eq('tenant_id', ctx.tenantId)
       .not('deleted_at', 'is', null)
       .order('deleted_at', { ascending: false })
       .limit(100);
@@ -194,6 +200,7 @@ async function handleGet(
     const { data: castMembers } = await supabaseAdmin!
       .from('cast_members')
       .select('id, display_name, role, deleted_at')
+      .eq('tenant_id', ctx.tenantId)
       .not('deleted_at', 'is', null)
       .order('deleted_at', { ascending: false })
       .limit(100);
@@ -237,6 +244,7 @@ async function handleGet(
     const { data: scrims } = await supabaseAdmin!
       .from('scrims')
       .select('id, name, slug, status, deleted_at')
+      .eq('tenant_id', ctx.tenantId)
       .not('deleted_at', 'is', null)
       .order('deleted_at', { ascending: false })
       .limit(100);
@@ -308,7 +316,8 @@ async function handleRestore(
             deleted_at: null,
             updated_at: nowIso,
           })
-          .eq('id', id);
+          .eq('id', id)
+          .eq('tenant_id', ctx.tenantId);
 
         if (error) throw error;
         break;
@@ -317,7 +326,8 @@ async function handleRestore(
         const { error } = await supabaseAdmin!
           .from('teams')
           .update({ is_active: true, deleted_at: null, updated_at: nowIso })
-          .eq('id', id);
+          .eq('id', id)
+          .eq('tenant_id', ctx.tenantId);
 
         if (error) throw error;
         break;
@@ -326,7 +336,8 @@ async function handleRestore(
         const { error } = await supabaseAdmin!
           .from('matches')
           .update({ status: 'pending', deleted_at: null, updated_at: nowIso })
-          .eq('id', id);
+          .eq('id', id)
+          .eq('tenant_id', ctx.tenantId);
 
         if (error) throw error;
         break;
@@ -335,7 +346,8 @@ async function handleRestore(
         const { error } = await supabaseAdmin!
           .from('announcements')
           .update({ is_active: true, deleted_at: null, updated_at: nowIso })
-          .eq('id', id);
+          .eq('id', id)
+          .eq('tenant_id', ctx.tenantId);
 
         if (error) throw error;
         break;
@@ -353,7 +365,8 @@ async function handleRestore(
         const { error } = await supabaseAdmin!
           .from('cast_members')
           .update({ is_active: true, deleted_at: null, updated_at: nowIso })
-          .eq('id', id);
+          .eq('id', id)
+          .eq('tenant_id', ctx.tenantId);
 
         if (error) throw error;
         break;
@@ -384,7 +397,8 @@ async function handleRestore(
         const { error } = await supabaseAdmin!
           .from('scrims')
           .update({ deleted_at: null, updated_at: nowIso })
-          .eq('id', id);
+          .eq('id', id)
+          .eq('tenant_id', ctx.tenantId);
         if (error) throw error;
         break;
       }

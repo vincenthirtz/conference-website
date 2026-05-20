@@ -27,7 +27,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
 
   try {
     if (req.method === 'GET') {
-      return await handleGet(id, res);
+      return await handleGet(id, res, ctx);
     }
     if (req.method === 'POST') {
       return await handlePost(id, req, res, ctx);
@@ -43,12 +43,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
   }
 }
 
-async function handleGet(matchId: string, res: NextApiResponse) {
+async function handleGet(
+  matchId: string,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   // 1) Fetch match basics
   const { data: match } = await supabaseAdmin
     .from('matches')
     .select('id, status, team1_id, team2_id, tournament_id')
     .eq('id', matchId)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (!match) {
@@ -60,6 +65,7 @@ async function handleGet(matchId: string, res: NextApiResponse) {
     .from('match_mvp_polls')
     .select('*')
     .eq('match_id', matchId)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   // 3) Fetch the rosters of both teams (non-substitutes only, for the dropdown)
@@ -84,6 +90,7 @@ async function handleGet(matchId: string, res: NextApiResponse) {
         team:team_id(id, name)
         `
       )
+      .eq('tenant_id', ctx.tenantId)
       .in('team_id', teamIds);
 
     candidates = (members || []).map((m: any) => {
@@ -126,6 +133,7 @@ async function handlePost(
     .from('matches')
     .select('id, team1_id, team2_id, tournament_id')
     .eq('id', matchId)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (!match) {
@@ -136,6 +144,7 @@ async function handlePost(
     .from('team_members')
     .select('id, team_id, battle_tag')
     .eq('id', winnerMemberId)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (!member) {
@@ -163,6 +172,7 @@ async function handlePost(
     .from('match_mvp_polls')
     .select('id')
     .eq('match_id', matchId)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   let result;
@@ -171,6 +181,7 @@ async function handlePost(
       .from('match_mvp_polls')
       .update(update)
       .eq('id', existing.id)
+      .eq('tenant_id', ctx.tenantId)
       .select('*')
       .maybeSingle();
     if (error) {
@@ -182,6 +193,7 @@ async function handlePost(
     const { data, error } = await supabaseAdmin
       .from('match_mvp_polls')
       .insert({
+        tenant_id: ctx.tenantId,
         match_id: matchId,
         ...update,
       })
@@ -222,6 +234,7 @@ async function handleDelete(matchId: string, res: NextApiResponse, ctx: Authenti
       updated_at: new Date().toISOString(),
     })
     .eq('match_id', matchId)
+    .eq('tenant_id', ctx.tenantId)
     .select('*')
     .maybeSingle();
 

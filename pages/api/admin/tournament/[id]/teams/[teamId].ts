@@ -39,7 +39,7 @@ async function handler(
   try {
     switch (req.method) {
       case 'GET':
-        return await handleGet(tournamentTeamId, res);
+        return await handleGet(tournamentTeamId, res, ctx);
       case 'PATCH':
         return await handlePatch(tournamentTeamId, tournamentId, req, res, ctx);
       case 'DELETE':
@@ -60,7 +60,8 @@ async function handler(
 
 async function handleGet(
   tournamentTeamId: string,
-  res: NextApiResponse<ApiResponse>
+  res: NextApiResponse<ApiResponse>,
+  ctx: AuthenticatedStaffContext
 ) {
   if (!supabaseAdmin) {
     return res
@@ -87,6 +88,7 @@ async function handleGet(
     `
     )
     .eq('id', tournamentTeamId)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (error || !data) {
@@ -116,6 +118,7 @@ async function handlePatch(
     .from('tournament_teams')
     .select('*, team:teams(name)')
     .eq('id', tournamentTeamId)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (fetchErr || !before) {
@@ -134,6 +137,7 @@ async function handlePatch(
     .from('tournament_teams')
     .update(updatePayload)
     .eq('id', tournamentTeamId)
+    .eq('tenant_id', ctx.tenantId)
     .select(
       `
       id,
@@ -197,6 +201,7 @@ async function handleDelete(
     .from('tournament_teams')
     .select('*, team:teams(name)')
     .eq('id', tournamentTeamId)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (fetchErr || !before) {
@@ -206,7 +211,8 @@ async function handleDelete(
   const { error } = await supabaseAdmin
     .from('tournament_teams')
     .delete()
-    .eq('id', tournamentTeamId);
+    .eq('id', tournamentTeamId)
+    .eq('tenant_id', ctx.tenantId);
 
   if (error) {
     logger.error('admin DELETE tournament team error:', error);

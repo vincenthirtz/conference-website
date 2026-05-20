@@ -1,3 +1,7 @@
+// TODO(S5c): cette route est cote utilisateur (capitaine ou manager) via
+// withAuthRoute, pas une route staff. La couverture multi-tenant doit etre
+// resolue depuis le tenant de l'equipe geree (cf. utils/teams/managementAccess).
+// Non scope en S5b car la session ne porte pas encore de tenant_id user-level.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';

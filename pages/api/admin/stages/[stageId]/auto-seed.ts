@@ -66,6 +66,7 @@ async function handler(
       .from('tournament_stages')
       .select('id, tournament_id, stage_type, settings')
       .eq('id', targetStageId)
+      .eq('tenant_id', ctx.tenantId)
       .maybeSingle();
 
     if (tgtErr || !targetStage) {
@@ -83,6 +84,7 @@ async function handler(
       .from('tournament_stages')
       .select('id, tournament_id, stage_type')
       .eq('id', sourceStageId)
+      .eq('tenant_id', ctx.tenantId)
       .maybeSingle();
 
     if (srcErr || !sourceStage) {
@@ -111,6 +113,7 @@ async function handler(
     const { data: bracketMatches, error: matchErr } = await supabaseAdmin
       .from('matches')
       .select('id, round_number, team1_id, team2_id')
+      .eq('tenant_id', ctx.tenantId)
       .eq('stage_id', targetStageId)
       .eq('round_number', 1)
       .order('created_at', { ascending: true });
@@ -141,6 +144,7 @@ async function handler(
       stageId: targetStageId,
       reason: 'auto_seed',
       staffId: ctx.staff?.id ?? null,
+      tenantId: ctx.tenantId,
     }).catch((e) =>
       logger.error('auto-seed: createBracketSnapshot failed', e)
     );
@@ -169,7 +173,8 @@ async function handler(
       const { error: updErr } = await supabaseAdmin
         .from('matches')
         .update({ [field]: u.teamId })
-        .eq('id', u.matchId);
+        .eq('id', u.matchId)
+        .eq('tenant_id', ctx.tenantId);
 
       if (updErr) {
         logger.error('auto-seed update error:', updErr);
@@ -180,6 +185,7 @@ async function handler(
     const existingTeams = await supabaseAdmin
       .from('stage_teams')
       .select('team_id')
+      .eq('tenant_id', ctx.tenantId)
       .eq('stage_id', targetStageId);
 
     const existingIds = new Set(
@@ -189,6 +195,7 @@ async function handler(
     const newTeamInserts = teamsToSeed
       .filter((t) => !existingIds.has(t.teamId))
       .map((t) => ({
+        tenant_id: ctx.tenantId,
         stage_id: targetStageId,
         team_id: t.teamId,
         seed: t.rank,

@@ -36,6 +36,7 @@ type MatchInput = {
 
 function normalizeMatch(
   scrimId: string,
+  tenantId: string,
   input: MatchInput,
   defaults: { team1Id: string | null; team2Id: string | null }
 ): { row?: Record<string, unknown>; error?: string } {
@@ -65,6 +66,7 @@ function normalizeMatch(
 
   return {
     row: {
+      tenant_id: tenantId,
       tournament_id: null,
       scrim_id: scrimId,
       stage_id: null,
@@ -101,14 +103,18 @@ async function handler(
     return res.status(400).json({ error: 'scrimId invalide' });
   }
 
-  if (req.method === 'GET') return handleGet(res, scrimId);
+  if (req.method === 'GET') return handleGet(res, scrimId, ctx);
   if (req.method === 'POST') return handlePost(req, res, scrimId, ctx);
 
   res.setHeader('Allow', 'GET,POST');
   return res.status(405).json({ error: 'Method not allowed' });
 }
 
-async function handleGet(res: NextApiResponse, scrimId: string) {
+async function handleGet(
+  res: NextApiResponse,
+  scrimId: string,
+  ctx: AuthenticatedStaffContext
+) {
   const { data, error } = await supabaseAdmin!
     .from('matches')
     .select(
@@ -122,6 +128,7 @@ async function handleGet(res: NextApiResponse, scrimId: string) {
       team2:teams!matches_team2_id_fkey(id, name, short_name, logo_url)
     `
     )
+    .eq('tenant_id', ctx.tenantId)
     .eq('scrim_id', scrimId)
     .order('scheduled_at', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: true });
@@ -147,6 +154,7 @@ async function handlePost(
     .from('scrims')
     .select('id, name, team1_id, team2_id')
     .eq('id', scrimId)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
   if (!scrim) return res.status(404).json({ error: 'Scrim introuvable' });
 
@@ -166,7 +174,7 @@ async function handlePost(
 
   const rows: Record<string, unknown>[] = [];
   for (let i = 0; i < inputs.length; i++) {
-    const { row, error } = normalizeMatch(scrimId, inputs[i], {
+    const { row, error } = normalizeMatch(scrimId, ctx.tenantId, inputs[i], {
       team1Id: scrim.team1_id ?? null,
       team2Id: scrim.team2_id ?? null,
     });

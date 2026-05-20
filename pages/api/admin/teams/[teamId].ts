@@ -48,7 +48,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
   try {
     switch (req.method) {
       case 'GET':
-        return await handleGet(id, res);
+        return await handleGet(id, res, ctx);
       case 'PUT':
       case 'PATCH':
         return await handlePut(id, req, res, ctx);
@@ -69,11 +69,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
  * GET : récupérer une équipe
  * ---------------------------------------------------------*/
 
-async function handleGet(id: string, res: NextApiResponse) {
+async function handleGet(
+  id: string,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   const { data, error } = await supabaseAdmin
     .from('teams')
     .select('*')
     .eq('id', id)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (error || !data) {
@@ -97,6 +102,7 @@ async function handleGet(id: string, res: NextApiResponse) {
       )
     `
     )
+    .eq('tenant_id', ctx.tenantId)
     .eq('team_id', id);
 
   if (membersError) {
@@ -244,6 +250,7 @@ async function handlePut(
     .from('teams')
     .select('*')
     .eq('id', id)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (fetchErr || !before) {
@@ -254,6 +261,7 @@ async function handlePut(
     .from('teams')
     .update(updatePayload)
     .eq('id', id)
+    .eq('tenant_id', ctx.tenantId)
     .select('*')
     .maybeSingle();
 
@@ -305,6 +313,7 @@ async function handleDelete(
     .from('teams')
     .select('*')
     .eq('id', id)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (fetchErr || !before) {
@@ -316,6 +325,7 @@ async function handleDelete(
     const { error: demandesErr } = await supabaseAdmin
       .from('demandes')
       .delete()
+      .eq('tenant_id', ctx.tenantId)
       .eq('team_id', id);
     if (demandesErr) {
       logger.error(
@@ -327,6 +337,7 @@ async function handleDelete(
     const { error: stageTeamsErr } = await supabaseAdmin
       .from('stage_teams')
       .delete()
+      .eq('tenant_id', ctx.tenantId)
       .eq('team_id', id);
     if (stageTeamsErr) {
       logger.error(
@@ -338,6 +349,7 @@ async function handleDelete(
     const { error: membersErr } = await supabaseAdmin
       .from('team_members')
       .delete()
+      .eq('tenant_id', ctx.tenantId)
       .eq('team_id', id);
     if (membersErr) {
       logger.error(
@@ -346,7 +358,11 @@ async function handleDelete(
       );
     }
 
-    const { error } = await supabaseAdmin.from('teams').delete().eq('id', id);
+    const { error } = await supabaseAdmin
+      .from('teams')
+      .delete()
+      .eq('id', id)
+      .eq('tenant_id', ctx.tenantId);
 
     if (error) {
       logger.error('admin hard delete team error:', error);
@@ -400,6 +416,7 @@ async function handleDelete(
       updated_at: nowIso,
     })
     .eq('id', id)
+    .eq('tenant_id', ctx.tenantId)
     .select('*')
     .maybeSingle();
 

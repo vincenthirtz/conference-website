@@ -44,7 +44,7 @@ export default withStaffRoute(handler, 'manager');
 async function handler(
   req: NextApiRequest,
   res: NextApiResponse<AdminLogsResponse | { error: string; detail?: string }>,
-  _ctx: AuthenticatedStaffContext
+  ctx: AuthenticatedStaffContext
 ) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -80,7 +80,8 @@ async function handler(
       .from('staff_logs')
       .select('id, created_at, staff_id, action, entity_type, entity_id', {
         count: wantTotal ? 'exact' : undefined,
-      });
+      })
+      .eq('tenant_id', ctx.tenantId);
 
     if (staffId && !Array.isArray(staffId)) {
       query = query.eq('staff_id', staffId);

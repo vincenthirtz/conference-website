@@ -29,6 +29,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
     .from('tournament_stages')
     .select('id, tournament_id')
     .eq('id', stageId)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (stageErr || !stage) {
@@ -120,6 +121,7 @@ async function handleBulkSchedule(
       ? await supabaseAdmin
           .from('matches')
           .select('id, scheduled_at')
+          .eq('tenant_id', ctx.tenantId)
           .eq('stage_id', stageId)
           .in('id', validMatchIds)
       : { data: [] };
@@ -142,6 +144,7 @@ async function handleBulkSchedule(
       .from('matches')
       .update({ scheduled_at: entry.scheduled_at ?? null })
       .eq('id', entry.matchId)
+      .eq('tenant_id', ctx.tenantId)
       .eq('stage_id', stageId);
 
     if (error) {
@@ -158,6 +161,7 @@ async function handleBulkSchedule(
             .from('matches')
             .update({ scheduled_at: prev.previousScheduledAt })
             .eq('id', prev.matchId)
+            .eq('tenant_id', ctx.tenantId)
             .eq('stage_id', stageId);
         }
         return res.status(500).json({
@@ -296,12 +300,14 @@ async function handleBulkUpdate(
   const { data: snapshotRows } = await supabaseAdmin
     .from('matches')
     .select(selectFields)
+    .eq('tenant_id', ctx.tenantId)
     .eq('stage_id', stageId)
     .in('id', matchIds);
 
   const { error, count } = await supabaseAdmin
     .from('matches')
     .update(updatePayload)
+    .eq('tenant_id', ctx.tenantId)
     .eq('stage_id', stageId)
     .in('id', matchIds);
 
@@ -381,6 +387,7 @@ async function handleBulkDelete(
     const { data: snapshotRows } = await supabaseAdmin
       .from('matches')
       .select('id, status, team1_score, team2_score, winner_team_id')
+      .eq('tenant_id', ctx.tenantId)
       .eq('stage_id', stageId)
       .in('id', matchIds);
 
@@ -402,6 +409,7 @@ async function handleBulkDelete(
     const { error } = await supabaseAdmin
       .from('matches')
       .delete()
+      .eq('tenant_id', ctx.tenantId)
       .eq('stage_id', stageId)
       .in('id', matchIds);
 
@@ -418,6 +426,7 @@ async function handleBulkDelete(
         team2_score: null,
         winner_team_id: null,
       })
+      .eq('tenant_id', ctx.tenantId)
       .eq('stage_id', stageId)
       .in('id', matchIds);
 
@@ -512,6 +521,7 @@ async function handleBulkUndo(
       .from('matches')
       .update(snap.fields)
       .eq('id', snap.matchId)
+      .eq('tenant_id', ctx.tenantId)
       .eq('stage_id', stageId);
 
     if (error) {

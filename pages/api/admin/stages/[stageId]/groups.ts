@@ -37,7 +37,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
   try {
     switch (req.method) {
       case 'GET':
-        return await handleGet(String(stageId), res);
+        return await handleGet(String(stageId), res, ctx);
       case 'PUT':
         return await handlePut(String(stageId), req, res, ctx);
       case 'POST':
@@ -55,12 +55,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
  * GET : retourne les assignations de groupes
  * ---------------------------------------------------------*/
 
-async function handleGet(stageId: string, res: NextApiResponse) {
+async function handleGet(
+  stageId: string,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   // Verify stage exists and is group/round_robin type
   const { data: stage, error: stageErr } = await supabaseAdmin!
     .from('tournament_stages')
     .select('id, tournament_id, stage_type, settings')
     .eq('id', stageId)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (stageErr || !stage) {
@@ -77,6 +82,7 @@ async function handleGet(stageId: string, res: NextApiResponse) {
   const { data: stageTeams, error: teamsErr } = await supabaseAdmin!
     .from('stage_teams')
     .select('team_id, seed, team:team_id(id, name, short_name, logo_url)')
+    .eq('tenant_id', ctx.tenantId)
     .eq('stage_id', stageId)
     .order('seed', { ascending: true, nullsFirst: false });
 
@@ -121,6 +127,7 @@ async function handleGet(stageId: string, res: NextApiResponse) {
     const { data: matches } = await supabaseAdmin!
       .from('matches')
       .select('team1_id, team2_id, group_key')
+      .eq('tenant_id', ctx.tenantId)
       .eq('stage_id', stageId)
       .neq('status', 'cancelled')
       .not('group_key', 'is', null);
@@ -181,6 +188,7 @@ async function handlePut(
     .from('tournament_stages')
     .select('id, tournament_id, stage_type, settings')
     .eq('id', stageId)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (stageErr || !stage) {
@@ -214,12 +222,14 @@ async function handlePut(
     await supabaseAdmin!
       .from('matches')
       .update({ group_key: gk })
+      .eq('tenant_id', ctx.tenantId)
       .eq('stage_id', stageId)
       .eq('team1_id', entry.teamId);
 
     await supabaseAdmin!
       .from('matches')
       .update({ group_key: gk })
+      .eq('tenant_id', ctx.tenantId)
       .eq('stage_id', stageId)
       .eq('team2_id', entry.teamId);
   }
@@ -236,7 +246,8 @@ async function handlePut(
       settings: updatedSettings,
       updated_at: new Date().toISOString(),
     })
-    .eq('id', stageId);
+    .eq('id', stageId)
+    .eq('tenant_id', ctx.tenantId);
 
   // Log
   if (ctx?.staff?.id) {
@@ -296,6 +307,7 @@ async function handlePost(
     .from('tournament_stages')
     .select('id, tournament_id, stage_type, settings')
     .eq('id', stageId)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (stageErr || !stage) {
@@ -312,6 +324,7 @@ async function handlePost(
   const { data: stageTeams, error: teamsErr } = await supabaseAdmin!
     .from('stage_teams')
     .select('team_id, seed, team:team_id(id, name, short_name, logo_url)')
+    .eq('tenant_id', ctx.tenantId)
     .eq('stage_id', stageId)
     .order('seed', { ascending: true, nullsFirst: false });
 
@@ -381,7 +394,8 @@ async function handlePost(
       settings: updatedSettings,
       updated_at: new Date().toISOString(),
     })
-    .eq('id', stageId);
+    .eq('id', stageId)
+    .eq('tenant_id', ctx.tenantId);
 
   // Also update group_key on existing matches
   for (const [gk, teamIds] of Object.entries(groupAssignments)) {
@@ -389,12 +403,14 @@ async function handlePost(
       await supabaseAdmin!
         .from('matches')
         .update({ group_key: gk })
+        .eq('tenant_id', ctx.tenantId)
         .eq('stage_id', stageId)
         .eq('team1_id', tid);
 
       await supabaseAdmin!
         .from('matches')
         .update({ group_key: gk })
+        .eq('tenant_id', ctx.tenantId)
         .eq('stage_id', stageId)
         .eq('team2_id', tid);
     }

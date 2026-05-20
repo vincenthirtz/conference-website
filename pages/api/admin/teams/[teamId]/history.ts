@@ -25,7 +25,7 @@ async function handler(
   res: NextApiResponse<
     TeamHistoryResponse | { error: string; detail?: string }
   >,
-  _ctx: AuthenticatedStaffContext
+  ctx: AuthenticatedStaffContext
 ) {
   const { teamId } = req.query;
 
@@ -72,6 +72,7 @@ async function handler(
         )
       `
       )
+      .eq('tenant_id', ctx.tenantId)
       .eq('entity_type', 'team')
       .eq('entity_id', id);
 
@@ -112,6 +113,7 @@ async function handler(
         )
       `
       )
+      .eq('tenant_id', ctx.tenantId)
       .contains('payload', { team_id: id });
 
     if (entityType && !Array.isArray(entityType)) {

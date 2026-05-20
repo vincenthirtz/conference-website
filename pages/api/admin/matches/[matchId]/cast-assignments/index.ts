@@ -35,6 +35,7 @@ async function handler(
          created_at, updated_at,
          cast_member:cast_member_id (id, name, auth_user_id, image_url)`
       )
+      .eq('tenant_id', ctx.tenantId)
       .eq('match_id', matchId)
       .order('briefing_at', { ascending: true });
 
@@ -76,6 +77,7 @@ async function handler(
       .from('cast_members')
       .select('id, is_active')
       .eq('id', castMemberId)
+      .eq('tenant_id', ctx.tenantId)
       .maybeSingle();
     if (castMemberErr) {
       logger.error('[admin/cast-assignments] cast_member lookup error', castMemberErr);
@@ -93,6 +95,7 @@ async function handler(
     const { data, error } = await supabaseAdmin
       .from('cast_assignments')
       .insert({
+        tenant_id: ctx.tenantId,
         match_id: matchId,
         cast_member_id: castMemberId,
         briefing_at: briefingDate.toISOString(),

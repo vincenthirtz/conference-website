@@ -24,7 +24,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
   try {
     switch (req.method) {
       case 'GET':
-        return await handleGet(stageId, req, res);
+        return await handleGet(stageId, req, res, ctx);
       case 'POST':
         return await handlePost(stageId, req, res, ctx);
       case 'PATCH':
@@ -49,13 +49,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
 async function handleGet(
   stageId: string,
   _req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
 ) {
   // Récupérer la phase + tournoi
   const { data: stage, error: stageErr } = await supabaseAdmin
     .from('tournament_stages')
     .select('id, tournament_id, name, stage_type')
     .eq('id', stageId)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (stageErr || !stage) {
@@ -67,6 +69,7 @@ async function handleGet(
     .from('tournaments')
     .select('id, name, slug')
     .eq('id', stage.tournament_id)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   // Récupérer les stage_teams avec infos équipe
@@ -75,6 +78,7 @@ async function handleGet(
     .select(
       'stage_id, team_id, seed, is_substitute, notes, team:team_id(id, name, short_name, logo_url)'
     )
+    .eq('tenant_id', ctx.tenantId)
     .eq('stage_id', stageId)
     .order('seed', { ascending: true, nullsFirst: false });
 
@@ -113,6 +117,7 @@ async function handlePost(
     .from('tournament_stages')
     .select('id, tournament_id')
     .eq('id', stageId)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (stageErr || !stage) {
@@ -128,8 +133,13 @@ async function handlePost(
       .from('tournaments')
       .select('id, min_players')
       .eq('id', stage.tournament_id)
+      .eq('tenant_id', ctx.tenantId)
       .maybeSingle(),
-    supabaseAdmin.from('team_members').select('user_id').eq('team_id', teamId),
+    supabaseAdmin
+      .from('team_members')
+      .select('user_id')
+      .eq('tenant_id', ctx.tenantId)
+      .eq('team_id', teamId),
   ]);
 
   const tournament = tournamentRes.data;
@@ -154,6 +164,7 @@ async function handlePost(
       const { data: tournamentStages } = await supabaseAdmin
         .from('tournament_stages')
         .select('id')
+        .eq('tenant_id', ctx.tenantId)
         .eq('tournament_id', stage.tournament_id);
 
       const stageIds = (tournamentStages || []).map(
@@ -165,6 +176,7 @@ async function handlePost(
         const { data: registeredStageTeams } = await supabaseAdmin
           .from('stage_teams')
           .select('team_id')
+          .eq('tenant_id', ctx.tenantId)
           .in('stage_id', stageIds)
           .neq('team_id', teamId);
 
@@ -181,6 +193,7 @@ async function handlePost(
           const { data: duplicateMembers } = await supabaseAdmin
             .from('team_members')
             .select('user_id, team_id, teams!inner(name)')
+            .eq('tenant_id', ctx.tenantId)
             .in('team_id', otherTeamIds)
             .in('user_id', memberUserIds);
 
@@ -204,6 +217,7 @@ async function handlePost(
   const { data, error } = await supabaseAdmin
     .from('stage_teams')
     .insert({
+      tenant_id: ctx.tenantId,
       stage_id: stageId,
       team_id: teamId,
       seed: typeof seed === 'number' ? seed : null,
@@ -255,6 +269,7 @@ async function handlePatch(
     .from('tournament_stages')
     .select('id, tournament_id')
     .eq('id', stageId)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (stageErr || !stage) {
@@ -284,6 +299,7 @@ async function handlePatch(
       const { error: updErr } = await supabaseAdmin
         .from('stage_teams')
         .update({ seed: seedVal })
+        .eq('tenant_id', ctx.tenantId)
         .eq('stage_id', stageId)
         .eq('team_id', entry.teamId);
 
@@ -322,6 +338,7 @@ async function handlePatch(
   const { data, error } = await supabaseAdmin
     .from('stage_teams')
     .update({ seed: seedVal })
+    .eq('tenant_id', ctx.tenantId)
     .eq('stage_id', stageId)
     .eq('team_id', teamId)
     .select('*')
@@ -366,6 +383,7 @@ async function handleDelete(
     .from('tournament_stages')
     .select('id, tournament_id')
     .eq('id', stageId)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (stageErr || !stage) {
@@ -390,11 +408,13 @@ async function handleDelete(
     supabaseAdmin
       .from('matches')
       .update({ team1_id: null, team1_score: null, winner_team_id: null })
+      .eq('tenant_id', ctx.tenantId)
       .eq('stage_id', stageId)
       .in('team1_id', idsToRemove),
     supabaseAdmin
       .from('matches')
       .update({ team2_id: null, team2_score: null, winner_team_id: null })
+      .eq('tenant_id', ctx.tenantId)
       .eq('stage_id', stageId)
       .in('team2_id', idsToRemove),
   ]);
@@ -410,6 +430,7 @@ async function handleDelete(
   const { error } = await supabaseAdmin
     .from('stage_teams')
     .delete()
+    .eq('tenant_id', ctx.tenantId)
     .eq('stage_id', stageId)
     .in('team_id', idsToRemove);
 

@@ -55,7 +55,7 @@ async function handler(
   try {
     switch (req.method) {
       case 'GET':
-        return await handleGet(tournamentId, res);
+        return await handleGet(tournamentId, res, ctx);
       case 'POST':
         return await handlePost(tournamentId, req, res, ctx);
       case 'PATCH':
@@ -73,7 +73,8 @@ async function handler(
 
 async function handleGet(
   tournamentId: string,
-  res: NextApiResponse<ApiResponse>
+  res: NextApiResponse<ApiResponse>,
+  ctx: AuthenticatedStaffContext
 ) {
   if (!supabaseAdmin) {
     return res
@@ -84,6 +85,7 @@ async function handleGet(
   const { data, error } = await supabaseAdmin
     .from('tournament_stages')
     .select('*')
+    .eq('tenant_id', ctx.tenantId)
     .eq('tournament_id', tournamentId)
     .order('order_index', { ascending: true, nullsFirst: false });
 
@@ -173,6 +175,7 @@ async function handlePost(
     .from('tournaments')
     .select('id, name')
     .eq('id', tournamentId)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (tournamentError || !tournament) {
@@ -185,6 +188,7 @@ async function handlePost(
     const { data: existingStages } = await supabaseAdmin
       .from('tournament_stages')
       .select('order_index')
+      .eq('tenant_id', ctx.tenantId)
       .eq('tournament_id', tournamentId)
       .order('order_index', { ascending: false })
       .limit(1);
@@ -213,6 +217,7 @@ async function handlePost(
   const { data, error } = await supabaseAdmin
     .from('tournament_stages')
     .insert({
+      tenant_id: ctx.tenantId,
       tournament_id: tournamentId,
       name: name.trim(),
       slug: finalSlug,
@@ -300,6 +305,7 @@ async function handlePatch(
     .from('tournaments')
     .select('id, name')
     .eq('id', tournamentId)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (tournamentError || !tournament) {
@@ -313,6 +319,7 @@ async function handlePatch(
       .from('tournament_stages')
       .update({ order_index: entry.order_index })
       .eq('id', entry.id)
+      .eq('tenant_id', ctx.tenantId)
       .eq('tournament_id', tournamentId);
 
     if (error) {
@@ -347,5 +354,5 @@ async function handlePatch(
   }
 
   // Return updated list
-  return await handleGet(tournamentId, res);
+  return await handleGet(tournamentId, res, ctx);
 }

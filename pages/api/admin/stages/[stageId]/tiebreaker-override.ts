@@ -42,6 +42,7 @@ async function handler(
     .from('tournament_stages')
     .select('id, tournament_id')
     .eq('id', stageIdStr)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
   if (!stage) {
     return res.status(404).json({ error: 'Stage introuvable.' });
@@ -49,7 +50,7 @@ async function handler(
 
   switch (req.method) {
     case 'GET':
-      return handleGet(res, stageIdStr);
+      return handleGet(res, stageIdStr, ctx);
     case 'POST':
       return handlePost(req, res, stageIdStr, stage.tournament_id, ctx);
     case 'DELETE':
@@ -60,7 +61,11 @@ async function handler(
   }
 }
 
-async function handleGet(res: NextApiResponse, stageId: string) {
+async function handleGet(
+  res: NextApiResponse,
+  stageId: string,
+  ctx: AuthenticatedStaffContext
+) {
   const { data, error } = await supabaseAdmin!
     .from('stage_tiebreaker_overrides')
     .select(
@@ -68,6 +73,7 @@ async function handleGet(res: NextApiResponse, stageId: string) {
        winner:teams!stage_tiebreaker_overrides_winner_team_id_fkey(id, name),
        loser:teams!stage_tiebreaker_overrides_loser_team_id_fkey(id, name)`
     )
+    .eq('tenant_id', ctx.tenantId)
     .eq('stage_id', stageId)
     .order('set_at', { ascending: false });
   if (error) {
@@ -116,6 +122,7 @@ async function handlePost(
   const { data: stageTeams } = await supabaseAdmin!
     .from('stage_teams')
     .select('team_id')
+    .eq('tenant_id', ctx.tenantId)
     .eq('stage_id', stageId)
     .in('team_id', [winnerTeamId, loserTeamId]);
   const foundIds = new Set(
@@ -130,6 +137,7 @@ async function handlePost(
   const { data, error } = await supabaseAdmin!
     .from('stage_tiebreaker_overrides')
     .insert({
+      tenant_id: ctx.tenantId,
       stage_id: stageId,
       winner_team_id: winnerTeamId,
       loser_team_id: loserTeamId,
@@ -191,6 +199,7 @@ async function handleDelete(
     .select('id, winner_team_id, loser_team_id')
     .eq('id', overrideId)
     .eq('stage_id', stageId)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
   if (!before) {
     return res.status(404).json({ error: 'Override introuvable.' });
@@ -200,7 +209,8 @@ async function handleDelete(
     .from('stage_tiebreaker_overrides')
     .delete()
     .eq('id', overrideId)
-    .eq('stage_id', stageId);
+    .eq('stage_id', stageId)
+    .eq('tenant_id', ctx.tenantId);
   if (error) {
     logger.error('[tiebreaker-override] delete error', error);
     return res

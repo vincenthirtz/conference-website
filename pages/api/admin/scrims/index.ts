@@ -53,7 +53,7 @@ async function handler(
   try {
     switch (req.method) {
       case 'GET':
-        return await handleGet(req, res);
+        return await handleGet(req, res, ctx);
       case 'POST':
         return await handlePost(req, res, ctx);
       default:
@@ -67,7 +67,11 @@ async function handler(
 }
 
 /* GET : liste */
-async function handleGet(req: NextApiRequest, res: NextApiResponse) {
+async function handleGet(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   if (!supabaseAdmin)
     return res.status(500).json({ error: 'Supabase admin not configured' });
 
@@ -91,21 +95,24 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
   const orderDirection =
     orderDir === 'asc' ? { ascending: true } : { ascending: false };
 
-  let query = supabaseAdmin.from('scrims').select(
-    `
-      id, name, slug, game, status,
-      team1_id, team2_id,
-      scheduled_date, timezone,
-      is_public, logo_url, banner_url, description, stream_url,
-      source_demande_id, settings, created_at, updated_at,
-      team1:teams!scrims_team1_id_fkey(id, name, short_name, logo_url),
-      team2:teams!scrims_team2_id_fkey(id, name, short_name, logo_url)
-    `,
-    {
-      count:
-        includeTotal === '1' || includeTotal === 'true' ? 'exact' : undefined,
-    }
-  );
+  let query = supabaseAdmin
+    .from('scrims')
+    .select(
+      `
+        id, name, slug, game, status,
+        team1_id, team2_id,
+        scheduled_date, timezone,
+        is_public, logo_url, banner_url, description, stream_url,
+        source_demande_id, settings, created_at, updated_at,
+        team1:teams!scrims_team1_id_fkey(id, name, short_name, logo_url),
+        team2:teams!scrims_team2_id_fkey(id, name, short_name, logo_url)
+      `,
+      {
+        count:
+          includeTotal === '1' || includeTotal === 'true' ? 'exact' : undefined,
+      }
+    )
+    .eq('tenant_id', ctx.tenantId);
 
   // Filtre soft-delete : par défaut on cache les scrims supprimés. Pour
   // l'admin "recycle bin", passer includeDeleted=1.
@@ -206,6 +213,7 @@ async function handlePost(
   const { data: existingSlug } = await supabaseAdmin
     .from('scrims')
     .select('id')
+    .eq('tenant_id', ctx.tenantId)
     .eq('slug', slug)
     .maybeSingle();
   if (existingSlug) {
@@ -215,6 +223,7 @@ async function handlePost(
   }
 
   const payload = {
+    tenant_id: ctx.tenantId,
     name,
     slug,
     game: body.game ?? null,

@@ -42,7 +42,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
   try {
     switch (req.method) {
       case 'GET':
-        return await handleGet(req, res);
+        return await handleGet(req, res, ctx);
       case 'POST':
         return await handlePost(req, res, ctx);
       default:
@@ -60,7 +60,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
  * GET : liste des tournois admin
  * ---------------------------------------------------------*/
 
-async function handleGet(req: NextApiRequest, res: NextApiResponse) {
+async function handleGet(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   const { status, orderBy, orderDir, includeTotal, dateFrom, dateTo } =
     req.query;
 
@@ -91,10 +95,13 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
     updated_at
   `;
 
-  let query = supabaseAdmin!.from('tournaments').select(selectColumns, {
-    count:
-      includeTotal === '1' || includeTotal === 'true' ? 'exact' : undefined,
-  });
+  let query = supabaseAdmin!
+    .from('tournaments')
+    .select(selectColumns, {
+      count:
+        includeTotal === '1' || includeTotal === 'true' ? 'exact' : undefined,
+    })
+    .eq('tenant_id', ctx.tenantId);
 
   if (status && !Array.isArray(status)) {
     query = query.eq('status', status);
@@ -155,6 +162,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
   const { data: existing } = await supabaseAdmin!
     .from('tournaments')
     .select('id')
+    .eq('tenant_id', ctx.tenantId)
     .eq('slug', slug)
     .maybeSingle();
 
@@ -195,6 +203,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
   }
 
   const payload = {
+    tenant_id: ctx.tenantId,
     name: body.name,
     slug,
     game: body.game ?? null,
@@ -235,6 +244,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
   // Auto-ajouter toutes les maps OW au pool du tournoi
   try {
     const mapRows = OVERWATCH_MAPS.map((m, idx) => ({
+      tenant_id: ctx.tenantId,
       tournament_id: data.id,
       map_name: m.name,
       map_slug: slugify(m.name, { lower: true, strict: true }),

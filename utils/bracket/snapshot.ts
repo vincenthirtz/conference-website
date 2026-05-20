@@ -32,6 +32,11 @@ export type CreateSnapshotInput = {
   stageId: string;
   reason: SnapshotReason | string;
   staffId?: string | null;
+  /**
+   * Tenant courant. S5b : accepte optionnel pour ne pas casser les call sites
+   * publics non encore migres. S7 / Phase 3 : rendra obligatoire.
+   */
+  tenantId?: string | null;
 };
 
 export type CreatedSnapshot = {
@@ -49,12 +54,16 @@ export async function createBracketSnapshot(
 ): Promise<CreatedSnapshot | null> {
   if (!supabaseAdmin) return null;
 
-  const { data: matches, error: fetchErr } = await supabaseAdmin
+  let matchesQuery = supabaseAdmin
     .from('matches')
     .select(
       'id, team1_id, team2_id, team1_score, team2_score, winner_team_id, status, completed_at, forfeit_team_id'
     )
     .eq('stage_id', input.stageId);
+  if (input.tenantId) {
+    matchesQuery = matchesQuery.eq('tenant_id', input.tenantId);
+  }
+  const { data: matches, error: fetchErr } = await matchesQuery;
   if (fetchErr) {
     logger.error('[bracket/snapshot] fetch matches error', fetchErr);
     return null;
@@ -69,6 +78,9 @@ export async function createBracketSnapshot(
       taken_by_staff_id: input.staffId ?? null,
       matches_snapshot: rows,
       match_count: rows.length,
+      // Si pas de tenantId fourni (call site pas encore migre S5b), on stocke
+      // null et on resoudra plus tard via le stage. S7 : rendre non-null.
+      ...(input.tenantId ? { tenant_id: input.tenantId } : {}),
     })
     .select('id')
     .maybeSingle();

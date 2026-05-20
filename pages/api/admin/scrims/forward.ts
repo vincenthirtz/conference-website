@@ -36,6 +36,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
     .from('demandes')
     .select('*')
     .eq('id', demandeId)
+    .eq('tenant_id', ctx.tenantId)
     .eq('type', 'scrim')
     .maybeSingle();
 
@@ -59,6 +60,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
     .from('teams')
     .select('id, name')
     .eq('id', targetTeamId)
+    .eq('tenant_id', ctx.tenantId)
     .eq('is_active', true)
     .maybeSingle();
 
@@ -75,6 +77,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
     const { data: dup } = await supabaseAdmin
       .from('demandes')
       .select('id')
+      .eq('tenant_id', ctx.tenantId)
       .eq('team_id', targetTeamId)
       .eq('type', 'scrim')
       .eq('status', 'pending')
@@ -102,6 +105,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
   const { data: inserted, error: insertErr } = await supabaseAdmin
     .from('demandes')
     .insert({
+      tenant_id: ctx.tenantId,
       user_id: null,
       team_id: targetTeamId,
       type: 'scrim',
@@ -129,7 +133,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
   await supabaseAdmin
     .from('demandes')
     .update({ staff_note: newNote })
-    .eq('id', source.id);
+    .eq('id', source.id)
+    .eq('tenant_id', ctx.tenantId);
 
   const staffId: string | null = ctx.staff?.id ?? null;
   if (staffId) {

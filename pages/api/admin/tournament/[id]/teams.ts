@@ -46,7 +46,7 @@ async function handler(
   try {
     switch (req.method) {
       case 'GET':
-        return await handleGet(tournamentId, res);
+        return await handleGet(tournamentId, res, ctx);
       case 'POST':
         return await handlePost(tournamentId, req, res, ctx);
       default:
@@ -62,7 +62,8 @@ async function handler(
 
 async function handleGet(
   tournamentId: string,
-  res: NextApiResponse<ApiResponse>
+  res: NextApiResponse<ApiResponse>,
+  ctx: AuthenticatedStaffContext
 ) {
   if (!supabaseAdmin) {
     return res
@@ -87,6 +88,7 @@ async function handleGet(
       )
     `
     )
+    .eq('tenant_id', ctx.tenantId)
     .eq('tournament_id', tournamentId)
     .order('seed', { ascending: true, nullsFirst: false });
 
@@ -123,6 +125,7 @@ async function handlePost(
     .from('tournaments')
     .select('id, name, max_teams, min_players')
     .eq('id', tournamentId)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (tournamentError || !tournament) {
@@ -134,6 +137,7 @@ async function handlePost(
     .from('teams')
     .select('id, name')
     .eq('id', team_id)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (teamError || !team) {
@@ -145,6 +149,7 @@ async function handlePost(
     const { count: playerCount, error: countPlayersError } = await supabaseAdmin
       .from('team_members')
       .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', ctx.tenantId)
       .eq('team_id', team_id);
 
     if (countPlayersError) {
@@ -163,6 +168,7 @@ async function handlePost(
   const { data: existing } = await supabaseAdmin
     .from('tournament_teams')
     .select('id')
+    .eq('tenant_id', ctx.tenantId)
     .eq('tournament_id', tournamentId)
     .eq('team_id', team_id)
     .maybeSingle();
@@ -178,6 +184,7 @@ async function handlePost(
     const { count } = await supabaseAdmin
       .from('tournament_teams')
       .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', ctx.tenantId)
       .eq('tournament_id', tournamentId);
 
     if (count && count >= tournament.max_teams) {
@@ -191,6 +198,7 @@ async function handlePost(
   const { data, error } = await supabaseAdmin
     .from('tournament_teams')
     .insert({
+      tenant_id: ctx.tenantId,
       tournament_id: tournamentId,
       team_id,
       seed: seed ?? null,
@@ -243,6 +251,7 @@ async function handlePost(
   try {
     const newsSlug = `tournament-${tournamentId}-team-${team_id}-${Date.now().toString(36)}`;
     await supabaseAdmin.from('news').insert({
+      tenant_id: ctx.tenantId,
       title: `${team.name} rejoint le tournoi ${tournament.name}`,
       slug: newsSlug,
       tag: 'tournaments',

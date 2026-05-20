@@ -70,6 +70,12 @@ export type StaffLogInsert = {
   entity_id?: string | null;
   tournament_id?: string | null;
   payload?: Record<string, any> | null;
+  /**
+   * Tenant courant : si absent, le helper `logStaffAction` retombe sur
+   * DEFAULT_TENANT_ID. S7 rendra ce champ obligatoire une fois le switcher
+   * tenant deploye et tous les call sites adaptes.
+   */
+  tenant_id?: string | null;
 };
 
 export type StaffLogsFilters = {
@@ -80,4 +86,9 @@ export type StaffLogsFilters = {
   date_from?: string | null;
   date_to?: string | null;
   search?: string | null;
+  /**
+   * Tenant scope pour la lecture. Si fourni, restreint a ce tenant. Sinon
+   * pas de filtre (S5b : seul DEFAULT_TENANT_ID en prod de toute facon).
+   */
+  tenant_id?: string | null;
 };

@@ -152,6 +152,7 @@ async function handler(
       .from('tournament_stages')
       .select('id, tournament_id, stage_type, name, settings')
       .eq('id', id)
+      .eq('tenant_id', ctx.tenantId)
       .maybeSingle();
 
     if (stageErr || !stage) {
@@ -175,6 +176,7 @@ async function handler(
     const { data: stageTeams, error: teamErr } = await supabaseAdmin
       .from('stage_teams')
       .select('stage_id, team_id, seed')
+      .eq('tenant_id', ctx.tenantId)
       .eq('stage_id', id);
 
     if (teamErr) {
@@ -210,6 +212,7 @@ async function handler(
         team2_score
       `
       )
+      .eq('tenant_id', ctx.tenantId)
       .eq('stage_id', id)
       .neq('status', 'cancelled');
 
@@ -426,7 +429,8 @@ async function handler(
       await supabaseAdmin
         .from('tournament_stages')
         .update({ is_active: false })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('tenant_id', ctx.tenantId);
 
       return res.status(200).json({
         stageId: id,
@@ -488,6 +492,7 @@ async function handler(
       const { data: teamsData } = await supabaseAdmin
         .from('teams')
         .select('id, name, short_name')
+        .eq('tenant_id', ctx.tenantId)
         .in('id', teamIds);
 
       const teamNameMap = new Map<string, string | null>();
@@ -522,6 +527,7 @@ async function handler(
       if (p.isBye) {
         // Match BYE : terminé immédiatement
         return {
+          tenant_id: ctx.tenantId,
           tournament_id: tournamentId,
           stage_id: id,
           status: 'finished' as MatchStatus,
@@ -552,6 +558,7 @@ async function handler(
 
       // Match normal, à jouer
       return {
+        tenant_id: ctx.tenantId,
         tournament_id: tournamentId,
         stage_id: id,
         status: 'pending' as MatchStatus,

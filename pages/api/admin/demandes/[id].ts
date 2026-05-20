@@ -3,13 +3,17 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { isValidUUID } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../utils/logger';
 export default withStaffRoute(handler, 'caster');
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });
@@ -49,6 +53,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       `
     )
     .eq('id', id)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (error) {

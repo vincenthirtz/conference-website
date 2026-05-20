@@ -25,9 +25,6 @@ import {
 } from '@/utils/bracket/propagate';
 import type { MatchStatus } from '@/types/admin';
 import { isValidUUID } from '@/utils/apiHelpers';
-// TODO(S5b): remplacer par ctx.tenantId resolu depuis la staff session
-// multi-tenant.
-import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
 import { logger } from '../../../../../utils/logger';
 type DbMatchRow = {
@@ -178,9 +175,7 @@ async function handler(
         const team2_score = m.team2_id === winnerTeamId ? scoreForBye : 0;
 
         // Reset propagation avant de figer un vainqueur
-        // TODO(S5b): remplacer DEFAULT_TENANT_ID par ctx.tenantId une fois
-        // la staff session multi-tenant en place.
-        await resetPropagationForMatch(DEFAULT_TENANT_ID, matchId);
+        await resetPropagationForMatch(ctx.tenantId, matchId);
 
         const { error: updErr } = await supabaseAdmin
           .from('matches')
@@ -201,8 +196,7 @@ async function handler(
         // Propage dans le bracket
         if (propagate) {
           try {
-            // TODO(S5b): remplacer DEFAULT_TENANT_ID par ctx.tenantId.
-            await propagateBracketForMatch(DEFAULT_TENANT_ID, matchId);
+            await propagateBracketForMatch(ctx.tenantId, matchId);
           } catch (e: any) {
             logger.error(
               'auto-byes: propagateBracketForMatch error',

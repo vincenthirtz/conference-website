@@ -25,7 +25,7 @@ async function handler(
   res: NextApiResponse<
     StageHistoryResponse | { error: string; detail?: string }
   >,
-  _ctx: AuthenticatedStaffContext
+  ctx: AuthenticatedStaffContext
 ) {
   const { stageId } = req.query;
 
@@ -72,6 +72,7 @@ async function handler(
         )
       `
       )
+      .eq('tenant_id', ctx.tenantId)
       .eq('entity_type', 'stage')
       .eq('entity_id', id);
 
@@ -117,6 +118,7 @@ async function handler(
         )
       `
       )
+      .eq('tenant_id', ctx.tenantId)
       .contains('payload', { stage_id: id });
 
     if (entityType && !Array.isArray(entityType)) {

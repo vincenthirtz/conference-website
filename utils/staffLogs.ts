@@ -1,6 +1,7 @@
 // lib/staffLogs.ts
 // Gestion centralisée des logs staff (inserts + lecture + filtres)
 import { supabaseAdmin } from './supabase';
+import { DEFAULT_TENANT_ID } from './tenant';
 import { logger } from './logger';
 import type {
   StaffLogAction,
@@ -28,6 +29,7 @@ export async function logStaffAction(params: StaffLogInsert) {
     entity_id = null,
     tournament_id = null,
     payload = null,
+    tenant_id = null,
   } = params;
 
   const { error } = await supabaseAdmin.from('staff_logs').insert({
@@ -37,6 +39,10 @@ export async function logStaffAction(params: StaffLogInsert) {
     entity_id,
     tournament_id,
     payload,
+    // TODO(S7): rendre obligatoire une fois le switcher tenant deploye et
+    // tous les call sites adaptes. Pour l'instant on default a
+    // DEFAULT_TENANT_ID — toujours mono-tenant en prod, defense-in-depth.
+    tenant_id: tenant_id ?? DEFAULT_TENANT_ID,
   });
 
   if (error) {
@@ -109,6 +115,10 @@ export async function fetchStaffLogsFiltered(
 
   if (filters.tournament_id) {
     query = query.eq('tournament_id', filters.tournament_id);
+  }
+
+  if (filters.tenant_id) {
+    query = query.eq('tenant_id', filters.tenant_id);
   }
 
   if (filters.entity_type) {

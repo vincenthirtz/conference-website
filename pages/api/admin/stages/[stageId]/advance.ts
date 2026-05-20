@@ -63,6 +63,7 @@ async function handler(
       .from('tournament_stages')
       .select('id, tournament_id, stage_type, settings, is_active')
       .eq('id', sourceStageId)
+      .eq('tenant_id', ctx.tenantId)
       .maybeSingle();
 
     if (srcErr || !sourceStage) {
@@ -146,6 +147,7 @@ async function handler(
       .from('tournament_stages')
       .select('id, tournament_id')
       .eq('id', targetStageId)
+      .eq('tenant_id', ctx.tenantId)
       .maybeSingle();
 
     if (tgtErr || !targetStage) {
@@ -162,6 +164,7 @@ async function handler(
     const { data: sourceTeams, error: srcTeamsErr } = await supabaseAdmin
       .from('stage_teams')
       .select('team_id')
+      .eq('tenant_id', ctx.tenantId)
       .eq('stage_id', sourceStageId);
 
     if (srcTeamsErr) {
@@ -185,6 +188,7 @@ async function handler(
     const { data: existingTargetTeams } = await supabaseAdmin
       .from('stage_teams')
       .select('team_id')
+      .eq('tenant_id', ctx.tenantId)
       .eq('stage_id', targetStageId);
 
     const existingTargetIds = new Set(
@@ -237,10 +241,12 @@ async function handler(
       stageId: targetStageId,
       reason: 'advance_teams',
       staffId: ctx.staff?.id ?? null,
+      tenantId: ctx.tenantId,
     }).catch((e) => logger.error('advance: createBracketSnapshot failed', e));
 
     // Insert into stage_teams
     const inserts = toAdvance.map((teamId: string) => ({
+      tenant_id: ctx.tenantId,
       stage_id: targetStageId,
       team_id: teamId,
       seed: seedMap.get(teamId) ?? null,
@@ -268,7 +274,8 @@ async function handler(
       const { error: deactivateErr } = await supabaseAdmin
         .from('tournament_stages')
         .update({ is_active: false })
-        .eq('id', sourceStageId);
+        .eq('id', sourceStageId)
+        .eq('tenant_id', ctx.tenantId);
 
       if (deactivateErr) {
         // Rollback: remove the teams we just inserted into the target stage
@@ -276,6 +283,7 @@ async function handler(
         await supabaseAdmin
           .from('stage_teams')
           .delete()
+          .eq('tenant_id', ctx.tenantId)
           .eq('stage_id', targetStageId)
           .in('team_id', toAdvance);
         return res.status(500).json({

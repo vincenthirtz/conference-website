@@ -3,16 +3,13 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import {
   validateBattleTag,
   resolveUserIdByEmail,
   insertTeamMember,
   setTeamCaptain,
 } from '@/utils/teams/addMember';
-// TODO(S5b): remplacer par ctx.tenantId resolu depuis la staff session
-// multi-tenant.
-import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
 import { logger } from '../../../../utils/logger';
 type AddMemberResponse =
@@ -31,7 +28,8 @@ export default withStaffRoute(handler, 'manager');
 
 async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<AddMemberResponse>
+  res: NextApiResponse<AddMemberResponse>,
+  ctx: AuthenticatedStaffContext
 ) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -91,9 +89,7 @@ async function handler(
 
     // Insert (le helper traduit les erreurs trigger/duplicate en messages metier)
     const insertResult = await insertTeamMember({
-      // TODO(S5b): remplacer DEFAULT_TENANT_ID par ctx.tenantId une fois
-      // la staff session multi-tenant en place.
-      tenantId: DEFAULT_TENANT_ID,
+      tenantId: ctx.tenantId,
       teamId,
       userId: resolvedUserId,
       role: resolvedRole,
@@ -119,6 +115,7 @@ async function handler(
       const teamName = team?.name || 'une equipe';
       const newsSlug = `team-${teamId}-member-${Date.now().toString(36)}`;
       await supabaseAdmin.from('news').insert({
+        tenant_id: ctx.tenantId,
         title: `${playerName} rejoint ${teamName}`,
         slug: newsSlug,
         tag: 'teams',

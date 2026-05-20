@@ -12,9 +12,6 @@ import {
   processCheckinForUpcomingMatches,
 } from '@/utils/checkin';
 import { logStaffAction } from '@/utils/staffLogs';
-// TODO(S5b): remplacer par ctx.tenantId resolu depuis la staff session
-// multi-tenant.
-import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
 import { logger } from '../../../../../utils/logger';
 export default withStaffRoute(handler, 'manager');
@@ -29,17 +26,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
 
   try {
     if (req.method === 'GET') {
-      // TODO(S5b): remplacer DEFAULT_TENANT_ID par ctx.tenantId une fois
-      // la staff session multi-tenant en place.
-      const rows = await listCheckinStatus(DEFAULT_TENANT_ID, tournamentId);
+      const rows = await listCheckinStatus(ctx.tenantId, tournamentId);
       return res.status(200).json({ matches: rows });
     }
 
     if (req.method === 'POST') {
-      // TODO(S5b): remplacer DEFAULT_TENANT_ID par ctx.tenantId.
       const summary = await processCheckinForUpcomingMatches({
         tournamentId,
-        tenantId: DEFAULT_TENANT_ID,
+        tenantId: ctx.tenantId,
       });
 
       if (ctx?.staff?.id) {

@@ -160,6 +160,18 @@ class Builder {
   }
 
   eq(col: string, val: unknown) {
+    // S5b compat : les fixtures legacy ne seedent pas `tenant_id`. Quand le
+    // code applicatif filtre `.eq('tenant_id', DEFAULT_TENANT_ID)` mais que
+    // la row n'a aucune valeur tenant_id, on laisse passer (pas de
+    // filtrage). Une row qui a explicitement un tenant_id different garde
+    // bien sur son comportement strict.
+    if (col === 'tenant_id') {
+      this.filters.push(
+        (row) =>
+          row[col] === undefined || row[col] === null || row[col] === val
+      );
+      return this;
+    }
     this.filters.push((row) => row[col] === val);
     return this;
   }

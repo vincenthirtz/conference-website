@@ -60,7 +60,7 @@ async function handler(
 
   switch (req.method) {
     case 'GET':
-      return handleGet(req, res, id);
+      return handleGet(req, res, id, ctx);
     case 'PATCH':
     case 'PUT':
       return handlePatch(req, res, id, ctx);
@@ -73,7 +73,8 @@ async function handler(
 async function handleGet(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse>,
-  id: string
+  id: string,
+  ctx: AuthenticatedStaffContext
 ) {
   try {
     const { data, error } = await supabaseAdmin!
@@ -101,6 +102,7 @@ async function handleGet(
 `
       )
       .eq('id', id)
+      .eq('tenant_id', ctx.tenantId)
       .maybeSingle();
 
     if (error) {
@@ -252,6 +254,7 @@ async function handlePatch(
       const { data: existingSlug } = await supabaseAdmin!
         .from('tournaments')
         .select('id')
+        .eq('tenant_id', ctx.tenantId)
         .eq('slug', slug)
         .neq('id', id)
         .maybeSingle();
@@ -268,6 +271,7 @@ async function handlePatch(
       .from('tournaments')
       .select('*')
       .eq('id', id)
+      .eq('tenant_id', ctx.tenantId)
       .maybeSingle();
 
     if (fetchErr || !before) {
@@ -294,7 +298,8 @@ async function handlePatch(
       const guards = await checkStatusTransitionGuards(
         id as string,
         before.status,
-        status
+        status,
+        ctx.tenantId
       );
       if (guards) {
         return res
@@ -345,6 +350,7 @@ async function handlePatch(
       .from('tournaments')
       .update(updatePayload)
       .eq('id', id)
+      .eq('tenant_id', ctx.tenantId)
       .select(
         `
         id,
@@ -415,13 +421,15 @@ async function handlePatch(
 async function checkStatusTransitionGuards(
   tournamentId: string,
   currentStatus: string | null,
-  newStatus: string
+  newStatus: string,
+  tenantId: string
 ): Promise<{ error: string; warnings?: string[] } | null> {
   // published -> doit avoir au moins 1 stage
   if (newStatus === 'published') {
     const { data: stages } = await supabaseAdmin!
       .from('tournament_stages')
       .select('id')
+      .eq('tenant_id', tenantId)
       .eq('tournament_id', tournamentId)
       .limit(1);
 
@@ -438,6 +446,7 @@ async function checkStatusTransitionGuards(
     const { data: stages } = await supabaseAdmin!
       .from('tournament_stages')
       .select('id')
+      .eq('tenant_id', tenantId)
       .eq('tournament_id', tournamentId)
       .limit(1);
 
@@ -451,6 +460,7 @@ async function checkStatusTransitionGuards(
     const { data: teams } = await supabaseAdmin!
       .from('tournament_teams')
       .select('id')
+      .eq('tenant_id', tenantId)
       .eq('tournament_id', tournamentId)
       .limit(1);
 

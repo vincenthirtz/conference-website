@@ -77,6 +77,7 @@ async function handler(
       .from('tournament_stages')
       .select('id, tournament_id, stage_type, settings')
       .eq('id', id)
+      .eq('tenant_id', ctx.tenantId)
       .maybeSingle();
 
     if (stageErr || !stage) {
@@ -110,6 +111,7 @@ async function handler(
       const { data: existingMatches, error: existErr } = await supabaseAdmin
         .from('matches')
         .select('id, status')
+        .eq('tenant_id', ctx.tenantId)
         .eq('stage_id', id)
         .neq('status', 'cancelled');
 
@@ -171,6 +173,7 @@ async function handler(
     // 7) Insertion des matchs
     const nowIso = new Date().toISOString();
     const inserts = allPairings.map((p) => ({
+      tenant_id: ctx.tenantId,
       tournament_id: stage.tournament_id,
       stage_id: id,
       status: (p.is_bye ? 'finished' : 'pending') as MatchStatus,

@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 
@@ -18,7 +18,11 @@ type CastMemberPayload = {
   authUserId?: string | null;
 };
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   if (
     applyRateLimit(
       req,
@@ -42,6 +46,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     let query = admin
       .from('cast_members')
       .select('*')
+      .eq('tenant_id', ctx.tenantId)
       .order('sort_order', { ascending: true })
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -70,6 +75,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data: maxOrder } = await admin
       .from('cast_members')
       .select('sort_order')
+      .eq('tenant_id', ctx.tenantId)
       .order('sort_order', { ascending: false })
       .limit(1)
       .single();
@@ -85,6 +91,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     const insertPayload = {
+      tenant_id: ctx.tenantId,
       name: body.name.trim(),
       title: body.title?.trim() || null,
       description: body.description?.trim() || null,

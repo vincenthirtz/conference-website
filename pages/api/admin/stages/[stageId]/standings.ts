@@ -4,7 +4,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import {
   computeStageStandings,
   computeGroupedStandings,
@@ -24,7 +24,11 @@ type ApiResponse =
 
 export default withStaffRoute(handler, 'manager');
 
-async function handler(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<ApiResponse>,
+  ctx: AuthenticatedStaffContext
+) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -51,6 +55,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
       .from('tournament_stages')
       .select('id, stage_type, name')
       .eq('id', id)
+      .eq('tenant_id', ctx.tenantId)
       .maybeSingle();
 
     if (stageErr || !stage) {

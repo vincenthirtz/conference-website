@@ -22,7 +22,7 @@ async function handler(
   res: NextApiResponse<
     MatchHistoryResponse | { error: string; detail?: string }
   >,
-  _ctx: AuthenticatedStaffContext
+  ctx: AuthenticatedStaffContext
 ) {
   const { matchId } = req.query;
 
@@ -59,6 +59,7 @@ async function handler(
         )
       `
       )
+      .eq('tenant_id', ctx.tenantId)
       .eq('entity_type', 'match')
       .eq('entity_id', id)
       .order('created_at', { ascending: false });
@@ -89,6 +90,7 @@ async function handler(
         )
       `
       )
+      .eq('tenant_id', ctx.tenantId)
       .eq('entity_type', 'game')
       .contains('payload', { match_id: id })
       .order('created_at', { ascending: false });

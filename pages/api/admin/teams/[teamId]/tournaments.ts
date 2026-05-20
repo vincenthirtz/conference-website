@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { supabaseAdmin } from '@/utils/supabase';
 import { logStaffAction } from '@/utils/staffLogs';
 import { applyRateLimit } from '@/utils/rateLimit';
@@ -19,7 +19,11 @@ import { logger } from '../../../../../utils/logger';
  * Body: { tournamentId: string }
  */
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   if (
     applyRateLimit(
       req,
@@ -44,6 +48,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     .from('teams')
     .select('id, name')
     .eq('id', teamId)
+    .eq('tenant_id', ctx.tenantId)
     .single();
 
   if (teamError || !team) {
@@ -51,11 +56,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   if (req.method === 'GET') {
-    return handleGet(req, res, teamId);
+    return handleGet(req, res, teamId, ctx);
   } else if (req.method === 'POST') {
-    return handlePost(req, res, teamId, team.name);
+    return handlePost(req, res, teamId, team.name, ctx);
   } else if (req.method === 'DELETE') {
-    return handleDelete(req, res, teamId, team.name);
+    return handleDelete(req, res, teamId, team.name, ctx);
   } else {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -64,7 +69,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 async function handleGet(
   req: NextApiRequest,
   res: NextApiResponse,
-  teamId: string
+  teamId: string,
+  ctx: AuthenticatedStaffContext
 ) {
   if (!supabaseAdmin) {
     return res.status(500).json({ error: 'Database not configured' });
@@ -76,6 +82,7 @@ async function handleGet(
       await supabaseAdmin
         .from('tournaments')
         .select('id, name, slug, game, status, start_date, end_date, max_teams')
+        .eq('tenant_id', ctx.tenantId)
         .eq('status', 'published')
         .order('start_date', { ascending: false });
 
@@ -108,6 +115,7 @@ async function handleGet(
         )
       `
         )
+        .eq('tenant_id', ctx.tenantId)
         .eq('team_id', teamId);
 
     if (registrationsError) {
@@ -160,7 +168,8 @@ async function handlePost(
   req: NextApiRequest,
   res: NextApiResponse,
   teamId: string,
-  teamName: string
+  teamName: string,
+  ctx: AuthenticatedStaffContext
 ) {
   const { tournamentId, stageId } = req.body;
 
@@ -178,6 +187,7 @@ async function handlePost(
       .from('tournaments')
       .select('id, name, status, max_teams, min_players')
       .eq('id', tournamentId)
+      .eq('tenant_id', ctx.tenantId)
       .single();
 
     if (tournamentError || !tournament) {
@@ -196,6 +206,7 @@ async function handlePost(
         await supabaseAdmin
           .from('team_members')
           .select('*', { count: 'exact', head: true })
+          .eq('tenant_id', ctx.tenantId)
           .eq('team_id', teamId);
 
       if (countPlayersError) {
@@ -214,6 +225,7 @@ async function handlePost(
       const { data: existingTeams, error: countError } = await supabaseAdmin
         .from('stage_teams')
         .select('team_id, tournament_stages!inner(tournament_id)')
+        .eq('tenant_id', ctx.tenantId)
         .eq('tournament_stages.tournament_id', tournamentId);
 
       if (countError) {
@@ -236,6 +248,7 @@ async function handlePost(
         .from('tournament_stages')
         .select('id, tournament_id')
         .eq('id', stageId)
+        .eq('tenant_id', ctx.tenantId)
         .eq('tournament_id', tournamentId)
         .single();
 
@@ -251,6 +264,7 @@ async function handlePost(
       const { data: stages, error: stagesError } = await supabaseAdmin
         .from('tournament_stages')
         .select('id')
+        .eq('tenant_id', ctx.tenantId)
         .eq('tournament_id', tournamentId);
 
       if (stagesError) {
@@ -271,6 +285,7 @@ async function handlePost(
       await supabaseAdmin
         .from('stage_teams')
         .select('stage_id')
+        .eq('tenant_id', ctx.tenantId)
         .eq('team_id', teamId)
         .in('stage_id', targetStageIds);
 
@@ -286,6 +301,7 @@ async function handlePost(
 
     // Insert into stage_teams for each stage
     const insertData = targetStageIds.map((stgId) => ({
+      tenant_id: ctx.tenantId,
       stage_id: stgId,
       team_id: teamId,
     }));
@@ -324,8 +340,10 @@ async function handlePost(
         .from('teams')
         .select('logo_url')
         .eq('id', teamId)
+        .eq('tenant_id', ctx.tenantId)
         .maybeSingle();
       await supabaseAdmin.from('news').insert({
+        tenant_id: ctx.tenantId,
         title: `${teamName} rejoint le tournoi ${tournament.name}`,
         slug: newsSlug,
         tag: 'tournaments',
@@ -354,7 +372,8 @@ async function handleDelete(
   req: NextApiRequest,
   res: NextApiResponse,
   teamId: string,
-  teamName: string
+  teamName: string,
+  ctx: AuthenticatedStaffContext
 ) {
   const { tournamentId } = req.body;
 
@@ -372,6 +391,7 @@ async function handleDelete(
       .from('tournaments')
       .select('name')
       .eq('id', tournamentId)
+      .eq('tenant_id', ctx.tenantId)
       .single();
 
     if (tournamentError || !tournament) {
@@ -382,6 +402,7 @@ async function handleDelete(
     const { data: stages, error: stagesError } = await supabaseAdmin
       .from('tournament_stages')
       .select('id')
+      .eq('tenant_id', ctx.tenantId)
       .eq('tournament_id', tournamentId);
 
     if (stagesError) {
@@ -401,6 +422,7 @@ async function handleDelete(
     const { error: deleteError, count } = await supabaseAdmin
       .from('stage_teams')
       .delete({ count: 'exact' })
+      .eq('tenant_id', ctx.tenantId)
       .eq('team_id', teamId)
       .in('stage_id', stageIds);
 

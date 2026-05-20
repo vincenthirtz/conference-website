@@ -4,13 +4,17 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { isValidUUID } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../../utils/logger';
 export default withStaffRoute(handler, 'caster');
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -35,6 +39,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .from('tournament_stages')
       .select('id, tournament_id, name, stage_type, order_index, settings')
       .eq('id', id)
+      .eq('tenant_id', ctx.tenantId)
       .maybeSingle();
 
     if (stageErr || !stage) {
@@ -45,6 +50,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data: matches, error: matchErr } = await supabaseAdmin
       .from('matches')
       .select('id, status')
+      .eq('tenant_id', ctx.tenantId)
       .eq('stage_id', id)
       .neq('status', 'cancelled');
 
@@ -77,6 +83,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       const { data: nextStageData } = await supabaseAdmin
         .from('tournament_stages')
         .select('id, name, stage_type, order_index')
+        .eq('tenant_id', ctx.tenantId)
         .eq('tournament_id', stage.tournament_id)
         .gt('order_index', stage.order_index)
         .order('order_index', { ascending: true })

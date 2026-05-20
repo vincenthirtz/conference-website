@@ -30,7 +30,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
   try {
     switch (req.method) {
       case 'GET':
-        return await handleGet(matchId, res);
+        return await handleGet(matchId, res, ctx);
       case 'POST':
         return await handlePost(matchId, req, res, ctx);
       case 'PATCH':
@@ -62,11 +62,15 @@ type MatchForVeto = {
   veto_locked_at: string | null;
 };
 
-async function fetchMatchForVeto(matchId: string): Promise<MatchForVeto | null> {
+async function fetchMatchForVeto(
+  matchId: string,
+  tenantId: string
+): Promise<MatchForVeto | null> {
   const { data, error } = await supabaseAdmin
     .from('matches')
     .select('id, tournament_id, match_format, team1_id, team2_id, veto_locked_at')
     .eq('id', matchId)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
   if (error || !data) return null;
   return data as MatchForVeto;
@@ -76,9 +80,13 @@ async function fetchMatchForVeto(matchId: string): Promise<MatchForVeto | null> 
  * GET : fetch veto state for a match
  * ---------------------------------------------------------*/
 
-async function handleGet(matchId: string, res: NextApiResponse) {
+async function handleGet(
+  matchId: string,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   // Fetch match info
-  const match = await fetchMatchForVeto(matchId);
+  const match = await fetchMatchForVeto(matchId, ctx.tenantId);
   if (!match) {
     return res.status(404).json({ error: 'Match not found' });
   }
@@ -87,6 +95,7 @@ async function handleGet(matchId: string, res: NextApiResponse) {
   const { data: steps, error: sErr } = await supabaseAdmin
     .from('match_map_vetos')
     .select('*')
+    .eq('tenant_id', ctx.tenantId)
     .eq('match_id', matchId)
     .order('step_number', { ascending: true });
 
@@ -102,6 +111,7 @@ async function handleGet(matchId: string, res: NextApiResponse) {
     const { data: teams } = await supabaseAdmin
       .from('teams')
       .select('id, name')
+      .eq('tenant_id', ctx.tenantId)
       .in('id', teamIds);
     for (const t of teams || []) {
       teamNames[t.id] = t.name;
@@ -161,7 +171,7 @@ async function handlePost(
   }
 
   // Fetch match to validate
-  const match = await fetchMatchForVeto(matchId);
+  const match = await fetchMatchForVeto(matchId, ctx.tenantId);
   if (!match) {
     return res.status(404).json({ error: 'Match not found' });
   }
@@ -181,6 +191,7 @@ async function handlePost(
   const { count, error: cErr } = await supabaseAdmin
     .from('match_map_vetos')
     .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', ctx.tenantId)
     .eq('match_id', matchId);
 
   if (cErr) {
@@ -199,6 +210,7 @@ async function handlePost(
   const { data: existing } = await supabaseAdmin
     .from('match_map_vetos')
     .select('map_name')
+    .eq('tenant_id', ctx.tenantId)
     .eq('match_id', matchId);
 
   const usedMaps = new Set((existing || []).map((e: any) => e.map_name));
@@ -209,6 +221,7 @@ async function handlePost(
   }
 
   const payload = {
+    tenant_id: ctx.tenantId,
     match_id: matchId,
     step_number: currentStep,
     action: body.action,
@@ -236,6 +249,7 @@ async function handlePost(
     const { data: allSteps } = await supabaseAdmin
       .from('match_map_vetos')
       .select('*')
+      .eq('tenant_id', ctx.tenantId)
       .eq('match_id', matchId)
       .order('step_number', { ascending: true });
 
@@ -245,6 +259,7 @@ async function handlePost(
 
     if (pickedSteps.length > 0) {
       const gamesPayload = pickedSteps.map((s: any, idx: number) => ({
+        tenant_id: ctx.tenantId,
         match_id: matchId,
         map_name: s.map_name,
         map_order: idx,
@@ -287,6 +302,7 @@ async function handlePost(
 
   // Discord notification: veto step (fire-and-forget)
   void sendVetoStepDiscord({
+    tenantId: ctx.tenantId,
     matchId,
     tournamentId: match.tournament_id ?? null,
     team1Id: match.team1_id ?? null,
@@ -311,6 +327,7 @@ async function handlePost(
  * ---------------------------------------------------------*/
 
 async function sendVetoStepDiscord(params: {
+  tenantId: string;
   matchId: string;
   tournamentId: string | null;
   team1Id: string | null;
@@ -330,6 +347,7 @@ async function sendVetoStepDiscord(params: {
   const { data: teams } = await supabaseAdmin
     .from('teams')
     .select('id, name')
+    .eq('tenant_id', params.tenantId)
     .in('id', ids);
 
   const byId = new Map<string, string>();
@@ -365,7 +383,7 @@ async function sendVetoStepDiscord(params: {
 
 async function handleDelete(matchId: string, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   // Verrou : meme garde que POST. Le reset est aussi destructeur.
-  const match = await fetchMatchForVeto(matchId);
+  const match = await fetchMatchForVeto(matchId, ctx.tenantId);
   if (!match) {
     return res.status(404).json({ error: 'Match not found' });
   }
@@ -382,11 +400,13 @@ async function handleDelete(matchId: string, res: NextApiResponse, ctx: Authenti
   const { data: vetoSteps } = await supabaseAdmin
     .from('match_map_vetos')
     .select('map_name, action')
+    .eq('tenant_id', ctx.tenantId)
     .eq('match_id', matchId);
 
   const { error } = await supabaseAdmin
     .from('match_map_vetos')
     .delete()
+    .eq('tenant_id', ctx.tenantId)
     .eq('match_id', matchId);
 
   if (error) {
@@ -438,7 +458,7 @@ async function handlePatch(
       .json({ error: 'Seul un admin peut deverrouiller un veto.' });
   }
 
-  const match = await fetchMatchForVeto(matchId);
+  const match = await fetchMatchForVeto(matchId, ctx.tenantId);
   if (!match) {
     return res.status(404).json({ error: 'Match not found' });
   }
@@ -453,7 +473,8 @@ async function handlePatch(
   const { error } = await supabaseAdmin
     .from('matches')
     .update({ veto_locked_at: null, updated_at: new Date().toISOString() })
-    .eq('id', matchId);
+    .eq('id', matchId)
+    .eq('tenant_id', ctx.tenantId);
 
   if (error) {
     logger.error('PATCH veto unlock error:', error);

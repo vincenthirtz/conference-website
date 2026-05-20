@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { sanitizeUrl } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { notifyAnnouncement } from '@/utils/discord';
@@ -23,7 +23,11 @@ function toISO(value?: string | null) {
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   if (
     applyRateLimit(
       req,
@@ -47,6 +51,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     let query = admin
       .from('announcements')
       .select('*')
+      .eq('tenant_id', ctx.tenantId)
       .order('created_at', { ascending: false })
       .limit(limit);
 
@@ -71,6 +76,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     const insertPayload = {
+      tenant_id: ctx.tenantId,
       title: body.title.trim(),
       message: body.message.trim(),
       cta_label: body.ctaLabel?.trim() || null,

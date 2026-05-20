@@ -56,6 +56,7 @@ async function handler(
       .select('briefing_at, cast_member_id')
       .eq('id', assignmentId)
       .eq('match_id', matchId)
+      .eq('tenant_id', ctx.tenantId)
       .maybeSingle();
 
     // Rescheduling resets the reminder flag so the bot DMs again at the new time.
@@ -68,6 +69,7 @@ async function handler(
       })
       .eq('id', assignmentId)
       .eq('match_id', matchId)
+      .eq('tenant_id', ctx.tenantId)
       .select('*')
       .maybeSingle();
 
@@ -97,13 +99,15 @@ async function handler(
       .select('cast_member_id, briefing_at')
       .eq('id', assignmentId)
       .eq('match_id', matchId)
+      .eq('tenant_id', ctx.tenantId)
       .maybeSingle();
 
     const { error } = await supabaseAdmin
       .from('cast_assignments')
       .delete()
       .eq('id', assignmentId)
-      .eq('match_id', matchId);
+      .eq('match_id', matchId)
+      .eq('tenant_id', ctx.tenantId);
 
     if (error) {
       logger.error('[admin/cast-assignments/id] delete error', error);

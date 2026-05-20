@@ -3,7 +3,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import {
   findOrCreateUserByEmail,
   listUsersEmailMap,
@@ -16,9 +16,6 @@ import {
   isTeamRosterLocked,
   rosterLockErrorMessage,
 } from '@/utils/teams/rosterLock';
-// TODO(S5b): remplacer par ctx.tenantId resolu depuis la staff session
-// multi-tenant.
-import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
 type TeamMemberRow = {
   id: string;
@@ -49,7 +46,8 @@ export default withStaffRoute(handler, 'manager');
 
 async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<MembersResponse>
+  res: NextApiResponse<MembersResponse>,
+  ctx: AuthenticatedStaffContext
 ) {
   if (
     applyRateLimit(
@@ -99,10 +97,8 @@ async function handler(
     // Garde roster lock : refus si l'equipe est inscrite a un tournoi avec
     // roster_locked_at <= now() (sauf flag force=true).
     if (force !== true) {
-      // TODO(S5b): remplacer DEFAULT_TENANT_ID par ctx.tenantId une fois
-      // la staff session multi-tenant en place.
       const lockStatus = await isTeamRosterLocked(
-        DEFAULT_TENANT_ID,
+        ctx.tenantId,
         String(teamId)
       );
       if (lockStatus.locked) {
@@ -262,10 +258,8 @@ async function handler(
       isSubstitute === undefined &&
       !swapWithMemberId;
     if (force !== true && !onlyBattleTagChange) {
-      // TODO(S5b): remplacer DEFAULT_TENANT_ID par ctx.tenantId une fois
-      // la staff session multi-tenant en place.
       const lockStatus = await isTeamRosterLocked(
-        DEFAULT_TENANT_ID,
+        ctx.tenantId,
         String(teamId)
       );
       if (lockStatus.locked) {
@@ -396,10 +390,8 @@ async function handler(
     }
 
     if (force !== true) {
-      // TODO(S5b): remplacer DEFAULT_TENANT_ID par ctx.tenantId une fois
-      // la staff session multi-tenant en place.
       const lockStatus = await isTeamRosterLocked(
-        DEFAULT_TENANT_ID,
+        ctx.tenantId,
         String(teamId)
       );
       if (lockStatus.locked) {

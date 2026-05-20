@@ -3,13 +3,17 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { isValidUUID } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../../utils/logger';
 export default withStaffRoute(handler, 'caster');
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -34,6 +38,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .from('tournament_stages')
       .select('id, tournament_id, stage_type, settings')
       .eq('id', id)
+      .eq('tenant_id', ctx.tenantId)
       .maybeSingle();
 
     if (stageErr || !stage) {
@@ -52,6 +57,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .select(
         'id, round_number, status, is_bye, team1_id, team2_id, winner_team_id'
       )
+      .eq('tenant_id', ctx.tenantId)
       .eq('stage_id', id)
       .neq('status', 'cancelled');
 
@@ -128,6 +134,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data: stageTeams } = await supabaseAdmin
       .from('stage_teams')
       .select('team_id')
+      .eq('tenant_id', ctx.tenantId)
       .eq('stage_id', id);
 
     const allTeamIds = (stageTeams || []).map((st: any) => st.team_id);

@@ -53,7 +53,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
   try {
     switch (req.method) {
       case 'GET':
-        return await handleGet(id, res);
+        return await handleGet(id, res, ctx);
       case 'PUT':
       case 'PATCH':
         return await handlePut(id, req, res, ctx);
@@ -74,11 +74,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
  * GET : récupérer une phase
  * ---------------------------------------------------------*/
 
-async function handleGet(id: string, res: NextApiResponse) {
+async function handleGet(
+  id: string,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   const { data, error } = await supabaseAdmin
     .from('tournament_stages')
     .select('*')
     .eq('id', id)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (error || !data) {
@@ -224,6 +229,7 @@ async function handlePut(
     .from('tournament_stages')
     .select('*')
     .eq('id', id)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (fetchErr || !before) {
@@ -277,6 +283,7 @@ async function handlePut(
     .from('tournament_stages')
     .update(updatePayload)
     .eq('id', id)
+    .eq('tenant_id', ctx.tenantId)
     .select('*')
     .maybeSingle();
 
@@ -329,6 +336,7 @@ async function handleDelete(
     .from('tournament_stages')
     .select('*')
     .eq('id', id)
+    .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
 
   if (fetchErr || !before) {
@@ -341,7 +349,8 @@ async function handleDelete(
     const { error } = await supabaseAdmin
       .from('tournament_stages')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('tenant_id', ctx.tenantId);
 
     if (error) {
       logger.error('admin hard delete stage error:', error);
@@ -382,6 +391,7 @@ async function handleDelete(
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
+    .eq('tenant_id', ctx.tenantId)
     .select('*')
     .maybeSingle();
 

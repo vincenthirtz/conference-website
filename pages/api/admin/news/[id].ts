@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import slugify from 'slugify';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { emitBotEvent } from '@/utils/botEvents';
@@ -29,7 +29,11 @@ function normalizeTag(tag?: string) {
   return slugify(cleaned, { lower: true, strict: true });
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-news-id'))
     return;
   const { id } = req.query;
@@ -49,6 +53,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .from('news')
       .select('*')
       .eq('id', id)
+      .eq('tenant_id', ctx.tenantId)
       .maybeSingle();
 
     if (error) {
@@ -73,6 +78,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .from('news')
       .select('published_at, status, tag')
       .eq('id', id)
+      .eq('tenant_id', ctx.tenantId)
       .maybeSingle();
 
     if (existingErr) {
@@ -112,6 +118,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .from('news')
       .update(payload)
       .eq('id', id)
+      .eq('tenant_id', ctx.tenantId)
       .select()
       .single();
 
@@ -141,7 +148,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   if (req.method === 'DELETE') {
-    const { error } = await admin.from('news').delete().eq('id', id);
+    const { error } = await admin
+      .from('news')
+      .delete()
+      .eq('id', id)
+      .eq('tenant_id', ctx.tenantId);
 
     if (error) {
       logger.error('[admin/news/id] delete error', error);

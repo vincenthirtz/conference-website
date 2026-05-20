@@ -24,7 +24,7 @@ async function handler(
   res: NextApiResponse<
     TournamentHistoryResponse | { error: string; detail?: string }
   >,
-  _ctx: AuthenticatedStaffContext
+  ctx: AuthenticatedStaffContext
 ) {
   const { id } = req.query;
 
@@ -70,6 +70,7 @@ async function handler(
         )
       `
       )
+      .eq('tenant_id', ctx.tenantId)
       .eq('tournament_id', tournamentId)
       .order('created_at', { ascending: false })
       .limit(limitNum);

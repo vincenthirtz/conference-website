@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { applyRateLimit } from '@/utils/rateLimit';
 
 import { logger } from '../../../../utils/logger';
@@ -18,7 +18,11 @@ type AvailableCaster = {
 const WINDOW_HOURS_DEFAULT = 2;
 const WINDOW_HOURS_MAX = 12;
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   if (
     applyRateLimit(
       req,
@@ -58,6 +62,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data: links, error: linksErr } = await admin
       .from('cast_members')
       .select('id, auth_user_id')
+      .eq('tenant_id', ctx.tenantId)
       .in('auth_user_id', userIds);
 
     if (linksErr) {
@@ -98,6 +103,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data: busy, error: busyErr } = await admin
       .from('cast_assignments')
       .select('cast_member_id, match:match_id!inner(id, scheduled_at)')
+      .eq('tenant_id', ctx.tenantId)
       .gte('match.scheduled_at', lo)
       .lte('match.scheduled_at', hi);
     if (busyErr) {

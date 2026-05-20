@@ -34,6 +34,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
       .from('tournament_stages')
       .select('*')
       .eq('id', id)
+      .eq('tenant_id', ctx.tenantId)
       .maybeSingle();
 
     if (fetchErr || !source) {
@@ -48,6 +49,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
     const { data: existingStages } = await supabaseAdmin
       .from('tournament_stages')
       .select('order_index')
+      .eq('tenant_id', ctx.tenantId)
       .eq('tournament_id', tournamentId)
       .order('order_index', { ascending: false })
       .limit(1);
@@ -62,6 +64,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
     const { data: cloned, error: insertErr } = await supabaseAdmin
       .from('tournament_stages')
       .insert({
+        tenant_id: ctx.tenantId,
         tournament_id: tournamentId,
         name: cloneName,
         slug: cloneSlug,
@@ -88,6 +91,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
       const { data: sourceMatches, error: matchErr } = await supabaseAdmin
         .from('matches')
         .select('*')
+        .eq('tenant_id', ctx.tenantId)
         .eq('stage_id', id);
 
       if (!matchErr && sourceMatches && sourceMatches.length > 0) {
@@ -98,6 +102,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
 
         // First pass: prepare all matches with new IDs (let DB generate them)
         const matchPayloads = sourceMatches.map((m: any) => ({
+          tenant_id: ctx.tenantId,
           tournament_id: tournamentId,
           stage_id: cloned.id,
           status: 'pending',
@@ -176,7 +181,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
                 next_match_win_id: u.next_match_win_id,
                 next_match_lose_id: u.next_match_lose_id,
               })
-              .eq('id', u.id);
+              .eq('id', u.id)
+              .eq('tenant_id', ctx.tenantId);
           }
         }
       }
@@ -186,10 +192,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
     const { data: stageTeams } = await supabaseAdmin
       .from('stage_teams')
       .select('*')
+      .eq('tenant_id', ctx.tenantId)
       .eq('stage_id', id);
 
     if (stageTeams && stageTeams.length > 0) {
       const teamPayloads = stageTeams.map((st: any) => ({
+        tenant_id: ctx.tenantId,
         stage_id: cloned.id,
         team_id: st.team_id,
         seed: st.seed,

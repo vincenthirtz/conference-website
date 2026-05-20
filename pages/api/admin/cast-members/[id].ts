@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 
@@ -18,7 +18,11 @@ type CastMemberPayload = {
   authUserId?: string | null;
 };
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   if (
     applyRateLimit(
       req,
@@ -45,6 +49,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .from('cast_members')
       .select('*')
       .eq('id', id)
+      .eq('tenant_id', ctx.tenantId)
       .single();
 
     if (error) {
@@ -88,6 +93,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .from('cast_members')
       .update(updatePayload)
       .eq('id', id)
+      .eq('tenant_id', ctx.tenantId)
       .select()
       .single();
 
@@ -114,7 +120,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   if (req.method === 'DELETE') {
-    const { error } = await admin.from('cast_members').delete().eq('id', id);
+    const { error } = await admin
+      .from('cast_members')
+      .delete()
+      .eq('id', id)
+      .eq('tenant_id', ctx.tenantId);
 
     if (error) {
       logger.error('[admin/cast-members] delete error', error);
