@@ -72,6 +72,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     .from('player_action_snoozes')
     .upsert(
       {
+        tenant_id: req.botContext!.tenantId,
         discord_user_id: pathDiscordUserId,
         action_key: actionKey,
         snoozed_until: snoozedUntil,

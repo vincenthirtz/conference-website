@@ -72,6 +72,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     .select(
       'id, discord_thread_id, discord_scheduled_event_id, discord_dispute_thread_id'
     )
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', matchId)
     .maybeSingle();
   if (mErr) {
@@ -83,6 +84,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: updated, error: upErr } = await supabaseAdmin
     .from('matches')
     .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', matchId)
     .select(
       'id, discord_thread_id, discord_scheduled_event_id, discord_dispute_thread_id'

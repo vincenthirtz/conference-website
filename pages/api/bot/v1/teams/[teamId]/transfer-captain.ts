@@ -49,6 +49,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: team, error: teamErr } = await supabaseAdmin
     .from('teams')
     .select('id, captain_id')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', teamId)
     .maybeSingle();
   if (teamErr) {
@@ -75,6 +76,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: membership, error: memberErr } = await supabaseAdmin
     .from('team_members')
     .select('id')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('team_id', team.id)
     .eq('user_id', newCaptain.authUserId)
     .maybeSingle();
@@ -99,6 +101,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       captain_id: newCaptain.authUserId,
       updated_at: new Date().toISOString(),
     })
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', team.id);
   if (updateErr) {
     logger.error('[bot/transfer-captain] update error', updateErr);

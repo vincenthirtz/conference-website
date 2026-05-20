@@ -31,6 +31,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: source, error: srcErr } = await supabaseAdmin
     .from('tournaments')
     .select('*')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', sourceId)
     .maybeSingle();
   if (srcErr) {
@@ -54,6 +55,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: clash } = await supabaseAdmin
     .from('tournaments')
     .select('id')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('slug', cloneSlug)
     .maybeSingle();
   if (clash) {
@@ -63,6 +65,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: cloned, error: createErr } = await supabaseAdmin
     .from('tournaments')
     .insert({
+      tenant_id: req.botContext!.tenantId,
       name: cloneName,
       slug: cloneSlug,
       game: source.game,
@@ -90,12 +93,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: sourceStages } = await supabaseAdmin
     .from('tournament_stages')
     .select('name, slug, stage_type, order_index, settings')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('tournament_id', sourceId)
     .order('order_index', { ascending: true });
 
   let createdStages: unknown[] = [];
   if (sourceStages && sourceStages.length > 0) {
     const inserts = sourceStages.map((s) => ({
+      tenant_id: req.botContext!.tenantId,
       tournament_id: cloned.id,
       name: (s as any).name,
       slug: (s as any).slug,
@@ -122,12 +127,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: sourceMaps } = await supabaseAdmin
     .from('tournament_maps')
     .select('map_name, map_slug, map_type, image_url, enabled, order_index')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('tournament_id', sourceId)
     .order('order_index', { ascending: true });
 
   let mapsCount = 0;
   if (sourceMaps && sourceMaps.length > 0) {
     const inserts = sourceMaps.map((m) => ({
+      tenant_id: req.botContext!.tenantId,
       tournament_id: cloned.id,
       map_name: (m as any).map_name,
       map_slug: (m as any).map_slug,

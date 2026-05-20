@@ -88,6 +88,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     .select(
       'id, name, discord_role_id, discord_channel_id, discord_voice_channel_id'
     )
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', teamId)
     .maybeSingle();
   if (tErr) {
@@ -107,6 +108,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: updated, error: upErr } = await supabaseAdmin
     .from('teams')
     .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', teamId)
     .select(
       'id, name, discord_role_id, discord_channel_id, discord_voice_channel_id'

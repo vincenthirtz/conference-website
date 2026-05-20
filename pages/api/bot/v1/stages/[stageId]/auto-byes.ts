@@ -45,6 +45,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: stage, error: stErr } = await supabaseAdmin
     .from('tournament_stages')
     .select('id, tournament_id')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', stageId)
     .maybeSingle();
   if (stErr) {
@@ -61,6 +62,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     .select(
       `id, status, is_bye, round_number, team1_id, team2_id`
     )
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('stage_id', stageId)
     .neq('status', 'cancelled');
   if (roundNumber !== undefined) q = q.eq('round_number', roundNumber);
@@ -107,6 +109,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           team2_score,
           completed_at: new Date().toISOString(),
         })
+        .eq('tenant_id', req.botContext!.tenantId)
         .eq('id', m.id);
       if (upErr) throw upErr;
 

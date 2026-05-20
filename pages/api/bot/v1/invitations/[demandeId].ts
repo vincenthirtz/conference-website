@@ -41,7 +41,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   if (action === 'accept') {
-    const result = await acceptInvitation(demandeId, actor.authUserId);
+    const result = await acceptInvitation(
+      req.botContext!.tenantId,
+      demandeId,
+      actor.authUserId
+    );
     if (!result.ok) {
       return res.status(result.status).json({ error: result.error });
     }
@@ -62,7 +66,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   if (action === 'reject') {
-    const result = await rejectInvitation(demandeId, actor.authUserId);
+    const result = await rejectInvitation(
+      req.botContext!.tenantId,
+      demandeId,
+      actor.authUserId
+    );
     if (!result.ok) {
       return res.status(result.status).json({ error: result.error });
     }
@@ -77,7 +85,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   // cancel
-  const result = await cancelInvitation(demandeId, actor.authUserId);
+  const result = await cancelInvitation(
+    req.botContext!.tenantId,
+    demandeId,
+    actor.authUserId
+  );
   if (!result.ok) {
     return res.status(result.status).json({ error: result.error });
   }

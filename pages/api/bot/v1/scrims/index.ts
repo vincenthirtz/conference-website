@@ -81,6 +81,7 @@ async function handleCreate(req: NextApiRequest, res: NextApiResponse) {
   const { data: existing } = await supabaseAdmin!
     .from('scrims')
     .select('id')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('slug', slug)
     .maybeSingle();
   if (existing) {
@@ -117,6 +118,7 @@ async function handleCreate(req: NextApiRequest, res: NextApiResponse) {
   }
 
   const payload = {
+    tenant_id: req.botContext!.tenantId,
     name,
     slug,
     game: typeof body.game === 'string' ? body.game : null,

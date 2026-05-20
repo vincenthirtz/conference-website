@@ -86,6 +86,7 @@ async function handleCreate(req: NextApiRequest, res: NextApiResponse) {
   const { data: existing } = await supabaseAdmin!
     .from('tournaments')
     .select('id')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('slug', slug)
     .maybeSingle();
   if (existing) {
@@ -132,6 +133,7 @@ async function handleCreate(req: NextApiRequest, res: NextApiResponse) {
   }
 
   const payload = {
+    tenant_id: req.botContext!.tenantId,
     name,
     slug,
     game: typeof body.game === 'string' ? body.game : null,
@@ -164,6 +166,7 @@ async function handleCreate(req: NextApiRequest, res: NextApiResponse) {
   // Auto-populate the tournament map pool with OW maps (parity with admin POST).
   try {
     const mapRows = OVERWATCH_MAPS.map((m, idx) => ({
+      tenant_id: req.botContext!.tenantId,
       tournament_id: data.id,
       map_name: m.name,
       map_slug: slugify(m.name, { lower: true, strict: true }),

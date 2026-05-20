@@ -97,6 +97,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: match, error: mErr } = await supabaseAdmin
     .from('matches')
     .select('id, tournament_id, status, team1_id, team2_id')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', matchId)
     .maybeSingle();
   if (mErr) {
@@ -132,6 +133,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         dispute_resolved_at: nowIso,
         updated_at: nowIso,
       })
+      .eq('tenant_id', req.botContext!.tenantId)
       .eq('id', matchId);
     if (clearErr) {
       logger.error('[bot/resolve-dispute] clear status error', clearErr);
@@ -171,6 +173,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         const { data: row } = await supabaseAdmin
           .from('matches')
           .select('discord_dispute_thread_id')
+          .eq('tenant_id', req.botContext!.tenantId)
           .eq('id', matchId)
           .maybeSingle();
         await emitBotEvent('match.dispute.resolved', {
@@ -203,6 +206,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           dispute_resolution: null,
           dispute_resolved_at: null,
         })
+        .eq('tenant_id', req.botContext!.tenantId)
         .eq('id', matchId);
       return res.status(500).json({
         error: `Echec de l'application du score : ${msg}. Dispute conservee.`,
@@ -222,6 +226,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       dispute_resolved_at: nowIso,
       updated_at: nowIso,
     })
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', matchId);
   if (updErr) {
     logger.error('[bot/resolve-dispute] simple update error', updErr);
@@ -245,6 +250,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data: row } = await supabaseAdmin
       .from('matches')
       .select('discord_dispute_thread_id')
+      .eq('tenant_id', req.botContext!.tenantId)
       .eq('id', matchId)
       .maybeSingle();
     await emitBotEvent('match.dispute.resolved', {

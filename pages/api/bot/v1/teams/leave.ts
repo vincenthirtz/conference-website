@@ -29,6 +29,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: membership, error: memberErr } = await supabaseAdmin
     .from('team_members')
     .select('id, team_id')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('user_id', actor.authUserId)
     .maybeSingle();
   if (memberErr) {
@@ -42,6 +43,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: team, error: teamErr } = await supabaseAdmin
     .from('teams')
     .select('captain_id')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', membership.team_id)
     .maybeSingle();
   if (teamErr) {
@@ -64,6 +66,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { error: deleteErr } = await supabaseAdmin
     .from('team_members')
     .delete()
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', membership.id);
   if (deleteErr) {
     logger.error('[bot/teams/leave] delete error', deleteErr);

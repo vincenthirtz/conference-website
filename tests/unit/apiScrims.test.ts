@@ -771,6 +771,7 @@ describe('/api/bot/scrims/[scrimId]/matches/[matchId]', () => {
     store.scrims = [
       {
         id: SCRIM_ID,
+        tenant_id: CONFERENCE_TENANT_ID,
         name: 'Match update',
         slug: 'match-update',
         status: 'running',
@@ -781,6 +782,7 @@ describe('/api/bot/scrims/[scrimId]/matches/[matchId]', () => {
     store.matches = [
       {
         id: MATCH_ID,
+        tenant_id: CONFERENCE_TENANT_ID,
         scrim_id: SCRIM_ID,
         tournament_id: null,
         team1_id: TEAM_A,
@@ -791,6 +793,7 @@ describe('/api/bot/scrims/[scrimId]/matches/[matchId]', () => {
       },
       {
         id: OTHER_MATCH_ID,
+        tenant_id: CONFERENCE_TENANT_ID,
         scrim_id: SCRIM_ID_2,
         tournament_id: null,
         team1_id: TEAM_A,
@@ -911,6 +914,7 @@ describe('/api/bot/scrims/[scrimId]/matches', () => {
     store.scrims = [
       {
         id: SCRIM_ID,
+        tenant_id: CONFERENCE_TENANT_ID,
         name: 'Scrim',
         slug: 's',
         status: 'scheduled',

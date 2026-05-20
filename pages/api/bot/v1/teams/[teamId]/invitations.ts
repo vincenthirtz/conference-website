@@ -134,6 +134,7 @@ async function handleCreate(
   const { data: team, error: teamErr } = await supabaseAdmin
     .from('teams')
     .select('id, captain_id, name')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', teamId)
     .maybeSingle();
   if (teamErr) {
@@ -176,7 +177,7 @@ async function handleCreate(
   const battleTag =
     typeof body.battleTag === 'string' ? body.battleTag : undefined;
 
-  const result = await createInvitation({
+  const result = await createInvitation(req.botContext!.tenantId, {
     teamId: team.id,
     captainAuthUserId: actor.authUserId,
     captainDiscordUserId: actor.discordUserId,

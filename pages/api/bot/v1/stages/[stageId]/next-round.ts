@@ -40,6 +40,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!actor) return;
 
   const result = await runSwissNextRound({
+    tenantId: req.botContext!.tenantId,
     stageId,
     roundNumber:
       typeof body.roundNumber === 'number' &&

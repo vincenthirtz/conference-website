@@ -208,6 +208,7 @@ async function handlePatch(req: NextApiRequest, res: NextApiResponse) {
   const { data: updated, error: updErr } = await supabaseAdmin
     .from('teams')
     .update(updates)
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', team.id)
     .select(TEAM_SELECT_COLUMNS)
     .single();

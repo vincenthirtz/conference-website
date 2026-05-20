@@ -45,6 +45,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       `id, acked_at, cast_member_id,
        cast_member:cast_member_id (id, auth_user_id)`
     )
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', assignmentId)
     .maybeSingle();
   if (aErr) {
@@ -105,6 +106,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { error: uErr } = await supabaseAdmin
     .from('cast_assignments')
     .update({ acked_at: ackedAt })
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', assignmentId);
   if (uErr) {
     logger.error('[bot/cast/ack] update error', uErr);

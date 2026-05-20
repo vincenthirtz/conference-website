@@ -42,6 +42,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: tournament, error: tErr } = await supabaseAdmin
     .from('tournaments')
     .select('id, name, status')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', tournamentId)
     .maybeSingle();
   if (tErr) {
@@ -62,6 +63,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { count, error: cntErr } = await supabaseAdmin
       .from('tournament_stages')
       .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', req.botContext!.tenantId)
       .eq('tournament_id', tournamentId);
     if (cntErr) {
       logger.error('[bot/tournament/status] stages count error', cntErr);
@@ -93,6 +95,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       status,
       updated_at: new Date().toISOString(),
     })
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', tournamentId)
     .select('id, name, status')
     .maybeSingle();

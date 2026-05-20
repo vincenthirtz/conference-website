@@ -245,7 +245,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   // --- Invitations team pending (joueur cible) ---------------------------
-  const invs = await listPendingInvitationsForUser(player.authUserId);
+  const invs = await listPendingInvitationsForUser(
+    req.botContext!.tenantId,
+    player.authUserId
+  );
   if (invs.ok) {
     for (const d of invs.data) {
       const key = `invitation:demande:${d.id}`;

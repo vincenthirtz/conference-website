@@ -41,6 +41,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: match, error: mErr } = await supabaseAdmin
     .from('matches')
     .select('id, status, team1_id, team2_id, is_bye')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', matchId)
     .maybeSingle();
   if (mErr) {

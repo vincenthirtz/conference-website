@@ -26,6 +26,12 @@ import type { MatchStatus } from '../../types/admin';
 import type { SwissSettings } from '../../types/stages';
 
 export type RunNextRoundInput = {
+  /**
+   * Multi-tenant (S3) : scope toutes les queries/inserts à ce tenant. Le bot
+   * caller passe `req.botContext!.tenantId`. Le helper propage `tenant_id`
+   * sur les matches insérés.
+   */
+  tenantId: string;
   stageId: string;
   /** Defaults to max(existing round) + 1. */
   roundNumber?: number;
@@ -162,6 +168,7 @@ export async function runSwissNextRound(
   const { data: stageData, error: stageErr } = await supabaseAdmin
     .from('tournament_stages')
     .select('id, tournament_id, stage_type, name, settings')
+    .eq('tenant_id', input.tenantId)
     .eq('id', input.stageId)
     .maybeSingle();
   if (stageErr) {
@@ -199,6 +206,7 @@ export async function runSwissNextRound(
   const { data: stRows, error: stErr } = await supabaseAdmin
     .from('stage_teams')
     .select('team_id, seed')
+    .eq('tenant_id', input.tenantId)
     .eq('stage_id', stage.id);
   if (stErr) {
     return { ok: false, status: 500, code: 'DB_ERROR', error: stErr.message };
@@ -219,6 +227,7 @@ export async function runSwissNextRound(
     .select(
       'id, status, is_bye, round_number, team1_id, team2_id, winner_team_id, team1_score, team2_score'
     )
+    .eq('tenant_id', input.tenantId)
     .eq('stage_id', stage.id)
     .neq('status', 'cancelled');
   if (mErr) {
@@ -381,6 +390,7 @@ export async function runSwissNextRound(
   const matchInserts = pairings.map((p) => {
     if (p.isBye) {
       return {
+        tenant_id: input.tenantId,
         tournament_id: stage.tournament_id,
         stage_id: stage.id,
         status: 'finished' as MatchStatus,
@@ -398,6 +408,7 @@ export async function runSwissNextRound(
       };
     }
     return {
+      tenant_id: input.tenantId,
       tournament_id: stage.tournament_id,
       stage_id: stage.id,
       status: 'pending' as MatchStatus,

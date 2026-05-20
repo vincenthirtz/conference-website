@@ -77,6 +77,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: inserted, error: insErr } = await supabaseAdmin
     .from('announcements')
     .insert({
+      tenant_id: req.botContext!.tenantId,
       title,
       message,
       cta_label: ctaLabel,

@@ -13,6 +13,9 @@ const CASTER_AUTH = 'auth-caster-a';
 const OTHER_AUTH = 'auth-other';
 const CASTER_DISCORD = '900000000000000001';
 const OTHER_DISCORD = '900000000000000002';
+// Conference tenant UUID — match DEFAULT_TENANT_ID in utils/tenant.ts. The
+// bot route gates lookups by tenant_id (multi-tenant S3 sweep).
+const CONFERENCE_TENANT_ID = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
 
 function makeReq(over: Partial<any> = {}): any {
   return {
@@ -44,12 +47,14 @@ beforeEach(() => {
   store.cast_assignments = [
     {
       id: ASSIGN_ID,
+      tenant_id: CONFERENCE_TENANT_ID,
       cast_member_id: CAST_MEMBER,
       acked_at: null,
       cast_member: { id: CAST_MEMBER, auth_user_id: CASTER_AUTH },
     },
     {
       id: ASSIGN_ID_ACKED,
+      tenant_id: CONFERENCE_TENANT_ID,
       cast_member_id: CAST_MEMBER,
       acked_at: '2026-05-19T20:00:00.000Z',
       cast_member: { id: CAST_MEMBER, auth_user_id: CASTER_AUTH },

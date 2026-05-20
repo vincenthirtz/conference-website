@@ -13,6 +13,12 @@
 //   - /api/bot/v1/teams/[teamId]/invitations          (captain create)
 //   - /api/bot/v1/invitations/[demandeId]             (accept/reject/cancel)
 // Une future UI cote site pourra reutiliser les memes helpers.
+//
+// Multi-tenant (S3) : toutes les fonctions exportées prennent `tenantId`
+// (string UUID) en premier paramètre. Les queries Supabase sur les tables
+// scopées (`demandes`, `team_members`) ajoutent `.eq('tenant_id', tenantId)`
+// défense en profondeur. Les bot callers passent `req.botContext!.tenantId`,
+// admin/public callers passent `DEFAULT_TENANT_ID` (cf. `utils/tenant.ts`).
 
 import { supabaseAdmin } from '../supabase';
 import { logger } from '../logger';
@@ -86,6 +92,7 @@ export type CreateInvitationInput = {
  *  - BattleTag bien forme si fourni
  */
 export async function createInvitation(
+  tenantId: string,
   input: CreateInvitationInput
 ): Promise<Result<InvitationRow>> {
   if (!supabaseAdmin) {
@@ -117,6 +124,7 @@ export async function createInvitation(
   const { data: existingMember } = await supabaseAdmin
     .from('team_members')
     .select('id')
+    .eq('tenant_id', tenantId)
     .eq('team_id', input.teamId)
     .eq('user_id', input.inviteeAuthUserId)
     .maybeSingle();
@@ -132,6 +140,7 @@ export async function createInvitation(
   const { data: existingInvite } = await supabaseAdmin
     .from('demandes')
     .select('id')
+    .eq('tenant_id', tenantId)
     .eq('team_id', input.teamId)
     .eq('user_id', input.inviteeAuthUserId)
     .eq('type', 'invite')
@@ -158,6 +167,7 @@ export async function createInvitation(
   const { data: inserted, error: insertErr } = await supabaseAdmin
     .from('demandes')
     .insert({
+      tenant_id: tenantId,
       user_id: input.inviteeAuthUserId,
       team_id: input.teamId,
       type: 'invite',
@@ -185,6 +195,7 @@ export async function createInvitation(
  * ------------------------------------------------------------------------- */
 
 async function loadPendingInvitation(
+  tenantId: string,
   demandeId: string
 ): Promise<Result<InvitationRow>> {
   if (!supabaseAdmin) {
@@ -193,6 +204,7 @@ async function loadPendingInvitation(
   const { data, error } = await supabaseAdmin
     .from('demandes')
     .select('*')
+    .eq('tenant_id', tenantId)
     .eq('id', demandeId)
     .eq('type', 'invite')
     .maybeSingle();
@@ -218,6 +230,7 @@ async function loadPendingInvitation(
  * ------------------------------------------------------------------------- */
 
 export async function acceptInvitation(
+  tenantId: string,
   demandeId: string,
   actorAuthUserId: string
 ): Promise<Result<{ teamId: string; memberId: string | null }>> {
@@ -225,7 +238,7 @@ export async function acceptInvitation(
     return { ok: false, error: 'Service unavailable.', status: 503 };
   }
 
-  const loaded = await loadPendingInvitation(demandeId);
+  const loaded = await loadPendingInvitation(tenantId, demandeId);
   if (!loaded.ok) return loaded;
   const demande = loaded.data;
 
@@ -242,6 +255,7 @@ export async function acceptInvitation(
     await supabaseAdmin
       .from('demandes')
       .update({ status: 'cancelled', processed_at: nowIso() })
+      .eq('tenant_id', tenantId)
       .eq('id', demande.id);
     return {
       ok: false,
@@ -262,6 +276,7 @@ export async function acceptInvitation(
   const { data: currentMembership } = await supabaseAdmin
     .from('team_members')
     .select('id')
+    .eq('tenant_id', tenantId)
     .eq('user_id', actorAuthUserId)
     .maybeSingle();
   if (currentMembership) {
@@ -298,6 +313,7 @@ export async function acceptInvitation(
   const { error: updateErr } = await supabaseAdmin
     .from('demandes')
     .update({ status: 'approved', processed_at: nowIso() })
+    .eq('tenant_id', tenantId)
     .eq('id', demande.id);
   if (updateErr) {
     logger.error('[invitations] approve update error', updateErr);
@@ -316,13 +332,14 @@ export async function acceptInvitation(
  * ------------------------------------------------------------------------- */
 
 export async function rejectInvitation(
+  tenantId: string,
   demandeId: string,
   actorAuthUserId: string
 ): Promise<Result<{ status: 'rejected' }>> {
   if (!supabaseAdmin) {
     return { ok: false, error: 'Service unavailable.', status: 503 };
   }
-  const loaded = await loadPendingInvitation(demandeId);
+  const loaded = await loadPendingInvitation(tenantId, demandeId);
   if (!loaded.ok) return loaded;
   const demande = loaded.data;
 
@@ -337,6 +354,7 @@ export async function rejectInvitation(
   const { error } = await supabaseAdmin
     .from('demandes')
     .update({ status: 'rejected', processed_at: nowIso() })
+    .eq('tenant_id', tenantId)
     .eq('id', demande.id);
   if (error) {
     logger.error('[invitations] reject error', error);
@@ -346,13 +364,14 @@ export async function rejectInvitation(
 }
 
 export async function cancelInvitation(
+  tenantId: string,
   demandeId: string,
   actorAuthUserId: string
 ): Promise<Result<{ status: 'cancelled' }>> {
   if (!supabaseAdmin) {
     return { ok: false, error: 'Service unavailable.', status: 503 };
   }
-  const loaded = await loadPendingInvitation(demandeId);
+  const loaded = await loadPendingInvitation(tenantId, demandeId);
   if (!loaded.ok) return loaded;
   const demande = loaded.data;
 
@@ -367,6 +386,7 @@ export async function cancelInvitation(
   const { error } = await supabaseAdmin
     .from('demandes')
     .update({ status: 'cancelled', processed_at: nowIso() })
+    .eq('tenant_id', tenantId)
     .eq('id', demande.id);
   if (error) {
     logger.error('[invitations] cancel error', error);
@@ -380,6 +400,7 @@ export async function cancelInvitation(
  * ------------------------------------------------------------------------- */
 
 export async function listPendingInvitationsForUser(
+  tenantId: string,
   authUserId: string
 ): Promise<Result<InvitationRow[]>> {
   if (!supabaseAdmin) {
@@ -388,6 +409,7 @@ export async function listPendingInvitationsForUser(
   const { data, error } = await supabaseAdmin
     .from('demandes')
     .select('*')
+    .eq('tenant_id', tenantId)
     .eq('user_id', authUserId)
     .eq('type', 'invite')
     .eq('status', 'pending')

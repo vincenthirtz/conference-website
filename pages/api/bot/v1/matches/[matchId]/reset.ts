@@ -43,6 +43,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       `id, tournament_id, status, team1_score, team2_score, winner_team_id,
        forfeit_team_id, is_bye, next_match_win_id, next_match_lose_id`
     )
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', matchId)
     .maybeSingle();
   if (mErr) {
@@ -61,6 +62,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data: tournament } = await supabaseAdmin
       .from('tournaments')
       .select('status')
+      .eq('tenant_id', req.botContext!.tenantId)
       .eq('id', match.tournament_id)
       .maybeSingle();
     if (tournament?.status === 'completed') {
@@ -92,6 +94,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       dispute_resolved_at: null,
       updated_at: new Date().toISOString(),
     })
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', matchId)
     .select('id, status')
     .maybeSingle();

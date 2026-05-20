@@ -27,6 +27,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: row, error: fetchErr } = await supabaseAdmin
     .from('bot_event_outbox')
     .select('id, status')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', id)
     .maybeSingle();
   if (fetchErr) {
@@ -50,6 +51,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       status: 'delivered',
       delivered_at: new Date().toISOString(),
     })
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', id);
   if (updErr) {
     logger.error('[bot/events/ack] update error', updErr);

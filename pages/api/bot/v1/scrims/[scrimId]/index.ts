@@ -101,7 +101,10 @@ async function handlePatch(
   if (!actor) return;
 
   // Resoudre le scrim (id ou slug) avant de patcher.
-  let lookup = supabaseAdmin!.from('scrims').select('*');
+  let lookup = supabaseAdmin!
+    .from('scrims')
+    .select('*')
+    .eq('tenant_id', req.botContext!.tenantId);
   lookup = isValidUUID(idOrSlug)
     ? lookup.eq('id', idOrSlug)
     : lookup.eq('slug', idOrSlug);
@@ -161,6 +164,7 @@ async function handlePatch(
   const { data: after, error: updErr } = await supabaseAdmin!
     .from('scrims')
     .update(updatePayload)
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', before.id)
     .select('*')
     .single();

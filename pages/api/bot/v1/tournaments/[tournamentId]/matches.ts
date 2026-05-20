@@ -48,6 +48,7 @@ type MatchInput = {
 
 function normalizeMatch(
   tournamentId: string,
+  tenantId: string,
   input: MatchInput
 ): { row?: Record<string, unknown>; error?: string } {
   if (input.stage_id && !isValidUUID(input.stage_id)) {
@@ -86,6 +87,7 @@ function normalizeMatch(
 
   return {
     row: {
+      tenant_id: tenantId,
       tournament_id: tournamentId,
       stage_id: input.stage_id ?? null,
       status,
@@ -143,6 +145,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: tournament } = await supabaseAdmin
     .from('tournaments')
     .select('id, name')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', tournamentId)
     .maybeSingle();
   if (!tournament) {
@@ -152,7 +155,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Normalize + validate each match
   const rows: Record<string, unknown>[] = [];
   for (let i = 0; i < inputs.length; i++) {
-    const { row, error } = normalizeMatch(tournamentId, inputs[i]);
+    const { row, error } = normalizeMatch(tournamentId, req.botContext!.tenantId, inputs[i]);
     if (error) {
       return res.status(400).json({ error: `match[${i}]: ${error}` });
     }

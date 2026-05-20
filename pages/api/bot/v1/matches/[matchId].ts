@@ -140,6 +140,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: match, error: mErr } = await supabaseAdmin
     .from('matches')
     .select('id, tournament_id, scrim_id, status, is_bye, scheduled_at')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', matchId)
     .maybeSingle();
   if (mErr) {
@@ -154,6 +155,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data: t } = await supabaseAdmin
       .from('tournaments')
       .select('status')
+      .eq('tenant_id', req.botContext!.tenantId)
       .eq('id', match.tournament_id)
       .maybeSingle();
     if (t?.status === 'completed') {
@@ -170,6 +172,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: updated, error: updErr } = await supabaseAdmin
     .from('matches')
     .update(updates)
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', matchId)
     .select(
       'id, status, scheduled_at, lobby_code, stream_url, notes, updated_at'

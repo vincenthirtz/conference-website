@@ -30,7 +30,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .json({ error: 'Compte Discord non lié au site.' });
   }
 
-  const result = await listPendingInvitationsForUser(player.authUserId);
+  const result = await listPendingInvitationsForUser(
+    req.botContext!.tenantId,
+    player.authUserId
+  );
   if (!result.ok) {
     return res.status(result.status).json({ error: result.error });
   }

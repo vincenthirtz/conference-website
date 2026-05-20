@@ -133,6 +133,7 @@ async function handleAssign(
     const { data: match } = await supabaseAdmin
       .from('matches')
       .select('scheduled_at')
+      .eq('tenant_id', req.botContext!.tenantId)
       .eq('id', matchId)
       .maybeSingle();
     if (match?.scheduled_at) {
@@ -151,6 +152,7 @@ async function handleAssign(
   const { data: inserted, error } = await supabaseAdmin
     .from('cast_assignments')
     .insert({
+      tenant_id: req.botContext!.tenantId,
       match_id: matchId,
       cast_member_id: castMemberId,
       briefing_at: briefingAtIso,
@@ -208,6 +210,7 @@ async function handleUnassign(
   let query = supabaseAdmin
     .from('cast_assignments')
     .delete()
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('match_id', matchId);
   if (assignmentId) query = query.eq('id', assignmentId);
   if (castMemberId) query = query.eq('cast_member_id', castMemberId);

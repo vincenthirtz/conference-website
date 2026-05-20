@@ -196,6 +196,7 @@ async function handleRegister(
       const { data: teamCaptainRow } = await supabaseAdmin
         .from('teams')
         .select('captain_id')
+        .eq('tenant_id', req.botContext!.tenantId)
         .eq('id', teamId)
         .maybeSingle();
       if (teamCaptainRow?.captain_id === playerActor.authUserId) {
@@ -223,6 +224,7 @@ async function handleRegister(
   const { data: tournament, error: tourErr } = await supabaseAdmin
     .from('tournaments')
     .select('id, name, status, max_teams, min_players')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', tournamentId)
     .single();
   if (tourErr || !tournament) {
@@ -239,6 +241,7 @@ async function handleRegister(
   const { data: team, error: teamErr } = await supabaseAdmin
     .from('teams')
     .select('id, name')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', teamId)
     .maybeSingle();
   if (teamErr || !team) {
@@ -250,6 +253,7 @@ async function handleRegister(
     const { count: playerCount, error: countErr } = await supabaseAdmin
       .from('team_members')
       .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', req.botContext!.tenantId)
       .eq('team_id', teamId);
     if (countErr) {
       logger.error('[bot/tournaments/teams] count members error', countErr);
@@ -267,6 +271,7 @@ async function handleRegister(
     const { data: existingTeams, error: maxErr } = await supabaseAdmin
       .from('stage_teams')
       .select('team_id, tournament_stages!inner(tournament_id)')
+      .eq('tenant_id', req.botContext!.tenantId)
       .eq('tournament_stages.tournament_id', tournamentId);
     if (maxErr) {
       logger.error('[bot/tournaments/teams] max_teams check error', maxErr);
@@ -288,6 +293,7 @@ async function handleRegister(
     const { data: stage, error: stErr } = await supabaseAdmin
       .from('tournament_stages')
       .select('id, tournament_id')
+      .eq('tenant_id', req.botContext!.tenantId)
       .eq('id', stageId)
       .eq('tournament_id', tournamentId)
       .maybeSingle();
@@ -301,6 +307,7 @@ async function handleRegister(
     const { data: stages, error: stagesErr } = await supabaseAdmin
       .from('tournament_stages')
       .select('id')
+      .eq('tenant_id', req.botContext!.tenantId)
       .eq('tournament_id', tournamentId);
     if (stagesErr) {
       logger.error('[bot/tournaments/teams] stages list error', stagesErr);
@@ -318,6 +325,7 @@ async function handleRegister(
   const { data: existingRegs, error: existsErr } = await supabaseAdmin
     .from('stage_teams')
     .select('stage_id')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('team_id', teamId)
     .in('stage_id', targetStageIds);
   if (existsErr) {
@@ -332,6 +340,7 @@ async function handleRegister(
 
   // Insert
   const insertRows = targetStageIds.map((stgId) => ({
+    tenant_id: req.botContext!.tenantId,
     stage_id: stgId,
     team_id: teamId,
   }));

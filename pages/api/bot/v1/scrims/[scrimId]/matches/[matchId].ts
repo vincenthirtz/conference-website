@@ -71,6 +71,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     .select(
       'id, scrim_id, tournament_id, team1_id, team2_id, status, team1_score, team2_score'
     )
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', matchId)
     .maybeSingle();
   if (!match) return res.status(404).json({ error: 'Match introuvable' });
@@ -202,6 +203,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: after, error: updErr } = await supabaseAdmin
     .from('matches')
     .update(updatePayload)
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', matchId)
     .select('*')
     .single();

@@ -169,6 +169,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { error: tmErr } = await supabaseAdmin
       .from('team_members')
       .update({ battle_tag: metaUpdates.battle_tag })
+      .eq('tenant_id', req.botContext!.tenantId)
       .eq('user_id', target.authUserId);
     if (tmErr) {
       logger.error('[bot/profile] team_members battle_tag propagation error', tmErr);

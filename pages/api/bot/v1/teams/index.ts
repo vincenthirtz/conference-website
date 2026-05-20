@@ -122,6 +122,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: existing } = await supabaseAdmin
     .from('teams')
     .select('id')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('slug', slug)
     .maybeSingle();
   if (existing) {
@@ -139,6 +140,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   const teamPayload: Record<string, unknown> = {
+    tenant_id: req.botContext!.tenantId,
     name,
     slug,
     captain_id: captainAuthId,
@@ -173,13 +175,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Add the captain as a team_member. Roll back the team on failure so a
   // retry can use the same slug.
   const { error: memberErr } = await supabaseAdmin.from('team_members').insert({
+    tenant_id: req.botContext!.tenantId,
     team_id: created.id,
     user_id: captainAuthId,
     role: 'captain',
   });
   if (memberErr) {
     logger.error('[bot/teams] member insert error, rolling back', memberErr);
-    await supabaseAdmin.from('teams').delete().eq('id', created.id);
+    await supabaseAdmin
+      .from('teams')
+      .delete()
+      .eq('tenant_id', req.botContext!.tenantId)
+      .eq('id', created.id);
     return res
       .status(500)
       .json({ error: 'Échec de création (rollback effectué)' });

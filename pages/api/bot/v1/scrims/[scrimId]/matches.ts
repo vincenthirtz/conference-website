@@ -39,6 +39,7 @@ type MatchInput = {
 
 function normalizeMatch(
   scrimId: string,
+  tenantId: string,
   input: MatchInput,
   defaults: { team1Id: string | null; team2Id: string | null }
 ): { row?: Record<string, unknown>; error?: string } {
@@ -67,6 +68,7 @@ function normalizeMatch(
 
   return {
     row: {
+      tenant_id: tenantId,
       tournament_id: null,
       scrim_id: scrimId,
       stage_id: null,
@@ -145,13 +147,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: scrim } = await supabaseAdmin
     .from('scrims')
     .select('id, name, team1_id, team2_id')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', scrimId)
     .maybeSingle();
   if (!scrim) return res.status(404).json({ error: 'Scrim introuvable' });
 
   const rows: Record<string, unknown>[] = [];
   for (let i = 0; i < inputs.length; i++) {
-    const { row, error } = normalizeMatch(scrimId, inputs[i], {
+    const { row, error } = normalizeMatch(scrimId, req.botContext!.tenantId, inputs[i], {
       team1Id: scrim.team1_id ?? null,
       team2Id: scrim.team2_id ?? null,
     });

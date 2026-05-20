@@ -43,6 +43,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: stage, error: stErr } = await supabaseAdmin
     .from('tournament_stages')
     .select('id, tournament_id, name, is_active')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', stageId)
     .maybeSingle();
   if (stErr) {
@@ -63,6 +64,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: activeMatches, error: amErr } = await supabaseAdmin
     .from('matches')
     .select('id, status, round_number')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('stage_id', stageId)
     .in('status', [...ACTIVE_STATUSES]);
   if (amErr) {
@@ -89,6 +91,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: updated, error: upErr } = await supabaseAdmin
     .from('tournament_stages')
     .update({ is_active: false, updated_at: new Date().toISOString() })
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', stageId)
     .select('id, name, is_active')
     .maybeSingle();
