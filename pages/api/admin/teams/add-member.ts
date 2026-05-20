@@ -10,6 +10,9 @@ import {
   insertTeamMember,
   setTeamCaptain,
 } from '@/utils/teams/addMember';
+// TODO(S5b): remplacer par ctx.tenantId resolu depuis la staff session
+// multi-tenant.
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
 import { logger } from '../../../../utils/logger';
 type AddMemberResponse =
@@ -88,6 +91,9 @@ async function handler(
 
     // Insert (le helper traduit les erreurs trigger/duplicate en messages metier)
     const insertResult = await insertTeamMember({
+      // TODO(S5b): remplacer DEFAULT_TENANT_ID par ctx.tenantId une fois
+      // la staff session multi-tenant en place.
+      tenantId: DEFAULT_TENANT_ID,
       teamId,
       userId: resolvedUserId,
       role: resolvedRole,

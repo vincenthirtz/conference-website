@@ -21,8 +21,14 @@ export type RosterLockStatus =
  *
  * Retourne le premier tournoi qui verrouille (utile pour le message d'erreur).
  * Si aucune inscription verrouillee, retourne `{ locked: false }`.
+ *
+ * @param tenantId Tenant scope — defense-in-depth (S5a). Filtre tournament_teams
+ *                 et tournaments pour s'assurer qu'on ne croise pas une inscription
+ *                 d'un autre tenant.
+ * @param teamId   Id de l'equipe a verifier.
  */
 export async function isTeamRosterLocked(
+  tenantId: string,
   teamId: string
 ): Promise<RosterLockStatus> {
   if (!supabaseAdmin) {
@@ -33,6 +39,7 @@ export async function isTeamRosterLocked(
   const { data: registrations } = await supabaseAdmin
     .from('tournament_teams')
     .select('tournament_id')
+    .eq('tenant_id', tenantId)
     .eq('team_id', teamId);
 
   const tournamentIds = (registrations || [])
@@ -47,6 +54,7 @@ export async function isTeamRosterLocked(
   const { data: tournaments } = await supabaseAdmin
     .from('tournaments')
     .select('id, name, roster_locked_at, status')
+    .eq('tenant_id', tenantId)
     .in('id', tournamentIds);
 
   const now = Date.now();

@@ -15,9 +15,13 @@ import {
  * Helpers
  * ---------------------------------------------------------*/
 
+// S5a: tenantId obligatoire sur tous les helpers exportes par propagate.ts.
+const TENANT_ID = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
+
 function defaultMatch(overrides: Partial<MatchRow> = {}): MatchRow {
   return {
     id: 'm1',
+    tenant_id: TENANT_ID,
     tournament_id: 't1',
     stage_id: 'stage1',
     status: 'finished',
@@ -35,7 +39,7 @@ function defaultMatch(overrides: Partial<MatchRow> = {}): MatchRow {
     next_match_lose_id: null,
     next_match_lose_slot: null,
     ...overrides,
-  };
+  } as MatchRow;
 }
 
 function seedMatches(matches: Partial<MatchRow>[]) {
@@ -43,7 +47,10 @@ function seedMatches(matches: Partial<MatchRow>[]) {
 }
 
 function seedRegistrations(rows: { tournament_id: string; team_id: string }[]) {
-  store.tournament_teams = rows as any;
+  store.tournament_teams = rows.map((r) => ({
+    ...r,
+    tenant_id: TENANT_ID,
+  })) as any;
 }
 
 function getMatch(id: string): Record<string, unknown> | undefined {
@@ -61,14 +68,14 @@ beforeEach(() => {
 describe('propagateBracketForMatch — early returns', () => {
   it('throws when the match is missing', async () => {
     seedMatches([]);
-    await expect(propagateBracketForMatch('missing')).rejects.toThrow(
+    await expect(propagateBracketForMatch(TENANT_ID, 'missing')).rejects.toThrow(
       /introuvable/
     );
   });
 
   it('returns null winner/loser when match status is cancelled', async () => {
     seedMatches([{ id: 'm1', status: 'cancelled' }]);
-    const result = await propagateBracketForMatch('m1');
+    const result = await propagateBracketForMatch(TENANT_ID, 'm1');
     expect(result).toEqual({
       matchId: 'm1',
       winnerTeamId: null,
@@ -78,7 +85,7 @@ describe('propagateBracketForMatch — early returns', () => {
 
   it('returns null winner/loser when match status is disputed', async () => {
     seedMatches([{ id: 'm1', status: 'disputed' }]);
-    const result = await propagateBracketForMatch('m1');
+    const result = await propagateBracketForMatch(TENANT_ID, 'm1');
     expect(result.winnerTeamId).toBeNull();
     expect(result.loserTeamId).toBeNull();
   });
@@ -105,7 +112,7 @@ describe('propagateBracketForMatch — winner/loser slot writes', () => {
     ]);
     seedRegistrations([{ tournament_id: 't1', team_id: 'team-a' }]);
 
-    const result = await propagateBracketForMatch('m1');
+    const result = await propagateBracketForMatch(TENANT_ID, 'm1');
     expect(result.winnerTeamId).toBe('team-a');
     expect(result.updatedWinMatchId).toBe('m-win');
     expect(getMatch('m-win')?.team1_id).toBe('team-a');
@@ -131,7 +138,7 @@ describe('propagateBracketForMatch — winner/loser slot writes', () => {
     ]);
     seedRegistrations([{ tournament_id: 't1', team_id: 'team-b' }]);
 
-    const result = await propagateBracketForMatch('m1');
+    const result = await propagateBracketForMatch(TENANT_ID, 'm1');
     expect(result.loserTeamId).toBe('team-b');
     expect(getMatch('m-lose')?.team2_id).toBe('team-b');
   });
@@ -145,7 +152,7 @@ describe('propagateBracketForMatch — winner/loser slot writes', () => {
       },
     ]);
 
-    await expect(propagateBracketForMatch('m1')).rejects.toThrow(
+    await expect(propagateBracketForMatch(TENANT_ID, 'm1')).rejects.toThrow(
       /next_match_win_slot est null/
     );
   });
@@ -159,7 +166,7 @@ describe('propagateBracketForMatch — winner/loser slot writes', () => {
       },
     ]);
 
-    await expect(propagateBracketForMatch('m1')).rejects.toThrow(
+    await expect(propagateBracketForMatch(TENANT_ID, 'm1')).rejects.toThrow(
       /next_match_lose_slot est null/
     );
   });
@@ -176,7 +183,7 @@ describe('propagateBracketForMatch — winner/loser slot writes', () => {
     ]);
     seedRegistrations([]); // team-a NOT registered
 
-    await expect(propagateBracketForMatch('m1')).rejects.toThrow(
+    await expect(propagateBracketForMatch(TENANT_ID, 'm1')).rejects.toThrow(
       /non inscrite au tournoi/
     );
   });
@@ -197,10 +204,10 @@ describe('propagateBracketForMatch — tiebreakers', () => {
       },
     ]);
     store.tournament_stages = [
-      { id: 'stage1', tiebreaker_policy: 'manual' },
+      { id: 'stage1', tenant_id: TENANT_ID, tiebreaker_policy: 'manual' },
     ] as any;
 
-    const result = await propagateBracketForMatch('m1');
+    const result = await propagateBracketForMatch(TENANT_ID, 'm1');
     expect(result.winnerTeamId).toBeNull();
     expect(result.tiebreakerApplied).toBeNull();
   });
@@ -219,14 +226,14 @@ describe('propagateBracketForMatch — tiebreakers', () => {
     ]);
     seedRegistrations([{ tournament_id: 't1', team_id: 'team-a' }]);
     store.tournament_stages = [
-      { id: 'stage1', tiebreaker_policy: 'map_diff' },
+      { id: 'stage1', tenant_id: TENANT_ID, tiebreaker_policy: 'map_diff' },
     ] as any;
     store.games = [
-      { match_id: 'm1', team1_score: 5, team2_score: 1 },
-      { match_id: 'm1', team1_score: 4, team2_score: 3 },
+      { tenant_id: TENANT_ID, match_id: 'm1', team1_score: 5, team2_score: 1 },
+      { tenant_id: TENANT_ID, match_id: 'm1', team1_score: 4, team2_score: 3 },
     ] as any;
 
-    const result = await propagateBracketForMatch('m1');
+    const result = await propagateBracketForMatch(TENANT_ID, 'm1');
     expect(result.winnerTeamId).toBe('team-a');
     expect(result.loserTeamId).toBe('team-b');
     expect(result.tiebreakerApplied).toBe('map_diff');
@@ -244,11 +251,11 @@ describe('propagateBracketForMatch — tiebreakers', () => {
       },
     ]);
     store.tournament_stages = [
-      { id: 'stage1', tiebreaker_policy: 'map_diff' },
+      { id: 'stage1', tenant_id: TENANT_ID, tiebreaker_policy: 'map_diff' },
     ] as any;
-    store.games = [{ match_id: 'm1', team1_score: 3, team2_score: 3 }] as any;
+    store.games = [{ tenant_id: TENANT_ID, match_id: 'm1', team1_score: 3, team2_score: 3 }] as any;
 
-    const result = await propagateBracketForMatch('m1');
+    const result = await propagateBracketForMatch(TENANT_ID, 'm1');
     expect(result.tiebreakerApplied).toBe('extra_round');
     expect(result.tiebreakerMatchId).toBeTruthy();
     // A new tiebreaker match must exist with the same teams
@@ -271,14 +278,14 @@ describe('propagateBracketForMatch — tiebreakers', () => {
       },
     ]);
     store.tournament_stages = [
-      { id: 'stage1', tiebreaker_policy: 'seed' },
+      { id: 'stage1', tenant_id: TENANT_ID, tiebreaker_policy: 'seed' },
     ] as any;
     store.stage_teams = [
-      { stage_id: 'stage1', team_id: 'team-a', seed: 3 },
-      { stage_id: 'stage1', team_id: 'team-b', seed: 1 },
+      { tenant_id: TENANT_ID, stage_id: 'stage1', team_id: 'team-a', seed: 3 },
+      { tenant_id: TENANT_ID, stage_id: 'stage1', team_id: 'team-b', seed: 1 },
     ] as any;
 
-    const result = await propagateBracketForMatch('m1');
+    const result = await propagateBracketForMatch(TENANT_ID, 'm1');
     expect(result.winnerTeamId).toBe('team-b');
     expect(result.loserTeamId).toBe('team-a');
     expect(result.tiebreakerApplied).toBe('seed');
@@ -294,14 +301,14 @@ describe('propagateBracketForMatch — tiebreakers', () => {
       },
     ]);
     store.tournament_stages = [
-      { id: 'stage1', tiebreaker_policy: 'seed' },
+      { id: 'stage1', tenant_id: TENANT_ID, tiebreaker_policy: 'seed' },
     ] as any;
     store.stage_teams = [
-      { stage_id: 'stage1', team_id: 'team-a', seed: 2 },
-      { stage_id: 'stage1', team_id: 'team-b', seed: 2 },
+      { tenant_id: TENANT_ID, stage_id: 'stage1', team_id: 'team-a', seed: 2 },
+      { tenant_id: TENANT_ID, stage_id: 'stage1', team_id: 'team-b', seed: 2 },
     ] as any;
 
-    const result = await propagateBracketForMatch('m1');
+    const result = await propagateBracketForMatch(TENANT_ID, 'm1');
     expect(result.tiebreakerApplied).toBe('extra_round');
   });
 });
@@ -321,7 +328,7 @@ describe('resetPropagationForMatch', () => {
       { id: 'm-win', team1_id: 'team-a', team2_id: null },
     ]);
 
-    await resetPropagationForMatch('m1');
+    await resetPropagationForMatch(TENANT_ID, 'm1');
     expect(getMatch('m-win')?.team1_id).toBeNull();
   });
 
@@ -335,18 +342,18 @@ describe('resetPropagationForMatch', () => {
       { id: 'm-lose', team1_id: null, team2_id: 'team-b' },
     ]);
 
-    await resetPropagationForMatch('m1');
+    await resetPropagationForMatch(TENANT_ID, 'm1');
     expect(getMatch('m-lose')?.team2_id).toBeNull();
   });
 
   it('does nothing for a missing match', async () => {
     seedMatches([]);
-    await expect(resetPropagationForMatch('nope')).resolves.toBeUndefined();
+    await expect(resetPropagationForMatch(TENANT_ID, 'nope')).resolves.toBeUndefined();
   });
 
   it('does nothing when the match has no propagation links', async () => {
     seedMatches([{ id: 'm1' }]);
-    await resetPropagationForMatch('m1');
+    await resetPropagationForMatch(TENANT_ID, 'm1');
     // No throw, store unchanged
     expect((store.matches || []).length).toBe(1);
   });
@@ -370,7 +377,7 @@ describe('snapshot + restore propagation slots', () => {
       { id: 'm-lose', team1_id: null, team2_id: 'pre-existing-B' },
     ]);
 
-    const snap = await snapshotPropagationSlots('m1');
+    const snap = await snapshotPropagationSlots(TENANT_ID, 'm1');
     expect(snap.winSlotValue).toBe('pre-existing-A');
     expect(snap.loseSlotValue).toBe('pre-existing-B');
 
@@ -380,20 +387,20 @@ describe('snapshot + restore propagation slots', () => {
     winRow.team1_id = 'NEW-A';
     loseRow.team2_id = 'NEW-B';
 
-    await restorePropagationSlots(snap);
+    await restorePropagationSlots(TENANT_ID, snap);
     expect(getMatch('m-win')?.team1_id).toBe('pre-existing-A');
     expect(getMatch('m-lose')?.team2_id).toBe('pre-existing-B');
   });
 
   it('returns an empty snapshot for a missing match', async () => {
     seedMatches([]);
-    const snap = await snapshotPropagationSlots('nope');
+    const snap = await snapshotPropagationSlots(TENANT_ID, 'nope');
     expect(snap.winMatchId).toBeNull();
     expect(snap.loseMatchId).toBeNull();
   });
 
   it('restorePropagationSlots is a no-op for an empty snapshot', async () => {
-    await restorePropagationSlots({
+    await restorePropagationSlots(TENANT_ID, {
       winMatchId: null,
       winSlotField: null,
       winSlotValue: null,

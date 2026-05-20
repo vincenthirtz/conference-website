@@ -304,16 +304,14 @@ describe('POST /api/teams/add-member', () => {
   it('409 when roster is locked', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 'team-1', captain_id: 'user-1', name: 'A', logo_url: null },
+      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', name: 'A', logo_url: null },
     ] as any;
     store.tournament_teams = [
-      { tournament_id: 'tour-1', team_id: 'team-1' },
+      { tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', tournament_id: 'tour-1', team_id: 'team-1' },
     ] as any;
     const past = new Date(Date.now() - 60_000).toISOString();
     store.tournaments = [
-      {
-        id: 'tour-1',
-        name: 'X',
+      { id: 'tour-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', name: 'X',
         roster_locked_at: past,
         status: 'in_progress',
       },
@@ -335,7 +333,7 @@ describe('POST /api/teams/add-member', () => {
   it('400 on invalid battle tag', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 'team-1', captain_id: 'user-1', name: 'A', logo_url: null },
+      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', name: 'A', logo_url: null },
     ] as any;
     store.tournament_teams = [];
     const res = makeRes();
@@ -355,7 +353,7 @@ describe('POST /api/teams/add-member', () => {
   it('400 when neither userId nor email', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 'team-1', captain_id: 'user-1', name: 'A', logo_url: null },
+      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', name: 'A', logo_url: null },
     ] as any;
     store.tournament_teams = [];
     const res = makeRes();
@@ -369,7 +367,7 @@ describe('POST /api/teams/add-member', () => {
   it('200 adds member by userId', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 'team-1', captain_id: 'user-1', name: 'A', logo_url: null },
+      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', name: 'A', logo_url: null },
     ] as any;
     store.tournament_teams = [];
     store.team_members = [];
@@ -394,7 +392,7 @@ describe('POST /api/teams/add-member', () => {
   it('200 resolves user by email when not provided directly', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 'team-1', captain_id: 'user-1', name: 'A', logo_url: null },
+      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', name: 'A', logo_url: null },
     ] as any;
     store.tournament_teams = [];
     store.team_members = [];
@@ -424,7 +422,7 @@ describe('POST /api/teams/add-member', () => {
   it('200 auto-creates a Supabase user when email is unknown', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 'team-1', captain_id: 'user-1', name: 'A', logo_url: null },
+      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', name: 'A', logo_url: null },
     ] as any;
     store.tournament_teams = [];
     store.team_members = [];
@@ -456,17 +454,14 @@ describe('POST /api/teams/add-member', () => {
   it('400 when team has reached max_players for one of its tournaments', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 'team-1', captain_id: 'user-1', name: 'A', logo_url: null },
+      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', name: 'A', logo_url: null },
     ] as any;
     store.team_members = [
-      { id: 'm1', team_id: 'team-1', role: 'player' },
-      { id: 'm2', team_id: 'team-1', role: 'player' },
+      { id: 'm1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: 'team-1', role: 'player' },
+      { id: 'm2', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: 'team-1', role: 'player' },
     ] as any;
     store.tournament_teams = [
-      {
-        team_id: 'team-1',
-        tournament_id: 'tour-1',
-        tournaments: { max_players: 2 },
+      { tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: 'team-1', tournament_id: 'tour-1', tournaments: { max_players: 2 },
       },
     ] as any;
     store.tournaments = []; // no roster lock
@@ -519,7 +514,7 @@ describe('GET /api/teams/search-players', () => {
 
   it('400 when q too short', async () => {
     setAuthUser({ id: 'user-1' });
-    store.teams = [{ id: 'team-1', captain_id: 'user-1', name: 'A' }] as any;
+    store.teams = [{ id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', name: 'A' }] as any;
     const res = makeRes();
     await searchPlayersHandler(
       makeReq({ method: 'GET', query: { q: 'a' } }, true),
@@ -530,7 +525,7 @@ describe('GET /api/teams/search-players', () => {
 
   it('400 when q too long', async () => {
     setAuthUser({ id: 'user-1' });
-    store.teams = [{ id: 'team-1', captain_id: 'user-1', name: 'A' }] as any;
+    store.teams = [{ id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', name: 'A' }] as any;
     const res = makeRes();
     await searchPlayersHandler(
       makeReq({ method: 'GET', query: { q: 'x'.repeat(101) } }, true),
@@ -541,7 +536,7 @@ describe('GET /api/teams/search-players', () => {
 
   it('200 finds players by email and reports has_team', async () => {
     setAuthUser({ id: 'user-1' });
-    store.teams = [{ id: 'team-1', captain_id: 'user-1', name: 'A' }] as any;
+    store.teams = [{ id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', name: 'A' }] as any;
     setAuthListUsers([
       { id: 'u1', email: 'alice@example.com' },
       { id: 'u2', email: 'bob@example.com' },
@@ -564,7 +559,7 @@ describe('GET /api/teams/search-players', () => {
 
   it('200 fills missing email via auth.admin.getUserById fallback', async () => {
     setAuthUser({ id: 'user-1' });
-    store.teams = [{ id: 'team-1', captain_id: 'user-1', name: 'A' }] as any;
+    store.teams = [{ id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', name: 'A' }] as any;
     setAuthListUsers([]);
     store.team_members = [{ user_id: 'u-bt', battle_tag: 'Mercy#1234' }] as any;
     store.profiles = [];
@@ -583,7 +578,7 @@ describe('GET /api/teams/search-players', () => {
 
   it('200 returns empty list when no source matches', async () => {
     setAuthUser({ id: 'user-1' });
-    store.teams = [{ id: 'team-1', captain_id: 'user-1', name: 'A' }] as any;
+    store.teams = [{ id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', name: 'A' }] as any;
     setAuthListUsers([]);
     store.team_members = [];
     store.profiles = [];

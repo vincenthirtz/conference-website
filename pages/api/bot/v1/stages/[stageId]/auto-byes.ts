@@ -97,7 +97,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       const team1_score = m.team1_id === winnerTeamId ? scoreForBye : 0;
       const team2_score = m.team2_id === winnerTeamId ? scoreForBye : 0;
 
-      await resetPropagationForMatch(m.id);
+      await resetPropagationForMatch(req.botContext!.tenantId, m.id);
 
       const { error: upErr } = await supabaseAdmin
         .from('matches')
@@ -115,7 +115,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
       if (propagate) {
         try {
-          await propagateBracketForMatch(m.id);
+          await propagateBracketForMatch(req.botContext!.tenantId, m.id);
         } catch (e) {
           logger.error('[bot/auto-byes] propagation error', m.id, e);
           // Match marque comme bye ok, on continue.

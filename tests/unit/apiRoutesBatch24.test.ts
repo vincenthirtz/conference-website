@@ -74,9 +74,7 @@ describe('/api/teams/join-requests', () => {
   it('GET 200 lists pending join demandes for captain team', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      {
-        id: 'team-1',
-        captain_id: 'user-1',
+      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1',
         is_active: true,
         name: 'Alpha',
         logo_url: null,
@@ -112,7 +110,7 @@ describe('/api/teams/join-requests', () => {
   it('POST 400 with invalid demandeId', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 'team-1', captain_id: 'user-1', is_active: true, name: 'A' },
+      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', is_active: true, name: 'A' },
     ] as any;
     const res = makeRes();
     await joinRequestsHandler(
@@ -131,7 +129,7 @@ describe('/api/teams/join-requests', () => {
   it('POST 400 with invalid action', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 'team-1', captain_id: 'user-1', is_active: true, name: 'A' },
+      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', is_active: true, name: 'A' },
     ] as any;
     const res = makeRes();
     await joinRequestsHandler(
@@ -150,7 +148,7 @@ describe('/api/teams/join-requests', () => {
   it('POST 404 when demande not found / not pending', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 'team-1', captain_id: 'user-1', is_active: true, name: 'A' },
+      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', is_active: true, name: 'A' },
     ] as any;
     store.demandes = [];
     const res = makeRes();
@@ -170,9 +168,7 @@ describe('/api/teams/join-requests', () => {
   it('POST approve: creates team_member and marks demande approved', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      {
-        id: 'team-1',
-        captain_id: 'user-1',
+      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1',
         is_active: true,
         name: 'Alpha',
         logo_url: null,
@@ -217,9 +213,7 @@ describe('/api/teams/join-requests', () => {
   it('POST reject: marks demande rejected, no member added', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      {
-        id: 'team-1',
-        captain_id: 'user-1',
+      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1',
         is_active: true,
         name: 'Alpha',
       },
@@ -255,22 +249,17 @@ describe('/api/teams/join-requests', () => {
   it('POST approve: 400 when team would exceed max_players', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      {
-        id: 'team-1',
-        captain_id: 'user-1',
+      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1',
         is_active: true,
         name: 'Alpha',
       },
     ] as any;
     store.team_members = [
-      { id: 'm1', team_id: 'team-1', role: 'player' },
-      { id: 'm2', team_id: 'team-1', role: 'player' },
+      { id: 'm1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: 'team-1', role: 'player' },
+      { id: 'm2', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: 'team-1', role: 'player' },
     ] as any;
     store.tournament_teams = [
-      {
-        team_id: 'team-1',
-        tournament_id: 'tour-1',
-        tournaments: { max_players: 2 },
+      { tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: 'team-1', tournament_id: 'tour-1', tournaments: { max_players: 2 },
       },
     ] as any;
     store.demandes = [
@@ -301,7 +290,7 @@ describe('/api/teams/join-requests', () => {
   it('returns 405 on unsupported method', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 'team-1', captain_id: 'user-1', is_active: true, name: 'A' },
+      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', is_active: true, name: 'A' },
     ] as any;
     const res = makeRes();
     await joinRequestsHandler(makeReq({ method: 'PATCH' }, true), res);
@@ -397,7 +386,7 @@ describe('/api/admin/teams/my', () => {
 
   it('PATCH 403 when not captain', async () => {
     setAuthUser({ id: 'user-1' });
-    store.teams = [{ id: 'team-1', captain_id: 'someone-else' }] as any;
+    store.teams = [{ id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'someone-else' }] as any;
     const res = makeRes();
     await myTeamHandler(
       makeReq(
@@ -411,7 +400,7 @@ describe('/api/admin/teams/my', () => {
 
   it('PATCH 400 on too-short name', async () => {
     setAuthUser({ id: 'user-1' });
-    store.teams = [{ id: 'team-1', captain_id: 'user-1' }] as any;
+    store.teams = [{ id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1' }] as any;
     const res = makeRes();
     await myTeamHandler(
       makeReq({ method: 'PATCH', body: { teamId: 'team-1', name: 'X' } }, true),
@@ -422,7 +411,7 @@ describe('/api/admin/teams/my', () => {
 
   it('PATCH 400 on description too long', async () => {
     setAuthUser({ id: 'user-1' });
-    store.teams = [{ id: 'team-1', captain_id: 'user-1' }] as any;
+    store.teams = [{ id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1' }] as any;
     const res = makeRes();
     await myTeamHandler(
       makeReq(
@@ -439,7 +428,7 @@ describe('/api/admin/teams/my', () => {
 
   it('PATCH 400 on invalid logo URL', async () => {
     setAuthUser({ id: 'user-1' });
-    store.teams = [{ id: 'team-1', captain_id: 'user-1' }] as any;
+    store.teams = [{ id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1' }] as any;
     const res = makeRes();
     await myTeamHandler(
       makeReq(
@@ -457,9 +446,7 @@ describe('/api/admin/teams/my', () => {
   it('PATCH 200 updates fields', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      {
-        id: 'team-1',
-        captain_id: 'user-1',
+      { id: 'team-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1',
         name: 'Old',
         country: 'FR',
         description: 'old',

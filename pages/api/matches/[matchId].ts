@@ -6,6 +6,9 @@ import { withStaffRoute, StaffContext } from '@/utils/staff';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
+// TODO(S5b): remplacer par ctx.tenantId resolu depuis la staff session
+// multi-tenant (cette route est wrappee dans withStaffRoute).
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 export default withStaffRoute(handler, 'manager');
@@ -125,6 +128,9 @@ async function handlePut(
   }
 
   const result = await applyMatchScore({
+    // TODO(S5b): remplacer DEFAULT_TENANT_ID par ctx.tenantId une fois
+    // la staff session multi-tenant en place.
+    tenantId: DEFAULT_TENANT_ID,
     matchId,
     team1Score,
     team2Score,

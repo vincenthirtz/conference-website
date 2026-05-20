@@ -20,6 +20,9 @@ import {
   insertTeamMember,
 } from '@/utils/teams/addMember';
 import { withAuthRoute } from '@/utils/staff';
+// TODO(S5c): remplacer DEFAULT_TENANT_ID par le tenantId resolu depuis le
+// subdomain/URL une fois la resolution publique multi-tenant en place.
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 type AddMemberResponse =
@@ -72,7 +75,11 @@ export default withAuthRoute(async function handler(
   }
 
   // Garde roster lock : un capitaine ne peut PAS forcer le verrouillage.
-  const lockStatus = await isTeamRosterLocked(captainTeam.id);
+  // TODO(S5c): remplacer DEFAULT_TENANT_ID par le tenantId resolu de l'URL.
+  const lockStatus = await isTeamRosterLocked(
+    DEFAULT_TENANT_ID,
+    captainTeam.id
+  );
   if (lockStatus.locked) {
     return res.status(409).json({
       error: rosterLockErrorMessage(lockStatus),
@@ -119,6 +126,8 @@ export default withAuthRoute(async function handler(
 
     // Insert (le helper fait le pre-check max_players + traduit les erreurs)
     const insertResult = await insertTeamMember({
+      // TODO(S5c): remplacer DEFAULT_TENANT_ID par le tenantId resolu de l'URL.
+      tenantId: DEFAULT_TENANT_ID,
       teamId: captainTeam.id,
       userId: resolvedUserId,
       role: validatedRole,

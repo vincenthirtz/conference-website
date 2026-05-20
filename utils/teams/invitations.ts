@@ -289,7 +289,7 @@ export async function acceptInvitation(
   }
 
   // Roster lock cote team cible.
-  const lockStatus = await isTeamRosterLocked(demande.team_id);
+  const lockStatus = await isTeamRosterLocked(tenantId, demande.team_id);
   if (lockStatus.locked) {
     return {
       ok: false,
@@ -300,6 +300,7 @@ export async function acceptInvitation(
 
   // Insert membership (le helper fait le pre-check max_players + duplicate).
   const insertResult = await insertTeamMember({
+    tenantId,
     teamId: demande.team_id,
     userId: actorAuthUserId,
     role: demande.payload?.desired_role || 'player',

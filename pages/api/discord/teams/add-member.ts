@@ -6,6 +6,11 @@ import {
   insertTeamMember,
   setTeamCaptain,
 } from '@/utils/teams/addMember';
+// TODO(S5c): endpoint legacy "discord secret" — bascule-le sur le tenantId
+// resolu depuis le body / un header dedie une fois la resolution publique
+// multi-tenant en place. Le bot v1 (pages/api/bot/v1/teams/*) est la version
+// moderne et porte deja req.botContext.tenantId.
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
 import { logger } from '../../../../utils/logger';
 type Body = {
@@ -89,6 +94,9 @@ export default async function handler(
     }
 
     const insertResult = await insertTeamMember({
+      // TODO(S5c): remplacer DEFAULT_TENANT_ID par le tenantId resolu de la
+      // requete une fois la resolution publique multi-tenant en place.
+      tenantId: DEFAULT_TENANT_ID,
       teamId,
       userId: resolvedUserId,
       role,

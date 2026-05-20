@@ -50,6 +50,7 @@ export async function applyMatchScore(
   input: ApplyMatchScoreInput
 ): Promise<ApplyMatchScoreResult> {
   const {
+    tenantId,
     matchId,
     status,
     winnerTeamId,
@@ -123,6 +124,7 @@ export async function applyMatchScore(
       next_match_lose_slot
     `
     )
+    .eq('tenant_id', tenantId)
     .eq('id', matchId)
     .maybeSingle();
 
@@ -136,6 +138,7 @@ export async function applyMatchScore(
     const { data: tournament } = await supabaseAdmin
       .from('tournaments')
       .select('status')
+      .eq('tenant_id', tenantId)
       .eq('id', match.tournament_id)
       .maybeSingle();
 
@@ -340,17 +343,17 @@ export async function applyMatchScore(
   //    pour pouvoir restaurer l'état complet en cas d'échec.
   let propagationSnapshot: PropagationSnapshot | null = null;
   if (propagateBracket) {
-    propagationSnapshot = await snapshotPropagationSlots(matchId);
+    propagationSnapshot = await snapshotPropagationSlots(tenantId, matchId);
   }
 
   // 8) Reset propagation avant de changer les équipes
   if (propagateBracket) {
     try {
-      await resetPropagationForMatch(matchId);
+      await resetPropagationForMatch(tenantId, matchId);
     } catch (e) {
       // Si le reset échoue, restaurer le snapshot et abandonner
       if (propagationSnapshot) {
-        await restorePropagationSlots(propagationSnapshot).catch(async (re) => {
+        await restorePropagationSlots(tenantId, propagationSnapshot).catch(async (re) => {
           logger.error(
             'applyMatchScore: restore after reset failure failed',
             re
@@ -381,6 +384,7 @@ export async function applyMatchScore(
   const { data: updated, error: updateErr } = await supabaseAdmin
     .from('matches')
     .update(updatePayloadFinal)
+    .eq('tenant_id', tenantId)
     .eq('id', matchId)
     .eq('updated_at', match.updated_at)
     .select('*')
@@ -399,7 +403,7 @@ export async function applyMatchScore(
 
     // Rollback : restaurer les slots de propagation vidés par le reset
     if (propagationSnapshot) {
-      await restorePropagationSlots(propagationSnapshot).catch(async (re) => {
+      await restorePropagationSlots(tenantId, propagationSnapshot).catch(async (re) => {
         logger.error(
           'applyMatchScore: restore after update failure failed',
           re
@@ -429,7 +433,7 @@ export async function applyMatchScore(
   let propagationResult: PropagationResult | null = null;
   if (shouldPropagate) {
     try {
-      propagationResult = await propagateBracketForMatch(matchId);
+      propagationResult = await propagateBracketForMatch(tenantId, matchId);
     } catch (e) {
       logger.error(
         'applyMatchScore: propagateBracketForMatch error — rollback',
@@ -442,6 +446,7 @@ export async function applyMatchScore(
           supabaseAdmin
             .from('matches')
             .update(previousMatchState)
+            .eq('tenant_id', tenantId)
             .eq('id', matchId)
         ).then(async ({ error: rollbackErr }) => {
           if (rollbackErr) {
@@ -463,7 +468,7 @@ export async function applyMatchScore(
 
       if (propagationSnapshot) {
         rollbackOps.push(
-          restorePropagationSlots(propagationSnapshot).catch(async (re) => {
+          restorePropagationSlots(tenantId, propagationSnapshot).catch(async (re) => {
             logger.error(
               'applyMatchScore: propagation slot restore failed',
               re
@@ -518,6 +523,7 @@ export async function applyMatchScore(
   // 12) Discord notifications (fire-and-forget)
   if (PROPAGATION_STATUSES.includes(newStatus)) {
     void sendMatchResultDiscord({
+      tenantId,
       matchId,
       tournamentId: match.tournament_id ?? null,
       team1Id: match.team1_id ?? null,
@@ -566,6 +572,7 @@ export async function applyMatchScore(
     // an MVP for). Fire-and-forget; failures are logged but don't block.
     if (newStatus === 'finished' && !resolvedForfeitTeamId) {
       void sendMvpPollForMatch({
+        tenantId,
         matchId,
         tournamentId: match.tournament_id ?? null,
         team1Id: match.team1_id ?? null,
@@ -598,6 +605,7 @@ export async function applyMatchScore(
  * ---------------------------------------------------------*/
 
 async function sendMatchResultDiscord(params: {
+  tenantId: string;
   matchId: string;
   tournamentId: string | null;
   team1Id: string | null;
@@ -616,6 +624,7 @@ async function sendMatchResultDiscord(params: {
   const { data: teams } = await supabaseAdmin
     .from('teams')
     .select('id, name, logo_url')
+    .eq('tenant_id', params.tenantId)
     .in('id', teamIds);
 
   const byId = new Map<string, { name: string; logo_url: string | null }>();
@@ -631,6 +640,7 @@ async function sendMatchResultDiscord(params: {
   const { data: match } = await supabaseAdmin
     .from('matches')
     .select('round_name, tournament:tournament_id(name)')
+    .eq('tenant_id', params.tenantId)
     .eq('id', params.matchId)
     .maybeSingle();
 
@@ -670,6 +680,7 @@ async function sendMatchResultDiscord(params: {
   const { data: nextMatch } = await supabaseAdmin
     .from('matches')
     .select('round_name, team1_id, team2_id')
+    .eq('tenant_id', params.tenantId)
     .eq('id', propag.updatedWinMatchId)
     .maybeSingle();
 
@@ -685,6 +696,7 @@ async function sendMatchResultDiscord(params: {
       const { data: opponent } = await supabaseAdmin
         .from('teams')
         .select('name')
+        .eq('tenant_id', params.tenantId)
         .eq('id', opponentId)
         .maybeSingle();
       nextOpponentName = opponent?.name ?? null;
@@ -746,6 +758,7 @@ export function computeWinnerFromScores(
  * ---------------------------------------------------------*/
 
 async function sendMvpPollForMatch(params: {
+  tenantId: string;
   matchId: string;
   tournamentId: string | null;
   team1Id: string | null;
@@ -757,6 +770,7 @@ async function sendMvpPollForMatch(params: {
   const { data: existing } = await supabaseAdmin
     .from('match_mvp_polls')
     .select('id, posted_at')
+    .eq('tenant_id', params.tenantId)
     .eq('match_id', params.matchId)
     .maybeSingle();
 
@@ -767,6 +781,7 @@ async function sendMvpPollForMatch(params: {
   const { data: teams } = await supabaseAdmin
     .from('teams')
     .select('id, name')
+    .eq('tenant_id', params.tenantId)
     .in('id', teamIds);
 
   const teamById = new Map<string, string>();
@@ -777,6 +792,7 @@ async function sendMvpPollForMatch(params: {
   const { data: members } = await supabaseAdmin
     .from('team_members')
     .select('id, team_id, battle_tag, is_substitute')
+    .eq('tenant_id', params.tenantId)
     .in('team_id', teamIds);
 
   const candidates = (members || [])
@@ -823,9 +839,11 @@ async function sendMvpPollForMatch(params: {
         candidate_player_ids: candidateIds,
         updated_at: new Date().toISOString(),
       })
+      .eq('tenant_id', params.tenantId)
       .eq('id', existing.id);
   } else {
     await supabaseAdmin.from('match_mvp_polls').insert({
+      tenant_id: params.tenantId,
       match_id: params.matchId,
       posted_at: new Date().toISOString(),
       duration_hours: 24,

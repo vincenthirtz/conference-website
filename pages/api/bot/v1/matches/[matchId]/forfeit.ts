@@ -62,6 +62,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   try {
     const result = await applyMatchScore({
+      tenantId: req.botContext!.tenantId,
       matchId,
       forfeitTeamId,
       staffId: actor.staffId,

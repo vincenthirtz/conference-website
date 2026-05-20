@@ -240,7 +240,7 @@ describe('PATCH /api/teams/transfer-captain', () => {
 
   it('returns 403 when user is not captain of any team', async () => {
     setAuthUser({ id: 'user-1' });
-    store.teams = [{ id: 't1', captain_id: 'someone-else' }] as any;
+    store.teams = [{ id: 't1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'someone-else' }] as any;
     const res = makeRes();
     await transferCaptainHandler(
       makeReq({ method: 'PATCH', body: { newCaptainUserId: otherUuid } }, true),
@@ -251,7 +251,7 @@ describe('PATCH /api/teams/transfer-captain', () => {
 
   it('returns 400 when target user is not a member of the team', async () => {
     setAuthUser({ id: 'user-1' });
-    store.teams = [{ id: 't1', captain_id: 'user-1' }] as any;
+    store.teams = [{ id: 't1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1' }] as any;
     store.team_members = []; // target not member
     const res = makeRes();
     await transferCaptainHandler(
@@ -263,7 +263,7 @@ describe('PATCH /api/teams/transfer-captain', () => {
 
   it('returns 200 and updates captain_id when transfer is valid', async () => {
     setAuthUser({ id: 'user-1' });
-    store.teams = [{ id: 't1', captain_id: 'user-1' }] as any;
+    store.teams = [{ id: 't1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1' }] as any;
     store.team_members = [
       { id: 'tm-target', team_id: 't1', user_id: otherUuid },
     ] as any;
@@ -280,17 +280,15 @@ describe('PATCH /api/teams/transfer-captain', () => {
     // Le transfert pendant un tournoi en cours est bloque pour preserver
     // l'integrite metier (capitaine = responsable lineup, scrims, scores).
     setAuthUser({ id: 'user-1' });
-    store.teams = [{ id: 't1', captain_id: 'user-1' }] as any;
+    store.teams = [{ id: 't1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1' }] as any;
     store.team_members = [
       { id: 'tm-target', team_id: 't1', user_id: otherUuid },
     ] as any;
     store.tournament_teams = [
-      { team_id: 't1', tournament_id: 'tour-1' },
+      { tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: 't1', tournament_id: 'tour-1' },
     ] as any;
     store.tournaments = [
-      {
-        id: 'tour-1',
-        name: 'Cup',
+      { id: 'tour-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', name: 'Cup',
         // verrouillage il y a 1h
         roster_locked_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
         status: 'in_progress',
@@ -309,17 +307,15 @@ describe('PATCH /api/teams/transfer-captain', () => {
   it('allows transfer when the only registered tournament is completed', async () => {
     // Un tournoi termine ne verrouille plus les rosters (cf. rosterLock.ts).
     setAuthUser({ id: 'user-1' });
-    store.teams = [{ id: 't1', captain_id: 'user-1' }] as any;
+    store.teams = [{ id: 't1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1' }] as any;
     store.team_members = [
       { id: 'tm-target', team_id: 't1', user_id: otherUuid },
     ] as any;
     store.tournament_teams = [
-      { team_id: 't1', tournament_id: 'tour-old' },
+      { tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: 't1', tournament_id: 'tour-old' },
     ] as any;
     store.tournaments = [
-      {
-        id: 'tour-old',
-        name: 'OldCup',
+      { id: 'tour-old', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', name: 'OldCup',
         roster_locked_at: new Date(Date.now() - 86400_000).toISOString(),
         status: 'completed',
       },
@@ -374,7 +370,7 @@ describe('PATCH /api/teams/update-member-role', () => {
   it('returns 400 when memberId is invalid', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 't1', captain_id: 'user-1', is_active: true, name: 'Alpha' },
+      { id: 't1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', is_active: true, name: 'Alpha' },
     ] as any;
     const res = makeRes();
     await updateMemberRoleHandler(
@@ -390,7 +386,7 @@ describe('PATCH /api/teams/update-member-role', () => {
   it('returns 400 when role is missing', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 't1', captain_id: 'user-1', is_active: true, name: 'Alpha' },
+      { id: 't1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', is_active: true, name: 'Alpha' },
     ] as any;
     const res = makeRes();
     await updateMemberRoleHandler(
@@ -403,7 +399,7 @@ describe('PATCH /api/teams/update-member-role', () => {
   it('returns 404 when member not found in the team', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 't1', captain_id: 'user-1', is_active: true, name: 'Alpha' },
+      { id: 't1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', is_active: true, name: 'Alpha' },
     ] as any;
     store.team_members = []; // no member found
     const res = makeRes();
@@ -420,7 +416,7 @@ describe('PATCH /api/teams/update-member-role', () => {
   it('returns 400 when captain tries to change their own role', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 't1', captain_id: 'user-1', is_active: true, name: 'Alpha' },
+      { id: 't1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', is_active: true, name: 'Alpha' },
     ] as any;
     store.team_members = [
       { id: memberId, team_id: 't1', user_id: 'user-1', role: 'player' },
@@ -436,7 +432,7 @@ describe('PATCH /api/teams/update-member-role', () => {
   it('returns 200 and updates role + is_substitute=true for substitute', async () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [
-      { id: 't1', captain_id: 'user-1', is_active: true, name: 'Alpha' },
+      { id: 't1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', is_active: true, name: 'Alpha' },
     ] as any;
     store.team_members = [
       {

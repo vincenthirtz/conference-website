@@ -11,6 +11,9 @@ import {
 } from '@/utils/teams/rosterLock';
 import { withAuthRoute } from '@/utils/staff';
 import { emitBotEvent } from '@/utils/botEvents';
+// TODO(S5c): remplacer DEFAULT_TENANT_ID par le tenantId resolu depuis le
+// subdomain/URL une fois la resolution publique multi-tenant en place.
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
@@ -60,7 +63,11 @@ export default withAuthRoute(async function handler(
 
   // Garde roster lock : un membre ne peut pas non plus quitter une equipe avec
   // roster verrouille. L'admin peut forcer via l'API admin.
-  const lockStatus = await isTeamRosterLocked(membership.team_id);
+  // TODO(S5c): remplacer DEFAULT_TENANT_ID par le tenantId resolu de l'URL.
+  const lockStatus = await isTeamRosterLocked(
+    DEFAULT_TENANT_ID,
+    membership.team_id
+  );
   if (lockStatus.locked) {
     return res.status(409).json({
       error: rosterLockErrorMessage(lockStatus),

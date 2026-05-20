@@ -17,14 +17,18 @@ export type { MatchRow, PropagationResult } from '@/types/bracket';
 /**
  * Propage le vainqueur / perdant d'un match vers les matchs suivants.
  *
- * @param matchId ID du match dont le résultat vient d'être mis à jour
- * @param chain Si true, re-propage en profondeur (utile si plusieurs rounds déjà saisis)
+ * @param tenantId Tenant scope — defense-in-depth (S5a). Propage le filtre sur
+ *                  toutes les queries Supabase (matches, tournament_teams,
+ *                  tournament_stages, stage_teams, games).
+ * @param matchId  ID du match dont le résultat vient d'être mis à jour
+ * @param chain    Si true, re-propage en profondeur (utile si plusieurs rounds déjà saisis)
  */
 export async function propagateBracketForMatch(
+  tenantId: string,
   matchId: string,
   chain: boolean = true
 ): Promise<PropagationResult> {
-  const match = await fetchMatchWithLinks(matchId);
+  const match = await fetchMatchWithLinks(tenantId, matchId);
 
   if (!match) {
     throw new Error(`Match ${matchId} introuvable pour la propagation.`);
@@ -65,11 +69,11 @@ export async function propagateBracketForMatch(
     match.team1_score === match.team2_score &&
     match.stage_id
   ) {
-    const tiebreaker = await resolveTiebreaker(match);
+    const tiebreaker = await resolveTiebreaker(tenantId, match);
 
     if (tiebreaker.policy === 'extra_round') {
       // Créer un match de barrage au lieu de propager
-      tiebreakerMatchId = await createTiebreakerMatch(match);
+      tiebreakerMatchId = await createTiebreakerMatch(tenantId, match);
       tiebreakerApplied = 'extra_round';
 
       return {
@@ -91,6 +95,7 @@ export async function propagateBracketForMatch(
       await supabaseAdmin
         .from('matches')
         .update({ winner_team_id: winnerTeamId })
+        .eq('tenant_id', tenantId)
         .eq('id', matchId);
     }
   }
@@ -111,7 +116,7 @@ export async function propagateBracketForMatch(
   }
 
   // Snapshot des slots avant propagation pour rollback atomique
-  const snapshot = await snapshotPropagationSlots(matchId);
+  const snapshot = await snapshotPropagationSlots(tenantId, matchId);
 
   try {
     // Propage le vainqueur et le perdant en parallèle
@@ -124,6 +129,7 @@ export async function propagateBracketForMatch(
     if (hasWin) {
       propagationOps.push(
         applyTeamToNextMatchSlot(
+          tenantId,
           match.tournament_id,
           match.next_match_win_id!,
           match.next_match_win_slot!,
@@ -135,6 +141,7 @@ export async function propagateBracketForMatch(
     if (hasLose) {
       propagationOps.push(
         applyTeamToNextMatchSlot(
+          tenantId,
           match.tournament_id,
           match.next_match_lose_id!,
           match.next_match_lose_slot!,
@@ -151,7 +158,7 @@ export async function propagateBracketForMatch(
   } catch (err) {
     // Rollback : restaurer les slots à leur état d'avant propagation
     logger.error(`Propagation failed for match ${matchId}, rolling back:`, err);
-    await restorePropagationSlots(snapshot);
+    await restorePropagationSlots(tenantId, snapshot);
     throw err;
   }
 
@@ -170,7 +177,10 @@ export async function propagateBracketForMatch(
  * Fetch d'un match avec les colonnes de lien de bracket
  * ---------------------------------------------------------*/
 
-async function fetchMatchWithLinks(matchId: string): Promise<MatchRow | null> {
+async function fetchMatchWithLinks(
+  tenantId: string,
+  matchId: string
+): Promise<MatchRow | null> {
   const { data, error } = await supabaseAdmin
     .from('matches')
     .select(
@@ -194,6 +204,7 @@ async function fetchMatchWithLinks(matchId: string): Promise<MatchRow | null> {
       next_match_lose_slot
     `
     )
+    .eq('tenant_id', tenantId)
     .eq('id', matchId)
     .maybeSingle();
 
@@ -279,6 +290,7 @@ export function computeWinnerLoserFromMatch(match: MatchRow): {
  * @returns l'ID du match mis à jour ou null
  */
 async function applyTeamToNextMatchSlot(
+  tenantId: string,
   tournamentId: string,
   nextMatchId: string,
   slot: 1 | 2,
@@ -298,6 +310,7 @@ async function applyTeamToNextMatchSlot(
     const { data: registration } = await supabaseAdmin
       .from('tournament_teams')
       .select('team_id')
+      .eq('tenant_id', tenantId)
       .eq('tournament_id', tournamentId)
       .eq('team_id', teamId)
       .maybeSingle();
@@ -315,6 +328,7 @@ async function applyTeamToNextMatchSlot(
   const { data: updated, error } = await supabaseAdmin
     .from('matches')
     .update({ [field]: teamId })
+    .eq('tenant_id', tenantId)
     .eq('id', nextMatchId)
     .eq('tournament_id', tournamentId)
     .select('id')
@@ -354,6 +368,7 @@ export type PropagationSnapshot = {
  * Permet un rollback précis en cas d'échec ultérieur.
  */
 export async function snapshotPropagationSlots(
+  tenantId: string,
   matchId: string
 ): Promise<PropagationSnapshot> {
   const snapshot: PropagationSnapshot = {
@@ -365,7 +380,7 @@ export async function snapshotPropagationSlots(
     loseSlotValue: null,
   };
 
-  const match = await fetchMatchWithLinks(matchId);
+  const match = await fetchMatchWithLinks(tenantId, matchId);
   if (!match) return snapshot;
 
   if (match.next_match_win_id && match.next_match_win_slot) {
@@ -376,6 +391,7 @@ export async function snapshotPropagationSlots(
     const { data } = await supabaseAdmin
       .from('matches')
       .select('team1_id, team2_id')
+      .eq('tenant_id', tenantId)
       .eq('id', match.next_match_win_id)
       .maybeSingle();
     snapshot.winSlotValue = (data as Record<string, any>)?.[field] ?? null;
@@ -389,6 +405,7 @@ export async function snapshotPropagationSlots(
     const { data } = await supabaseAdmin
       .from('matches')
       .select('team1_id, team2_id')
+      .eq('tenant_id', tenantId)
       .eq('id', match.next_match_lose_id)
       .maybeSingle();
     snapshot.loseSlotValue = (data as Record<string, any>)?.[field] ?? null;
@@ -401,6 +418,7 @@ export async function snapshotPropagationSlots(
  * Restaure les slots de propagation à leur état capturé par un snapshot.
  */
 export async function restorePropagationSlots(
+  tenantId: string,
   snapshot: PropagationSnapshot
 ): Promise<void> {
   const updates: Promise<any>[] = [];
@@ -411,6 +429,7 @@ export async function restorePropagationSlots(
         supabaseAdmin
           .from('matches')
           .update({ [snapshot.winSlotField]: snapshot.winSlotValue })
+          .eq('tenant_id', tenantId)
           .eq('id', snapshot.winMatchId)
       )
     );
@@ -422,6 +441,7 @@ export async function restorePropagationSlots(
         supabaseAdmin
           .from('matches')
           .update({ [snapshot.loseSlotField]: snapshot.loseSlotValue })
+          .eq('tenant_id', tenantId)
           .eq('id', snapshot.loseMatchId)
       )
     );
@@ -444,7 +464,10 @@ type TiebreakerResult = {
 /**
  * Récupère la politique de tiebreaker du stage et tente de résoudre l'égalité.
  */
-async function resolveTiebreaker(match: MatchRow): Promise<TiebreakerResult> {
+async function resolveTiebreaker(
+  tenantId: string,
+  match: MatchRow
+): Promise<TiebreakerResult> {
   if (!match.stage_id) {
     return { policy: 'manual', winnerTeamId: null };
   }
@@ -452,6 +475,7 @@ async function resolveTiebreaker(match: MatchRow): Promise<TiebreakerResult> {
   const { data: stage } = await supabaseAdmin
     .from('tournament_stages')
     .select('tiebreaker_policy')
+    .eq('tenant_id', tenantId)
     .eq('id', match.stage_id)
     .maybeSingle();
 
@@ -466,7 +490,7 @@ async function resolveTiebreaker(match: MatchRow): Promise<TiebreakerResult> {
   }
 
   if (policy === 'map_diff') {
-    const winner = await resolveByMapDiff(match);
+    const winner = await resolveByMapDiff(tenantId, match);
     if (winner) {
       return { policy, winnerTeamId: winner };
     }
@@ -475,7 +499,7 @@ async function resolveTiebreaker(match: MatchRow): Promise<TiebreakerResult> {
   }
 
   if (policy === 'seed') {
-    const winner = await resolveBySeed(match);
+    const winner = await resolveBySeed(tenantId, match);
     if (winner) {
       return { policy, winnerTeamId: winner };
     }
@@ -491,10 +515,14 @@ async function resolveTiebreaker(match: MatchRow): Promise<TiebreakerResult> {
  * Le team ayant le meilleur différentiel de score total l'emporte.
  * En cas d'égalité de différentiel, retourne null (fallback manual).
  */
-async function resolveByMapDiff(match: MatchRow): Promise<string | null> {
+async function resolveByMapDiff(
+  tenantId: string,
+  match: MatchRow
+): Promise<string | null> {
   const { data: games } = await supabaseAdmin
     .from('games')
     .select('team1_score, team2_score')
+    .eq('tenant_id', tenantId)
     .eq('match_id', match.id);
 
   if (!games || games.length === 0) return null;
@@ -517,12 +545,16 @@ async function resolveByMapDiff(match: MatchRow): Promise<string | null> {
  * Départage par seed : le mieux seedé (seed le plus bas) l'emporte.
  * Cherche les seeds dans stage_teams pour le stage du match.
  */
-async function resolveBySeed(match: MatchRow): Promise<string | null> {
+async function resolveBySeed(
+  tenantId: string,
+  match: MatchRow
+): Promise<string | null> {
   if (!match.stage_id || !match.team1_id || !match.team2_id) return null;
 
   const { data: stageTeams } = await supabaseAdmin
     .from('stage_teams')
     .select('team_id, seed')
+    .eq('tenant_id', tenantId)
     .eq('stage_id', match.stage_id)
     .in('team_id', [match.team1_id, match.team2_id]);
 
@@ -546,11 +578,15 @@ async function resolveBySeed(match: MatchRow): Promise<string | null> {
  * Le barrage reprend les mêmes équipes et les mêmes liens de propagation.
  * Le match original perd ses liens de propagation (le barrage les reprend).
  */
-async function createTiebreakerMatch(match: MatchRow): Promise<string> {
+async function createTiebreakerMatch(
+  tenantId: string,
+  match: MatchRow
+): Promise<string> {
   // 1) Créer le match de barrage avec les liens de propagation du match original
   const { data: tbMatch, error: insertErr } = await supabaseAdmin
     .from('matches')
     .insert({
+      tenant_id: tenantId,
       tournament_id: match.tournament_id,
       stage_id: match.stage_id,
       team1_id: match.team1_id,
@@ -587,6 +623,7 @@ async function createTiebreakerMatch(match: MatchRow): Promise<string> {
       next_match_lose_id: null,
       next_match_lose_slot: null,
     })
+    .eq('tenant_id', tenantId)
     .eq('id', match.id);
 
   return tbMatch.id;
@@ -604,8 +641,11 @@ async function createTiebreakerMatch(match: MatchRow): Promise<string> {
  * Elle supprime l'équipe propagée dans les matchs liés
  * (win & lose).
  */
-export async function resetPropagationForMatch(matchId: string): Promise<void> {
-  const match = await fetchMatchWithLinks(matchId);
+export async function resetPropagationForMatch(
+  tenantId: string,
+  matchId: string
+): Promise<void> {
+  const match = await fetchMatchWithLinks(tenantId, matchId);
   if (!match) return;
 
   const updates: Promise<any>[] = [];
@@ -618,6 +658,7 @@ export async function resetPropagationForMatch(matchId: string): Promise<void> {
         supabaseAdmin
           .from('matches')
           .update({ [field]: null })
+          .eq('tenant_id', tenantId)
           .eq('id', match.next_match_win_id)
           .eq('tournament_id', match.tournament_id)
       )
@@ -632,6 +673,7 @@ export async function resetPropagationForMatch(matchId: string): Promise<void> {
         supabaseAdmin
           .from('matches')
           .update({ [field]: null })
+          .eq('tenant_id', tenantId)
           .eq('id', match.next_match_lose_id)
           .eq('tournament_id', match.tournament_id)
       )

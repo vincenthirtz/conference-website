@@ -17,6 +17,9 @@ import { applyMatchScore } from '@/utils/matches/applyScore';
 import { emitBotEvent } from '@/utils/botEvents';
 import { enrichMatchEvent } from '@/utils/matches/botEventEnrich';
 import type { MatchStatus } from '@/types/admin';
+// TODO(S5b): remplacer par ctx.tenantId resolu depuis la staff session
+// multi-tenant.
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
 import { logger } from '../../../../../utils/logger';
 const VALID_RESUME_STATUSES: MatchStatus[] = [
@@ -274,6 +277,9 @@ async function resolveDispute(
 
     try {
       const result = await applyMatchScore({
+        // TODO(S5b): remplacer par ctx.tenantId une fois la staff session
+        // multi-tenant en place.
+        tenantId: DEFAULT_TENANT_ID,
         matchId,
         team1Score: hasScoreOverride ? (body.team1Score as number) : undefined,
         team2Score: hasScoreOverride ? (body.team2Score as number) : undefined,

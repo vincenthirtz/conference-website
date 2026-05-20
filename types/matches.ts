@@ -112,6 +112,13 @@ export interface AutoScheduleResult {
 }
 
 export interface ApplyMatchScoreInput {
+  /**
+   * Tenant scope (S5a — defense-in-depth).
+   * Toutes les queries Supabase contre matches/tournaments/teams/games/etc.
+   * sont filtrees par ce tenant_id pour eviter qu'une operation traverse
+   * accidentellement la frontiere multi-tenant.
+   */
+  tenantId: string;
   /** ID du match à mettre à jour */
   matchId: string;
 

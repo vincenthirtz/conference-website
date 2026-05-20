@@ -58,7 +58,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     });
   }
 
-  const lockStatus = await isTeamRosterLocked(membership.team_id);
+  const lockStatus = await isTeamRosterLocked(
+    req.botContext!.tenantId,
+    membership.team_id
+  );
   if (lockStatus.locked) {
     return res.status(409).json({ error: rosterLockErrorMessage(lockStatus) });
   }

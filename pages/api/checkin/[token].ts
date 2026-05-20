@@ -9,6 +9,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { resolveCheckinToken, redeemCheckinToken } from '@/utils/checkin';
+// TODO(S5c): remplacer DEFAULT_TENANT_ID par le tenantId resolu depuis le
+// subdomain/URL une fois la resolution publique multi-tenant en place.
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
 export default async function handler(
   req: NextApiRequest,
@@ -24,7 +27,8 @@ export default async function handler(
   }
 
   if (req.method === 'GET') {
-    const result = await resolveCheckinToken(token);
+    // TODO(S5c): remplacer DEFAULT_TENANT_ID par le tenantId resolu de l'URL.
+    const result = await resolveCheckinToken(DEFAULT_TENANT_ID, token);
     if (!result.ok) {
       return res.status(404).json({ error: result.error });
     }
@@ -32,7 +36,8 @@ export default async function handler(
   }
 
   if (req.method === 'POST') {
-    const result = await redeemCheckinToken(token);
+    // TODO(S5c): remplacer DEFAULT_TENANT_ID par le tenantId resolu de l'URL.
+    const result = await redeemCheckinToken(DEFAULT_TENANT_ID, token);
     if (!result.ok) {
       return res.status(400).json({ error: result.error });
     }

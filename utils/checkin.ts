@@ -63,8 +63,14 @@ export type CheckinResolveResult =
 /**
  * Look up a token without redeeming it. Used by the public page to render
  * a confirmation screen before the captain clicks "Check-in".
+ *
+ * @param tenantId Tenant scope (S5a — defense-in-depth) — restreint la recherche
+ *                  aux matches du tenant courant pour qu'un token volé ne puisse
+ *                  pas révéler un match d'un autre tenant.
+ * @param token    Token brut transmis dans l'URL ou l'API.
  */
 export async function resolveCheckinToken(
+  tenantId: string,
   token: string
 ): Promise<CheckinResolveResult> {
   if (!supabaseAdmin) return { ok: false, error: 'Service indisponible' };
@@ -85,6 +91,7 @@ export async function resolveCheckinToken(
       tournament:tournament_id(id, name)
       `
     )
+    .eq('tenant_id', tenantId)
     .or(`team1_checkin_token.eq.${token},team2_checkin_token.eq.${token}`)
     .maybeSingle();
 
@@ -137,11 +144,17 @@ export type CheckinRedeemResult =
 /**
  * Redeem a check-in token: marks the team as checked-in if not already.
  * Idempotent — calling twice on a valid token is safe.
+ *
+ * @param tenantId Tenant scope (S5a) — propagé à resolveCheckinToken et
+ *                  à l'UPDATE final pour éviter de marquer un check-in
+ *                  sur un match d'un autre tenant.
+ * @param token    Token brut.
  */
 export async function redeemCheckinToken(
+  tenantId: string,
   token: string
 ): Promise<CheckinRedeemResult> {
-  const resolved = await resolveCheckinToken(token);
+  const resolved = await resolveCheckinToken(tenantId, token);
   if (!resolved.ok) return { ok: false, error: resolved.error };
 
   if (
@@ -172,6 +185,7 @@ export async function redeemCheckinToken(
   const { error } = await supabaseAdmin!
     .from('matches')
     .update({ [field]: now })
+    .eq('tenant_id', tenantId)
     .eq('id', resolved.matchId);
 
   if (error) {
@@ -193,12 +207,16 @@ export async function redeemCheckinToken(
  * Captain email lookup
  * ---------------------------------------------------------*/
 
-async function getCaptainEmail(teamId: string): Promise<string | null> {
+async function getCaptainEmail(
+  tenantId: string,
+  teamId: string
+): Promise<string | null> {
   if (!supabaseAdmin) return null;
 
   const { data: team } = await supabaseAdmin
     .from('teams')
     .select('captain_id')
+    .eq('tenant_id', tenantId)
     .eq('id', teamId)
     .maybeSingle();
 
@@ -221,6 +239,10 @@ async function getCaptainEmail(teamId: string): Promise<string | null> {
 
 type MatchLite = {
   id: string;
+  // Tenant scope (S5a — defense-in-depth). Source-of-truth pour scoper toutes
+  // les mutations declenchees par le state machine check-in (update matches,
+  // appel applyMatchScore, etc.).
+  tenant_id: string;
   tournament_id: string | null;
   status: string;
   is_bye: boolean | null;
@@ -334,6 +356,7 @@ async function runCheckinOpenStep(
     const { error } = await supabaseAdmin!
       .from('matches')
       .update(updates)
+      .eq('tenant_id', match.tenant_id)
       .eq('id', match.id);
 
     if (error) {
@@ -347,10 +370,10 @@ async function runCheckinOpenStep(
 
   const team1Email = match.team1_checked_in_at
     ? null
-    : await getCaptainEmail(match.team1_id!);
+    : await getCaptainEmail(match.tenant_id, match.team1_id!);
   const team2Email = match.team2_checked_in_at
     ? null
-    : await getCaptainEmail(match.team2_id!);
+    : await getCaptainEmail(match.tenant_id, match.team2_id!);
 
   const team1Name = match.team1?.name || 'Équipe 1';
   const team2Name = match.team2?.name || 'Équipe 2';
@@ -389,6 +412,7 @@ async function runCheckinOpenStep(
   const { error: markErr } = await supabaseAdmin!
     .from('matches')
     .update({ checkin_email_sent_at: new Date().toISOString() })
+    .eq('tenant_id', match.tenant_id)
     .eq('id', match.id);
 
   if (markErr) {
@@ -453,6 +477,7 @@ async function runReminderStep(
   const { error } = await supabaseAdmin!
     .from('matches')
     .update({ [field]: new Date().toISOString() })
+    .eq('tenant_id', match.tenant_id)
     .eq('id', match.id);
 
   if (error) {
@@ -475,7 +500,7 @@ async function runForfeitStep(
 
   // Both teams checked in -> no action, just mark processed
   if (team1CheckedIn && team2CheckedIn) {
-    await markForfeitProcessed(match.id, result);
+    await markForfeitProcessed(match.tenant_id, match.id, result);
     result.steps.push('forfeit_skipped (both teams checked in)');
     return;
   }
@@ -488,12 +513,13 @@ async function runForfeitStep(
         status: 'cancelled',
         notes: "Annulé : aucune équipe n'a check-in",
       })
+      .eq('tenant_id', match.tenant_id)
       .eq('id', match.id);
     if (error) {
       result.errors.push(`cancel both: ${error.message}`);
       return;
     }
-    await markForfeitProcessed(match.id, result);
+    await markForfeitProcessed(match.tenant_id, match.id, result);
     result.steps.push('forfeit_both_cancelled');
     return;
   }
@@ -508,6 +534,7 @@ async function runForfeitStep(
 
   try {
     await applyMatchScore({
+      tenantId: match.tenant_id,
       matchId: match.id,
       forfeitTeamId,
       staffId: null,
@@ -531,17 +558,19 @@ async function runForfeitStep(
     opponentName: winnerName,
   }).catch((e) => logger.error('[checkin] notifyCheckinForfeit error:', e));
 
-  await markForfeitProcessed(match.id, result);
+  await markForfeitProcessed(match.tenant_id, match.id, result);
   result.steps.push(`forfeit (${forfeitedName} -> walkover)`);
 }
 
 async function markForfeitProcessed(
+  tenantId: string,
   matchId: string,
   result: ProcessStepResult
 ): Promise<void> {
   const { error } = await supabaseAdmin!
     .from('matches')
     .update({ forfeit_processed_at: new Date().toISOString() })
+    .eq('tenant_id', tenantId)
     .eq('id', matchId);
   if (error) {
     result.errors.push(`mark forfeit processed: ${error.message}`);
@@ -560,7 +589,7 @@ export type BulkProcessResult = {
 };
 
 const SELECT_FIELDS = `
-  id, tournament_id, status, is_bye, scheduled_at,
+  id, tenant_id, tournament_id, status, is_bye, scheduled_at,
   team1_id, team2_id,
   team1_checkin_token, team2_checkin_token,
   team1_checked_in_at, team2_checked_in_at,
@@ -575,9 +604,15 @@ const SELECT_FIELDS = `
  * Scans all upcoming pending matches in a window from T-65min to T-65min late
  * (so the cron can be a few minutes off without missing anything) and runs
  * the state machine on each one.
+ *
+ * @param opts.tenantId Si fourni, restreint le scan a ce tenant. Sinon (cron
+ *                       multi-tenant cross-tenant), on traite tous les tenants
+ *                       — chaque ligne porte son propre tenant_id qui est
+ *                       propage aux mutations downstream (S5a).
  */
 export async function processCheckinForUpcomingMatches(opts?: {
   tournamentId?: string;
+  tenantId?: string;
 }): Promise<BulkProcessResult> {
   const summary: BulkProcessResult = {
     scanned: 0,
@@ -599,6 +634,10 @@ export async function processCheckinForUpcomingMatches(opts?: {
     .not('scheduled_at', 'is', null)
     .gte('scheduled_at', windowStart)
     .lte('scheduled_at', windowEnd);
+
+  if (opts?.tenantId) {
+    q = q.eq('tenant_id', opts.tenantId);
+  }
 
   if (opts?.tournamentId) {
     q = q.eq('tournament_id', opts.tournamentId);
@@ -656,6 +695,7 @@ export type CheckinStatusRow = {
 };
 
 export async function listCheckinStatus(
+  tenantId: string,
   tournamentId: string
 ): Promise<CheckinStatusRow[]> {
   if (!supabaseAdmin) return [];
@@ -673,6 +713,7 @@ export async function listCheckinStatus(
       team2:team2_id(id, name)
       `
     )
+    .eq('tenant_id', tenantId)
     .eq('tournament_id', tournamentId)
     .order('scheduled_at', { ascending: true, nullsFirst: false });
 

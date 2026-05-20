@@ -144,6 +144,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     try {
       const result = await applyMatchScore({
+        tenantId: req.botContext!.tenantId,
         matchId,
         team1Score: hasScoreOverride ? (t1 as number) : undefined,
         team2Score: hasScoreOverride ? (t2 as number) : undefined,

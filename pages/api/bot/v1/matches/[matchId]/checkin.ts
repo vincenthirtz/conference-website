@@ -107,7 +107,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     });
   }
 
-  const result = await redeemCheckinToken(token);
+  const result = await redeemCheckinToken(req.botContext!.tenantId, token);
   if (!result.ok) {
     return res.status(400).json({ error: result.error });
   }

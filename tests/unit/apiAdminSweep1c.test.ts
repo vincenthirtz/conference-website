@@ -145,9 +145,7 @@ describe('/api/admin/teams/[teamId]/members', () => {
 
   it('GET returns existing members', async () => {
     store.team_members = [
-      {
-        id: 'tm1',
-        team_id: TEAM_UUID,
+      { id: 'tm1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: TEAM_UUID,
         user_id: 'u1',
         role: 'player',
         battle_tag: 'a#1234',
@@ -264,13 +262,24 @@ describe('/api/admin/teams/[teamId]/members', () => {
   });
 
   it('POST 409 when roster locked (no force)', async () => {
-    store.teams = [{ id: TEAM_UUID, name: 'Alpha' }] as any;
+    store.teams = [
+      {
+        id: TEAM_UUID,
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        name: 'Alpha',
+      },
+    ] as any;
     store.tournament_teams = [
-      { team_id: TEAM_UUID, tournament_id: TOUR_UUID },
+      {
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        team_id: TEAM_UUID,
+        tournament_id: TOUR_UUID,
+      },
     ] as any;
     store.tournaments = [
       {
         id: TOUR_UUID,
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
         name: 'Cup',
         status: 'live',
         roster_locked_at: '2026-01-01T00:00:00.000Z',
@@ -362,9 +371,7 @@ describe('/api/admin/teams/[teamId]/members', () => {
 
   it('PATCH allows only-battleTag change even when locked', async () => {
     store.team_members = [
-      {
-        id: 'tm1',
-        team_id: TEAM_UUID,
+      { id: 'tm1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: TEAM_UUID,
         user_id: 'u1',
         role: 'player',
         battle_tag: 'old#1234',
@@ -396,9 +403,7 @@ describe('/api/admin/teams/[teamId]/members', () => {
 
   it('PATCH updates role + isSubstitute', async () => {
     store.team_members = [
-      {
-        id: 'tm1',
-        team_id: TEAM_UUID,
+      { id: 'tm1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: TEAM_UUID,
         user_id: 'u1',
         role: 'player',
         battle_tag: 'old#1234',
@@ -426,9 +431,7 @@ describe('/api/admin/teams/[teamId]/members', () => {
 
   it('PATCH clears battle_tag when empty string', async () => {
     store.team_members = [
-      {
-        id: 'tm1',
-        team_id: TEAM_UUID,
+      { id: 'tm1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: TEAM_UUID,
         user_id: 'u1',
         role: 'player',
         battle_tag: 'x#1234',
@@ -463,18 +466,14 @@ describe('/api/admin/teams/[teamId]/members', () => {
 
   it('PATCH swap exchanges is_substitute between two members', async () => {
     store.team_members = [
-      {
-        id: 'tm1',
-        team_id: TEAM_UUID,
+      { id: 'tm1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: TEAM_UUID,
         user_id: 'u1',
         role: 'player',
         battle_tag: 'a#1234',
         is_substitute: false,
         created_at: '2026-04-01',
       },
-      {
-        id: 'tm2',
-        team_id: TEAM_UUID,
+      { id: 'tm2', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: TEAM_UUID,
         user_id: 'u2',
         role: 'player',
         battle_tag: 'b#1234',
@@ -500,9 +499,7 @@ describe('/api/admin/teams/[teamId]/members', () => {
 
   it('PATCH swap 404 when member missing', async () => {
     store.team_members = [
-      {
-        id: 'tm1',
-        team_id: TEAM_UUID,
+      { id: 'tm1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: TEAM_UUID,
         user_id: 'u1',
         role: 'player',
         battle_tag: 'a#1234',
@@ -551,9 +548,7 @@ describe('/api/admin/teams/[teamId]/members', () => {
 
   it('DELETE removes a member', async () => {
     store.team_members = [
-      {
-        id: 'tm1',
-        team_id: TEAM_UUID,
+      { id: 'tm1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: TEAM_UUID,
         user_id: 'u1',
         role: 'player',
         is_substitute: false,

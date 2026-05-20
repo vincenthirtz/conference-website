@@ -90,7 +90,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .json({ error: "Cette joueuse n'est pas membre de ton équipe." });
   }
 
-  const lockStatus = await isTeamRosterLocked(team.id);
+  const lockStatus = await isTeamRosterLocked(
+    req.botContext!.tenantId,
+    team.id
+  );
   if (lockStatus.locked) {
     return res.status(409).json({ error: rosterLockErrorMessage(lockStatus) });
   }

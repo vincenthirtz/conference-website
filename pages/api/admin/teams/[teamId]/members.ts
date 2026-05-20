@@ -16,6 +16,9 @@ import {
   isTeamRosterLocked,
   rosterLockErrorMessage,
 } from '@/utils/teams/rosterLock';
+// TODO(S5b): remplacer par ctx.tenantId resolu depuis la staff session
+// multi-tenant.
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
 type TeamMemberRow = {
   id: string;
@@ -96,7 +99,12 @@ async function handler(
     // Garde roster lock : refus si l'equipe est inscrite a un tournoi avec
     // roster_locked_at <= now() (sauf flag force=true).
     if (force !== true) {
-      const lockStatus = await isTeamRosterLocked(String(teamId));
+      // TODO(S5b): remplacer DEFAULT_TENANT_ID par ctx.tenantId une fois
+      // la staff session multi-tenant en place.
+      const lockStatus = await isTeamRosterLocked(
+        DEFAULT_TENANT_ID,
+        String(teamId)
+      );
       if (lockStatus.locked) {
         return res.status(409).json({
           error: rosterLockErrorMessage(lockStatus),
@@ -254,7 +262,12 @@ async function handler(
       isSubstitute === undefined &&
       !swapWithMemberId;
     if (force !== true && !onlyBattleTagChange) {
-      const lockStatus = await isTeamRosterLocked(String(teamId));
+      // TODO(S5b): remplacer DEFAULT_TENANT_ID par ctx.tenantId une fois
+      // la staff session multi-tenant en place.
+      const lockStatus = await isTeamRosterLocked(
+        DEFAULT_TENANT_ID,
+        String(teamId)
+      );
       if (lockStatus.locked) {
         return res.status(409).json({
           error: rosterLockErrorMessage(lockStatus),
@@ -383,7 +396,12 @@ async function handler(
     }
 
     if (force !== true) {
-      const lockStatus = await isTeamRosterLocked(String(teamId));
+      // TODO(S5b): remplacer DEFAULT_TENANT_ID par ctx.tenantId une fois
+      // la staff session multi-tenant en place.
+      const lockStatus = await isTeamRosterLocked(
+        DEFAULT_TENANT_ID,
+        String(teamId)
+      );
       if (lockStatus.locked) {
         return res.status(409).json({
           error: rosterLockErrorMessage(lockStatus),

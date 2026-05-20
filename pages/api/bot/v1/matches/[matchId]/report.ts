@@ -267,6 +267,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       // sendMatchResultDiscord ne fait rien si tournament_id manque).
       const isScrim = !!match.scrim_id;
       const result = await applyMatchScore({
+        tenantId: req.botContext!.tenantId,
         matchId,
         team1Score: mine.team1_score,
         team2Score: mine.team2_score,

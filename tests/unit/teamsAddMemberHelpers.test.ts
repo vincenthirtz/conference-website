@@ -22,6 +22,9 @@ import {
   BATTLE_TAG_REGEX,
 } from '../../utils/teams/addMember';
 
+// S5a: tenantId obligatoire dans InsertTeamMemberInput.
+const TENANT_ID = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
+
 beforeEach(() => {
   resetSupabaseMock();
 });
@@ -154,6 +157,7 @@ describe('insertTeamMember', () => {
 
   it('inserts a new member and returns the id', async () => {
     const r = await insertTeamMember({
+      tenantId: TENANT_ID,
       teamId: 'team-1',
       userId: 'u-1',
       role: 'player',
@@ -174,6 +178,7 @@ describe('insertTeamMember', () => {
 
   it('omits battle_tag from payload when not provided (Discord endpoint)', async () => {
     const r = await insertTeamMember({
+      tenantId: TENANT_ID,
       teamId: 'team-1',
       userId: 'u-1',
       role: 'player',
@@ -185,17 +190,19 @@ describe('insertTeamMember', () => {
   describe('with enforceMaxPlayersPreCheck', () => {
     it('rejects with isMaxPlayersViolation when team is at limit', async () => {
       store.team_members = [
-        { id: 'm1', team_id: 'team-1', role: 'player' },
-        { id: 'm2', team_id: 'team-1', role: 'player' },
+        { id: 'm1', tenant_id: TENANT_ID, team_id: 'team-1', role: 'player' },
+        { id: 'm2', tenant_id: TENANT_ID, team_id: 'team-1', role: 'player' },
       ] as any;
       store.tournament_teams = [
         {
+          tenant_id: TENANT_ID,
           team_id: 'team-1',
           tournament_id: 'tour-1',
           tournaments: { max_players: 2 },
         },
       ] as any;
       const r = await insertTeamMember({
+        tenantId: TENANT_ID,
         teamId: 'team-1',
         userId: 'u-new',
         role: 'player',
@@ -213,17 +220,19 @@ describe('insertTeamMember', () => {
 
     it('skips the check when adding a coach (coachs ne comptent pas)', async () => {
       store.team_members = [
-        { id: 'm1', team_id: 'team-1', role: 'player' },
-        { id: 'm2', team_id: 'team-1', role: 'player' },
+        { id: 'm1', tenant_id: TENANT_ID, team_id: 'team-1', role: 'player' },
+        { id: 'm2', tenant_id: TENANT_ID, team_id: 'team-1', role: 'player' },
       ] as any;
       store.tournament_teams = [
         {
+          tenant_id: TENANT_ID,
           team_id: 'team-1',
           tournament_id: 'tour-1',
           tournaments: { max_players: 2 },
         },
       ] as any;
       const r = await insertTeamMember({
+        tenantId: TENANT_ID,
         teamId: 'team-1',
         userId: 'u-coach',
         role: 'coach',
@@ -234,17 +243,19 @@ describe('insertTeamMember', () => {
 
     it('does not count coaches against the limit', async () => {
       store.team_members = [
-        { id: 'm1', team_id: 'team-1', role: 'coach' },
-        { id: 'm2', team_id: 'team-1', role: 'coach' },
+        { id: 'm1', tenant_id: TENANT_ID, team_id: 'team-1', role: 'coach' },
+        { id: 'm2', tenant_id: TENANT_ID, team_id: 'team-1', role: 'coach' },
       ] as any;
       store.tournament_teams = [
         {
+          tenant_id: TENANT_ID,
           team_id: 'team-1',
           tournament_id: 'tour-1',
           tournaments: { max_players: 1 },
         },
       ] as any;
       const r = await insertTeamMember({
+        tenantId: TENANT_ID,
         teamId: 'team-1',
         userId: 'u-new',
         role: 'player',
@@ -256,17 +267,19 @@ describe('insertTeamMember', () => {
 
     it('passes when enforceMaxPlayersPreCheck is false (Discord)', async () => {
       store.team_members = [
-        { id: 'm1', team_id: 'team-1', role: 'player' },
-        { id: 'm2', team_id: 'team-1', role: 'player' },
+        { id: 'm1', tenant_id: TENANT_ID, team_id: 'team-1', role: 'player' },
+        { id: 'm2', tenant_id: TENANT_ID, team_id: 'team-1', role: 'player' },
       ] as any;
       store.tournament_teams = [
         {
+          tenant_id: TENANT_ID,
           team_id: 'team-1',
           tournament_id: 'tour-1',
           tournaments: { max_players: 2 },
         },
       ] as any;
       const r = await insertTeamMember({
+        tenantId: TENANT_ID,
         teamId: 'team-1',
         userId: 'u-new',
         role: 'player',

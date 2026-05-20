@@ -39,8 +39,13 @@ import {
  * Helpers
  * ---------------------------------------------------------*/
 
+// S5a: tenantId est maintenant obligatoire sur resolveCheckinToken /
+// redeemCheckinToken / processMatchCheckin (via MatchLite.tenant_id).
+const TENANT_ID = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
+
 type MatchSeed = {
   id: string;
+  tenant_id?: string;
   status?: string;
   is_bye?: boolean | null;
   scheduled_at?: string | null;
@@ -60,6 +65,7 @@ type MatchSeed = {
 function defaultMatchSeed(overrides: Partial<MatchSeed> = {}): MatchSeed {
   return {
     id: 'match-1',
+    tenant_id: TENANT_ID,
     status: 'pending',
     is_bye: false,
     scheduled_at: null,
@@ -140,12 +146,12 @@ describe('buildCheckinUrl', () => {
 
 describe('resolveCheckinToken', () => {
   it('rejects an empty token', async () => {
-    const r = await resolveCheckinToken('');
+    const r = await resolveCheckinToken(TENANT_ID, '');
     expect(r.ok).toBe(false);
   });
 
   it('rejects a too-short token', async () => {
-    const r = await resolveCheckinToken('short');
+    const r = await resolveCheckinToken(TENANT_ID, 'short');
     expect(r.ok).toBe(false);
   });
 
@@ -154,6 +160,7 @@ describe('resolveCheckinToken', () => {
     store.matches = [
       {
         id: 'match-1',
+        tenant_id: TENANT_ID,
         status: 'pending',
         scheduled_at: scheduledIn(45),
         team1_id: 'team-a',
@@ -168,7 +175,7 @@ describe('resolveCheckinToken', () => {
       },
     ] as any;
 
-    const r = await resolveCheckinToken(tok);
+    const r = await resolveCheckinToken(TENANT_ID, tok);
     if (!r.ok) throw new Error('expected ok');
     expect(r.matchId).toBe('match-1');
     expect(r.teamSlot).toBe(1);
@@ -183,6 +190,7 @@ describe('resolveCheckinToken', () => {
     store.matches = [
       {
         id: 'match-1',
+        tenant_id: TENANT_ID,
         status: 'pending',
         scheduled_at: scheduledIn(45),
         team1_id: 'team-a',
@@ -196,7 +204,7 @@ describe('resolveCheckinToken', () => {
       },
     ] as any;
 
-    const r = await resolveCheckinToken(tok);
+    const r = await resolveCheckinToken(TENANT_ID, tok);
     if (!r.ok) throw new Error('expected ok');
     expect(r.teamSlot).toBe(2);
     expect(r.teamName).toBe('Bravo');
@@ -207,6 +215,7 @@ describe('resolveCheckinToken', () => {
     store.matches = [
       {
         id: 'match-1',
+        tenant_id: TENANT_ID,
         status: 'pending',
         scheduled_at: scheduledIn(15),
         team1_id: 'team-a',
@@ -220,7 +229,7 @@ describe('resolveCheckinToken', () => {
       },
     ] as any;
 
-    const r = await resolveCheckinToken(tok);
+    const r = await resolveCheckinToken(TENANT_ID, tok);
     if (!r.ok) throw new Error('expected ok');
     expect(r.alreadyCheckedIn).toBe(true);
     expect(r.checkedInAt).toBe('2026-04-01T12:00:00.000Z');
@@ -228,7 +237,7 @@ describe('resolveCheckinToken', () => {
 
   it('returns ok=false when no match has the token', async () => {
     store.matches = [];
-    const r = await resolveCheckinToken('z'.repeat(32));
+    const r = await resolveCheckinToken(TENANT_ID, 'z'.repeat(32));
     expect(r.ok).toBe(false);
   });
 });
@@ -243,6 +252,7 @@ describe('redeemCheckinToken', () => {
     store.matches = [
       {
         id: 'match-1',
+        tenant_id: TENANT_ID,
         status: 'pending',
         scheduled_at: scheduledIn(15),
         team1_id: 'team-a',
@@ -256,7 +266,7 @@ describe('redeemCheckinToken', () => {
       },
     ] as any;
 
-    const r = await redeemCheckinToken(tok);
+    const r = await redeemCheckinToken(TENANT_ID, tok);
     if (!r.ok) throw new Error('expected ok');
     expect(r.alreadyCheckedIn).toBe(false);
     expect((store.matches[0] as any).team1_checked_in_at).toBeTruthy();
@@ -267,6 +277,7 @@ describe('redeemCheckinToken', () => {
     store.matches = [
       {
         id: 'match-1',
+        tenant_id: TENANT_ID,
         status: 'pending',
         scheduled_at: scheduledIn(15),
         team1_id: 'team-a',
@@ -280,7 +291,7 @@ describe('redeemCheckinToken', () => {
       },
     ] as any;
 
-    const r = await redeemCheckinToken(tok);
+    const r = await redeemCheckinToken(TENANT_ID, tok);
     if (!r.ok) throw new Error('expected ok');
     expect(r.alreadyCheckedIn).toBe(true);
     expect(r.checkedInAt).toBe('2026-04-01T12:00:00.000Z');
@@ -291,6 +302,7 @@ describe('redeemCheckinToken', () => {
     store.matches = [
       {
         id: 'match-1',
+        tenant_id: TENANT_ID,
         status: 'finished',
         scheduled_at: scheduledIn(-30),
         team1_id: 'team-a',
@@ -304,7 +316,7 @@ describe('redeemCheckinToken', () => {
       },
     ] as any;
 
-    const r = await redeemCheckinToken(tok);
+    const r = await redeemCheckinToken(TENANT_ID, tok);
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error).toMatch(/Check-in fermé/);
   });
@@ -350,10 +362,10 @@ describe('processMatchCheckin — T-60 open step', () => {
     setAdminUser('captain-a', 'a@example.com');
     setAdminUser('captain-b', 'b@example.com');
 
-    store.matches = [{ id: 'match-1' }] as any;
+    store.matches = [{ id: 'match-1', tenant_id: TENANT_ID }] as any;
     store.teams = [
-      { id: 'team-a', captain_id: 'captain-a' },
-      { id: 'team-b', captain_id: 'captain-b' },
+      { id: 'team-a', tenant_id: TENANT_ID, captain_id: 'captain-a' },
+      { id: 'team-b', tenant_id: TENANT_ID, captain_id: 'captain-b' },
     ] as any;
 
     const m = buildMatchLite({ scheduled_at: scheduledIn(45) }); // inside the 60-min window
@@ -370,6 +382,7 @@ describe('processMatchCheckin — T-60 open step', () => {
     store.matches = [
       {
         id: 'match-1',
+        tenant_id: TENANT_ID,
         checkin_email_sent_at: '2026-04-01T12:00:00.000Z',
       },
     ] as any;
@@ -386,10 +399,10 @@ describe('processMatchCheckin — T-60 open step', () => {
 
   it('skips the email of a team that is already checked in', async () => {
     setAdminUser('captain-b', 'b@example.com');
-    store.matches = [{ id: 'match-1' }] as any;
+    store.matches = [{ id: 'match-1', tenant_id: TENANT_ID }] as any;
     store.teams = [
-      { id: 'team-a', captain_id: 'captain-a' },
-      { id: 'team-b', captain_id: 'captain-b' },
+      { id: 'team-a', tenant_id: TENANT_ID, captain_id: 'captain-a' },
+      { id: 'team-b', tenant_id: TENANT_ID, captain_id: 'captain-b' },
     ] as any;
 
     const m = buildMatchLite({
@@ -409,7 +422,7 @@ describe('processMatchCheckin — T-60 open step', () => {
 
 describe('processMatchCheckin — reminders', () => {
   it('pings both teams at T-30 when neither is checked in', async () => {
-    store.matches = [{ id: 'match-1' }] as any;
+    store.matches = [{ id: 'match-1', tenant_id: TENANT_ID }] as any;
 
     const m = buildMatchLite({
       scheduled_at: scheduledIn(20),
@@ -425,7 +438,7 @@ describe('processMatchCheckin — reminders', () => {
   });
 
   it('skips checked-in teams in the T-15 reminder', async () => {
-    store.matches = [{ id: 'match-1' }] as any;
+    store.matches = [{ id: 'match-1', tenant_id: TENANT_ID }] as any;
 
     const m = buildMatchLite({
       scheduled_at: scheduledIn(10),
@@ -448,7 +461,7 @@ describe('processMatchCheckin — reminders', () => {
 
 describe('processMatchCheckin — forfeit step', () => {
   it('skips the forfeit when both teams have checked in', async () => {
-    store.matches = [{ id: 'match-1' }] as any;
+    store.matches = [{ id: 'match-1', tenant_id: TENANT_ID }] as any;
 
     const m = buildMatchLite({
       scheduled_at: scheduledIn(-1),
@@ -464,7 +477,7 @@ describe('processMatchCheckin — forfeit step', () => {
   });
 
   it('cancels the match when no team checked in', async () => {
-    store.matches = [{ id: 'match-1' }] as any;
+    store.matches = [{ id: 'match-1', tenant_id: TENANT_ID }] as any;
 
     const m = buildMatchLite({
       scheduled_at: scheduledIn(-1),
@@ -478,7 +491,7 @@ describe('processMatchCheckin — forfeit step', () => {
   });
 
   it('forfeits the missing team to the present one', async () => {
-    store.matches = [{ id: 'match-1' }] as any;
+    store.matches = [{ id: 'match-1', tenant_id: TENANT_ID }] as any;
 
     const m = buildMatchLite({
       scheduled_at: scheduledIn(-1),
@@ -496,7 +509,7 @@ describe('processMatchCheckin — forfeit step', () => {
 
   it('records an error when applyMatchScore throws', async () => {
     applyMatchScore.mockRejectedValueOnce(new Error('db down'));
-    store.matches = [{ id: 'match-1' }] as any;
+    store.matches = [{ id: 'match-1', tenant_id: TENANT_ID }] as any;
 
     const m = buildMatchLite({
       scheduled_at: scheduledIn(-1),
@@ -519,6 +532,7 @@ describe('listCheckinStatus', () => {
     store.matches = [
       {
         id: 'match-1',
+        tenant_id: TENANT_ID,
         scheduled_at: '2026-04-01T12:00:00.000Z',
         status: 'pending',
         tournament_id: 'tour-1',
@@ -535,7 +549,7 @@ describe('listCheckinStatus', () => {
       },
     ] as any;
 
-    const rows = await listCheckinStatus('tour-1');
+    const rows = await listCheckinStatus(TENANT_ID, 'tour-1');
     expect(rows).toHaveLength(1);
     expect(rows[0].team1.checkedInAt).toBe('2026-04-01T11:30:00.000Z');
     expect(rows[0].team2.checkedInAt).toBeNull();
@@ -544,7 +558,7 @@ describe('listCheckinStatus', () => {
 
   it('returns an empty array when no matches', async () => {
     store.matches = [];
-    expect(await listCheckinStatus('tour-x')).toEqual([]);
+    expect(await listCheckinStatus(TENANT_ID, 'tour-x')).toEqual([]);
   });
 });
 

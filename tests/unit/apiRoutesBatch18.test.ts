@@ -217,13 +217,29 @@ describe('POST /api/admin/teams/add-member', () => {
   });
 
   it('400 when team already at max_players for one of its tournaments', async () => {
-    store.teams = [{ id: 'team-1', name: 'Alpha', logo_url: null }] as any;
+    store.teams = [
+      {
+        id: 'team-1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        name: 'Alpha',
+        logo_url: null,
+      },
+    ] as any;
     store.team_members = [
-      { id: 'm1', team_id: 'team-1' },
-      { id: 'm2', team_id: 'team-1' },
+      {
+        id: 'm1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        team_id: 'team-1',
+      },
+      {
+        id: 'm2',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        team_id: 'team-1',
+      },
     ] as any;
     store.tournament_teams = [
       {
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
         team_id: 'team-1',
         tournament_id: TID,
         tournaments: { max_players: 2 }, // joined

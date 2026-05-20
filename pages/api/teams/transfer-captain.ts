@@ -10,6 +10,9 @@ import {
   isTeamRosterLocked,
   rosterLockErrorMessage,
 } from '@/utils/teams/rosterLock';
+// TODO(S5c): remplacer DEFAULT_TENANT_ID par le tenantId resolu depuis le
+// subdomain/URL une fois la resolution publique multi-tenant en place.
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
@@ -83,7 +86,8 @@ export default withAuthRoute(async function handler(
   // changer de capitaine pendant un tournoi modifie qui peut agir
   // sur les line-ups, scrims, scores… c'est une rupture d'intégrité métier.
   // Un admin peut toujours forcer via les routes /api/admin/*.
-  const lockStatus = await isTeamRosterLocked(team.id);
+  // TODO(S5c): remplacer DEFAULT_TENANT_ID par le tenantId resolu de l'URL.
+  const lockStatus = await isTeamRosterLocked(DEFAULT_TENANT_ID, team.id);
   if (lockStatus.locked) {
     return res.status(409).json({ error: rosterLockErrorMessage(lockStatus) });
   }

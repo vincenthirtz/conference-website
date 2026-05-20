@@ -127,6 +127,12 @@ export async function resolveUserIdByEmail(
  * ---------------------------------------------------------*/
 
 export type InsertTeamMemberInput = {
+  /**
+   * Tenant scope (S5a — defense-in-depth).
+   * Filtre `team_members` / `tournament_teams` lors du pre-check max_players
+   * et stocke `tenant_id` sur la nouvelle ligne `team_members`.
+   */
+  tenantId: string;
   teamId: string;
   userId: string;
   role: string;
@@ -173,11 +179,13 @@ export async function insertTeamMember(
         supabaseAdmin
           .from('team_members')
           .select('*', { count: 'exact', head: true })
+          .eq('tenant_id', input.tenantId)
           .eq('team_id', input.teamId)
           .neq('role', 'coach'),
         supabaseAdmin
           .from('tournament_teams')
           .select('tournament_id, tournaments!inner(max_players)')
+          .eq('tenant_id', input.tenantId)
           .eq('team_id', input.teamId),
       ]);
 
@@ -196,6 +204,7 @@ export async function insertTeamMember(
   }
 
   const payload: Record<string, unknown> = {
+    tenant_id: input.tenantId,
     team_id: input.teamId,
     user_id: input.userId,
     role: input.role,

@@ -17,7 +17,7 @@ const {
   fetchDashboardData,
 } = vi.hoisted(() => ({
   postToDiscordWebhook: vi.fn(async () => undefined),
-  listCheckinStatus: vi.fn(async () => [{ id: 'm1', status: 'ok' }]),
+  listCheckinStatus: vi.fn(async () => [{ id: 'm1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', status: 'ok' }]),
   processCheckinForUpcomingMatches: vi.fn(async () => ({
     scanned: 5,
     acted: 2,
@@ -241,7 +241,11 @@ describe('/api/admin/tournament/[id]/checkin', () => {
     );
     expect(res.statusCode).toBe(200);
     expect((res.body as any).matches).toBeDefined();
-    expect(listCheckinStatus).toHaveBeenCalledWith(VALID_UUID);
+    // S5a: listCheckinStatus(tenantId, tournamentId)
+    expect(listCheckinStatus).toHaveBeenCalledWith(
+      'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+      VALID_UUID
+    );
   });
 
   it('POST runs the manual processor and logs', async () => {

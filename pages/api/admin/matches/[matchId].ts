@@ -9,6 +9,9 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import { logStaffAction } from '@/utils/staffLogs';
+// TODO(S5b): remplacer par le tenantId resolu depuis la staff session
+// (`ctx.tenantId`) une fois la middleware staff multi-tenant deployee.
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { notifyMatchStarting } from '@/utils/discord';
 import { emitBotEvent } from '@/utils/botEvents';
@@ -240,6 +243,9 @@ async function handlePut(
     }
 
     const result = await applyMatchScore({
+      // TODO(S5b): remplacer par ctx.tenantId une fois la staff session
+      // multi-tenant en place.
+      tenantId: DEFAULT_TENANT_ID,
       matchId,
       team1Score,
       team2Score,

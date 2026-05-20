@@ -16,15 +16,21 @@ type Tournament = {
 };
 
 const TEAM_ID = 'team-1';
+// S5a: tenantId obligatoire en premier parametre positionnel.
+const TENANT_ID = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
 
 function seedRegistrations(rows: Reg[]) {
   // The mock filters by team_id (the rosterLock query does .eq('team_id', …)),
-  // so attach the test team_id automatically to keep the seeds compact.
-  store.tournament_teams = rows.map((r) => ({ ...r, team_id: TEAM_ID })) as any;
+  // so attach the test team_id + tenant_id automatically to keep seeds compact.
+  store.tournament_teams = rows.map((r) => ({
+    ...r,
+    team_id: TEAM_ID,
+    tenant_id: TENANT_ID,
+  })) as any;
 }
 
 function seedTournaments(rows: Tournament[]) {
-  store.tournaments = rows as any;
+  store.tournaments = rows.map((r) => ({ ...r, tenant_id: TENANT_ID })) as any;
 }
 
 beforeEach(() => {
@@ -75,7 +81,7 @@ describe('rosterLockErrorMessage', () => {
 describe('isTeamRosterLocked', () => {
   it('returns unlocked when the team has no tournament registrations', async () => {
     seedRegistrations([]);
-    const status = await isTeamRosterLocked(TEAM_ID);
+    const status = await isTeamRosterLocked(TENANT_ID, TEAM_ID);
     expect(status.locked).toBe(false);
   });
 
@@ -89,7 +95,7 @@ describe('isTeamRosterLocked', () => {
         status: 'in_progress',
       },
     ]);
-    const status = await isTeamRosterLocked(TEAM_ID);
+    const status = await isTeamRosterLocked(TENANT_ID, TEAM_ID);
     expect(status.locked).toBe(false);
   });
 
@@ -104,7 +110,7 @@ describe('isTeamRosterLocked', () => {
         status: 'in_progress',
       },
     ]);
-    const status = await isTeamRosterLocked(TEAM_ID);
+    const status = await isTeamRosterLocked(TENANT_ID, TEAM_ID);
     expect(status.locked).toBe(false);
   });
 
@@ -119,7 +125,7 @@ describe('isTeamRosterLocked', () => {
         status: 'in_progress',
       },
     ]);
-    const status = await isTeamRosterLocked(TEAM_ID);
+    const status = await isTeamRosterLocked(TENANT_ID, TEAM_ID);
     expect(status).toEqual({
       locked: true,
       tournamentId: 't1',
@@ -139,7 +145,7 @@ describe('isTeamRosterLocked', () => {
         status: 'archived',
       },
     ]);
-    const status = await isTeamRosterLocked(TEAM_ID);
+    const status = await isTeamRosterLocked(TENANT_ID, TEAM_ID);
     expect(status.locked).toBe(false);
   });
 
@@ -154,7 +160,7 @@ describe('isTeamRosterLocked', () => {
         status: 'completed',
       },
     ]);
-    const status = await isTeamRosterLocked(TEAM_ID);
+    const status = await isTeamRosterLocked(TENANT_ID, TEAM_ID);
     expect(status.locked).toBe(false);
   });
 
@@ -175,7 +181,7 @@ describe('isTeamRosterLocked', () => {
         status: 'in_progress',
       },
     ]);
-    const status = await isTeamRosterLocked(TEAM_ID);
+    const status = await isTeamRosterLocked(TENANT_ID, TEAM_ID);
     expect(status.locked).toBe(true);
     if (status.locked) {
       expect(status.tournamentId).toBe('t1');
@@ -185,7 +191,7 @@ describe('isTeamRosterLocked', () => {
   it('skips registrations with a null tournament_id', async () => {
     seedRegistrations([{ tournament_id: null as unknown as string }]);
     seedTournaments([]);
-    const status = await isTeamRosterLocked(TEAM_ID);
+    const status = await isTeamRosterLocked(TENANT_ID, TEAM_ID);
     expect(status.locked).toBe(false);
   });
 
@@ -195,7 +201,7 @@ describe('isTeamRosterLocked', () => {
     seedTournaments([
       { id: 't1', name: null, roster_locked_at: past, status: 'in_progress' },
     ]);
-    const status = await isTeamRosterLocked(TEAM_ID);
+    const status = await isTeamRosterLocked(TENANT_ID, TEAM_ID);
     if (!status.locked) throw new Error('expected locked');
     expect(status.tournamentName).toBeNull();
   });
