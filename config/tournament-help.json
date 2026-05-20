@@ -1,5 +1,5 @@
 {
-  "version": "2026-05-20.1",
+  "version": "2026-05-20.2",
   "sections": [
     {
       "id": "setup",
@@ -466,6 +466,26 @@
             }
           ],
           "deeplink_admin": "/admin/aide-tournoi#retirer-cast"
+        },
+        {
+          "name": "cast-ack-dm-rappel",
+          "signature": "Job interne bot : DM caster T-30 min avec bouton ✅ \"OK je suis prêt\" (customId `cast:ack:<assignmentId>`)",
+          "role": "captain",
+          "phase": "casts",
+          "prereqs": ["Cast assigné non-acknowledgé", "Match dans [now, now+30 min]"],
+          "endpoint": "GET /api/bot/v1/cast/upcoming?withinMinutes=30 (lecture cron) + POST /api/bot/v1/cast/:assignmentId/ack (clic bouton)",
+          "impact": {
+            "db": ["cast_assignments (update acked_at)"],
+            "ui": ["DM Discord caster"]
+          },
+          "examples": [
+            {
+              "label": "Caster confirme sa présence",
+              "payload": { "actorDiscordUserId": "<caster discord id>" },
+              "expected": "Le bouton DM se grise et affiche « Confirmé à HH:MM ». Idempotent : 2e clic = 200 sans changer acked_at."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#cast-ack-dm"
         }
       ]
     },
@@ -607,6 +627,35 @@
           "deeplink_admin": "/admin/aide-tournoi#bracket"
         },
         {
+          "name": "mes-actions",
+          "signature": "/mes-actions  •  Bouton 💤 « Snooze 1h » (customId `actions:snooze:<actionKey>`)",
+          "role": "player",
+          "phase": "matchs",
+          "prereqs": ["Compte site lié"],
+          "endpoint": "GET /api/bot/v1/players/by-discord/:discordUserId/actions-todo  +  POST /api/bot/v1/players/by-discord/:discordUserId/actions/snooze",
+          "impact": {
+            "db": ["player_action_snoozes (upsert)"],
+            "ui": ["DM/ephemeral Discord"]
+          },
+          "examples": [
+            {
+              "label": "Joueuse consulte ses actions du moment",
+              "payload": null,
+              "expected": "Embed ephemeral groupé urgent/today/later : checkin pending, veto à faire, score à reporter, invitation. Bouton Snooze 1h par action. Pagination 5/page si la liste est longue."
+            },
+            {
+              "label": "Snooze d'une action 1 h",
+              "payload": {
+                "actorDiscordUserId": "<player discord id>",
+                "actionKey": "checkin:match:42",
+                "minutes": 60
+              },
+              "expected": "L'action disparaît de la liste pendant 1 h. Réappel passé l'échéance. Idempotent : 2e snooze met à jour snoozed_until."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#mes-actions"
+        },
+        {
           "name": "next-round",
           "signature": "/next-round phase-id:<uuid>",
           "role": "admin",
@@ -633,6 +682,31 @@
       "title": "5. Litiges, forfaits & resets",
       "description": "Quand le report-score diverge, ou qu'une équipe ne se présente pas : forum dispute, forfait staff, reset match, résolution officielle.",
       "commands": [
+        {
+          "name": "ma-dispute",
+          "signature": "/ma-dispute match:<autocomplete>  •  Bouton 📎 « Ajouter une preuve » (V1 : invite upload, pas de pipeline)",
+          "role": "captain",
+          "phase": "disputes",
+          "prereqs": ["Être capitaine d'une des 2 équipes du match", "Match en dispute"],
+          "endpoint": "GET /api/bot/v1/matches/:matchId/dispute?actorDiscordUserId=...",
+          "impact": {
+            "db": [],
+            "ui": ["Embed ephemeral Discord"]
+          },
+          "examples": [
+            {
+              "label": "Capitaine consulte l'état d'une dispute",
+              "payload": null,
+              "expected": "Embed ephemeral avec status, ouvert le, 2 reports côte-à-côte (équipe / score / soumis par / quand), note staff publique, résolution si présente. Pas de leak des champs internes (rejected reports, audit log, IPs)."
+            },
+            {
+              "label": "Erreur si pas capitaine",
+              "payload": { "actorDiscordUserId": "<non-captain discord id>" },
+              "expected": "403 → message clair « Seul le capitaine de l'équipe peut consulter la dispute. »"
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#ma-dispute"
+        },
         {
           "name": "disputes",
           "signature": "/disputes [tournoi-id:<uuid>]",
