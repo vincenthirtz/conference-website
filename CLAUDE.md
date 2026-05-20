@@ -31,6 +31,7 @@ This is a **Next.js 16** conference/tournament website using the **Pages Router*
 
 - **pages/** - Next.js pages and API routes
   - **pages/api/admin/** - Protected admin API endpoints (require staff authentication)
+  - **pages/api/bot/v1/** - Discord-bot API. Shared contract documented in [docs/BOT_API_CONTRACT.md](docs/BOT_API_CONTRACT.md) (auth via `x-api-key` / `BOT_API_KEY`, idempotency, rate limits, endpoint inventory). Sibling repo: `docker-box/services/discord-bot/`.
   - **pages/api/** - Public API endpoints (matches, news, teams, Twitch integration)
   - **pages/admin/** - Admin dashboard pages (tournament management, teams, news, announcements)
 - **components/** - React components (Navbar, Footer, forms, illustrations)
