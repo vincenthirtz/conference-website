@@ -19,7 +19,14 @@ import { applyActorRateLimit, applyRateLimit } from './rateLimit';
 import { supabaseAdmin } from './supabase';
 import { isBotMaintenanceMode } from './maintenance';
 import { logger } from './logger';
-import { resolveTenantId } from './tenant';
+import { DEFAULT_TENANT_ID } from './tenant';
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Fallback tenant bucket pour les routes `crossTenant: true` qui utilisent
+// l'idempotency cache. Voir le commentaire dans le bloc idempotency.
+const DEFAULT_TENANT_ID_FOR_CACHE = DEFAULT_TENANT_ID;
 
 export function verifyBotApiKey(req: NextApiRequest): boolean {
   const expected = process.env.BOT_API_KEY;
@@ -200,7 +207,73 @@ export type BotRouteOptions = {
    * key on a different route doesn't collide.
    */
   idempotent?: boolean;
+  /**
+   * If true, this route does not require a tenant context — it's a global
+   * resolver (e.g. /tenants/all-configs, /events/pending). The handler
+   * won't have `req.botContext.tenantId` set; do not consume it.
+   *
+   * Pour ces routes :
+   *   - le header `x-tenant-id` n'est PAS valide (peut etre present ou
+   *     absent, on l'ignore),
+   *   - aucun round-trip d'existence n'est fait,
+   *   - `req.botContext.tenantId` reste `undefined` — c'est volontaire et
+   *     contractuel : si un handler `crossTenant` lit cette valeur, c'est
+   *     un bug d'implementation. La table d'inventaire dans
+   *     docs/BOT_API_CONTRACT.md liste les 5 routes flaggees.
+   */
+  crossTenant?: boolean;
 };
+
+/* ---------------------------------------------------------------------------
+ * Tenant existence cache (60s, in-memory)
+ *
+ * Le set de tenants change tres rarement (creation manuelle via /admin) et
+ * une requete bot peut etre tres rapide, donc on cache les existences pour
+ * eviter 1 round-trip Supabase par appel. Volontairement *local* a la
+ * Lambda — pas besoin de coherence cross-instance, un nouveau tenant
+ * deviendra valide sur la prochaine instance dans la minute qui suit.
+ * Les hits/miss/expiry sont silencieux (pas de log).
+ * ------------------------------------------------------------------------- */
+
+const TENANT_EXISTS_TTL_MS = 60_000;
+const tenantExistsCache = new Map<string, { exists: boolean; expiresAt: number }>();
+
+async function tenantExists(tenantId: string): Promise<boolean> {
+  const now = Date.now();
+  const cached = tenantExistsCache.get(tenantId);
+  if (cached && cached.expiresAt > now) {
+    return cached.exists;
+  }
+  if (!supabaseAdmin) {
+    // Sans DB on ne peut pas valider — on retourne true et on laissera le
+    // handler segfauter sur sa propre query (cas degrade improbable, deja
+    // bloque par le check supabaseAdmin plus haut).
+    return true;
+  }
+  const { data, error } = await supabaseAdmin
+    .from('tenants')
+    .select('id')
+    .eq('id', tenantId)
+    .maybeSingle();
+  if (error) {
+    // Erreur DB transitoire : on ne cache pas le verdict (next call retentera)
+    // et on laisse l'existence supposee vraie pour ne pas bloquer le trafic
+    // sur un hoquet Supabase.
+    logger.warn('[bot/tenant] tenant existence check failed', { tenantId });
+    return true;
+  }
+  const exists = Boolean(data);
+  tenantExistsCache.set(tenantId, {
+    exists,
+    expiresAt: now + TENANT_EXISTS_TTL_MS,
+  });
+  return exists;
+}
+
+/** Test-only : flush the tenant existence cache between scenarios. */
+export function __resetTenantExistsCache() {
+  tenantExistsCache.clear();
+}
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 const DISCORD_ID_RE = /^[0-9]{15,25}$/;
@@ -255,18 +328,85 @@ export function withBotRoute(
       return res.status(401).json({ error: 'Invalid or missing API key.' });
     }
 
-    // Multi-tenant scoping : si la key matche une row tenant_secrets, le
-    // tenantId est *autoritaire* (le header x-tenant-id est ignore meme s'il
-    // contredit — la key l'emporte). Sinon (fallback env), on resout via le
-    // header comme avant (V1 transitoire).
-    const resolvedTenantId =
-      authResult.tenantId !== null
-        ? authResult.tenantId
-        : resolveTenantId(req);
-    req.botContext = {
-      ...(req.botContext ?? {}),
-      tenantId: resolvedTenantId,
-    };
+    // Multi-tenant scoping (V2, durci) :
+    //
+    // 1. Si la route est `crossTenant: true` (global resolver type
+    //    /tenants/all-configs, /events/pending), on ne touche pas a
+    //    `req.botContext.tenantId` — le handler ne doit pas le lire. Tout
+    //    le bloc de validation est skippe.
+    //
+    // 2. Sinon, si la key matche une row `tenant_secrets`, le tenantId est
+    //    *autoritaire* (provient directement de la DB) — on ignore le
+    //    header `x-tenant-id` meme s'il contredit. Un warn est emis en cas
+    //    de mismatch pour debug.
+    //
+    // 3. Sinon (fallback env legacy), le header devient REQUIS :
+    //      - absent       → 400 MISSING_TENANT_ID
+    //      - non-UUID     → 400 INVALID_TENANT_ID
+    //      - tenant absent en DB → 404 UNKNOWN_TENANT
+    //    Le cache `tenantExists()` evite 1 round-trip Supabase a chaque
+    //    requete bot (TTL 60s).
+    if (options.crossTenant !== true) {
+      let resolvedTenantId: string;
+
+      if (authResult.tenantId !== null) {
+        // Per-tenant key match : la key est autoritaire. Si un header
+        // contradictoire est present, on warn (signal d'un bug cote bot,
+        // pas un cas a 400 — la key gagne).
+        const rawHeader = req.headers['x-tenant-id'];
+        const headerValue = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
+        if (
+          typeof headerValue === 'string' &&
+          headerValue.length > 0 &&
+          headerValue.toLowerCase() !== authResult.tenantId.toLowerCase()
+        ) {
+          logger.warn(
+            '[bot/tenant] x-tenant-id header conflicts with per-tenant API key — key wins',
+            {
+              header: headerValue,
+              keyTenant: authResult.tenantId,
+              route: options.rateLimit.key,
+            }
+          );
+        }
+        resolvedTenantId = authResult.tenantId;
+      } else {
+        // Fallback env legacy : on durcit la lecture du header.
+        const rawHeader = req.headers['x-tenant-id'];
+        const headerValue = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
+
+        if (
+          headerValue === undefined ||
+          headerValue === null ||
+          (typeof headerValue === 'string' && headerValue.length === 0)
+        ) {
+          return res.status(400).json({
+            error: 'x-tenant-id header is required.',
+            code: 'MISSING_TENANT_ID',
+          });
+        }
+        if (typeof headerValue !== 'string' || !UUID_RE.test(headerValue)) {
+          return res.status(400).json({
+            error: 'x-tenant-id header must be a valid UUID.',
+            code: 'INVALID_TENANT_ID',
+          });
+        }
+
+        const candidate = headerValue.toLowerCase();
+        if (!(await tenantExists(candidate))) {
+          return res.status(404).json({
+            error: 'Unknown tenant id.',
+            code: 'UNKNOWN_TENANT',
+          });
+        }
+        resolvedTenantId = candidate;
+      }
+
+      req.botContext = {
+        ...(req.botContext ?? {}),
+        tenantId: resolvedTenantId,
+      };
+    }
 
     // Maintenance mode : si actif, on bloque tous les writes (POST/PATCH/
     // DELETE/PUT). Les GET continuent de fonctionner pour ne pas casser
@@ -322,7 +462,14 @@ export function withBotRoute(
         const cacheKey = idempotencyCacheKey(req, userKey);
         // Scope cache lookup + write par tenant (S3 / Phase 1c) — pas de leak
         // si deux tenants utilisent par hasard la meme Idempotency-Key.
-        const tenantIdForCache = req.botContext!.tenantId;
+        //
+        // Pour les routes `crossTenant: true` (ex: /tenants/link-guild,
+        // /events/:id/ack), `req.botContext.tenantId` est undefined : on
+        // utilise le DEFAULT_TENANT_ID comme bucket de scoping. Ces routes
+        // sont globales par design donc une "collision" entre tenants n'est
+        // pas un risque metier.
+        const tenantIdForCache =
+          req.botContext?.tenantId ?? DEFAULT_TENANT_ID_FOR_CACHE;
         const cached = await readIdempotencyCache(cacheKey, tenantIdForCache);
         if (cached) {
           res.setHeader('Idempotency-Replay', 'true');

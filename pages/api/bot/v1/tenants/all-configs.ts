@@ -126,4 +126,5 @@ async function handler(_req: NextApiRequest, res: NextApiResponse) {
 export default withBotRoute(handler, {
   methods: ['GET'],
   rateLimit: { max: 30, key: 'bot-tenants-all-configs' },
+  crossTenant: true,
 });

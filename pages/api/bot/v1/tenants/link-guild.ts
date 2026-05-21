@@ -123,4 +123,5 @@ export default withBotRoute(handler, {
   methods: ['POST'],
   rateLimit: { max: 30, key: 'bot-tenants-link-guild' },
   idempotent: true,
+  crossTenant: true,
 });

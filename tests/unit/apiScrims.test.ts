@@ -534,6 +534,8 @@ describe('/api/scrims/[id] (public)', () => {
 describe('/api/bot/scrims', () => {
   beforeEach(() => {
     process.env.BOT_API_KEY = 'test-key';
+  // V2 strict tenant header — withBotRoute checks existence in `tenants`.
+  store.tenants = [{ id: CONFERENCE_TENANT_ID }] as any;
     store.user_discord_links = [
       { discord_user_id: DISCORD_ID, auth_user_id: 'user-1' },
     ] as any;
@@ -546,7 +548,7 @@ describe('/api/bot/scrims', () => {
   function makeBotReq(over: Partial<any> = {}, method = 'POST'): any {
     return {
       method,
-      headers: { host: 'h', 'x-api-key': 'test-key' },
+      headers: { host: 'h', 'x-api-key': 'test-key', 'x-tenant-id': CONFERENCE_TENANT_ID },
       query: {},
       body: {},
       ...over,
@@ -632,6 +634,7 @@ describe('/api/bot/scrims', () => {
 describe('/api/bot/scrims/[scrimId]', () => {
   beforeEach(() => {
     process.env.BOT_API_KEY = 'test-key';
+  store.tenants = [{ id: CONFERENCE_TENANT_ID }] as any;
     store.user_discord_links = [
       { discord_user_id: DISCORD_ID, auth_user_id: 'user-1' },
     ] as any;
@@ -656,7 +659,7 @@ describe('/api/bot/scrims/[scrimId]', () => {
   function makeBotReq(over: Partial<any> = {}): any {
     return {
       method: 'GET',
-      headers: { host: 'h', 'x-api-key': 'test-key' },
+      headers: { host: 'h', 'x-api-key': 'test-key', 'x-tenant-id': CONFERENCE_TENANT_ID },
       query: { scrimId: SCRIM_ID },
       body: {},
       ...over,
@@ -768,6 +771,7 @@ describe('/api/bot/scrims/[scrimId]/matches/[matchId]', () => {
 
   beforeEach(() => {
     process.env.BOT_API_KEY = 'test-key';
+  store.tenants = [{ id: CONFERENCE_TENANT_ID }] as any;
     store.user_discord_links = [
       { discord_user_id: DISCORD_ID, auth_user_id: 'user-1' },
     ] as any;
@@ -813,7 +817,7 @@ describe('/api/bot/scrims/[scrimId]/matches/[matchId]', () => {
   function makeBotReq(over: Partial<any> = {}): any {
     return {
       method: 'PATCH',
-      headers: { host: 'h', 'x-api-key': 'test-key' },
+      headers: { host: 'h', 'x-api-key': 'test-key', 'x-tenant-id': CONFERENCE_TENANT_ID },
       query: { scrimId: SCRIM_ID, matchId: MATCH_ID },
       body: { actorDiscordUserId: DISCORD_ID },
       ...over,
@@ -911,6 +915,7 @@ describe('/api/bot/scrims/[scrimId]/matches/[matchId]', () => {
 describe('/api/bot/scrims/[scrimId]/matches', () => {
   beforeEach(() => {
     process.env.BOT_API_KEY = 'test-key';
+  store.tenants = [{ id: CONFERENCE_TENANT_ID }] as any;
     store.user_discord_links = [
       { discord_user_id: DISCORD_ID, auth_user_id: 'user-1' },
     ] as any;
@@ -935,7 +940,7 @@ describe('/api/bot/scrims/[scrimId]/matches', () => {
   function makeBotReq(over: Partial<any> = {}): any {
     return {
       method: 'POST',
-      headers: { host: 'h', 'x-api-key': 'test-key' },
+      headers: { host: 'h', 'x-api-key': 'test-key', 'x-tenant-id': CONFERENCE_TENANT_ID },
       query: { scrimId: SCRIM_ID },
       body: {},
       ...over,

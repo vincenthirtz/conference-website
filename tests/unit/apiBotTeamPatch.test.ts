@@ -23,7 +23,11 @@ const CONFERENCE_TENANT_ID = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
 function makeReq(over: Partial<any> = {}): any {
   return {
     method: 'PATCH',
-    headers: { host: 'h', 'x-api-key': 'test-key' },
+    headers: {
+      host: 'h',
+      'x-api-key': 'test-key',
+      'x-tenant-id': CONFERENCE_TENANT_ID,
+    },
     query: { teamId: TEAM_ID },
     body: { actorDiscordUserId: CAPTAIN_DISCORD },
     ...over,
@@ -47,6 +51,8 @@ function makeRes() {
 beforeEach(() => {
   resetSupabaseMock();
   process.env.BOT_API_KEY = 'test-key';
+  // V2 strict tenant header — withBotRoute checks existence in `tenants`.
+  store.tenants = [{ id: CONFERENCE_TENANT_ID }] as any;
   store.teams = [
     {
       id: TEAM_ID,

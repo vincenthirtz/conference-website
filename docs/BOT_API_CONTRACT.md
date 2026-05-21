@@ -36,32 +36,49 @@ endpoint so the bot side can be code-reviewed against a single page.
 
 ## Tenant identification
 
-The site is in the middle of a single-tenant → multi-tenant migration. The
-bot is expected to declare which tenant a call targets via a header. The API
-resolves that header in [`utils/tenant.ts`](../utils/tenant.ts) and stashes
-the result on `req.botContext.tenantId` for every `/api/bot/v1/*` route.
+The site is multi-tenant. Every `/api/bot/v1/*` call **must** declare which
+tenant it targets, either through a per-tenant API key (preferred) or
+through the `x-tenant-id` header (legacy fallback while we roll out
+per-tenant keys). The middleware ([`utils/botAuth.ts`](../utils/botAuth.ts))
+resolves the tenant once and stashes it on `req.botContext.tenantId`.
 
 | Header        | Value                                                      |
 | ------------- | ---------------------------------------------------------- |
 | `x-tenant-id` | The tenant UUID (RFC 4122, any version). Case-insensitive. |
 
 - **Format**: must match `^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`.
-- **V1 (current — S2)**: the header is **optional**. Absent or malformed →
-  fallback to `DEFAULT_TENANT_ID` (env var, defaults to the conference
-  tenant UUID `ce69a726-773e-4d12-b5eb-d2503aa752b4`). A malformed value
-  is logged with a `warn` so misbehaving clients are easy to find. **No
-  call breaks** because of this rollout phase.
-- **V2 (post Phase 3)**: the header becomes **required**. Missing → `400`
-  with `code: "MISSING_TENANT_ID"`. Unknown tenant (no row in `tenants`)
-  → `404` with `code: "UNKNOWN_TENANT"`.
+- **V2 (active)**: the header is **required** when the `x-api-key` matches
+  the legacy global `BOT_API_KEY` env var. Missing/empty → `400` with
+  `code: "MISSING_TENANT_ID"`. Non-UUID → `400` with
+  `code: "INVALID_TENANT_ID"`. Unknown tenant (no row in `tenants`) →
+  `404` with `code: "UNKNOWN_TENANT"`. The existence check is cached
+  in-process for 60s to avoid a Supabase round-trip per request.
+- **Per-tenant API key (authoritative)**: when the provided `x-api-key`
+  matches a row in `tenant_secrets.bot_api_key_hash`, the tenant id is
+  taken from the DB and the `x-tenant-id` header is **ignored**. If the
+  header is present and contradicts the key, a `warn` is logged but the
+  request still succeeds with the key's tenant id (the key wins). This
+  lets the bot ship one `bot_api_key` per linked guild without also
+  having to send a coherent header.
 - **Discord guild mapping**: the bot resolves the right UUID locally from
   `discord_guilds.guild_id` → `tenant_id`. It is not the site's job to
   guess the tenant from a Discord context.
 - **Cross-tenant exemptions**: `/tenants/all-configs`, `/tenants/by-guild/:id`,
   `/tenants/link-guild`, `/events/pending` and `/events/:id/ack` are
   intentionally **not** tenant-scoped — they are global resolvers the bot
-  needs in order to route correctly. Every other `/api/bot/v1/*` route
-  enforces tenant scoping at the data layer.
+  needs in order to route correctly. These routes are flagged
+  `crossTenant: true` in `withBotRoute({ ... })` and the middleware
+  **skips** the header validation + existence check; `req.botContext.tenantId`
+  is left `undefined` and handlers must not read it. Every other
+  `/api/bot/v1/*` route enforces tenant scoping.
+
+### Error codes
+
+| Code                 | Status | When                                                              |
+| -------------------- | ------ | ----------------------------------------------------------------- |
+| `MISSING_TENANT_ID`  | 400    | `x-tenant-id` header is absent or empty (legacy env auth only).   |
+| `INVALID_TENANT_ID`  | 400    | `x-tenant-id` header is present but not a valid UUID.             |
+| `UNKNOWN_TENANT`     | 404    | `x-tenant-id` is a valid UUID but no matching row in `tenants`.   |
 
 Example:
 
@@ -310,9 +327,9 @@ Le caster clique le bouton "Je confirme" du DM T-30. Marque
 
 | Route                                                                              | Methods | Idem. | Rate-key                | Tenant scope |
 | ---------------------------------------------------------------------------------- | ------- | ----- | ----------------------- | ------------ |
-| [`events/pending.ts`](../pages/api/bot/v1/events/pending.ts)                       | GET     | —     | `bot-events-pending`    | cross-tenant — `tenantId` returned per row |
+| [`events/pending.ts`](../pages/api/bot/v1/events/pending.ts)                       | GET     | —     | `bot-events-pending`    | `crossTenant: true` — `tenantId` returned per row |
 | [`events/handled.ts`](../pages/api/bot/v1/events/handled.ts)                       | POST    | no    | `bot-events-handled`    | per-tenant   |
-| [`events/[id]/ack.ts`](../pages/api/bot/v1/events/[id]/ack.ts)                     | POST    | yes   | `bot-events-ack`        | cross-tenant — PK globally unique |
+| [`events/[id]/ack.ts`](../pages/api/bot/v1/events/[id]/ack.ts)                     | POST    | yes   | `bot-events-ack`        | `crossTenant: true` — PK globally unique |
 | [`reconcile/discord-orphans.ts`](../pages/api/bot/v1/reconcile/discord-orphans.ts) | GET     | —     | `bot-reconcile-orphans` | per-tenant   |
 
 ### Locks (distributed cron / fullSync coordination)
@@ -565,17 +582,19 @@ Response shape (truncated):
 
 ### Tenant lifecycle (multi-tenant resolution)
 
-| Route                                                                                | Methods | Idem. | Rate-key                  |
-| ------------------------------------------------------------------------------------ | ------- | ----- | ------------------------- |
-| [`tenants/by-guild/[guildId].ts`](../pages/api/bot/v1/tenants/by-guild/[guildId].ts) | GET     | —     | `bot-tenants-by-guild`    |
-| [`tenants/link-guild.ts`](../pages/api/bot/v1/tenants/link-guild.ts)                 | POST    | yes   | `bot-tenants-link-guild`  |
-| [`tenants/all-configs.ts`](../pages/api/bot/v1/tenants/all-configs.ts)               | GET     | —     | `bot-tenants-all-configs` |
+| Route                                                                                | Methods | Idem. | Rate-key                  | Tenant scope             |
+| ------------------------------------------------------------------------------------ | ------- | ----- | ------------------------- | ------------------------ |
+| [`tenants/by-guild/[guildId].ts`](../pages/api/bot/v1/tenants/by-guild/[guildId].ts) | GET     | —     | `bot-tenants-by-guild`    | `crossTenant: true`      |
+| [`tenants/link-guild.ts`](../pages/api/bot/v1/tenants/link-guild.ts)                 | POST    | yes   | `bot-tenants-link-guild`  | `crossTenant: true`      |
+| [`tenants/all-configs.ts`](../pages/api/bot/v1/tenants/all-configs.ts)               | GET     | —     | `bot-tenants-all-configs` | `crossTenant: true`      |
 
 These three endpoints **bootstrap** the bot's `guildId → (tenant_id, discord
-config)` map. They are the **only** `/api/bot/v1/*` routes that do not scope
-their queries by `req.botContext.tenantId` — they ARE the tenant resolver,
-so they look up `discord_guilds` / `tenants` directly. Pas de header
-`x-tenant-id` requis (il serait ignore).
+config)` map. They are the **only** `/api/bot/v1/*` routes (alongside
+`/events/pending` and `/events/:id/ack`) that do not scope their queries by
+`req.botContext.tenantId` — they ARE the tenant resolver, so they look up
+`discord_guilds` / `tenants` directly. The middleware is opted into this via
+`crossTenant: true` in `withBotRoute({ ... })`. Pas de header `x-tenant-id`
+requis (il serait ignoré — aucun 400/404 émis pour ce header sur ces routes).
 
 #### `GET /api/bot/v1/tenants/by-guild/:guildId`
 

@@ -69,4 +69,5 @@ export default withBotRoute(handler, {
   methods: ['POST'],
   rateLimit: { max: 120, key: 'bot-events-ack' },
   idempotent: true,
+  crossTenant: true,
 });

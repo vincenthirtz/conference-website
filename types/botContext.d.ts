@@ -9,9 +9,12 @@
 //     once auth passes, so downstream code can safely use a non-null
 //     assertion or a runtime check.
 //
-// `tenantId` is always a `string` once set — we fall back to
-// `DEFAULT_TENANT_ID` (utils/tenant.ts) when the bot omits the
-// `x-tenant-id` header. No null/undefined slips through.
+// `tenantId` is always a `string` once set. On routes flagged
+// `crossTenant: true` in `withBotRoute({ ... })` (global resolvers like
+// /tenants/all-configs, /events/pending), `req.botContext` is intentionally
+// left `undefined` and handlers must not read `tenantId`. On all other
+// `/api/bot/v1/*` routes, the middleware enforces a valid tenant header
+// (400/404 otherwise) so handlers can safely assume the field is set.
 
 import 'next';
 

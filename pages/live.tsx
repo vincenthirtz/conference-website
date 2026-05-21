@@ -19,6 +19,9 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
   // Static export -> no `req`, so we hard-code the conference tenant. Quand
   // on switchera vers du multi-tenant via subdomain/path-prefix (S7), il
   // faudra basculer cette page en `getServerSideProps`.
+  // TODO(multi-tenant) — passer en `getServerSideProps` puis utiliser
+  // `getTenantIdBySlug(slug)` (cf. POC `pages/[tenantSlug]/tournois.tsx`)
+  // pour servir une variante `pages/[tenantSlug]/live.tsx`.
   const { data, error } = await supabaseAdmin
     .from('twitch_channels')
     .select('channel, label, badge, description, background_url')

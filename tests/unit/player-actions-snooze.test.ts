@@ -8,11 +8,16 @@ import handler from '../../pages/api/bot/v1/players/by-discord/[discordUserId]/a
 const PLAYER_DISCORD = '900000000000000001';
 const OTHER_DISCORD = '900000000000000002';
 const VALID_ACTION_KEY = 'checkin:match:550e8400-e29b-41d4-a716-446655440a01';
+const CONFERENCE_TENANT_ID = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
 
 function makeReq(over: Partial<any> = {}): any {
   return {
     method: 'POST',
-    headers: { host: 'h', 'x-api-key': 'test-key' },
+    headers: {
+      host: 'h',
+      'x-api-key': 'test-key',
+      'x-tenant-id': CONFERENCE_TENANT_ID,
+    },
     query: { discordUserId: PLAYER_DISCORD },
     body: {
       actorDiscordUserId: PLAYER_DISCORD,
@@ -40,6 +45,8 @@ function makeRes() {
 beforeEach(() => {
   resetSupabaseMock();
   process.env.BOT_API_KEY = 'test-key';
+  // V2 strict tenant header — withBotRoute checks existence in `tenants`.
+  store.tenants = [{ id: CONFERENCE_TENANT_ID }] as any;
   store.player_action_snoozes = [] as any;
 });
 
