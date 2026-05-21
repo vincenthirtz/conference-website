@@ -243,7 +243,7 @@ async function handlePatch(
   const afterStatus = (after.status as string) || beforeStatus;
   const transitionEvent = statusTransitionEvent(beforeStatus, afterStatus);
   if (transitionEvent) {
-    void emitScrimEvent(transitionEvent, after, {
+    void emitScrimEvent(transitionEvent, after, ctx.tenantId, {
       previousStatus: beforeStatus,
     });
   }
@@ -297,7 +297,7 @@ async function handleDelete(
     }
   }
 
-  void emitScrimEvent('scrim.deleted', before, {
+  void emitScrimEvent('scrim.deleted', before, ctx.tenantId, {
     previousStatus: before.status,
   });
 

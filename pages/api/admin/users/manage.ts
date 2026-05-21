@@ -467,7 +467,7 @@ async function handler(
       // emitRoleSyncEvent enrichit le payload avec discordUserId + team +
       // staffRole résolus depuis la DB (voir utils/botRoleSync.ts).
       // No-op si l'utilisateur n'a pas lié son Discord.
-      void emitRoleSyncEvent('staff.role.changed', userId, {
+      void emitRoleSyncEvent('staff.role.changed', userId, ctx.tenantId, {
         extras: { previousRole: previousStaffRole, newRole: newStaffRole },
       });
     }
@@ -581,7 +581,7 @@ async function handler(
     const wasStaffRole = targetStaffRole;
     await supabaseAdmin.from('staff').delete().eq('auth_user_id', userId);
     if (wasStaffRole) {
-      void emitRoleSyncEvent('staff.role.changed', userId, {
+      void emitRoleSyncEvent('staff.role.changed', userId, ctx.tenantId, {
         extras: { previousRole: wasStaffRole, newRole: null },
       });
     }

@@ -5,6 +5,12 @@
 // delivered_at=now(). Idempotent — re-acknowledger une row deja delivered
 // renvoie 200 sans erreur.
 //
+// EXCEPTION DE SCOPING TENANT_ID : pendant que /events/pending est
+// cross-tenant (le bot route via le tenantId inclus dans chaque row), l'ack
+// l'est aussi — sinon le bot devrait reenvoyer un header x-tenant-id
+// derive de la row, ce qui rend le contract plus fragile. L'`id` (PK
+// numerique) est globalement unique, donc pas de risque de collision.
+//
 // Auth : x-api-key (BOT_API_KEY). Le bot s'authentifie via la cle ; pas
 // d'acteur Discord requis (c'est le bot lui-meme).
 //
@@ -27,7 +33,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: row, error: fetchErr } = await supabaseAdmin
     .from('bot_event_outbox')
     .select('id, status')
-    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', id)
     .maybeSingle();
   if (fetchErr) {
@@ -51,7 +56,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       status: 'delivered',
       delivered_at: new Date().toISOString(),
     })
-    .eq('tenant_id', req.botContext!.tenantId)
     .eq('id', id);
   if (updErr) {
     logger.error('[bot/events/ack] update error', updErr);

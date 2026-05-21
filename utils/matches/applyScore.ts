@@ -542,28 +542,32 @@ export async function applyMatchScore(
     // et le bot saura le gerer (le payload de base contient deja les scores).
     void (async () => {
       const enriched = await enrichMatchEvent(matchId);
-      await emitBotEvent('match.finished', {
-        matchId,
-        tournamentId: match.tournament_id ?? null,
-        stageId: match.stage_id ?? null,
-        team1Id: match.team1_id ?? null,
-        team2Id: match.team2_id ?? null,
-        team1Score,
-        team2Score,
-        winnerTeamId: newWinnerTeamId,
-        isForfeit: !!resolvedForfeitTeamId,
-        forfeitTeamId: resolvedForfeitTeamId,
-        status: newStatus,
-        propagation: propagationResult
-          ? {
-              winnerTeamId: propagationResult.winnerTeamId ?? null,
-              loserTeamId: propagationResult.loserTeamId ?? null,
-              nextWinMatchId: propagationResult.updatedWinMatchId ?? null,
-              nextLoseMatchId: propagationResult.updatedLoseMatchId ?? null,
-            }
-          : null,
-        enriched,
-      });
+      await emitBotEvent(
+        'match.finished',
+        {
+          matchId,
+          tournamentId: match.tournament_id ?? null,
+          stageId: match.stage_id ?? null,
+          team1Id: match.team1_id ?? null,
+          team2Id: match.team2_id ?? null,
+          team1Score,
+          team2Score,
+          winnerTeamId: newWinnerTeamId,
+          isForfeit: !!resolvedForfeitTeamId,
+          forfeitTeamId: resolvedForfeitTeamId,
+          status: newStatus,
+          propagation: propagationResult
+            ? {
+                winnerTeamId: propagationResult.winnerTeamId ?? null,
+                loserTeamId: propagationResult.loserTeamId ?? null,
+                nextWinMatchId: propagationResult.updatedWinMatchId ?? null,
+                nextLoseMatchId: propagationResult.updatedLoseMatchId ?? null,
+              }
+            : null,
+          enriched,
+        },
+        tenantId
+      );
     })().catch((e) =>
       logger.error('[botEvents] match.finished emit error:', e)
     );

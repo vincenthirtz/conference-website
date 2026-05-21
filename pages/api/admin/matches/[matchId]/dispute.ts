@@ -149,15 +149,19 @@ async function openDispute(
   // pinger les capitaines dans le thread forum (chantier 5).
   void (async () => {
     const enriched = await enrichMatchEvent(matchId);
-    await emitBotEvent('match.disputed', {
-      matchId,
-      tournamentId: match.tournament_id ?? null,
-      previousStatus,
-      reason: reason.trim(),
-      openedBy: 'staff',
-      openedByStaffId: ctx?.staff?.id ?? null,
-      enriched,
-    });
+    await emitBotEvent(
+      'match.disputed',
+      {
+        matchId,
+        tournamentId: match.tournament_id ?? null,
+        previousStatus,
+        reason: reason.trim(),
+        openedBy: 'staff',
+        openedByStaffId: ctx?.staff?.id ?? null,
+        enriched,
+      },
+      ctx.tenantId
+    );
   })().catch((e) =>
     logger.error('[botEvents] match.disputed emit error:', e)
   );
@@ -307,15 +311,19 @@ async function resolveDispute(
 
       void (async () => {
         const enriched = await enrichMatchEvent(matchId);
-        await emitBotEvent('match.dispute.resolved', {
-          matchId,
-          tournamentId: match.tournament_id ?? null,
-          resolution: trimmedResolution,
-          resumeStatus,
-          resolvedByStaffId: resolverId,
-          cancelled: false,
-          discordDisputeThreadId: enriched?.discordDisputeThreadId ?? null,
-        });
+        await emitBotEvent(
+          'match.dispute.resolved',
+          {
+            matchId,
+            tournamentId: match.tournament_id ?? null,
+            resolution: trimmedResolution,
+            resumeStatus,
+            resolvedByStaffId: resolverId,
+            cancelled: false,
+            discordDisputeThreadId: enriched?.discordDisputeThreadId ?? null,
+          },
+          ctx.tenantId
+        );
       })().catch((err) =>
         logger.error('[botEvents] match.dispute.resolved emit error:', err)
       );
@@ -378,15 +386,19 @@ async function resolveDispute(
 
   void (async () => {
     const enriched = await enrichMatchEvent(matchId);
-    await emitBotEvent('match.dispute.resolved', {
-      matchId,
-      tournamentId: match.tournament_id ?? null,
-      resolution: trimmedResolution,
-      resumeStatus,
-      resolvedByStaffId: resolverId,
-      cancelled: false,
-      discordDisputeThreadId: enriched?.discordDisputeThreadId ?? null,
-    });
+    await emitBotEvent(
+      'match.dispute.resolved',
+      {
+        matchId,
+        tournamentId: match.tournament_id ?? null,
+        resolution: trimmedResolution,
+        resumeStatus,
+        resolvedByStaffId: resolverId,
+        cancelled: false,
+        discordDisputeThreadId: enriched?.discordDisputeThreadId ?? null,
+      },
+      ctx.tenantId
+    );
   })().catch((err) =>
     logger.error('[botEvents] match.dispute.resolved emit error:', err)
   );
@@ -477,15 +489,19 @@ async function cancelDispute(
   // resolution (cancelled=true distingue ce cas dans les logs bot).
   void (async () => {
     const enriched = await enrichMatchEvent(matchId);
-    await emitBotEvent('match.dispute.resolved', {
-      matchId,
-      tournamentId: match.tournament_id ?? null,
-      resolution: null,
-      resumeStatus,
-      resolvedByStaffId: ctx?.staff?.id ?? null,
-      cancelled: true,
-      discordDisputeThreadId: enriched?.discordDisputeThreadId ?? null,
-    });
+    await emitBotEvent(
+      'match.dispute.resolved',
+      {
+        matchId,
+        tournamentId: match.tournament_id ?? null,
+        resolution: null,
+        resumeStatus,
+        resolvedByStaffId: ctx?.staff?.id ?? null,
+        cancelled: true,
+        discordDisputeThreadId: enriched?.discordDisputeThreadId ?? null,
+      },
+      ctx.tenantId
+    );
   })().catch((err) =>
     logger.error('[botEvents] match.dispute.resolved emit error:', err)
   );

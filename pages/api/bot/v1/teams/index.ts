@@ -210,14 +210,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   });
 
   // team.created -> chantier voice par equipe : le bot cree le salon vocal.
-  void emitBotEvent('team.created', {
-    teamId: created.id,
-    name: created.name,
-    slug: created.slug ?? null,
-    captainAuthUserId: captainAuthId,
-    captainDiscordUserId,
-    discordRoleId: created.discord_role_id ?? null,
-  }).catch((e) => logger.error('[botEvents] team.created emit error:', e));
+  void emitBotEvent(
+    'team.created',
+    {
+      teamId: created.id,
+      name: created.name,
+      slug: created.slug ?? null,
+      captainAuthUserId: captainAuthId,
+      captainDiscordUserId,
+      discordRoleId: created.discord_role_id ?? null,
+    },
+    req.botContext!.tenantId
+  ).catch((e) => logger.error('[botEvents] team.created emit error:', e));
 
   return res.status(201).json({ team: created });
 }

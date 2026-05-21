@@ -83,10 +83,14 @@ export default withAuthRoute(async function handler(
     return res.status(500).json({ error: 'Failed to leave team.' });
   }
 
-  void emitBotEvent('team.member.removed', {
-    authUserId: userId,
-    teamId: membership.team_id,
-  }).catch((e) =>
+  void emitBotEvent(
+    'team.member.removed',
+    {
+      authUserId: userId,
+      teamId: membership.team_id,
+    },
+    tenantId
+  ).catch((e) =>
     logger.error('[botEvents] team.member.removed emit error:', e)
   );
 

@@ -202,18 +202,26 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       if (next) {
         void (async () => {
           const enriched = await enrichMatchEvent(matchId);
-          await emitBotEvent('match.scheduled', {
-            matchId,
-            tournamentId: match.tournament_id ?? null,
-            scrimId: match.scrim_id ?? null,
-            scheduledAt: next,
-            enriched,
-          });
+          await emitBotEvent(
+            'match.scheduled',
+            {
+              matchId,
+              tournamentId: match.tournament_id ?? null,
+              scrimId: match.scrim_id ?? null,
+              scheduledAt: next,
+              enriched,
+            },
+            req.botContext!.tenantId
+          );
         })().catch((e) =>
           logger.error('[botEvents] match.scheduled emit error:', e)
         );
       } else {
-        void emitBotEvent('match.unscheduled', { matchId }).catch((e) =>
+        void emitBotEvent(
+          'match.unscheduled',
+          { matchId },
+          req.botContext!.tenantId
+        ).catch((e) =>
           logger.error('[botEvents] match.unscheduled emit error:', e)
         );
       }

@@ -129,12 +129,16 @@ async function handler(
       });
     }
 
-    void emitCastEvent('cast.assigned', {
-      assignmentId: data.id,
-      matchId,
-      castMemberId,
-      briefingAt: data.briefing_at ?? briefingDate.toISOString(),
-    });
+    void emitCastEvent(
+      'cast.assigned',
+      {
+        assignmentId: data.id,
+        matchId,
+        castMemberId,
+        briefingAt: data.briefing_at ?? briefingDate.toISOString(),
+      },
+      ctx.tenantId
+    );
 
     return res.status(201).json({ assignment: data });
   }

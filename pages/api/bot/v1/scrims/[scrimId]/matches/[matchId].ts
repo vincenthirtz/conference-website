@@ -228,19 +228,23 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (after.status === 'ongoing' && match.status !== 'ongoing') {
     void (async () => {
       const enriched = await enrichMatchEvent(matchId);
-      await emitBotEvent('match.starting', {
-        matchId,
-        tournamentId: null,
-        scrimId,
-        team1Id: after.team1_id ?? null,
-        team2Id: after.team2_id ?? null,
-        scheduledAt: after.scheduled_at ?? null,
-        startedAt: after.started_at ?? null,
-        matchFormat: after.match_format ?? null,
-        lobbyCode: after.lobby_code ?? null,
-        streamUrl: after.stream_url ?? null,
-        enriched,
-      });
+      await emitBotEvent(
+        'match.starting',
+        {
+          matchId,
+          tournamentId: null,
+          scrimId,
+          team1Id: after.team1_id ?? null,
+          team2Id: after.team2_id ?? null,
+          scheduledAt: after.scheduled_at ?? null,
+          startedAt: after.started_at ?? null,
+          matchFormat: after.match_format ?? null,
+          lobbyCode: after.lobby_code ?? null,
+          streamUrl: after.stream_url ?? null,
+          enriched,
+        },
+        req.botContext!.tenantId
+      );
     })().catch((e) =>
       logger.error('[botEvents] match.starting emit error:', e)
     );

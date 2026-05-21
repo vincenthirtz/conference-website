@@ -64,6 +64,7 @@ function isConfigured(): boolean {
 async function persistOutbox(params: {
   eventId: string;
   eventName: BotEventName;
+  tenantId: string;
   payload: unknown;
 }): Promise<number | null> {
   if (!supabaseAdmin) return null;
@@ -72,6 +73,7 @@ async function persistOutbox(params: {
     .insert({
       event_id: params.eventId,
       event_name: params.eventName,
+      tenant_id: params.tenantId,
       payload: params.payload,
       status: 'pending',
     })
@@ -123,12 +125,21 @@ async function recordPushAttempt(
 
 export async function emitBotEvent(
   event: BotEventName,
-  data: BotEventPayload
+  data: BotEventPayload,
+  tenantId: string
 ): Promise<EmitResult> {
+  if (!tenantId) {
+    logger.error(
+      `[botEvents] ${event} aborted: tenantId missing — multi-tenant required`
+    );
+    return { delivered: false, error: 'missing_tenant_id', attempts: 0 };
+  }
+
   const eventId = crypto.randomUUID();
   const fullPayload = {
     id: eventId,
     event,
+    tenantId,
     timestamp: new Date().toISOString(),
     data,
   };
@@ -138,6 +149,7 @@ export async function emitBotEvent(
   const outboxId = await persistOutbox({
     eventId,
     eventName: event,
+    tenantId,
     payload: fullPayload,
   });
 
@@ -166,6 +178,7 @@ export async function emitBotEvent(
           'Content-Type': 'application/json',
           'X-Webhook-Signature': signature,
           'X-Webhook-Event': event,
+          'X-Tenant-Id': tenantId,
         },
         body,
         signal: AbortSignal.timeout(TIMEOUT_MS),

@@ -8,6 +8,11 @@
 // Le bot consume ces events, fait son traitement, puis appelle
 // POST /api/bot/v1/events/[id]/ack pour marquer le succes.
 //
+// EXCEPTION DE SCOPING TENANT_ID : meme philosophie que /tenants/all-configs
+// — le bot est multi-tenant, il doit voir les events de tous les tenants
+// pour pouvoir router vers le bon guild. Le `tenantId` est inclus dans
+// chaque row pour que le handler bot puisse resoudre la cible.
+//
 // Auth : x-api-key (BOT_API_KEY). Pas d'acteur staff — c'est un endpoint
 // de service consomme par le bot lui-meme.
 
@@ -29,9 +34,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data, error } = await supabaseAdmin
     .from('bot_event_outbox')
     .select(
-      'id, event_id, event_name, payload, push_attempts, last_push_error, last_push_at, created_at'
+      'id, event_id, event_name, tenant_id, payload, push_attempts, last_push_error, last_push_at, created_at'
     )
-    .eq('tenant_id', req.botContext!.tenantId)
     .eq('status', 'pending')
     .order('created_at', { ascending: true })
     .limit(limit);
@@ -46,6 +50,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       id: number;
       event_id: string;
       event_name: string;
+      tenant_id: string;
       payload: unknown;
       push_attempts: number;
       last_push_error: string | null;
@@ -56,6 +61,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       id: r.id,
       eventId: r.event_id,
       eventName: r.event_name,
+      tenantId: r.tenant_id,
       payload: r.payload,
       pushAttempts: r.push_attempts,
       lastPushError: r.last_push_error,

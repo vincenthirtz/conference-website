@@ -76,10 +76,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(500).json({ error: "Échec de la sortie de l'équipe" });
   }
 
-  void emitRoleSyncEvent('team.member.removed', actor.authUserId, {
-    previousTeamId: membership.team_id,
-    extras: { teamId: membership.team_id },
-  });
+  void emitRoleSyncEvent(
+    'team.member.removed',
+    actor.authUserId,
+    req.botContext!.tenantId,
+    {
+      previousTeamId: membership.team_id,
+      extras: { teamId: membership.team_id },
+    }
+  );
 
   void logPlayerAction({
     actorAuthUserId: actor.authUserId,

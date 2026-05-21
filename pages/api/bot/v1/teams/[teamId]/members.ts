@@ -116,10 +116,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(500).json({ error: 'Échec du retrait' });
   }
 
-  void emitRoleSyncEvent('team.member.removed', target.authUserId, {
-    previousTeamId: team.id,
-    extras: { teamId: team.id },
-  });
+  void emitRoleSyncEvent(
+    'team.member.removed',
+    target.authUserId,
+    req.botContext!.tenantId,
+    {
+      previousTeamId: team.id,
+      extras: { teamId: team.id },
+    }
+  );
 
   void logPlayerAction({
     actorAuthUserId: actor.authUserId,

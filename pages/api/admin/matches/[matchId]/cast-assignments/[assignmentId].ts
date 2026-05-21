@@ -78,14 +78,19 @@ async function handler(
       return res.status(500).json({ error: 'Échec de la mise à jour' });
     }
 
-    void emitCastEvent('cast.briefing.rescheduled', {
-      assignmentId: String(assignmentId),
-      matchId: String(matchId),
-      castMemberId: data.cast_member_id as string,
-      briefingAt: data.briefing_at ?? briefingDate.toISOString(),
-    }, {
-      previousBriefingAt: previous?.briefing_at ?? null,
-    });
+    void emitCastEvent(
+      'cast.briefing.rescheduled',
+      {
+        assignmentId: String(assignmentId),
+        matchId: String(matchId),
+        castMemberId: data.cast_member_id as string,
+        briefingAt: data.briefing_at ?? briefingDate.toISOString(),
+      },
+      ctx.tenantId,
+      {
+        previousBriefingAt: previous?.briefing_at ?? null,
+      }
+    );
 
     return res.status(200).json({ assignment: data });
   }
@@ -126,12 +131,16 @@ async function handler(
     }
 
     if (before?.cast_member_id) {
-      void emitCastEvent('cast.unassigned', {
-        assignmentId: String(assignmentId),
-        matchId: String(matchId),
-        castMemberId: before.cast_member_id as string,
-        briefingAt: (before.briefing_at as string | null) ?? null,
-      });
+      void emitCastEvent(
+        'cast.unassigned',
+        {
+          assignmentId: String(assignmentId),
+          matchId: String(matchId),
+          castMemberId: before.cast_member_id as string,
+          briefingAt: (before.briefing_at as string | null) ?? null,
+        },
+        ctx.tenantId
+      );
     }
 
     return res.status(200).json({ success: true });

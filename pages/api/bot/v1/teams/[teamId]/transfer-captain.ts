@@ -113,12 +113,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   // 2 events : ancien capitaine (perd le rôle captain) puis nouveau (le gagne).
   // syncSingleUser fait 1 sync par event — plus simple et idempotent.
-  void emitRoleSyncEvent('team.captain.changed', actor.authUserId, {
-    extras: { teamId: team.id, role: 'previous' },
-  });
-  void emitRoleSyncEvent('team.captain.changed', newCaptain.authUserId, {
-    extras: { teamId: team.id, role: 'new' },
-  });
+  void emitRoleSyncEvent(
+    'team.captain.changed',
+    actor.authUserId,
+    req.botContext!.tenantId,
+    { extras: { teamId: team.id, role: 'previous' } }
+  );
+  void emitRoleSyncEvent(
+    'team.captain.changed',
+    newCaptain.authUserId,
+    req.botContext!.tenantId,
+    { extras: { teamId: team.id, role: 'new' } }
+  );
 
   void logPlayerAction({
     actorAuthUserId: actor.authUserId,

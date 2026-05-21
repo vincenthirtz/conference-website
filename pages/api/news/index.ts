@@ -177,15 +177,19 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
       )
     );
 
-    void emitBotEvent('news.published', {
-      newsId: data.id,
-      slug: data.slug,
-      title: data.title,
-      tag: data.tag,
-      excerpt: data.excerpt,
-      imageUrl: data.image_url,
-      publishedAt: data.published_at,
-    }).catch((e) => logger.error('[botEvents] news.published emit error', e));
+    void emitBotEvent(
+      'news.published',
+      {
+        newsId: data.id,
+        slug: data.slug,
+        title: data.title,
+        tag: data.tag,
+        excerpt: data.excerpt,
+        imageUrl: data.image_url,
+        publishedAt: data.published_at,
+      },
+      tenantId
+    ).catch((e) => logger.error('[botEvents] news.published emit error', e));
   }
 
   return res.status(201).json(data);

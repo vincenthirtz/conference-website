@@ -131,15 +131,19 @@ async function handler(
       body.status === 'published' &&
       existing?.status !== 'published'
     ) {
-      void emitBotEvent('news.published', {
-        newsId: data.id,
-        slug: data.slug,
-        title: data.title,
-        tag: data.tag,
-        excerpt: data.excerpt,
-        imageUrl: data.image_url,
-        publishedAt: data.published_at,
-      }).catch((e) =>
+      void emitBotEvent(
+        'news.published',
+        {
+          newsId: data.id,
+          slug: data.slug,
+          title: data.title,
+          tag: data.tag,
+          excerpt: data.excerpt,
+          imageUrl: data.image_url,
+          publishedAt: data.published_at,
+        },
+        ctx.tenantId
+      ).catch((e) =>
         logger.error('[botEvents] news.published emit error', e)
       );
     }

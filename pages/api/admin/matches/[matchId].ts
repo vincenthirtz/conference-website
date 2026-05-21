@@ -485,19 +485,23 @@ async function handlePut(
     // sans round-trip supplementaire vers /api/bot/v1/matches/[id].
     void (async () => {
       const enriched = await enrichMatchEvent(matchId);
-      await emitBotEvent('match.starting', {
-        matchId,
-        tournamentId: updated.tournament_id ?? null,
-        scrimId: updated.scrim_id ?? null,
-        team1Id: updated.team1_id ?? null,
-        team2Id: updated.team2_id ?? null,
-        scheduledAt: updated.scheduled_at ?? null,
-        startedAt: updated.started_at ?? null,
-        matchFormat: updated.match_format ?? null,
-        lobbyCode: updated.lobby_code ?? null,
-        streamUrl: updated.stream_url ?? null,
-        enriched,
-      });
+      await emitBotEvent(
+        'match.starting',
+        {
+          matchId,
+          tournamentId: updated.tournament_id ?? null,
+          scrimId: updated.scrim_id ?? null,
+          team1Id: updated.team1_id ?? null,
+          team2Id: updated.team2_id ?? null,
+          scheduledAt: updated.scheduled_at ?? null,
+          startedAt: updated.started_at ?? null,
+          matchFormat: updated.match_format ?? null,
+          lobbyCode: updated.lobby_code ?? null,
+          streamUrl: updated.stream_url ?? null,
+          enriched,
+        },
+        ctx.tenantId
+      );
     })().catch((e) =>
       logger.error('[botEvents] match.starting emit error:', e)
     );
@@ -512,18 +516,22 @@ async function handlePut(
       if (next) {
         void (async () => {
           const enriched = await enrichMatchEvent(matchId);
-          await emitBotEvent('match.scheduled', {
-            matchId,
-            tournamentId: updated.tournament_id ?? null,
-            scrimId: updated.scrim_id ?? null,
-            scheduledAt: next,
-            enriched,
-          });
+          await emitBotEvent(
+            'match.scheduled',
+            {
+              matchId,
+              tournamentId: updated.tournament_id ?? null,
+              scrimId: updated.scrim_id ?? null,
+              scheduledAt: next,
+              enriched,
+            },
+            ctx.tenantId
+          );
         })().catch((e) =>
           logger.error('[botEvents] match.scheduled emit error:', e)
         );
       } else {
-        void emitBotEvent('match.unscheduled', { matchId }).catch((e) =>
+        void emitBotEvent('match.unscheduled', { matchId }, ctx.tenantId).catch((e) =>
           logger.error('[botEvents] match.unscheduled emit error:', e)
         );
       }

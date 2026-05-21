@@ -267,11 +267,11 @@ async function handlePost(
     }
   }
 
-  void emitScrimEvent('scrim.created', data);
+  void emitScrimEvent('scrim.created', data, ctx.tenantId);
   // Si on naît directement en 'scheduled', le bot doit aussi pouvoir s'accrocher
   // à l'event de programmation (annonce dans #scrims, etc.).
   if (data.status === 'scheduled') {
-    void emitScrimEvent('scrim.scheduled', data, {
+    void emitScrimEvent('scrim.scheduled', data, ctx.tenantId, {
       previousStatus: 'draft',
     });
   }

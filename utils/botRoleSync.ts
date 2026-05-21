@@ -118,9 +118,16 @@ export async function resolvePreviousTeamRoleId(
 export async function emitRoleSyncEvent(
   event: BotEventName,
   authUserId: string,
+  tenantId: string,
   opts?: { previousTeamId?: string | null; extras?: Record<string, unknown> }
 ): Promise<void> {
   try {
+    if (!tenantId) {
+      logger.error(
+        `[botRoleSync] ${event} aborted: tenantId missing — multi-tenant required`
+      );
+      return;
+    }
     const snapshot = await resolveRoleSyncUser(authUserId);
     if (!snapshot) return;
 
@@ -139,7 +146,7 @@ export async function emitRoleSyncEvent(
       Object.assign(payload, opts.extras);
     }
 
-    await emitBotEvent(event, payload);
+    await emitBotEvent(event, payload, tenantId);
   } catch (err) {
     logger.error(`[botRoleSync] emit ${event} error`, err);
   }

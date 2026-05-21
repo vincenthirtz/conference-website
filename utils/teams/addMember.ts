@@ -246,7 +246,7 @@ export async function insertTeamMember(
     };
   }
 
-  void emitRoleSyncEvent('team.member.added', input.userId, {
+  void emitRoleSyncEvent('team.member.added', input.userId, input.tenantId, {
     extras: {
       teamId: input.teamId,
       role: input.role,
@@ -272,7 +272,8 @@ export type SetTeamCaptainResult =
  */
 export async function setTeamCaptain(
   teamId: string,
-  userId: string
+  userId: string,
+  tenantId: string
 ): Promise<SetTeamCaptainResult> {
   if (!supabaseAdmin) {
     return { ok: false, error: 'Service unavailable.', status: 503 };
@@ -307,12 +308,15 @@ export async function setTeamCaptain(
     // Émet un event pour l'ancien capitaine (perd le rôle captain) et un pour
     // le nouveau (gagne le rôle). Le bot fait 1 sync par event — c'est plus
     // simple et idempotent que de packager 2 users dans un seul payload.
-    void emitRoleSyncEvent('team.captain.changed', previousCaptainAuthUserId, {
-      extras: { teamId, role: 'previous' },
-    });
+    void emitRoleSyncEvent(
+      'team.captain.changed',
+      previousCaptainAuthUserId,
+      tenantId,
+      { extras: { teamId, role: 'previous' } }
+    );
   }
   if (previousCaptainAuthUserId !== userId) {
-    void emitRoleSyncEvent('team.captain.changed', userId, {
+    void emitRoleSyncEvent('team.captain.changed', userId, tenantId, {
       extras: { teamId, role: 'new' },
     });
   }

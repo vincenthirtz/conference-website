@@ -554,14 +554,18 @@ export default async function handler(
         .maybeSingle();
       captainDiscordUserId = (link?.discord_user_id as string | undefined) ?? null;
     }
-    await emitBotEvent('team.created', {
-      teamId: createdTeam.id,
-      name: createdTeam.name,
-      slug: createdTeam.slug ?? null,
-      captainAuthUserId: captainUserId,
-      captainDiscordUserId,
-      discordRoleId: createdTeam.discord_role_id ?? null,
-    });
+    await emitBotEvent(
+      'team.created',
+      {
+        teamId: createdTeam.id,
+        name: createdTeam.name,
+        slug: createdTeam.slug ?? null,
+        captainAuthUserId: captainUserId,
+        captainDiscordUserId,
+        discordRoleId: createdTeam.discord_role_id ?? null,
+      },
+      tenantId
+    );
   })().catch((e) => logger.error('[botEvents] team.created emit error:', e));
 
   return res.status(201).json({

@@ -57,9 +57,11 @@ the result on `req.botContext.tenantId` for every `/api/bot/v1/*` route.
 - **Discord guild mapping**: the bot resolves the right UUID locally from
   `discord_guilds.guild_id` → `tenant_id`. It is not the site's job to
   guess the tenant from a Discord context.
-- **Not yet enforced on data**: handlers don't yet add
-  `.eq('tenant_id', tenantId)` to their queries — that sweep arrives in
-  S3-S4. For V1, the tenant id is plumbed only.
+- **Cross-tenant exemptions**: `/tenants/all-configs`, `/tenants/by-guild/:id`,
+  `/tenants/link-guild`, `/events/pending` and `/events/:id/ack` are
+  intentionally **not** tenant-scoped — they are global resolvers the bot
+  needs in order to route correctly. Every other `/api/bot/v1/*` route
+  enforces tenant scoping at the data layer.
 
 Example:
 
@@ -74,6 +76,25 @@ curl -sS https://site.example/api/bot/v1/teams \
   -H "x-api-key: $BOT_API_KEY" \
   -H "x-tenant-id: ce69a726-773e-4d12-b5eb-d2503aa752b4"
 ```
+
+### Outbox events carry their tenant
+
+Outbound events emitted via `emitBotEvent()` (see [`utils/botEvents.ts`](../utils/botEvents.ts))
+**embed `tenantId`** so the bot can route to the right guild without having to
+re-derive it from the payload:
+
+- `bot_event_outbox.tenant_id` — DB column, `NOT NULL` since
+  [`enforce_tenant_id_not_null_and_fk.sql`](../database/migrations/).
+- Webhook push body — `tenantId` at the payload root, e.g.
+  `{ id, event, tenantId, timestamp, data }`.
+- Webhook push headers — `X-Tenant-Id: <uuid>` alongside the existing
+  `X-Webhook-Signature` and `X-Webhook-Event` headers.
+- `/events/pending` response — every row exposes `tenantId` (in addition to
+  `id`, `eventId`, `eventName`, `payload`, ...) so the bot can dispatch
+  cross-tenant from a single poll.
+
+The bot resolves the target guild via `tenant_config.getGuildIdForTenant(tenantId)`
+(local cache amorcé au boot via `/tenants/all-configs`).
 
 ## Idempotency
 
@@ -287,12 +308,12 @@ Le caster clique le bouton "Je confirme" du DM T-30. Marque
 
 ### Events queue (bot ↔ site eventual-consistency channel)
 
-| Route                                                                              | Methods | Idem. | Rate-key                |
-| ---------------------------------------------------------------------------------- | ------- | ----- | ----------------------- |
-| [`events/pending.ts`](../pages/api/bot/v1/events/pending.ts)                       | GET     | —     | `bot-events-pending`    |
-| [`events/handled.ts`](../pages/api/bot/v1/events/handled.ts)                       | POST    | no    | `bot-events-handled`    |
-| [`events/[id]/ack.ts`](../pages/api/bot/v1/events/[id]/ack.ts)                     | POST    | yes   | `bot-events-ack`        |
-| [`reconcile/discord-orphans.ts`](../pages/api/bot/v1/reconcile/discord-orphans.ts) | GET     | —     | `bot-reconcile-orphans` |
+| Route                                                                              | Methods | Idem. | Rate-key                | Tenant scope |
+| ---------------------------------------------------------------------------------- | ------- | ----- | ----------------------- | ------------ |
+| [`events/pending.ts`](../pages/api/bot/v1/events/pending.ts)                       | GET     | —     | `bot-events-pending`    | cross-tenant — `tenantId` returned per row |
+| [`events/handled.ts`](../pages/api/bot/v1/events/handled.ts)                       | POST    | no    | `bot-events-handled`    | per-tenant   |
+| [`events/[id]/ack.ts`](../pages/api/bot/v1/events/[id]/ack.ts)                     | POST    | yes   | `bot-events-ack`        | cross-tenant — PK globally unique |
+| [`reconcile/discord-orphans.ts`](../pages/api/bot/v1/reconcile/discord-orphans.ts) | GET     | —     | `bot-reconcile-orphans` | per-tenant   |
 
 ### Locks (distributed cron / fullSync coordination)
 

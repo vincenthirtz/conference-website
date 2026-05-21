@@ -303,14 +303,22 @@ describe('setTeamCaptain', () => {
   });
 
   it('updates the team captain_id', async () => {
-    const r = await setTeamCaptain('team-1', 'u-new');
+    const r = await setTeamCaptain(
+      'team-1',
+      'u-new',
+      'ce69a726-773e-4d12-b5eb-d2503aa752b4'
+    );
     expect(r.ok).toBe(true);
     const t = (store.teams as any[]).find((x) => x.id === 'team-1');
     expect(t.captain_id).toBe('u-new');
   });
 
   it('overwrites an existing captain', async () => {
-    const r = await setTeamCaptain('team-2', 'u-new');
+    const r = await setTeamCaptain(
+      'team-2',
+      'u-new',
+      'ce69a726-773e-4d12-b5eb-d2503aa752b4'
+    );
     expect(r.ok).toBe(true);
     const t = (store.teams as any[]).find((x) => x.id === 'team-2');
     expect(t.captain_id).toBe('u-new');

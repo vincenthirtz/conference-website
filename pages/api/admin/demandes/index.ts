@@ -604,7 +604,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
           if (scrimErr) {
             logger.error('admin scrim auto-create error:', scrimErr);
           } else if (createdScrim) {
-            void emitScrimEvent('scrim.created', createdScrim, {
+            void emitScrimEvent('scrim.created', createdScrim, ctx.tenantId, {
               autoCreatedFromDemande: true,
             });
           }

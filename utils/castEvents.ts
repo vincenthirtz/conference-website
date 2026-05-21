@@ -156,23 +156,34 @@ type AssignmentInput = {
 export async function emitCastEvent(
   eventName: CastEventName,
   assignment: AssignmentInput,
+  tenantId: string,
   extras?: Record<string, unknown>
 ): Promise<void> {
   try {
+    if (!tenantId) {
+      logger.error(
+        `[castEvents] ${eventName} aborted: tenantId missing — multi-tenant required`
+      );
+      return;
+    }
     const [castMember, match] = await Promise.all([
       resolveCastMember(assignment.castMemberId),
       resolveMatch(assignment.matchId),
     ]);
 
-    await emitBotEvent(eventName, {
-      assignmentId: assignment.assignmentId,
-      matchId: assignment.matchId,
-      castMemberId: assignment.castMemberId,
-      briefingAt: assignment.briefingAt,
-      castMember,
-      match,
-      ...(extras ?? {}),
-    });
+    await emitBotEvent(
+      eventName,
+      {
+        assignmentId: assignment.assignmentId,
+        matchId: assignment.matchId,
+        castMemberId: assignment.castMemberId,
+        briefingAt: assignment.briefingAt,
+        castMember,
+        match,
+        ...(extras ?? {}),
+      },
+      tenantId
+    );
   } catch (err) {
     logger.error(`[castEvents] emit ${eventName} failed`, err);
   }

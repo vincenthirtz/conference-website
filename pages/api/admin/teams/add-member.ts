@@ -102,7 +102,7 @@ async function handler(
 
     let captainSet = false;
     if (setCaptain) {
-      const captainResult = await setTeamCaptain(teamId, resolvedUserId);
+      const captainResult = await setTeamCaptain(teamId, resolvedUserId, ctx.tenantId);
       if (!captainResult.ok) {
         return res.status(captainResult.status).json({ error: captainResult.error });
       }

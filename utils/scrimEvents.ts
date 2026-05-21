@@ -27,6 +27,10 @@ type ScrimRow = {
   stream_url: string | null;
   description: string | null;
   source_demande_id: string | null;
+  // tenant_id est facultatif sur le ScrimRow (les selects ne le ramenent pas
+  // tous), mais s'il est present il sert de source de tenant. A defaut, le
+  // caller doit passer un tenantId explicite.
+  tenant_id?: string | null;
 };
 
 type TeamLite = {
@@ -78,25 +82,37 @@ async function resolveTeams(
 export async function emitScrimEvent(
   eventName: ScrimEventName,
   scrim: ScrimRow,
+  tenantId: string,
   extras?: Record<string, unknown>
 ): Promise<void> {
   try {
+    const resolvedTenantId = tenantId || scrim.tenant_id || null;
+    if (!resolvedTenantId) {
+      logger.error(
+        `[scrimEvents] ${eventName} aborted: tenantId missing — multi-tenant required`
+      );
+      return;
+    }
     const { team1, team2 } = await resolveTeams(scrim.team1_id, scrim.team2_id);
-    await emitBotEvent(eventName, {
-      scrimId: scrim.id,
-      name: scrim.name,
-      slug: scrim.slug,
-      status: scrim.status,
-      team1,
-      team2,
-      scheduledDate: scrim.scheduled_date,
-      timezone: scrim.timezone,
-      isPublic: scrim.is_public,
-      streamUrl: scrim.stream_url,
-      description: scrim.description,
-      sourceDemandeId: scrim.source_demande_id,
-      ...(extras ?? {}),
-    });
+    await emitBotEvent(
+      eventName,
+      {
+        scrimId: scrim.id,
+        name: scrim.name,
+        slug: scrim.slug,
+        status: scrim.status,
+        team1,
+        team2,
+        scheduledDate: scrim.scheduled_date,
+        timezone: scrim.timezone,
+        isPublic: scrim.is_public,
+        streamUrl: scrim.stream_url,
+        description: scrim.description,
+        sourceDemandeId: scrim.source_demande_id,
+        ...(extras ?? {}),
+      },
+      resolvedTenantId
+    );
   } catch (err) {
     logger.error(`[scrimEvents] emit ${eventName} failed`, err);
   }

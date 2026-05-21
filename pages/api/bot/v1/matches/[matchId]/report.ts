@@ -331,16 +331,20 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     void (async () => {
       const enriched = await enrichMatchEvent(matchId);
-      await emitBotEvent('match.disputed', {
-        matchId,
-        tournamentId: match.tournament_id ?? null,
-        scrimId: match.scrim_id ?? null,
-        previousStatus: match.status,
-        reason: reasonParts,
-        openedBy: 'bot',
-        openedByStaffId: null,
-        enriched,
-      });
+      await emitBotEvent(
+        'match.disputed',
+        {
+          matchId,
+          tournamentId: match.tournament_id ?? null,
+          scrimId: match.scrim_id ?? null,
+          previousStatus: match.status,
+          reason: reasonParts,
+          openedBy: 'bot',
+          openedByStaffId: null,
+          enriched,
+        },
+        req.botContext!.tenantId
+      );
     })().catch((e) =>
       logger.error('[botEvents] match.disputed emit error', e)
     );

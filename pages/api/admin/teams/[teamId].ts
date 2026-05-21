@@ -389,14 +389,18 @@ async function handleDelete(
       }
     }
 
-    void emitBotEvent('team.dissolved', {
-      teamId: id,
-      name: (before as TeamRow).name,
-      hardDelete: true,
-      discordRoleId: (before as TeamRow).discord_role_id ?? null,
-      discordChannelId: (before as TeamRow).discord_channel_id ?? null,
-      discordVoiceChannelId: (before as TeamRow).discord_voice_channel_id ?? null,
-    }).catch((e) =>
+    void emitBotEvent(
+      'team.dissolved',
+      {
+        teamId: id,
+        name: (before as TeamRow).name,
+        hardDelete: true,
+        discordRoleId: (before as TeamRow).discord_role_id ?? null,
+        discordChannelId: (before as TeamRow).discord_channel_id ?? null,
+        discordVoiceChannelId: (before as TeamRow).discord_voice_channel_id ?? null,
+      },
+      ctx.tenantId
+    ).catch((e) =>
       logger.error('[botEvents] team.dissolved emit error:', e)
     );
 
@@ -445,14 +449,18 @@ async function handleDelete(
     }
   }
 
-  void emitBotEvent('team.dissolved', {
-    teamId: id,
-    name: (before as TeamRow).name,
-    hardDelete: false,
-    discordRoleId: (before as TeamRow).discord_role_id ?? null,
-    discordChannelId: (before as TeamRow).discord_channel_id ?? null,
-    discordVoiceChannelId: (before as TeamRow).discord_voice_channel_id ?? null,
-  }).catch((e) => logger.error('[botEvents] team.dissolved emit error:', e));
+  void emitBotEvent(
+    'team.dissolved',
+    {
+      teamId: id,
+      name: (before as TeamRow).name,
+      hardDelete: false,
+      discordRoleId: (before as TeamRow).discord_role_id ?? null,
+      discordChannelId: (before as TeamRow).discord_channel_id ?? null,
+      discordVoiceChannelId: (before as TeamRow).discord_voice_channel_id ?? null,
+    },
+    ctx.tenantId
+  ).catch((e) => logger.error('[botEvents] team.dissolved emit error:', e));
 
   return res.status(200).json({
     success: true,
