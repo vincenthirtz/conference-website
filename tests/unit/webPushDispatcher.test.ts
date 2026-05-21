@@ -685,6 +685,203 @@ describe('in-flight lock', () => {
 });
 
 /* ===========================================================================
+ * event_segment.transitioned : audience = casters assignés au match
+ * ===========================================================================*/
+
+describe('event_segment.transitioned', () => {
+  const MATCH_ID = 'match-xyz';
+  const CAST_MEMBER_A = 'cm-a';
+  const CAST_MEMBER_B = 'cm-b';
+
+  function makeSegmentEvent(over: Partial<any> = {}) {
+    return {
+      id: 99,
+      event_id: 'evt-seg-1',
+      event_name: 'event_segment.transitioned',
+      tenant_id: TENANT_A,
+      payload: {
+        id: 'evt-seg-1',
+        event: 'event_segment.transitioned',
+        tenantId: TENANT_A,
+        timestamp: NOW,
+        data: {
+          runId: 'run-1',
+          segmentId: 'seg-1',
+          fromStatus: 'upcoming',
+          toStatus: 'live',
+          tenantId: TENANT_A,
+          broadcastMessage: null,
+          segment: {
+            ord: 3,
+            type: 'match',
+            title: 'Demi A vs Demi B',
+            durationMin: 60,
+            matchId: MATCH_ID,
+          },
+        },
+      },
+      created_at: NOW,
+      status: 'pending',
+      ...over,
+    };
+  }
+
+  function seedCasterAssignments() {
+    // USER_A est lié à un cast_member assigné au match.
+    // USER_B est lié à un cast_member NON assigné (ne doit pas recevoir).
+    // USER_POLE n'est pas caster (pas de cast_member lié).
+    store.cast_members = [
+      { id: CAST_MEMBER_A, auth_user_id: USER_A, is_active: true },
+      { id: CAST_MEMBER_B, auth_user_id: USER_B, is_active: true },
+    ] as any;
+    store.cast_assignments = [
+      { id: 'ca-1', match_id: MATCH_ID, cast_member_id: CAST_MEMBER_A },
+    ] as any;
+  }
+
+  it('push uniquement aux casters assignés au match (toStatus=live, type=match)', async () => {
+    seedCasterAssignments();
+    store.bot_event_outbox = [makeSegmentEvent()] as any;
+
+    const counters = await runWebPushDispatcher();
+
+    // Seul USER_A est assigné → 1 envoi (sa sub). USER_B et USER_POLE NON.
+    expect(counters.events_examined).toBe(1);
+    expect(counters.processed).toBe(1);
+    expect(counters.sent).toBe(1);
+    const targets = sendNotification.mock.calls.map(
+      (c: any[]) => c[0].endpoint
+    );
+    expect(targets).toEqual(['https://push.example/a']);
+
+    // Render : url=/caster/cockpit, title=fallback, body inclut le segment.
+    const payload = JSON.parse(sendNotification.mock.calls[0][1] as string);
+    expect(payload.title).toBe('Match en direct');
+    expect(payload.body).toContain('Demi A vs Demi B');
+    expect(payload.data.url).toBe('/caster/cockpit');
+    expect(payload.tag).toBe('evt-seg-1');
+  });
+
+  it('utilise broadcastMessage.push_title / push_body si fournis', async () => {
+    seedCasterAssignments();
+    store.bot_event_outbox = [
+      makeSegmentEvent({
+        event_id: 'evt-seg-bm',
+        payload: {
+          ...makeSegmentEvent().payload,
+          data: {
+            ...makeSegmentEvent().payload.data,
+            broadcastMessage: {
+              push_title: 'CAST LIVE !',
+              push_body: 'Connectez-vous au cockpit immédiatement.',
+            },
+          },
+        },
+      }),
+    ] as any;
+
+    await runWebPushDispatcher();
+    const payload = JSON.parse(sendNotification.mock.calls[0][1] as string);
+    expect(payload.title).toBe('CAST LIVE !');
+    expect(payload.body).toBe('Connectez-vous au cockpit immédiatement.');
+  });
+
+  it('skip si toStatus != live (ex: done)', async () => {
+    seedCasterAssignments();
+    const evt = makeSegmentEvent({ event_id: 'evt-done' });
+    evt.payload.data.toStatus = 'done';
+    store.bot_event_outbox = [evt] as any;
+
+    const counters = await runWebPushDispatcher();
+    expect(counters.events_examined).toBe(1);
+    expect(counters.processed).toBe(0);
+    expect(counters.sent).toBe(0);
+    expect(sendNotification).not.toHaveBeenCalled();
+  });
+
+  it('skip si segment.type != match (ex: break)', async () => {
+    seedCasterAssignments();
+    const evt = makeSegmentEvent({ event_id: 'evt-break' });
+    evt.payload.data.segment.type = 'break';
+    store.bot_event_outbox = [evt] as any;
+
+    const counters = await runWebPushDispatcher();
+    expect(counters.processed).toBe(0);
+    expect(counters.sent).toBe(0);
+    expect(sendNotification).not.toHaveBeenCalled();
+  });
+
+  it('skip si segment.matchId est absent', async () => {
+    seedCasterAssignments();
+    const evt = makeSegmentEvent({ event_id: 'evt-no-match' });
+    (evt.payload.data.segment as { matchId: string | null }).matchId = null;
+    store.bot_event_outbox = [evt] as any;
+
+    const counters = await runWebPushDispatcher();
+    expect(counters.processed).toBe(0);
+    expect(counters.sent).toBe(0);
+  });
+
+  it('skip si aucun caster assigné au match (no-op silencieux)', async () => {
+    // Pas de seed de cast_assignments → liste vide.
+    store.cast_members = [
+      { id: CAST_MEMBER_A, auth_user_id: USER_A, is_active: true },
+    ] as any;
+    store.cast_assignments = [] as any;
+    store.bot_event_outbox = [makeSegmentEvent()] as any;
+
+    const counters = await runWebPushDispatcher();
+    expect(counters.events_examined).toBe(1);
+    expect(counters.processed).toBe(0);
+    expect(counters.sent).toBe(0);
+  });
+
+  it('ignore un cast_member is_active=false', async () => {
+    store.cast_members = [
+      { id: CAST_MEMBER_A, auth_user_id: USER_A, is_active: false },
+    ] as any;
+    store.cast_assignments = [
+      { id: 'ca-1', match_id: MATCH_ID, cast_member_id: CAST_MEMBER_A },
+    ] as any;
+    store.bot_event_outbox = [makeSegmentEvent()] as any;
+
+    const counters = await runWebPushDispatcher();
+    expect(counters.processed).toBe(0);
+    expect(counters.sent).toBe(0);
+  });
+
+  it('respecte opt-out notification_prefs pour event_segment.transitioned', async () => {
+    seedCasterAssignments();
+    store.notification_prefs = [
+      {
+        user_id: USER_A,
+        event_type: 'event_segment.transitioned',
+        enabled: false,
+        updated_at: NOW,
+      },
+    ] as any;
+    store.bot_event_outbox = [makeSegmentEvent()] as any;
+
+    const counters = await runWebPushDispatcher();
+    // USER_A opt-out → 0 envoi (et le pole admin n'est PAS dans l'audience
+    // pour ce type d'event).
+    expect(counters.sent).toBe(0);
+    expect(counters.skipped_prefs).toBe(1);
+  });
+
+  it('le pole admin ne reçoit PAS un event_segment.transitioned (audience = casters only)', async () => {
+    seedCasterAssignments();
+    store.bot_event_outbox = [makeSegmentEvent()] as any;
+
+    await runWebPushDispatcher();
+    const targets = sendNotification.mock.calls.map(
+      (c: any[]) => c[0].endpoint
+    );
+    expect(targets).not.toContain('https://push.example/pole');
+  });
+});
+
+/* ===========================================================================
  * Cross-tenant : pole admin reçoit les events de plusieurs tenants
  * ===========================================================================*/
 

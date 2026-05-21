@@ -30,6 +30,16 @@ export const WEB_PUSH_EVENT_TYPES = [
   'registration.new',
   'helloasso.payment.received',
   'captain.support.opened',
+  // Run-of-show : transition d'un segment dans le timeline d'un event.
+  // Le dispatcher applique un filtre supplémentaire (cf. shouldPushForEvent)
+  // pour ne notifier QUE les transitions vers 'live' d'un segment de type
+  // 'match'. Les autres transitions (done, skipped, intro/break/outro...)
+  // sont écrites dans l'outbox pour le bot Discord mais ne déclenchent pas
+  // de push PWA — l'audience est restreinte aux casters assignés au match
+  // (cf. loadCasterUserIdsForMatch dans le dispatcher).
+  // Note : cast.hotkey_triggered N'EST PAS ajouté ici — par design, on ne
+  // push pas les highlights en temps réel (Discord-only).
+  'event_segment.transitioned',
 ] as const;
 
 export type WebPushEventType = (typeof WEB_PUSH_EVENT_TYPES)[number];
@@ -98,6 +108,53 @@ export type WebPushRendered = {
   body: string;
   url: string;
 };
+
+/**
+ * Extrait `payload.data` si présent (forme envelope { id, event, tenantId,
+ * timestamp, data }), sinon retourne le payload tel quel (forme flat des
+ * anciens tests / events sans wrapper). Permet aux mappings ci-dessous
+ * d'accepter les deux formes sans avoir à connaître l'emitter.
+ */
+function unwrap(payload: EventPayload): EventPayload {
+  const data = (payload as { data?: unknown }).data;
+  if (data && typeof data === 'object' && !Array.isArray(data)) {
+    return data as EventPayload;
+  }
+  return payload;
+}
+
+/**
+ * Filtre amont appliqué par le dispatcher AVANT de calculer recipients/render.
+ * Renvoie `true` si l'event doit déclencher un push, `false` sinon.
+ *
+ * Pour la plupart des events de WEB_PUSH_EVENT_TYPES, on retourne `true`
+ * inconditionnellement — le filtrage opt-out/audience est fait ailleurs.
+ *
+ * Cas spéciaux :
+ *   - `event_segment.transitioned` : push uniquement si on bascule UN segment
+ *     de type 'match' vers 'live'. Les transitions intermédiaires (done,
+ *     skipped) et les segments non-match (intro, break, outro, custom) sont
+ *     ignorés côté PWA (le bot Discord, lui, traite toutes les transitions).
+ */
+export function shouldPushForEvent(
+  eventName: string,
+  payload: EventPayload
+): boolean {
+  if (eventName === 'event_segment.transitioned') {
+    const data = unwrap(payload);
+    const toStatus = str(data, 'toStatus');
+    if (toStatus !== 'live') return false;
+    const segment = (data as { segment?: unknown }).segment;
+    if (!segment || typeof segment !== 'object') return false;
+    const seg = segment as Record<string, unknown>;
+    if (seg.type !== 'match') return false;
+    if (typeof seg.matchId !== 'string' || seg.matchId.length === 0) {
+      return false;
+    }
+    return true;
+  }
+  return true;
+}
 
 /**
  * Construit (title, body, url) pour un event de l'outbox.
@@ -236,6 +293,43 @@ export function renderWebPushPayload(
           ? `/admin/support/${str(payload, 'ticket_id')}`
           : '/admin/support',
       };
+    case 'event_segment.transitioned': {
+      // Le dispatcher a déjà filtré via shouldPushForEvent : on sait que
+      // toStatus === 'live' et segment.type === 'match' (sinon on ne serait
+      // pas là). On rend défensivement quand même au cas où la fonction
+      // serait appelée hors flux.
+      const data = unwrap(payload);
+      const segment =
+        (data as { segment?: Record<string, unknown> }).segment ?? {};
+      const segTitle =
+        typeof segment.title === 'string' && segment.title.length > 0
+          ? segment.title
+          : 'Match';
+      const broadcast = (data as { broadcastMessage?: unknown })
+        .broadcastMessage;
+      const pushTitle =
+        broadcast && typeof broadcast === 'object'
+          ? (broadcast as Record<string, unknown>).push_title
+          : null;
+      const pushBody =
+        broadcast && typeof broadcast === 'object'
+          ? (broadcast as Record<string, unknown>).push_body
+          : null;
+      return {
+        title:
+          typeof pushTitle === 'string' && pushTitle.length > 0
+            ? pushTitle
+            : 'Match en direct',
+        body:
+          typeof pushBody === 'string' && pushBody.length > 0
+            ? pushBody
+            : `${segTitle} commence maintenant`,
+        // Audience = casters assignés au match. Le cockpit liste leurs
+        // segments du jour ; on évite /admin/events/<runId> qui suppose un
+        // accès staff.
+        url: '/caster/cockpit',
+      };
+    }
     default:
       // Fallback safe : un event_name inconnu n'arrivera pas (filtré par
       // WEB_PUSH_EVENT_TYPES côté query), mais on protège tout de même.

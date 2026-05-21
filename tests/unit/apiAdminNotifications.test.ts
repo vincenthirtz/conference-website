@@ -377,14 +377,15 @@ describe('GET /api/admin/notifications/prefs', () => {
     expect(res.statusCode).toBe(200);
     const prefs = (res.body as any).prefs;
     expect(prefs).toBeInstanceOf(Array);
-    // 14 events dans la liste canonique.
-    expect(prefs).toHaveLength(14);
+    // 15 events dans la liste canonique (cf. WEB_PUSH_EVENT_TYPES).
+    expect(prefs).toHaveLength(15);
     expect(prefs.every((p: any) => p.enabled === true)).toBe(true);
 
     const types = prefs.map((p: any) => p.event_type);
     expect(types).toContain('match.starting');
     expect(types).toContain('cast.assigned');
     expect(types).toContain('helloasso.payment.received');
+    expect(types).toContain('event_segment.transitioned');
   });
 
   it('fusionne les opt-out stockés avec les défauts', async () => {
@@ -484,7 +485,7 @@ describe('PUT /api/admin/notifications/prefs', () => {
       event_type: string;
       enabled: boolean;
     }>;
-    expect(prefs).toHaveLength(14);
+    expect(prefs).toHaveLength(15);
     expect(prefs.find((p) => p.event_type === 'news.published')?.enabled).toBe(
       false
     );

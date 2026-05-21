@@ -59,6 +59,7 @@ import { logger } from '@/utils/logger';
 import {
   WEB_PUSH_EVENT_TYPES,
   renderWebPushPayload,
+  shouldPushForEvent,
   type WebPushEventType,
 } from '@/utils/webPushEvents';
 
@@ -259,6 +260,58 @@ async function loadStaffUserIdsForTenant(tenantId: string): Promise<string[]> {
     // Soft-delete filtering : un staff inactif/deleted ne reçoit plus de
     // notifications (cohérent avec utils/staff.ts:getStaffByUserId).
     if (r.is_active === false || r.deleted_at) continue;
+    if (r.auth_user_id) userIds.add(r.auth_user_id);
+  }
+  return Array.from(userIds);
+}
+
+/**
+ * Pour `event_segment.transitioned` (segment type='match' → live), l'audience
+ * n'est PAS le staff général du tenant mais uniquement les casteurs assignés
+ * au match concerné. Ce sont les seuls qui ont besoin de savoir que leur
+ * cast commence — les autres staff ont le bot Discord pour ça.
+ *
+ * Pipeline (2 queries pour rester lisible et compatible avec le mock supabase
+ * de tests — qui ne fait pas de jointure) :
+ *   1. cast_assignments.match_id = matchId → liste de cast_member_id
+ *   2. cast_members.id IN (...) AND is_active = true AND auth_user_id IS NOT
+ *      NULL → liste d'auth_user_id
+ *
+ * Note : on ne filtre pas par tenant_id ici. Un match appartient à un seul
+ * tenant et cast_assignments est scoped via la FK match_id. Si jamais un
+ * cast_member d'un autre tenant était assigné (ne devrait pas arriver),
+ * le filtre opt-out aval le couvrirait.
+ */
+async function loadCasterUserIdsForMatch(matchId: string): Promise<string[]> {
+  const { data: assignments, error: assignErr } = await supabaseAdmin
+    .from('cast_assignments')
+    .select('cast_member_id')
+    .eq('match_id', matchId);
+  if (assignErr) {
+    logger.error('[cron/web-push] cast_assignments load error', assignErr);
+    return [];
+  }
+  const memberIds = ((assignments ?? []) as Array<{ cast_member_id: string }>)
+    .map((r) => r.cast_member_id)
+    .filter((v): v is string => typeof v === 'string' && v.length > 0);
+  if (memberIds.length === 0) return [];
+
+  const { data: members, error: memErr } = await supabaseAdmin
+    .from('cast_members')
+    .select('id, auth_user_id, is_active')
+    .in('id', memberIds);
+  if (memErr) {
+    logger.error('[cron/web-push] cast_members load error', memErr);
+    return [];
+  }
+
+  const userIds = new Set<string>();
+  for (const r of (members ?? []) as Array<{
+    id: string;
+    auth_user_id: string | null;
+    is_active?: boolean | null;
+  }>) {
+    if (r.is_active === false) continue;
     if (r.auth_user_id) userIds.add(r.auth_user_id);
   }
   return Array.from(userIds);
@@ -540,8 +593,38 @@ export async function runWebPushDispatcher(): Promise<TickCounters> {
       continue;
     }
 
-    // Recipients du tenant.
-    const userIds = await loadStaffUserIdsForTenant(event.tenant_id);
+    // Filtre amont par event_name : certains events (event_segment.transitioned
+    // notamment) ne déclenchent un push que pour un sous-ensemble de leurs
+    // transitions/types. Voir shouldPushForEvent dans utils/webPushEvents.ts.
+    if (!shouldPushForEvent(event.event_name, event.payload ?? {})) {
+      continue;
+    }
+
+    // Recipients : par défaut staff du tenant + pole admins ; pour les
+    // transitions de segment match→live, on cible les casters assignés au
+    // match uniquement (audience réduite, cf. loadCasterUserIdsForMatch).
+    let userIds: string[];
+    if (event.event_name === 'event_segment.transitioned') {
+      const data = (event.payload ?? {}) as Record<string, unknown>;
+      const inner =
+        data.data && typeof data.data === 'object'
+          ? (data.data as Record<string, unknown>)
+          : data;
+      const segment =
+        inner.segment && typeof inner.segment === 'object'
+          ? (inner.segment as Record<string, unknown>)
+          : {};
+      const matchId =
+        typeof segment.matchId === 'string' ? segment.matchId : null;
+      if (!matchId) {
+        // shouldPushForEvent garantit normalement matchId présent — défense
+        // en profondeur.
+        continue;
+      }
+      userIds = await loadCasterUserIdsForMatch(matchId);
+    } else {
+      userIds = await loadStaffUserIdsForTenant(event.tenant_id);
+    }
     if (userIds.length === 0) continue;
 
     // Filtrage opt-out.
