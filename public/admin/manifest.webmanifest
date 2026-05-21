@@ -1,0 +1,25 @@
+{
+  "name": "OW Women's Cup – Admin",
+  "short_name": "OWWC Admin",
+  "description": "Back-office staff OW Women's Cup : tournois, matches, équipes, support.",
+  "start_url": "/admin",
+  "scope": "/admin",
+  "display": "standalone",
+  "background_color": "#0E0A1F",
+  "theme_color": "#0E0A1F",
+  "orientation": "portrait-primary",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "/img/logos/2025-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ]
+}

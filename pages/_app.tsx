@@ -1,5 +1,7 @@
 import '@/styles/globals.css';
 import dynamic from 'next/dynamic';
+import Head from 'next/head';
+import { useEffect } from 'react';
 import { Work_Sans } from 'next/font/google';
 import Footer from '@/components/Footer/footer';
 import Navbar from '@/components/Navbar/navbar';
@@ -27,6 +29,9 @@ const FloatingSocials = dynamic(
   () => import('@/components/Socials/FloatingSocials'),
   { ssr: false }
 );
+const PushOptIn = dynamic(() => import('@/components/admin/PushOptIn'), {
+  ssr: false,
+});
 
 type AppPropsWithSeo = AppProps & {
   Component: AppProps['Component'] & { seo?: SeoProps };
@@ -39,15 +44,36 @@ function MyApp({ Component, pageProps, router }: AppPropsWithSeo) {
     ? { ...seo, noindex: true }
     : { ...seo };
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (process.env.NEXT_PUBLIC_ENABLE_PWA !== '1') return;
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error('[PWA] SW registration failed:', err);
+    });
+  }, []);
+
   return (
     <ErrorBoundary>
       <ToastProvider>
         <div className={workSans.variable}>
+          {isAdmin && (
+            <Head>
+              <link rel="manifest" href="/admin/manifest.webmanifest" />
+              <meta name="apple-mobile-web-app-capable" content="yes" />
+              <meta
+                name="apple-mobile-web-app-status-bar-style"
+                content="default"
+              />
+            </Head>
+          )}
           <DefaultSeo {...effectiveSeo} />
           <Navbar />
           <main id="main-content">
             <Component {...pageProps} />
           </main>
+          {isAdmin && <PushOptIn />}
           <Footer />
           {!isAdmin && <FloatingSocials />}
           <BackToTopButton />

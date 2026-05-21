@@ -1,0 +1,628 @@
+// pages/admin/notifications.tsx
+//
+// Page /admin/notifications — configuration Web Push pour le staff.
+//
+// Trois sections :
+//   1. État de l'abonnement de CE device (permission + sub active)
+//      → boutons réabonner / désabonner
+//   2. Préférences par event_type (14+ events groupés en 5 catégories)
+//      → toggle individuel ; save explicite via bouton "Enregistrer"
+//   3. Test (envoie une notif factice sur tous les devices du user staff)
+//
+// Auth : minRole 'caster' — n'importe quel staff peut configurer ses notifs.
+
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import Head from 'next/head';
+import { withStaffPage } from '@/utils/staff';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useToast } from '@/components/Toast';
+import Breadcrumb from '@/components/admin/Breadcrumb';
+import LoadingSpinner from '@/components/admin/LoadingSpinner';
+import AlertBanner from '@/components/admin/AlertBanner';
+import { logger } from '@/utils/logger';
+import {
+  WEB_PUSH_EVENT_TYPES,
+  type WebPushEventType,
+} from '@/utils/webPushEvents';
+import {
+  getActivePushSubscription,
+  getWebPushSupport,
+  urlBase64ToUint8Array,
+} from '@/utils/webPush';
+
+type StaffShape = {
+  id: string;
+  role: string;
+  display_name: string | null;
+};
+
+type Props = {
+  staff: StaffShape;
+};
+
+type PrefRow = { event_type: WebPushEventType; enabled: boolean };
+type PrefsResponse = { prefs: PrefRow[] };
+type TestResponse = {
+  sent: number;
+  expired_removed: number;
+  failed: number;
+};
+
+// Groupement éditorial des event_types pour l'UI. Les labels sont en FR.
+// Source des event_types : utils/webPushEvents.ts (single source of truth).
+const EVENT_GROUPS: Array<{
+  title: string;
+  description?: string;
+  events: Array<{
+    type: WebPushEventType;
+    label: string;
+    hint?: string;
+  }>;
+}> = [
+  {
+    title: 'Matches & Cast',
+    description: 'Tout ce qui bouge en plateau ou côté cast.',
+    events: [
+      {
+        type: 'match.starting',
+        label: 'Match imminent',
+        hint: 'Quelques minutes avant le coup d’envoi.',
+      },
+      {
+        type: 'match.finished',
+        label: 'Match terminé',
+      },
+      {
+        type: 'match.score_reported',
+        label: 'Score reporté',
+        hint: 'Une capitaine vient d’envoyer un score.',
+      },
+      { type: 'cast.assigned', label: 'Cast assignée' },
+      { type: 'cast.unassigned', label: 'Cast retirée' },
+    ],
+  },
+  {
+    title: 'Scrims',
+    events: [
+      { type: 'scrim.invitation', label: 'Invitation scrim' },
+      { type: 'scrim.confirmed', label: 'Scrim confirmé' },
+    ],
+  },
+  {
+    title: 'Tournoi',
+    events: [
+      { type: 'team.forfeit', label: 'Forfait équipe' },
+      { type: 'checkin.opened', label: 'Check-in ouvert' },
+    ],
+  },
+  {
+    title: 'Inscriptions & Support',
+    events: [
+      { type: 'registration.new', label: 'Nouvelle inscription' },
+      {
+        type: 'helloasso.payment.received',
+        label: 'Paiement HelloAsso',
+      },
+      {
+        type: 'captain.support.opened',
+        label: 'Ticket capitaine ouvert',
+      },
+    ],
+  },
+  {
+    title: 'Autres',
+    events: [
+      { type: 'news.published', label: 'News publiée' },
+      { type: 'staff.role.changed', label: 'Rôle staff modifié' },
+    ],
+  },
+];
+
+// Sanity check au runtime : si quelqu'un ajoute un event_type dans
+// utils/webPushEvents.ts sans le mettre dans un groupe ci-dessus, log un warn.
+function assertGroupsCoverAllEvents() {
+  if (process.env.NODE_ENV === 'production') return;
+  const inGroups = new Set<string>();
+  for (const g of EVENT_GROUPS) for (const e of g.events) inGroups.add(e.type);
+  const missing = WEB_PUSH_EVENT_TYPES.filter((t) => !inGroups.has(t));
+  if (missing.length > 0) {
+    logger.warn(
+      '[admin/notifications] event_types absents des groupes UI :',
+      missing
+    );
+  }
+}
+
+type SubscriptionStatus =
+  | { state: 'unsupported'; reason: string }
+  | { state: 'denied' }
+  | { state: 'default' } // jamais demandé
+  | { state: 'no-sub' } // permission granted mais pas de sub active
+  | { state: 'subscribed'; endpoint: string };
+
+function formatStatusLabel(s: SubscriptionStatus): {
+  label: string;
+  variant: 'success' | 'warning' | 'error' | 'info';
+} {
+  switch (s.state) {
+    case 'subscribed':
+      return { label: 'Activées sur ce device', variant: 'success' };
+    case 'no-sub':
+      return {
+        label: 'Permission accordée — pas encore abonné·e ici',
+        variant: 'info',
+      };
+    case 'default':
+      return { label: 'Non configurées', variant: 'info' };
+    case 'denied':
+      return { label: 'Refusées (paramètres navigateur)', variant: 'warning' };
+    case 'unsupported':
+      return { label: `Non supporté (${s.reason})`, variant: 'error' };
+  }
+}
+
+export const getServerSideProps = withStaffPage('caster');
+
+function AdminNotificationsPage({ staff }: Props) {
+  void staff; // utilisé via SSR pour gate l'accès ; pas lu côté client.
+
+  const { adminFetchJson } = useAdminFetch();
+  const { addToast } = useToast();
+
+  const [prefs, setPrefs] = useState<PrefRow[] | null>(null);
+  const [loadingPrefs, setLoadingPrefs] = useState(true);
+  const [savingPrefs, setSavingPrefs] = useState(false);
+  const [prefsError, setPrefsError] = useState<string | null>(null);
+
+  const [subStatus, setSubStatus] = useState<SubscriptionStatus>({
+    state: 'default',
+  });
+  const [subBusy, setSubBusy] = useState(false);
+
+  const [testing, setTesting] = useState(false);
+
+  const pwaEnabled = process.env.NEXT_PUBLIC_ENABLE_PWA === '1';
+
+  useEffect(() => {
+    assertGroupsCoverAllEvents();
+  }, []);
+
+  // ----- Statut de l'abonnement local --------------------------------------
+  const refreshSubStatus = useCallback(async () => {
+    const support = getWebPushSupport();
+    if (!support.supported) {
+      setSubStatus({ state: 'unsupported', reason: support.reason });
+      return;
+    }
+    if (Notification.permission === 'denied') {
+      setSubStatus({ state: 'denied' });
+      return;
+    }
+    if (Notification.permission === 'default') {
+      setSubStatus({ state: 'default' });
+      return;
+    }
+    const sub = await getActivePushSubscription();
+    if (sub) {
+      setSubStatus({ state: 'subscribed', endpoint: sub.endpoint });
+    } else {
+      setSubStatus({ state: 'no-sub' });
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshSubStatus();
+  }, [refreshSubStatus]);
+
+  // ----- Chargement des prefs ----------------------------------------------
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingPrefs(true);
+    adminFetchJson<PrefsResponse>('/api/admin/notifications/prefs')
+      .then((res) => {
+        if (cancelled) return;
+        setPrefs(res.prefs);
+        setPrefsError(null);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        logger.error('[admin/notifications] load prefs', err);
+        setPrefsError(
+          (err as Error)?.message ||
+            'Erreur lors du chargement des préférences.'
+        );
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setLoadingPrefs(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [adminFetchJson]);
+
+  const prefsMap = useMemo(() => {
+    const m = new Map<string, boolean>();
+    for (const p of prefs ?? []) m.set(p.event_type, p.enabled);
+    return m;
+  }, [prefs]);
+
+  const togglePref = useCallback((event_type: WebPushEventType) => {
+    setPrefs((prev) => {
+      if (!prev) return prev;
+      return prev.map((p) =>
+        p.event_type === event_type ? { ...p, enabled: !p.enabled } : p
+      );
+    });
+  }, []);
+
+  const savePrefs = useCallback(async () => {
+    if (!prefs || savingPrefs) return;
+    setSavingPrefs(true);
+    setPrefsError(null);
+    try {
+      const res = await adminFetchJson<PrefsResponse>(
+        '/api/admin/notifications/prefs',
+        {
+          method: 'PUT',
+          body: JSON.stringify({ prefs }),
+        }
+      );
+      setPrefs(res.prefs);
+      addToast('Préférences enregistrées.', 'success');
+    } catch (err) {
+      logger.error('[admin/notifications] save prefs', err);
+      const msg = (err as Error)?.message || 'Erreur lors de l’enregistrement.';
+      setPrefsError(msg);
+      addToast(msg, 'error');
+    } finally {
+      setSavingPrefs(false);
+    }
+  }, [adminFetchJson, addToast, prefs, savingPrefs]);
+
+  // ----- Subscribe / unsubscribe ce device ---------------------------------
+  const handleSubscribe = useCallback(async () => {
+    if (subBusy) return;
+    setSubBusy(true);
+    try {
+      const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!publicKey) {
+        addToast('Clé VAPID publique manquante côté serveur.', 'error');
+        return;
+      }
+
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        addToast(
+          permission === 'denied'
+            ? 'Permission refusée par le navigateur.'
+            : 'Permission non accordée.',
+          'warning'
+        );
+        await refreshSubStatus();
+        return;
+      }
+
+      const reg = await navigator.serviceWorker.ready;
+      const subscription = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+
+      await adminFetchJson('/api/admin/notifications/subscribe', {
+        method: 'POST',
+        body: JSON.stringify({
+          subscription: subscription.toJSON(),
+          user_agent: navigator.userAgent,
+        }),
+      });
+
+      addToast('Device abonné aux notifications.', 'success');
+      await refreshSubStatus();
+    } catch (err) {
+      logger.error('[admin/notifications] subscribe', err);
+      addToast(
+        (err as Error)?.message || 'Erreur lors de l’abonnement.',
+        'error'
+      );
+    } finally {
+      setSubBusy(false);
+    }
+  }, [adminFetchJson, addToast, refreshSubStatus, subBusy]);
+
+  const handleUnsubscribe = useCallback(async () => {
+    if (subBusy) return;
+    setSubBusy(true);
+    try {
+      const sub = await getActivePushSubscription();
+      if (!sub) {
+        addToast('Aucun abonnement actif sur ce device.', 'info');
+        await refreshSubStatus();
+        return;
+      }
+      const endpoint = sub.endpoint;
+
+      // 1) Tente de révoquer côté navigateur d'abord. Si ça échoue, on
+      //    continue quand même pour purger la table serveur.
+      try {
+        await sub.unsubscribe();
+      } catch (_err) {
+        // Ignore — on continue.
+      }
+
+      // 2) Purge la row côté serveur. Tolère 404 (la row n'existait déjà
+      //    plus, l'opération est idempotente côté client).
+      await adminFetchJson('/api/admin/notifications/unsubscribe', {
+        method: 'DELETE',
+        body: JSON.stringify({ endpoint }),
+      }).catch((err) => {
+        // Tolère 404 : la row n'existait déjà plus, c'est ok.
+        const status = (err as { status?: number })?.status;
+        if (status !== 404) throw err;
+      });
+
+      addToast('Device désabonné.', 'success');
+      await refreshSubStatus();
+    } catch (err) {
+      logger.error('[admin/notifications] unsubscribe', err);
+      addToast(
+        (err as Error)?.message || 'Erreur lors du désabonnement.',
+        'error'
+      );
+    } finally {
+      setSubBusy(false);
+    }
+  }, [adminFetchJson, addToast, refreshSubStatus, subBusy]);
+
+  // ----- Test notification --------------------------------------------------
+  const handleSendTest = useCallback(async () => {
+    if (testing) return;
+    setTesting(true);
+    try {
+      const res = await adminFetchJson<TestResponse>(
+        '/api/admin/notifications/test',
+        { method: 'POST' }
+      );
+      const { sent, expired_removed, failed } = res;
+      const parts = [`${sent} envoi(s)`];
+      if (expired_removed > 0)
+        parts.push(`${expired_removed} expiré(s) purgé(s)`);
+      if (failed > 0) parts.push(`${failed} échec(s)`);
+      addToast(
+        `Test : ${parts.join(', ')}.`,
+        failed > 0 ? 'warning' : 'success'
+      );
+    } catch (err) {
+      logger.error('[admin/notifications] test', err);
+      addToast((err as Error)?.message || 'Échec de l’envoi du test.', 'error');
+    } finally {
+      setTesting(false);
+    }
+  }, [adminFetchJson, addToast, testing]);
+
+  const statusInfo = formatStatusLabel(subStatus);
+
+  return (
+    <>
+      <Head>
+        <title>Admin – Notifications</title>
+      </Head>
+
+      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
+        <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12 max-w-5xl mx-auto">
+          <Breadcrumb
+            items={[
+              { label: 'Admin', href: '/admin' },
+              { label: 'Notifications' },
+            ]}
+          />
+
+          <div className="mb-8">
+            <p className="text-sm text-neutral-400">PWA &amp; Web Push</p>
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight mt-1">
+              Notifications
+            </h1>
+            <p className="text-sm text-neutral-400 mt-2 max-w-2xl">
+              Configure les notifications push reçues sur tes devices admin (PWA
+              installée ou navigateur ouvert). Les préférences sont communes à
+              tous tes devices ; l’abonnement ci-dessous concerne uniquement le
+              device courant.
+            </p>
+          </div>
+
+          {!pwaEnabled && (
+            <AlertBanner
+              variant="warning"
+              message="La PWA n’est pas activée dans cet environnement (NEXT_PUBLIC_ENABLE_PWA ≠ '1'). Les abonnements et tests ne fonctionneront que sur master/prod."
+              className="mb-6"
+            />
+          )}
+
+          {/* ===== Section : État ===== */}
+          <section
+            className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6"
+            data-testid="notifications-status-section"
+          >
+            <h2 className="text-xl font-semibold mb-1">État de ce device</h2>
+            <p className="text-sm text-neutral-400 mb-4">
+              Permission navigateur et abonnement push sur ce browser
+              spécifique.
+            </p>
+
+            <div className="flex items-center gap-3 mb-4">
+              <span
+                className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
+                  statusInfo.variant === 'success'
+                    ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+                    : statusInfo.variant === 'warning'
+                      ? 'bg-amber-500/15 border-amber-500/30 text-amber-300'
+                      : statusInfo.variant === 'error'
+                        ? 'bg-red-500/15 border-red-500/30 text-red-300'
+                        : 'bg-blue-500/15 border-blue-500/30 text-blue-300'
+                }`}
+                data-testid="notifications-status-pill"
+              >
+                {statusInfo.label}
+              </span>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              {subStatus.state !== 'subscribed' && (
+                <button
+                  type="button"
+                  onClick={handleSubscribe}
+                  disabled={
+                    subBusy ||
+                    subStatus.state === 'unsupported' ||
+                    subStatus.state === 'denied'
+                  }
+                  className="px-4 py-2 bg-purple-500 hover:bg-purple-400 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  data-testid="notifications-subscribe-btn"
+                >
+                  {subBusy ? 'Abonnement…' : 'Abonner ce device'}
+                </button>
+              )}
+              {subStatus.state === 'subscribed' && (
+                <button
+                  type="button"
+                  onClick={handleUnsubscribe}
+                  disabled={subBusy}
+                  className="px-4 py-2 bg-neutral-700 hover:bg-neutral-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                  data-testid="notifications-unsubscribe-btn"
+                >
+                  {subBusy ? 'Désabonnement…' : 'Désabonner ce device'}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleSendTest}
+                disabled={testing || !pwaEnabled}
+                className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                data-testid="notifications-test-btn"
+              >
+                {testing
+                  ? 'Envoi en cours…'
+                  : 'Envoyer une notification de test'}
+              </button>
+            </div>
+
+            {subStatus.state === 'denied' && (
+              <p className="text-xs text-amber-300 mt-4">
+                La permission a été refusée. Pour réactiver, va dans les
+                paramètres du site dans ton navigateur (icône cadenas dans la
+                barre d’URL) et autorise les notifications, puis rafraîchis
+                cette page.
+              </p>
+            )}
+          </section>
+
+          {/* ===== Section : Préférences ===== */}
+          <section
+            className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6"
+            data-testid="notifications-prefs-section"
+          >
+            <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+              <div>
+                <h2 className="text-xl font-semibold mb-1">
+                  Préférences par type d’événement
+                </h2>
+                <p className="text-sm text-neutral-400">
+                  Décoche pour ne plus recevoir un type d’événement (sur tous
+                  tes devices).
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={savePrefs}
+                disabled={loadingPrefs || savingPrefs || !prefs}
+                className="px-4 py-2 bg-purple-500 hover:bg-purple-400 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                data-testid="notifications-save-btn"
+              >
+                {savingPrefs ? 'Enregistrement…' : 'Enregistrer'}
+              </button>
+            </div>
+
+            <AlertBanner
+              message={prefsError}
+              variant="error"
+              className="mb-4"
+              onDismiss={() => setPrefsError(null)}
+            />
+
+            {loadingPrefs && (
+              <LoadingSpinner label="Chargement des préférences…" />
+            )}
+
+            {!loadingPrefs && prefs && (
+              <div className="space-y-6">
+                {EVENT_GROUPS.map((group) => (
+                  <div key={group.title}>
+                    <h3 className="text-sm font-semibold uppercase tracking-wider text-neutral-300 mb-2">
+                      {group.title}
+                    </h3>
+                    {group.description && (
+                      <p className="text-xs text-neutral-500 mb-3">
+                        {group.description}
+                      </p>
+                    )}
+                    <ul className="divide-y divide-neutral-700/50 rounded-lg border border-neutral-700/50 overflow-hidden">
+                      {group.events.map((evt) => {
+                        const enabled = prefsMap.get(evt.type) ?? true;
+                        return (
+                          <li
+                            key={evt.type}
+                            className="flex items-center justify-between gap-3 px-4 py-3 bg-neutral-900/40"
+                          >
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-white">
+                                {evt.label}
+                              </p>
+                              {evt.hint && (
+                                <p className="text-xs text-neutral-500 mt-0.5">
+                                  {evt.hint}
+                                </p>
+                              )}
+                              <p className="text-[10px] uppercase tracking-wide text-neutral-600 mt-1 font-mono">
+                                {evt.type}
+                              </p>
+                            </div>
+                            <label
+                              className="relative inline-flex items-center cursor-pointer flex-shrink-0"
+                              data-testid={`pref-toggle-${evt.type}`}
+                            >
+                              <input
+                                type="checkbox"
+                                className="sr-only peer"
+                                checked={enabled}
+                                onChange={() => togglePref(evt.type)}
+                                aria-label={`Notifications ${evt.label}`}
+                              />
+                              <span
+                                className="w-11 h-6 bg-neutral-700 rounded-full peer
+                                  peer-checked:bg-purple-500
+                                  peer-focus:ring-2 peer-focus:ring-purple-500/50
+                                  transition-colors"
+                              />
+                              <span
+                                className="absolute left-0.5 top-0.5 bg-white w-5 h-5 rounded-full
+                                  transition-transform peer-checked:translate-x-5"
+                              />
+                            </label>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      </div>
+    </>
+  );
+}
+
+AdminNotificationsPage.displayName = 'AdminNotificationsPage';
+
+export default AdminNotificationsPage;
