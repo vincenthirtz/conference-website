@@ -270,6 +270,28 @@ export const ADMIN_LINKS: AdminLink[] = [
           },
         ],
       },
+      {
+        title: 'Tenants',
+        ref: '',
+        minRole: 'manager',
+        children: [
+          {
+            title: 'Liste des tenants',
+            ref: '/admin/tenants',
+            minRole: 'manager',
+          },
+          {
+            title: 'Créer un tenant',
+            ref: '/admin/tenants/new',
+            minRole: 'manager',
+          },
+          {
+            title: 'Serveurs Discord en attente',
+            ref: '/admin/pending-guild-links',
+            minRole: 'manager',
+          },
+        ],
+      },
     ],
   },
 ];

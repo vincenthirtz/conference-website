@@ -8,7 +8,6 @@ import type {
 } from 'next';
 import type { User } from '@supabase/supabase-js';
 import { supabaseAdmin, getServerClient } from './supabase';
-import { DEFAULT_TENANT_ID } from './tenant';
 import type { StaffRole } from '@/types/admin';
 import type {
   StaffMember,
@@ -298,16 +297,27 @@ export async function requireStaffRoleFromRequest(
     throw new StaffUnauthorizedError('Accès non autorisé');
   }
 
-  // Apres ces checks, user / staff / role sont tous garantis non-null.
+  // S7 : resolution du tenant actif via cookie `staff_active_tenant_id`,
+  // fallback sur le premier tenant accessible (par slug ASC) puis sur
+  // DEFAULT_TENANT_ID. La query DB cote `resolveActiveTenant` est minuscule
+  // (tenant_staff est petit) — pas de cache pour V1.
+  //
+  // Import dynamique pour eviter un cycle (`utils/adminTenants` reimporte
+  // `hasAtLeastRole` depuis ce module).
+  const { resolveActiveTenant, readActiveTenantCookie } =
+    await import('./adminTenants');
+  const cookieTenantId = readActiveTenantCookie(req.cookies);
+  const { tenantId, source } = await resolveActiveTenant(
+    ctx.staff.id,
+    cookieTenantId
+  );
+
   return {
     user: ctx.user,
     staff: ctx.staff,
     role: ctx.role,
-    // TODO(S7): remplacer par le tenant selectionne via le switcher
-    // /admin/tenants (cookie/session). En S5b on reste sur DEFAULT_TENANT_ID
-    // partout : toujours mono-tenant en prod, defense-in-depth dans les
-    // handlers.
-    tenantId: DEFAULT_TENANT_ID,
+    tenantId,
+    currentTenantSource: source,
   };
 }
 

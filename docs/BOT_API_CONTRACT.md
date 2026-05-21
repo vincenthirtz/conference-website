@@ -815,6 +815,43 @@ sa ligne ici **et** dans la fixture.
 
 ---
 
+## Tenant management (admin)
+
+S7 — endpoints **admin** (staff dashboard, NOT bot) qui gerent la
+configuration multi-tenant : switcher de tenant actif via cookie, CRUD
+des tenants, claim des `pending_guild_links` venus du bot, config
+Discord par guild, gestion du staff par tenant.
+
+Auth : `withStaffRoute` (cookie Supabase) — cf. `utils/staff.ts`. Le
+tenant actif est lu depuis le cookie `staff_active_tenant_id` (UUID),
+fallback sur le premier tenant accessible par slug ASC, puis sur
+`DEFAULT_TENANT_ID`. Le champ `currentTenantSource` dans
+`AuthenticatedStaffContext` indique la provenance (`'cookie' |
+'fallback_first' | 'fallback_default'`).
+
+Cookie `staff_active_tenant_id` : `HttpOnly; SameSite=Lax; Path=/`,
+session cookie (pas de Max-Age), `Secure` ajoute en production.
+
+| Route                                                                                                                                                                  | Methods | Min role | Notes                                                            |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | -------- | ---------------------------------------------------------------- |
+| [`active-tenant.ts`](../pages/api/admin/active-tenant.ts)                                                                                                              | GET, POST | caster   | GET → tenant courant + source. POST → switch + Set-Cookie.       |
+| [`tenants/accessible.ts`](../pages/api/admin/tenants/accessible.ts)                                                                                                    | GET     | caster   | Tenants accessibles au staff (pour dropdown switcher).           |
+| [`tenants/index.ts`](../pages/api/admin/tenants/index.ts)                                                                                                              | GET, POST | manager  | GET liste globale + guild_count/staff_count. POST cree tenant.   |
+| [`tenants/[id].ts`](../pages/api/admin/tenants/[id].ts)                                                                                                                | GET, PATCH, DELETE | caster/manager | GET = manager+ OU staff du tenant. PATCH/DELETE = manager+. Slug immuable. DELETE = soft (is_active=false), `conference` protege. |
+| [`tenants/[id]/discord-config/index.ts`](../pages/api/admin/tenants/[id]/discord-config/index.ts)                                                                      | GET     | caster   | Liste configs par guild du tenant.                               |
+| [`tenants/[id]/discord-config/[guildId].ts`](../pages/api/admin/tenants/[id]/discord-config/[guildId].ts)                                                              | PUT     | caster   | Upsert config Discord. Verifie que guildId est dans le tenant.   |
+| [`tenants/[id]/staff/index.ts`](../pages/api/admin/tenants/[id]/staff/index.ts)                                                                                        | GET, POST | caster/manager | GET = staff du tenant ou manager+. POST = manager+.          |
+| [`tenants/[id]/staff/[staffId].ts`](../pages/api/admin/tenants/[id]/staff/[staffId].ts)                                                                                | DELETE  | manager  | 409 si on retire le dernier admin du tenant.                     |
+| [`pending-guild-links/index.ts`](../pages/api/admin/pending-guild-links/index.ts)                                                                                      | GET     | manager  | Guilds en attente de linkage (rempli par `POST /bot/v1/tenants/link-guild`). |
+| [`pending-guild-links/[guildId]/claim.ts`](../pages/api/admin/pending-guild-links/[guildId]/claim.ts)                                                                  | POST    | manager  | Body `{ tenant_id }` OU `{ new_tenant: { slug, name, default_locale? } }`. Cree row dans `discord_guilds` + delete pending. |
+| [`pending-guild-links/[guildId]/index.ts`](../pages/api/admin/pending-guild-links/[guildId]/index.ts)                                                                  | DELETE  | manager  | Rejette la demande (delete pending). V2 TODO : signaler au bot pour `guild.leave()`. |
+
+Idempotence : les mutations POST/PATCH/PUT/DELETE supportent
+l'header `Idempotency-Key` via `withAdminIdempotency` (cache scope =
+tenant courant + staff + route + body hash, TTL 5 min, 2xx only).
+
+---
+
 ## Where it lives
 
 - **Middleware** — [`utils/botAuth.ts`](../utils/botAuth.ts) (`withBotRoute`,

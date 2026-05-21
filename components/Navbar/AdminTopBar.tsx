@@ -1,10 +1,16 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useEffect, useRef, useState } from 'react';
 import linksConfig from '@/config/links.json';
 import type { LinkItem } from '@/types/types';
 import type { AdminLink } from '@/types/components';
 import { formatStaffRoleLabel, type StaffRole } from '@/utils/staff';
+
+const TenantSwitcher = dynamic(
+  () => import('@/components/admin/TenantSwitcher'),
+  { ssr: false }
+);
 
 const SITE_MENU_KEY = '__site__';
 
@@ -169,6 +175,10 @@ export default function AdminTopBar({
               {formatStaffRoleLabel(staffRole)}
             </span>
           )}
+        </div>
+
+        <div className="flex shrink-0 items-center gap-3 whitespace-nowrap border-r border-white/[0.06] pr-4">
+          <TenantSwitcher />
         </div>
 
         <div

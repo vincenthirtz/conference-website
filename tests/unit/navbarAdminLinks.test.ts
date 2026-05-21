@@ -109,7 +109,7 @@ describe('filterAdminLinks – manager role', () => {
     const config = findByTitle(links, 'Configuration');
     expect(config).toBeDefined();
     const titles = config?.children?.map((c) => c.title) ?? [];
-    expect(titles).toEqual(['Logs & stats']);
+    expect(titles).toEqual(['Logs & stats', 'Tenants']);
   });
 });
 

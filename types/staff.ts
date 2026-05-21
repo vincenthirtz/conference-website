@@ -22,14 +22,21 @@ export type StaffContext = {
  * non-null. C'est le type passe aux handlers proteges par `withStaffRoute`,
  * puisque ce wrapper rejette deja les requetes sans staff valide.
  *
- * `tenantId` : tenant courant sous lequel le staff opere. En S5b, on default
- * systematiquement a DEFAULT_TENANT_ID (toujours mono-tenant en prod). S7
- * ajoutera un selecteur dans /admin/tenants qui pourra surcharger ce champ
- * via cookie / session.
+ * `tenantId` : tenant courant sous lequel le staff opere. Resolu par
+ * `requireStaffRoleFromRequest` selon l'ordre suivant (cf. S7) :
+ *   1. cookie `staff_active_tenant_id` (UUID brut) si le staff a une row
+ *      dans `tenant_staff` pour ce tenant → `currentTenantSource = 'cookie'`.
+ *   2. sinon, premier tenant par slug ASC dans `tenant_staff` du staff →
+ *      `currentTenantSource = 'fallback_first'`.
+ *   3. sinon (staff sans aucune entree tenant_staff, cas degrade) →
+ *      DEFAULT_TENANT_ID, `currentTenantSource = 'fallback_default'`.
  */
+export type TenantSource = 'cookie' | 'fallback_first' | 'fallback_default';
+
 export type AuthenticatedStaffContext = {
   user: User;
   staff: StaffMember;
   role: StaffRole;
   tenantId: string;
+  currentTenantSource: TenantSource;
 };

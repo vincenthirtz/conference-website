@@ -29,7 +29,6 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from './supabase';
 import { logger } from './logger';
 import type { AuthenticatedStaffContext } from './staff';
-import { DEFAULT_TENANT_ID } from './tenant';
 
 const IDEMPOTENCY_TTL_MS = 5 * 60 * 1000;
 const IDEMPOTENCY_KEY_MAX_LEN = 200;
@@ -151,10 +150,11 @@ export function withAdminIdempotency(
     }
 
     const cacheKey = buildCacheKey(req, ctx.staff.id, options.key, userKey);
-    // Admin staff n'a pas (encore) de contexte tenant — on utilise
-    // DEFAULT_TENANT_ID. La colonne tenant_id est NOT NULL en DB et fait
-    // partie du UNIQUE composite (tenant_id, cache_key).
-    const tenantId = DEFAULT_TENANT_ID;
+    // S7 : scope cache idempotency par tenant actif du staff (resolu via
+    // cookie / fallback dans `requireStaffRoleFromRequest`). La colonne
+    // tenant_id est NOT NULL en DB et fait partie du UNIQUE composite
+    // (tenant_id, cache_key).
+    const tenantId = ctx.tenantId;
     const cached = await readCache(cacheKey, tenantId);
     if (cached) {
       res.setHeader('Idempotency-Replay', 'true');
