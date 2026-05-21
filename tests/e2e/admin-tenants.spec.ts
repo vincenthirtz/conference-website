@@ -183,15 +183,14 @@ test.describe.serial('Admin tenants UI (S7)', () => {
     await expect(row.first().or(empty)).toBeVisible({ timeout: 15000 });
   });
 
-  test('TenantSwitcher mounts in the admin top bar', async ({ page }) => {
-    test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
-
+  test.skip('TenantSwitcher mounts in the admin top bar', async ({ page }) => {
+    // Skipped: the switcher is no longer rendered in AdminTopBar — on the
+    // conference-website domain the active tenant is always DEFAULT_TENANT_ID,
+    // tenant switching is done by URL prefix navigation instead. Re-enable
+    // this test if the component is restored to the navbar.
     await loginAsAdmin(page);
     await page.goto('/admin');
 
-    // Either the multi-tenant dropdown, the single-tenant badge, or the
-    // initial skeleton (briefly) is visible. The skeleton may flash out
-    // before the assert lands, so we accept the resolved states too.
     const dropdown = page.getByTestId('tenant-switcher');
     const single = page.getByTestId('tenant-switcher-single');
     const skeleton = page.getByTestId('tenant-switcher-skeleton');
