@@ -685,10 +685,12 @@ describe('/api/admin/matches/[matchId]/veto', () => {
     ).toHaveLength(1);
   });
 
-  it('returns 405 on PATCH', async () => {
+  it('returns 405 on PUT', async () => {
+    // PATCH is supported (used to lock/unlock veto), so use PUT to test the
+    // method-not-allowed branch.
     const res = makeRes();
     await vetoHandler(
-      makeReq({ method: 'PATCH', query: { matchId: M_ID } }),
+      makeReq({ method: 'PUT', query: { matchId: M_ID } }),
       res
     );
     expect(res.statusCode).toBe(405);

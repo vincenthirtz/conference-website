@@ -115,9 +115,9 @@ const TID = '550e8400-e29b-41d4-a716-446655440000';
  * ---------------------------------------------------------*/
 
 describe('GET /api/news', () => {
-  it('405 on non-GET', async () => {
+  it('405 on non-GET/POST', async () => {
     const res = makeRes();
-    await publicNewsHandler(makeReq({ method: 'POST' }), res);
+    await publicNewsHandler(makeReq({ method: 'PUT' }), res);
     expect(res.statusCode).toBe(405);
   });
 

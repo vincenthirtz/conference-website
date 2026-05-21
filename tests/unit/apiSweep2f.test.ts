@@ -153,16 +153,17 @@ describe('/api/admin/cast-members/[id]', () => {
       is_active: false,
       sort_order: 5,
     };
+    // Handler chains .update().eq('id').eq('tenant_id').select().single();
+    // make .eq() self-chainable.
+    const okChain: any = {
+      eq: () => okChain,
+      select: () => okChain,
+      single: async () => ({ data: updatedRow, error: null }),
+    };
     (supabaseAdmin as any).from = (table: string) => {
       if (table === 'cast_members') {
         return {
-          update: () => ({
-            eq: () => ({
-              select: () => ({
-                single: async () => ({ data: updatedRow, error: null }),
-              }),
-            }),
-          }),
+          update: () => okChain,
         };
       }
       return originalFrom(table);
@@ -197,19 +198,15 @@ describe('/api/admin/cast-members/[id]', () => {
 
   it('PATCH returns 500 on db error', async () => {
     const originalFrom = supabaseAdmin.from;
+    const errChain: any = {
+      eq: () => errChain,
+      select: () => errChain,
+      single: async () => ({ data: null, error: { message: 'boom' } }),
+    };
     (supabaseAdmin as any).from = (table: string) => {
       if (table === 'cast_members') {
         return {
-          update: () => ({
-            eq: () => ({
-              select: () => ({
-                single: async () => ({
-                  data: null,
-                  error: { message: 'boom' },
-                }),
-              }),
-            }),
-          }),
+          update: () => errChain,
         };
       }
       return originalFrom(table);

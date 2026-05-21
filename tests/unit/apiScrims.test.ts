@@ -312,14 +312,17 @@ describe('/api/admin/scrims/[scrimId]', () => {
     expect((res.body as any).scrim.is_public).toBe(true);
   });
 
-  it('DELETE removes the scrim', async () => {
+  it('DELETE soft-deletes the scrim', async () => {
     const res = makeRes();
     await adminScrimIdHandler(
       makeAuthedReq({ method: 'DELETE', query: { scrimId: SCRIM_ID } }),
       res
     );
     expect(res.statusCode).toBe(200);
-    expect(store.scrims).toHaveLength(0);
+    // Soft-delete : row stays for restoration via /admin/recycle-bin
+    // (cf pages/api/admin/scrims/[scrimId]/index.ts).
+    expect(store.scrims).toHaveLength(1);
+    expect((store.scrims[0] as any).deleted_at).toBeTruthy();
   });
 });
 

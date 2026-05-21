@@ -321,8 +321,15 @@ describe('computeHeadToHead', () => {
 
 describe('GET /api/admin/recycle-bin', () => {
   it('200 with empty stores returns empty items', async () => {
+    // Filter to "stage" so the admin staff row seeded in beforeEach (used by
+    // withStaffRoute auth) isn't picked up by the staff branch of the handler.
+    // The mock's .or() filter is a no-op so any seeded staff row would
+    // otherwise appear as "soft-deleted" in the listing.
     const res = makeRes();
-    await recycleBinHandler(makeReq({ method: 'GET' }), res);
+    await recycleBinHandler(
+      makeReq({ method: 'GET', query: { type: 'stage' } }),
+      res
+    );
     expect(res.statusCode).toBe(200);
     expect((res.body as any).items).toEqual([]);
   });

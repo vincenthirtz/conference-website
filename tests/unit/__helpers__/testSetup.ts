@@ -22,5 +22,6 @@ vi.mock('../../utils/supabase', async () => {
 
 vi.mock('@/utils/rateLimit', () => ({
   applyRateLimit: () => false,
+  applyActorRateLimit: () => false,
   getClientIp: () => '127.0.0.1',
 }));

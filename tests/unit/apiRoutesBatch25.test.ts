@@ -501,7 +501,7 @@ describe('/api/admin/users/manage', () => {
     expect(newStaff.role).toBe('caster');
   });
 
-  it('PATCH demotes staff to non-staff role removes staff entry', async () => {
+  it('PATCH demotes staff to non-staff role soft-deletes staff entry', async () => {
     setAdminUser('u-target', 'demote@x.com');
     store.staff = [
       makeStaffRow('owner'),
@@ -513,6 +513,8 @@ describe('/api/admin/users/manage', () => {
         display_name: null,
         avatar_url: null,
         created_at: '2026',
+        is_active: true,
+        deleted_at: null,
       },
     ] as any;
     const res = makeRes();
@@ -524,10 +526,14 @@ describe('/api/admin/users/manage', () => {
       res
     );
     expect(res.statusCode).toBe(200);
+    // Soft-delete: row stays for staff_logs.staff_id FK preservation, but is
+    // flagged inactive + timestamped (cf utils/admin/users/manage.ts).
     const remaining = (store.staff as any).find(
       (s: any) => s.auth_user_id === 'u-target'
     );
-    expect(remaining).toBeUndefined();
+    expect(remaining).toBeTruthy();
+    expect(remaining.is_active).toBe(false);
+    expect(remaining.deleted_at).toBeTruthy();
   });
 
   it('PATCH update battle_tag for a team membership', async () => {

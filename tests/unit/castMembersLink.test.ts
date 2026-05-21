@@ -226,21 +226,23 @@ describe('PATCH /api/admin/cast-members/[id] (authUserId)', () => {
   function stubUpdateReturning(updatedRow: Record<string, unknown>) {
     const originalFrom = supabaseAdmin.from;
     let captured: Record<string, unknown> | null = null;
+    // Handler chains .update().eq('id', …).eq('tenant_id', …).select().single().
+    // The stub returns a self-referential object where .eq() returns itself so
+    // any number of .eq() calls keep chaining cleanly.
+    const chain: any = {
+      eq: () => chain,
+      select: () => chain,
+      single: async () => ({
+        data: { ...updatedRow, ...captured },
+        error: null,
+      }),
+    };
     (supabaseAdmin as any).from = (table: string) => {
       if (table === 'cast_members') {
         return {
           update: (payload: Record<string, unknown>) => {
             captured = payload;
-            return {
-              eq: () => ({
-                select: () => ({
-                  single: async () => ({
-                    data: { ...updatedRow, ...captured },
-                    error: null,
-                  }),
-                }),
-              }),
-            };
+            return chain;
           },
         };
       }
@@ -329,23 +331,25 @@ describe('PATCH /api/admin/cast-members/[id] (authUserId)', () => {
 
   it('translates trigger error into a 400 with friendly message', async () => {
     const originalFrom = supabaseAdmin.from;
+    // Chainable .eq()/.select() so the handler's
+    // .update().eq('id').eq('tenant_id').select().single() resolves to a
+    // trigger error.
+    const errChain: any = {
+      eq: () => errChain,
+      select: () => errChain,
+      single: async () => ({
+        data: null,
+        error: {
+          code: 'XX000',
+          message:
+            'cast_members.auth_user_id (xx) doit referencer un staff avec role=caster',
+        },
+      }),
+    };
     (supabaseAdmin as any).from = (table: string) => {
       if (table === 'cast_members') {
         return {
-          update: () => ({
-            eq: () => ({
-              select: () => ({
-                single: async () => ({
-                  data: null,
-                  error: {
-                    code: 'XX000',
-                    message:
-                      'cast_members.auth_user_id (xx) doit referencer un staff avec role=caster',
-                  },
-                }),
-              }),
-            }),
-          }),
+          update: () => errChain,
         };
       }
       return originalFrom(table);
@@ -373,22 +377,22 @@ describe('PATCH /api/admin/cast-members/[id] (authUserId)', () => {
 
   it('translates unique-violation error into a 409', async () => {
     const originalFrom = supabaseAdmin.from;
+    // Chainable to support .eq('id').eq('tenant_id').select().single().
+    const errChain: any = {
+      eq: () => errChain,
+      select: () => errChain,
+      single: async () => ({
+        data: null,
+        error: {
+          code: '23505',
+          message: 'duplicate key value violates unique constraint',
+        },
+      }),
+    };
     (supabaseAdmin as any).from = (table: string) => {
       if (table === 'cast_members') {
         return {
-          update: () => ({
-            eq: () => ({
-              select: () => ({
-                single: async () => ({
-                  data: null,
-                  error: {
-                    code: '23505',
-                    message: 'duplicate key value violates unique constraint',
-                  },
-                }),
-              }),
-            }),
-          }),
+          update: () => errChain,
         };
       }
       return originalFrom(table);
