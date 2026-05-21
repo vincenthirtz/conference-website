@@ -32,8 +32,8 @@ type AssignmentRow = {
     auth_user_id: string | null;
     image_url: string | null;
   } | null;
-  // Pas dans le select admin mais sera renvoye si on adapte l'endpoint. On
-  // garde optional pour ne pas casser le typage si l'API change.
+  // Renvoye par GET /api/admin/matches/[matchId]/cast-assignments depuis le
+  // follow-up Lot 5. Garde optional par precaution (anciens caches PWA, etc.).
   acked_at?: string | null;
 };
 
@@ -143,9 +143,9 @@ export default function CasterStatusPanel({ segments }: Props) {
         <ul className="space-y-2">
           {assignments.map((a) => {
             // L'endpoint admin /api/admin/matches/[matchId]/cast-assignments
-            // ne renvoie pas acked_at aujourd'hui (cf. Lot 2). On affiche donc
-            // brief time uniquement. Un Lot ulterieur (4 ou correctif API)
-            // exposera acked_at ici.
+            // renvoie maintenant acked_at (follow-up Lot 5). Le rendu reste
+            // tolerant : si l'API future omet le champ, on affiche "indispo"
+            // plutot que d'inventer un statut.
             const ackedKnown = typeof a.acked_at !== 'undefined';
             const acked = ackedKnown && !!a.acked_at;
             return (

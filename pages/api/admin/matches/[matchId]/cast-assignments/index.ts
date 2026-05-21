@@ -32,7 +32,7 @@ async function handler(
       .from('cast_assignments')
       .select(
         `id, match_id, cast_member_id, briefing_at, briefing_reminder_sent_at,
-         created_at, updated_at,
+         acked_at, created_at, updated_at,
          cast_member:cast_member_id (id, name, auth_user_id, image_url)`
       )
       .eq('tenant_id', ctx.tenantId)
@@ -49,10 +49,7 @@ async function handler(
   if (req.method === 'POST') {
     const { castMemberId, briefingAt } = req.body || {};
 
-    if (
-      typeof castMemberId !== 'string' ||
-      !isValidUUID(castMemberId)
-    ) {
+    if (typeof castMemberId !== 'string' || !isValidUUID(castMemberId)) {
       return res.status(400).json({ error: 'castMemberId invalide' });
     }
     if (typeof briefingAt !== 'string') {
@@ -80,16 +77,17 @@ async function handler(
       .eq('tenant_id', ctx.tenantId)
       .maybeSingle();
     if (castMemberErr) {
-      logger.error('[admin/cast-assignments] cast_member lookup error', castMemberErr);
+      logger.error(
+        '[admin/cast-assignments] cast_member lookup error',
+        castMemberErr
+      );
       return res.status(500).json({ error: 'Échec de la vérification' });
     }
     if (!castMember) {
       return res.status(404).json({ error: 'Caster introuvable.' });
     }
     if (castMember.is_active === false) {
-      return res
-        .status(409)
-        .json({ error: 'Ce caster est désactivé.' });
+      return res.status(409).json({ error: 'Ce caster est désactivé.' });
     }
 
     const { data, error } = await supabaseAdmin
@@ -102,7 +100,7 @@ async function handler(
       })
       .select(
         `id, match_id, cast_member_id, briefing_at, briefing_reminder_sent_at,
-         created_at, updated_at,
+         acked_at, created_at, updated_at,
          cast_member:cast_member_id (id, name, auth_user_id, image_url)`
       )
       .single();
