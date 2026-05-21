@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin, getServerClient } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 type AnnouncementRow = {
@@ -44,11 +45,14 @@ export default async function handler(
     return res.status(500).json({ error: 'Database service unavailable.' });
   }
 
+  const tenantId = resolveTenantIdForPublicRequest(req);
+
   const limit = Math.max(1, Math.min(20, Number(req.query.limit) || 10));
   const { data, error } = await admin
     .from('announcements')
     .select('*')
     .eq('is_active', true)
+    .eq('tenant_id', tenantId)
     .order('priority', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false })
     .limit(limit);

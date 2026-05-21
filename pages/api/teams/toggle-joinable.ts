@@ -9,6 +9,7 @@ import {
   getManagedTeam,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
+import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
@@ -27,9 +28,10 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
+  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: userId });
 
   // Check if user can manage a team (captain or manager)
-  const access = await getManagedTeam(userId);
+  const access = await getManagedTeam(userId, tenantId);
   if (!access) {
     return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
   }
@@ -38,6 +40,7 @@ export default withAuthRoute(async function handler(
     .from('teams')
     .select('id, name, is_joinable')
     .eq('id', access.teamId)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
 
   if (teamErr || !team) {
@@ -50,7 +53,8 @@ export default withAuthRoute(async function handler(
   const { error: updateErr } = await supabaseAdmin
     .from('teams')
     .update({ is_joinable: newValue })
-    .eq('id', team.id);
+    .eq('id', team.id)
+    .eq('tenant_id', tenantId);
 
   if (updateErr) {
     logger.error('[toggle-joinable] update error:', updateErr);

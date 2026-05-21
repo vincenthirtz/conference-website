@@ -5,6 +5,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { isValidUUID } from '@/utils/apiHelpers';
+import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 import { logger } from '../../../utils/logger';
 
 export default async function handler(
@@ -23,6 +24,7 @@ export default async function handler(
   if (!id) return res.status(400).json({ error: 'Missing id' });
 
   const matchByUuid = isValidUUID(id);
+  const tenantId = resolveTenantIdForPublicRequest(req);
 
   let scrimQuery = supabaseAdmin
     .from('scrims')
@@ -36,6 +38,7 @@ export default async function handler(
     `
     )
     .eq('is_public', true)
+    .eq('tenant_id', tenantId)
     .neq('status', 'draft');
 
   scrimQuery = matchByUuid ? scrimQuery.eq('id', id) : scrimQuery.eq('slug', id);
@@ -60,6 +63,7 @@ export default async function handler(
     `
     )
     .eq('scrim_id', scrim.id)
+    .eq('tenant_id', tenantId)
     .order('scheduled_at', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: true });
 

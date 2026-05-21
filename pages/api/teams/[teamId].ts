@@ -5,6 +5,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 export default async function handler(
@@ -27,10 +28,13 @@ export default async function handler(
     return res.status(500).json({ error: 'Supabase admin non configuré' });
   }
 
+  const tenantId = resolveTenantIdForPublicRequest(req);
+
   const { data, error } = await supabaseAdmin
     .from('teams')
     .select('*')
     .eq('id', teamId)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
 
   if (error || !data) {

@@ -4,6 +4,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
+import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 import { logger } from '../../../utils/logger';
 
 export default async function handler(
@@ -21,6 +22,8 @@ export default async function handler(
   const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
   const statusQ = req.query.status;
 
+  const tenantId = resolveTenantIdForPublicRequest(req);
+
   let query = supabaseAdmin
     .from('scrims')
     .select(
@@ -33,6 +36,7 @@ export default async function handler(
     `
     )
     .eq('is_public', true)
+    .eq('tenant_id', tenantId)
     .neq('status', 'draft')
     .order('scheduled_date', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false })

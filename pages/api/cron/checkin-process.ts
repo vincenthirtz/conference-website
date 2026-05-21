@@ -49,6 +49,11 @@ export default async function handler(
   }
 
   try {
+    // S5c : le cron tourne en mode cross-tenant intentionnellement — il scrute
+    // tous les matchs proches du kickoff, peu importe le tenant. La logique
+    // applicative dans utils/checkin.ts est tenant-agnostique a ce niveau.
+    // TODO(S7) : si on a > 1 tenant en prod, segmenter la metrique heartbeat
+    // par tenant pour pouvoir alerter par tenant.
     const summary = await processCheckinForUpcomingMatches();
     logger.info(
       '[cron/checkin] scanned=%d acted=%d errors=%d',

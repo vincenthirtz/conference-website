@@ -16,6 +16,7 @@ import {
   loadTeamRolesFromSupabase,
   roleHasAnyPermission,
 } from '@/utils/teamRoles';
+import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
@@ -39,9 +40,10 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
+  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: userId });
 
   // Check if user can manage a team (captain or manager)
-  const access = await getManagedTeam(userId);
+  const access = await getManagedTeam(userId, tenantId);
   if (!access) {
     return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
   }
@@ -50,6 +52,7 @@ export default withAuthRoute(async function handler(
     .from('teams')
     .select('id, name')
     .eq('id', access.teamId)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
 
   if (teamErr || !captainTeam) {
@@ -83,6 +86,7 @@ export default withAuthRoute(async function handler(
     .select('id, user_id, role, is_substitute')
     .eq('id', memberId)
     .eq('team_id', captainTeam.id)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
 
   if (memberErr || !member) {
@@ -116,7 +120,8 @@ export default withAuthRoute(async function handler(
     .from('team_members')
     .update({ role: newRole, is_substitute: isSubstitute })
     .eq('id', memberId)
-    .eq('team_id', captainTeam.id);
+    .eq('team_id', captainTeam.id)
+    .eq('tenant_id', tenantId);
 
   if (updateErr) {
     logger.error('[update-member-role] error:', updateErr);

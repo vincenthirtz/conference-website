@@ -12,7 +12,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
-import type { StaffContext } from '@/utils/staff';
+import type { AuthenticatedStaffContext } from '@/utils/staff';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { VETO_FLOWS } from '@/types/veto';
 import type { VetoStep, VetoFlowStep } from '@/types/veto';
@@ -40,8 +40,9 @@ type H2HMeeting = {
 async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: StaffContext
+  ctx: AuthenticatedStaffContext
 ) {
+  const tenantId = ctx.tenantId;
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });
@@ -72,6 +73,7 @@ async function handler(
       `
     )
     .eq('id', matchId)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
 
   if (matchErr || !match) {
@@ -90,6 +92,7 @@ async function handler(
     .from('match_map_vetos')
     .select('*')
     .eq('match_id', matchId)
+    .eq('tenant_id', tenantId)
     .order('step_number', { ascending: true });
 
   const format = match.match_format || 'bo3';
@@ -124,6 +127,7 @@ async function handler(
     const { data: members } = await supabaseAdmin
       .from('team_members')
       .select('id, team_id, user_id, role, battle_tag, is_substitute')
+      .eq('tenant_id', tenantId)
       .in('team_id', teamIds);
 
     for (const m of members || []) {
@@ -173,6 +177,7 @@ async function handler(
       .or(
         `and(team1_id.eq.${a},team2_id.eq.${b}),and(team1_id.eq.${b},team2_id.eq.${a})`
       )
+      .eq('tenant_id', tenantId)
       .in('status', ['finished', 'walkover'])
       .neq('id', matchId)
       .order('completed_at', { ascending: false })
@@ -214,6 +219,7 @@ async function handler(
       .from('cast_members')
       .select('id, name, title, image_url, twitch_url, is_active')
       .eq('auth_user_id', ctx.user.id)
+      .eq('tenant_id', tenantId)
       .eq('is_active', true)
       .maybeSingle();
 

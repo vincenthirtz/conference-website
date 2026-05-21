@@ -15,6 +15,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 import { CHECKIN_OPEN_MINUTES } from '@/utils/checkin';
 import { getManagedTeam } from '@/utils/teams/managementAccess';
+import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 
 export type PlayerNotificationsPayload = {
   hasTeam: boolean;
@@ -36,11 +37,12 @@ export type PlayerNotificationsPayload = {
   total: number;
 };
 
-async function countMembership(userId: string) {
+async function countMembership(userId: string, tenantId: string) {
   const { data } = await supabaseAdmin!
     .from('team_members')
     .select('team_id')
     .eq('user_id', userId)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
   return data?.team_id ?? null;
 }
@@ -61,9 +63,11 @@ export default withAuthRoute(async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const access = await getManagedTeam(user.id);
+  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: user.id });
+  const access = await getManagedTeam(user.id, tenantId);
   const managedTeamId = access?.teamId ?? null;
-  const memberTeamId = managedTeamId ?? (await countMembership(user.id));
+  const memberTeamId =
+    managedTeamId ?? (await countMembership(user.id, tenantId));
   const hasTeam = !!memberTeamId;
   const isCaptain = !!access?.isCaptain;
   const isManager = !!access?.isManager;
@@ -85,6 +89,7 @@ export default withAuthRoute(async function handler(
       .from('demandes')
       .select('id', { count: 'exact', head: true })
       .eq('team_id', managedTeamId)
+      .eq('tenant_id', tenantId)
       .eq('type', 'captain_message')
       .eq('status', 'pending');
     unreadMessages = unread ?? 0;
@@ -93,6 +98,7 @@ export default withAuthRoute(async function handler(
       .from('demandes')
       .select('id', { count: 'exact', head: true })
       .eq('team_id', managedTeamId)
+      .eq('tenant_id', tenantId)
       .eq('type', 'scrim')
       .eq('status', 'pending');
     pendingScrims = scrims ?? 0;
@@ -101,6 +107,7 @@ export default withAuthRoute(async function handler(
       .from('demandes')
       .select('id', { count: 'exact', head: true })
       .eq('team_id', managedTeamId)
+      .eq('tenant_id', tenantId)
       .eq('type', 'join')
       .eq('status', 'pending');
     pendingJoinRequests = joins ?? 0;
@@ -120,6 +127,7 @@ export default withAuthRoute(async function handler(
          team1_checked_in_at, team2_checked_in_at`
       )
       .or(`team1_id.eq.${memberTeamId},team2_id.eq.${memberTeamId}`)
+      .eq('tenant_id', tenantId)
       .in('status', ['pending', 'ongoing'])
       .gte('scheduled_at', cutoffISO)
       .order('scheduled_at', { ascending: true })

@@ -43,7 +43,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
   try {
     switch (req.method) {
       case 'GET':
-        return await handleGet(id, res);
+        return await handleGet(id, res, ctx);
       case 'POST':
         return await handlePost(id, req, res, ctx);
       case 'PUT':
@@ -67,11 +67,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
  * GET : liste des maps du tournoi
  * ---------------------------------------------------------*/
 
-async function handleGet(tournamentId: string, res: NextApiResponse) {
+async function handleGet(
+  tournamentId: string,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   const { data, error } = await supabaseAdmin
     .from('tournament_maps')
     .select('*')
     .eq('tournament_id', tournamentId)
+    .eq('tenant_id', ctx.tenantId)
     .order('order_index', { ascending: true })
     .order('map_name', { ascending: true });
 
@@ -111,7 +116,8 @@ async function handlePost(
   const { data: existing, error: countErr } = await supabaseAdmin
     .from('tournament_maps')
     .select('order_index')
-    .eq('tournament_id', tournamentId);
+    .eq('tournament_id', tournamentId)
+    .eq('tenant_id', ctx.tenantId);
 
   if (!countErr && existing) {
     const max = (existing as any[])
@@ -129,6 +135,7 @@ async function handlePost(
     enabled: body.enabled ?? true,
     order_index:
       typeof body.order_index === 'number' ? body.order_index : nextIndex,
+    tenant_id: ctx.tenantId,
   };
 
   const { data, error } = await supabaseAdmin
@@ -151,6 +158,7 @@ async function handlePost(
       entity_type: 'tournament_map',
       entity_id: (data as any).id,
       tournament_id: tournamentId,
+      tenant_id: ctx.tenantId,
       payload: {
         created: true,
         map_name: body.map_name,
@@ -186,7 +194,8 @@ async function handlePut(
   const { error: delErr } = await supabaseAdmin
     .from('tournament_maps')
     .delete()
-    .eq('tournament_id', tournamentId);
+    .eq('tournament_id', tournamentId)
+    .eq('tenant_id', ctx.tenantId);
 
   if (delErr) {
     logger.error('DELETE existing tournament_maps error:', delErr);
@@ -204,6 +213,7 @@ async function handlePut(
     image_url: m.image_url ?? null,
     enabled: m.enabled ?? true,
     order_index: typeof m.order_index === 'number' ? m.order_index : idx,
+    tenant_id: ctx.tenantId,
   }));
 
   let insertedMaps: TournamentMapRow[] = [];
@@ -231,6 +241,7 @@ async function handlePut(
       entity_type: 'tournament_map',
       entity_id: null,
       tournament_id: tournamentId,
+      tenant_id: ctx.tenantId,
       payload: {
         replaced_all_maps: true,
         maps_count: insertedMaps.length,
@@ -290,6 +301,7 @@ async function handlePatch(
     .update(updatePayload)
     .eq('id', mapId)
     .eq('tournament_id', tournamentId)
+    .eq('tenant_id', ctx.tenantId)
     .select('*')
     .maybeSingle();
 
@@ -307,6 +319,7 @@ async function handlePatch(
       entity_type: 'tournament_map',
       entity_id: mapId,
       tournament_id: tournamentId,
+      tenant_id: ctx.tenantId,
       payload: {
         updated: true,
         fields: Object.keys(updatePayload),
@@ -340,7 +353,8 @@ async function handleDelete(
   let query = supabaseAdmin
     .from('tournament_maps')
     .delete()
-    .eq('tournament_id', tournamentId);
+    .eq('tournament_id', tournamentId)
+    .eq('tenant_id', ctx.tenantId);
 
   if (mapId) {
     query = query.eq('id', mapId);
@@ -362,6 +376,7 @@ async function handleDelete(
       entity_type: 'tournament_map',
       entity_id: mapId ? String(mapId) : null,
       tournament_id: tournamentId,
+      tenant_id: ctx.tenantId,
       payload: {
         deleted_all: !mapId,
         deleted_one: !!mapId,

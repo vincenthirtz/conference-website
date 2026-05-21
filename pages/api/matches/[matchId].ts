@@ -2,13 +2,13 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute, StaffContext } from '@/utils/staff';
+import {
+  withStaffRoute,
+  type AuthenticatedStaffContext,
+} from '@/utils/staff';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
-// TODO(S5b): remplacer par ctx.tenantId resolu depuis la staff session
-// multi-tenant (cette route est wrappee dans withStaffRoute).
-import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 export default withStaffRoute(handler, 'manager');
@@ -20,7 +20,7 @@ export default withStaffRoute(handler, 'manager');
 async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: StaffContext
+  ctx: AuthenticatedStaffContext
 ) {
   const { matchId } = req.query;
 
@@ -31,7 +31,7 @@ async function handler(
   try {
     switch (req.method) {
       case 'GET':
-        return await handleGet(matchId, req, res);
+        return await handleGet(matchId, req, res, ctx);
 
       case 'PUT':
       case 'PATCH':
@@ -57,9 +57,11 @@ async function handler(
 
 async function handleGet(
   matchId: string,
-  req: NextApiRequest,
-  res: NextApiResponse
+  _req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
 ) {
+  const tenantId = ctx.tenantId;
   const { data, error } = await supabaseAdmin
     .from('matches')
     .select(
@@ -94,6 +96,7 @@ async function handleGet(
     `
     )
     .eq('id', matchId)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
 
   if (error || !data) {
@@ -111,7 +114,7 @@ async function handlePut(
   matchId: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: StaffContext
+  ctx: AuthenticatedStaffContext
 ) {
   const {
     team1Score,
@@ -128,9 +131,7 @@ async function handlePut(
   }
 
   const result = await applyMatchScore({
-    // TODO(S5b): remplacer DEFAULT_TENANT_ID par ctx.tenantId une fois
-    // la staff session multi-tenant en place.
-    tenantId: DEFAULT_TENANT_ID,
+    tenantId: ctx.tenantId,
     matchId,
     team1Score,
     team2Score,
@@ -150,14 +151,16 @@ async function handlePut(
 
 async function handleDelete(
   matchId: string,
-  req: NextApiRequest,
+  _req: NextApiRequest,
   res: NextApiResponse,
-  ctx: StaffContext
+  ctx: AuthenticatedStaffContext
 ) {
+  const tenantId = ctx.tenantId;
   const { data: match, error: fetchErr } = await supabaseAdmin
     .from('matches')
     .select('*')
     .eq('id', matchId)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
 
   if (fetchErr || !match) {
@@ -172,7 +175,8 @@ async function handleDelete(
       team2_score: null,
       winner_team_id: null,
     })
-    .eq('id', matchId);
+    .eq('id', matchId)
+    .eq('tenant_id', tenantId);
 
   if (error) {
     logger.error('delete match error:', error);
@@ -186,6 +190,7 @@ async function handleDelete(
     entity_type: 'match',
     entity_id: matchId,
     tournament_id: match.tournament_id,
+    tenant_id: tenantId,
     payload: {
       cancelled: true,
     },

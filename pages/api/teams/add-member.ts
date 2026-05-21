@@ -20,9 +20,7 @@ import {
   insertTeamMember,
 } from '@/utils/teams/addMember';
 import { withAuthRoute } from '@/utils/staff';
-// TODO(S5c): remplacer DEFAULT_TENANT_ID par le tenantId resolu depuis le
-// subdomain/URL une fois la resolution publique multi-tenant en place.
-import { DEFAULT_TENANT_ID } from '@/utils/tenant';
+import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 type AddMemberResponse =
@@ -58,8 +56,10 @@ export default withAuthRoute(async function handler(
   )
     return;
 
+  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: user.id });
+
   // Check if user can manage a team (captain OR manager)
-  const access = await getManagedTeam(user.id);
+  const access = await getManagedTeam(user.id, tenantId);
   if (!access) {
     return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
   }
@@ -68,6 +68,7 @@ export default withAuthRoute(async function handler(
     .from('teams')
     .select('id, name, logo_url')
     .eq('id', access.teamId)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
 
   if (!captainTeam) {
@@ -75,11 +76,7 @@ export default withAuthRoute(async function handler(
   }
 
   // Garde roster lock : un capitaine ne peut PAS forcer le verrouillage.
-  // TODO(S5c): remplacer DEFAULT_TENANT_ID par le tenantId resolu de l'URL.
-  const lockStatus = await isTeamRosterLocked(
-    DEFAULT_TENANT_ID,
-    captainTeam.id
-  );
+  const lockStatus = await isTeamRosterLocked(tenantId, captainTeam.id);
   if (lockStatus.locked) {
     return res.status(409).json({
       error: rosterLockErrorMessage(lockStatus),
@@ -126,8 +123,7 @@ export default withAuthRoute(async function handler(
 
     // Insert (le helper fait le pre-check max_players + traduit les erreurs)
     const insertResult = await insertTeamMember({
-      // TODO(S5c): remplacer DEFAULT_TENANT_ID par le tenantId resolu de l'URL.
-      tenantId: DEFAULT_TENANT_ID,
+      tenantId,
       teamId: captainTeam.id,
       userId: resolvedUserId,
       role: validatedRole,
@@ -188,6 +184,7 @@ export default withAuthRoute(async function handler(
         image_url: captainTeam.logo_url ?? null,
         status: 'published',
         published_at: new Date().toISOString(),
+        tenant_id: tenantId,
       });
     } catch (newsErr) {
       logger.error('[/api/teams/add-member] create news error:', newsErr);

@@ -12,6 +12,7 @@ import {
   getManagedTeam,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
+import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 export type SendMessageBody = {
@@ -28,9 +29,10 @@ type CaptainTeam = { id: string; captain_id: string | null; name: string };
 
 async function loadCaptainTeam(
   res: NextApiResponse,
-  user: User
+  user: User,
+  tenantId: string
 ): Promise<CaptainTeam | null> {
-  const access = await getManagedTeam(user.id);
+  const access = await getManagedTeam(user.id, tenantId);
   if (!access) {
     res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
     return null;
@@ -40,6 +42,7 @@ async function loadCaptainTeam(
     .from('teams')
     .select('id, captain_id, name')
     .eq('id', access.teamId)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
 
   if (!myTeam) {
@@ -60,8 +63,10 @@ export default withAuthRoute(async function handler(
   )
     return;
 
+  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: user.id });
+
   if (req.method === 'GET') {
-    const team = await loadCaptainTeam(res, user);
+    const team = await loadCaptainTeam(res, user, tenantId);
     if (!team) return;
 
     // Fetch all captain_message demandes involving this captain's team
@@ -70,6 +75,7 @@ export default withAuthRoute(async function handler(
       .from('demandes')
       .select('id, user_id, team_id, comment, payload, status, created_at')
       .eq('type', 'captain_message')
+      .eq('tenant_id', tenantId)
       .or(`payload->>from_team_id.eq.${team.id},team_id.eq.${team.id}`)
       .order('created_at', { ascending: false });
 
@@ -147,7 +153,7 @@ export default withAuthRoute(async function handler(
   }
 
   if (req.method === 'POST') {
-    const team = await loadCaptainTeam(res, user);
+    const team = await loadCaptainTeam(res, user, tenantId);
     if (!team) return;
 
     const body = req.body as SendMessageBody;
@@ -184,6 +190,7 @@ export default withAuthRoute(async function handler(
       .select('id, name')
       .eq('id', targetTeamId)
       .eq('is_active', true)
+      .eq('tenant_id', tenantId)
       .maybeSingle();
 
     if (teamErr || !targetTeam) {
@@ -213,6 +220,7 @@ export default withAuthRoute(async function handler(
         comment: content,
         source: 'website',
         payload,
+        tenant_id: tenantId,
       })
       .select('*')
       .single();

@@ -8,6 +8,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { captainRequestSchema, formatZodError } from '@/utils/validation';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
+import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
@@ -21,6 +22,7 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
+  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: userId });
 
   if (req.method === 'GET') {
     // Récupérer les demandes de capitaine de l'utilisateur
@@ -28,6 +30,7 @@ export default withAuthRoute(async function handler(
       .from('demandes')
       .select('*')
       .eq('user_id', userId)
+      .eq('tenant_id', tenantId)
       .eq('type', 'captain_request')
       .order('created_at', { ascending: false });
 
@@ -55,6 +58,7 @@ export default withAuthRoute(async function handler(
       .from('demandes')
       .select('id, status')
       .eq('user_id', userId)
+      .eq('tenant_id', tenantId)
       .eq('type', 'captain_request')
       .eq('status', 'pending')
       .maybeSingle();
@@ -78,6 +82,7 @@ export default withAuthRoute(async function handler(
         .from('teams')
         .select('id, name')
         .eq('id', body.existingTeamId!)
+        .eq('tenant_id', tenantId)
         .maybeSingle();
 
       if (teamErr || !teamData) {
@@ -126,6 +131,7 @@ export default withAuthRoute(async function handler(
         comment: message,
         source: 'website',
         payload,
+        tenant_id: tenantId,
       })
       .select('*')
       .single();

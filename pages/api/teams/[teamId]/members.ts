@@ -14,6 +14,7 @@ import {
   loadTeamRolesFromSupabase,
   roleHasAnyPermission,
 } from '@/utils/teamRoles';
+import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 
 import { logger } from '../../../../utils/logger';
 export default withAuthRoute(async function handler(
@@ -42,11 +43,13 @@ export default withAuthRoute(async function handler(
   }
 
   const userId = user.id;
+  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: userId });
 
   const { data: team } = await supabaseAdmin
     .from('teams')
     .select('id, captain_id')
     .eq('id', teamId)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
 
   if (!team) {
@@ -54,7 +57,7 @@ export default withAuthRoute(async function handler(
   }
 
   // Vérifier que l'utilisateur gère cette équipe (capitaine ou manager)
-  const access = await getManagedTeam(userId);
+  const access = await getManagedTeam(userId, tenantId);
   if (!access || access.teamId !== teamId) {
     return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
   }
@@ -70,6 +73,7 @@ export default withAuthRoute(async function handler(
     .select('id, user_id, role')
     .eq('id', memberId)
     .eq('team_id', teamId)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
 
   if (fetchErr || !member) {
@@ -109,7 +113,8 @@ export default withAuthRoute(async function handler(
     .from('team_members')
     .delete()
     .eq('id', memberId)
-    .eq('team_id', teamId);
+    .eq('team_id', teamId)
+    .eq('tenant_id', tenantId);
 
   if (deleteErr) {
     logger.error('[teams/[teamId]/members] delete error:', deleteErr);

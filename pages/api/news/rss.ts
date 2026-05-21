@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin, getServerClient } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 const SITE_URL =
@@ -26,12 +27,14 @@ export default async function handler(
   }
 
   const admin = supabaseAdmin ?? getServerClient(req, res);
+  const tenantId = resolveTenantIdForPublicRequest(req);
 
   const nowISO = new Date().toISOString();
   const { data, error } = await admin
     .from('news')
     .select('id, title, slug, tag, excerpt, content, published_at')
     .eq('status', 'published')
+    .eq('tenant_id', tenantId)
     .or(`published_at.lte.${nowISO},published_at.is.null`)
     .order('published_at', { ascending: false, nullsFirst: false })
     .limit(50);

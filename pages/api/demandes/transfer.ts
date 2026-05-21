@@ -11,6 +11,7 @@ import {
   getManagedTeam,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
+import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 export type TransferRequestBody = {
@@ -32,12 +33,14 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
+  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: userId });
 
   if (req.method === 'GET') {
     const { data: demandes, error: demandesErr } = await supabaseAdmin
       .from('demandes')
       .select('*, team:teams!team_id(id, name, short_name, logo_url)')
       .eq('user_id', userId)
+      .eq('tenant_id', tenantId)
       .eq('type', 'transfer')
       .order('created_at', { ascending: false });
 
@@ -72,7 +75,7 @@ export default withAuthRoute(async function handler(
       const targetPlayerId = body.targetPlayerId.trim();
 
       // Verifier que le demandeur peut gerer une equipe (capitaine ou manager)
-      const access = await getManagedTeam(userId);
+      const access = await getManagedTeam(userId, tenantId);
       if (!access) {
         return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
       }
@@ -81,6 +84,7 @@ export default withAuthRoute(async function handler(
         .from('teams')
         .select('id, name')
         .eq('id', access.teamId)
+        .eq('tenant_id', tenantId)
         .maybeSingle();
 
       if (!captTeam) {
@@ -94,6 +98,7 @@ export default withAuthRoute(async function handler(
           .select('id, team_id, role, battle_tag')
           .eq('user_id', targetPlayerId)
           .eq('team_id', captTeam.id)
+          .eq('tenant_id', tenantId)
           .maybeSingle();
 
       if (playerMemErr) {
@@ -127,6 +132,7 @@ export default withAuthRoute(async function handler(
         .select('id, name, is_joinable')
         .eq('id', teamId)
         .eq('is_active', true)
+        .eq('tenant_id', tenantId)
         .maybeSingle();
 
       if (tErr || !targetTeam) {
@@ -144,6 +150,7 @@ export default withAuthRoute(async function handler(
         .from('demandes')
         .select('id')
         .eq('user_id', targetPlayerId)
+        .eq('tenant_id', tenantId)
         .in('type', ['join', 'transfer'])
         .eq('status', 'pending')
         .maybeSingle();
@@ -205,6 +212,7 @@ export default withAuthRoute(async function handler(
           comment: message,
           source: 'website',
           payload,
+          tenant_id: tenantId,
         })
         .select('*')
         .single();
@@ -234,6 +242,7 @@ export default withAuthRoute(async function handler(
       .from('team_members')
       .select('id, team_id, role')
       .eq('user_id', userId)
+      .eq('tenant_id', tenantId)
       .maybeSingle();
 
     if (memberErr) {
@@ -260,6 +269,7 @@ export default withAuthRoute(async function handler(
       .from('teams')
       .select('captain_id, name')
       .eq('id', currentMembership.team_id)
+      .eq('tenant_id', tenantId)
       .maybeSingle();
 
     if (currentTeam?.captain_id === userId) {
@@ -275,6 +285,7 @@ export default withAuthRoute(async function handler(
       .select('id, name, is_joinable')
       .eq('id', teamId)
       .eq('is_active', true)
+      .eq('tenant_id', tenantId)
       .maybeSingle();
 
     if (teamErr || !targetTeam) {
@@ -292,6 +303,7 @@ export default withAuthRoute(async function handler(
       .from('demandes')
       .select('id, status, team_id, type')
       .eq('user_id', userId)
+      .eq('tenant_id', tenantId)
       .in('type', ['join', 'transfer'])
       .eq('status', 'pending')
       .maybeSingle();
@@ -342,6 +354,7 @@ export default withAuthRoute(async function handler(
         comment: message,
         source: 'website',
         payload,
+        tenant_id: tenantId,
       })
       .select('*')
       .single();

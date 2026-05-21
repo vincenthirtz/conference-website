@@ -11,9 +11,7 @@ import {
 } from '@/utils/teams/rosterLock';
 import { withAuthRoute } from '@/utils/staff';
 import { emitBotEvent } from '@/utils/botEvents';
-// TODO(S5c): remplacer DEFAULT_TENANT_ID par le tenantId resolu depuis le
-// subdomain/URL une fois la resolution publique multi-tenant en place.
-import { DEFAULT_TENANT_ID } from '@/utils/tenant';
+import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
@@ -30,12 +28,14 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
+  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: userId });
 
   // Trouver le membership
   const { data: membership, error: membershipErr } = await supabaseAdmin
     .from('team_members')
     .select('id, team_id')
     .eq('user_id', userId)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
 
   if (membershipErr) {
@@ -52,6 +52,7 @@ export default withAuthRoute(async function handler(
     .from('teams')
     .select('captain_id')
     .eq('id', membership.team_id)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
 
   if (team?.captain_id === userId) {
@@ -63,11 +64,7 @@ export default withAuthRoute(async function handler(
 
   // Garde roster lock : un membre ne peut pas non plus quitter une equipe avec
   // roster verrouille. L'admin peut forcer via l'API admin.
-  // TODO(S5c): remplacer DEFAULT_TENANT_ID par le tenantId resolu de l'URL.
-  const lockStatus = await isTeamRosterLocked(
-    DEFAULT_TENANT_ID,
-    membership.team_id
-  );
+  const lockStatus = await isTeamRosterLocked(tenantId, membership.team_id);
   if (lockStatus.locked) {
     return res.status(409).json({
       error: rosterLockErrorMessage(lockStatus),
@@ -78,7 +75,8 @@ export default withAuthRoute(async function handler(
   const { error: deleteErr } = await supabaseAdmin
     .from('team_members')
     .delete()
-    .eq('id', membership.id);
+    .eq('id', membership.id)
+    .eq('tenant_id', tenantId);
 
   if (deleteErr) {
     logger.error('[teams/leave] delete error:', deleteErr);

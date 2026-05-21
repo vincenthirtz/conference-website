@@ -16,6 +16,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 import { hasTeamPermission } from '@/utils/teams/permissions';
+import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 import {
   MEMBER_DISPLAY_NAME_MAX,
   MEMBER_PRONOUNS_MAX,
@@ -93,6 +94,8 @@ export default withAuthRoute(async function handler(
     return res.status(400).json({ error: 'memberId invalide.' });
   }
 
+  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: user.id });
+
   // Look up the member to confirm she belongs to the team and to get her
   // user_id (needed for the self-edit allowance).
   const { data: member, error: memberErr } = await supabaseAdmin
@@ -102,6 +105,7 @@ export default withAuthRoute(async function handler(
     )
     .eq('id', memberId)
     .eq('team_id', teamId)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
 
   if (memberErr || !member) {
@@ -208,7 +212,8 @@ export default withAuthRoute(async function handler(
     .from('team_members')
     .update(patch)
     .eq('id', memberId)
-    .eq('team_id', teamId);
+    .eq('team_id', teamId)
+    .eq('tenant_id', tenantId);
 
   if (updateErr) {
     logger.error('[team-member-profile] update error:', updateErr);
@@ -232,6 +237,7 @@ export default withAuthRoute(async function handler(
       user_id: user.id,
       action: 'update_member_profile',
       payload: { member_id: memberId, diff },
+      tenant_id: tenantId,
     });
     if (logErr) {
       logger.error('[team-member-profile] audit log error:', logErr);

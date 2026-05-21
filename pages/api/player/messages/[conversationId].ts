@@ -12,15 +12,17 @@ import {
   getManagedTeam,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
+import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 
 import { logger } from '../../../../utils/logger';
 type CaptainTeam = { id: string; captain_id: string | null; name: string };
 
 async function loadCaptainTeam(
   res: NextApiResponse,
-  user: User
+  user: User,
+  tenantId: string
 ): Promise<CaptainTeam | null> {
-  const access = await getManagedTeam(user.id);
+  const access = await getManagedTeam(user.id, tenantId);
   if (!access) {
     res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
     return null;
@@ -30,6 +32,7 @@ async function loadCaptainTeam(
     .from('teams')
     .select('id, captain_id, name')
     .eq('id', access.teamId)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
 
   if (!myTeam) {
@@ -61,9 +64,10 @@ export default withAuthRoute(async function handler(
   }
 
   const [teamIdA, teamIdB] = conversationId.split('_');
+  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: user.id });
 
   if (req.method === 'GET') {
-    const team = await loadCaptainTeam(res, user);
+    const team = await loadCaptainTeam(res, user, tenantId);
     if (!team) return;
 
     // Verify captain is part of this conversation
@@ -80,6 +84,7 @@ export default withAuthRoute(async function handler(
       .from('demandes')
       .select('id, user_id, team_id, comment, payload, status, created_at')
       .eq('type', 'captain_message')
+      .eq('tenant_id', tenantId)
       .or(
         `and(payload->>from_team_id.eq.${teamIdA},team_id.eq.${teamIdB}),and(payload->>from_team_id.eq.${teamIdB},team_id.eq.${teamIdA})`
       )
@@ -95,6 +100,7 @@ export default withAuthRoute(async function handler(
       .from('teams')
       .select('id, name, short_name, logo_url')
       .eq('id', otherTeamId)
+      .eq('tenant_id', tenantId)
       .maybeSingle();
 
     return res.status(200).json({
@@ -117,7 +123,7 @@ export default withAuthRoute(async function handler(
   }
 
   if (req.method === 'PATCH') {
-    const team = await loadCaptainTeam(res, user);
+    const team = await loadCaptainTeam(res, user, tenantId);
     if (!team) return;
 
     if (team.id !== teamIdA && team.id !== teamIdB) {
@@ -132,6 +138,7 @@ export default withAuthRoute(async function handler(
       .update({ status: 'approved' })
       .eq('type', 'captain_message')
       .eq('team_id', team.id)
+      .eq('tenant_id', tenantId)
       .eq('status', 'pending')
       .or(
         `payload->>from_team_id.eq.${team.id === teamIdA ? teamIdB : teamIdA}`

@@ -5,6 +5,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
+import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 const BATTLE_TAG_RE = /^[A-Za-z0-9\u00C0-\u024F]+#[0-9]{4,6}$/;
@@ -69,12 +70,16 @@ export default withAuthRoute(async function handler(
     return res.status(500).json({ error: 'Echec de la mise a jour.' });
   }
 
-  // Si battle_tag modifie, mettre a jour aussi team_members
+  // Si battle_tag modifie, mettre a jour aussi team_members (scoped au tenant
+  // courant — un user pourrait theoriquement avoir un BT different par tenant
+  // a terme ; pour l'instant on update juste celui du tenant courant).
   if ('battle_tag' in updates) {
+    const tenantId = resolveTenantIdForUserRequest(req, { authUserId: user.id });
     await supabaseAdmin
       .from('team_members')
       .update({ battle_tag: updates.battle_tag })
-      .eq('user_id', user.id);
+      .eq('user_id', user.id)
+      .eq('tenant_id', tenantId);
   }
 
   return res.status(200).json({

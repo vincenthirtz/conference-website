@@ -29,7 +29,7 @@ async function handler(
   }
 
   // Defense-in-depth : on rejette les tournament_id d'un autre tenant avant
-  // de deleguer au helper (qui n'est pas encore tenant-aware, cf TODO S5c+).
+  // de deleguer au helper (qui est maintenant tenant-aware, S5c).
   if (!supabaseAdmin) {
     return res.status(500).json({ error: 'Database service unavailable' });
   }
@@ -43,7 +43,7 @@ async function handler(
     return res.status(404).json({ error: 'Tournament not found' });
   }
 
-  const result = await fetchDashboardData(String(id));
+  const result = await fetchDashboardData(String(id), ctx.tenantId);
   if (!result.ok) {
     return res.status(result.status).json({ error: result.error });
   }

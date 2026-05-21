@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import slugify from 'slugify';
 import { supabaseAdmin } from '@/utils/supabase';
 import { sanitizeUrl } from '@/utils/apiHelpers';
+import { resolveTenantId } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 type CreateTeamBody = {
@@ -40,6 +41,10 @@ export default async function handler(
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  // Legacy Discord endpoint — authentifié via DISCORD_TEAM_SECRET, suit la
+  // convention bot (x-tenant-id header optionnel ; fallback DEFAULT_TENANT_ID).
+  const tenantId = resolveTenantId(req);
+
   const body: CreateTeamBody = req.body || {};
   const name = (body.name || '').trim();
   if (!name) {
@@ -60,6 +65,7 @@ export default async function handler(
     discord: sanitizeUrl(body.discord),
     website: sanitizeUrl(body.website),
     is_active: true,
+    tenant_id: tenantId,
   });
 
   const maxAttempts = 3;
@@ -89,6 +95,7 @@ export default async function handler(
           content: `Bienvenue à ${name} ! Une nouvelle équipe vient d'être créée pour participer au tournoi. Restez à l'écoute pour suivre ses matchs.`,
           status: 'published',
           published_at: new Date().toISOString(),
+          tenant_id: tenantId,
         });
       } catch (newsErr) {
         logger.error('[/api/discord/teams] create news error:', newsErr);

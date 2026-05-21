@@ -12,6 +12,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 import { hasTeamPermission } from '@/utils/teams/permissions';
+import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 import {
   TEAM_PUBLIC_CONTENT_MAX_LENGTH,
   normalizeAccentColor,
@@ -129,6 +130,8 @@ export default withAuthRoute(async function handler(
   if (typeof teamId !== 'string' || !isValidUUID(teamId)) {
     return res.status(400).json({ error: 'teamId invalide.' });
   }
+
+  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: user.id });
 
   const allowed = await hasTeamPermission(user.id, teamId, 'edit_public_page');
   if (!allowed) {
@@ -346,6 +349,7 @@ export default withAuthRoute(async function handler(
       'description, public_content, accent_color, secondary_color, banner_overlay, banner_focal, logo_url, banner_url, twitter, discord, website, youtube, twitch, instagram, tiktok, achievements, sponsors, embed_provider, embed_id, pinned_announcement, pinned_announcement_until'
     )
     .eq('id', teamId)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
 
   if (beforeErr || !before) {
@@ -355,7 +359,8 @@ export default withAuthRoute(async function handler(
   const { error: updateErr } = await supabaseAdmin
     .from('teams')
     .update(updates)
-    .eq('id', teamId);
+    .eq('id', teamId)
+    .eq('tenant_id', tenantId);
 
   if (updateErr) {
     logger.error('[team-public-page] update error:', updateErr);
@@ -385,6 +390,7 @@ export default withAuthRoute(async function handler(
       user_id: user.id,
       action: 'update_public_page',
       payload: { diff },
+      tenant_id: tenantId,
     });
     if (logErr) {
       logger.error('[team-public-page] audit log error:', logErr);

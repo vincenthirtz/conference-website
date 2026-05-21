@@ -12,6 +12,7 @@ import {
   loadTeamRolesFromSupabase,
   privilegedRoleValues,
 } from '@/utils/teamRoles';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
 export type TeamManagementAccess = {
   teamId: string;
@@ -32,9 +33,15 @@ export type TeamManagementAccess = {
  *  - Si on est capitaine d'une equipe ET on a un role privilegie dans une
  *    autre, on retourne celle dont on est capitaine (priorite la plus forte).
  *  - On ne considere que les teams actives implicitement (RLS / API en aval).
+ *
+ * **Multi-tenant (S5c)** : si `tenantId` est fourni, les deux queries (team
+ * dont l'user est capitaine, team_members privilégiés) sont scopées au
+ * tenant. En V1 mono-tenant, les callers passent `DEFAULT_TENANT_ID` ; à
+ * terme (S7) on lira la team du user pour résoudre son tenant.
  */
 export async function getManagedTeam(
-  userId: string
+  userId: string,
+  tenantId: string = DEFAULT_TENANT_ID
 ): Promise<TeamManagementAccess | null> {
   if (!userId) return null;
   if (!supabaseAdmin) {
@@ -47,6 +54,7 @@ export async function getManagedTeam(
     .from('teams')
     .select('id')
     .eq('captain_id', userId)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
 
   if (captainErr) {
@@ -66,6 +74,7 @@ export async function getManagedTeam(
     .from('team_members')
     .select('team_id')
     .eq('user_id', userId)
+    .eq('tenant_id', tenantId)
     .in('role', privileged)
     .maybeSingle();
 

@@ -12,6 +12,7 @@ import {
   getManagedTeam,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
+import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
@@ -23,6 +24,7 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
+  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: userId });
 
   // Per-user cap : 5 actions/minute. Évite qu'un capitaine spamme
   // l'approve/reject (et donc trigger team_members + news).
@@ -37,7 +39,7 @@ export default withAuthRoute(async function handler(
     return;
 
   // Check if user can manage a team (captain or manager)
-  const access = await getManagedTeam(userId);
+  const access = await getManagedTeam(userId, tenantId);
   if (!access) {
     return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
   }
@@ -46,6 +48,7 @@ export default withAuthRoute(async function handler(
     .from('teams')
     .select('id, name, logo_url')
     .eq('id', access.teamId)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
 
   if (teamErr || !captainTeam) {
@@ -53,11 +56,11 @@ export default withAuthRoute(async function handler(
   }
 
   if (req.method === 'GET') {
-    return handleGet(req, res, captainTeam.id);
+    return handleGet(req, res, captainTeam.id, tenantId);
   }
 
   if (req.method === 'POST') {
-    return handlePost(req, res, captainTeam, userId);
+    return handlePost(req, res, captainTeam, userId, tenantId);
   }
 
   res.setHeader('Allow', 'GET,POST');
@@ -67,7 +70,8 @@ export default withAuthRoute(async function handler(
 async function handleGet(
   req: NextApiRequest,
   res: NextApiResponse,
-  teamId: string
+  teamId: string,
+  tenantId: string
 ) {
   const statusFilter = req.query.status as string | undefined;
 
@@ -75,6 +79,7 @@ async function handleGet(
     .from('demandes')
     .select('*')
     .eq('team_id', teamId)
+    .eq('tenant_id', tenantId)
     .eq('type', 'join')
     .order('created_at', { ascending: false });
 
@@ -136,7 +141,8 @@ async function handlePost(
   req: NextApiRequest,
   res: NextApiResponse,
   captainTeam: { id: string; name: string; logo_url: string | null },
-  captainUserId: string
+  captainUserId: string,
+  tenantId: string
 ) {
   const { demandeId, action } = req.body || {};
 
@@ -156,6 +162,7 @@ async function handlePost(
     .select('*')
     .eq('id', demandeId)
     .eq('team_id', captainTeam.id)
+    .eq('tenant_id', tenantId)
     .eq('type', 'join')
     .eq('status', 'pending')
     .maybeSingle();
@@ -182,11 +189,13 @@ async function handlePost(
             .from('team_members')
             .select('*', { count: 'exact', head: true })
             .eq('team_id', captainTeam.id)
+            .eq('tenant_id', tenantId)
             .neq('role', 'coach'),
           supabaseAdmin!
             .from('tournament_teams')
             .select('tournament_id, tournaments!inner(max_players)')
-            .eq('team_id', captainTeam.id),
+            .eq('team_id', captainTeam.id)
+            .eq('tenant_id', tenantId),
         ]);
 
       if (teamTournaments && teamTournaments.length > 0) {
@@ -208,6 +217,7 @@ async function handlePost(
         user_id: demande.user_id,
         role: desiredRole,
         battle_tag: battleTag,
+        tenant_id: tenantId,
       });
 
     if (insertErr) {
@@ -235,6 +245,7 @@ async function handlePost(
         image_url: captainTeam.logo_url ?? null,
         status: 'published',
         published_at: new Date().toISOString(),
+        tenant_id: tenantId,
       });
     } catch (newsErr) {
       logger.error('[join-requests] create news error:', newsErr);
@@ -249,7 +260,8 @@ async function handlePost(
       processed_at: new Date().toISOString(),
       staff_note: `Traite par le capitaine (${captainUserId})`,
     })
-    .eq('id', demandeId);
+    .eq('id', demandeId)
+    .eq('tenant_id', tenantId);
 
   if (updateErr) {
     logger.error('[join-requests] update error:', updateErr);

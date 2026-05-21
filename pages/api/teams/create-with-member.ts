@@ -9,6 +9,7 @@ import { sendTeamJoinEmail } from '@/utils/email';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { sanitizeUrl, validateRole } from '@/utils/apiHelpers';
 import { emitBotEvent } from '@/utils/botEvents';
+import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 type Body = {
@@ -75,6 +76,8 @@ export default async function handler(
   if (!supabaseAdmin) {
     return res.status(503).json({ error: 'Service unavailable.' });
   }
+
+  const tenantId = resolveTenantIdForPublicRequest(req);
 
   const body: Body = req.body || {};
   const name = (body.name || '').trim();
@@ -270,6 +273,7 @@ export default async function handler(
       description: description || null,
       discord: sanitizeUrl(body.discord) || null,
       website: sanitizeUrl(body.website) || null,
+      tenant_id: tenantId,
     };
     return base;
   };
@@ -354,6 +358,7 @@ export default async function handler(
       user_id: m.user_id,
       role: m.role,
       battle_tag: m.battle_tag,
+      tenant_id: tenantId,
     };
 
     const { data: member, error: insertErr } = await supabaseAdmin
@@ -445,6 +450,7 @@ export default async function handler(
         .from('tournaments')
         .select('id, name, status, max_teams, min_players')
         .eq('id', tournamentId)
+        .eq('tenant_id', tenantId)
         .single();
 
       if (tournament && tournament.status === 'published') {
@@ -460,6 +466,7 @@ export default async function handler(
           const { data: existingTeams } = await supabaseAdmin
             .from('stage_teams')
             .select('team_id, tournament_stages!inner(tournament_id)')
+            .eq('tenant_id', tenantId)
             .eq('tournament_stages.tournament_id', tournamentId);
 
           const uniqueTeams = new Set(
@@ -475,12 +482,14 @@ export default async function handler(
           const { data: stages } = await supabaseAdmin
             .from('tournament_stages')
             .select('id')
-            .eq('tournament_id', tournamentId);
+            .eq('tournament_id', tournamentId)
+            .eq('tenant_id', tenantId);
 
           if (stages && stages.length > 0) {
             const insertData = stages.map((s) => ({
               stage_id: s.id,
               team_id: createdTeam.id,
+              tenant_id: tenantId,
             }));
 
             const { error: regError } = await supabaseAdmin

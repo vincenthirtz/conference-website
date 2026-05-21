@@ -5,6 +5,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { isValidUUID } from '@/utils/apiHelpers';
+import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 
 import { logger } from '../../../../utils/logger';
 type LeaderboardEntry = {
@@ -54,6 +55,7 @@ export default async function handler(
   }
 
   const tournamentId = String(id);
+  const tenantId = resolveTenantIdForPublicRequest(req);
 
   try {
     // Charger le tournoi (juste pour le nom + verifier qu'il est public)
@@ -61,6 +63,7 @@ export default async function handler(
       .from('tournaments')
       .select('id, name, is_public')
       .eq('id', tournamentId)
+      .eq('tenant_id', tenantId)
       .maybeSingle();
 
     if (tErr || !tournament) {
@@ -88,6 +91,7 @@ export default async function handler(
         `
       )
       .eq('tournament_id', tournamentId)
+      .eq('tenant_id', tenantId)
       .eq('status', 'finished')
       .order('completed_at', { ascending: false });
 
@@ -123,6 +127,7 @@ export default async function handler(
       const { data: members } = await supabaseAdmin
         .from('team_members')
         .select('id, team_id, battle_tag')
+        .eq('tenant_id', tenantId)
         .in('id', memberIds);
       for (const m of members || []) {
         memberToTeam.set(m.id, m.team_id);
@@ -146,6 +151,7 @@ export default async function handler(
       const { data: teams } = await supabaseAdmin
         .from('teams')
         .select('id, name')
+        .eq('tenant_id', tenantId)
         .in('id', allTeamIds);
       for (const t of teams || []) teamNameMap.set(t.id, t.name);
     }

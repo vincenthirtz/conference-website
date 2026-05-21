@@ -5,6 +5,7 @@ import { supabaseAdmin, getServerClient } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { parsePagination } from '@/utils/apiHelpers';
 import { emitBotEvent } from '@/utils/botEvents';
+import { resolveTenantIdForPublicRequest, resolveTenantId } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 
@@ -56,6 +57,7 @@ export default async function handler(
   }
 
   const admin = supabaseAdmin ?? getServerClient(req, res);
+  const tenantId = resolveTenantIdForPublicRequest(req);
 
   const { limit, offset } = parsePagination(req, { limit: 10, maxLimit: 100 });
   const tagFilter = normalizeTag(req.query.tag?.toString());
@@ -68,6 +70,7 @@ export default async function handler(
       'id, title, slug, tag, excerpt, content, image_url, published_at, created_at, updated_at, news_comments(count)'
     )
     .eq('status', 'published')
+    .eq('tenant_id', tenantId)
     .or(`published_at.lte.${nowISO},published_at.is.null`)
     .order('published_at', { ascending: false, nullsFirst: false })
     .range(offset, offset + limit - 1);
@@ -124,6 +127,10 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
       .json({ error: 'Database service unavailable (missing service role).' });
   }
 
+  // POST is bot-authenticated (x-api-key + x-tenant-id) — use resolveTenantId,
+  // which reads the bot header. Falls back to DEFAULT_TENANT_ID si absent.
+  const tenantId = resolveTenantId(req);
+
   const body = (req.body ?? {}) as NewsPayload;
   if (!body.title || !body.content) {
     return res.status(400).json({ error: 'Title and content are required.' });
@@ -150,6 +157,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
       status,
       published_at: publishedAt,
       author_id: null,
+      tenant_id: tenantId,
     })
     .select()
     .single();

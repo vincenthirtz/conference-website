@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 
 import { logger } from '../../utils/logger';
 export default async function handler(
@@ -18,12 +19,15 @@ export default async function handler(
     return res.status(500).json({ error: 'Database service unavailable.' });
   }
 
+  const tenantId = resolveTenantIdForPublicRequest(req);
+
   const { data, error } = await supabaseAdmin
     .from('cast_members')
     .select(
       'id, name, title, description, image_url, twitch_url, city, is_promo, sort_order'
     )
     .eq('is_active', true)
+    .eq('tenant_id', tenantId)
     .order('sort_order', { ascending: true });
 
   if (error) {

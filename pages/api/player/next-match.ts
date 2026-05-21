@@ -11,6 +11,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 import { CHECKIN_OPEN_MINUTES } from '@/utils/checkin';
+import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 export type NextMatchPayload =
@@ -65,11 +66,14 @@ export default withAuthRoute(async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: user.id });
+
   // Find the user's active team (member or captain)
   const { data: membership } = await supabaseAdmin
     .from('team_members')
     .select('team_id')
     .eq('user_id', user.id)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
 
   const teamId = membership?.team_id;
@@ -102,6 +106,7 @@ export default withAuthRoute(async function handler(
       `
     )
     .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
+    .eq('tenant_id', tenantId)
     .in('status', ['pending', 'ongoing'])
     .gte('scheduled_at', cutoffISO)
     .order('scheduled_at', { ascending: true })

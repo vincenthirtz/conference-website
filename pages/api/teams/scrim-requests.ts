@@ -13,6 +13,7 @@ import {
   getManagedTeam,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
+import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
@@ -24,6 +25,7 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
+  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: userId });
 
   // Per-user cap : refuser le spam de scrim accept/reject (a chaque
   // accept, on cree un scrim draft cote /admin/demandes auto-process).
@@ -38,7 +40,7 @@ export default withAuthRoute(async function handler(
     return;
 
   // Check if user can manage a team (captain or manager)
-  const access = await getManagedTeam(userId);
+  const access = await getManagedTeam(userId, tenantId);
   if (!access) {
     return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
   }
@@ -47,6 +49,7 @@ export default withAuthRoute(async function handler(
     .from('teams')
     .select('id, name, logo_url')
     .eq('id', access.teamId)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
 
   if (teamErr || !captainTeam) {
@@ -60,6 +63,7 @@ export default withAuthRoute(async function handler(
       .from('demandes')
       .select('*')
       .eq('team_id', captainTeam.id)
+      .eq('tenant_id', tenantId)
       .eq('type', 'scrim')
       .order('created_at', { ascending: false });
 
@@ -150,6 +154,7 @@ export default withAuthRoute(async function handler(
       .select('*')
       .eq('id', demandeId)
       .eq('team_id', captainTeam.id)
+      .eq('tenant_id', tenantId)
       .eq('type', 'scrim')
       .eq('status', 'pending')
       .maybeSingle();
@@ -187,7 +192,8 @@ export default withAuthRoute(async function handler(
         processed_at: new Date().toISOString(),
         staff_note: staffNote,
       })
-      .eq('id', demandeId);
+      .eq('id', demandeId)
+      .eq('tenant_id', tenantId);
 
     if (updateErr) {
       logger.error('[scrim-requests] update error:', updateErr);
@@ -221,6 +227,7 @@ export default withAuthRoute(async function handler(
           preferred_date: preferredDate,
           original_demande_id: demandeId,
         },
+        tenant_id: tenantId,
       });
     }
 

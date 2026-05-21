@@ -11,6 +11,7 @@ import {
   getManagedTeam,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
+import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 export type RegisterTeamBody = {
@@ -30,12 +31,14 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
+  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: userId });
 
   if (req.method === 'GET') {
     const { data: demandes, error: demandesErr } = await supabaseAdmin
       .from('demandes')
       .select('*')
       .eq('user_id', userId)
+      .eq('tenant_id', tenantId)
       .eq('type', 'team_registration')
       .order('created_at', { ascending: false });
 
@@ -71,6 +74,7 @@ export default withAuthRoute(async function handler(
       .from('teams')
       .select('id, name, captain_id, is_active')
       .eq('id', teamId)
+      .eq('tenant_id', tenantId)
       .maybeSingle();
 
     if (teamErr || !team) {
@@ -82,7 +86,7 @@ export default withAuthRoute(async function handler(
     }
 
     // Verify user can manage the team (captain or manager)
-    const access = await getManagedTeam(userId);
+    const access = await getManagedTeam(userId, tenantId);
     if (!access || access.teamId !== team.id) {
       return res.status(403).json({
         error:
@@ -95,6 +99,7 @@ export default withAuthRoute(async function handler(
       .from('tournaments')
       .select('id, name, status, max_teams, min_players')
       .eq('id', tournamentId)
+      .eq('tenant_id', tenantId)
       .maybeSingle();
 
     if (tourErr || !tournament) {
@@ -113,6 +118,7 @@ export default withAuthRoute(async function handler(
       .select('id')
       .eq('tournament_id', tournamentId)
       .eq('team_id', teamId)
+      .eq('tenant_id', tenantId)
       .maybeSingle();
 
     if (existingReg) {
@@ -127,6 +133,7 @@ export default withAuthRoute(async function handler(
       .select('id')
       .eq('team_id', teamId)
       .eq('tournament_id', tournamentId)
+      .eq('tenant_id', tenantId)
       .eq('type', 'team_registration')
       .eq('status', 'pending')
       .maybeSingle();
@@ -143,7 +150,8 @@ export default withAuthRoute(async function handler(
       const { count: memberCount } = await supabaseAdmin
         .from('team_members')
         .select('id', { count: 'exact', head: true })
-        .eq('team_id', teamId);
+        .eq('team_id', teamId)
+        .eq('tenant_id', tenantId);
 
       if ((memberCount ?? 0) < tournament.min_players) {
         return res.status(400).json({
@@ -157,7 +165,8 @@ export default withAuthRoute(async function handler(
       const { count: teamCount } = await supabaseAdmin
         .from('tournament_teams')
         .select('id', { count: 'exact', head: true })
-        .eq('tournament_id', tournamentId);
+        .eq('tournament_id', tournamentId)
+        .eq('tenant_id', tenantId);
 
       if ((teamCount ?? 0) >= tournament.max_teams) {
         return res.status(400).json({
@@ -188,6 +197,7 @@ export default withAuthRoute(async function handler(
         comment: message,
         source: 'website',
         payload,
+        tenant_id: tenantId,
       })
       .select('*')
       .single();

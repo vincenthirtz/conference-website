@@ -73,3 +73,58 @@ export function resolveTenantId(req: NextApiRequest): string {
 
   return header.toLowerCase();
 }
+
+/* -----------------------------------------------------------------------
+ * Public + user-level resolvers (S5c)
+ * -----------------------------------------------------------------------
+ *
+ * V1 (mono-tenant) : on est sur un seul tenant — la home, les pages
+ * `/tournois`, `/news`, `/teams`, etc. servent toujours le tenant
+ * "conference". Les helpers ci-dessous existent pour :
+ *   1. uniformiser la signature des handlers (toujours `resolveTenant*()`
+ *      au lieu de coder en dur `DEFAULT_TENANT_ID`),
+ *   2. flagger les TODO S7 de façon centralisée — la migration vers un
+ *      modèle multi-tenant (subdomain ou path prefix `/conference/...`)
+ *      ne touchera que ce fichier.
+ *
+ * V2 (post Phase 3) :
+ *   - `resolveTenantIdForPublicRequest` lira le sous-domaine
+ *     (`conference.foo.gg` → tenant "conference") ou le préfixe d'URL
+ *     (`/conference/tournois` → tenant "conference").
+ *   - `resolveTenantIdForUserRequest` se basera en priorité sur la team
+ *     gérée par le user (team → tournament → tenant) puis fallback URL.
+ *     Décision produit en attente : un user peut-il être capitaine sur 2
+ *     tenants en même temps ? V1 dit non (1 team par user).
+ *
+ * Pour l'instant, les deux retournent `DEFAULT_TENANT_ID`. La signature
+ * accepte cependant déjà `req` (et un `userContext` optionnel) pour
+ * limiter les churn-diff lors du switch S7.
+ */
+
+/**
+ * Résout le tenant pour une requête publique (anon, pas de session). En V1
+ * tout est servi pour le tenant `DEFAULT_TENANT_ID`. Voir le commentaire de
+ * tête pour la roadmap S7.
+ */
+export function resolveTenantIdForPublicRequest(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _req: NextApiRequest
+): string {
+  // TODO(S7) : résoudre depuis URL prefix ou subdomain.
+  return DEFAULT_TENANT_ID;
+}
+
+/**
+ * Résout le tenant pour une requête user-level (capitaine/manager, session
+ * Supabase active). En V1 mono-tenant, default `DEFAULT_TENANT_ID`. À terme,
+ * on lira d'abord la team gérée par le user, puis fallback URL.
+ */
+export function resolveTenantIdForUserRequest(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _req: NextApiRequest,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _userContext?: { authUserId?: string | null } | null
+): string {
+  // TODO(S7) : résoudre depuis l'équipe gérée par le user, ou via URL.
+  return DEFAULT_TENANT_ID;
+}

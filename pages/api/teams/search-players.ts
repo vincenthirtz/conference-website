@@ -10,6 +10,7 @@ import {
   getManagedTeam,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
+import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 type PlayerResult = {
@@ -37,8 +38,10 @@ export default withAuthRoute(async function handler(
   )
     return;
 
+  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: user.id });
+
   // Check if user can manage a team (captain or manager)
-  const access = await getManagedTeam(user.id);
+  const access = await getManagedTeam(user.id, tenantId);
   if (!access) {
     return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
   }
@@ -101,10 +104,11 @@ export default withAuthRoute(async function handler(
       }
     }
 
-    // 2) Search by battle_tag in team_members
+    // 2) Search by battle_tag in team_members (scoped au tenant)
     const { data: membersByTag } = await supabaseAdmin
       .from('team_members')
       .select('user_id, battle_tag, team_id')
+      .eq('tenant_id', tenantId)
       .ilike('battle_tag', `%${safeQuery}%`)
       .limit(15);
 
@@ -156,6 +160,7 @@ export default withAuthRoute(async function handler(
       const { data: allMemberships } = await supabaseAdmin
         .from('team_members')
         .select('user_id, battle_tag')
+        .eq('tenant_id', tenantId)
         .in('user_id', candidateIds);
 
       if (allMemberships) {

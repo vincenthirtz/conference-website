@@ -10,6 +10,7 @@ import {
   escapePostgrestValue,
 } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 export type PublicTeam = {
@@ -37,6 +38,8 @@ export default async function handler(
   }
 
   try {
+    const tenantId = resolveTenantIdForPublicRequest(req);
+
     const { limit: limitNum, offset: offsetNum } = parsePagination(req, {
       limit: 100,
     });
@@ -53,7 +56,8 @@ export default async function handler(
         {
           count: 'exact',
         }
-      );
+      )
+      .eq('tenant_id', tenantId);
 
     // Filter by joinable status
     if (joinable === '1' || joinable === 'true') {

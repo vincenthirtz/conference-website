@@ -10,9 +10,7 @@ import {
   isTeamRosterLocked,
   rosterLockErrorMessage,
 } from '@/utils/teams/rosterLock';
-// TODO(S5c): remplacer DEFAULT_TENANT_ID par le tenantId resolu depuis le
-// subdomain/URL une fois la resolution publique multi-tenant en place.
-import { DEFAULT_TENANT_ID } from '@/utils/tenant';
+import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
@@ -36,6 +34,7 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
+  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: userId });
   const { newCaptainUserId } = req.body || {};
 
   if (
@@ -55,6 +54,7 @@ export default withAuthRoute(async function handler(
     .from('teams')
     .select('id, captain_id')
     .eq('captain_id', userId)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
 
   if (teamErr) {
@@ -74,6 +74,7 @@ export default withAuthRoute(async function handler(
     .select('id')
     .eq('team_id', team.id)
     .eq('user_id', newCaptainUserId)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
 
   if (!newCaptainMembership) {
@@ -86,8 +87,7 @@ export default withAuthRoute(async function handler(
   // changer de capitaine pendant un tournoi modifie qui peut agir
   // sur les line-ups, scrims, scores… c'est une rupture d'intégrité métier.
   // Un admin peut toujours forcer via les routes /api/admin/*.
-  // TODO(S5c): remplacer DEFAULT_TENANT_ID par le tenantId resolu de l'URL.
-  const lockStatus = await isTeamRosterLocked(DEFAULT_TENANT_ID, team.id);
+  const lockStatus = await isTeamRosterLocked(tenantId, team.id);
   if (lockStatus.locked) {
     return res.status(409).json({ error: rosterLockErrorMessage(lockStatus) });
   }
@@ -99,7 +99,8 @@ export default withAuthRoute(async function handler(
       captain_id: newCaptainUserId,
       updated_at: new Date().toISOString(),
     })
-    .eq('id', team.id);
+    .eq('id', team.id)
+    .eq('tenant_id', tenantId);
 
   if (updateErr) {
     logger.error('[transfer-captain] update error:', updateErr);

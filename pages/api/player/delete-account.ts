@@ -49,10 +49,12 @@ export default withAuthRoute(async function handler(
     await supabaseAdmin.from('staff').delete().eq('auth_user_id', userId);
   }
 
-  // Remove team memberships
+  // Remove team memberships — droit a l'oubli RGPD : on supprime sur TOUS les
+  // tenants (delibere : si l'user a joue sur 2 tenants, on doit nettoyer les
+  // deux). Pas de filtre tenant_id.
   await supabaseAdmin.from('team_members').delete().eq('user_id', userId);
 
-  // Remove demandes
+  // Remove demandes — meme logique, cross-tenant.
   await supabaseAdmin.from('demandes').delete().eq('user_id', userId);
 
   // Send account deleted email (non-blocking)

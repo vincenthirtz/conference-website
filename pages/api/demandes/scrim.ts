@@ -12,6 +12,7 @@ import {
   getManagedTeam,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
+import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 export type ScrimRequestBody = {
@@ -29,12 +30,14 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
+  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: userId });
 
   if (req.method === 'GET') {
     const { data: demandes, error: demandesErr } = await supabaseAdmin
       .from('demandes')
       .select('*, team:teams!team_id(id, name, short_name, logo_url)')
       .eq('user_id', userId)
+      .eq('tenant_id', tenantId)
       .eq('type', 'scrim')
       .order('created_at', { ascending: false });
 
@@ -65,7 +68,7 @@ export default withAuthRoute(async function handler(
     const message = rawMessage?.slice(0, 1000) || null;
 
     // Verifier que l'user est capitaine ou manager d'une equipe active
-    const access = await getManagedTeam(userId);
+    const access = await getManagedTeam(userId, tenantId);
     if (!access) {
       return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
     }
@@ -74,6 +77,7 @@ export default withAuthRoute(async function handler(
       .from('teams')
       .select('id, name')
       .eq('id', access.teamId)
+      .eq('tenant_id', tenantId)
       .maybeSingle();
 
     if (!myTeam) {
@@ -93,6 +97,7 @@ export default withAuthRoute(async function handler(
       .select('id, name')
       .eq('id', teamId)
       .eq('is_active', true)
+      .eq('tenant_id', tenantId)
       .maybeSingle();
 
     if (teamErr || !targetTeam) {
@@ -104,6 +109,7 @@ export default withAuthRoute(async function handler(
       .from('demandes')
       .select('id')
       .eq('user_id', userId)
+      .eq('tenant_id', tenantId)
       .eq('type', 'scrim')
       .eq('team_id', teamId)
       .eq('status', 'pending')
@@ -152,6 +158,7 @@ export default withAuthRoute(async function handler(
         comment: message,
         source: 'website',
         payload,
+        tenant_id: tenantId,
       })
       .select('*')
       .single();

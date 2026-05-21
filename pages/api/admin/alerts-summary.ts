@@ -4,7 +4,10 @@
 // pour signaler "où ça brûle" sans charger tout le dashboard.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { withStaffRoute } from '@/utils/staff';
+import {
+  withStaffRoute,
+  type AuthenticatedStaffContext,
+} from '@/utils/staff';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { resolveCurrentTournamentId } from '@/utils/currentTournament';
@@ -18,7 +21,11 @@ type ApiResponse = AlertsSummary | { error: string };
 
 export default withStaffRoute(handler, 'caster');
 
-async function handler(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<ApiResponse>,
+  ctx: AuthenticatedStaffContext
+) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -52,7 +59,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
     return res.status(200).json(computeAlertsSummary(null));
   }
 
-  const result = await fetchDashboardData(tournamentId);
+  const result = await fetchDashboardData(tournamentId, ctx.tenantId);
   if (!result.ok) {
     return res.status(result.status).json({ error: result.error });
   }

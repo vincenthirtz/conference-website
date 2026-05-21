@@ -5,9 +5,6 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import { logStaffAction } from '@/utils/staffLogs';
-// TODO(S5b): remplacer par ctx.tenantId resolu depuis la staff session
-// multi-tenant (cette route est wrappee dans withStaffRoute).
-import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
 import { logger } from '../../../../utils/logger';
 export default withStaffRoute(handler, 'manager');
@@ -54,7 +51,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
   try {
     switch (req.method) {
       case 'GET':
-        return await handleGet(matchId, res);
+        return await handleGet(matchId, res, ctx);
       case 'POST':
         return await handlePost(matchId, req, res, ctx);
       case 'PUT':
@@ -77,11 +74,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse, ctx: Authentic
  * GET : liste des games d'un match
  * ---------------------------------------------------------*/
 
-async function handleGet(matchId: string, res: NextApiResponse) {
+async function handleGet(
+  matchId: string,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   const { data, error } = await supabaseAdmin
     .from('games')
     .select('*')
     .eq('match_id', matchId)
+    .eq('tenant_id', ctx.tenantId)
     .order('map_order', { ascending: true });
 
   if (error) {
@@ -117,6 +119,7 @@ async function handlePost(
     duration_minutes: body.duration_minutes ?? null,
     is_tiebreaker: body.is_tiebreaker ?? false,
     went_overtime: body.went_overtime ?? false,
+    tenant_id: ctx.tenantId,
   };
 
   const { data, error } = await supabaseAdmin
@@ -138,6 +141,7 @@ async function handlePost(
       entity_type: 'game',
       entity_id: data.id,
       tournament_id: null,
+      tenant_id: ctx.tenantId,
       payload: {
         match_id: matchId,
         created: true,
@@ -174,7 +178,8 @@ async function handlePut(
   const { error: delErr } = await supabaseAdmin
     .from('games')
     .delete()
-    .eq('match_id', matchId);
+    .eq('match_id', matchId)
+    .eq('tenant_id', ctx.tenantId);
 
   if (delErr) {
     logger.error('DELETE existing games error:', delErr);
@@ -194,6 +199,7 @@ async function handlePut(
     duration_minutes: g.duration_minutes ?? null,
     is_tiebreaker: g.is_tiebreaker ?? false,
     went_overtime: g.went_overtime ?? false,
+    tenant_id: ctx.tenantId,
   }));
 
   let newGames: GameRow[] = [];
@@ -223,6 +229,7 @@ async function handlePut(
       .from('matches')
       .select('team1_id, team2_id')
       .eq('id', matchId)
+      .eq('tenant_id', ctx.tenantId)
       .maybeSingle();
 
     const team1Id = matchRow?.team1_id ?? null;
@@ -254,16 +261,15 @@ async function handlePut(
         await supabaseAdmin
           .from('games')
           .update({ winner_team_id: u.winner_team_id })
-          .eq('id', u.id);
+          .eq('id', u.id)
+          .eq('tenant_id', ctx.tenantId);
       }
     }
 
     const total = computeMapWinsFromGames(newGames, team1Id, team2Id);
     try {
       recomputeResult = await applyMatchScore({
-        // TODO(S5b): remplacer DEFAULT_TENANT_ID par ctx.tenantId une fois
-        // la staff session multi-tenant en place.
-        tenantId: DEFAULT_TENANT_ID,
+        tenantId: ctx.tenantId,
         matchId,
         team1Score: total.team1,
         team2Score: total.team2,
@@ -285,6 +291,7 @@ async function handlePut(
       entity_type: 'game',
       entity_id: null,
       tournament_id: null,
+      tenant_id: ctx.tenantId,
       payload: {
         match_id: matchId,
         replaced_all_games: true,
@@ -308,7 +315,8 @@ async function handleDelete(matchId: string, res: NextApiResponse, ctx: Authenti
   const { error } = await supabaseAdmin
     .from('games')
     .delete()
-    .eq('match_id', matchId);
+    .eq('match_id', matchId)
+    .eq('tenant_id', ctx.tenantId);
 
   if (error) {
     logger.error('DELETE games error:', error);
@@ -324,6 +332,7 @@ async function handleDelete(matchId: string, res: NextApiResponse, ctx: Authenti
       entity_type: 'game',
       entity_id: null,
       tournament_id: null,
+      tenant_id: ctx.tenantId,
       payload: {
         match_id: matchId,
         deleted_all_games: true,

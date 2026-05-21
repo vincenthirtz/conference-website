@@ -6,6 +6,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { withAuthRoute } from '@/utils/staff';
+import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
@@ -24,6 +25,7 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
+  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: userId });
   const { demandeId } = req.body || {};
 
   if (!demandeId || typeof demandeId !== 'string' || !isValidUUID(demandeId)) {
@@ -35,6 +37,7 @@ export default withAuthRoute(async function handler(
     .from('demandes')
     .select('id, user_id, status')
     .eq('id', demandeId)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
 
   if (fetchErr || !demande) {
@@ -57,7 +60,8 @@ export default withAuthRoute(async function handler(
   const { error: updateErr } = await supabaseAdmin
     .from('demandes')
     .update({ status: 'cancelled', updated_at: new Date().toISOString() })
-    .eq('id', demandeId);
+    .eq('id', demandeId)
+    .eq('tenant_id', tenantId);
 
   if (updateErr) {
     logger.error('[demandes/cancel] update error:', updateErr);

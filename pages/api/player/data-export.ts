@@ -5,6 +5,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
+import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
@@ -22,6 +23,7 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
+  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: userId });
 
   // Collect all user data in parallel
   const [teamMembership, demandes, staffEntry] = await Promise.all([
@@ -29,13 +31,15 @@ export default withAuthRoute(async function handler(
     supabaseAdmin
       .from('team_members')
       .select('id, role, joined_at, team:teams(id, name, short_name)')
-      .eq('user_id', userId),
+      .eq('user_id', userId)
+      .eq('tenant_id', tenantId),
 
     // All demandes (requests)
     supabaseAdmin
       .from('demandes')
       .select('*')
       .eq('user_id', userId)
+      .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false }),
 
     // Staff entry if any

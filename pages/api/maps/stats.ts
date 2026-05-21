@@ -11,6 +11,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import type { MatchStatus } from '@/types/admin';
 import { parsePagination, isValidUUID } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 /* -----------------------------------------------------------
@@ -120,6 +121,8 @@ export default async function handler(
   );
 
   try {
+    const tenantId = resolveTenantIdForPublicRequest(req);
+
     // 1) Récupérer les matches du tournoi (hors annulés, hors BYE)
     const { data: matchesData, error: mErr } = await supabaseAdmin
       .from('matches')
@@ -127,6 +130,7 @@ export default async function handler(
         'id, tournament_id, status, is_bye, team1_id, team2_id, winner_team_id'
       )
       .eq('tournament_id', tournamentId)
+      .eq('tenant_id', tenantId)
       .neq('status', 'cancelled');
 
     if (mErr) {
@@ -159,6 +163,7 @@ export default async function handler(
       .select(
         'match_id, map_name, team1_score, team2_score, winner_team_id, duration_minutes, is_tiebreaker, went_overtime'
       )
+      .eq('tenant_id', tenantId)
       .in('match_id', matchIds);
 
     if (gErr) {
@@ -175,6 +180,7 @@ export default async function handler(
     const { data: vetoData, error: vErr } = await supabaseAdmin
       .from('match_map_vetos')
       .select('match_id, action, team_id, map_name')
+      .eq('tenant_id', tenantId)
       .in('match_id', matchIds);
 
     if (!vErr && vetoData) {
@@ -196,6 +202,7 @@ export default async function handler(
       const { data: teamsData } = await supabaseAdmin
         .from('teams')
         .select('id, name')
+        .eq('tenant_id', tenantId)
         .in('id', Array.from(teamIdSet));
       for (const t of teamsData || []) {
         teamNames.set(t.id, t.name);
@@ -249,6 +256,7 @@ export default async function handler(
         .from('tournament_maps')
         .select('map_name')
         .eq('tournament_id', tournamentId)
+        .eq('tenant_id', tenantId)
         .eq('enabled', true);
 
       if (poolData) {

@@ -10,6 +10,7 @@ import { applyRateLimit, getClientIp } from '@/utils/rateLimit';
 import { verifyCaptcha } from '@/utils/captcha';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { notifyScrimRequest } from '@/utils/discord';
+import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 type Body = {
@@ -52,6 +53,7 @@ export default async function handler(
   }
 
   const body = (req.body || {}) as Body;
+  const tenantId = resolveTenantIdForPublicRequest(req);
 
   // Honeypot and captcha first: cheap rejections for obvious bots, and we
   // don't want failed-validation noise to consume the per-IP rate-limit
@@ -117,6 +119,7 @@ export default async function handler(
       .select('id, name')
       .eq('id', teamId)
       .eq('is_active', true)
+      .eq('tenant_id', tenantId)
       .maybeSingle();
     target = data ?? null;
   }
@@ -128,6 +131,7 @@ export default async function handler(
         .select('id, name')
         .eq('id', slug)
         .eq('is_active', true)
+        .eq('tenant_id', tenantId)
         .maybeSingle();
       target = data ?? null;
     }
@@ -137,6 +141,7 @@ export default async function handler(
         .select('id, name')
         .ilike('name', slug)
         .eq('is_active', true)
+        .eq('tenant_id', tenantId)
         .maybeSingle();
       target = data ?? null;
     }
@@ -146,6 +151,7 @@ export default async function handler(
         .select('id, name')
         .ilike('short_name', slug)
         .eq('is_active', true)
+        .eq('tenant_id', tenantId)
         .maybeSingle();
       target = data ?? null;
     }
@@ -177,6 +183,7 @@ export default async function handler(
     .from('demandes')
     .select('id')
     .eq('team_id', target.id)
+    .eq('tenant_id', tenantId)
     .eq('type', 'scrim')
     .eq('status', 'pending')
     .gte('created_at', cutoff)
@@ -235,6 +242,7 @@ export default async function handler(
       comment: message || null,
       source: 'public',
       payload,
+      tenant_id: tenantId,
     })
     .select('id')
     .single();

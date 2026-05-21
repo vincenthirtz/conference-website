@@ -7,6 +7,7 @@
 
 import { supabaseAdmin } from '../supabase';
 import { isValidUUID } from '../apiHelpers';
+import { DEFAULT_TENANT_ID } from '../tenant';
 
 import { logger } from '../logger';
 /* -----------------------------------------------------------
@@ -291,9 +292,14 @@ const STAFF_ACTION_LABEL: Record<string, string> = {
  * Construit le payload complet du dashboard pour un tournoi.
  * Renvoie un résultat typé avec un statut HTTP recommandé en cas d'erreur,
  * pour permettre aux callers (route API ou SSR) de propager l'état.
+ *
+ * **Multi-tenant (S5c)** : `tenantId` est optionnel par compat ; en V1 mono-tenant,
+ * les callers passent `ctx.tenantId` (admin) ou `DEFAULT_TENANT_ID` (SSR). Toutes
+ * les sous-queries scopent par tenant pour eviter une fuite de donnees entre tenants.
  */
 export async function fetchDashboardData(
-  tournamentId: string
+  tournamentId: string,
+  tenantId: string = DEFAULT_TENANT_ID
 ): Promise<DashboardResult> {
   if (!tournamentId || !isValidUUID(tournamentId)) {
     return { ok: false, status: 400, error: 'Invalid tournament id' };
@@ -315,6 +321,7 @@ export async function fetchDashboardData(
         'id, name, status, start_date, end_date, timezone, format, min_players, roster_locked_at'
       )
       .eq('id', tournamentId)
+      .eq('tenant_id', tenantId)
       .maybeSingle();
 
     if (tErr || !tournament) {
@@ -326,6 +333,7 @@ export async function fetchDashboardData(
       .from('tournament_stages')
       .select('id, name, stage_type, order_index, is_active')
       .eq('tournament_id', tournamentId)
+      .eq('tenant_id', tenantId)
       .order('order_index', { ascending: true });
 
     const stages = stagesData || [];
@@ -341,7 +349,8 @@ export async function fetchDashboardData(
          team1_checked_in_at, team2_checked_in_at, forfeit_processed_at,
          completed_at`
       )
-      .eq('tournament_id', tournamentId);
+      .eq('tournament_id', tournamentId)
+      .eq('tenant_id', tenantId);
 
     const matches = matchesData || [];
 
@@ -349,7 +358,8 @@ export async function fetchDashboardData(
     const { data: tournamentTeamsData } = await supabaseAdmin
       .from('tournament_teams')
       .select('team_id, status')
-      .eq('tournament_id', tournamentId);
+      .eq('tournament_id', tournamentId)
+      .eq('tenant_id', tenantId);
 
     const tournamentTeams = tournamentTeamsData || [];
 
@@ -360,6 +370,7 @@ export async function fetchDashboardData(
       const { data: stageTeamsData } = await supabaseAdmin
         .from('stage_teams')
         .select('stage_id')
+        .eq('tenant_id', tenantId)
         .in('stage_id', stageIds);
       for (const row of stageTeamsData || []) {
         stageTeamCounts.set(
@@ -468,6 +479,7 @@ export async function fetchDashboardData(
       const { data: teamsData } = await supabaseAdmin
         .from('teams')
         .select('id, name')
+        .eq('tenant_id', tenantId)
         .in('id', Array.from(teamIds));
       for (const t of teamsData || []) teamNameMap.set(t.id, t.name);
     }
@@ -554,6 +566,7 @@ export async function fetchDashboardData(
         .from('tournament_teams')
         .select('id', { count: 'exact', head: true })
         .eq('tournament_id', tournamentId)
+        .eq('tenant_id', tenantId)
         .eq('status', 'pending'),
       supabaseAdmin
         .from('support_tickets')
@@ -564,12 +577,14 @@ export async function fetchDashboardData(
       supabaseAdmin
         .from('match_mvp_polls')
         .select('match_id, matches!inner(tournament_id)')
+        .eq('tenant_id', tenantId)
         .is('winner_member_id', null)
         .eq('matches.tournament_id', tournamentId),
       tournament.min_players && tournament.roster_locked_at
         ? supabaseAdmin
             .from('team_members')
             .select('team_id, tournament_teams!inner(tournament_id)')
+            .eq('tenant_id', tenantId)
             .eq('tournament_teams.tournament_id', tournamentId)
         : Promise.resolve({ data: null }),
       // Recent staff activity for this tournament (last 10 entries)
@@ -582,9 +597,11 @@ export async function fetchDashboardData(
           `
         )
         .eq('tournament_id', tournamentId)
+        .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false })
         .limit(10),
-      // Tickets ouverts pour le donut (catégorie + sévérité)
+      // Tickets ouverts pour le donut (catégorie + sévérité) — support_tickets
+      // n'a pas de tenant_id (table globale).
       supabaseAdmin
         .from('support_tickets')
         .select('category, severity')
@@ -596,6 +613,7 @@ export async function fetchDashboardData(
       supabaseAdmin
         .from('discord_webhooks')
         .select('*')
+        .eq('tenant_id', tenantId)
         .or(`tournament_id.eq.${tournamentId},tournament_id.is.null`),
       // Heartbeat du cron checkin (clé site_settings : last_cron_checkin_at)
       supabaseAdmin
@@ -628,6 +646,7 @@ export async function fetchDashboardData(
       const { data: vetoSteps } = await supabaseAdmin
         .from('match_map_vetos')
         .select('match_id, action, map_name, map_type, step_number')
+        .eq('tenant_id', tenantId)
         .in('match_id', liveIds)
         .in('action', ['pick', 'decider'])
         .order('step_number', { ascending: true });
@@ -743,6 +762,7 @@ export async function fetchDashboardData(
       const { data: extraTeams } = await supabaseAdmin
         .from('teams')
         .select('id, name')
+        .eq('tenant_id', tenantId)
         .in('id', missingConflictTeamIds);
       const extraMap = new Map<string, string>();
       for (const t of extraTeams || []) extraMap.set(t.id, t.name);
@@ -799,6 +819,7 @@ export async function fetchDashboardData(
       const { data: stageSettings } = await supabaseAdmin
         .from('tournament_stages')
         .select('id, name, settings')
+        .eq('tenant_id', tenantId)
         .in('id', candidateStageIds);
       for (const s of stageSettings || []) {
         const rules = (s as any).settings?.advancement_rules;

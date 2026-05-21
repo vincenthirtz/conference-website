@@ -9,6 +9,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import type { MatchStatus } from '@/types/admin';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 
 import { logger } from '../../../../utils/logger';
 /* -----------------------------------------------------------
@@ -92,11 +93,14 @@ export default async function handler(
   }
 
   try {
+    const tenantId = resolveTenantIdForPublicRequest(req);
+
     // 1) Vérifier que l'équipe existe
     const { data: team, error: tErr } = await supabaseAdmin
       .from('teams')
       .select('id, name, short_name, logo_url, country')
       .eq('id', id)
+      .eq('tenant_id', tenantId)
       .maybeSingle();
 
     if (tErr || !team) {
@@ -126,6 +130,7 @@ export default async function handler(
       .from('matches')
       .select('id, status, is_bye, team1_id, team2_id, winner_team_id')
       .or(`team1_id.eq.${id},team2_id.eq.${id}`)
+      .eq('tenant_id', tenantId)
       .neq('status', 'cancelled');
 
     if (mErr) {
@@ -146,6 +151,7 @@ export default async function handler(
         .select(
           'match_id, map_name, team1_score, team2_score, winner_team_id, duration_minutes, is_tiebreaker, went_overtime'
         )
+        .eq('tenant_id', tenantId)
         .in('match_id', matchIds);
 
       if (gErr) {

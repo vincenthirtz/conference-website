@@ -7,6 +7,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
+import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 export type JoinRequestBody = {
@@ -24,6 +25,7 @@ export default withAuthRoute(async function handler(
     return;
 
   const userId = user.id;
+  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: userId });
 
   if (req.method === 'GET') {
     // Recuperer les demandes de type "join" de l'utilisateur
@@ -31,6 +33,7 @@ export default withAuthRoute(async function handler(
       .from('demandes')
       .select('*, team:teams!team_id(id, name, short_name, logo_url)')
       .eq('user_id', userId)
+      .eq('tenant_id', tenantId)
       .eq('type', 'join')
       .order('created_at', { ascending: false });
 
@@ -66,6 +69,7 @@ export default withAuthRoute(async function handler(
       .select('id, name, is_joinable')
       .eq('id', teamId)
       .eq('is_active', true)
+      .eq('tenant_id', tenantId)
       .maybeSingle();
 
     if (teamErr || !teamData) {
@@ -85,6 +89,7 @@ export default withAuthRoute(async function handler(
       .from('team_members')
       .select('id, team_id')
       .eq('user_id', userId)
+      .eq('tenant_id', tenantId)
       .maybeSingle();
 
     if (memberErr) {
@@ -103,6 +108,7 @@ export default withAuthRoute(async function handler(
       .from('demandes')
       .select('id, status, team_id')
       .eq('user_id', userId)
+      .eq('tenant_id', tenantId)
       .eq('type', 'join')
       .eq('status', 'pending')
       .maybeSingle();
@@ -158,6 +164,7 @@ export default withAuthRoute(async function handler(
         comment: message,
         source: 'website',
         payload,
+        tenant_id: tenantId,
       })
       .select('*')
       .single();

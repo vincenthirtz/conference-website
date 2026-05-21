@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin, getServerClient } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { verifyCaptcha } from '@/utils/captcha';
+import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 type Comment = {
@@ -48,10 +49,13 @@ async function listComments(
     return res.status(500).json({ error: 'Supabase client unavailable' });
   }
 
+  const tenantId = resolveTenantIdForPublicRequest(req);
+
   const { data, error } = await client
     .from('news_comments')
     .select('id, news_id, author_name, content, created_at')
     .eq('news_id', newsId)
+    .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
     .limit(limit);
 
@@ -125,12 +129,15 @@ async function createComment(
       .json({ error: 'author name must be at most 50 characters' });
   }
 
+  const tenantId = resolveTenantIdForPublicRequest(req);
+
   const { data, error } = await client
     .from('news_comments')
     .insert({
       news_id: trimmedNewsId,
       content: trimmedContent,
       author_name: trimmedAuthor,
+      tenant_id: tenantId,
     })
     .select('id, news_id, author_name, content, created_at')
     .maybeSingle();

@@ -6,6 +6,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { parsePagination } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 export type PublicTournament = {
@@ -41,6 +42,7 @@ export default async function handler(
   }
 
   try {
+    const tenantId = resolveTenantIdForPublicRequest(req);
     const { status, id } = req.query;
 
     const { limit: limitNum, offset: offsetNum } = parsePagination(req, {
@@ -65,7 +67,8 @@ export default async function handler(
 
     let query = supabaseAdmin
       .from('tournaments')
-      .select(selectColumns, { count: 'exact' });
+      .select(selectColumns, { count: 'exact' })
+      .eq('tenant_id', tenantId);
 
     // When fetching a specific tournament by ID, skip status filter
     if (id && typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id)) {
@@ -102,6 +105,7 @@ export default async function handler(
       const { data: teamCounts } = await supabaseAdmin
         .from('tournament_teams')
         .select('tournament_id')
+        .eq('tenant_id', tenantId)
         .in('tournament_id', tournamentIds);
       if (teamCounts) {
         for (const row of teamCounts) {
