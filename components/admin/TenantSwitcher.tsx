@@ -8,8 +8,11 @@
 // Behaviours :
 //  - 0 tenants : nothing rendered (degenerate state, shouldn't happen for
 //    real staff but stays safe).
-//  - 1 tenant  : passive badge with the tenant slug/name, no dropdown.
+//  - 1 tenant  : passive label with the tenant name only, no dropdown.
 //  - 2+        : button + dropdown panel matching the AdminTopBar style.
+//    Slug badges are shown only inside the dropdown options (visual aid
+//    to distinguish tenants when several share similar names) — never
+//    in the TopBar bar itself, where the name suffices.
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
@@ -139,7 +142,6 @@ export default function TenantSwitcher() {
         className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg bg-white/5 px-2 py-1"
         title={`Tenant : ${only.name}`}
       >
-        <TenantBadge tenant={only} />
         <span className="text-[12px] font-medium text-neutral-200">
           {only.name}
         </span>
@@ -193,7 +195,6 @@ export default function TenantSwitcher() {
         aria-expanded={open}
         data-testid="tenant-switcher-button"
       >
-        <TenantBadge tenant={current} />
         <span className="max-w-[160px] truncate text-neutral-100">
           {current.name}
         </span>
