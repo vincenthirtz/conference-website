@@ -143,6 +143,8 @@ export default function LiveEventBanner() {
     <section
       className="rounded-2xl border border-red-500/40 bg-gradient-to-br from-red-950/40 via-purple-950/30 to-black p-4 sm:p-5 mb-6"
       aria-label="Event en direct"
+      data-testid="live-event-banner"
+      data-run-id={run.id}
     >
       <div className="flex items-center gap-2 mb-2 flex-wrap">
         <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-500/80 text-white font-semibold animate-pulse">

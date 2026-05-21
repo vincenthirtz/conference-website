@@ -106,6 +106,7 @@ export default function AddSegmentModal({ onClose, onSubmit }: Props) {
         ref={ref}
         className="w-full max-w-md bg-neutral-900 border border-neutral-700/60 rounded-2xl shadow-xl"
         onClick={(e) => e.stopPropagation()}
+        data-testid="add-segment-modal"
       >
         <div className="px-6 py-4 border-b border-neutral-700/60">
           <h2 id="add-segment-title" className="text-lg font-semibold">
@@ -121,6 +122,7 @@ export default function AddSegmentModal({ onClose, onSubmit }: Props) {
             <select
               value={type}
               onChange={(e) => setType(e.target.value as EventSegmentType)}
+              data-testid="add-segment-type"
               className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white focus:outline-none focus:border-purple-500"
             >
               {TYPE_OPTIONS.map((t) => (
@@ -138,6 +140,7 @@ export default function AddSegmentModal({ onClose, onSubmit }: Props) {
               autoFocus
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              data-testid="add-segment-title-input"
               placeholder={
                 type === 'match'
                   ? 'Quart 1 : Team A vs Team B'
@@ -155,6 +158,7 @@ export default function AddSegmentModal({ onClose, onSubmit }: Props) {
               <input
                 value={matchId}
                 onChange={(e) => setMatchId(e.target.value)}
+                data-testid="add-segment-match-id"
                 placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
                 className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white placeholder:text-neutral-500 font-mono text-xs focus:outline-none focus:border-purple-500"
               />
@@ -174,6 +178,7 @@ export default function AddSegmentModal({ onClose, onSubmit }: Props) {
               step={1}
               value={durationMin}
               onChange={(e) => setDurationMin(e.target.value)}
+              data-testid="add-segment-duration"
               placeholder="ex: 30"
               className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white placeholder:text-neutral-500 focus:outline-none focus:border-purple-500"
             />
@@ -195,6 +200,7 @@ export default function AddSegmentModal({ onClose, onSubmit }: Props) {
             <button
               type="submit"
               disabled={submitting}
+              data-testid="add-segment-submit"
               className="px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
             >
               {submitting ? 'Ajout…' : 'Ajouter'}

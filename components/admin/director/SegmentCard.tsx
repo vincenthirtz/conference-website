@@ -76,6 +76,10 @@ export default function SegmentCard({
       onClick={onSelect}
       role="button"
       tabIndex={0}
+      data-testid={`segment-card-${segment.id}`}
+      data-segment-type={segment.type}
+      data-segment-status={segment.status}
+      data-segment-ord={segment.ord}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
@@ -163,6 +167,7 @@ export default function SegmentCard({
                 onClick={onStart}
                 disabled={busy}
                 title="Demarrer ce segment"
+                data-testid={`segment-start-${segment.id}`}
                 className="px-2 py-1 rounded-md text-xs bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 border border-emerald-500/40 disabled:opacity-50"
               >
                 Demarrer
@@ -172,6 +177,7 @@ export default function SegmentCard({
                 onClick={onSkip}
                 disabled={busy}
                 title="Passer ce segment"
+                data-testid={`segment-skip-${segment.id}`}
                 className="px-2 py-1 rounded-md text-xs bg-amber-600/30 hover:bg-amber-600/50 text-amber-200 border border-amber-500/40 disabled:opacity-50"
               >
                 Skip
@@ -184,6 +190,7 @@ export default function SegmentCard({
               onClick={onEnd}
               disabled={busy}
               title="Terminer ce segment"
+              data-testid={`segment-end-${segment.id}`}
               className="px-2 py-1 rounded-md text-xs bg-red-600/30 hover:bg-red-600/50 text-red-200 border border-red-500/40 disabled:opacity-50"
             >
               Terminer
@@ -194,6 +201,7 @@ export default function SegmentCard({
             onClick={onDelete}
             disabled={busy}
             title="Supprimer ce segment"
+            data-testid={`segment-delete-${segment.id}`}
             className="px-2 py-1 rounded-md text-xs bg-neutral-700/50 hover:bg-red-700/40 text-neutral-300 hover:text-red-200 border border-neutral-600/40 disabled:opacity-50"
           >
             ×

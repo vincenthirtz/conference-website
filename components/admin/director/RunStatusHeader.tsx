@@ -96,12 +96,17 @@ export default function RunStatusHeader({
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div
+          className="flex items-center gap-2"
+          data-testid="run-status-header-actions"
+          data-run-status={run.status}
+        >
           {run.status === 'draft' && (
             <button
               type="button"
               onClick={onStartRun}
               disabled={busy}
+              data-testid="run-start"
               className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-sm font-medium"
             >
               Demarrer le run
@@ -112,13 +117,17 @@ export default function RunStatusHeader({
               type="button"
               onClick={onEndRun}
               disabled={busy}
+              data-testid="run-end"
               className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-50 text-sm font-medium"
             >
               Terminer le run
             </button>
           )}
           {run.status === 'done' && (
-            <span className="px-4 py-2 rounded-lg bg-neutral-800 text-sm text-neutral-400 border border-neutral-700">
+            <span
+              className="px-4 py-2 rounded-lg bg-neutral-800 text-sm text-neutral-400 border border-neutral-700"
+              data-testid="run-done-label"
+            >
               Run termine
             </span>
           )}

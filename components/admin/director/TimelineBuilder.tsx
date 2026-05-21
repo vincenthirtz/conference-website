@@ -105,6 +105,7 @@ export default function TimelineBuilder({
               <button
                 type="button"
                 onClick={onAddClick}
+                data-testid="timeline-add-empty"
                 className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium"
               >
                 Ajouter un segment
@@ -113,7 +114,7 @@ export default function TimelineBuilder({
           />
         </div>
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-2" data-testid="timeline-list">
           {localSegments.map((seg, idx) => (
             <li key={seg.id}>
               <SegmentCard
@@ -142,6 +143,7 @@ export default function TimelineBuilder({
         <button
           type="button"
           onClick={onAddClick}
+          data-testid="timeline-add"
           className="w-full px-4 py-3 rounded-xl border border-dashed border-neutral-700 hover:border-neutral-600 text-sm text-neutral-400 hover:text-white transition-colors"
         >
           + Ajouter un segment

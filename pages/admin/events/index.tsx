@@ -154,6 +154,7 @@ function AdminEventsIndexPage(_props: StaffProps) {
             <button
               type="button"
               onClick={() => setCreateOpen(true)}
+              data-testid="events-new"
               className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors"
             >
               + Nouvel event
@@ -235,6 +236,9 @@ function AdminEventsIndexPage(_props: StaffProps) {
                   {items.map((r) => (
                     <tr
                       key={r.id}
+                      data-testid={`event-row-${r.id}`}
+                      data-event-status={r.status}
+                      data-event-slug={r.slug}
                       className="border-b border-neutral-700/30 last:border-0 hover:bg-neutral-800/40"
                     >
                       <td className="px-4 py-3">
@@ -397,6 +401,7 @@ function CreateRunModal({ onClose, onCreated }: CreateRunModalProps) {
         ref={ref}
         className="w-full max-w-lg bg-neutral-900 border border-neutral-700/60 rounded-2xl shadow-xl"
         onClick={(e) => e.stopPropagation()}
+        data-testid="create-run-modal"
       >
         <div className="px-6 py-4 border-b border-neutral-700/60">
           <h2 id="create-run-title" className="text-lg font-semibold">
@@ -415,6 +420,7 @@ function CreateRunModal({ onClose, onCreated }: CreateRunModalProps) {
               autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
+              data-testid="create-run-name"
               placeholder="Conference du 21 mai"
               className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white placeholder:text-neutral-500 focus:outline-none focus:border-purple-500"
               required
@@ -428,6 +434,7 @@ function CreateRunModal({ onClose, onCreated }: CreateRunModalProps) {
                 setSlug(e.target.value);
                 setSlugDirty(true);
               }}
+              data-testid="create-run-slug"
               placeholder="conference-21-mai"
               className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white placeholder:text-neutral-500 focus:outline-none focus:border-purple-500 font-mono text-sm"
             />
@@ -443,6 +450,7 @@ function CreateRunModal({ onClose, onCreated }: CreateRunModalProps) {
               type="datetime-local"
               value={scheduledAt}
               onChange={(e) => setScheduledAt(e.target.value)}
+              data-testid="create-run-scheduled"
               className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white focus:outline-none focus:border-purple-500"
               required
             />
@@ -455,6 +463,7 @@ function CreateRunModal({ onClose, onCreated }: CreateRunModalProps) {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
+              data-testid="create-run-description"
               placeholder="Note optionnelle visible uniquement par le staff."
               className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white placeholder:text-neutral-500 focus:outline-none focus:border-purple-500"
             />
@@ -476,6 +485,7 @@ function CreateRunModal({ onClose, onCreated }: CreateRunModalProps) {
             <button
               type="submit"
               disabled={submitting}
+              data-testid="create-run-submit"
               className="px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
             >
               {submitting ? 'Creation…' : 'Creer'}
