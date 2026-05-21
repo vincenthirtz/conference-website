@@ -19,7 +19,18 @@
 // here.
 
 import type { NextApiRequest } from 'next';
+import type { IncomingMessage } from 'http';
 import { logger } from './logger';
+
+/**
+ * Minimal "request-like" shape that both Next API routes (`NextApiRequest`)
+ * and `getServerSideProps` (`IncomingMessage`) satisfy. Used by the public /
+ * user-level resolvers below since they only inspect `req.headers`.
+ */
+type RequestLike =
+  | NextApiRequest
+  | IncomingMessage
+  | { headers: Record<string, string | string[] | undefined> };
 
 /**
  * Default tenant UUID — the "conference" tenant, hardcoded as a safety net
@@ -105,10 +116,14 @@ export function resolveTenantId(req: NextApiRequest): string {
  * Résout le tenant pour une requête publique (anon, pas de session). En V1
  * tout est servi pour le tenant `DEFAULT_TENANT_ID`. Voir le commentaire de
  * tête pour la roadmap S7.
+ *
+ * Accepte aussi bien un `NextApiRequest` (handlers `/pages/api/*`) qu'un
+ * `IncomingMessage` (le `req` exposé par `getServerSideProps`), ce qui permet
+ * d'utiliser le même resolver dans les pages SSR publiques.
  */
 export function resolveTenantIdForPublicRequest(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _req: NextApiRequest
+  _req: RequestLike
 ): string {
   // TODO(S7) : résoudre depuis URL prefix ou subdomain.
   return DEFAULT_TENANT_ID;
@@ -118,10 +133,13 @@ export function resolveTenantIdForPublicRequest(
  * Résout le tenant pour une requête user-level (capitaine/manager, session
  * Supabase active). En V1 mono-tenant, default `DEFAULT_TENANT_ID`. À terme,
  * on lira d'abord la team gérée par le user, puis fallback URL.
+ *
+ * Comme `resolveTenantIdForPublicRequest`, accepte n'importe quel `req`
+ * exposant `headers` (NextApiRequest ou IncomingMessage SSR).
  */
 export function resolveTenantIdForUserRequest(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _req: NextApiRequest,
+  _req: RequestLike,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _userContext?: { authUserId?: string | null } | null
 ): string {

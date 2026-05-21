@@ -430,7 +430,7 @@ function AdminNewsPage({ news, total, errorMsg: ssrError }: Props) {
   );
 }
 
-export const getServerSideProps = withStaffPage('admin', async (ctx) => {
+export const getServerSideProps = withStaffPage('admin', async (ctx, staffCtx) => {
   const { query } = ctx;
   const search = sanitizeSearch(query.search);
   const status = typeof query.status === 'string' ? query.status : null;
@@ -440,11 +440,14 @@ export const getServerSideProps = withStaffPage('admin', async (ctx) => {
     return { news: [], total: 0, errorMsg: 'Service indisponible' };
   }
 
+  const { tenantId } = staffCtx;
+
   let q = supabaseAdmin
     .from('news')
     .select('id, title, slug, tag, status, published_at, created_at', {
       count: 'exact',
     })
+    .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
     .range(offset, offset + LIMIT - 1);
 

@@ -6,6 +6,7 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import { logger } from '../../../utils/logger';
 import { supabaseAdmin } from '@/utils/supabase'; // adapte le chemin si besoin
+import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 
 type Team = {
   id: string;
@@ -239,6 +240,8 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     return { notFound: true };
   }
 
+  const tenantId = resolveTenantIdForPublicRequest(ctx.req);
+
   // Look up by slug first; fall back to id (UUID) then name for legacy URLs.
   const isUuid =
     /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/.test(
@@ -251,6 +254,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   ({ data: team, error: teamError } = await supabaseAdmin
     .from('teams')
     .select<'*, id, slug, name, short_name, logo_url, country, description'>()
+    .eq('tenant_id', tenantId)
     .eq('slug', slug)
     .maybeSingle());
 
@@ -258,6 +262,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     ({ data: team, error: teamError } = await supabaseAdmin
       .from('teams')
       .select<'*, id, slug, name, short_name, logo_url, country, description'>()
+      .eq('tenant_id', tenantId)
       .eq('id', slug)
       .maybeSingle());
   }
@@ -266,6 +271,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     ({ data: team, error: teamError } = await supabaseAdmin
       .from('teams')
       .select<'*, id, slug, name, short_name, logo_url, country, description'>()
+      .eq('tenant_id', tenantId)
       .ilike('name', slug)
       .maybeSingle());
   }
@@ -276,6 +282,8 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   }
 
   // 2) Récupérer les stats de maps
+  // NB: `team_map_stats` est une vue agrégée non-tenant-scopée — l'isolation
+  // est implicite via team_id (chaque team appartient à un seul tenant).
   const { data: mapStats, error: mapsError } = await supabaseAdmin
     .from('team_map_stats')
     .select(

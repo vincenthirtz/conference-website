@@ -11,6 +11,7 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 
 type Tournament = {
@@ -89,10 +90,14 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     return { notFound: true, revalidate: 60 };
   if (!supabaseAdmin) return { notFound: true, revalidate: 60 };
 
+  // S5d: getStaticProps → DEFAULT_TENANT_ID (TODO(S7) — SSR/ISR per tenant).
+  const tenantId = DEFAULT_TENANT_ID;
+
   // Phase A : tournoi (UUID ou slug)
   const tournament = await findTournamentByIdOrSlug<Tournament>(
     id,
-    'id, name, slug, game, start_date, end_date, is_public'
+    'id, name, slug, game, start_date, end_date, is_public',
+    tenantId
   );
   if (!tournament || !tournament.is_public)
     return { notFound: true, revalidate: 60 };
@@ -105,17 +110,20 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       .select(
         'id, slug, name, short_name, logo_url, banner_url, country, description, twitter, discord, website, captain_id, is_active'
       )
+      .eq('tenant_id', tenantId)
       .eq('id', teamId)
       .maybeSingle(),
     supabaseAdmin
       .from('tournament_teams')
       .select('team_id')
+      .eq('tenant_id', tenantId)
       .eq('tournament_id', tournamentId)
       .eq('team_id', teamId)
       .maybeSingle(),
     supabaseAdmin
       .from('team_members')
       .select('id, battle_tag, role, is_substitute, user_id, created_at')
+      .eq('tenant_id', tenantId)
       .eq('team_id', teamId)
       .order('is_substitute', { ascending: true })
       .order('created_at', { ascending: true }),
@@ -128,6 +136,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       mvp:match_mvp_polls(winner_member_id)
       `
       )
+      .eq('tenant_id', tenantId)
       .eq('tournament_id', tournamentId)
       .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
       .neq('status', 'cancelled')
@@ -155,6 +164,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       ? await supabaseAdmin
           .from('teams')
           .select('id, name, short_name, logo_url')
+          .eq('tenant_id', tenantId)
           .in('id', Array.from(opponentIds))
       : { data: [] };
   const oppMap = new Map((opponentTeams || []).map((t: any) => [t.id, t]));

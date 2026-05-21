@@ -16,6 +16,7 @@ import HomeEvents from '@/components/Home/HomeEvents';
 import HomeIdahobitScrim from '@/components/Home/HomeIdahobitScrim';
 import HomeSponsors, { HomePartner } from '@/components/Home/HomeSponsors';
 import { supabaseAdmin } from '@/utils/supabase';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
 const HomeTwitchEmbed = dynamic(
   () => import('@/components/Home/HomeTwitchEmbed'),
@@ -41,13 +42,19 @@ function sanitizeAnnouncementUrl(url: string | null): string | null {
   }
 }
 
-async function loadUpcomingTournament(): Promise<UpcomingTournament | null> {
+// S5d: tenant id du build courant. `getStaticProps` n'a pas d'accès à la
+// requête, donc on est forcés sur DEFAULT_TENANT_ID. TODO(S7) — quand on
+// passera multi-tenant, ces pages basculeront en SSR (ou ISR par tenant).
+async function loadUpcomingTournament(
+  tenantId: string
+): Promise<UpcomingTournament | null> {
   if (!supabaseAdmin) return null;
   const { data, error } = await supabaseAdmin
     .from('tournaments')
     .select(
       'id, name, slug, short_name, status, format, start_date, end_date, max_teams'
     )
+    .eq('tenant_id', tenantId)
     .in('status', ['running', 'published'])
     .order('start_date', { ascending: true, nullsFirst: false });
   if (error || !data?.length) return null;
@@ -64,6 +71,7 @@ async function loadUpcomingTournament(): Promise<UpcomingTournament | null> {
   const { count } = await supabaseAdmin
     .from('tournament_teams')
     .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId)
     .eq('tournament_id', picked.id);
 
   return {
@@ -81,6 +89,8 @@ async function loadUpcomingTournament(): Promise<UpcomingTournament | null> {
 }
 
 async function loadPartners(): Promise<HomePartner[]> {
+  // `partners` n'est pas une table tenant-scopée (global / cross-tenant) —
+  // on ne filtre pas par tenant_id ici (rappel S5d).
   if (!supabaseAdmin) return [];
   const { data, error } = await supabaseAdmin
     .from('partners')
@@ -106,6 +116,7 @@ async function loadPartners(): Promise<HomePartner[]> {
 }
 
 async function loadCountdownSetting(): Promise<string | null> {
+  // `site_settings` est une table globale (NOT tenant-scoped).
   if (!supabaseAdmin) return null;
   const { data } = await supabaseAdmin
     .from('site_settings')
@@ -123,6 +134,10 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
   let partners: HomePartner[] = [];
   let countdownTarget: string | null = null;
 
+  // S5d: pas de req → DEFAULT_TENANT_ID. TODO(S7) — switcher en SSR ou ISR
+  // par-tenant quand le multi-tenant sera actif.
+  const tenantId = DEFAULT_TENANT_ID;
+
   if (supabaseAdmin) {
     const nowISO = new Date().toISOString();
 
@@ -138,6 +153,7 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
         .select(
           'id, title, slug, tag, excerpt, content, image_url, published_at, created_at, updated_at, news_comments(count)'
         )
+        .eq('tenant_id', tenantId)
         .eq('status', 'published')
         .or(`published_at.lte.${nowISO},published_at.is.null`)
         .order('published_at', { ascending: false, nullsFirst: false })
@@ -145,11 +161,12 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
       supabaseAdmin
         .from('announcements')
         .select('id, title, message, cta_label, cta_url, priority, created_at')
+        .eq('tenant_id', tenantId)
         .eq('is_active', true)
         .order('priority', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false })
         .limit(6),
-      loadUpcomingTournament(),
+      loadUpcomingTournament(tenantId),
       loadPartners(),
       loadCountdownSetting(),
     ]);

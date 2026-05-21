@@ -7,6 +7,7 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 
 import { logger } from '../../../utils/logger';
@@ -95,8 +96,15 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     return { notFound: true, revalidate: 60 };
   }
 
+  // S5d: getStaticProps → DEFAULT_TENANT_ID (TODO(S7) — SSR/ISR per tenant).
+  const tenantId = DEFAULT_TENANT_ID;
+
   // 1) Tournoi (UUID ou slug)
-  const tournament = await findTournamentByIdOrSlug<Tournament>(id, '*');
+  const tournament = await findTournamentByIdOrSlug<Tournament>(
+    id,
+    '*',
+    tenantId
+  );
   if (!tournament) {
     return { notFound: true, revalidate: 60 };
   }
@@ -109,6 +117,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   const matchesRes = await supabaseAdmin
     .from('matches')
     .select('id, status, is_bye, team1_id, team2_id')
+    .eq('tenant_id', tenantId)
     .eq('tournament_id', tournamentId)
     .neq('status', 'cancelled');
 
@@ -137,15 +146,18 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
         .select(
           'match_id, map_name, team1_score, team2_score, is_tiebreaker, went_overtime'
         )
+        .eq('tenant_id', tenantId)
         .in('match_id', matchIds),
       supabaseAdmin
         .from('match_map_vetos')
         .select('match_id, action, team_id, map_name')
+        .eq('tenant_id', tenantId)
         .in('match_id', matchIds),
       teamIdSet.size > 0
         ? supabaseAdmin
             .from('teams')
             .select('id, name')
+            .eq('tenant_id', tenantId)
             .in('id', Array.from(teamIdSet))
         : Promise.resolve({ data: [] as TeamMini[], error: null }),
     ]);

@@ -7,6 +7,7 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import type { MatchStatus } from '@/types/admin';
 
 import { logger } from '../../../utils/logger';
@@ -77,6 +78,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     return { notFound: true, revalidate: 60 };
   }
 
+  // S5d: getStaticProps → DEFAULT_TENANT_ID (TODO(S7) — SSR/ISR per tenant).
   const { data, error } = await supabaseAdmin
     .from('matches')
     .select(
@@ -101,6 +103,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       games (*)
     `
     )
+    .eq('tenant_id', DEFAULT_TENANT_ID)
     .eq('id', id)
     .single();
 

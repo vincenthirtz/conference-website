@@ -8,6 +8,7 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import { supabaseAdmin } from '@/utils/supabase';
 import { isValidUUID } from '@/utils/apiHelpers';
+import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 import { logger } from '../../utils/logger';
 
 type TeamMini = {
@@ -60,6 +61,8 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   const id = typeof rawId === 'string' ? rawId : '';
   if (!id || !supabaseAdmin) return { notFound: true };
 
+  const tenantId = resolveTenantIdForPublicRequest(ctx.req);
+
   let scrimQuery = supabaseAdmin
     .from('scrims')
     .select(
@@ -70,6 +73,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       team2:teams!scrims_team2_id_fkey(id, name, short_name, slug, logo_url)
       `
     )
+    .eq('tenant_id', tenantId)
     .eq('is_public', true)
     .neq('status', 'draft');
 
@@ -95,6 +99,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       team2:teams!matches_team2_id_fkey(id, name, short_name, slug, logo_url)
       `
     )
+    .eq('tenant_id', tenantId)
     .eq('scrim_id', scrim.id)
     .order('scheduled_at', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: true });

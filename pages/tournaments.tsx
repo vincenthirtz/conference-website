@@ -7,6 +7,7 @@ import { useMemo } from 'react';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import { supabaseAdmin } from '@/utils/supabase';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../utils/logger';
@@ -34,6 +35,8 @@ export const getStaticProps: GetStaticProps<
     return { props: { tournaments: [] }, revalidate: 60 };
   }
 
+  // S5d: getStaticProps n'a pas accès au req → DEFAULT_TENANT_ID.
+  // TODO(S7) — basculer en SSR ou ISR par-tenant.
   const { data, error } = await supabaseAdmin
     .from('tournaments')
     .select(
@@ -50,6 +53,7 @@ export const getStaticProps: GetStaticProps<
       max_teams
     `
     )
+    .eq('tenant_id', DEFAULT_TENANT_ID)
     .in('status', ['published', 'running', 'completed'])
     .order('start_date', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false });

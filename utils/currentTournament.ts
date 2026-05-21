@@ -6,13 +6,20 @@
 //   2. Le plus récent en status='running'
 //   3. Le plus récent en status='published' avec start_date dans les 30 derniers jours
 //   4. null si aucun candidat
+//
+// S5d : `tenantId` optionnel — limite la résolution à un tenant donné.
+// Defaut = `DEFAULT_TENANT_ID` pour ne pas casser les call sites admin
+// existants. Sera obligatoire en V2.
 
 import { supabaseAdmin } from './supabase';
+import { DEFAULT_TENANT_ID } from './tenant';
 
 export const DEFAULT_CURRENT_TOURNAMENT_ID =
   'e8fa740c-d92b-49d8-a654-05a37d0eea3b';
 
-export async function resolveCurrentTournamentId(): Promise<string | null> {
+export async function resolveCurrentTournamentId(
+  tenantId: string = DEFAULT_TENANT_ID
+): Promise<string | null> {
   if (!supabaseAdmin) return null;
 
   // 1. Default UUID si encore actif
@@ -20,6 +27,7 @@ export async function resolveCurrentTournamentId(): Promise<string | null> {
     .from('tournaments')
     .select('id, status')
     .eq('id', DEFAULT_CURRENT_TOURNAMENT_ID)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
 
   if (
@@ -34,6 +42,7 @@ export async function resolveCurrentTournamentId(): Promise<string | null> {
   const { data: running } = await supabaseAdmin
     .from('tournaments')
     .select('id')
+    .eq('tenant_id', tenantId)
     .eq('status', 'running')
     .order('start_date', { ascending: false, nullsFirst: false })
     .limit(1)
@@ -46,6 +55,7 @@ export async function resolveCurrentTournamentId(): Promise<string | null> {
   const { data: published } = await supabaseAdmin
     .from('tournaments')
     .select('id')
+    .eq('tenant_id', tenantId)
     .eq('status', 'published')
     .gte('start_date', cutoff)
     .order('start_date', { ascending: false, nullsFirst: false })

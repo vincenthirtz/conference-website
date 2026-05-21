@@ -8,6 +8,7 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import type { MatchStatus } from '@/types/admin';
 
 import { logger } from '../../utils/logger';
@@ -116,10 +117,14 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
   const tournamentColumns =
     'id, name, short_name, slug, game, status, format, max_teams, start_date, end_date, rules_url, description_info, schedule_details, schedule_rules, format_details, visibility, created_at, updated_at';
 
+  // S5d: getStaticProps → DEFAULT_TENANT_ID (TODO(S7) — SSR/ISR per tenant).
+  const tenantId = DEFAULT_TENANT_ID;
+
   if (isUuid) {
     const { data, error } = await supabaseAdmin
       .from('tournaments')
       .select(tournamentColumns)
+      .eq('tenant_id', tenantId)
       .eq('id', asString)
       .single();
     if (!error && data) {
@@ -131,6 +136,7 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
     const { data } = await supabaseAdmin
       .from('tournaments')
       .select(tournamentColumns)
+      .eq('tenant_id', tenantId)
       .eq('slug', asString)
       .single();
     if (data) {
@@ -157,6 +163,7 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
       .select(
         'id, tournament_id, name, stage_type, default_match_format, swiss_rounds, bracket_format, visible'
       )
+      .eq('tenant_id', tenantId)
       .eq('tournament_id', tournamentId)
       .order('created_at', { ascending: true }),
 
@@ -180,6 +187,7 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
         stage:tournament_stages ( id, name, stage_type )
       `
       )
+      .eq('tenant_id', tenantId)
       .eq('tournament_id', tournamentId)
       .neq('status', 'cancelled')
       .order('scheduled_at', { ascending: true }),
@@ -188,6 +196,7 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
     supabaseAdmin
       .from('tournament_teams')
       .select('team:teams ( id, slug, name, short_name, logo_url )')
+      .eq('tenant_id', tenantId)
       .eq('tournament_id', tournamentId),
   ]);
 

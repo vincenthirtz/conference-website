@@ -9,6 +9,7 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
 type ScrimTeam = {
   id: string;
@@ -27,9 +28,11 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
   let teams: ScrimTeam[] = [];
 
   if (supabaseAdmin) {
+    // S5d: getStaticProps → DEFAULT_TENANT_ID (TODO(S7) — SSR/ISR per tenant).
     const { data } = await supabaseAdmin
       .from('teams')
       .select('id, slug, name, short_name, logo_url, country')
+      .eq('tenant_id', DEFAULT_TENANT_ID)
       .eq('is_active', true)
       .order('name', { ascending: true });
     teams = (data || []) as ScrimTeam[];

@@ -120,7 +120,7 @@ function sanitizeSearchInput(raw: string) {
   return raw.replace(/[,()*\\]/g, ' ').trim();
 }
 
-export const getServerSideProps = withStaffPage('manager', async (ctx) => {
+export const getServerSideProps = withStaffPage('manager', async (ctx, staffCtx) => {
   const { query } = ctx;
   const type = typeof query.type === 'string' ? query.type : '';
   const statusRaw = typeof query.status === 'string' ? query.status : 'pending';
@@ -145,6 +145,8 @@ export const getServerSideProps = withStaffPage('manager', async (ctx) => {
     };
   }
 
+  const { tenantId } = staffCtx;
+
   const baseColumns = `
     id, user_id, team_id, tournament_id, type, status,
     comment, staff_note, source, payload,
@@ -157,6 +159,7 @@ export const getServerSideProps = withStaffPage('manager', async (ctx) => {
   let q = supabaseAdmin
     .from('demandes')
     .select(baseColumns, { count: 'exact' })
+    .eq('tenant_id', tenantId)
     .order(orderBy, { ascending: orderDir === 'asc' })
     .range(offset, offset + LIMIT - 1);
 
@@ -176,6 +179,7 @@ export const getServerSideProps = withStaffPage('manager', async (ctx) => {
     let sq = supabaseAdmin!
       .from('demandes')
       .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
       .eq('status', targetStatus);
     if (type) sq = sq.eq('type', type);
     if (tournamentId) sq = sq.eq('tournament_id', tournamentId);
@@ -200,6 +204,7 @@ export const getServerSideProps = withStaffPage('manager', async (ctx) => {
     supabaseAdmin
       .from('tournaments')
       .select('id, name, slug')
+      .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
       .limit(200),
     buildStatusQuery('pending'),

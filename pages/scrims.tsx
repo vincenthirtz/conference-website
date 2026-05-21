@@ -8,6 +8,7 @@ import { useMemo } from 'react';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import { supabaseAdmin } from '@/utils/supabase';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { logger } from '../utils/logger';
 
 type ScrimTeam = {
@@ -37,6 +38,7 @@ export const getStaticProps: GetStaticProps<ScrimsPageProps> = async () => {
     return { props: { scrims: [] }, revalidate: 60 };
   }
 
+  // S5d: getStaticProps → DEFAULT_TENANT_ID (TODO(S7) — passer en SSR/ISR).
   const { data, error } = await supabaseAdmin
     .from('scrims')
     .select(
@@ -46,6 +48,7 @@ export const getStaticProps: GetStaticProps<ScrimsPageProps> = async () => {
       team2:teams!scrims_team2_id_fkey(id, name, slug, logo_url)
       `
     )
+    .eq('tenant_id', DEFAULT_TENANT_ID)
     .eq('is_public', true)
     .neq('status', 'draft')
     .order('scheduled_date', { ascending: false, nullsFirst: false })

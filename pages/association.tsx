@@ -3,6 +3,7 @@ import Link from 'next/link';
 import type { GetStaticProps } from 'next';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useSiteSetting } from '@/hooks/useSiteSettings';
 import { POLE_KEYS, type PoleKey } from '@/utils/associationPoles';
 
@@ -815,10 +816,16 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
     };
   }
 
+  // S5d:
+  //  - `cast_members` est tenant-scopée → DEFAULT_TENANT_ID (getStaticProps).
+  //    TODO(S7) — basculer en SSR/ISR per tenant.
+  //  - `association_pole_members` est globale (pas de tenant_id) → pas de
+  //    filtre tenant.
   const [castRes, poleRes] = await Promise.all([
     supabaseAdmin
       .from('cast_members')
       .select('id, name, title, image_url, twitch_url, city, is_promo')
+      .eq('tenant_id', DEFAULT_TENANT_ID)
       .eq('is_active', true)
       .order('sort_order', { ascending: true }),
     supabaseAdmin

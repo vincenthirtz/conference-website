@@ -11,6 +11,7 @@ import Image from 'next/image';
 import { supabaseAdmin, getServerClient } from '@/utils/supabase';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { hasTeamPermission } from '@/utils/teams/permissions';
+import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 import {
   TEAM_PUBLIC_CONTENT_MAX_LENGTH,
   renderTeamPublicMarkdown,
@@ -89,6 +90,10 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     };
   }
 
+  const tenantId = resolveTenantIdForUserRequest(ctx.req, {
+    authUserId: user.id,
+  });
+
   // Resolve team by slug first, then id/name/short_name (back-compat).
   let team: EditableTeam | null = null;
   const fields =
@@ -101,6 +106,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   const { data: bySlug } = await supabaseAdmin
     .from('teams')
     .select(fields)
+    .eq('tenant_id', tenantId)
     .eq('slug', slug)
     .maybeSingle();
   if (bySlug) team = bySlug as EditableTeam;
@@ -109,6 +115,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     const { data } = await supabaseAdmin
       .from('teams')
       .select(fields)
+      .eq('tenant_id', tenantId)
       .eq('id', slug)
       .maybeSingle();
     if (data) team = data as EditableTeam;
@@ -118,6 +125,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     const { data } = await supabaseAdmin
       .from('teams')
       .select(fields)
+      .eq('tenant_id', tenantId)
       .ilike('name', slug)
       .maybeSingle();
     if (data) team = data as EditableTeam;
@@ -126,6 +134,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     const { data } = await supabaseAdmin
       .from('teams')
       .select(fields)
+      .eq('tenant_id', tenantId)
       .ilike('short_name', slug)
       .maybeSingle();
     if (data) team = data as EditableTeam;
@@ -149,6 +158,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     .select(
       'id, user_id, role, battle_tag, is_substitute, display_name, specialty, avatar_url, pronouns, tagline, twitter, twitch, created_at'
     )
+    .eq('tenant_id', tenantId)
     .eq('team_id', team.id)
     .order('created_at', { ascending: true });
 

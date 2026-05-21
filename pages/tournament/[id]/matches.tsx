@@ -9,6 +9,7 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 import type { MatchStatus as BaseMatchStatus } from '@/types/admin';
 
@@ -77,8 +78,15 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     return { notFound: true, revalidate: 60 };
   }
 
+  // S5d: getStaticProps → DEFAULT_TENANT_ID (TODO(S7) — SSR/ISR per tenant).
+  const tenantId = DEFAULT_TENANT_ID;
+
   // 1) Tournoi (UUID ou slug)
-  const tournament = await findTournamentByIdOrSlug<Tournament>(id, '*');
+  const tournament = await findTournamentByIdOrSlug<Tournament>(
+    id,
+    '*',
+    tenantId
+  );
   if (!tournament) {
     return { notFound: true, revalidate: 60 };
   }
@@ -91,6 +99,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   const { data: stages, error: sErr } = await supabaseAdmin
     .from('tournament_stages')
     .select('*')
+    .eq('tenant_id', tenantId)
     .eq('tournament_id', tournamentId)
     .order('created_at', { ascending: true });
 
@@ -117,6 +126,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       stage:tournament_stages ( id, name, stage_type )
     `
     )
+    .eq('tenant_id', tenantId)
     .eq('tournament_id', tournamentId)
     .neq('status', 'cancelled')
     .order('scheduled_at', { ascending: true })

@@ -4,6 +4,7 @@ import Heading from '@/components/Typography/heading';
 import Button from '@/components/Buttons/button';
 import Link from 'next/link';
 import { supabaseAdmin } from '@/utils/supabase';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useEffect, useState, Fragment, type ReactNode } from 'react';
 
 import { logger } from '../../utils/logger';
@@ -74,9 +75,11 @@ export const getStaticProps: GetStaticProps<NewsPageProps> = async (
     return { notFound: true, revalidate: 60 };
   }
 
+  // S5d: getStaticProps → DEFAULT_TENANT_ID (TODO(S7) — SSR/ISR per tenant).
   const { data, error } = await supabaseAdmin
     .from('news')
     .select('*')
+    .eq('tenant_id', DEFAULT_TENANT_ID)
     .eq('slug', slug)
     .maybeSingle();
 

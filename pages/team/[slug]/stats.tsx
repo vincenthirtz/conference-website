@@ -9,6 +9,7 @@ import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
 import type { MatchStatus } from '@/types/admin';
+import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 type Team = {
@@ -83,11 +84,14 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       slugStr
     );
 
+  const tenantId = resolveTenantIdForPublicRequest(ctx.req);
+
   // 1) Team — by slug first, fall back to id for legacy UUID URLs
   let team: any = null;
   ({ data: team } = await supabaseAdmin
     .from('teams')
     .select('*')
+    .eq('tenant_id', tenantId)
     .eq('slug', slugStr)
     .maybeSingle());
 
@@ -95,6 +99,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     ({ data: team } = await supabaseAdmin
       .from('teams')
       .select('*')
+      .eq('tenant_id', tenantId)
       .eq('id', slugStr)
       .maybeSingle());
   }
@@ -106,6 +111,9 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   const teamId = team.id as string;
 
   // Phase A : team_stats_view + matches en parallèle
+  // NB: `team_stats_view` est une materialized view non-tenant-scopée mais
+  // l'agrégation est par team_id, et chaque team_id appartient à un seul
+  // tenant — l'isolation est donc implicite via le filtre `team_id`.
   const [statsRes, matchesRes] = await Promise.all([
     supabaseAdmin
       .from('team_stats_view')
@@ -115,6 +123,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     supabaseAdmin
       .from('matches')
       .select('id, status, is_bye, team1_id, team2_id, winner_team_id')
+      .eq('tenant_id', tenantId)
       .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
       .neq('status', 'cancelled'),
   ]);
@@ -143,6 +152,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       .select(
         'match_id, map_name, team1_score, team2_score, is_tiebreaker, went_overtime'
       )
+      .eq('tenant_id', tenantId)
       .in('match_id', matchIds);
 
     if (gErr) {

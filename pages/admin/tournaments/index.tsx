@@ -495,7 +495,7 @@ function AdminTournamentsPage({
   );
 }
 
-export const getServerSideProps = withStaffPage('manager', async (ctx) => {
+export const getServerSideProps = withStaffPage('manager', async (ctx, staffCtx) => {
   const { query } = ctx;
   const search = typeof query.search === 'string' ? query.search.trim() : '';
   const status = typeof query.status === 'string' ? query.status : null;
@@ -507,6 +507,8 @@ export const getServerSideProps = withStaffPage('manager', async (ctx) => {
     return { tournaments: [], total: null, errorMsg: 'Service indisponible' };
   }
 
+  const { tenantId } = staffCtx;
+
   const selectColumns = `
     id, name, slug, game, status,
     start_date, end_date, max_teams,
@@ -516,6 +518,7 @@ export const getServerSideProps = withStaffPage('manager', async (ctx) => {
   let q = supabaseAdmin
     .from('tournaments')
     .select(selectColumns, { count: 'exact' })
+    .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
     .range(offset, offset + LIMIT - 1);
 

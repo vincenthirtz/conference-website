@@ -103,6 +103,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 
   // --- Auth (same as withStaffPage) ---
   let staff: { id: string | null; role: string; display_name: string | null };
+  let tenantId: string;
   try {
     const staffCtx = await requireStaffRoleFromRequest(
       req as any,
@@ -114,6 +115,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
       role: staffCtx.role ?? 'manager',
       display_name: staffCtx.staff?.display_name ?? null,
     };
+    tenantId = staffCtx.tenantId;
   } catch (err: unknown) {
     if (err instanceof StaffUnauthenticatedError) {
       return { redirect: { destination: '/admin/login', permanent: false } };
@@ -142,6 +144,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
         .select(
           'id, name, slug, game, status, start_date, end_date, timezone, format_type, max_teams, visibility, is_featured, logo_url, banner_url, created_at, updated_at'
         )
+        .eq('tenant_id', tenantId)
         .eq('id', id)
         .maybeSingle(),
       supabaseAdmin
@@ -149,6 +152,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
         .select(
           'id, name, stage_type, order_index, is_active, is_public, start_date, end_date'
         )
+        .eq('tenant_id', tenantId)
         .eq('tournament_id', id)
         .order('order_index', { ascending: true, nullsFirst: false }),
       supabaseAdmin
@@ -156,6 +160,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
         .select(
           'id, tournament_id, team_id, seed, status, created_at, team:teams ( id, name, logo_url )'
         )
+        .eq('tenant_id', tenantId)
         .eq('tournament_id', id)
         .order('seed', { ascending: true, nullsFirst: false }),
       supabaseAdmin
@@ -163,6 +168,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
         .select(
           'id, stage_id, round_number, status, scheduled_at, team1_id, team2_id, team1_score, team2_score, winner_team_id'
         )
+        .eq('tenant_id', tenantId)
         .eq('tournament_id', id)
         .order('scheduled_at', { ascending: false, nullsFirst: true })
         .limit(3),
@@ -171,14 +177,17 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
         supabaseAdmin
           .from('tournament_stages')
           .select('id', { count: 'exact', head: true })
+          .eq('tenant_id', tenantId)
           .eq('tournament_id', id),
         supabaseAdmin
           .from('tournament_teams')
           .select('id', { count: 'exact', head: true })
+          .eq('tenant_id', tenantId)
           .eq('tournament_id', id),
         supabaseAdmin
           .from('matches')
           .select('id', { count: 'exact', head: true })
+          .eq('tenant_id', tenantId)
           .eq('tournament_id', id)
           .neq('status', 'cancelled'),
       ]),
@@ -258,6 +267,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     const { data: teamsData } = await supabaseAdmin
       .from('teams')
       .select('id, name, logo_url')
+      .eq('tenant_id', tenantId)
       .in('id', Array.from(teamIdsSet));
     for (const t of teamsData || []) {
       teamNameMap[t.id] = t;

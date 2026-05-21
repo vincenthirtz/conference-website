@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { GetStaticProps } from 'next';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
 const WOMEN_TOURNAMENT_ID_2026 = 'e8fa740c-d92b-49d8-a654-05a37d0eea3b';
 const TWITCH_URL = 'https://www.twitch.tv/womens_cup';
@@ -92,6 +93,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
   let tournamentSlug: string | null = null;
 
   if (supabaseAdmin) {
+    // S5d: getStaticProps → DEFAULT_TENANT_ID (TODO(S7) — SSR/ISR per tenant).
     const [matchesRes, tournamentRes] = await Promise.all([
       supabaseAdmin
         .from('matches')
@@ -110,6 +112,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
         stage:tournament_stages ( name )
       `
         )
+        .eq('tenant_id', DEFAULT_TENANT_ID)
         .eq('tournament_id', WOMEN_TOURNAMENT_ID_2026)
         .neq('status', 'cancelled')
         .order('scheduled_at', { ascending: true, nullsFirst: false })
@@ -117,6 +120,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
       supabaseAdmin
         .from('tournaments')
         .select('slug')
+        .eq('tenant_id', DEFAULT_TENANT_ID)
         .eq('id', WOMEN_TOURNAMENT_ID_2026)
         .maybeSingle(),
     ]);

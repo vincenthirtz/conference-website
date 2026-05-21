@@ -1325,7 +1325,7 @@ function AdminTeamsListPage({
   );
 }
 
-export const getServerSideProps = withStaffPage('manager', async (ctx) => {
+export const getServerSideProps = withStaffPage('manager', async (ctx, staffCtx) => {
   const { query } = ctx;
   const search = sanitizeSearch(query.search);
   const isActive = typeof query.isActive === 'string' ? query.isActive : '';
@@ -1337,9 +1337,12 @@ export const getServerSideProps = withStaffPage('manager', async (ctx) => {
     return { teams: [], total: null, errorMsg: 'Service indisponible' };
   }
 
+  const { tenantId } = staffCtx;
+
   let q = supabaseAdmin
     .from('teams')
     .select('*', { count: 'exact' })
+    .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
     .range(offset, offset + LIMIT - 1);
 
@@ -1353,6 +1356,7 @@ export const getServerSideProps = withStaffPage('manager', async (ctx) => {
     const { data: regs } = await supabaseAdmin
       .from('tournament_teams')
       .select('team_id')
+      .eq('tenant_id', tenantId)
       .eq('tournament_id', tournamentId);
     const teamIds = (regs || []).map((r) => r.team_id).filter(Boolean);
     if (teamIds.length === 0) {

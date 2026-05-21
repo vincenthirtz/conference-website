@@ -8,6 +8,7 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 
 type LeaderboardEntry = {
@@ -53,10 +54,14 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   if (!id || Array.isArray(id)) return { notFound: true, revalidate: 60 };
   if (!supabaseAdmin) return { notFound: true, revalidate: 60 };
 
+  // S5d: getStaticProps → DEFAULT_TENANT_ID (TODO(S7) — SSR/ISR per tenant).
+  const tenantId = DEFAULT_TENANT_ID;
+
   // Phase A : tournoi (UUID ou slug)
   const tournament = await findTournamentByIdOrSlug<Tournament>(
     id,
-    'id, name, slug, is_public'
+    'id, name, slug, is_public',
+    tenantId
   );
   if (!tournament || !tournament.is_public)
     return { notFound: true, revalidate: 60 };
@@ -75,6 +80,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       mvp:match_mvp_polls(winner_member_id, winner_battle_tag)
       `
     )
+    .eq('tenant_id', tenantId)
     .eq('tournament_id', tournamentId)
     .eq('status', 'finished')
     .order('completed_at', { ascending: false });
@@ -113,6 +119,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     const { data: members } = await supabaseAdmin
       .from('team_members')
       .select('id, team_id')
+      .eq('tenant_id', tenantId)
       .in('id', memberIds);
     for (const m of members || []) memberToTeam.set(m.id, m.team_id);
   }
@@ -133,6 +140,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     const { data: teams } = await supabaseAdmin
       .from('teams')
       .select('id, name')
+      .eq('tenant_id', tenantId)
       .in('id', teamIds);
     for (const t of teams || []) teamNameMap.set(t.id, t.name);
   }

@@ -438,7 +438,7 @@ function AdminAnnouncementsPage({
   );
 }
 
-export const getServerSideProps = withStaffPage('admin', async (ctx) => {
+export const getServerSideProps = withStaffPage('admin', async (ctx, staffCtx) => {
   const { query } = ctx;
   const search = sanitizeSearch(query.search);
   const status = typeof query.status === 'string' ? query.status : null;
@@ -448,9 +448,12 @@ export const getServerSideProps = withStaffPage('admin', async (ctx) => {
     return { announcements: [], total: 0, errorMsg: 'Service indisponible' };
   }
 
+  const { tenantId } = staffCtx;
+
   let q = supabaseAdmin
     .from('announcements')
     .select('*', { count: 'exact' })
+    .eq('tenant_id', tenantId)
     .order('priority', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false })
     .range(offset, offset + LIMIT - 1);

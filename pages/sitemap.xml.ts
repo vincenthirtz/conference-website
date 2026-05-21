@@ -1,5 +1,6 @@
 import type { GetServerSideProps } from 'next';
 import { supabaseAdmin, getServerClient } from '@/utils/supabase';
+import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 
 import { logger } from '../utils/logger';
 const publicRoutes = [
@@ -166,6 +167,7 @@ ${matchUrls}
 
 export const getServerSideProps: GetServerSideProps = async ({ res, req }) => {
   const baseUrl = getBaseUrl(req);
+  const tenantId = resolveTenantIdForPublicRequest(req);
 
   const client = supabaseAdmin ?? getServerClient(req, res);
 
@@ -175,6 +177,7 @@ export const getServerSideProps: GetServerSideProps = async ({ res, req }) => {
     const { data } = await client
       .from('news')
       .select('slug, updated_at, published_at')
+      .eq('tenant_id', tenantId)
       .eq('status', 'published')
       .order('published_at', { ascending: false })
       .limit(100);
@@ -190,6 +193,7 @@ export const getServerSideProps: GetServerSideProps = async ({ res, req }) => {
     const { data } = await client
       .from('tournaments')
       .select('id, slug, updated_at')
+      .eq('tenant_id', tenantId)
       .eq('visibility', 'public')
       .order('created_at', { ascending: false })
       .limit(50);
@@ -205,6 +209,7 @@ export const getServerSideProps: GetServerSideProps = async ({ res, req }) => {
     const { data } = await client
       .from('teams')
       .select('slug, updated_at')
+      .eq('tenant_id', tenantId)
       .not('slug', 'is', null)
       .order('updated_at', { ascending: false })
       .limit(500);
@@ -222,6 +227,7 @@ export const getServerSideProps: GetServerSideProps = async ({ res, req }) => {
     const { data } = await client
       .from('matches')
       .select('id, completed_at, updated_at')
+      .eq('tenant_id', tenantId)
       .eq('status', 'finished')
       .order('completed_at', { ascending: false })
       .limit(500);

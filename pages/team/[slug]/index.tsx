@@ -10,6 +10,7 @@ import Paragraph from '@/components/Typography/paragraph';
 import PublicScrimDialog from '@/components/Team/PublicScrimDialog';
 import { supabaseAdmin, getServerClient } from '@/utils/supabase';
 import { hasTeamPermission } from '@/utils/teams/permissions';
+import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 import {
   renderTeamPublicMarkdown,
   normalizeAccentColor,
@@ -167,6 +168,11 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
     return { notFound: true };
   }
 
+  // S5d: page accessible aux capitaines connectés (édition) ET au public —
+  // on utilise le resolver "user" pour préfigurer la résolution via team
+  // gérée. En V1 = DEFAULT_TENANT_ID.
+  const tenantId = resolveTenantIdForUserRequest(ctx.req);
+
   // 1) Try lookup by slug (primary) — falls back to id/name/short_name for
   //    backwards compat with old URLs.
   let team: Team | null = null;
@@ -178,6 +184,7 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
   const { data: teamBySlug } = await supabaseAdmin
     .from('teams')
     .select('*')
+    .eq('tenant_id', tenantId)
     .eq('slug', slug)
     .maybeSingle();
   if (teamBySlug) team = teamBySlug;
@@ -186,6 +193,7 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
     const { data } = await supabaseAdmin
       .from('teams')
       .select('*')
+      .eq('tenant_id', tenantId)
       .eq('id', slug)
       .maybeSingle();
     if (data) team = data;
@@ -195,6 +203,7 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
     const { data } = await supabaseAdmin
       .from('teams')
       .select('*')
+      .eq('tenant_id', tenantId)
       .ilike('name', slug)
       .maybeSingle();
     if (data) team = data;
@@ -204,6 +213,7 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
     const { data } = await supabaseAdmin
       .from('teams')
       .select('*')
+      .eq('tenant_id', tenantId)
       .ilike('short_name', slug)
       .maybeSingle();
     if (data) team = data;
@@ -226,6 +236,7 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
     .select(
       'id, user_id, role, battle_tag, is_substitute, display_name, specialty, avatar_url, pronouns, tagline, twitter, twitch, created_at'
     )
+    .eq('tenant_id', tenantId)
     .eq('team_id', teamId)
     .order('created_at', { ascending: true });
 
@@ -251,6 +262,9 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
   const seenTournaments = new Set<string>();
 
   // Try tournament_registrations
+  // NB: `tournament_registrations` n'est pas dans la liste des tables
+  // tenant-scopées en S2 (legacy). On reste sur l'unique filtre par team_id
+  // qui est lui-même scopé (cf. lookup team ci-dessus).
   const { data: registrations } = await supabaseAdmin
     .from('tournament_registrations')
     .select(
@@ -281,6 +295,7 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
       )
     `
     )
+    .eq('tenant_id', tenantId)
     .eq('team_id', teamId);
 
   if (tournamentTeams) {
@@ -304,6 +319,7 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
       )
     `
     )
+    .eq('tenant_id', tenantId)
     .eq('team_id', teamId);
 
   if (stageTeams) {
@@ -322,6 +338,7 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
     .select(
       'id, status, team1_id, team2_id, team1_score, team2_score, winner_team_id'
     )
+    .eq('tenant_id', tenantId)
     .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
     .in('status', ['finished', 'completed', 'done']);
 
@@ -358,6 +375,7 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
   const { data: recentMatchesData, error: matchesError } = await supabaseAdmin
     .from('matches')
     .select('*')
+    .eq('tenant_id', tenantId)
     .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
     .order('scheduled_at', { ascending: false, nullsFirst: false })
     .limit(10);
@@ -380,6 +398,7 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
       ? await supabaseAdmin
           .from('teams')
           .select('id, name, short_name, logo_url')
+          .eq('tenant_id', tenantId)
           .in('id', Array.from(opponentIds))
       : { data: [] };
 
@@ -388,6 +407,7 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
       ? await supabaseAdmin
           .from('tournaments')
           .select('id, name')
+          .eq('tenant_id', tenantId)
           .in('id', Array.from(tournamentIds))
       : { data: [] };
 
