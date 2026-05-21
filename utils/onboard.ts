@@ -1,0 +1,156 @@
+// utils/onboard.ts
+//
+// Shared helpers for the self-service tenant onboarding flow.
+// Validation regexes, blacklisted slugs, Discord bot OAuth invite URL builder.
+//
+// The matching endpoints live under `pages/api/onboard/*` and the auto-claim
+// path under `pages/api/bot/v1/tenants/link-guild.ts`.
+
+import { z } from 'zod';
+
+// ---------------------------------------------------------------------------
+// Slug rules
+// ---------------------------------------------------------------------------
+
+/**
+ * Slug format : starts with a lowercase letter, then lowercase letters/digits/
+ * hyphens, 3-30 chars total (`^[a-z][a-z0-9-]{2,29}$`).
+ *
+ * Stricter than the DB CHECK on `tenants.slug` (which allows `[a-z0-9-]+`,
+ * 2-50 chars) on purpose : the request-side rule should always be a subset
+ * of the DB rule so the latter never trips at insert.
+ */
+export const ONBOARD_SLUG_RE = /^[a-z][a-z0-9-]{2,29}$/;
+
+/**
+ * Slugs we never want users to claim — collide with URL prefixes, brand
+ * surface area, or sensitive routes.
+ */
+export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
+  'admin',
+  'api',
+  'auth',
+  'bot',
+  'conference',
+  'demo',
+  'docs',
+  'help',
+  'login',
+  'logout',
+  'onboard',
+  'onboarding',
+  'owner',
+  'public',
+  'root',
+  'static',
+  'staff',
+  'staging',
+  'support',
+  'test',
+  'tests',
+  'www',
+  '_next',
+]);
+
+export function isReservedSlug(slug: string): boolean {
+  return RESERVED_SLUGS.has(slug.toLowerCase());
+}
+
+// ---------------------------------------------------------------------------
+// Zod schema for the POST /api/onboard/tenant-request body
+// ---------------------------------------------------------------------------
+
+/**
+ * Trim + lowercase. We don't use the shared helper from utils/validation
+ * because the slug pipeline needs a specific shape — keep the schema
+ * self-contained.
+ */
+const trimmed = (min: number, max: number) =>
+  z
+    .string()
+    .transform((s) => s.trim())
+    .pipe(z.string().min(min).max(max));
+
+export const onboardTenantRequestSchema = z.object({
+  requested_slug: z
+    .string()
+    .transform((s) => s.trim().toLowerCase())
+    .pipe(
+      z
+        .string()
+        .regex(
+          ONBOARD_SLUG_RE,
+          'Slug invalide (3-30 chars, débute par une lettre, puis [a-z0-9-]).'
+        )
+        .refine(
+          (s) => !isReservedSlug(s),
+          'Ce slug est réservé, choisissez-en un autre.'
+        )
+    ),
+  requested_name: trimmed(1, 200),
+  requested_email: z
+    .string()
+    .transform((s) => s.trim().toLowerCase())
+    .pipe(z.string().email('Email invalide.')),
+  description: z
+    .string()
+    .transform((s) => s.trim())
+    .pipe(z.string().max(1000))
+    .optional()
+    .or(z.literal('')),
+  turnstile_token: z.string().min(1, 'Captcha manquant.'),
+});
+
+export type OnboardTenantRequestInput = z.input<
+  typeof onboardTenantRequestSchema
+>;
+export type OnboardTenantRequestOutput = z.output<
+  typeof onboardTenantRequestSchema
+>;
+
+// ---------------------------------------------------------------------------
+// SITE_URL helper (same precedence as utils/checkin.ts)
+// ---------------------------------------------------------------------------
+
+export function getSiteUrl(): string {
+  return (
+    process.env.SITE_URL ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    'https://owwomenscup.fr'
+  ).replace(/\/$/, '');
+}
+
+// ---------------------------------------------------------------------------
+// Discord bot OAuth invite URL
+// ---------------------------------------------------------------------------
+
+/**
+ * Build the Discord OAuth URL that invites the bot onto a guild.
+ *
+ * Permissions are configured via `DISCORD_BOT_PERMISSIONS` (bitfield string),
+ * with a sane default that mirrors what the bot actually uses today
+ * (kick, ban, manage channels, manage roles, manage messages, view audit log,
+ * read history, send messages, embed links, create threads, manage threads,
+ * mention everyone, use external emojis, view channel, etc).
+ *
+ * If `DISCORD_CLIENT_ID` is unset we return `null` so the caller can decide
+ * whether to render the page in a degraded state or 500.
+ */
+export function buildBotInviteUrl(): string | null {
+  const clientId = process.env.DISCORD_CLIENT_ID;
+  if (!clientId) return null;
+
+  // 0x10000000 (manage events) | manage channels (0x10) | manage roles (0x10000000)
+  // We default to a wide-but-not-administrator bitfield that lines up with
+  // the bot's current command set. Operators can override via env.
+  const permissions =
+    process.env.DISCORD_BOT_PERMISSIONS ?? '1099780063312';
+
+  const params = new URLSearchParams({
+    client_id: clientId,
+    scope: 'bot applications.commands',
+    permissions,
+  });
+
+  return `https://discord.com/oauth2/authorize?${params.toString()}`;
+}

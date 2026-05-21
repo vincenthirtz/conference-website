@@ -290,6 +290,11 @@ export const ADMIN_LINKS: AdminLink[] = [
             ref: '/admin/pending-guild-links',
             minRole: 'manager',
           },
+          {
+            title: 'Demandes self-service',
+            ref: '/admin/tenant-requests',
+            minRole: 'owner',
+          },
         ],
       },
     ],

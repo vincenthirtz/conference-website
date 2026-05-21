@@ -30,10 +30,15 @@ let _cookieUser: unknown = null;
 let _cookieError: unknown = null;
 
 /**
- * Map<userId, email> — read by `supabaseAdmin.auth.admin.getUserById(id)`.
- * Used by helpers like checkin.getCaptainEmail.
+ * Map<userId, { email, identities? }> — read by
+ * `supabaseAdmin.auth.admin.getUserById(id)`. Used by helpers like
+ * checkin.getCaptainEmail (email only) and the onboarding flow (identities).
  */
-const _adminUsers = new Map<string, { email: string | null }>();
+type AdminUserEntry = {
+  email: string | null;
+  identities?: Array<{ provider: string; identity_data?: Record<string, unknown> }>;
+};
+const _adminUsers = new Map<string, AdminUserEntry>();
 
 /** State returned by `supabaseAdmin.auth.admin.generateLink()`. */
 let _generateLinkResult: {
@@ -80,6 +85,18 @@ export function setCookieUser(user: unknown, error: unknown = null) {
 
 export function setAdminUser(userId: string, email: string | null) {
   _adminUsers.set(userId, { email });
+}
+
+/**
+ * Seed identities on an admin user. Used by onboarding tests that need the
+ * Discord snowflake to be exposed via `auth.admin.getUserById(id).user.identities`.
+ */
+export function setAdminUserIdentities(
+  userId: string,
+  identities: Array<{ provider: string; identity_data?: Record<string, unknown> }>,
+  email: string | null = null
+) {
+  _adminUsers.set(userId, { email, identities });
 }
 
 export function resetSupabaseMock() {
@@ -422,7 +439,13 @@ export const supabaseAdmin = {
         const entry = _adminUsers.get(userId);
         return Promise.resolve({
           data: entry
-            ? { user: { id: userId, email: entry.email } as any }
+            ? {
+                user: {
+                  id: userId,
+                  email: entry.email,
+                  identities: entry.identities ?? [],
+                } as any,
+              }
             : { user: null as any },
           error: null as any,
         });

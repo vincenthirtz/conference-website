@@ -707,16 +707,26 @@ curl -sS "https://site.example/api/bot/v1/tenants/by-guild/1259186540001890474" 
 #### `POST /api/bot/v1/tenants/link-guild`
 
 Appele par le bot dans son handler `guildCreate` (le bot vient d'etre invite
-sur un nouveau serveur). Deux cas couverts en une seule call :
+sur un nouveau serveur). Trois cas couverts en une seule call :
 
 1. **Guild deja linke** — repond `already_linked` avec le tenant cible. Le
    bot continue normalement.
-2. **Guild inconnu** — la demande est enregistree dans `pending_guild_links`
-   (upsert idempotent par `guild_id`). Un admin doit ensuite passer sur
-   `/admin/tenants` (S7) pour creer un tenant ou rattacher a un tenant
-   existant. Le bot DEVRAIT etre configure pour quitter automatiquement les
-   guilds non-linked apres N minutes (anti-abus), mais c'est une decision
-   produit cote bot.
+2. **Auto-claim onboarding (NEW)** — si `owner_discord_id` matche une row
+   `tenant_requests` active (`status='pending_bot_invite'`,
+   `email_verified_at IS NOT NULL`, `created_at < 7d`), le site cree le
+   tenant complet de maniere atomique :
+   `tenants` → `discord_guilds` → `tenant_secrets` (clef API + webhook
+   secret freshly minted) → `staff` (si requester signed-in via Supabase
+   Auth, role global = `caster`) → `tenant_staff` (role = `owner`) →
+   `tenant_discord_config` (row vide). Un email Brevo single-use est
+   envoye au demandeur avec un lien `/onboard/secrets/<token>` (TTL 1h).
+   Reponse : `auto_claimed`.
+3. **Guild inconnu sans match** — la demande est enregistree dans
+   `pending_guild_links` (upsert idempotent par `guild_id`). Un admin doit
+   ensuite passer sur `/admin/tenants` (S7) pour creer un tenant ou
+   rattacher a un tenant existant. Le bot DEVRAIT etre configure pour
+   quitter automatiquement les guilds non-linked apres N minutes
+   (anti-abus), mais c'est une decision produit cote bot.
 
 **Body**
 
@@ -731,6 +741,7 @@ sur un nouveau serveur). Deux cas couverts en une seule call :
 - `guild_id` _(requis)_ — snowflake Discord (15-25 chiffres).
 - `guild_name` _(optionnel)_ — nom du guild, max 200 chars (UX admin).
 - `owner_discord_id` _(optionnel)_ — Discord ID du proprietaire, snowflake.
+  Recommande car declenche le chemin auto-claim si match.
 
 **Response 200 (deja linke)**
 
@@ -741,6 +752,18 @@ sur un nouveau serveur). Deux cas couverts en une seule call :
   "is_primary": true,
   "tenant_id": "ce69a726-773e-4d12-b5eb-d2503aa752b4",
   "tenant_slug": "conference"
+}
+```
+
+**Response 200 (auto-claim)**
+
+```json
+{
+  "status": "auto_claimed",
+  "tenant_id": "44444444-4444-4444-4444-444444444444",
+  "tenant_slug": "fresh-org",
+  "guild_id": "1234567890123456789",
+  "message": "Tenant created automatically from onboarding request."
 }
 ```
 
@@ -758,7 +781,7 @@ sur un nouveau serveur). Deux cas couverts en une seule call :
 **Errors**
 
 - `400 { code: "INVALID_GUILD_ID" | "INVALID_OWNER_ID" }` — validation body.
-- `401`, `500`, `503`.
+- `401`, `500 { code: "AUTO_CLAIM_FAILED" }`, `503`.
 
 **Rate limit** : 30/min global. **Idempotency** : oui (header
 `Idempotency-Key`).
@@ -768,7 +791,7 @@ curl -sS -X POST "https://site.example/api/bot/v1/tenants/link-guild" \
   -H "x-api-key: $BOT_API_KEY" \
   -H "content-type: application/json" \
   -H "Idempotency-Key: bot-guild-create-1234567890123456789" \
-  -d '{"guild_id":"1234567890123456789","guild_name":"Nouveau Serveur"}'
+  -d '{"guild_id":"1234567890123456789","guild_name":"Nouveau Serveur","owner_discord_id":"9876543210123456789"}'
 ```
 
 #### `GET /api/bot/v1/tenants/all-configs`
