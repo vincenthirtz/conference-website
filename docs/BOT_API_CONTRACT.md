@@ -22,17 +22,45 @@ endpoint so the bot side can be code-reviewed against a single page.
 
 ## Authentication
 
-| Header      | Value                                                    |
-| ----------- | -------------------------------------------------------- |
-| `x-api-key` | The shared secret `BOT_API_KEY` (set in both repos' env) |
+| Header      | Value                                                            |
+| ----------- | ---------------------------------------------------------------- |
+| `x-api-key` | A bot API key (per-tenant from `tenant_secrets`, or legacy env). |
 
-- Comparison is constant-time (`crypto.timingSafeEqual`).
+- Comparison is **per-tenant first** : the provided key is sha256-hashed and
+  looked up in `tenant_secrets.bot_api_key_hash`. Match → the row's
+  `tenant_id` is authoritative for the request (`req.botContext.tenantId`).
+- Fallback : if no row matches, the key is constant-time compared with the
+  legacy global `BOT_API_KEY` env var. **This env var is a transition
+  fallback and should be retired once every tenant has been rotated** (see
+  [Per-tenant secrets rotation](#per-tenant-secrets-rotation) below).
 - Missing/empty header → `401 { error: "Invalid or missing API key." }`.
-- `BOT_API_KEY` unset on the server → `500 { error: "Endpoint not configured." }`
-  (the server logs which route was hit).
+- Neither per-tenant nor env key matches → `401`.
+- Per-tenant cache empty AND env unset → `500 { error: "Endpoint not configured." }`.
 - The bot identifies the **acting user** via `actorDiscordUserId` in the
   body (writes) or query string (reads) — this is separate from auth and
   feeds the per-actor rate-limit and audit logs.
+
+### Per-tenant secrets rotation
+
+Each tenant carries its own `bot_api_key` and `bot_webhook_secret` (HMAC
+push signing) in `tenant_secrets`. Rotate via
+`POST /api/admin/tenants/:id/rotate-secrets` (owner-only): the endpoint
+returns the two plain values **once** in the response body. The operator:
+
+1. Updates the **bot side** podman secrets on the Freebox VM:
+   ```bash
+   printf '%s' '<new-api-key>'        | sudo podman secret create --replace discord_bot_api_key -
+   printf '%s' '<new-webhook-secret>' | sudo podman secret create --replace discord_bot_webhook_secret -
+   sudo systemctl restart discord-bot.service
+   ```
+2. **Does NOT need to update Netlify env vars** for that tenant: once the
+   `tenant_secrets` row exists, the site stops consulting `BOT_API_KEY` /
+   `BOT_WEBHOOK_SECRET` env for it. The env entries remain as a fallback
+   for tenants that haven't been rotated yet.
+3. **End-state cleanup** (when every tenant has a `tenant_secrets` row):
+   delete `BOT_API_KEY` and `BOT_WEBHOOK_SECRET` from Netlify's dashboard.
+   Verify the rotated bot still authenticates after the next deploy.
+   The site will then refuse any unrotated bot — that's the point.
 
 ## Tenant identification
 
@@ -64,12 +92,14 @@ resolves the tenant once and stashes it on `req.botContext.tenantId`.
   `discord_guilds.guild_id` → `tenant_id`. It is not the site's job to
   guess the tenant from a Discord context.
 - **Cross-tenant exemptions**: `/tenants/all-configs`, `/tenants/by-guild/:id`,
-  `/tenants/link-guild`, `/events/pending` and `/events/:id/ack` are
-  intentionally **not** tenant-scoped — they are global resolvers the bot
-  needs in order to route correctly. These routes are flagged
-  `crossTenant: true` in `withBotRoute({ ... })` and the middleware
-  **skips** the header validation + existence check; `req.botContext.tenantId`
-  is left `undefined` and handlers must not read it. Every other
+  `/tenants/link-guild`, `/events/pending`, `/events/:id/ack` and
+  `/cast/upcoming` are intentionally **not** tenant-scoped — they are
+  global resolvers / pollers the bot needs in order to route correctly.
+  These routes are flagged `crossTenant: true` in `withBotRoute({ ... })`
+  and the middleware **skips** the header validation + existence check;
+  `req.botContext.tenantId` is left `undefined` and handlers must not
+  read it. When a cross-tenant route returns a list, every row exposes
+  its own `tenantId` so the bot can dispatch per-row. Every other
   `/api/bot/v1/*` route enforces tenant scoping.
 
 ### Error codes
@@ -250,12 +280,12 @@ body shapes live there. `Idem.` means the route honours `Idempotency-Key`.
 
 ### Cast assignments
 
-| Route                                                                          | Methods           | Idem. | Rate-key               |
-| ------------------------------------------------------------------------------ | ----------------- | ----- | ---------------------- |
-| [`cast/assignments.ts`](../pages/api/bot/v1/cast/assignments.ts)               | GET               | —     | `bot-cast-assignments` |
-| [`cast/upcoming.ts`](../pages/api/bot/v1/cast/upcoming.ts)                     | GET               | —     | `bot-cast-upcoming`    |
-| [`cast/[assignmentId]/ack.ts`](../pages/api/bot/v1/cast/[assignmentId]/ack.ts) | POST              | yes   | `cast.ack`             |
-| [`matches/[matchId]/cast.ts`](../pages/api/bot/v1/matches/[matchId]/cast.ts)   | GET, POST, DELETE | yes   | `bot-match-cast`       |
+| Route                                                                          | Methods           | Idem. | Rate-key               | Tenant scope                                          |
+| ------------------------------------------------------------------------------ | ----------------- | ----- | ---------------------- | ----------------------------------------------------- |
+| [`cast/assignments.ts`](../pages/api/bot/v1/cast/assignments.ts)               | GET               | —     | `bot-cast-assignments` | per-tenant                                            |
+| [`cast/upcoming.ts`](../pages/api/bot/v1/cast/upcoming.ts)                     | GET               | —     | `bot-cast-upcoming`    | `crossTenant: true` — `tenantId` returned per row     |
+| [`cast/[assignmentId]/ack.ts`](../pages/api/bot/v1/cast/[assignmentId]/ack.ts) | POST              | yes   | `cast.ack`             | per-tenant                                            |
+| [`matches/[matchId]/cast.ts`](../pages/api/bot/v1/matches/[matchId]/cast.ts)   | GET, POST, DELETE | yes   | `bot-match-cast`       | per-tenant                                            |
 
 #### `GET /api/bot/v1/cast/upcoming`
 
@@ -263,7 +293,11 @@ Liste les `cast_assignments` dont le match commence dans la fenetre `[now,
 now+withinMinutes]`, non annules, `acked_at IS NULL`. Sert au bot pour DM les
 casters a T-30 avec un bouton "Je confirme" (qui POST `/cast/:id/ack`).
 
-**Auth** : `x-api-key`
+**Auth** : `x-api-key`. La route est `crossTenant: true` — le header
+`x-tenant-id` n'est ni requis ni utilise. Chaque row de la response inclut
+`tenantId` afin que le bot route le DM vers le guild Discord correspondant
+(resolution `tenantId -> guildId` cote `tenant_config`). Un seul poll
+suffit pour DM les casters de tous les tenants linkes.
 
 **Query**
 
@@ -276,6 +310,7 @@ casters a T-30 avec un bouton "Je confirme" (qui POST `/cast/:id/ack`).
   "assignments": [
     {
       "assignmentId": "uuid",
+      "tenantId": "ce69a726-773e-4d12-b5eb-d2503aa752b4",
       "matchId": "uuid",
       "matchStartsAt": "2026-05-20T20:00:00.000Z",
       "casterDiscordUserId": "9000…",

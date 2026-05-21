@@ -12,6 +12,13 @@
 // Note : on filtre aussi sur le statut du match (pas de matchs annules) — on
 // ne renvoie que des assignations actionnables. Les matches.is_bye sont aussi
 // exclus puisqu'ils n'ont pas de cast.
+//
+// EXCEPTION DE SCOPING TENANT_ID : meme philosophie que /events/pending et
+// /tenants/all-configs — le bot est multi-tenant et doit poller une seule
+// fois pour DM les casters de tous les guilds. Chaque row expose son
+// `tenantId` afin que le bot route correctement (resolution
+// `tenantId -> guildId` cote tenant_config). Pas de filtre `tenant_id`
+// applique dans le SELECT.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
@@ -51,10 +58,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   // pas sur briefing_at. Le brief T-30 est cale par convention sur 30min
   // avant scheduled_at cote admin, mais c'est le match qui fait foi pour le
   // "upcoming".
+  // crossTenant: true — pas de filtre `tenant_id`. Le bot va router via le
+  // `tenantId` retourne par row (cf. note d'en-tete).
   const { data, error } = await supabaseAdmin
     .from('cast_assignments')
     .select(
-      `id, match_id, briefing_at, acked_at, cast_member_id,
+      `id, tenant_id, match_id, briefing_at, acked_at, cast_member_id,
        cast_member:cast_member_id (id, name, title, auth_user_id),
        match:match_id (
          id, status, scheduled_at, is_bye,
@@ -63,7 +72,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          tournament:tournament_id (id, name, slug)
        )`
     )
-    .eq('tenant_id', req.botContext!.tenantId)
     .is('acked_at', null)
     .order('briefing_at', { ascending: true });
 
@@ -146,6 +154,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const casterDiscord = casterAuth ? discordByAuth.get(casterAuth) ?? null : null;
     return {
       assignmentId: r.id as string,
+      tenantId: (r.tenant_id as string | null) ?? null,
       matchId: r.match_id as string,
       matchStartsAt: (m?.scheduled_at as string | null) ?? null,
       casterDiscordUserId: casterDiscord,
@@ -167,4 +176,5 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 export default withBotRoute(handler, {
   methods: ['GET'],
   rateLimit: { max: 60, key: 'bot-cast-upcoming' },
+  crossTenant: true,
 });

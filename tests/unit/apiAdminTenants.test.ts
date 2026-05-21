@@ -26,6 +26,11 @@ import discordConfigList from '../../pages/api/admin/tenants/[id]/discord-config
 import discordConfigPut from '../../pages/api/admin/tenants/[id]/discord-config/[guildId]';
 import staffList from '../../pages/api/admin/tenants/[id]/staff/index';
 import staffDelete from '../../pages/api/admin/tenants/[id]/staff/[staffId]';
+import poleAdminToggle from '../../pages/api/admin/staff/[staffId]/pole-admin';
+import {
+  canAccessTenant,
+  listAccessibleTenants,
+} from '../../utils/adminTenants';
 
 const TENANT_A = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const TENANT_B = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
@@ -35,7 +40,8 @@ const OTHER_STAFF = '99999999-9999-9999-9999-999999999999';
 const GUILD_ID = '1234567890123456789';
 
 function makeStaffRow(
-  role: 'admin' | 'manager' | 'caster' = 'admin'
+  role: 'owner' | 'admin' | 'manager' | 'caster' = 'owner',
+  opts: { is_pole_admin?: boolean } = {}
 ): StaffMember {
   return {
     id: STAFF_1,
@@ -45,6 +51,7 @@ function makeStaffRow(
     display_name: null,
     avatar_url: null,
     created_at: '2026-01-01T00:00:00.000Z',
+    is_pole_admin: opts.is_pole_admin ?? false,
   };
 }
 
@@ -83,7 +90,7 @@ beforeEach(() => {
   invalidateStaffCache();
   setAuthUser({ id: 'user-1' });
   store.staff = [
-    makeStaffRow('admin'),
+    makeStaffRow('owner'),
     {
       id: OTHER_STAFF,
       auth_user_id: 'other-user',
@@ -92,6 +99,7 @@ beforeEach(() => {
       display_name: 'Other',
       avatar_url: null,
       created_at: '2026-01-01T00:00:00.000Z',
+      is_pole_admin: false,
     } as any,
   ] as any;
   store.tenants = [
@@ -165,6 +173,38 @@ describe('GET /api/admin/tenants/accessible', () => {
     const res = makeRes();
     await accessibleHandler(makeReq({ method: 'POST' }), res);
     expect(res.statusCode).toBe(405);
+  });
+
+  it('pole_admin: retourne tous les tenants actifs', async () => {
+    // STAFF_1 devient pole_admin (cross-tenant). On retire ses rows
+    // tenant_staff pour prouver que le bypass ne depend pas d'elles.
+    store.staff = [makeStaffRow('owner', { is_pole_admin: true })] as any;
+    invalidateStaffCache();
+    store.tenant_staff = [] as any;
+    const res = makeRes();
+    await accessibleHandler(makeReq(), res);
+    expect(res.statusCode).toBe(200);
+    const body = res.body as any;
+    // 3 tenants actifs : alpha, beta, conference.
+    expect(body.tenants).toHaveLength(3);
+    const slugs = body.tenants.map((t: any) => t.slug).sort();
+    expect(slugs).toEqual(['alpha', 'beta', 'conference']);
+    // role expose = pole_admin pour tous.
+    expect(body.tenants.every((t: any) => t.role === 'pole_admin')).toBe(true);
+  });
+
+  it('non pole_admin: comportement actuel (uniquement tenant_staff)', async () => {
+    store.staff = [makeStaffRow('owner', { is_pole_admin: false })] as any;
+    invalidateStaffCache();
+    const res = makeRes();
+    await accessibleHandler(makeReq(), res);
+    expect(res.statusCode).toBe(200);
+    const body = res.body as any;
+    expect(body.tenants).toHaveLength(2);
+    expect(body.tenants.map((t: any) => t.slug)).toEqual([
+      'alpha',
+      'conference',
+    ]);
   });
 });
 
@@ -353,6 +393,15 @@ describe('/api/admin/tenants/[id]/discord-config', () => {
   });
 
   it('PUT 404 si guild pas dans le tenant', async () => {
+    // STAFF_1 (owner) doit aussi avoir acces a TENANT_B pour passer la
+    // verification canAccessTenant — sinon on s'arrete a 403 avant
+    // d'atteindre la verification "guild appartient au tenant".
+    (store.tenant_staff as any[]).push({
+      tenant_id: TENANT_B,
+      staff_id: STAFF_1,
+      role: 'admin',
+      created_at: '2026-01-01',
+    });
     const res = makeRes();
     await discordConfigPut(
       makeReq({
@@ -519,5 +568,203 @@ describe('/api/admin/tenants/[id]/staff', () => {
       res
     );
     expect(res.statusCode).toBe(404);
+  });
+});
+
+/* ===========================================================================
+ * Helpers : canAccessTenant + listAccessibleTenants (pole_admin)
+ * =========================================================================*/
+
+describe('utils/adminTenants pole_admin behaviour', () => {
+  it('listAccessibleTenants(pole_admin=true) → tous les tenants actifs', async () => {
+    // STAFF_1 sans aucune row tenant_staff mais is_pole_admin = true.
+    store.staff = [
+      { ...makeStaffRow('owner'), is_pole_admin: true } as any,
+    ] as any;
+    store.tenant_staff = [] as any;
+    const list = await listAccessibleTenants(STAFF_1);
+    expect(list.map((t) => t.slug).sort()).toEqual([
+      'alpha',
+      'beta',
+      'conference',
+    ]);
+    expect(list.every((t) => t.role === 'pole_admin')).toBe(true);
+  });
+
+  it('listAccessibleTenants(pole_admin=false) → uniquement tenant_staff', async () => {
+    store.staff = [
+      { ...makeStaffRow('owner'), is_pole_admin: false } as any,
+    ] as any;
+    // STAFF_1 a tenant_staff sur TENANT_A + CONFERENCE_ID (seed).
+    const list = await listAccessibleTenants(STAFF_1);
+    expect(list.map((t) => t.slug)).toEqual(['alpha', 'conference']);
+  });
+
+  it('canAccessTenant(isPoleAdmin hint=true) → true sans toucher tenant_staff', async () => {
+    // Si le hint est fourni, l'implementation doit shortcut.
+    store.tenant_staff = [] as any;
+    const ok = await canAccessTenant(STAFF_1, TENANT_B, { isPoleAdmin: true });
+    expect(ok).toBe(true);
+  });
+
+  it('canAccessTenant: pole_admin via SELECT bypass tenant_staff', async () => {
+    // Pas de hint passe → le helper SELECT staff.is_pole_admin. Si true, bypass.
+    store.staff = [
+      { ...makeStaffRow('owner'), is_pole_admin: true } as any,
+    ] as any;
+    store.tenant_staff = [] as any;
+    const ok = await canAccessTenant(STAFF_1, TENANT_B);
+    expect(ok).toBe(true);
+  });
+
+  it('canAccessTenant: non pole_admin → fallback tenant_staff', async () => {
+    store.staff = [
+      { ...makeStaffRow('owner'), is_pole_admin: false } as any,
+    ] as any;
+    store.tenant_staff = [] as any;
+    const ok = await canAccessTenant(STAFF_1, TENANT_B);
+    expect(ok).toBe(false);
+  });
+});
+
+/* ===========================================================================
+ * POST/DELETE /api/admin/staff/[staffId]/pole-admin
+ * =========================================================================*/
+
+describe('/api/admin/staff/[staffId]/pole-admin', () => {
+  it('POST 200 active is_pole_admin sur la cible', async () => {
+    // STAFF_1 = owner active. On force OTHER_STAFF a is_pole_admin=false
+    // pour pouvoir l'activer.
+    const res = makeRes();
+    await poleAdminToggle(
+      makeReq({ method: 'POST', query: { staffId: OTHER_STAFF } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).is_pole_admin).toBe(true);
+    const updated = (store.staff as any[]).find((s) => s.id === OTHER_STAFF);
+    expect(updated.is_pole_admin).toBe(true);
+  });
+
+  it('DELETE 200 desactive is_pole_admin sur la cible', async () => {
+    // Pre-active OTHER_STAFF (admin role, donc pas concerne par le garde-fou
+    // last-owner).
+    const other = (store.staff as any[]).find((s) => s.id === OTHER_STAFF);
+    other.is_pole_admin = true;
+    const res = makeRes();
+    await poleAdminToggle(
+      makeReq({ method: 'DELETE', query: { staffId: OTHER_STAFF } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).is_pole_admin).toBe(false);
+    const updated = (store.staff as any[]).find((s) => s.id === OTHER_STAFF);
+    expect(updated.is_pole_admin).toBe(false);
+  });
+
+  it('POST 403 si appelant pas owner', async () => {
+    store.staff = [makeStaffRow('admin')] as any;
+    invalidateStaffCache();
+    const res = makeRes();
+    await poleAdminToggle(
+      makeReq({ method: 'POST', query: { staffId: OTHER_STAFF } }),
+      res
+    );
+    expect(res.statusCode).toBe(403);
+  });
+
+  it('POST 400 si staffId non UUID', async () => {
+    const res = makeRes();
+    await poleAdminToggle(
+      makeReq({ method: 'POST', query: { staffId: 'nope' } }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect((res.body as any).code).toBe('INVALID_STAFF_ID');
+  });
+
+  it('POST 404 si staff cible inconnu', async () => {
+    const res = makeRes();
+    await poleAdminToggle(
+      makeReq({
+        method: 'POST',
+        query: { staffId: '00000000-0000-0000-0000-000000000000' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(404);
+    expect((res.body as any).code).toBe('STAFF_NOT_FOUND');
+  });
+
+  it('DELETE 409 si dernier owner pole_admin actif (garde-fou lockout)', async () => {
+    // STAFF_1 est le seul owner actif avec is_pole_admin=true.
+    store.staff = [
+      { ...makeStaffRow('owner'), is_pole_admin: true } as any,
+      {
+        id: OTHER_STAFF,
+        auth_user_id: 'other-user',
+        email: 'o@o.com',
+        role: 'admin',
+        display_name: 'Other',
+        avatar_url: null,
+        created_at: '2026-01-01T00:00:00.000Z',
+        is_pole_admin: true,
+        is_active: true,
+      } as any,
+    ] as any;
+    invalidateStaffCache();
+    const res = makeRes();
+    await poleAdminToggle(
+      makeReq({ method: 'DELETE', query: { staffId: STAFF_1 } }),
+      res
+    );
+    expect(res.statusCode).toBe(409);
+    expect((res.body as any).code).toBe('LAST_POLE_OWNER');
+  });
+
+  it('DELETE 200 si autre owner pole_admin actif existe', async () => {
+    store.staff = [
+      { ...makeStaffRow('owner'), is_pole_admin: true } as any,
+      {
+        id: OTHER_STAFF,
+        auth_user_id: 'other-user',
+        email: 'o@o.com',
+        role: 'owner',
+        display_name: 'Other',
+        avatar_url: null,
+        created_at: '2026-01-01T00:00:00.000Z',
+        is_pole_admin: true,
+        is_active: true,
+      } as any,
+    ] as any;
+    invalidateStaffCache();
+    const res = makeRes();
+    await poleAdminToggle(
+      makeReq({ method: 'DELETE', query: { staffId: STAFF_1 } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).is_pole_admin).toBe(false);
+  });
+
+  it('POST no-op si deja active (changed=false)', async () => {
+    const other = (store.staff as any[]).find((s) => s.id === OTHER_STAFF);
+    other.is_pole_admin = true;
+    const res = makeRes();
+    await poleAdminToggle(
+      makeReq({ method: 'POST', query: { staffId: OTHER_STAFF } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).changed).toBe(false);
+  });
+
+  it('405 sur GET', async () => {
+    const res = makeRes();
+    await poleAdminToggle(
+      makeReq({ method: 'GET', query: { staffId: OTHER_STAFF } }),
+      res
+    );
+    expect(res.statusCode).toBe(405);
   });
 });

@@ -47,12 +47,39 @@ export type ActiveTenantResolution = {
  *
  * V1 : "acceder" = avoir une row dans `tenant_staff(tenant_id, staff_id)`.
  * Le `role` colonne n'est pas inspecte (toute row = acces complet).
+ *
+ * Cross-tenant : si le staff a `is_pole_admin = true` (cf. migration
+ * `add_pole_admin_flag_to_staff.sql`), il a acces a tous les tenants sans
+ * passer par `tenant_staff`. On accepte un `isPoleAdmin` hint pour eviter
+ * un re-SELECT quand l'appelant a deja le staff row charge (typiquement
+ * via `requireStaffRoleFromRequest`). Sans hint, on fait un SELECT minimal.
  */
 export async function canAccessTenant(
   staffId: string,
-  tenantId: string
+  tenantId: string,
+  opts?: { isPoleAdmin?: boolean }
 ): Promise<boolean> {
   if (!isValidTenantUuid(tenantId)) return false;
+
+  // Fast-path : hint deja fourni par l'appelant.
+  if (opts?.isPoleAdmin === true) return true;
+
+  // Si pas de hint, on lit le flag (cheap : staff est cache 5 min dans
+  // `getStaffByUserId` mais ici on contourne le cache car on a juste
+  // l'id du staff, pas l'auth_user_id).
+  if (opts?.isPoleAdmin === undefined) {
+    const { data: staffRow, error: staffErr } = await supabaseAdmin
+      .from('staff')
+      .select('is_pole_admin')
+      .eq('id', staffId)
+      .maybeSingle();
+    if (staffErr) {
+      logger.error('[adminTenants] canAccessTenant staff lookup error', staffErr);
+    } else if ((staffRow as { is_pole_admin?: boolean } | null)?.is_pole_admin) {
+      return true;
+    }
+  }
+
   const { data, error } = await supabaseAdmin
     .from('tenant_staff')
     .select('staff_id')
@@ -64,6 +91,119 @@ export async function canAccessTenant(
     return false;
   }
   return !!data;
+}
+
+/**
+ * Liste les tenants accessibles a un staff.
+ *
+ * Comportement :
+ *   - `is_pole_admin = true` → tous les tenants actifs (cross-tenant).
+ *     Le `role` retourne est `'pole_admin'` (informationnel uniquement).
+ *   - `is_pole_admin = false` (ou absent) → uniquement les tenants ou il
+ *     a une row dans `tenant_staff`. Le `role` retourne est celui de la
+ *     row tenant_staff.
+ *
+ * Comme `canAccessTenant`, accepte un `isPoleAdmin` hint pour eviter un
+ * re-SELECT quand l'appelant a deja le staff row.
+ */
+export type AccessibleTenantRow = {
+  id: string;
+  slug: string;
+  name: string;
+  is_active: boolean;
+  role: string;
+};
+
+export async function listAccessibleTenants(
+  staffId: string,
+  opts?: { isPoleAdmin?: boolean }
+): Promise<AccessibleTenantRow[]> {
+  let isPoleAdmin = opts?.isPoleAdmin ?? false;
+
+  if (opts?.isPoleAdmin === undefined) {
+    const { data: staffRow, error: staffErr } = await supabaseAdmin
+      .from('staff')
+      .select('is_pole_admin')
+      .eq('id', staffId)
+      .maybeSingle();
+    if (staffErr) {
+      logger.error(
+        '[adminTenants] listAccessibleTenants staff lookup error',
+        staffErr
+      );
+    } else if ((staffRow as { is_pole_admin?: boolean } | null)?.is_pole_admin) {
+      isPoleAdmin = true;
+    }
+  }
+
+  if (isPoleAdmin) {
+    const { data, error } = await supabaseAdmin
+      .from('tenants')
+      .select('id, slug, name, is_active')
+      .eq('is_active', true)
+      .order('slug', { ascending: true });
+    if (error) {
+      logger.error('[adminTenants] listAccessibleTenants (pole) error', error);
+      return [];
+    }
+    type Row = { id: string; slug: string; name: string; is_active: boolean };
+    return ((data as Row[] | null) ?? []).map((t) => ({
+      id: t.id,
+      slug: t.slug,
+      name: t.name,
+      is_active: t.is_active,
+      role: 'pole_admin',
+    }));
+  }
+
+  // Default : lookup via tenant_staff (2 requetes, mock-friendly).
+  const { data: rows, error } = await supabaseAdmin
+    .from('tenant_staff')
+    .select('tenant_id, role')
+    .eq('staff_id', staffId);
+
+  if (error) {
+    logger.error('[adminTenants] listAccessibleTenants error', error);
+    return [];
+  }
+
+  type StaffRow = { tenant_id: string; role: string };
+  const staffRows = ((rows as StaffRow[] | null) ?? []).filter(
+    (r) => typeof r.tenant_id === 'string'
+  );
+  const ids = staffRows.map((r) => r.tenant_id);
+  if (ids.length === 0) return [];
+
+  const { data: tenantsData, error: tErr } = await supabaseAdmin
+    .from('tenants')
+    .select('id, slug, name, is_active')
+    .in('id', ids);
+  if (tErr) {
+    logger.error(
+      '[adminTenants] listAccessibleTenants tenants lookup error',
+      tErr
+    );
+    return [];
+  }
+  type TRow = { id: string; slug: string; name: string; is_active: boolean };
+  const tenantsById = new Map<string, TRow>(
+    ((tenantsData as TRow[] | null) ?? []).map((t) => [t.id, t])
+  );
+
+  return staffRows
+    .map((r) => {
+      const t = tenantsById.get(r.tenant_id);
+      if (!t) return null;
+      return {
+        id: t.id,
+        slug: t.slug,
+        name: t.name,
+        is_active: t.is_active,
+        role: r.role,
+      } as AccessibleTenantRow;
+    })
+    .filter((t): t is AccessibleTenantRow => t !== null)
+    .sort((a, b) => a.slug.localeCompare(b.slug));
 }
 
 /**
@@ -103,20 +243,53 @@ export async function requireManagerRoleAcrossAnyTenant(
  *   3. Aucune row tenant_staff → DEFAULT_TENANT_ID, 'fallback_default'
  *      + warning log (cas degrade, ne devrait pas arriver apres backfill).
  *
+ * Si `isPoleAdmin` hint est fourni (typiquement par le caller qui a deja
+ * charge la row staff), on accepte tout tenant_id valide en cookie et le
+ * fallback pioche dans tous les tenants actifs par slug ASC.
+ *
  * Note perf : `tenant_staff` est minuscule (< 100 rows attendus), une
  * requete par appel est negligeable. Pas de cache V1.
  */
 export async function resolveActiveTenant(
   staffId: string,
-  cookieTenantId: string | null | undefined
+  cookieTenantId: string | null | undefined,
+  opts?: { isPoleAdmin?: boolean }
 ): Promise<ActiveTenantResolution> {
+  const isPoleAdmin = opts?.isPoleAdmin === true;
+
   // 1) Cookie present + valide → check d'acces.
   if (cookieTenantId && isValidTenantUuid(cookieTenantId)) {
     const lower = cookieTenantId.toLowerCase();
-    const allowed = await canAccessTenant(staffId, lower);
+    const allowed = await canAccessTenant(staffId, lower, {
+      isPoleAdmin,
+    });
     if (allowed) {
       return { tenantId: lower, source: 'cookie' };
     }
+  }
+
+  // Pole admin sans cookie valide → premier tenant actif par slug ASC.
+  if (isPoleAdmin) {
+    const { data: tenantsData, error: tErr } = await supabaseAdmin
+      .from('tenants')
+      .select('id, slug')
+      .eq('is_active', true)
+      .order('slug', { ascending: true });
+    if (!tErr && Array.isArray(tenantsData) && tenantsData.length > 0) {
+      const sorted = (tenantsData as Array<{ id: string; slug: string }>).sort(
+        (a, b) => (a.slug ?? '').localeCompare(b.slug ?? '')
+      );
+      const first = sorted[0];
+      if (first?.id) {
+        return { tenantId: first.id, source: 'fallback_first' };
+      }
+    }
+    // Pas de tenant actif → fallback degrade.
+    logger.warn(
+      '[adminTenants] pole admin but no active tenant found, falling back to DEFAULT_TENANT_ID',
+      { staffId }
+    );
+    return { tenantId: DEFAULT_TENANT_ID, source: 'fallback_default' };
   }
 
   // 2) Fallback first : premier tenant par slug ASC dans tenant_staff.

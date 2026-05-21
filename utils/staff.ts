@@ -302,14 +302,20 @@ export async function requireStaffRoleFromRequest(
   // DEFAULT_TENANT_ID. La query DB cote `resolveActiveTenant` est minuscule
   // (tenant_staff est petit) — pas de cache pour V1.
   //
+  // On passe `is_pole_admin` en hint pour eviter un re-SELECT cote
+  // `resolveActiveTenant` / `canAccessTenant` : la row staff est deja
+  // chargee ici via `getStaffByUserId` (cache 5min).
+  //
   // Import dynamique pour eviter un cycle (`utils/adminTenants` reimporte
   // `hasAtLeastRole` depuis ce module).
   const { resolveActiveTenant, readActiveTenantCookie } =
     await import('./adminTenants');
   const cookieTenantId = readActiveTenantCookie(req.cookies);
+  const isPoleAdmin = (ctx.staff as { is_pole_admin?: boolean }).is_pole_admin === true;
   const { tenantId, source } = await resolveActiveTenant(
     ctx.staff.id,
-    cookieTenantId
+    cookieTenantId,
+    { isPoleAdmin }
   );
 
   return {

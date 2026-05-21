@@ -47,10 +47,12 @@ async function handler(
 
   // ---------- GET ----------
   if (req.method === 'GET') {
-    // Acces : manager+ globalement OU staff de ce tenant precis.
+    // Acces : manager+ globalement OU staff de ce tenant precis OU pole admin.
     const isManager = hasAtLeastRole(ctx.role, 'manager');
     if (!isManager) {
-      const allowed = await canAccessTenant(ctx.staff.id, id);
+      const isPoleAdmin =
+        (ctx.staff as { is_pole_admin?: boolean }).is_pole_admin === true;
+      const allowed = await canAccessTenant(ctx.staff.id, id, { isPoleAdmin });
       if (!allowed) {
         return res.status(403).json({ error: 'No access to this tenant.' });
       }
@@ -120,7 +122,9 @@ async function handler(
 
   // ---------- PATCH ----------
   if (req.method === 'PATCH') {
-    if (!hasAtLeastRole(ctx.role, 'manager')) {
+    // Owner-only : editer un tenant (name/locale/is_active) impacte tous
+    // les utilisateurs scope dessus.
+    if (!hasAtLeastRole(ctx.role, 'owner')) {
       return res.status(403).json({ error: 'Forbidden.' });
     }
 
@@ -194,7 +198,8 @@ async function handler(
 
   // ---------- DELETE (soft) ----------
   if (req.method === 'DELETE') {
-    if (!hasAtLeastRole(ctx.role, 'manager')) {
+    // Owner-only : suppression (soft) d'un tenant.
+    if (!hasAtLeastRole(ctx.role, 'owner')) {
       return res.status(403).json({ error: 'Forbidden.' });
     }
 

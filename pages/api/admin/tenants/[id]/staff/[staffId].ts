@@ -40,7 +40,8 @@ async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (!hasAtLeastRole(ctx.role, 'manager')) {
+  // Owner-only : retirer un staff d'un tenant.
+  if (!hasAtLeastRole(ctx.role, 'owner')) {
     return res.status(403).json({ error: 'Forbidden.' });
   }
 
@@ -97,5 +98,5 @@ async function handler(
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'admin-tenants-staff-delete' }),
-  'manager'
+  'owner'
 );

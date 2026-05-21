@@ -1,6 +1,10 @@
 // tests/unit/cast-upcoming.test.ts
 // GET /api/bot/v1/cast/upcoming — fenetre 5..120 min, exclut acked, exclut
 // matchs annules / finished / is_bye.
+//
+// S6 (multi-tenant) : la route est `crossTenant: true`. Pas de header
+// `x-tenant-id` requis ; chaque row expose son propre `tenantId` pour que
+// le bot route vers le bon guild en un seul poll.
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
@@ -9,10 +13,14 @@ import handler from '../../pages/api/bot/v1/cast/upcoming';
 const MATCH_A = '550e8400-e29b-41d4-a716-446655440a01';
 const MATCH_B = '550e8400-e29b-41d4-a716-446655440a02';
 const MATCH_FINISHED = '550e8400-e29b-41d4-a716-446655440a03';
+const MATCH_TENANT_X = '550e8400-e29b-41d4-a716-446655440a04';
+const MATCH_TENANT_Y = '550e8400-e29b-41d4-a716-446655440a05';
 const ASSIGN_A = '550e8400-e29b-41d4-a716-446655440b01';
 const ASSIGN_B = '550e8400-e29b-41d4-a716-446655440b02';
 const ASSIGN_FINISHED = '550e8400-e29b-41d4-a716-446655440b03';
 const ASSIGN_ACKED = '550e8400-e29b-41d4-a716-446655440b04';
+const ASSIGN_TENANT_X = '550e8400-e29b-41d4-a716-446655440b05';
+const ASSIGN_TENANT_Y = '550e8400-e29b-41d4-a716-446655440b06';
 const CAST_MEMBER_A = '550e8400-e29b-41d4-a716-446655440c01';
 const CAST_MEMBER_B = '550e8400-e29b-41d4-a716-446655440c02';
 const CASTER_AUTH_A = 'auth-caster-a';
@@ -22,16 +30,18 @@ const CASTER_DISCORD_B = '900000000000000002';
 const TEAM_1 = '550e8400-e29b-41d4-a716-446655440d01';
 const TEAM_2 = '550e8400-e29b-41d4-a716-446655440d02';
 const TOURNAMENT = '550e8400-e29b-41d4-a716-446655440e01';
-// Conference tenant UUID — match DEFAULT_TENANT_ID in utils/tenant.ts. The
-// fallback resolveTenantId() injects this value into req.botContext.tenantId
-// when the bot doesn't send x-tenant-id, so fixtures must carry it too for
-// the S3 sweep tenant_id filters to match.
+// Conference tenant UUID — match DEFAULT_TENANT_ID in utils/tenant.ts.
 const CONFERENCE_TENANT_ID = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
+// Tenants additionnels pour le test cross-tenant.
+const TENANT_X_ID = '11111111-2222-4333-8444-555555555555';
+const TENANT_Y_ID = '99999999-aaaa-4bbb-8ccc-dddddddddddd';
 
 function makeReq(over: Partial<any> = {}): any {
   return {
     method: 'GET',
-    headers: { host: 'h', 'x-api-key': 'test-key', 'x-tenant-id': CONFERENCE_TENANT_ID },
+    // crossTenant: true → pas besoin de header `x-tenant-id`. On le retire
+    // volontairement des defaults pour exercer le bypass du middleware.
+    headers: { host: 'h', 'x-api-key': 'test-key' },
     query: {},
     body: {},
     ...over,
@@ -178,6 +188,87 @@ describe('GET /api/bot/v1/cast/upcoming', () => {
     expect(a.teamA.name).toBe('Team Alpha');
     expect(a.teamB.name).toBe('Team Beta');
     expect(a.role).toBe('Caster');
+    // S6 multi-tenant : chaque row expose son tenantId pour le routage bot.
+    expect(a.tenantId).toBe(CONFERENCE_TENANT_ID);
+  });
+
+  it('crossTenant: no x-tenant-id header required (route is global)', async () => {
+    const res = makeRes();
+    // makeReq() default headers volontairement sans x-tenant-id.
+    await handler(makeReq(), res);
+    expect(res.statusCode).toBe(200);
+    // Aucune erreur MISSING_TENANT_ID / INVALID_TENANT_ID emise.
+    expect((res.body as any).error).toBeUndefined();
+  });
+
+  it('returns assignments from multiple tenants in a single response', async () => {
+    // Seed 2 assignments supplementaires sur 2 autres tenants — le poll
+    // unique du bot doit recuperer les 3 (conference + X + Y) dans la
+    // meme reponse, chacun avec son `tenantId`.
+    const now = Date.now();
+    const inFifteenMin = new Date(now + 15 * 60_000).toISOString();
+    (store.cast_assignments as any[]).push(
+      {
+        id: ASSIGN_TENANT_X,
+        tenant_id: TENANT_X_ID,
+        match_id: MATCH_TENANT_X,
+        cast_member_id: CAST_MEMBER_A,
+        briefing_at: inFifteenMin,
+        acked_at: null,
+        cast_member: {
+          id: CAST_MEMBER_A,
+          name: 'Alice',
+          title: 'Caster',
+          auth_user_id: CASTER_AUTH_A,
+        },
+        match: {
+          id: MATCH_TENANT_X,
+          status: 'pending',
+          scheduled_at: inFifteenMin,
+          is_bye: false,
+          team1: { id: TEAM_1, name: 'Team Alpha', short_name: 'TA' },
+          team2: { id: TEAM_2, name: 'Team Beta', short_name: 'TB' },
+          tournament: { id: TOURNAMENT, name: 'Spring Cup', slug: 'spring-cup' },
+        },
+      },
+      {
+        id: ASSIGN_TENANT_Y,
+        tenant_id: TENANT_Y_ID,
+        match_id: MATCH_TENANT_Y,
+        cast_member_id: CAST_MEMBER_B,
+        briefing_at: inFifteenMin,
+        acked_at: null,
+        cast_member: {
+          id: CAST_MEMBER_B,
+          name: 'Bob',
+          title: 'Caster',
+          auth_user_id: CASTER_AUTH_B,
+        },
+        match: {
+          id: MATCH_TENANT_Y,
+          status: 'pending',
+          scheduled_at: inFifteenMin,
+          is_bye: false,
+          team1: { id: TEAM_1, name: 'Team Alpha', short_name: 'TA' },
+          team2: { id: TEAM_2, name: 'Team Beta', short_name: 'TB' },
+          tournament: { id: TOURNAMENT, name: 'Spring Cup', slug: 'spring-cup' },
+        },
+      }
+    );
+
+    const res = makeRes();
+    await handler(makeReq(), res);
+    expect(res.statusCode).toBe(200);
+    const body = res.body as any;
+
+    // Les 2 assignments cross-tenant doivent etre presents, avec leur tenantId.
+    const byId = new Map<string, any>(
+      body.assignments.map((a: any) => [a.assignmentId as string, a])
+    );
+    expect(byId.get(ASSIGN_TENANT_X)?.tenantId).toBe(TENANT_X_ID);
+    expect(byId.get(ASSIGN_TENANT_Y)?.tenantId).toBe(TENANT_Y_ID);
+    // L'assignment original (conference) est toujours la avec son tenantId.
+    expect(byId.get(ASSIGN_A)?.tenantId).toBe(CONFERENCE_TENANT_ID);
   });
 
   it('400 if withinMinutes < 5', async () => {

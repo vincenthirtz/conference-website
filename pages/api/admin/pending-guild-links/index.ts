@@ -47,4 +47,4 @@ async function handler(
   return res.status(200).json({ links: data ?? [] });
 }
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'owner');

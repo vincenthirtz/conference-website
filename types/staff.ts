@@ -9,6 +9,16 @@ export type StaffMember = {
   display_name: string | null;
   avatar_url: string | null;
   created_at: string;
+  /**
+   * Flag cross-tenant. `true` = ce staff a acces a TOUS les tenants sans
+   * passer par `tenant_staff`. Cible : membres du pole dirigeant /
+   * lead-tech qui doivent naviguer cross-tenant sans friction. Geree
+   * uniquement via l'endpoint owner-only `/api/admin/staff/[staffId]/pole-admin`.
+   *
+   * Optional pour compat des fixtures de tests existantes qui ne le
+   * renseignent pas — traite alors comme `false`.
+   */
+  is_pole_admin?: boolean;
 };
 
 export type StaffContext = {

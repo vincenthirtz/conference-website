@@ -44,7 +44,9 @@ async function handler(
 
   if (req.method === 'GET') {
     if (!hasAtLeastRole(ctx.role, 'manager')) {
-      const allowed = await canAccessTenant(ctx.staff.id, id);
+      const isPoleAdmin =
+        (ctx.staff as { is_pole_admin?: boolean }).is_pole_admin === true;
+      const allowed = await canAccessTenant(ctx.staff.id, id, { isPoleAdmin });
       if (!allowed) {
         return res.status(403).json({ error: 'No access to this tenant.' });
       }
@@ -92,7 +94,8 @@ async function handler(
   }
 
   if (req.method === 'POST') {
-    if (!hasAtLeastRole(ctx.role, 'manager')) {
+    // Owner-only : assigner un staff a un tenant.
+    if (!hasAtLeastRole(ctx.role, 'owner')) {
       return res.status(403).json({ error: 'Forbidden.' });
     }
 

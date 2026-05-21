@@ -64,11 +64,17 @@ async function handler(
     return res.status(400).json({ error: 'Invalid tenant id.' });
   }
 
+  // Acces : manager+ requis pour LIRE la config Discord (channels/roles).
+  // Les casters n'y ont pas acces meme s'ils sont rattaches au tenant via
+  // tenant_staff. Les pole admins beneficient d'un bypass cross-tenant.
   if (!hasAtLeastRole(ctx.role, 'manager')) {
-    const allowed = await canAccessTenant(ctx.staff.id, id);
-    if (!allowed) {
-      return res.status(403).json({ error: 'No access to this tenant.' });
-    }
+    return res.status(403).json({ error: 'Forbidden.' });
+  }
+  const isPoleAdmin =
+    (ctx.staff as { is_pole_admin?: boolean }).is_pole_admin === true;
+  const allowed = await canAccessTenant(ctx.staff.id, id, { isPoleAdmin });
+  if (!allowed) {
+    return res.status(403).json({ error: 'No access to this tenant.' });
   }
 
   const { data: guilds, error: gErr } = await supabaseAdmin
@@ -117,4 +123,4 @@ async function handler(
   return res.status(200).json({ configs: merged });
 }
 
-export default withStaffRoute(handler, 'caster');
+export default withStaffRoute(handler, 'manager');

@@ -27,7 +27,7 @@ const PENDING_GUILD = '9999999999999999999';
 const NEW_GUILD = '8888888888888888888';
 
 function makeStaffRow(
-  role: 'admin' | 'manager' | 'caster' = 'manager'
+  role: 'owner' | 'admin' | 'manager' | 'caster' = 'owner'
 ): StaffMember {
   return {
     id: STAFF_1,
@@ -37,6 +37,7 @@ function makeStaffRow(
     display_name: null,
     avatar_url: null,
     created_at: '2026-01-01T00:00:00.000Z',
+    is_pole_admin: false,
   };
 }
 
@@ -74,7 +75,7 @@ beforeEach(() => {
   resetSupabaseMock();
   invalidateStaffCache();
   setAuthUser({ id: 'user-1' });
-  store.staff = [makeStaffRow('manager')] as any;
+  store.staff = [makeStaffRow('owner')] as any;
   store.tenants = [
     {
       id: TENANT_A,
@@ -115,8 +116,24 @@ describe('GET /api/admin/pending-guild-links', () => {
     expect((res.body as any).links).toHaveLength(2);
   });
 
-  it('403 si caster', async () => {
+  it('403 si caster (owner requis)', async () => {
     store.staff = [makeStaffRow('caster')] as any;
+    invalidateStaffCache();
+    const res = makeRes();
+    await listHandler(makeReq(), res);
+    expect(res.statusCode).toBe(403);
+  });
+
+  it('403 si manager (owner requis)', async () => {
+    store.staff = [makeStaffRow('manager')] as any;
+    invalidateStaffCache();
+    const res = makeRes();
+    await listHandler(makeReq(), res);
+    expect(res.statusCode).toBe(403);
+  });
+
+  it('403 si admin (owner requis)', async () => {
+    store.staff = [makeStaffRow('admin')] as any;
     invalidateStaffCache();
     const res = makeRes();
     await listHandler(makeReq(), res);

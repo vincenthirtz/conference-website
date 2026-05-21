@@ -70,4 +70,4 @@ async function handler(
   return res.status(200).json({ deleted: true, guild_id: guildId });
 }
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'owner');

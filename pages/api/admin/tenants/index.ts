@@ -9,7 +9,11 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
+import {
+  withStaffRoute,
+  hasAtLeastRole,
+  type AuthenticatedStaffContext,
+} from '@/utils/staff';
 import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { logger } from '@/utils/logger';
@@ -98,6 +102,10 @@ async function handler(
   }
 
   if (req.method === 'POST') {
+    // Owner-only : creation d'un tenant est une operation strategique.
+    if (!hasAtLeastRole(ctx.role, 'owner')) {
+      return res.status(403).json({ error: 'Forbidden.' });
+    }
     const body = (req.body ?? {}) as Record<string, unknown>;
     const slug =
       typeof body.slug === 'string' ? body.slug.trim().toLowerCase() : '';

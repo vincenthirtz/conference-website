@@ -9,9 +9,9 @@
 // UI displays them once in a modal and prompts the operator to copy them
 // into their secret manager.
 //
-// Auth : manager+ globally (we do not want a single-tenant staff to be able
-// to rotate secrets of a tenant they are scoped to — this is a global
-// security operation).
+// Auth : owner-only. Rotating bot secrets revokes the bot's current API key
+// and forces a redeploy with the new value — only the owner role is allowed
+// to trigger this kind of disruptive operation.
 //
 // Rate-limited at 5/min per IP to slow down a compromised admin session.
 //
@@ -131,4 +131,4 @@ async function handler(
   });
 }
 
-export default withStaffRoute(handler, 'manager');
+export default withStaffRoute(handler, 'owner');

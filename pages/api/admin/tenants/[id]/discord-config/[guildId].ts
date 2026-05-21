@@ -88,12 +88,18 @@ async function handler(
       .json({ error: 'Invalid guildId.', code: 'INVALID_GUILD_ID' });
   }
 
-  // Acces : manager+ OU staff du tenant.
-  if (!hasAtLeastRole(ctx.role, 'manager')) {
-    const allowed = await canAccessTenant(ctx.staff.id, id);
-    if (!allowed) {
-      return res.status(403).json({ error: 'No access to this tenant.' });
-    }
+  // Acces : admin+ requis pour MODIFIER la config Discord. Restreint la
+  // verification cross-tenant via canAccessTenant (manager scope du tenant
+  // peut lire, mais seul admin+ peut PUT). Les pole admins beneficient
+  // d'un bypass cross-tenant.
+  if (!hasAtLeastRole(ctx.role, 'admin')) {
+    return res.status(403).json({ error: 'Forbidden.' });
+  }
+  const isPoleAdmin =
+    (ctx.staff as { is_pole_admin?: boolean }).is_pole_admin === true;
+  const allowed = await canAccessTenant(ctx.staff.id, id, { isPoleAdmin });
+  if (!allowed) {
+    return res.status(403).json({ error: 'No access to this tenant.' });
   }
 
   // Verifie que le guild appartient bien au tenant.
@@ -178,5 +184,5 @@ async function handler(
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'admin-tenants-discord-config-put' }),
-  'caster'
+  'admin'
 );
