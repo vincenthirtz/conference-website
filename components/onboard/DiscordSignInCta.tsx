@@ -1,9 +1,20 @@
 // Re-usable "Connect with Discord" button used by the onboarding pages.
-// Wraps `supabaseClient.auth.signInWithOAuth` with the same redirect pattern
-// as `pages/register.tsx` / `pages/admin/login.tsx`.
+//
+// Two modes depending on whether the user is already signed in:
+//   - Not signed in → `signInWithOAuth({provider:'discord'})` (creates a
+//     Discord-backed account).
+//   - Already signed in (e.g. email/password) → `linkIdentity({provider:
+//     'discord'})` (attaches Discord as a second provider to the EXISTING
+//     account, no session change). Without this, calling signInWithOAuth
+//     on a signed-in user fails to deliver a code/state at callback and
+//     /auth/discord-member shows "Session introuvable".
+//
+// Same redirect pattern as `pages/register.tsx` and
+// `components/player/DiscordLinkCard.tsx`.
 
 import { useState } from 'react';
 import { supabaseClient } from '@/utils/supabase';
+import { useAuthSession } from '@/hooks/useAuthSession';
 import { logger } from '@/utils/logger';
 
 type Props = {
@@ -18,6 +29,7 @@ export default function DiscordSignInCta({
   className = '',
   label = 'Se connecter avec Discord',
 }: Props) {
+  const { user } = useAuthSession();
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -32,6 +44,40 @@ export default function DiscordSignInCta({
         ? `${baseUrl}/auth/discord-member?next=${encodeURIComponent(next)}`
         : undefined;
 
+      if (user) {
+        // Mode lier : on attache Discord à l'utilisateur connecté (email/pwd).
+        // linkIdentity n'est pas typé dans @supabase/supabase-js V2 mais dispo
+        // à l'exécution. Pattern identique à DiscordLinkCard.tsx.
+        const { data, error } = await (
+          supabaseClient.auth as unknown as {
+            linkIdentity: (args: {
+              provider: 'discord';
+              options?: { redirectTo?: string; scopes?: string };
+            }) => Promise<{
+              data: { url: string | null };
+              error: Error | null;
+            }>;
+          }
+        ).linkIdentity({
+          provider: 'discord',
+          options: { redirectTo, scopes: 'identify email' },
+        });
+        if (error) {
+          throw new Error(
+            error.message || 'Impossible de lier votre compte Discord.'
+          );
+        }
+        if (data?.url) {
+          window.location.href = data.url;
+          return;
+        }
+        // Pas d'URL retournée → déjà lié, on recharge la page pour que
+        // la détection côté /onboard/request voie le link.
+        window.location.reload();
+        return;
+      }
+
+      // Mode signin : pas connecté → flow OAuth Discord standard.
       const { error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'discord',
         options: { redirectTo, scopes: 'identify email' },
