@@ -288,11 +288,14 @@ test.describe.serial('Admin Director — golden path', () => {
     await page.getByTestId('add-segment-submit').click();
     await expect(page.getByTestId('add-segment-modal')).toBeHidden();
 
-    // 2nd segment: match
+    // 2nd segment: match (autocomplete picker — accepte un UUID colle)
     await page.getByTestId('timeline-add').click();
     await page.getByTestId('add-segment-type').selectOption('match');
     await page.getByTestId('add-segment-title-input').fill('Demi-finale');
-    await page.getByTestId('add-segment-match-id').fill(matchId);
+    await page
+      .getByTestId('add-segment-match-id')
+      .getByTestId('match-picker-input')
+      .fill(matchId);
     await page.getByTestId('add-segment-duration').fill('30');
     await page.getByTestId('add-segment-submit').click();
     await expect(page.getByTestId('add-segment-modal')).toBeHidden();

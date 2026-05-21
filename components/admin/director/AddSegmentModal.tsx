@@ -1,16 +1,16 @@
 // components/admin/director/AddSegmentModal.tsx
-// Feature: Run-of-show — Lot 3.
+// Feature: Run-of-show — Lot 3 + polish.
 // Modal d'ajout d'un segment. Champs : type, title, match_id (si match),
 // duration_min. L'API auto-set ord = MAX+1 — pas de control ici.
 //
-// Pas d'autocomplete de matches en Lot 3 : pas d'endpoint admin "matches
-// scoped tenant" (un fix API serait scope api-agent, hors scope ici). On
-// laisse un champ UUID simple, accompagne d'un helper texte. L'API valide
-// que le match existe et appartient au tenant — un mauvais UUID renverra
-// 400 INVALID_MATCH_ID.
+// Pour type=match, on utilise <MatchPicker> (autocomplete sur
+// /api/admin/matches/search) au lieu du champ UUID brut. Le match_id
+// envoye a l'API reste un UUID. L'API valide tenant + existence — un
+// mauvais UUID renverra 400 INVALID_MATCH_ID.
 
 import { useEffect, useState } from 'react';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
+import MatchPicker from '@/components/admin/director/MatchPicker';
 import {
   SEGMENT_TYPE_LABEL,
   segmentTypeLabel,
@@ -153,18 +153,17 @@ export default function AddSegmentModal({ onClose, onSubmit }: Props) {
           {type === 'match' && (
             <div>
               <label className="block text-sm text-neutral-300 mb-1">
-                Match ID (UUID) <span className="text-red-400">*</span>
+                Match <span className="text-red-400">*</span>
               </label>
-              <input
-                value={matchId}
-                onChange={(e) => setMatchId(e.target.value)}
-                data-testid="add-segment-match-id"
-                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white placeholder:text-neutral-500 font-mono text-xs focus:outline-none focus:border-purple-500"
+              <MatchPicker
+                value={matchId || null}
+                onChange={(id) => setMatchId(id ?? '')}
+                disabled={submitting}
+                testId="add-segment-match-id"
               />
               <p className="text-xs text-neutral-500 mt-1">
-                L&apos;UUID du match. Tu peux le copier depuis l&apos;URL
-                d&apos;un match admin.
+                Recherche par nom d&apos;equipe ou de tournoi. Seuls les matches
+                a venir ou non planifies apparaissent.
               </p>
             </div>
           )}
@@ -199,9 +198,13 @@ export default function AddSegmentModal({ onClose, onSubmit }: Props) {
             </button>
             <button
               type="submit"
-              disabled={submitting}
+              disabled={
+                submitting ||
+                !title.trim() ||
+                (type === 'match' && !UUID_RE.test(matchId.trim()))
+              }
               data-testid="add-segment-submit"
-              className="px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? 'Ajout…' : 'Ajouter'}
             </button>
