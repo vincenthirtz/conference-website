@@ -26,10 +26,29 @@
 [functions."outbox-maintenance-cron"]
   schedule = "0 * * * *"
 
+# Scheduled function: fan-out des events bot_event_outbox vers les
+# subscriptions Web Push de la PWA /admin (1 minute = latence max ~2 min).
+# Lit l'outbox en read-only (ne touche pas .status, qui appartient au bot
+# Discord). Tracking dans web_push_deliveries. Configurable via
+# WEB_PUSH_BATCH_LIMIT (defaut 200) / WEB_PUSH_WINDOW_HOURS (defaut 24).
+# Requiert NEXT_PUBLIC_VAPID_PUBLIC_KEY + VAPID_PRIVATE_KEY en env.
+[functions."web-push-dispatcher-cron"]
+  schedule = "* * * * *"
+
 [[headers]]
   for = "/*"
   [headers.values]
     X-Frame-Options = "ALLOW-FROM https://www.youtube.com/"
+
+# Service Worker for /admin PWA: served from /sw.js (registered with scope '/'
+# so it can receive push events outside the /admin route). no-cache so SW
+# updates propagate quickly. Service-Worker-Allowed lifts the scope cap.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Service-Worker-Allowed = "/"
+    Cache-Control = "no-cache"
+    Content-Type = "application/javascript; charset=utf-8"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"

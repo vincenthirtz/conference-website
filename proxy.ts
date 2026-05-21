@@ -25,6 +25,9 @@ export function proxy(request: NextRequest) {
     `media-src 'self' https://*.supabase.co`,
     "font-src 'self'",
     "frame-src 'self' https://player.twitch.tv https://www.youtube.com https://challenges.cloudflare.com",
+    // PWA /admin: allow Service Worker (/sw.js) and Web App Manifest from same origin.
+    "worker-src 'self'",
+    "manifest-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
