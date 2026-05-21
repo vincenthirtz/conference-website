@@ -40,16 +40,18 @@ type AppPropsWithSeo = AppProps & {
 function MyApp({ Component, pageProps, router }: AppPropsWithSeo) {
   const seo = (Component as any)?.seo as SeoProps | undefined;
   const isAdmin = router.pathname.startsWith('/admin');
-  const effectiveSeo: SeoProps = isAdmin
-    ? { ...seo, noindex: true }
-    : { ...seo };
+  const isCaster = router.pathname.startsWith('/caster');
+  // Routes "applicatives" (admin + cockpit caster) : pas d index, pas de
+  // navbar/footer marketing par defaut (chaque page caster gere sa propre
+  // chrome legere — cf. /caster/login, /caster/cockpit).
+  const effectiveSeo: SeoProps =
+    isAdmin || isCaster ? { ...seo, noindex: true } : { ...seo };
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (process.env.NEXT_PUBLIC_ENABLE_PWA !== '1') return;
     if (!('serviceWorker' in navigator)) return;
     navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch((err) => {
-      // eslint-disable-next-line no-console
       console.error('[PWA] SW registration failed:', err);
     });
   }, []);
@@ -68,14 +70,24 @@ function MyApp({ Component, pageProps, router }: AppPropsWithSeo) {
               />
             </Head>
           )}
+          {isCaster && (
+            <Head>
+              <link rel="manifest" href="/caster/manifest.webmanifest" />
+              <meta name="apple-mobile-web-app-capable" content="yes" />
+              <meta
+                name="apple-mobile-web-app-status-bar-style"
+                content="default"
+              />
+            </Head>
+          )}
           <DefaultSeo {...effectiveSeo} />
-          <Navbar />
+          {!isCaster && <Navbar />}
           <main id="main-content">
             <Component {...pageProps} />
           </main>
           {isAdmin && <PushOptIn />}
-          <Footer />
-          {!isAdmin && <FloatingSocials />}
+          {!isCaster && <Footer />}
+          {!isAdmin && !isCaster && <FloatingSocials />}
           <BackToTopButton />
           <CookieBanner />
           <ToastContainer />

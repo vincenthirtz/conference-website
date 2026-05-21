@@ -1,0 +1,25 @@
+{
+  "name": "OW Women's Cup – Cockpit caster",
+  "short_name": "OWWC Cast",
+  "description": "Cockpit du caster OW Women's Cup : segments, checklist, briefing, hotkeys.",
+  "start_url": "/caster/cockpit",
+  "scope": "/caster",
+  "display": "standalone",
+  "background_color": "#0E0A1F",
+  "theme_color": "#0E0A1F",
+  "orientation": "portrait-primary",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "/img/logos/2025-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ]
+}
