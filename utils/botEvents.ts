@@ -43,7 +43,12 @@ export type BotEventName =
   | 'scrim.deleted'
   | 'cast.assigned'
   | 'cast.unassigned'
-  | 'cast.briefing.rescheduled';
+  | 'cast.briefing.rescheduled'
+  | 'checkin.opened'
+  | 'team.forfeit'
+  | 'registration.new'
+  | 'helloasso.payment.received'
+  | 'captain.support.opened';
 
 export type BotEventPayload = Record<string, unknown>;
 

@@ -572,6 +572,30 @@ export async function applyMatchScore(
       logger.error('[botEvents] match.finished emit error:', e)
     );
 
+    if (resolvedForfeitTeamId) {
+      const forfeitTeamId = resolvedForfeitTeamId;
+      void (async () => {
+        const { data: team } = await supabaseAdmin
+          .from('teams')
+          .select('name')
+          .eq('tenant_id', tenantId)
+          .eq('id', forfeitTeamId)
+          .maybeSingle();
+        await emitBotEvent(
+          'team.forfeit',
+          {
+            team_id: forfeitTeamId,
+            team_name: team?.name ?? null,
+            match_id: matchId,
+            tournament_id: match.tournament_id ?? null,
+          },
+          tenantId
+        );
+      })().catch((e) =>
+        logger.error('[botEvents] team.forfeit emit error:', e)
+      );
+    }
+
     // MVP poll: only on real finishes (not forfeits — there's no game to vote
     // an MVP for). Fire-and-forget; failures are logged but don't block.
     if (newStatus === 'finished' && !resolvedForfeitTeamId) {

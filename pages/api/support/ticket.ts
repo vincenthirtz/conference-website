@@ -14,6 +14,8 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { notifySupportTicket } from '@/utils/discord';
+import { emitBotEvent } from '@/utils/botEvents';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { logger } from '../../../utils/logger';
 import {
   sendSupportConfirmationEmail,
@@ -244,6 +246,24 @@ export default async function handler(
     logger.error('[support/ticket] insert error:', insertErr);
     return res.status(500).json({ error: 'Échec de la création du ticket' });
   }
+
+  void emitBotEvent(
+    'captain.support.opened',
+    {
+      ticket_id: ticket.id,
+      category: ticket.category,
+      severity: ticket.severity,
+      subject: ticket.subject,
+      tournament_id: validTournamentId,
+      reporter_name: anon ? null : cleanName,
+      reporter_email: anon ? null : cleanEmail,
+      discord_user_id: storedDiscordUserId,
+      is_anonymous: anon,
+    },
+    DEFAULT_TENANT_ID
+  ).catch((err) =>
+    logger.warn('[support/ticket] captain.support.opened emit failed', err)
+  );
 
   // Fire-and-forget: Discord notification + email confirmation
   void notifySupportTicket({

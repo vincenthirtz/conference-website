@@ -15,6 +15,7 @@ import { supabaseAdmin } from './supabase';
 import { sendMatchCheckinEmail } from './email';
 import { notifyCheckinReminder, notifyCheckinForfeit } from './discord';
 import { applyMatchScore } from './matches/applyScore';
+import { emitBotEvent } from './botEvents';
 
 import { logger } from './logger';
 export const CHECKIN_OPEN_MINUTES = 60;
@@ -423,6 +424,18 @@ async function runCheckinOpenStep(
   result.steps.push(
     `email_sent (${[team1Email, team2Email].filter(Boolean).length} recipients)`
   );
+
+  await emitBotEvent(
+    'checkin.opened',
+    {
+      match_id: match.id,
+      tournament_id: match.tournament?.id ?? null,
+      scheduled_at: match.scheduled_at,
+      teamA_name: match.team1?.name ?? null,
+      teamB_name: match.team2?.name ?? null,
+    },
+    match.tenant_id
+  ).catch((err) => logger.warn('[checkin] checkin.opened emit failed', err));
 }
 
 async function runReminderStep(

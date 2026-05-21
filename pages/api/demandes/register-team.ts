@@ -12,6 +12,7 @@ import {
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { emitBotEvent } from '@/utils/botEvents';
 
 import { logger } from '../../../utils/logger';
 export type RegisterTeamBody = {
@@ -208,6 +209,21 @@ export default withAuthRoute(async function handler(
         .status(500)
         .json({ error: 'Echec de la creation de la demande.' });
     }
+
+    void emitBotEvent(
+      'registration.new',
+      {
+        demande_id: newDemande?.id ?? null,
+        team_id: teamId,
+        team_name: team.name,
+        tournament_id: tournamentId,
+        tournament_name: tournament.name,
+        captain_user_id: userId,
+      },
+      tenantId
+    ).catch((err) =>
+      logger.warn('[demandes/register-team] registration.new emit failed', err)
+    );
 
     return res.status(201).json({
       success: true,

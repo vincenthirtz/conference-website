@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import type { HelloAssoWebhookEvent } from '@/utils/helloasso';
+import { emitBotEvent } from '@/utils/botEvents';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 /**
@@ -31,6 +33,29 @@ export default async function handler(
   logger.info(
     `[helloasso/webhook] ${event.eventType} — amount=${event.data.amount} state=${event.data.state} payer=${event.data.payer?.email ?? 'unknown'}`
   );
+
+  if (event.eventType === 'Payment' && event.data.state === 'Authorized') {
+    const payerName = [event.data.payer?.firstName, event.data.payer?.lastName]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+    void emitBotEvent(
+      'helloasso.payment.received',
+      {
+        helloasso_payment_id: event.data.id,
+        amount: event.data.amount,
+        currency: 'EUR',
+        payer_name: payerName || null,
+        payer_email: event.data.payer?.email ?? null,
+      },
+      DEFAULT_TENANT_ID
+    ).catch((err) =>
+      logger.warn(
+        '[helloasso/webhook] helloasso.payment.received emit failed',
+        err
+      )
+    );
+  }
 
   // Always respond 200 so HelloAsso doesn't retry
   return res.status(200).json({ ok: true });
