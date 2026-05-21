@@ -1,0 +1,41 @@
+-- Migration: NO-OP marker pour la feature run-of-show — segment_transition event
+-- Date: 2026-05-21
+--
+-- WHY:
+--   La feature run-of-show (cf. create_event_runs_table.sql +
+--   create_event_segments_table.sql) émet un nouvel event bot
+--   `event_segment.transitioned` (ou nom équivalent décidé par l'API S2)
+--   poussé dans `bot_event_outbox` pour fan-out Discord lors du passage
+--   d'un segment en 'live' / 'done' / 'skipped'.
+--
+--   Vérification structurelle de `bot_event_outbox` au moment de l'écriture
+--   de cette migration (2026-05-21) :
+--
+--     - `event_name` : type `text NOT NULL`, AUCUNE check constraint
+--       restrictive (les valeurs existantes en prod incluent `news.published`
+--       et le code applicatif émet librement `match.starting`,
+--       `match.disputed`, `team.member.added`, etc.).
+--     - Seule CHECK existante : `bot_event_outbox_status_check` sur la
+--       colonne `status` (pending|delivered|failed).
+--
+--   Conclusion : AUCUN ALTER nécessaire. L'API peut écrire
+--   `event_name = 'event_segment.transitioned'` (ou tout autre nom) dans
+--   `bot_event_outbox` sans modifier le schéma.
+--
+--   Cette migration est conservée comme MARKER explicite dans la timeline du
+--   feature run-of-show, pour que la PR review puisse pointer ce fichier et
+--   confirmer "oui, on a vérifié, c'est un no-op volontaire" plutôt que de
+--   deviner qu'une migration manque.
+--
+--   Si une CHECK constraint sur `event_name` est ajoutée dans le futur, cette
+--   migration devra être éditée (et son contenu remplacé par le DROP/ADD
+--   correspondant).
+--
+-- CAVEATS:
+--   - Idempotente par construction (no-op).
+--   - Pas de NOTIFY pgrst : aucun changement de schéma.
+--   - Si tu lis ce fichier en review, tu peux le SKIP côté Dashboard SQL
+--     Editor ; il est ici pour la traçabilité git, pas pour modifier la DB.
+
+-- (Intentionnellement vide. Voir header pour la justification.)
+SELECT 'no-op: bot_event_outbox.event_name is free text, no schema change required for segment_transition events' AS note;
