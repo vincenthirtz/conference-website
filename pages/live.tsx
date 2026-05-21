@@ -1,4 +1,5 @@
 import type { GetStaticProps } from 'next';
+import dynamic from 'next/dynamic';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import LiveTwitchSection, {
   type TwitchChannel,
@@ -6,6 +7,13 @@ import LiveTwitchSection, {
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { logger } from '@/utils/logger';
+
+// LiveEventBanner depend de fetch + realtime supabaseClient — pas SSR-friendly,
+// on le charge cote client uniquement.
+const LiveEventBanner = dynamic(
+  () => import('@/components/Live/LiveEventBanner'),
+  { ssr: false }
+);
 
 type Props = {
   channels: TwitchChannel[];
@@ -50,6 +58,7 @@ function LivePage({ channels }: Props) {
   return (
     <div className="min-h-screen">
       <div className="container mx-auto px-4 pt-24 pb-20">
+        <LiveEventBanner />
         <LiveTwitchSection initialChannels={channels} />
       </div>
     </div>
