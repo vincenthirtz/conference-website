@@ -4,6 +4,7 @@ import LiveTwitchSection, {
   type TwitchChannel,
 } from '@/components/Live/LiveTwitchSection';
 import { supabaseAdmin } from '@/utils/supabase';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { logger } from '@/utils/logger';
 
 type Props = {
@@ -15,9 +16,13 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
     return { props: { channels: [] }, revalidate: 60 };
   }
 
+  // Static export -> no `req`, so we hard-code the conference tenant. Quand
+  // on switchera vers du multi-tenant via subdomain/path-prefix (S7), il
+  // faudra basculer cette page en `getServerSideProps`.
   const { data, error } = await supabaseAdmin
     .from('twitch_channels')
     .select('channel, label, badge, description, background_url')
+    .eq('tenant_id', DEFAULT_TENANT_ID)
     .eq('is_active', true)
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: false });

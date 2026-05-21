@@ -35,7 +35,11 @@ function emptyDiscordConfig() {
     scrims_announce_channel_id: null as string | null,
     captain_role_id: null as string | null,
     substitute_role_id: null as string | null,
-    staff_role_ids: [] as string[],
+    // Roles staff par niveau (depuis migration drop staff_role_ids).
+    staff_role_owner_id: null as string | null,
+    staff_role_admin_id: null as string | null,
+    staff_role_manager_id: null as string | null,
+    staff_role_caster_id: null as string | null,
     teams_voice_category_id: null as string | null,
     disputes_forum_tag_open_id: null as string | null,
     disputes_forum_tag_pending_id: null as string | null,
@@ -86,7 +90,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: configRow, error: configErr } = await supabaseAdmin!
     .from('tenant_discord_config')
     .select(
-      'staff_log_channel_id, matches_live_channel_id, disputes_forum_channel_id, lives_board_channel_id, news_ingest_channel_id, scrims_announce_channel_id, captain_role_id, substitute_role_id, staff_role_ids, teams_voice_category_id, disputes_forum_tag_open_id, disputes_forum_tag_pending_id, disputes_forum_tag_resolved_id, extras'
+      'staff_log_channel_id, matches_live_channel_id, disputes_forum_channel_id, lives_board_channel_id, news_ingest_channel_id, scrims_announce_channel_id, captain_role_id, substitute_role_id, staff_role_owner_id, staff_role_admin_id, staff_role_manager_id, staff_role_caster_id, teams_voice_category_id, disputes_forum_tag_open_id, disputes_forum_tag_pending_id, disputes_forum_tag_resolved_id, extras'
     )
     .eq('guild_id', guildId)
     .maybeSingle();
@@ -100,11 +104,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     ? {
         ...emptyDiscordConfig(),
         ...configRow,
-        // staff_role_ids peut etre NULL en theorie si quelqu'un l'UPDATE a
-        // NULL en bypassant le DEFAULT — normalise pour le contrat.
-        staff_role_ids: Array.isArray(configRow.staff_role_ids)
-          ? (configRow.staff_role_ids as string[])
-          : [],
         extras:
           configRow.extras && typeof configRow.extras === 'object'
             ? (configRow.extras as Record<string, unknown>)

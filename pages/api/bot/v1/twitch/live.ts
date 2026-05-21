@@ -24,6 +24,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: channelsData, error } = await supabaseAdmin
     .from('twitch_channels')
     .select('channel, label, badge, description, background_url')
+    .eq('tenant_id', req.botContext!.tenantId)
     .eq('is_active', true)
     .order('sort_order', { ascending: true });
   if (error) {

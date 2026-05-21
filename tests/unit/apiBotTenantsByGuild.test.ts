@@ -115,7 +115,10 @@ describe('GET /api/bot/v1/tenants/by-guild/[guildId]', () => {
     expect(body.discord_config.staff_log_channel_id).toBeNull();
     expect(body.discord_config.matches_live_channel_id).toBeNull();
     expect(body.discord_config.captain_role_id).toBeNull();
-    expect(body.discord_config.staff_role_ids).toEqual([]);
+    expect(body.discord_config.staff_role_owner_id).toBeNull();
+    expect(body.discord_config.staff_role_admin_id).toBeNull();
+    expect(body.discord_config.staff_role_manager_id).toBeNull();
+    expect(body.discord_config.staff_role_caster_id).toBeNull();
     expect(body.discord_config.extras).toEqual({});
   });
 
@@ -144,7 +147,10 @@ describe('GET /api/bot/v1/tenants/by-guild/[guildId]', () => {
         scrims_announce_channel_id: null,
         captain_role_id: '333333333333333333',
         substitute_role_id: null,
-        staff_role_ids: ['role-admin', 'role-modo'],
+        staff_role_owner_id: '555555555555555555',
+        staff_role_admin_id: '666666666666666666',
+        staff_role_manager_id: null,
+        staff_role_caster_id: null,
         teams_voice_category_id: null,
         disputes_forum_tag_open_id: null,
         disputes_forum_tag_pending_id: null,
@@ -163,14 +169,14 @@ describe('GET /api/bot/v1/tenants/by-guild/[guildId]', () => {
       '222222222222222222'
     );
     expect(body.discord_config.captain_role_id).toBe('333333333333333333');
-    expect(body.discord_config.staff_role_ids).toEqual([
-      'role-admin',
-      'role-modo',
-    ]);
+    expect(body.discord_config.staff_role_owner_id).toBe('555555555555555555');
+    expect(body.discord_config.staff_role_admin_id).toBe('666666666666666666');
+    expect(body.discord_config.staff_role_manager_id).toBeNull();
+    expect(body.discord_config.staff_role_caster_id).toBeNull();
     expect(body.discord_config.extras).toEqual({ mvp_emoji_id: '444' });
   });
 
-  it('normalise staff_role_ids et extras si NULL en DB', async () => {
+  it('normalise extras si NULL en DB', async () => {
     store.discord_guilds = [
       {
         guild_id: GUILD_ID,
@@ -195,7 +201,10 @@ describe('GET /api/bot/v1/tenants/by-guild/[guildId]', () => {
         scrims_announce_channel_id: null,
         captain_role_id: null,
         substitute_role_id: null,
-        staff_role_ids: null,
+        staff_role_owner_id: null,
+        staff_role_admin_id: null,
+        staff_role_manager_id: null,
+        staff_role_caster_id: null,
         teams_voice_category_id: null,
         disputes_forum_tag_open_id: null,
         disputes_forum_tag_pending_id: null,
@@ -209,7 +218,8 @@ describe('GET /api/bot/v1/tenants/by-guild/[guildId]', () => {
 
     expect(res.statusCode).toBe(200);
     const body = res.body as any;
-    expect(body.discord_config.staff_role_ids).toEqual([]);
+    expect(body.discord_config.staff_role_owner_id).toBeNull();
+    expect(body.discord_config.staff_role_admin_id).toBeNull();
     expect(body.discord_config.extras).toEqual({});
   });
 });

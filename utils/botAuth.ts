@@ -32,6 +32,60 @@ export function verifyBotApiKey(req: NextApiRequest): boolean {
   return crypto.timingSafeEqual(a, b);
 }
 
+/**
+ * Per-tenant API key lookup.
+ *
+ * V1 transition strategy: each tenant can be assigned its own bot API key via
+ * `POST /api/admin/tenants/:id/rotate-secrets`. Incoming `x-api-key` is
+ * sha256-hashed and looked up in `tenant_secrets.bot_api_key_hash`. If found,
+ * we return the matching tenant id so `withBotRoute` can authoritatively set
+ * `req.botContext.tenantId` (the `x-tenant-id` header is ignored if it
+ * conflicts — the key wins).
+ *
+ * If the key doesn't match any row in `tenant_secrets`, we fall back to the
+ * legacy global `BOT_API_KEY` env var (constant-time compare). On match,
+ * `tenantId` is `null` and the caller falls back to `resolveTenantId(req)`
+ * (header-based).
+ *
+ * Returns `{ ok: false }` if neither match.
+ */
+export async function verifyBotApiKeyMultiTenant(
+  req: NextApiRequest
+): Promise<
+  | { ok: false }
+  | { ok: true; tenantId: string | null /* null = legacy env match */ }
+> {
+  const provided = req.headers['x-api-key'];
+  if (typeof provided !== 'string' || provided.length === 0) {
+    return { ok: false };
+  }
+
+  // 1. Per-tenant lookup (sha256(provided) → tenant_id)
+  if (supabaseAdmin) {
+    const hash = crypto.createHash('sha256').update(provided).digest('hex');
+    const { data } = await supabaseAdmin
+      .from('tenant_secrets')
+      .select('tenant_id')
+      .eq('bot_api_key_hash', hash)
+      .maybeSingle();
+    if (data?.tenant_id) {
+      return { ok: true, tenantId: data.tenant_id as string };
+    }
+  }
+
+  // 2. Legacy global env fallback (constant-time compare)
+  const expected = process.env.BOT_API_KEY;
+  if (expected) {
+    const a = Buffer.from(provided);
+    const b = Buffer.from(expected);
+    if (a.length === b.length && crypto.timingSafeEqual(a, b)) {
+      return { ok: true, tenantId: null };
+    }
+  }
+
+  return { ok: false };
+}
+
 /* ---------------------------------------------------------------------------
  * Idempotency cache (Supabase-backed)
  * ------------------------------------------------------------------------- */
@@ -182,27 +236,36 @@ export function withBotRoute(
       return;
     }
 
-    if (!process.env.BOT_API_KEY) {
-      logger.error(`[bot/${options.rateLimit.key}] BOT_API_KEY is unset`);
-      return res.status(500).json({ error: 'Endpoint not configured.' });
-    }
-    if (!verifyBotApiKey(req)) {
-      return res.status(401).json({ error: 'Invalid or missing API key.' });
-    }
     if (!supabaseAdmin) {
       return res.status(500).json({ error: 'Database unavailable.' });
     }
 
-    // Multi-tenant plumbing (Phase 1 / S2) : on resout l'identite du tenant
-    // pour ce call (x-tenant-id header) et on l'attache au contexte pour
-    // que les handlers (sweep S3-S4) puissent scoper leurs requetes avec
-    // .eq('tenant_id', tenantId). Pas de validation contre la table
-    // `tenants` ici — c'est juste un passe-plat (la validation arrive en
-    // Phase 3 / S6). Header absent ou malforme → fallback
-    // DEFAULT_TENANT_ID (utils/tenant.ts).
+    // Auth : per-tenant lookup (tenant_secrets.bot_api_key_hash) avec
+    // fallback sur l'env BOT_API_KEY pour la transition V1.
+    const authResult = await verifyBotApiKeyMultiTenant(req);
+    if (!authResult.ok) {
+      // Si aucune key per-tenant n'est seedee ET l'env est absent → c'est
+      // une erreur de config serveur, pas une mauvaise key.
+      if (!process.env.BOT_API_KEY) {
+        logger.error(
+          `[bot/${options.rateLimit.key}] BOT_API_KEY unset and no per-tenant key matched`
+        );
+        return res.status(500).json({ error: 'Endpoint not configured.' });
+      }
+      return res.status(401).json({ error: 'Invalid or missing API key.' });
+    }
+
+    // Multi-tenant scoping : si la key matche une row tenant_secrets, le
+    // tenantId est *autoritaire* (le header x-tenant-id est ignore meme s'il
+    // contredit — la key l'emporte). Sinon (fallback env), on resout via le
+    // header comme avant (V1 transitoire).
+    const resolvedTenantId =
+      authResult.tenantId !== null
+        ? authResult.tenantId
+        : resolveTenantId(req);
     req.botContext = {
       ...(req.botContext ?? {}),
-      tenantId: resolveTenantId(req),
+      tenantId: resolvedTenantId,
     };
 
     // Maintenance mode : si actif, on bloque tous les writes (POST/PATCH/

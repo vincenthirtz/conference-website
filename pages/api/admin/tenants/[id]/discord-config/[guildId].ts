@@ -7,7 +7,8 @@
 //   - acces tenant (manager+ OU staff du tenant),
 //   - le guildId fait partie des guilds du tenant (via `discord_guilds`),
 //   - tous les IDs (channel/role/tag) sont des snowflakes 15-25 digits OU
-//     NULL, `staff_role_ids` est un text[] de snowflakes.
+//     NULL. Les 4 colonnes staff_role_{owner,admin,manager,caster}_id sont
+//     gerees comme les autres snowflakes nullables.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
@@ -34,6 +35,10 @@ const NULLABLE_SNOWFLAKE_KEYS = [
   'scrims_announce_channel_id',
   'captain_role_id',
   'substitute_role_id',
+  'staff_role_owner_id',
+  'staff_role_admin_id',
+  'staff_role_manager_id',
+  'staff_role_caster_id',
   'teams_voice_category_id',
   'disputes_forum_tag_open_id',
   'disputes_forum_tag_pending_id',
@@ -129,29 +134,6 @@ async function handler(
       });
     }
     upsertPayload[key] = typeof v === 'string' && v === '' ? null : v;
-  }
-
-  if ('staff_role_ids' in body) {
-    const raw = (body as Record<string, unknown>).staff_role_ids;
-    if (!Array.isArray(raw)) {
-      return res
-        .status(400)
-        .json({
-          error: 'staff_role_ids must be an array.',
-          code: 'INVALID_STAFF_ROLES',
-        });
-    }
-    for (const role of raw) {
-      if (typeof role !== 'string' || !SNOWFLAKE_RE.test(role)) {
-        return res
-          .status(400)
-          .json({
-            error: 'staff_role_ids entries must be snowflakes.',
-            code: 'INVALID_STAFF_ROLES',
-          });
-      }
-    }
-    upsertPayload.staff_role_ids = raw;
   }
 
   if ('extras' in body) {

@@ -12,6 +12,7 @@ import AlertBanner from '@/components/admin/AlertBanner';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import EmptyState from '@/components/admin/EmptyState';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
+import BotSecretsRevealModal from '@/components/admin/BotSecretsRevealModal';
 
 import { logger } from '../../../utils/logger';
 
@@ -58,6 +59,16 @@ type Tab = 'general' | 'discord' | 'staff';
 
 const CONFERENCE_SLUG = 'conference';
 
+// POST /api/admin/tenants/[id]/rotate-secrets is live (manager+ only).
+const ROTATE_SECRETS_API_READY = true;
+
+type RotateSecretsResponse = {
+  tenantId: string;
+  botApiKey: string;
+  botWebhookSecret: string;
+  rotatedAt: string;
+};
+
 function formatDate(s: string | null): string {
   if (!s) return '—';
   try {
@@ -93,6 +104,13 @@ function AdminTenantDetailPage({ tenantId }: Props) {
   const [staffIdToAdd, setStaffIdToAdd] = useState('');
   const [staffRoleToAdd, setStaffRoleToAdd] = useState('caster');
   const [addingStaff, setAddingStaff] = useState(false);
+
+  // Bot secrets rotation
+  const [rotatingSecrets, setRotatingSecrets] = useState(false);
+  const [revealedSecrets, setRevealedSecrets] = useState<{
+    botApiKey: string;
+    botWebhookSecret: string;
+  } | null>(null);
 
   const fetchData = useCallback(async () => {
     setError(null);
@@ -146,7 +164,7 @@ function AdminTenantDetailPage({ tenantId }: Props) {
     const ok = await confirm({
       title: `Archiver le tenant « ${data.tenant.slug} » ?`,
       subtitle:
-        'Le tenant sera marqué is_active=false. Les staff perdront l\'accès tant qu\'il reste archivé.',
+        "Le tenant sera marqué is_active=false. Les staff perdront l'accès tant qu'il reste archivé.",
       variant: 'danger',
       confirmLabel: 'Archiver',
     });
@@ -187,19 +205,51 @@ function AdminTenantDetailPage({ tenantId }: Props) {
     }
   };
 
+  const handleRotateSecrets = async () => {
+    if (!data) return;
+    if (!ROTATE_SECRETS_API_READY) return;
+    const ok = await confirm({
+      title: 'Régénérer les secrets bot du tenant ?',
+      subtitle:
+        "Cette action invalide les anciens secrets bot. Le bot et tout système qui s'authentifie auprès du tenant devront utiliser les nouvelles valeurs.",
+      variant: 'danger',
+      confirmLabel: 'Régénérer',
+    });
+    if (!ok) return;
+    setRotatingSecrets(true);
+    try {
+      const resp = await mutateJson<RotateSecretsResponse>(
+        `/api/admin/tenants/${tenantId}/rotate-secrets`,
+        { method: 'POST', body: JSON.stringify({}) }
+      );
+      // Show the secrets one-shot — never store, never log.
+      setRevealedSecrets({
+        botApiKey: resp.botApiKey,
+        botWebhookSecret: resp.botWebhookSecret,
+      });
+      addToast('Secrets bot régénérés.', 'success');
+    } catch (err) {
+      addToast(
+        (err as Error)?.message || 'Régénération des secrets impossible.',
+        'error'
+      );
+    } finally {
+      setRotatingSecrets(false);
+    }
+  };
+
   const handleRemoveStaff = async (row: StaffRow) => {
     const ok = await confirm({
       title: `Retirer ${row.display_name ?? row.email ?? row.staff_id} du tenant ?`,
-      subtitle: 'Le staff perdra l\'accès à ce tenant.',
+      subtitle: "Le staff perdra l'accès à ce tenant.",
       variant: 'danger',
       confirmLabel: 'Retirer',
     });
     if (!ok) return;
     try {
-      await mutateJson(
-        `/api/admin/tenants/${tenantId}/staff/${row.staff_id}`,
-        { method: 'DELETE' }
-      );
+      await mutateJson(`/api/admin/tenants/${tenantId}/staff/${row.staff_id}`, {
+        method: 'DELETE',
+      });
       addToast('Staff retiré.', 'success');
       await fetchData();
     } catch (err) {
@@ -258,9 +308,7 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                   <button
                     type="button"
                     onClick={handleArchive}
-                    disabled={
-                      archiving || data.tenant.slug === CONFERENCE_SLUG
-                    }
+                    disabled={archiving || data.tenant.slug === CONFERENCE_SLUG}
                     className="px-4 py-2.5 rounded-xl border border-red-500/40 text-red-300 hover:border-red-400 hover:bg-red-500/10 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     title={
                       data.tenant.slug === CONFERENCE_SLUG
@@ -310,67 +358,125 @@ function AdminTenantDetailPage({ tenantId }: Props) {
               </div>
 
               {tab === 'general' && (
-                <form
-                  onSubmit={handleSaveGeneral}
-                  className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 sm:p-8 space-y-6"
-                >
-                  <div>
-                    <label
-                      htmlFor="g-name"
-                      className="block text-sm font-medium text-neutral-300 mb-2"
-                    >
-                      Nom
+                <div className="space-y-6">
+                  <form
+                    onSubmit={handleSaveGeneral}
+                    className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 sm:p-8 space-y-6"
+                  >
+                    <div>
+                      <label
+                        htmlFor="g-name"
+                        className="block text-sm font-medium text-neutral-300 mb-2"
+                      >
+                        Nom
+                      </label>
+                      <input
+                        id="g-name"
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        required
+                        className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="g-locale"
+                        className="block text-sm font-medium text-neutral-300 mb-2"
+                      >
+                        Locale par défaut
+                      </label>
+                      <select
+                        id="g-locale"
+                        value={editLocale}
+                        onChange={(e) => setEditLocale(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
+                      >
+                        <option value="fr">Français (fr)</option>
+                        <option value="en">English (en)</option>
+                      </select>
+                    </div>
+
+                    <label className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={editActive}
+                        onChange={(e) => setEditActive(e.target.checked)}
+                        className="w-5 h-5 rounded border-neutral-600 bg-neutral-900/50 text-purple-500 focus:ring-purple-500"
+                      />
+                      <span className="text-sm font-medium text-neutral-300">
+                        Tenant actif
+                      </span>
                     </label>
-                    <input
-                      id="g-name"
-                      type="text"
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      required
-                      className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
-                    />
-                  </div>
 
-                  <div>
-                    <label
-                      htmlFor="g-locale"
-                      className="block text-sm font-medium text-neutral-300 mb-2"
-                    >
-                      Locale par défaut
-                    </label>
-                    <select
-                      id="g-locale"
-                      value={editLocale}
-                      onChange={(e) => setEditLocale(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
-                    >
-                      <option value="fr">Français (fr)</option>
-                      <option value="en">English (en)</option>
-                    </select>
-                  </div>
+                    <div className="pt-2">
+                      <button
+                        type="submit"
+                        disabled={saving}
+                        className="px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-semibold text-white transition disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+                      >
+                        {saving ? 'Sauvegarde…' : 'Enregistrer'}
+                      </button>
+                    </div>
+                  </form>
 
-                  <label className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={editActive}
-                      onChange={(e) => setEditActive(e.target.checked)}
-                      className="w-5 h-5 rounded border-neutral-600 bg-neutral-900/50 text-purple-500 focus:ring-purple-500"
-                    />
-                    <span className="text-sm font-medium text-neutral-300">
-                      Tenant actif
-                    </span>
-                  </label>
-
-                  <div className="pt-2">
-                    <button
-                      type="submit"
-                      disabled={saving}
-                      className="px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-semibold text-white transition disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
-                    >
-                      {saving ? 'Sauvegarde…' : 'Enregistrer'}
-                    </button>
-                  </div>
-                </form>
+                  <section
+                    className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 sm:p-8"
+                    data-testid="tenant-bot-secrets-section"
+                  >
+                    <div className="flex items-start gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-full bg-amber-900/30 flex items-center justify-center text-amber-300 flex-shrink-0">
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                          />
+                        </svg>
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-semibold text-white">
+                          Secrets bot
+                        </h2>
+                        <p className="mt-1 text-sm text-neutral-400">
+                          Régénère les secrets utilisés par le bot Discord pour
+                          s&apos;authentifier auprès du site et signer les
+                          webhooks de ce tenant. Le nouveau secret n&apos;est
+                          affiché qu&apos;une seule fois, juste après la
+                          rotation.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={handleRotateSecrets}
+                        disabled={rotatingSecrets || !ROTATE_SECRETS_API_READY}
+                        className="px-4 py-2.5 rounded-xl border border-amber-500/50 text-amber-200 hover:border-amber-400 hover:bg-amber-500/10 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        title={
+                          !ROTATE_SECRETS_API_READY
+                            ? 'API à venir : POST /api/admin/tenants/[id]/rotate-secrets'
+                            : undefined
+                        }
+                        data-testid="tenant-rotate-secrets-btn"
+                      >
+                        {rotatingSecrets ? 'Rotation…' : 'Rotate bot secrets'}
+                      </button>
+                      {!ROTATE_SECRETS_API_READY && (
+                        <span className="text-xs text-neutral-500">
+                          API en cours d&apos;implémentation.
+                        </span>
+                      )}
+                    </div>
+                  </section>
+                </div>
               )}
 
               {tab === 'discord' && (
@@ -541,6 +647,13 @@ function AdminTenantDetailPage({ tenantId }: Props) {
           )}
         </div>
         {dialog}
+        {revealedSecrets && (
+          <BotSecretsRevealModal
+            botApiKey={revealedSecrets.botApiKey}
+            botWebhookSecret={revealedSecrets.botWebhookSecret}
+            onClose={() => setRevealedSecrets(null)}
+          />
+        )}
       </div>
     </>
   );

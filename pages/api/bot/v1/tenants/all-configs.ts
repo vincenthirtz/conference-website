@@ -25,7 +25,11 @@ function emptyDiscordConfig() {
     scrims_announce_channel_id: null as string | null,
     captain_role_id: null as string | null,
     substitute_role_id: null as string | null,
-    staff_role_ids: [] as string[],
+    // Roles staff par niveau (depuis migration drop staff_role_ids).
+    staff_role_owner_id: null as string | null,
+    staff_role_admin_id: null as string | null,
+    staff_role_manager_id: null as string | null,
+    staff_role_caster_id: null as string | null,
     teams_voice_category_id: null as string | null,
     disputes_forum_tag_open_id: null as string | null,
     disputes_forum_tag_pending_id: null as string | null,
@@ -62,7 +66,7 @@ async function handler(_req: NextApiRequest, res: NextApiResponse) {
   const { data: configRows, error: configErr } = await supabaseAdmin!
     .from('tenant_discord_config')
     .select(
-      'guild_id, staff_log_channel_id, matches_live_channel_id, disputes_forum_channel_id, lives_board_channel_id, news_ingest_channel_id, scrims_announce_channel_id, captain_role_id, substitute_role_id, staff_role_ids, teams_voice_category_id, disputes_forum_tag_open_id, disputes_forum_tag_pending_id, disputes_forum_tag_resolved_id, extras'
+      'guild_id, staff_log_channel_id, matches_live_channel_id, disputes_forum_channel_id, lives_board_channel_id, news_ingest_channel_id, scrims_announce_channel_id, captain_role_id, substitute_role_id, staff_role_owner_id, staff_role_admin_id, staff_role_manager_id, staff_role_caster_id, teams_voice_category_id, disputes_forum_tag_open_id, disputes_forum_tag_pending_id, disputes_forum_tag_resolved_id, extras'
     )
     .in('guild_id', guildIds);
 
@@ -74,20 +78,16 @@ async function handler(_req: NextApiRequest, res: NextApiResponse) {
   const configByGuild = new Map<string, DiscordConfigRow>();
   for (const row of configRows ?? []) {
     const r = row as Record<string, unknown>;
-    configByGuild.set(
-      r.guild_id as string,
-      {
-        ...emptyDiscordConfig(),
-        ...(r as object),
-        staff_role_ids: Array.isArray(r.staff_role_ids)
-          ? (r.staff_role_ids as string[])
-          : [],
-        extras:
-          r.extras && typeof r.extras === 'object'
-            ? (r.extras as Record<string, unknown>)
-            : {},
-      } as DiscordConfigRow
-    );
+    const guildId = r.guild_id as string;
+    configByGuild.set(guildId, {
+      ...emptyDiscordConfig(),
+      ...(r as object),
+      guild_id: guildId,
+      extras:
+        r.extras && typeof r.extras === 'object'
+          ? (r.extras as Record<string, unknown>)
+          : {},
+    } as DiscordConfigRow);
   }
 
   const configs = guilds

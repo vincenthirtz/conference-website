@@ -1,6 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import {
+  withStaffRoute,
+  type AuthenticatedStaffContext,
+} from '@/utils/staff';
 import { sanitizeUrl } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 
@@ -15,7 +18,11 @@ type TwitchChannelPayload = {
   sortOrder?: number;
 };
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-twitch'))
     return;
   if (!supabaseAdmin) {
@@ -24,6 +31,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .json({ error: 'Database service unavailable (missing service role).' });
   }
   const admin = supabaseAdmin!;
+  const tenantId = ctx.tenantId;
 
   if (req.method === 'GET') {
     const limit = Math.max(1, Math.min(200, Number(req.query.limit) || 100));
@@ -32,6 +40,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     let query = admin
       .from('twitch_channels')
       .select('*')
+      .eq('tenant_id', tenantId)
       .order('sort_order', { ascending: true })
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -56,10 +65,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       return res.status(400).json({ error: 'Channel and label are required.' });
     }
 
-    // Récupérer le prochain sort_order
+    // Récupérer le prochain sort_order (scopé au tenant courant).
     const { data: maxOrder } = await admin
       .from('twitch_channels')
       .select('sort_order')
+      .eq('tenant_id', tenantId)
       .order('sort_order', { ascending: false })
       .limit(1)
       .single();
@@ -67,6 +77,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const nextOrder = (maxOrder?.sort_order ?? 0) + 1;
 
     const insertPayload = {
+      tenant_id: tenantId,
       channel: body.channel.trim().toLowerCase(),
       label: body.label.trim(),
       badge: body.badge?.trim() || null,

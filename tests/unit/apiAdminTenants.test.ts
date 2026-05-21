@@ -332,7 +332,10 @@ describe('/api/admin/tenants/[id]/discord-config', () => {
     const body = res.body as any;
     expect(body.configs).toHaveLength(1);
     expect(body.configs[0].guild_id).toBe(GUILD_ID);
-    expect(body.configs[0].staff_role_ids).toEqual([]);
+    expect(body.configs[0].staff_role_owner_id).toBeNull();
+    expect(body.configs[0].staff_role_admin_id).toBeNull();
+    expect(body.configs[0].staff_role_manager_id).toBeNull();
+    expect(body.configs[0].staff_role_caster_id).toBeNull();
     expect(body.configs[0].staff_log_channel_id).toBeNull();
   });
 
@@ -377,20 +380,22 @@ describe('/api/admin/tenants/[id]/discord-config', () => {
     expect((res.body as any).code).toBe('INVALID_SNOWFLAKE');
   });
 
-  it('PUT 400 si staff_role_ids contient un non-snowflake', async () => {
+  it('PUT 400 si staff_role_admin_id n est pas un snowflake', async () => {
     const res = makeRes();
     await discordConfigPut(
       makeReq({
         method: 'PUT',
         query: { id: TENANT_A, guildId: GUILD_ID },
-        body: { staff_role_ids: ['1234567890123456789', 'bad'] },
+        body: { staff_role_admin_id: 'nope' },
       }),
       res
     );
     expect(res.statusCode).toBe(400);
+    expect((res.body as any).code).toBe('INVALID_SNOWFLAKE');
+    expect((res.body as any).field).toBe('staff_role_admin_id');
   });
 
-  it('PUT 200 upsert config', async () => {
+  it('PUT 200 upsert config (incluant les 4 staff_role_*_id)', async () => {
     const res = makeRes();
     await discordConfigPut(
       makeReq({
@@ -398,7 +403,10 @@ describe('/api/admin/tenants/[id]/discord-config', () => {
         query: { id: TENANT_A, guildId: GUILD_ID },
         body: {
           staff_log_channel_id: '9876543210123456789',
-          staff_role_ids: ['1111111111111111111'],
+          staff_role_owner_id: '1111111111111111111',
+          staff_role_admin_id: '2222222222222222222',
+          staff_role_manager_id: null,
+          staff_role_caster_id: null,
         },
       }),
       res

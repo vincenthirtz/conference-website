@@ -102,7 +102,10 @@ describe('GET /api/bot/v1/tenants/all-configs', () => {
         scrims_announce_channel_id: null,
         captain_role_id: '222222222222222222',
         substitute_role_id: null,
-        staff_role_ids: ['role-A1', 'role-A2'],
+        staff_role_owner_id: '777777777777777777',
+        staff_role_admin_id: '888888888888888888',
+        staff_role_manager_id: null,
+        staff_role_caster_id: null,
         teams_voice_category_id: null,
         disputes_forum_tag_open_id: null,
         disputes_forum_tag_pending_id: null,
@@ -126,7 +129,9 @@ describe('GET /api/bot/v1/tenants/all-configs', () => {
     expect(a.guild.is_primary).toBe(true);
     expect(a.discord_config.staff_log_channel_id).toBe('111111111111111111');
     expect(a.discord_config.captain_role_id).toBe('222222222222222222');
-    expect(a.discord_config.staff_role_ids).toEqual(['role-A1', 'role-A2']);
+    expect(a.discord_config.staff_role_owner_id).toBe('777777777777777777');
+    expect(a.discord_config.staff_role_admin_id).toBe('888888888888888888');
+    expect(a.discord_config.staff_role_manager_id).toBeNull();
     expect(a.discord_config.extras).toEqual({ foo: 'bar' });
     // guild_id pas duplique dans discord_config.
     expect(a.discord_config).not.toHaveProperty('guild_id');
@@ -135,7 +140,10 @@ describe('GET /api/bot/v1/tenants/all-configs', () => {
     expect(b.guild.is_primary).toBe(false);
     // Defauts vides.
     expect(b.discord_config.staff_log_channel_id).toBeNull();
-    expect(b.discord_config.staff_role_ids).toEqual([]);
+    expect(b.discord_config.staff_role_owner_id).toBeNull();
+    expect(b.discord_config.staff_role_admin_id).toBeNull();
+    expect(b.discord_config.staff_role_manager_id).toBeNull();
+    expect(b.discord_config.staff_role_caster_id).toBeNull();
     expect(b.discord_config.extras).toEqual({});
   });
 });

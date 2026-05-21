@@ -611,7 +611,10 @@ memoire.
     "scrims_announce_channel_id": null,
     "captain_role_id": null,
     "substitute_role_id": null,
-    "staff_role_ids": [],
+    "staff_role_owner_id": null,
+    "staff_role_admin_id": null,
+    "staff_role_manager_id": null,
+    "staff_role_caster_id": null,
     "teams_voice_category_id": null,
     "disputes_forum_tag_open_id": null,
     "disputes_forum_tag_pending_id": null,
@@ -622,8 +625,16 @@ memoire.
 ```
 
 Si aucune row n'existe dans `tenant_discord_config` pour ce guild, toutes les
-colonnes config retournent `null` / `[]` / `{}` (defauts). Le bot doit alors
+colonnes config retournent `null` / `{}` (defauts). Le bot doit alors
 appliquer son fallback env vars sur les valeurs `null` (mode V1 progressif).
+
+> **Breaking change** (2026-05-21) : l'ancien tableau `staff_role_ids:
+> string[]` est remplace par 4 colonnes typees
+> (`staff_role_owner_id`, `staff_role_admin_id`, `staff_role_manager_id`,
+> `staff_role_caster_id`), chacune un snowflake Discord nullable. La colonne
+> SQL `staff_role_ids` est droppee. Cote bot, lire les 4 nouvelles cles dans
+> `discord_config` et choisir le role correspondant a la hierarchie
+> staff (`owner > admin > manager > caster`).
 
 **Errors**
 
@@ -728,7 +739,10 @@ sur `/by-guild/:id`.
       "guild": { "guild_id": "1259186540001890474", "is_primary": true },
       "discord_config": {
         "staff_log_channel_id": null,
-        "staff_role_ids": [],
+        "staff_role_owner_id": null,
+        "staff_role_admin_id": null,
+        "staff_role_manager_id": null,
+        "staff_role_caster_id": null,
         "extras": {}
       }
     }

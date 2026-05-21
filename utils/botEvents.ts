@@ -58,7 +58,33 @@ const MAX_ATTEMPTS = 3;
 const TIMEOUT_MS = 5_000;
 
 function isConfigured(): boolean {
-  return Boolean(process.env.BOT_WEBHOOK_URL && process.env.BOT_WEBHOOK_SECRET);
+  // Le webhook URL est obligatoire (cible). Le secret par contre peut etre
+  // fourni soit par tenant_secrets, soit par l'env (transition V1) — on
+  // verifie sa presence per-tenant a l'emission.
+  return Boolean(process.env.BOT_WEBHOOK_URL);
+}
+
+/**
+ * Resolve the HMAC webhook secret to sign a push to the bot for `tenantId`.
+ *
+ * 1. Lookup `tenant_secrets.bot_webhook_secret` for the tenant — that secret
+ *    is provisioned via `POST /api/admin/tenants/:id/rotate-secrets`.
+ * 2. Fallback to `BOT_WEBHOOK_SECRET` env var (legacy global, V1 transition).
+ *
+ * Returns `null` if neither is available — in that case the caller falls
+ * back to outbox-only delivery (bot will pick it up via polling).
+ */
+async function resolveWebhookSecret(tenantId: string): Promise<string | null> {
+  if (supabaseAdmin) {
+    const { data } = await supabaseAdmin
+      .from('tenant_secrets')
+      .select('bot_webhook_secret')
+      .eq('tenant_id', tenantId)
+      .maybeSingle();
+    const perTenant = (data?.bot_webhook_secret as string | undefined) ?? null;
+    if (perTenant) return perTenant;
+  }
+  return process.env.BOT_WEBHOOK_SECRET ?? null;
 }
 
 async function persistOutbox(params: {
@@ -159,7 +185,14 @@ export async function emitBotEvent(
   }
 
   const url = process.env.BOT_WEBHOOK_URL as string;
-  const secret = process.env.BOT_WEBHOOK_SECRET as string;
+  const secret = await resolveWebhookSecret(tenantId);
+  if (!secret) {
+    // Ni tenant_secrets ni env : pas de signature possible. L'outbox suffit.
+    logger.warn(
+      `[botEvents] ${event} no webhook secret for tenant ${tenantId}, outbox-only`
+    );
+    return { delivered: false, error: 'no_webhook_secret', attempts: 0 };
+  }
 
   const body = JSON.stringify(fullPayload);
   const signature = crypto

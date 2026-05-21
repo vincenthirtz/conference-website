@@ -25,7 +25,11 @@ const EMPTY_CONFIG = {
   scrims_announce_channel_id: null,
   captain_role_id: null,
   substitute_role_id: null,
-  staff_role_ids: [] as string[],
+  // Roles staff par niveau (depuis migration drop staff_role_ids).
+  staff_role_owner_id: null,
+  staff_role_admin_id: null,
+  staff_role_manager_id: null,
+  staff_role_caster_id: null,
   teams_voice_category_id: null,
   disputes_forum_tag_open_id: null,
   disputes_forum_tag_pending_id: null,

@@ -24,9 +24,12 @@ type DiscordConfig = {
   announcements_channel_id: string | null;
   cast_voice_channel_id: string | null;
   forum_channel_id: string | null;
-  staff_role_ids: string[] | null;
-  admin_role_ids?: string[] | null;
-  manager_role_ids?: string[] | null;
+  captain_role_id?: string | null;
+  substitute_role_id?: string | null;
+  staff_role_admin_id: string | null;
+  staff_role_manager_id: string | null;
+  staff_role_caster_id: string | null;
+  staff_role_owner_id: string | null;
 };
 
 type DiscordConfigResponse = {
@@ -105,22 +108,31 @@ const FIELDS: FieldDef[] = [
     section: 'voice',
   },
   {
-    key: 'staff_role_ids',
-    label: 'Rôles staff (liste, séparés par espace ou virgule)',
-    help: 'Rôles Discord traités comme staff par le bot.',
-    kind: 'list',
+    key: 'staff_role_owner_id',
+    label: 'Staff role — Owner',
+    help: 'Rôle Discord mappé sur le rôle staff owner.',
+    kind: 'single',
     section: 'roles',
   },
   {
-    key: 'admin_role_ids',
-    label: 'Rôles admin',
-    kind: 'list',
+    key: 'staff_role_admin_id',
+    label: 'Staff role — Admin',
+    help: 'Rôle Discord mappé sur le rôle staff admin.',
+    kind: 'single',
     section: 'roles',
   },
   {
-    key: 'manager_role_ids',
-    label: 'Rôles manager',
-    kind: 'list',
+    key: 'staff_role_manager_id',
+    label: 'Staff role — Manager',
+    help: 'Rôle Discord mappé sur le rôle staff manager.',
+    kind: 'single',
+    section: 'roles',
+  },
+  {
+    key: 'staff_role_caster_id',
+    label: 'Staff role — Caster',
+    help: 'Rôle Discord mappé sur le rôle staff caster.',
+    kind: 'single',
     section: 'roles',
   },
 ];
@@ -163,9 +175,12 @@ function AdminDiscordConfigPage({ tenantId, guildId }: Props) {
         announcements_channel_id: null,
         cast_voice_channel_id: null,
         forum_channel_id: null,
-        staff_role_ids: null,
-        admin_role_ids: null,
-        manager_role_ids: null,
+        captain_role_id: null,
+        substitute_role_id: null,
+        staff_role_admin_id: null,
+        staff_role_manager_id: null,
+        staff_role_caster_id: null,
+        staff_role_owner_id: null,
       };
       setConfig(effective);
       const next: Record<string, string> = {};
@@ -215,7 +230,7 @@ function AdminDiscordConfigPage({ tenantId, guildId }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (Object.keys(invalid).length > 0) {
-      setError('Corrige les snowflakes invalides avant d\'enregistrer.');
+      setError("Corrige les snowflakes invalides avant d'enregistrer.");
       return;
     }
     setSaving(true);
@@ -264,7 +279,10 @@ function AdminDiscordConfigPage({ tenantId, guildId }: Props) {
             items={[
               { label: 'Admin', href: '/admin' },
               { label: 'Tenants', href: '/admin/tenants' },
-              { label: tenantId.slice(0, 8) + '…', href: `/admin/tenants/${tenantId}` },
+              {
+                label: tenantId.slice(0, 8) + '…',
+                href: `/admin/tenants/${tenantId}`,
+              },
               { label: 'Discord config' },
             ]}
           />
@@ -298,10 +316,7 @@ function AdminDiscordConfigPage({ tenantId, guildId }: Props) {
           <AlertBanner message={error} className="mb-4" />
 
           {!loading && config && (
-            <form
-              onSubmit={handleSubmit}
-              className="space-y-6"
-            >
+            <form onSubmit={handleSubmit} className="space-y-6">
               {sections.map((sec) => (
                 <section
                   key={sec.key}
@@ -340,9 +355,7 @@ function AdminDiscordConfigPage({ tenantId, guildId }: Props) {
                                   : '123456789012345678'
                               }
                               className={`flex-1 px-3 py-2 rounded-lg bg-neutral-900/50 border focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm font-mono ${
-                                err
-                                  ? 'border-red-500/60'
-                                  : 'border-neutral-600'
+                                err ? 'border-red-500/60' : 'border-neutral-600'
                               }`}
                             />
                             {value && (

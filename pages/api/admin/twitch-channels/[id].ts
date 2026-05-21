@@ -1,6 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import {
+  withStaffRoute,
+  type AuthenticatedStaffContext,
+} from '@/utils/staff';
 import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 
@@ -15,7 +18,11 @@ type TwitchChannelPayload = {
   sortOrder?: number;
 };
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   if (
     applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-twitch-id')
   )
@@ -26,6 +33,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .json({ error: 'Database service unavailable (missing service role).' });
   }
   const admin = supabaseAdmin!;
+  const tenantId = ctx.tenantId;
 
   const { id } = req.query;
   if (!id || typeof id !== 'string' || !isValidUUID(id)) {
@@ -37,6 +45,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .from('twitch_channels')
       .select('*')
       .eq('id', id)
+      .eq('tenant_id', tenantId)
       .single();
 
     if (error) {
@@ -66,6 +75,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .from('twitch_channels')
       .update(updatePayload)
       .eq('id', id)
+      .eq('tenant_id', tenantId)
       .select()
       .single();
 
@@ -81,7 +91,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   if (req.method === 'DELETE') {
-    const { error } = await admin.from('twitch_channels').delete().eq('id', id);
+    const { error } = await admin
+      .from('twitch_channels')
+      .delete()
+      .eq('id', id)
+      .eq('tenant_id', tenantId);
 
     if (error) {
       logger.error('[admin/twitch-channels] delete error', error);
