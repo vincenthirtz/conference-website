@@ -71,7 +71,16 @@ const trimmed = (min: number, max: number) =>
     .transform((s) => s.trim())
     .pipe(z.string().min(min).max(max));
 
-export const onboardTenantRequestSchema = z.object({
+/**
+ * Shared tenant-identity sub-schema. Slug/name/email/description rules are
+ * identical between the web flow (`POST /api/onboard/tenant-request`, which
+ * needs a Turnstile token on top) and the Discord-native flow
+ * (`POST /api/bot/v1/tenants/request-onboard`, which proves identity via the
+ * bot's API key + the requester's Discord ID). Keep the rules in one place
+ * so the slug regex / reserved list / email lowercasing don't drift between
+ * the two surfaces.
+ */
+export const tenantIdentityFields = {
   requested_slug: z
     .string()
     .transform((s) => s.trim().toLowerCase())
@@ -98,6 +107,10 @@ export const onboardTenantRequestSchema = z.object({
     .pipe(z.string().max(1000))
     .optional()
     .or(z.literal('')),
+} as const;
+
+export const onboardTenantRequestSchema = z.object({
+  ...tenantIdentityFields,
   turnstile_token: z.string().min(1, 'Captcha manquant.'),
 });
 

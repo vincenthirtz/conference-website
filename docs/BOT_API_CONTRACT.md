@@ -92,8 +92,9 @@ resolves the tenant once and stashes it on `req.botContext.tenantId`.
   `discord_guilds.guild_id` → `tenant_id`. It is not the site's job to
   guess the tenant from a Discord context.
 - **Cross-tenant exemptions**: `/tenants/all-configs`, `/tenants/by-guild/:id`,
-  `/tenants/link-guild`, `/events/pending`, `/events/:id/ack` and
-  `/cast/upcoming` are intentionally **not** tenant-scoped — they are
+  `/tenants/link-guild`, `/tenants/request-onboard`, `/events/pending`,
+  `/events/:id/ack` and `/cast/upcoming` are intentionally **not**
+  tenant-scoped — they are
   global resolvers / pollers the bot needs in order to route correctly.
   These routes are flagged `crossTenant: true` in `withBotRoute({ ... })`
   and the middleware **skips** the header validation + existence check;
@@ -619,9 +620,10 @@ Response shape (truncated):
 
 | Route                                                                                | Methods | Idem. | Rate-key                  | Tenant scope             |
 | ------------------------------------------------------------------------------------ | ------- | ----- | ------------------------- | ------------------------ |
-| [`tenants/by-guild/[guildId].ts`](../pages/api/bot/v1/tenants/by-guild/[guildId].ts) | GET     | —     | `bot-tenants-by-guild`    | `crossTenant: true`      |
-| [`tenants/link-guild.ts`](../pages/api/bot/v1/tenants/link-guild.ts)                 | POST    | yes   | `bot-tenants-link-guild`  | `crossTenant: true`      |
-| [`tenants/all-configs.ts`](../pages/api/bot/v1/tenants/all-configs.ts)               | GET     | —     | `bot-tenants-all-configs` | `crossTenant: true`      |
+| [`tenants/by-guild/[guildId].ts`](../pages/api/bot/v1/tenants/by-guild/[guildId].ts) | GET     | —     | `bot-tenants-by-guild`         | `crossTenant: true`      |
+| [`tenants/link-guild.ts`](../pages/api/bot/v1/tenants/link-guild.ts)                 | POST    | yes   | `bot-tenants-link-guild`       | `crossTenant: true`      |
+| [`tenants/all-configs.ts`](../pages/api/bot/v1/tenants/all-configs.ts)               | GET     | —     | `bot-tenants-all-configs`      | `crossTenant: true`      |
+| [`tenants/request-onboard.ts`](../pages/api/bot/v1/tenants/request-onboard.ts)       | POST    | yes   | `bot-tenants-request-onboard`  | `crossTenant: true`      |
 
 These three endpoints **bootstrap** the bot's `guildId → (tenant_id, discord
 config)` map. They are the **only** `/api/bot/v1/*` routes (alongside
@@ -836,6 +838,96 @@ ajouter `?limit=&offset=`.
 ```bash
 curl -sS "https://site.example/api/bot/v1/tenants/all-configs" \
   -H "x-api-key: $BOT_API_KEY"
+```
+
+#### `POST /api/bot/v1/tenants/request-onboard`
+
+Entrée _Discord-native_ du flow onboarding. Pendant du POST web
+`/api/onboard/tenant-request`. Un user déjà présent sur l'un de nos serveurs
+Discord exécute la slash command `/demander-bot`, le bot relaye le modal
+ici. La clef API du bot prouve que le canal est de confiance et le snowflake
+Discord prouve l'identité, donc **on saute la vérification Turnstile ET le
+round-trip email**. Le bot doit ensuite DM le user avec le `botInviteUrl`
+retourné — quand le user invite le bot sur son serveur, le `guildCreate`
+côté bot déclenchera `/tenants/link-guild` qui auto-claimera ce request
+(match `requester_discord_user_id` == `owner_discord_id`).
+
+**Body**
+
+```json
+{
+  "requesterDiscordUserId": "1234567890123456789",
+  "requesterDiscordDisplayName": "OperatorTag",
+  "requesterEmail": "op@example.com",
+  "requestedSlug": "my-org",
+  "requestedName": "My Organisation",
+  "description": "We host community tournaments."
+}
+```
+
+- `requesterDiscordUserId` _(requis)_ — snowflake Discord (15-25 chiffres).
+- `requesterDiscordDisplayName` _(optionnel, nullable)_ — tag Discord, ≤ 200
+  chars. Stocké pour l'UX admin/queue.
+- `requested_email` _(requis)_ — email du demandeur (recevra l'email
+  `secrets_reveal` quand le bot sera invité). Lowercased côté serveur.
+- `requested_slug` _(requis)_ — `^[a-z][a-z0-9-]{2,29}$`, non réservé.
+- `requested_name` _(requis)_ — 1-200 chars.
+- `description` _(optionnel)_ — 0-1000 chars.
+
+> Le payload utilise camelCase pour les champs Discord (`requesterDiscordUserId`,
+> `requesterDiscordDisplayName`) et snake_case pour les champs tenant
+> (`requested_slug`, `requested_name`, `requested_email`, `description`) afin
+> de matcher 1:1 les colonnes DB pour ces derniers. Le bot doit envoyer
+> exactement ces noms de clefs.
+
+**Response 200**
+
+```json
+{
+  "requestId": "f9a1f4c0-1234-4abc-89de-aaaaaaaaaaaa",
+  "secretsRevealHint": "user will receive DM with bot invite URL",
+  "botInviteUrl": "https://discord.com/oauth2/authorize?client_id=...&scope=bot+applications.commands&permissions=..."
+}
+```
+
+Row insérée :
+
+- `source = 'discord_command'`
+- `status = 'pending_bot_invite'` (skip `pending_email_verification`)
+- `email_verified_at = now()`
+- `email_verification_token = NULL`
+- `requester_auth_user_id = NULL`
+- `ip_address` / `user_agent` = NULL
+
+**Errors**
+
+- `400 { code: "INVALID_BODY", fields: {…} }` — champ invalide (snowflake,
+  slug, email, nom). Le champ fautif est dans `fields`.
+- `409 { code: "SLUG_TAKEN" }` — un tenant existant ou une autre request
+  active porte déjà ce slug.
+- `409 { code: "REQUEST_ALREADY_PENDING" }` — ce Discord user a déjà une
+  request `pending_*` en cours (unique partial index).
+- `500 { code: "BOT_INVITE_UNAVAILABLE" }` — `DISCORD_CLIENT_ID` non
+  configuré côté site (no-op du flow, contactez l'admin site).
+- `401`, `500`, `503` — auth / database / maintenance.
+
+**Rate limit** : 30/min global. **Idempotency** : oui (header
+`Idempotency-Key` recommandé — le bot peut rejouer le slash command sans
+créer de doublon).
+
+```bash
+curl -sS -X POST "https://site.example/api/bot/v1/tenants/request-onboard" \
+  -H "x-api-key: $BOT_API_KEY" \
+  -H "content-type: application/json" \
+  -H "Idempotency-Key: demander-bot-1234567890123456789" \
+  -d '{
+    "requesterDiscordUserId": "1234567890123456789",
+    "requesterDiscordDisplayName": "OperatorTag",
+    "requesterEmail": "op@example.com",
+    "requestedSlug": "my-org",
+    "requestedName": "My Organisation",
+    "description": "We host community tournaments."
+  }'
 ```
 
 ### Teams
