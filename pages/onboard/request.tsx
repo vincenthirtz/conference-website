@@ -45,6 +45,11 @@ function validateSlugClient(slug: string): SlugValidation {
   return { ok: true };
 }
 
+type DiscordLinkState =
+  | { kind: 'unknown' }
+  | { kind: 'linked'; discordUserId: string; discordUsername: string | null }
+  | { kind: 'not-linked' };
+
 function OnboardRequestPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuthSession();
@@ -60,6 +65,49 @@ function OnboardRequestPage() {
 
   const [submit, setSubmit] = useState<SubmitState>({ kind: 'idle' });
   const submitInFlight = useRef(false);
+
+  // Le user peut être signé in (email/password ou Discord OAuth) MAIS sans
+  // Discord lié à son compte Supabase. On vérifie via /api/auth/discord-link.
+  // Sans Discord lié, l'API onboard refuse la submission (401 UNAUTHENTICATED).
+  const [discordLink, setDiscordLink] = useState<DiscordLinkState>({
+    kind: 'unknown',
+  });
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/auth/discord-link', {
+          credentials: 'include',
+        });
+        if (!res.ok) {
+          if (!cancelled) setDiscordLink({ kind: 'not-linked' });
+          return;
+        }
+        const data = (await res.json()) as {
+          linked?: boolean;
+          discordUserId?: string | null;
+          discordUsername?: string | null;
+        };
+        if (cancelled) return;
+        if (data.linked && data.discordUserId) {
+          setDiscordLink({
+            kind: 'linked',
+            discordUserId: data.discordUserId,
+            discordUsername: data.discordUsername ?? null,
+          });
+        } else {
+          setDiscordLink({ kind: 'not-linked' });
+        }
+      } catch {
+        if (!cancelled) setDiscordLink({ kind: 'not-linked' });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   const debouncedSlug = useDebounce(slug, 250);
   const slugValidation = useMemo(
@@ -253,6 +301,41 @@ function OnboardRequestPage() {
             <DiscordSignInCta next="/onboard/request" />
             <p className="text-xs text-gray-500 mt-4">
               Aucun mot de passe à créer.{' '}
+              <Link
+                href="/onboard"
+                className="text-purple-300 hover:text-purple-200"
+              >
+                Retour à la présentation
+              </Link>
+            </p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // User connecté MAIS pas via Discord (compte email/password sans Discord lié).
+  // L'API onboard refuse la submission tant que Discord n'est pas lié.
+  if (discordLink.kind === 'not-linked') {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
+        <main className="px-4 pt-28 pb-20 md:pt-32 flex items-center justify-center">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl p-6 md:p-8 shadow-2xl">
+            <h1 className="text-2xl font-bold text-gradient mb-2">
+              Liez votre compte Discord
+            </h1>
+            <p className="text-sm text-gray-300 mb-5">
+              Vous êtes connecté{user?.email ? ` (${user.email})` : ''} mais
+              votre identité Discord n&apos;est pas liée à ce compte. Pour
+              demander le bot, vous devez d&apos;abord lier votre Discord.
+            </p>
+            <DiscordSignInCta
+              next="/onboard/request"
+              label="Lier mon compte Discord"
+            />
+            <p className="text-xs text-gray-500 mt-4">
+              Vous serez redirigé vers Discord pour autoriser la liaison, puis
+              ramené ici pour remplir le formulaire.{' '}
               <Link
                 href="/onboard"
                 className="text-purple-300 hover:text-purple-200"
