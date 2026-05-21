@@ -1,0 +1,129 @@
+// GET /api/bot/v1/tenants/all-configs
+//
+// Retourne la config de tous les guilds linkes en une seule requete. Utilise
+// par le bot au boot pour amorcer son cache in-memory `guildId -> {tenant,
+// config}` plutot que de faire N requetes /by-guild/:id.
+//
+// EXCEPTION DE SCOPING TENANT_ID : meme raison que /by-guild — c'est un
+// resolveur global, pas une requete au sein d'un tenant.
+//
+// Auth: x-api-key. Pas de pagination V1 (peu de guilds attendus, < 100). Si
+// le volume monte, ajouter `?limit=&offset=` ici.
+
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { supabaseAdmin } from '@/utils/supabase';
+import { withBotRoute } from '@/utils/botAuth';
+import { logger } from '@/utils/logger';
+
+function emptyDiscordConfig() {
+  return {
+    staff_log_channel_id: null as string | null,
+    matches_live_channel_id: null as string | null,
+    disputes_forum_channel_id: null as string | null,
+    lives_board_channel_id: null as string | null,
+    news_ingest_channel_id: null as string | null,
+    scrims_announce_channel_id: null as string | null,
+    captain_role_id: null as string | null,
+    substitute_role_id: null as string | null,
+    staff_role_ids: [] as string[],
+    teams_voice_category_id: null as string | null,
+    disputes_forum_tag_open_id: null as string | null,
+    disputes_forum_tag_pending_id: null as string | null,
+    disputes_forum_tag_resolved_id: null as string | null,
+    extras: {} as Record<string, unknown>,
+  };
+}
+
+type DiscordConfigRow = ReturnType<typeof emptyDiscordConfig> & {
+  guild_id: string;
+};
+
+async function handler(_req: NextApiRequest, res: NextApiResponse) {
+  // 1) Tous les guilds avec leur tenant.
+  const { data: guildRows, error: guildErr } = await supabaseAdmin!
+    .from('discord_guilds')
+    .select(
+      'guild_id, is_primary, tenant:tenants!discord_guilds_tenant_id_fkey(id, slug, name, is_active, default_locale)'
+    )
+    .order('guild_id', { ascending: true });
+
+  if (guildErr) {
+    logger.error('[bot/tenants/all-configs] guild list error', guildErr);
+    return res.status(500).json({ error: 'Failed to list guilds' });
+  }
+
+  const guilds = guildRows ?? [];
+  if (guilds.length === 0) {
+    return res.status(200).json({ configs: [] });
+  }
+
+  // 2) Toutes les configs en un seul SELECT, indexees par guild_id.
+  const guildIds = guilds.map((g) => g.guild_id as string);
+  const { data: configRows, error: configErr } = await supabaseAdmin!
+    .from('tenant_discord_config')
+    .select(
+      'guild_id, staff_log_channel_id, matches_live_channel_id, disputes_forum_channel_id, lives_board_channel_id, news_ingest_channel_id, scrims_announce_channel_id, captain_role_id, substitute_role_id, staff_role_ids, teams_voice_category_id, disputes_forum_tag_open_id, disputes_forum_tag_pending_id, disputes_forum_tag_resolved_id, extras'
+    )
+    .in('guild_id', guildIds);
+
+  if (configErr) {
+    logger.error('[bot/tenants/all-configs] config list error', configErr);
+    return res.status(500).json({ error: 'Failed to list discord configs' });
+  }
+
+  const configByGuild = new Map<string, DiscordConfigRow>();
+  for (const row of configRows ?? []) {
+    const r = row as Record<string, unknown>;
+    configByGuild.set(
+      r.guild_id as string,
+      {
+        ...emptyDiscordConfig(),
+        ...(r as object),
+        staff_role_ids: Array.isArray(r.staff_role_ids)
+          ? (r.staff_role_ids as string[])
+          : [],
+        extras:
+          r.extras && typeof r.extras === 'object'
+            ? (r.extras as Record<string, unknown>)
+            : {},
+      } as DiscordConfigRow
+    );
+  }
+
+  const configs = guilds
+    .filter((g) => Boolean(g.tenant))
+    .map((g) => {
+      const tenant = Array.isArray(g.tenant) ? g.tenant[0] : g.tenant;
+      const cfg = configByGuild.get(g.guild_id as string);
+      // On enleve `guild_id` du config object (redondant avec guild.guild_id).
+      let discord_config: ReturnType<typeof emptyDiscordConfig>;
+      if (cfg) {
+        const { guild_id: _gid, ...rest } = cfg;
+        void _gid;
+        discord_config = rest;
+      } else {
+        discord_config = emptyDiscordConfig();
+      }
+      return {
+        tenant: {
+          id: tenant.id,
+          slug: tenant.slug,
+          name: tenant.name,
+          is_active: tenant.is_active,
+          default_locale: tenant.default_locale,
+        },
+        guild: {
+          guild_id: g.guild_id,
+          is_primary: g.is_primary,
+        },
+        discord_config,
+      };
+    });
+
+  return res.status(200).json({ configs });
+}
+
+export default withBotRoute(handler, {
+  methods: ['GET'],
+  rateLimit: { max: 30, key: 'bot-tenants-all-configs' },
+});

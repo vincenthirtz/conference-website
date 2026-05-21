@@ -542,6 +542,190 @@ Response shape (truncated):
 | [`stages/[stageId]/finalize.ts`](../pages/api/bot/v1/stages/[stageId]/finalize.ts)     | POST    | yes   | `bot-stage-finalize`   |
 | [`stages/[stageId]/next-round.ts`](../pages/api/bot/v1/stages/[stageId]/next-round.ts) | POST    | yes   | `bot-stage-next-round` |
 
+### Tenant lifecycle (multi-tenant resolution)
+
+| Route                                                                                | Methods | Idem. | Rate-key                  |
+| ------------------------------------------------------------------------------------ | ------- | ----- | ------------------------- |
+| [`tenants/by-guild/[guildId].ts`](../pages/api/bot/v1/tenants/by-guild/[guildId].ts) | GET     | —     | `bot-tenants-by-guild`    |
+| [`tenants/link-guild.ts`](../pages/api/bot/v1/tenants/link-guild.ts)                 | POST    | yes   | `bot-tenants-link-guild`  |
+| [`tenants/all-configs.ts`](../pages/api/bot/v1/tenants/all-configs.ts)               | GET     | —     | `bot-tenants-all-configs` |
+
+These three endpoints **bootstrap** the bot's `guildId → (tenant_id, discord
+config)` map. They are the **only** `/api/bot/v1/*` routes that do not scope
+their queries by `req.botContext.tenantId` — they ARE the tenant resolver,
+so they look up `discord_guilds` / `tenants` directly. Pas de header
+`x-tenant-id` requis (il serait ignore).
+
+#### `GET /api/bot/v1/tenants/by-guild/:guildId`
+
+Resoud un guild Discord vers son tenant + sa config Discord (channels, roles,
+forum tags). Le bot l'appelle au boot (one-shot per guild) puis cache en
+memoire.
+
+**Path params**
+
+- `guildId` — snowflake Discord (15-25 chiffres).
+
+**Response 200**
+
+```json
+{
+  "tenant": {
+    "id": "ce69a726-773e-4d12-b5eb-d2503aa752b4",
+    "slug": "conference",
+    "name": "Conférence",
+    "is_active": true,
+    "default_locale": "fr"
+  },
+  "guild": {
+    "guild_id": "1259186540001890474",
+    "is_primary": true
+  },
+  "discord_config": {
+    "staff_log_channel_id": null,
+    "matches_live_channel_id": null,
+    "disputes_forum_channel_id": null,
+    "lives_board_channel_id": null,
+    "news_ingest_channel_id": null,
+    "scrims_announce_channel_id": null,
+    "captain_role_id": null,
+    "substitute_role_id": null,
+    "staff_role_ids": [],
+    "teams_voice_category_id": null,
+    "disputes_forum_tag_open_id": null,
+    "disputes_forum_tag_pending_id": null,
+    "disputes_forum_tag_resolved_id": null,
+    "extras": {}
+  }
+}
+```
+
+Si aucune row n'existe dans `tenant_discord_config` pour ce guild, toutes les
+colonnes config retournent `null` / `[]` / `{}` (defauts). Le bot doit alors
+appliquer son fallback env vars sur les valeurs `null` (mode V1 progressif).
+
+**Errors**
+
+- `400 { code: "INVALID_GUILD_ID" }` — `guildId` absent ou non-snowflake.
+- `404 { code: "GUILD_NOT_LINKED", guild_id: "..." }` — guild absent de
+  `discord_guilds`. Le bot doit alors appeler `POST /tenants/link-guild`.
+- `401`, `500`, `503` — auth / database / maintenance.
+
+**Rate limit** : 120/min global. **Idempotency** : non (read-only).
+
+```bash
+curl -sS "https://site.example/api/bot/v1/tenants/by-guild/1259186540001890474" \
+  -H "x-api-key: $BOT_API_KEY"
+```
+
+#### `POST /api/bot/v1/tenants/link-guild`
+
+Appele par le bot dans son handler `guildCreate` (le bot vient d'etre invite
+sur un nouveau serveur). Deux cas couverts en une seule call :
+
+1. **Guild deja linke** — repond `already_linked` avec le tenant cible. Le
+   bot continue normalement.
+2. **Guild inconnu** — la demande est enregistree dans `pending_guild_links`
+   (upsert idempotent par `guild_id`). Un admin doit ensuite passer sur
+   `/admin/tenants` (S7) pour creer un tenant ou rattacher a un tenant
+   existant. Le bot DEVRAIT etre configure pour quitter automatiquement les
+   guilds non-linked apres N minutes (anti-abus), mais c'est une decision
+   produit cote bot.
+
+**Body**
+
+```json
+{
+  "guild_id": "1234567890123456789",
+  "guild_name": "Nouveau Serveur",
+  "owner_discord_id": "9876543210123456789"
+}
+```
+
+- `guild_id` _(requis)_ — snowflake Discord (15-25 chiffres).
+- `guild_name` _(optionnel)_ — nom du guild, max 200 chars (UX admin).
+- `owner_discord_id` _(optionnel)_ — Discord ID du proprietaire, snowflake.
+
+**Response 200 (deja linke)**
+
+```json
+{
+  "status": "already_linked",
+  "guild_id": "1259186540001890474",
+  "is_primary": true,
+  "tenant_id": "ce69a726-773e-4d12-b5eb-d2503aa752b4",
+  "tenant_slug": "conference"
+}
+```
+
+**Response 200 (en attente)**
+
+```json
+{
+  "status": "pending_admin_link",
+  "guild_id": "1234567890123456789",
+  "guild_name": "Nouveau Serveur",
+  "owner_discord_id": "9876543210123456789"
+}
+```
+
+**Errors**
+
+- `400 { code: "INVALID_GUILD_ID" | "INVALID_OWNER_ID" }` — validation body.
+- `401`, `500`, `503`.
+
+**Rate limit** : 30/min global. **Idempotency** : oui (header
+`Idempotency-Key`).
+
+```bash
+curl -sS -X POST "https://site.example/api/bot/v1/tenants/link-guild" \
+  -H "x-api-key: $BOT_API_KEY" \
+  -H "content-type: application/json" \
+  -H "Idempotency-Key: bot-guild-create-1234567890123456789" \
+  -d '{"guild_id":"1234567890123456789","guild_name":"Nouveau Serveur"}'
+```
+
+#### `GET /api/bot/v1/tenants/all-configs`
+
+Liste la config de TOUS les guilds linkes en une seule requete. Le bot
+l'utilise au boot pour amorcer son cache in-memory plutot que de boucler
+sur `/by-guild/:id`.
+
+**Response 200**
+
+```json
+{
+  "configs": [
+    {
+      "tenant": {
+        "id": "...",
+        "slug": "conference",
+        "name": "Conférence",
+        "is_active": true,
+        "default_locale": "fr"
+      },
+      "guild": { "guild_id": "1259186540001890474", "is_primary": true },
+      "discord_config": {
+        "staff_log_channel_id": null,
+        "staff_role_ids": [],
+        "extras": {}
+      }
+    }
+  ]
+}
+```
+
+Pas de pagination V1 (volume attendu < 100 guilds). Si le nombre monte,
+ajouter `?limit=&offset=`.
+
+**Errors** : `401`, `500`, `503`.
+**Rate limit** : 30/min global. **Idempotency** : non (read-only).
+
+```bash
+curl -sS "https://site.example/api/bot/v1/tenants/all-configs" \
+  -H "x-api-key: $BOT_API_KEY"
+```
+
 ### Teams
 
 | Route                                                                                          | Methods    | Idem. | Rate-key                    |
