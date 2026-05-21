@@ -78,28 +78,55 @@ function OnboardRequestPage() {
     let cancelled = false;
     (async () => {
       try {
+        // 1) Etat actuel de user_discord_links (table custom).
         const res = await fetch('/api/auth/discord-link', {
           credentials: 'include',
         });
-        if (!res.ok) {
-          if (!cancelled) setDiscordLink({ kind: 'not-linked' });
-          return;
-        }
-        const data = (await res.json()) as {
-          linked?: boolean;
-          discordUserId?: string | null;
-          discordUsername?: string | null;
-        };
         if (cancelled) return;
-        if (data.linked && data.discordUserId) {
-          setDiscordLink({
-            kind: 'linked',
-            discordUserId: data.discordUserId,
-            discordUsername: data.discordUsername ?? null,
-          });
-        } else {
-          setDiscordLink({ kind: 'not-linked' });
+        if (res.ok) {
+          const data = (await res.json()) as {
+            linked?: boolean;
+            discordUserId?: string | null;
+            discordUsername?: string | null;
+          };
+          if (data.linked && data.discordUserId) {
+            setDiscordLink({
+              kind: 'linked',
+              discordUserId: data.discordUserId,
+              discordUsername: data.discordUsername ?? null,
+            });
+            return;
+          }
         }
+        // 2) Pas de row user_discord_links, mais l'utilisateur peut avoir
+        //    quand même une identité Discord attachée à auth.identities
+        //    (cas typique : un ancien sign-in via Discord OAuth, mais la
+        //    table custom n'a jamais été peuplée). On tente le populate
+        //    automatique via POST /api/auth/link-discord — ce endpoint
+        //    lit auth.users.identities côté serveur et upsert la row si
+        //    une discord identity existe.
+        const linkRes = await fetch('/api/auth/link-discord', {
+          method: 'POST',
+          credentials: 'include',
+        });
+        if (cancelled) return;
+        if (linkRes.ok) {
+          const linkData = (await linkRes.json()) as {
+            success?: boolean;
+            discordUserId?: string | null;
+            discordUsername?: string | null;
+          };
+          if (linkData.success && linkData.discordUserId) {
+            setDiscordLink({
+              kind: 'linked',
+              discordUserId: linkData.discordUserId,
+              discordUsername: linkData.discordUsername ?? null,
+            });
+            return;
+          }
+        }
+        // 3) Vraiment pas d'identité Discord → afficher le CTA pour lier.
+        setDiscordLink({ kind: 'not-linked' });
       } catch {
         if (!cancelled) setDiscordLink({ kind: 'not-linked' });
       }
