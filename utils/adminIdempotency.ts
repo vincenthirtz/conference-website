@@ -47,8 +47,8 @@ async function readCache(
   if (!supabaseAdmin) return null;
   // Scope multi-tenant (S3 / Phase 1c) : on filtre par tenant_id. Admin
   // staff n'a pas encore de contexte tenant (mono-tenant aujourd'hui), on
-  // passe donc DEFAULT_TENANT_ID depuis le wrapper. Defense-in-depth pour
-  // quand S5/Phase 3 introduira un staff multi-tenant.
+  // passe donc DEFAULT_TENANT_ID depuis le wrapper. Pret pour le jour ou
+  // un staff multi-tenant arrivera.
   const { data, error } = await supabaseAdmin
     .from('admin_idempotency')
     .select('status, body, expires_at')
@@ -72,13 +72,13 @@ async function writeCache(
 ): Promise<void> {
   if (!supabaseAdmin) return;
   const expires_at = new Date(Date.now() + IDEMPOTENCY_TTL_MS).toISOString();
-  // On stocke tenant_id pour le scope cache. onConflict reste sur cache_key
-  // tant que phase 3 n'a pas pose le UNIQUE composite (tenant_id, cache_key).
+  // On stocke tenant_id pour le scope cache, et le UNIQUE composite
+  // (tenant_id, cache_key) garantit l'unicite au niveau DB.
   const { error } = await supabaseAdmin
     .from('admin_idempotency')
     .upsert(
       { cache_key: cacheKey, status, body, expires_at, tenant_id: tenantId },
-      { onConflict: 'cache_key' }
+      { onConflict: 'tenant_id,cache_key' }
     );
   if (error) {
     // Best-effort : un échec de write = pire UX (retry refera le travail)
@@ -152,10 +152,8 @@ export function withAdminIdempotency(
 
     const cacheKey = buildCacheKey(req, ctx.staff.id, options.key, userKey);
     // Admin staff n'a pas (encore) de contexte tenant — on utilise
-    // DEFAULT_TENANT_ID. Cela equivaut a aujourd'hui d'un point de vue
-    // comportemental (toutes les rows actuelles portent ce tenant_id) mais
-    // ecrit la colonne explicitement pour rester compatible avec la phase 3
-    // (NOT NULL + UNIQUE composite).
+    // DEFAULT_TENANT_ID. La colonne tenant_id est NOT NULL en DB et fait
+    // partie du UNIQUE composite (tenant_id, cache_key).
     const tenantId = DEFAULT_TENANT_ID;
     const cached = await readCache(cacheKey, tenantId);
     if (cached) {

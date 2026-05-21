@@ -2,7 +2,7 @@
 //
 // Le joueur peut snoozer une de ses actions (voir actions-todo) pour qu'elle
 // disparaisse temporairement de sa liste /mes-actions. Upsert sur
-// player_action_snoozes (PK (discord_user_id, action_key)).
+// player_action_snoozes (PK (tenant_id, discord_user_id, action_key)).
 //
 // Body : { actorDiscordUserId, actionKey, minutes }
 //   - actorDiscordUserId : doit etre egal au :discordUserId du path (un
@@ -66,8 +66,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const snoozedUntil = new Date(Date.now() + minutes * 60_000).toISOString();
   const updatedAt = new Date().toISOString();
 
-  // Upsert sur PK (discord_user_id, action_key). Pour les onConflict on
-  // utilise la PK composite.
+  // Upsert sur PK (tenant_id, discord_user_id, action_key). Pour les
+  // onConflict on utilise la PK composite.
   const { error } = await supabaseAdmin
     .from('player_action_snoozes')
     .upsert(
@@ -78,7 +78,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         snoozed_until: snoozedUntil,
         updated_at: updatedAt,
       },
-      { onConflict: 'discord_user_id,action_key' }
+      { onConflict: 'tenant_id,discord_user_id,action_key' }
     );
   if (error) {
     logger.error('[bot/player/actions/snooze] upsert error', error);

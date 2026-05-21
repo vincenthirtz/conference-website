@@ -52,8 +52,8 @@ async function readIdempotencyCache(
   // Multi-tenant scoping (S3 / Phase 1c) : on filtre par tenant_id pour
   // que deux tenants utilisant la meme Idempotency-Key (collision plausible
   // sur des keys courtes type UUIDv4 tronques) n'entrent pas en collision
-  // de cache. Defense-in-depth : aujourd'hui UNIQUE(cache_key) est global
-  // mais phase 3 le transformera en UNIQUE(tenant_id, cache_key).
+  // de cache. La contrainte UNIQUE(tenant_id, cache_key) garantit l'unicite
+  // au niveau DB.
   const { data, error } = await supabaseAdmin
     .from('bot_idempotency')
     .select('status, body, expires_at')
@@ -78,15 +78,12 @@ async function writeIdempotencyCache(
   if (!supabaseAdmin) return;
   const expires_at = new Date(Date.now() + IDEMPOTENCY_TTL_MS).toISOString();
   // Upsert : remplace une row potentiellement expiree avec la meme cle.
-  // On stocke tenant_id pour le scope multi-tenant. onConflict reste sur
-  // cache_key tant que la migration phase 3 n'a pas pose le UNIQUE composite
-  // (tenant_id, cache_key) — c'est suffisant aujourd'hui car le sweep S3
-  // garantit qu'on n'ecrit que des rows scoping par tenant a la lecture.
+  // On stocke tenant_id pour le scope multi-tenant.
   const { error } = await supabaseAdmin
     .from('bot_idempotency')
     .upsert(
       { cache_key: cacheKey, status, body, expires_at, tenant_id: tenantId },
-      { onConflict: 'cache_key' }
+      { onConflict: 'tenant_id,cache_key' }
     );
   if (error) {
     // On log mais on ne bloque pas : echec d'ecriture cache = pire UX
