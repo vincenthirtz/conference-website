@@ -105,11 +105,11 @@ resolves the tenant once and stashes it on `req.botContext.tenantId`.
 
 ### Error codes
 
-| Code                 | Status | When                                                              |
-| -------------------- | ------ | ----------------------------------------------------------------- |
-| `MISSING_TENANT_ID`  | 400    | `x-tenant-id` header is absent or empty (legacy env auth only).   |
-| `INVALID_TENANT_ID`  | 400    | `x-tenant-id` header is present but not a valid UUID.             |
-| `UNKNOWN_TENANT`     | 404    | `x-tenant-id` is a valid UUID but no matching row in `tenants`.   |
+| Code                | Status | When                                                            |
+| ------------------- | ------ | --------------------------------------------------------------- |
+| `MISSING_TENANT_ID` | 400    | `x-tenant-id` header is absent or empty (legacy env auth only). |
+| `INVALID_TENANT_ID` | 400    | `x-tenant-id` header is present but not a valid UUID.           |
+| `UNKNOWN_TENANT`    | 404    | `x-tenant-id` is a valid UUID but no matching row in `tenants`. |
 
 Example:
 
@@ -143,6 +143,75 @@ re-derive it from the payload:
 
 The bot resolves the target guild via `tenant_config.getGuildIdForTenant(tenantId)`
 (local cache amorcé au boot via `/tenants/all-configs`).
+
+### Outbox event catalog
+
+Event names written to `bot_event_outbox.event_name` are free-form text (no
+CHECK constraint). The list below documents the names emitted by the website
+today. The bot must tolerate unknown names (treat them as no-ops) so the
+catalog can grow without forcing a bot deploy.
+
+| Event name                      | Emitted by                                                                         | Payload `data` shape (high-level)                                                                                             |
+| ------------------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `match.starting`                | `pages/api/admin/matches/[matchId].ts` (status → ongoing)                          | `{ matchId, tournamentId?, scrimId?, team1Id, team2Id, scheduledAt, ..., enriched }`                                          |
+| `match.scheduled`               | Admin match meta update (`scheduled_at` set)                                       | `{ matchId, scheduledAt, ..., enriched }`                                                                                     |
+| `match.unscheduled`             | Admin match meta update (`scheduled_at` cleared)                                   | `{ matchId }`                                                                                                                 |
+| `match.finished`                | Score apply / admin                                                                | `{ matchId, team1Score, team2Score, winnerTeamId }`                                                                           |
+| `match.disputed`                | Admin `POST .../dispute`                                                           | `{ matchId, reason, openedBy }`                                                                                               |
+| `match.dispute.resolved`        | Admin `POST .../resolve-dispute`                                                   | `{ matchId, resolution, resolvedBy }`                                                                                         |
+| `news.published`                | Admin / bot ingest                                                                 | `{ newsId, slug, title, tag, excerpt, imageUrl, publishedAt }`                                                                |
+| `team.*` / `scrim.*` / `cast.*` | various admin / bot routes                                                         | see emitter call sites                                                                                                        |
+| `event_segment.transitioned`    | Admin `/api/admin/events/.../segments/.../{start,skip,end}.ts` (Lot 2 run-of-show) | `{ runId, segmentId, fromStatus, toStatus, tenantId, broadcastMessage, segment: { ord, type, title, durationMin, matchId } }` |
+
+#### `event_segment.transitioned` (Lot 2 run-of-show)
+
+Emitted whenever a segment in an `event_runs` timeline changes lifecycle
+state via the staff Director endpoints:
+
+- `upcoming → live` (via `POST /api/admin/events/:runId/segments/:segId/start`)
+- `upcoming → skipped` (via `POST /api/admin/events/:runId/segments/:segId/skip`)
+- `live → done` (via `POST /api/admin/events/:runId/segments/:segId/end`)
+
+Idempotent endpoints — if the transition is a no-op (segment already in the
+target state) the event is **not** re-emitted, so the bot can safely treat
+the event as "first time we see this transition for this segmentId".
+
+The full webhook/outbox body shape (consistent with the rest of the catalog):
+
+```json
+{
+  "id": "<event uuid>",
+  "event": "event_segment.transitioned",
+  "tenantId": "<uuid>",
+  "timestamp": "2026-05-21T20:42:00.000Z",
+  "data": {
+    "runId": "<uuid>",
+    "segmentId": "<uuid>",
+    "fromStatus": "upcoming",
+    "toStatus": "live",
+    "tenantId": "<uuid>",
+    "broadcastMessage": {
+      "discord": "**Match 3** kicks off NOW — Chaos Theory vs Phoenix Rising",
+      "push_title": "Live now: Chaos Theory vs Phoenix Rising",
+      "push_body": "Tune in for Match 3 of Finale Spring 2026",
+      "email_subject": null
+    },
+    "segment": {
+      "ord": 4,
+      "type": "match",
+      "title": "Match 3 — Chaos Theory vs Phoenix Rising",
+      "durationMin": 45,
+      "matchId": "<uuid>"
+    }
+  }
+}
+```
+
+`broadcastMessage` is `null` when the staff didn't author one for that
+segment (i.e. silent transition — pure cockpit/timeline state change). The
+bot uses it as the canonical Discord copy when `toStatus === 'live'`. For
+`skipped` and `done`, the bot typically ignores `broadcastMessage` and just
+updates its own panel/state.
 
 ## Idempotency
 
@@ -281,12 +350,12 @@ body shapes live there. `Idem.` means the route honours `Idempotency-Key`.
 
 ### Cast assignments
 
-| Route                                                                          | Methods           | Idem. | Rate-key               | Tenant scope                                          |
-| ------------------------------------------------------------------------------ | ----------------- | ----- | ---------------------- | ----------------------------------------------------- |
-| [`cast/assignments.ts`](../pages/api/bot/v1/cast/assignments.ts)               | GET               | —     | `bot-cast-assignments` | per-tenant                                            |
-| [`cast/upcoming.ts`](../pages/api/bot/v1/cast/upcoming.ts)                     | GET               | —     | `bot-cast-upcoming`    | `crossTenant: true` — `tenantId` returned per row     |
-| [`cast/[assignmentId]/ack.ts`](../pages/api/bot/v1/cast/[assignmentId]/ack.ts) | POST              | yes   | `cast.ack`             | per-tenant                                            |
-| [`matches/[matchId]/cast.ts`](../pages/api/bot/v1/matches/[matchId]/cast.ts)   | GET, POST, DELETE | yes   | `bot-match-cast`       | per-tenant                                            |
+| Route                                                                          | Methods           | Idem. | Rate-key               | Tenant scope                                      |
+| ------------------------------------------------------------------------------ | ----------------- | ----- | ---------------------- | ------------------------------------------------- |
+| [`cast/assignments.ts`](../pages/api/bot/v1/cast/assignments.ts)               | GET               | —     | `bot-cast-assignments` | per-tenant                                        |
+| [`cast/upcoming.ts`](../pages/api/bot/v1/cast/upcoming.ts)                     | GET               | —     | `bot-cast-upcoming`    | `crossTenant: true` — `tenantId` returned per row |
+| [`cast/[assignmentId]/ack.ts`](../pages/api/bot/v1/cast/[assignmentId]/ack.ts) | POST              | yes   | `cast.ack`             | per-tenant                                        |
+| [`matches/[matchId]/cast.ts`](../pages/api/bot/v1/matches/[matchId]/cast.ts)   | GET, POST, DELETE | yes   | `bot-match-cast`       | per-tenant                                        |
 
 #### `GET /api/bot/v1/cast/upcoming`
 
@@ -361,12 +430,12 @@ Le caster clique le bouton "Je confirme" du DM T-30. Marque
 
 ### Events queue (bot ↔ site eventual-consistency channel)
 
-| Route                                                                              | Methods | Idem. | Rate-key                | Tenant scope |
-| ---------------------------------------------------------------------------------- | ------- | ----- | ----------------------- | ------------ |
+| Route                                                                              | Methods | Idem. | Rate-key                | Tenant scope                                      |
+| ---------------------------------------------------------------------------------- | ------- | ----- | ----------------------- | ------------------------------------------------- |
 | [`events/pending.ts`](../pages/api/bot/v1/events/pending.ts)                       | GET     | —     | `bot-events-pending`    | `crossTenant: true` — `tenantId` returned per row |
-| [`events/handled.ts`](../pages/api/bot/v1/events/handled.ts)                       | POST    | no    | `bot-events-handled`    | per-tenant   |
-| [`events/[id]/ack.ts`](../pages/api/bot/v1/events/[id]/ack.ts)                     | POST    | yes   | `bot-events-ack`        | `crossTenant: true` — PK globally unique |
-| [`reconcile/discord-orphans.ts`](../pages/api/bot/v1/reconcile/discord-orphans.ts) | GET     | —     | `bot-reconcile-orphans` | per-tenant   |
+| [`events/handled.ts`](../pages/api/bot/v1/events/handled.ts)                       | POST    | no    | `bot-events-handled`    | per-tenant                                        |
+| [`events/[id]/ack.ts`](../pages/api/bot/v1/events/[id]/ack.ts)                     | POST    | yes   | `bot-events-ack`        | `crossTenant: true` — PK globally unique          |
+| [`reconcile/discord-orphans.ts`](../pages/api/bot/v1/reconcile/discord-orphans.ts) | GET     | —     | `bot-reconcile-orphans` | per-tenant                                        |
 
 ### Locks (distributed cron / fullSync coordination)
 
@@ -557,6 +626,71 @@ Idempotent : un 2eme POST avec la meme `actionKey` UPDATE
 | [`leaderboards/teams.ts`](../pages/api/bot/v1/leaderboards/teams.ts)               | GET     | —     | `bot-leaderboards-teams`        |
 | [`twitch/live.ts`](../pages/api/bot/v1/twitch/live.ts)                             | GET     | —     | `bot-twitch-live`               |
 | [`tournament-help/inventory.ts`](../pages/api/bot/v1/tournament-help/inventory.ts) | GET     | —     | `bot-tournament-help-inventory` |
+| [`runs/current.ts`](../pages/api/bot/v1/runs/current.ts)                           | GET     | —     | `bot-runs-current`              |
+
+#### `GET /api/bot/v1/runs/current`
+
+Returns the current live `event_run` of the tenant plus its segments —
+useful for a `/run` or `/event` slash command, or for the bot to render a
+"What's live right now" panel without piecing it together from the outbox.
+
+**Auth** : `x-api-key` + tenant via per-tenant key or `x-tenant-id` header
+(standard `withBotRoute` resolution).
+
+**Response 200** (no live run)
+
+```json
+{ "run": null, "segments": [] }
+```
+
+**Response 200** (live run)
+
+```json
+{
+  "run": {
+    "id": "<uuid>",
+    "slug": "finale-printemps-2026",
+    "name": "Finale Printemps 2026",
+    "description": "Show de clôture, 4 matchs + remise des prix",
+    "scheduledAt": "2026-05-21T20:00:00.000Z",
+    "status": "live",
+    "startedAt": "2026-05-21T20:03:12.000Z",
+    "endedAt": null
+  },
+  "segments": [
+    {
+      "id": "<uuid>",
+      "ord": 0,
+      "type": "intro",
+      "title": "Intro caster",
+      "durationMin": 10,
+      "matchId": null,
+      "status": "done",
+      "startedAt": "2026-05-21T20:03:12.000Z",
+      "endedAt": "2026-05-21T20:13:45.000Z"
+    },
+    {
+      "id": "<uuid>",
+      "ord": 1,
+      "type": "match",
+      "title": "Match 1 — Chaos Theory vs Phoenix Rising",
+      "durationMin": 45,
+      "matchId": "<uuid>",
+      "status": "live",
+      "startedAt": "2026-05-21T20:14:01.000Z",
+      "endedAt": null
+    }
+  ]
+}
+```
+
+Like the public timeline endpoint, this projection deliberately omits
+`broadcast_message` and `caster_checklist`. Those stay internal — the bot
+already receives the broadcast copy via the `event_segment.transitioned`
+outbox event.
+
+**Errors** : `400` (missing tenant context), `401` (auth), `500` (DB).
+**Rate limit** : 60/min global. **Idempotency** : non (GET).
 
 #### `GET /api/bot/v1/tournament-help/inventory`
 
@@ -618,12 +752,12 @@ Response shape (truncated):
 
 ### Tenant lifecycle (multi-tenant resolution)
 
-| Route                                                                                | Methods | Idem. | Rate-key                  | Tenant scope             |
-| ------------------------------------------------------------------------------------ | ------- | ----- | ------------------------- | ------------------------ |
-| [`tenants/by-guild/[guildId].ts`](../pages/api/bot/v1/tenants/by-guild/[guildId].ts) | GET     | —     | `bot-tenants-by-guild`         | `crossTenant: true`      |
-| [`tenants/link-guild.ts`](../pages/api/bot/v1/tenants/link-guild.ts)                 | POST    | yes   | `bot-tenants-link-guild`       | `crossTenant: true`      |
-| [`tenants/all-configs.ts`](../pages/api/bot/v1/tenants/all-configs.ts)               | GET     | —     | `bot-tenants-all-configs`      | `crossTenant: true`      |
-| [`tenants/request-onboard.ts`](../pages/api/bot/v1/tenants/request-onboard.ts)       | POST    | yes   | `bot-tenants-request-onboard`  | `crossTenant: true`      |
+| Route                                                                                | Methods | Idem. | Rate-key                      | Tenant scope        |
+| ------------------------------------------------------------------------------------ | ------- | ----- | ----------------------------- | ------------------- |
+| [`tenants/by-guild/[guildId].ts`](../pages/api/bot/v1/tenants/by-guild/[guildId].ts) | GET     | —     | `bot-tenants-by-guild`        | `crossTenant: true` |
+| [`tenants/link-guild.ts`](../pages/api/bot/v1/tenants/link-guild.ts)                 | POST    | yes   | `bot-tenants-link-guild`      | `crossTenant: true` |
+| [`tenants/all-configs.ts`](../pages/api/bot/v1/tenants/all-configs.ts)               | GET     | —     | `bot-tenants-all-configs`     | `crossTenant: true` |
+| [`tenants/request-onboard.ts`](../pages/api/bot/v1/tenants/request-onboard.ts)       | POST    | yes   | `bot-tenants-request-onboard` | `crossTenant: true` |
 
 These three endpoints **bootstrap** the bot's `guildId → (tenant_id, discord
 config)` map. They are the **only** `/api/bot/v1/*` routes (alongside
@@ -685,7 +819,7 @@ colonnes config retournent `null` / `{}` (defauts). Le bot doit alors
 appliquer son fallback env vars sur les valeurs `null` (mode V1 progressif).
 
 > **Breaking change** (2026-05-21) : l'ancien tableau `staff_role_ids:
-> string[]` est remplace par 4 colonnes typees
+string[]` est remplace par 4 colonnes typees
 > (`staff_role_owner_id`, `staff_role_admin_id`, `staff_role_manager_id`,
 > `staff_role_caster_id`), chacune un snowflake Discord nullable. La colonne
 > SQL `staff_role_ids` est droppee. Cote bot, lire les 4 nouvelles cles dans
@@ -1036,19 +1170,19 @@ fallback sur le premier tenant accessible par slug ASC, puis sur
 Cookie `staff_active_tenant_id` : `HttpOnly; SameSite=Lax; Path=/`,
 session cookie (pas de Max-Age), `Secure` ajoute en production.
 
-| Route                                                                                                                                                                  | Methods | Min role | Notes                                                            |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | -------- | ---------------------------------------------------------------- |
-| [`active-tenant.ts`](../pages/api/admin/active-tenant.ts)                                                                                                              | GET, POST | caster   | GET → tenant courant + source. POST → switch + Set-Cookie.       |
-| [`tenants/accessible.ts`](../pages/api/admin/tenants/accessible.ts)                                                                                                    | GET     | caster   | Tenants accessibles au staff (pour dropdown switcher).           |
-| [`tenants/index.ts`](../pages/api/admin/tenants/index.ts)                                                                                                              | GET, POST | manager  | GET liste globale + guild_count/staff_count. POST cree tenant.   |
-| [`tenants/[id].ts`](../pages/api/admin/tenants/[id].ts)                                                                                                                | GET, PATCH, DELETE | caster/manager | GET = manager+ OU staff du tenant. PATCH/DELETE = manager+. Slug immuable. DELETE = soft (is_active=false), `conference` protege. |
-| [`tenants/[id]/discord-config/index.ts`](../pages/api/admin/tenants/[id]/discord-config/index.ts)                                                                      | GET     | caster   | Liste configs par guild du tenant.                               |
-| [`tenants/[id]/discord-config/[guildId].ts`](../pages/api/admin/tenants/[id]/discord-config/[guildId].ts)                                                              | PUT     | caster   | Upsert config Discord. Verifie que guildId est dans le tenant.   |
-| [`tenants/[id]/staff/index.ts`](../pages/api/admin/tenants/[id]/staff/index.ts)                                                                                        | GET, POST | caster/manager | GET = staff du tenant ou manager+. POST = manager+.          |
-| [`tenants/[id]/staff/[staffId].ts`](../pages/api/admin/tenants/[id]/staff/[staffId].ts)                                                                                | DELETE  | manager  | 409 si on retire le dernier admin du tenant.                     |
-| [`pending-guild-links/index.ts`](../pages/api/admin/pending-guild-links/index.ts)                                                                                      | GET     | manager  | Guilds en attente de linkage (rempli par `POST /bot/v1/tenants/link-guild`). |
-| [`pending-guild-links/[guildId]/claim.ts`](../pages/api/admin/pending-guild-links/[guildId]/claim.ts)                                                                  | POST    | manager  | Body `{ tenant_id }` OU `{ new_tenant: { slug, name, default_locale? } }`. Cree row dans `discord_guilds` + delete pending. |
-| [`pending-guild-links/[guildId]/index.ts`](../pages/api/admin/pending-guild-links/[guildId]/index.ts)                                                                  | DELETE  | manager  | Rejette la demande (delete pending). V2 TODO : signaler au bot pour `guild.leave()`. |
+| Route                                                                                                     | Methods            | Min role       | Notes                                                                                                                             |
+| --------------------------------------------------------------------------------------------------------- | ------------------ | -------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| [`active-tenant.ts`](../pages/api/admin/active-tenant.ts)                                                 | GET, POST          | caster         | GET → tenant courant + source. POST → switch + Set-Cookie.                                                                        |
+| [`tenants/accessible.ts`](../pages/api/admin/tenants/accessible.ts)                                       | GET                | caster         | Tenants accessibles au staff (pour dropdown switcher).                                                                            |
+| [`tenants/index.ts`](../pages/api/admin/tenants/index.ts)                                                 | GET, POST          | manager        | GET liste globale + guild_count/staff_count. POST cree tenant.                                                                    |
+| [`tenants/[id].ts`](../pages/api/admin/tenants/[id].ts)                                                   | GET, PATCH, DELETE | caster/manager | GET = manager+ OU staff du tenant. PATCH/DELETE = manager+. Slug immuable. DELETE = soft (is_active=false), `conference` protege. |
+| [`tenants/[id]/discord-config/index.ts`](../pages/api/admin/tenants/[id]/discord-config/index.ts)         | GET                | caster         | Liste configs par guild du tenant.                                                                                                |
+| [`tenants/[id]/discord-config/[guildId].ts`](../pages/api/admin/tenants/[id]/discord-config/[guildId].ts) | PUT                | caster         | Upsert config Discord. Verifie que guildId est dans le tenant.                                                                    |
+| [`tenants/[id]/staff/index.ts`](../pages/api/admin/tenants/[id]/staff/index.ts)                           | GET, POST          | caster/manager | GET = staff du tenant ou manager+. POST = manager+.                                                                               |
+| [`tenants/[id]/staff/[staffId].ts`](../pages/api/admin/tenants/[id]/staff/[staffId].ts)                   | DELETE             | manager        | 409 si on retire le dernier admin du tenant.                                                                                      |
+| [`pending-guild-links/index.ts`](../pages/api/admin/pending-guild-links/index.ts)                         | GET                | manager        | Guilds en attente de linkage (rempli par `POST /bot/v1/tenants/link-guild`).                                                      |
+| [`pending-guild-links/[guildId]/claim.ts`](../pages/api/admin/pending-guild-links/[guildId]/claim.ts)     | POST               | manager        | Body `{ tenant_id }` OU `{ new_tenant: { slug, name, default_locale? } }`. Cree row dans `discord_guilds` + delete pending.       |
+| [`pending-guild-links/[guildId]/index.ts`](../pages/api/admin/pending-guild-links/[guildId]/index.ts)     | DELETE             | manager        | Rejette la demande (delete pending). V2 TODO : signaler au bot pour `guild.leave()`.                                              |
 
 Idempotence : les mutations POST/PATCH/PUT/DELETE supportent
 l'header `Idempotency-Key` via `withAdminIdempotency` (cache scope =
