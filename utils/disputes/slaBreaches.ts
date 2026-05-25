@@ -35,6 +35,7 @@ export type DisputeRow = {
   disputeReason: string | null;
   disputeOpenedAt: string | null;
   escalationPingedAt: string | null;
+  disputeThreadId: string | null;
   ageMinutes: number | null;
   slaMinutes: number;
   classification: SLAClassification;
@@ -84,7 +85,7 @@ export async function listOpenDisputes(
   let query = supabaseAdmin
     .from('matches')
     .select(
-      'id, tournament_id, team1_id, team2_id, dispute_reason, dispute_opened_at, escalation_pinged_at'
+      'id, tournament_id, team1_id, team2_id, dispute_reason, dispute_opened_at, escalation_pinged_at, discord_dispute_thread_id'
     )
     .eq('tenant_id', tenantId)
     .eq('status', 'disputed')
@@ -110,6 +111,7 @@ export async function listOpenDisputes(
       disputeReason: m.dispute_reason ?? null,
       disputeOpenedAt: m.dispute_opened_at ?? null,
       escalationPingedAt: m.escalation_pinged_at ?? null,
+      disputeThreadId: m.discord_dispute_thread_id ?? null,
       ageMinutes,
       slaMinutes,
       classification: classifyAge(ageMinutes, slaMinutes),

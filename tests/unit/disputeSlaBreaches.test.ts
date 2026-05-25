@@ -90,6 +90,7 @@ describe('listOpenDisputes', () => {
         dispute_opened_at: '2026-05-25T09:00:00.000Z', // 180 min ago
         escalation_pinged_at: null,
         dispute_reason: 'too late',
+        discord_dispute_thread_id: '1300000000000000001',
       },
       {
         id: 'm-fresh',
@@ -100,6 +101,7 @@ describe('listOpenDisputes', () => {
         dispute_opened_at: '2026-05-25T11:50:00.000Z', // 10 min ago
         escalation_pinged_at: null,
         dispute_reason: 'just now',
+        discord_dispute_thread_id: null,
       },
       // non-disputed match — must be ignored
       {
@@ -115,8 +117,10 @@ describe('listOpenDisputes', () => {
     const byId = Object.fromEntries(rows.map((r) => [r.matchId, r]));
     expect(byId['m-old'].classification).toBe('breached');
     expect(byId['m-old'].ageMinutes).toBe(180);
+    expect(byId['m-old'].disputeThreadId).toBe('1300000000000000001');
     expect(byId['m-fresh'].classification).toBe('fresh');
     expect(byId['m-fresh'].ageMinutes).toBe(10);
+    expect(byId['m-fresh'].disputeThreadId).toBeNull();
   });
 
   it('filters by tournamentId when provided', async () => {
@@ -200,8 +204,12 @@ describe('markEscalationPinged', () => {
     ] as any;
 
     await markEscalationPinged(TENANT_ID, ['a'], NOW_ISO);
-    expect((store.matches as any[]).find((m) => m.id === 'a').escalation_pinged_at).toBe(NOW_ISO);
-    expect((store.matches as any[]).find((m) => m.id === 'b').escalation_pinged_at).toBeNull();
+    expect(
+      (store.matches as any[]).find((m) => m.id === 'a').escalation_pinged_at
+    ).toBe(NOW_ISO);
+    expect(
+      (store.matches as any[]).find((m) => m.id === 'b').escalation_pinged_at
+    ).toBeNull();
   });
 
   it('is a no-op for an empty matchIds list', async () => {

@@ -98,24 +98,33 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       }
     }
 
-    const escalations = trimmed.map((r) => ({
-      matchId: r.matchId,
-      tournament: r.tournamentId
-        ? (tournamentInfo.get(r.tournamentId) ?? null)
-        : null,
-      team1: r.team1Id
-        ? { id: r.team1Id, name: teamNames.get(r.team1Id) ?? null }
-        : null,
-      team2: r.team2Id
-        ? { id: r.team2Id, name: teamNames.get(r.team2Id) ?? null }
-        : null,
-      disputeReason: r.disputeReason,
-      disputeOpenedAt: r.disputeOpenedAt,
-      escalationPingedAt: r.escalationPingedAt,
-      ageMinutes: r.ageMinutes,
-      slaMinutes: r.slaMinutes,
-      classification: r.classification,
-    }));
+    const escalations = trimmed.map((r) => {
+      const openedMs = r.disputeOpenedAt ? Date.parse(r.disputeOpenedAt) : NaN;
+      const slaDueAt =
+        Number.isFinite(openedMs) && Number.isFinite(r.slaMinutes)
+          ? new Date(openedMs + r.slaMinutes * 60_000).toISOString()
+          : null;
+      return {
+        matchId: r.matchId,
+        tournament: r.tournamentId
+          ? (tournamentInfo.get(r.tournamentId) ?? null)
+          : null,
+        team1: r.team1Id
+          ? { id: r.team1Id, name: teamNames.get(r.team1Id) ?? null }
+          : null,
+        team2: r.team2Id
+          ? { id: r.team2Id, name: teamNames.get(r.team2Id) ?? null }
+          : null,
+        disputeReason: r.disputeReason,
+        disputeOpenedAt: r.disputeOpenedAt,
+        escalationPingedAt: r.escalationPingedAt,
+        disputeThreadId: r.disputeThreadId,
+        slaDueAt,
+        ageMinutes: r.ageMinutes,
+        slaMinutes: r.slaMinutes,
+        classification: r.classification,
+      };
+    });
 
     return res.status(200).json({
       escalations,
