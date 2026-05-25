@@ -45,6 +45,7 @@ export type StaffLogAction =
   | 'delete_staff_account'
   | 'finalize_tournament'
   | 'unfinalize_tournament'
+  | 'checkin_manual_nudge'
   | 'other';
 
 export type StaffLog = {

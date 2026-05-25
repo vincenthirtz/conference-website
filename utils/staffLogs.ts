@@ -200,6 +200,7 @@ export function formatStaffLog(log: StaffLog) {
     delete_staff_account: 'Suppression compte staff',
     finalize_tournament: 'Clôture tournoi (podium gelé)',
     unfinalize_tournament: 'Déverrouillage tournoi',
+    checkin_manual_nudge: 'Relance check-in (Discord)',
     other: 'Action staff',
   };
 

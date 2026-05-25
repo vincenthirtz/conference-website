@@ -50,7 +50,8 @@ export type BotEventName =
   | 'helloasso.payment.received'
   | 'captain.support.opened'
   | 'tournament.finalized'
-  | 'dispute.sla_breached';
+  | 'dispute.sla_breached'
+  | 'checkin.nudge';
 
 export type BotEventPayload = Record<string, unknown>;
 

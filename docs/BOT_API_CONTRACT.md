@@ -160,6 +160,7 @@ catalog can grow without forcing a bot deploy.
 | `match.disputed`                | Admin `POST .../dispute`                                                           | `{ matchId, reason, openedBy }`                                                                                               |
 | `match.dispute.resolved`        | Admin `POST .../resolve-dispute`                                                   | `{ matchId, resolution, resolvedBy }`                                                                                         |
 | `dispute.sla_breached` (Lot 4)  | Cron `/api/cron/dispute-sla-check`                                                 | `{ matchId, tournamentId, disputeReason, disputeOpenedAt, ageMinutes, slaMinutes }`                                           |
+| `checkin.nudge` (Lot 5)         | Admin `POST /api/admin/matches/[matchId]/checkin-nudge`                            | `{ matchId, tournamentId, teamSide: 1 \| 2, scheduledAt, nudgedByStaffId, enriched }`                                          |
 | `news.published`                | Admin / bot ingest                                                                 | `{ newsId, slug, title, tag, excerpt, imageUrl, publishedAt }`                                                                |
 | `team.*` / `scrim.*` / `cast.*` | various admin / bot routes                                                         | see emitter call sites                                                                                                        |
 | `event_segment.transitioned`    | Admin `/api/admin/events/.../segments/.../{start,skip,end}.ts` (Lot 2 run-of-show) | `{ runId, segmentId, fromStatus, toStatus, tenantId, broadcastMessage, segment: { ord, type, title, durationMin, matchId } }` |
@@ -252,6 +253,53 @@ The bot is expected to DM the configured staff role (or the
 the bot can pull `GET /api/bot/v1/disputes/escalations?breached=true`,
 which returns the full enriched list (team names, tournament, age,
 classification).
+
+#### `checkin.nudge` (Lot 5 Live Check-In Console)
+
+Emitted by `pages/api/admin/matches/[matchId]/checkin-nudge.ts` when a
+staff member clicks "Relance Discord" on the live check-in console at
+`/admin/tournament/[id]/checkin/live`. One event is emitted per nudged
+team side, so the bot can route directly to the right captain.
+
+Server-side guards :
+
+- 404 if the match is unknown for the tenant.
+- 409 with `INVALID_STATUS` when the match is not `pending` / `ongoing`.
+- 409 with `ALREADY_CHECKED_IN` if every requested side already checked
+  in (the endpoint silently filters out checked sides; this 409 is only
+  returned when none remain).
+- `withAdminIdempotency` wraps the handler (5 min window, key
+  `match-checkin-nudge`), so double-clicks within the window replay the
+  cached response instead of re-emitting.
+
+Payload :
+
+```json
+{
+  "id": "<event uuid>",
+  "event": "checkin.nudge",
+  "tenantId": "<uuid>",
+  "timestamp": "2026-05-25T18:42:00.000Z",
+  "data": {
+    "matchId": "<uuid>",
+    "tournamentId": "<uuid|null>",
+    "teamSide": 1,
+    "scheduledAt": "2026-05-25T19:00:00.000Z",
+    "nudgedByStaffId": "<uuid|null>",
+    "enriched": {
+      "team1": { "captainDiscordUserId": "<snowflake|null>", ... },
+      "team2": { "captainDiscordUserId": "<snowflake|null>", ... },
+      "checkinUrl1": "https://site/checkin/<token>",
+      "checkinUrl2": "https://site/checkin/<token>"
+    }
+  }
+}
+```
+
+The bot DMs the captain of `teamSide`, posts a fresh check-in prompt
+(URL + Check-in button reusing the existing `match_checkin` reminder
+template). If `enriched.team{N}.captainDiscordUserId` is null, the bot
+logs and skips — the team probably has no linked captain.
 
 ## Idempotency
 
