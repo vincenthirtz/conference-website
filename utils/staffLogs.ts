@@ -201,6 +201,7 @@ export function formatStaffLog(log: StaffLog) {
     finalize_tournament: 'Clôture tournoi (podium gelé)',
     unfinalize_tournament: 'Déverrouillage tournoi',
     checkin_manual_nudge: 'Relance check-in (Discord)',
+    broadcast_state_update: 'Mise à jour état broadcast',
     other: 'Action staff',
   };
 

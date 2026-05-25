@@ -162,6 +162,7 @@ catalog can grow without forcing a bot deploy.
 | `dispute.sla_breached` (Lot 4)  | Cron `/api/cron/dispute-sla-check`                                                 | `{ matchId, tournamentId, disputeReason, disputeOpenedAt, ageMinutes, slaMinutes }`                                           |
 | `checkin.nudge` (Lot 5)         | Admin `POST /api/admin/matches/[matchId]/checkin-nudge`                            | `{ matchId, tournamentId, teamSide: 1 \| 2, scheduledAt, nudgedByStaffId, enriched }`                                          |
 | `tournament.finalized` (Lot 1)  | Admin `POST /api/admin/tournament/[id]/finalize`                                   | `{ tournament_id, tournament_name, rankings: [{ team_id, team_name, rank, prize }, ...] }`                                    |
+| `broadcast.state_changed` (Lot 7) | Admin `POST /api/admin/broadcast/state`                                          | `{ runId, runSlug, state: { v: 1, on_air, lower_third, pip }, currentSegmentId, matchId }`                                    |
 | `news.published`                | Admin / bot ingest                                                                 | `{ newsId, slug, title, tag, excerpt, imageUrl, publishedAt }`                                                                |
 | `team.*` / `scrim.*` / `cast.*` | various admin / bot routes                                                         | see emitter call sites                                                                                                        |
 | `event_segment.transitioned`    | Admin `/api/admin/events/.../segments/.../{start,skip,end}.ts` (Lot 2 run-of-show) | `{ runId, segmentId, fromStatus, toStatus, tenantId, broadcastMessage, segment: { ord, type, title, durationMin, matchId } }` |
@@ -421,12 +422,13 @@ body shapes live there. `Idem.` means the route honours `Idempotency-Key`.
 
 ### Announcements & moderation
 
-| Route                                                                            | Methods | Idem. | Rate-key                     |
-| -------------------------------------------------------------------------------- | ------- | ----- | ---------------------------- |
-| [`announcements.ts`](../pages/api/bot/v1/announcements.ts)                       | POST    | yes   | `bot-announcements`          |
-| [`disputes.ts`](../pages/api/bot/v1/disputes.ts)                                 | GET     | —     | `bot-disputes`               |
-| [`disputes/escalations.ts`](../pages/api/bot/v1/disputes/escalations.ts) (Lot 4) | GET     | —     | `bot-disputes-escalations`   |
-| [`staff-logs.ts`](../pages/api/bot/v1/staff-logs.ts)                             | GET     | —     | `bot-staff-logs`             |
+| Route                                                                                | Methods | Idem. | Rate-key                     |
+| ------------------------------------------------------------------------------------ | ------- | ----- | ---------------------------- |
+| [`announcements.ts`](../pages/api/bot/v1/announcements.ts)                           | POST    | yes   | `bot-announcements`          |
+| [`broadcast/on-air.ts`](../pages/api/bot/v1/broadcast/on-air.ts) (Lot 7)             | GET     | —     | `bot-broadcast-on-air`       |
+| [`disputes.ts`](../pages/api/bot/v1/disputes.ts)                                     | GET     | —     | `bot-disputes`               |
+| [`disputes/escalations.ts`](../pages/api/bot/v1/disputes/escalations.ts) (Lot 4)     | GET     | —     | `bot-disputes-escalations`   |
+| [`staff-logs.ts`](../pages/api/bot/v1/staff-logs.ts)                                 | GET     | —     | `bot-staff-logs`             |
 
 ### Autocomplete (Discord choice-pickers)
 

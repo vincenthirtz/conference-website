@@ -38,6 +38,11 @@ export const ADMIN_LINKS: AdminLink[] = [
         ref: '/admin/disputes',
         minRole: 'manager',
       },
+      {
+        title: 'Broadcast live (cockpit)',
+        ref: '/admin/broadcast/live',
+        minRole: 'manager',
+      },
     ],
   },
   {

@@ -1,0 +1,152 @@
+// pages/api/admin/broadcast/state.ts
+// Lot 7 Broadcast Console — admin endpoint.
+//   GET  : aggregate live state (run + current segment + match + casters
+//          + overlay state).
+//   POST : partial update of broadcast_state on the currently-live run.
+//
+// The endpoint always operates on the SINGLE live run of the tenant
+// (status='live'). If no run is live, GET returns nullish fields and
+// POST returns 409.
+
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
+import { withAdminIdempotency } from '@/utils/adminIdempotency';
+import { logStaffAction } from '@/utils/staffLogs';
+import { emitBotEvent } from '@/utils/botEvents';
+import {
+  fetchLiveBroadcastState,
+  updateBroadcastState,
+} from '@/utils/broadcast/liveState';
+import { logger } from '../../../../utils/logger';
+
+export default withStaffRoute(
+  withAdminIdempotency(handler, { key: 'broadcast-state' }),
+  'caster'
+);
+
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
+  try {
+    if (req.method === 'GET') {
+      const data = await fetchLiveBroadcastState(ctx.tenantId);
+      return res.status(200).json(data);
+    }
+
+    if (req.method === 'POST') {
+      const body = (req.body ?? {}) as {
+        on_air?: unknown;
+        lower_third?: unknown;
+        pip?: unknown;
+      };
+
+      // Validate the patch up-front so we fail fast before touching the DB.
+      const patch: Record<string, unknown> = {};
+      if (body.on_air !== undefined) {
+        if (typeof body.on_air !== 'boolean') {
+          return res
+            .status(400)
+            .json({ error: 'on_air must be a boolean' });
+        }
+        patch.on_air = body.on_air;
+      }
+      if (body.lower_third !== undefined) {
+        if (body.lower_third !== null && typeof body.lower_third !== 'string') {
+          return res
+            .status(400)
+            .json({ error: 'lower_third must be a string or null' });
+        }
+        if (
+          typeof body.lower_third === 'string' &&
+          body.lower_third.length > 500
+        ) {
+          return res
+            .status(400)
+            .json({ error: 'lower_third too long (max 500 chars)' });
+        }
+        patch.lower_third = body.lower_third;
+      }
+      if (body.pip !== undefined) {
+        if (
+          !body.pip ||
+          typeof body.pip !== 'object' ||
+          typeof (body.pip as any).enabled !== 'boolean'
+        ) {
+          return res
+            .status(400)
+            .json({ error: 'pip must be { enabled: boolean }' });
+        }
+        patch.pip = { enabled: (body.pip as any).enabled };
+      }
+      if (Object.keys(patch).length === 0) {
+        return res.status(400).json({ error: 'No fields to update' });
+      }
+
+      // Find the current live run for the tenant — required since we patch
+      // its broadcast_state. Manager can update; caster reads only.
+      if (ctx.staff.role === 'caster') {
+        return res.status(403).json({ error: 'Caster cannot edit state' });
+      }
+
+      const current = await fetchLiveBroadcastState(ctx.tenantId);
+      if (!current.run) {
+        return res.status(409).json({
+          error: 'No live event_run for this tenant. Start a run first.',
+          code: 'NO_LIVE_RUN',
+        });
+      }
+
+      const next = await updateBroadcastState(
+        ctx.tenantId,
+        current.run.id,
+        patch as never
+      );
+      if (!next) {
+        return res
+          .status(500)
+          .json({ error: 'Failed to update broadcast_state' });
+      }
+
+      if (ctx?.staff?.id) {
+        await logStaffAction({
+          staff_id: ctx.staff.id,
+          action: 'broadcast_state_update',
+          entity_type: 'event_run',
+          entity_id: current.run.id,
+          tournament_id: null,
+          payload: { patch, new_state: next },
+          tenant_id: ctx.tenantId,
+        });
+      }
+
+      // Best-effort outbox event so the bot can refresh the lives-board
+      // panel without waiting for the next poll tick.
+      try {
+        await emitBotEvent(
+          'broadcast.state_changed',
+          {
+            runId: current.run.id,
+            runSlug: current.run.slug,
+            state: next,
+            currentSegmentId: current.currentSegment?.id ?? null,
+            matchId: current.match?.matchId ?? null,
+          },
+          ctx.tenantId
+        );
+      } catch (e) {
+        logger.error('[broadcast/state] emitBotEvent error', e);
+      }
+
+      const refreshed = await fetchLiveBroadcastState(ctx.tenantId);
+      return res.status(200).json(refreshed);
+    }
+
+    res.setHeader('Allow', 'GET,POST');
+    return res.status(405).json({ error: 'Method not allowed' });
+  } catch (err) {
+    logger.error('[/api/admin/broadcast/state] error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}

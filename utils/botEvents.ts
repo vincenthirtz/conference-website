@@ -51,7 +51,8 @@ export type BotEventName =
   | 'captain.support.opened'
   | 'tournament.finalized'
   | 'dispute.sla_breached'
-  | 'checkin.nudge';
+  | 'checkin.nudge'
+  | 'broadcast.state_changed';
 
 export type BotEventPayload = Record<string, unknown>;
 

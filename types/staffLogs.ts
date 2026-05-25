@@ -46,6 +46,7 @@ export type StaffLogAction =
   | 'finalize_tournament'
   | 'unfinalize_tournament'
   | 'checkin_manual_nudge'
+  | 'broadcast_state_update'
   | 'other';
 
 export type StaffLog = {
