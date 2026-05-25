@@ -105,11 +105,11 @@ describe('filterAdminLinks – manager role', () => {
     expect(titles).toContain('Tickets de support');
   });
 
-  it('keeps "Configuration" because at least "Logs & stats" (manager) is reachable', () => {
+  it('keeps "Configuration" with Notifications (caster-visible) + Logs & stats + Tenants (manager)', () => {
     const config = findByTitle(links, 'Configuration');
     expect(config).toBeDefined();
     const titles = config?.children?.map((c) => c.title) ?? [];
-    expect(titles).toEqual(['Logs & stats', 'Tenants']);
+    expect(titles).toEqual(['Notifications', 'Logs & stats', 'Tenants']);
   });
 });
 
@@ -132,9 +132,15 @@ describe('filterAdminLinks – caster role', () => {
     expect(titles).toEqual(['Gérer mon équipe (capitaine)']);
   });
 
-  it('drops "Contenu" and "Configuration" entirely', () => {
+  it('drops "Contenu" entirely', () => {
     expect(findByTitle(links, 'Contenu')).toBeUndefined();
-    expect(findByTitle(links, 'Configuration')).toBeUndefined();
+  });
+
+  it('keeps "Configuration" but only with the caster-level "Notifications" child', () => {
+    const config = findByTitle(links, 'Configuration');
+    expect(config).toBeDefined();
+    const titles = config?.children?.map((c) => c.title) ?? [];
+    expect(titles).toEqual(['Notifications']);
   });
 });
 

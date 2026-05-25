@@ -13,7 +13,7 @@
 // `notification_prefs`, `web_push_deliveries` directement et on assert sur
 // l'état post-tick.
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.hoisted(() => {
   process.env.CRON_SECRET = 'cron-test-secret';
@@ -155,6 +155,11 @@ function seedBaseFixtures() {
 }
 
 beforeEach(() => {
+  // Freeze le clock à NOW : le dispatcher filtre les events par fenêtre
+  // glissante (24h par défaut) via `gte('created_at', cutoff)`. Sans freeze,
+  // la suite casse dès que le calendrier dépasse NOW + 24h.
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date(NOW));
   resetSupabaseMock();
   seedBaseFixtures();
   sendNotification.mockReset();
@@ -162,6 +167,10 @@ beforeEach(() => {
   vi.spyOn(console, 'warn').mockImplementation(() => {});
   vi.spyOn(console, 'error').mockImplementation(() => {});
   vi.spyOn(console, 'info').mockImplementation(() => {});
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 /* ===========================================================================
