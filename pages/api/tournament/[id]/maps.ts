@@ -87,8 +87,21 @@ async function handleGet(
     });
   }
 
+  // Récupérer aussi les infos tournoi (game pour adapter l'UI multi-jeu)
+  const { data: tournamentRow, error: tErr } = await supabaseAdmin
+    .from('tournaments')
+    .select('id, name, slug, game')
+    .eq('id', tournamentId)
+    .eq('tenant_id', ctx.tenantId)
+    .maybeSingle();
+
+  if (tErr) {
+    logger.error('GET tournament for maps error:', tErr);
+  }
+
   return res.status(200).json({
     maps: (data || []) as TournamentMapRow[],
+    tournament: tournamentRow ?? null,
   });
 }
 

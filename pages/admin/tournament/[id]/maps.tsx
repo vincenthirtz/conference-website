@@ -7,7 +7,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { OVERWATCH_MAPS } from '@/config/overwatch-maps';
+import { getGame, type GameDef } from '@/config/games';
 
 type StaffShape = {
   id: string;
@@ -21,6 +21,7 @@ type TournamentMini = {
   id: string;
   name: string | null;
   slug: string | null;
+  game: string | null;
 };
 
 type TournamentMapRow = {
@@ -41,11 +42,17 @@ type ApiResponse = {
 };
 
 const TYPE_LABEL: Record<string, string> = {
+  // Overwatch
   control: 'Contrôle',
   hybrid: 'Hybride',
   escort: 'Convoi',
   push: 'Push',
   flashpoint: 'Flashpoint',
+  clash: 'Clash',
+  // Valorant
+  standard: 'Standard',
+  // CS2
+  'active-duty': 'Active Duty',
 };
 
 function typeLabel(t: string | null | undefined) {
@@ -67,7 +74,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
 
   // États pour l'ajout de map
   const [showAddForm, setShowAddForm] = useState(false);
-  const [selectedOWMap, setSelectedOWMap] = useState('');
+  const [selectedPoolMap, setSelectedPoolMap] = useState('');
   const [customMapName, setCustomMapName] = useState('');
   const [customMapType, setCustomMapType] = useState('control');
   const [customMapImage, setCustomMapImage] = useState('');
@@ -121,7 +128,10 @@ function AdminTournamentMapsPage(_: StaffProps) {
     let mapType = '';
     let imageUrl = '';
 
-    if (useCustomMap) {
+    // Jeux sans veto : seule l'option "personnalisée" est exposée
+    const forceCustom = useCustomMap || !hasMapVeto;
+
+    if (forceCustom) {
       if (!customMapName.trim()) {
         alert('Veuillez entrer un nom de map');
         return;
@@ -130,11 +140,11 @@ function AdminTournamentMapsPage(_: StaffProps) {
       mapType = customMapType;
       imageUrl = customMapImage.trim();
     } else {
-      if (!selectedOWMap) {
+      if (!selectedPoolMap) {
         alert('Veuillez sélectionner une map');
         return;
       }
-      const selected = OVERWATCH_MAPS.find((m) => m.name === selectedOWMap);
+      const selected = gamePool.find((m) => m.name === selectedPoolMap);
       if (!selected) return;
       mapName = selected.name;
       mapType = selected.type;
@@ -163,7 +173,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
 
       // Réinitialiser le formulaire
       setShowAddForm(false);
-      setSelectedOWMap('');
+      setSelectedPoolMap('');
       setCustomMapName('');
       setCustomMapImage('');
       setUseCustomMap(false);
@@ -305,7 +315,13 @@ function AdminTournamentMapsPage(_: StaffProps) {
 
   async function handleAddAllMaps() {
     if (!tournamentId) return;
-    if (!confirm('Ajouter toutes les maps OW manquantes au pool ?')) return;
+    if (!gameDef || !gameDef.hasMapVeto) return;
+    if (
+      !confirm(
+        `Ajouter toutes les maps ${gameDef.label} manquantes au pool ?`
+      )
+    )
+      return;
 
     setAddingAll(true);
     setErrorMsg(null);
@@ -313,7 +329,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
     try {
       // Maps déjà présentes
       const existingNames = new Set(maps.map((m) => m.map_name));
-      const missing = OVERWATCH_MAPS.filter((m) => !existingNames.has(m.name));
+      const missing = gamePool.filter((m) => !existingNames.has(m.name));
 
       if (missing.length === 0) {
         alert('Toutes les maps sont déjà dans le pool.');
@@ -360,9 +376,16 @@ function AdminTournamentMapsPage(_: StaffProps) {
     }
   }
 
-  // Filtrer les maps OW déjà ajoutées
-  const availableOWMaps = OVERWATCH_MAPS.filter(
-    (owMap) => !maps.some((m) => m.map_name === owMap.name)
+  // Game registry — dérive le pool selon le jeu du tournoi
+  const gameDef: GameDef | null = tournament?.game
+    ? getGame(tournament.game)
+    : null;
+  const gamePool = gameDef?.mapPool ?? [];
+  const hasMapVeto = !!gameDef?.hasMapVeto;
+
+  // Filtrer les maps du pool déjà ajoutées
+  const availablePoolMaps = gamePool.filter(
+    (poolMap) => !maps.some((m) => m.map_name === poolMap.name)
   );
 
   return (
@@ -377,8 +400,16 @@ function AdminTournamentMapsPage(_: StaffProps) {
               <p className="text-xs uppercase tracking-[0.18em] text-purple-200/80">
                 Admin · Pool de maps
               </p>
-              <h1 className="text-2xl font-semibold">
-                {tournament?.name || 'Tournoi'} · Maps
+              <h1 className="text-2xl font-semibold flex items-center gap-3">
+                <span>{tournament?.name || 'Tournoi'} · Maps</span>
+                {tournament?.game && (
+                  <span
+                    className="px-2 py-0.5 rounded-full text-xs border border-purple-400/40 bg-purple-500/10 text-purple-200 font-normal"
+                    title={`Slug: ${tournament.game}`}
+                  >
+                    Jeu : {gameDef?.label ?? tournament.game}
+                  </span>
+                )}
               </h1>
             </div>
             <div className="flex gap-2">
@@ -425,7 +456,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
                 >
                   {showAddForm ? '✕ Annuler' : '+ Ajouter une map'}
                 </button>
-                {availableOWMaps.length > 0 && (
+                {hasMapVeto && availablePoolMaps.length > 0 && (
                   <button
                     onClick={handleAddAllMaps}
                     disabled={addingAll}
@@ -433,7 +464,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
                   >
                     {addingAll
                       ? 'Ajout en cours…'
-                      : `+ Ajouter toutes les maps (${availableOWMaps.length})`}
+                      : `+ Ajouter toutes les maps ${gameDef?.label ?? ''} (${availablePoolMaps.length})`}
                   </button>
                 )}
                 {maps.length > 0 && (
@@ -453,46 +484,58 @@ function AdminTournamentMapsPage(_: StaffProps) {
                     Ajouter une map
                   </h3>
 
-                  {/* Toggle entre map OW et custom */}
-                  <div className="flex gap-4 mb-4">
-                    <button
-                      onClick={() => setUseCustomMap(false)}
-                      className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                        !useCustomMap
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-white/5 text-gray-300 hover:bg-white/10'
-                      }`}
-                    >
-                      Map Overwatch
-                    </button>
-                    <button
-                      onClick={() => setUseCustomMap(true)}
-                      className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                        useCustomMap
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-white/5 text-gray-300 hover:bg-white/10'
-                      }`}
-                    >
-                      Map personnalisée
-                    </button>
-                  </div>
+                  {/* Bandeau info si le jeu n'a pas de veto (ou jeu inconnu) */}
+                  {!hasMapVeto && (
+                    <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-400/30 text-amber-100 text-sm">
+                      {gameDef
+                        ? `${gameDef.label} n'utilise pas de veto de maps.`
+                        : 'Ce jeu ne dispose pas de pool de maps prédéfini.'}{' '}
+                      Vous pouvez tout de même ajouter une map personnalisée.
+                    </div>
+                  )}
 
-                  {!useCustomMap ? (
-                    // Sélection map OW
+                  {/* Toggle entre map du pool et custom (caché si pas de veto) */}
+                  {hasMapVeto && (
+                    <div className="flex gap-4 mb-4">
+                      <button
+                        onClick={() => setUseCustomMap(false)}
+                        className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                          !useCustomMap
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                        }`}
+                      >
+                        Map {gameDef?.label ?? ''}
+                      </button>
+                      <button
+                        onClick={() => setUseCustomMap(true)}
+                        className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                          useCustomMap
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                        }`}
+                      >
+                        Map personnalisée
+                      </button>
+                    </div>
+                  )}
+
+                  {hasMapVeto && !useCustomMap ? (
+                    // Sélection map dans le pool du jeu
                     <div className="space-y-3">
                       <div>
                         <label className="block text-sm text-gray-300 mb-2">
-                          Sélectionner une map Overwatch
+                          Sélectionner une map {gameDef?.label ?? ''}
                         </label>
                         <select
-                          value={selectedOWMap}
-                          onChange={(e) => setSelectedOWMap(e.target.value)}
+                          value={selectedPoolMap}
+                          onChange={(e) => setSelectedPoolMap(e.target.value)}
                           className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white"
                         >
                           <option value="">-- Choisir une map --</option>
-                          {availableOWMaps.map((owMap) => (
-                            <option key={owMap.name} value={owMap.name}>
-                              {owMap.name} ({typeLabel(owMap.type)})
+                          {availablePoolMaps.map((poolMap) => (
+                            <option key={poolMap.name} value={poolMap.name}>
+                              {poolMap.name} ({typeLabel(poolMap.type)})
                             </option>
                           ))}
                         </select>
