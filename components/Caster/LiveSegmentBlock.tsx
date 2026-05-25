@@ -6,14 +6,33 @@
 //   - run live + segment live → countdown, progress bar, status badge
 //   - run live + pas de segment live → "en attente du prochain segment"
 //   - pas de run live → cf. parent (affiche assignations a la place)
+//
+// Lot 6 (run-of-show) : countdown timing aligne sur le Director.
+//   - Segment courant : grand timer "Restant MM:SS" ou "Depassement MM:SS"
+//     base sur duration_min. Couleur : vert > 2min, amber 30s-2min ou overrun
+//     < 2min, rouge overrun >= 2min. Si duration_min null → "Sans duree
+//     definie" (pas de countdown).
+//   - Segment suivant : "Demarre dans MM:SS" base sur le plannedStartAt
+//     calcule par computeRunSchedule (meme source de verite que le Director).
+//     Si plannedStartAt est dans le passe → "Demarre maintenant".
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { EventRun, EventSegment } from '@/types/events';
+import {
+  computeRunSchedule,
+  type ComputedRunSchedule,
+} from '@/utils/eventSchedule';
 
 type Props = {
   run: EventRun | null;
   currentSegment: EventSegment | null;
   nextSegment: EventSegment | null;
+  /**
+   * Planning pre-calcule par le parent (ex: cockpit) pour partager la meme
+   * horloge (tick 1s) entre plusieurs blocs. Si absent, on recalcule en
+   * interne — utile pour tests / usages standalone.
+   */
+  schedule?: ComputedRunSchedule | null;
 };
 
 function formatDuration(totalSeconds: number): string {
@@ -39,17 +58,73 @@ const TYPE_LABEL: Record<string, string> = {
   custom: 'Segment',
 };
 
+/**
+ * Hook tick 1s visibility-gated. Skip setInterval si l'onglet est cache
+ * (economie batterie mobile). Re-snap a Date.now() au retour visible pour
+ * eviter un saut visuel.
+ */
+function useNowTick(enabled: boolean): number {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!enabled) return;
+    if (typeof document === 'undefined') return;
+
+    let timer: ReturnType<typeof setInterval> | null = null;
+
+    const start = () => {
+      if (timer) return;
+      setNow(Date.now());
+      timer = setInterval(() => setNow(Date.now()), 1000);
+    };
+    const stop = () => {
+      if (!timer) return;
+      clearInterval(timer);
+      timer = null;
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') start();
+      else stop();
+    };
+
+    if (document.visibilityState === 'visible') start();
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      stop();
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [enabled]);
+
+  return now;
+}
+
 export default function LiveSegmentBlock({
   run,
   currentSegment,
   nextSegment,
+  schedule,
 }: Props) {
-  const [now, setNow] = useState(() => Date.now());
+  const tickEnabled = !!run;
+  const now = useNowTick(tickEnabled);
 
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, []);
+  // Si le parent ne fournit pas de schedule, on le calcule localement. On
+  // garde la meme horloge (now) pour rester coherent avec les countdowns.
+  const localSchedule = useMemo<ComputedRunSchedule | null>(() => {
+    if (schedule !== undefined) return schedule;
+    if (!run) return null;
+    // Pour le calcul standalone on n'a pas la liste complete des segments :
+    // on assemble currentSegment + nextSegment. C'est partial mais suffit a
+    // produire le plannedStartAt du nextSegment quand le parent ne le pousse
+    // pas. Le parent (cockpit) passe le vrai schedule, c'est le chemin
+    // prefere.
+    const segs: EventSegment[] = [];
+    if (currentSegment) segs.push(currentSegment);
+    if (nextSegment) segs.push(nextSegment);
+    if (segs.length === 0) return null;
+    return computeRunSchedule(run, segs, now);
+  }, [schedule, run, currentSegment, nextSegment, now]);
 
   if (!run) {
     return (
@@ -65,6 +140,33 @@ export default function LiveSegmentBlock({
     );
   }
 
+  // Helper : sous-ligne "Demarre dans MM:SS" pour le segment suivant.
+  // Renvoie null si on ne peut pas la calculer (pas de schedule, pas de
+  // nextSegment, etc.).
+  const renderNextStartHint = () => {
+    if (!nextSegment) return null;
+    const nextTiming = localSchedule?.segments.find(
+      (s) => s.segmentId === nextSegment.id
+    );
+    if (!nextTiming) return null;
+    const startMs = Date.parse(nextTiming.plannedStartAt);
+    if (!Number.isFinite(startMs)) return null;
+    const diffSec = Math.floor((startMs - now) / 1000);
+    if (diffSec <= 0) {
+      return (
+        <span className="text-amber-300 font-medium">Demarre maintenant</span>
+      );
+    }
+    return (
+      <span className="text-gray-200">
+        Demarre dans{' '}
+        <span className="font-mono tabular-nums text-white">
+          {formatDuration(diffSec)}
+        </span>
+      </span>
+    );
+  };
+
   if (!currentSegment) {
     return (
       <div className="rounded-2xl border border-purple-500/30 bg-purple-900/20 p-4">
@@ -78,14 +180,17 @@ export default function LiveSegmentBlock({
           En attente du prochain segment
         </div>
         {nextSegment && (
-          <div className="text-xs text-gray-300">
-            Prochain :{' '}
-            <span className="text-white">
-              {nextSegment.title || TYPE_LABEL[nextSegment.type] || 'Segment'}
-            </span>
-            {nextSegment.duration_min
-              ? ` • ${nextSegment.duration_min} min`
-              : ''}
+          <div className="text-xs text-gray-300 space-y-1">
+            <div>
+              Prochain :{' '}
+              <span className="text-white">
+                {nextSegment.title || TYPE_LABEL[nextSegment.type] || 'Segment'}
+              </span>
+              {nextSegment.duration_min
+                ? ` • ${nextSegment.duration_min} min`
+                : ''}
+            </div>
+            {renderNextStartHint() && <div>{renderNextStartHint()}</div>}
           </div>
         )}
       </div>
@@ -113,6 +218,43 @@ export default function LiveSegmentBlock({
     }
   }
 
+  // overrun = depassement positif (en secondes). 0 si pas encore depasse ou
+  // si on ne peut pas mesurer. Calcule en local pour rester aligne avec le
+  // tick 1s local, mais le schedule du parent expose la meme info.
+  const overrunSec =
+    remainingSeconds !== null && remainingSeconds < 0
+      ? -remainingSeconds
+      : 0;
+
+  // Couleur du timer principal : vert > 2min restants, amber 30s-2min ou
+  // overrun < 2min, rouge overrun >= 2min. Si pas de duree → gris.
+  let timerColorCls = 'text-white';
+  let timerLabel: 'Restant' | 'Depassement' | 'Sans duree definie' = 'Restant';
+  let timerValue = '—';
+
+  if (remainingSeconds === null) {
+    timerColorCls = 'text-gray-400';
+    timerLabel = 'Sans duree definie';
+    timerValue = '—';
+  } else if (overrunSec > 0) {
+    timerLabel = 'Depassement';
+    timerValue = formatDuration(overrunSec);
+    timerColorCls =
+      overrunSec >= 120 ? 'text-red-400' : 'text-amber-300';
+  } else {
+    timerLabel = 'Restant';
+    timerValue = formatDuration(remainingSeconds);
+    if (remainingSeconds > 120) {
+      timerColorCls = 'text-emerald-300';
+    } else if (remainingSeconds >= 30) {
+      timerColorCls = 'text-amber-300';
+    } else {
+      // < 30s restants : amber appuye (le rouge est reserve a l'overrun >=2min
+      // pour escalader au caster qu'il faut clore / demander au Director).
+      timerColorCls = 'text-amber-300';
+    }
+  }
+
   const badge = STATUS_BADGE[currentSegment.status] ?? STATUS_BADGE.upcoming;
   const typeLabel = TYPE_LABEL[currentSegment.type] ?? 'Segment';
 
@@ -129,40 +271,38 @@ export default function LiveSegmentBlock({
         </span>
         <span className="text-xs text-gray-400 truncate">{run.name}</span>
       </div>
-      <h2 className="text-lg font-bold text-white mb-2 leading-tight">
+      <h2 className="text-lg font-bold text-white mb-3 leading-tight">
         {currentSegment.title || typeLabel}
       </h2>
 
-      <div className="grid grid-cols-2 gap-3 mb-3">
-        <div className="rounded-lg bg-black/40 px-3 py-2">
-          <div className="text-[10px] uppercase tracking-wider text-gray-400">
-            Ecoule
-          </div>
-          <div className="text-lg font-mono font-semibold text-white tabular-nums">
-            {formatDuration(elapsedSeconds)}
-          </div>
+      {/* Bloc countdown principal — grand format, role="timer" pour a11y. */}
+      <div className="rounded-xl bg-black/50 border border-white/5 px-4 py-3 mb-3">
+        <div className="text-[10px] uppercase tracking-wider text-gray-400 mb-1">
+          {timerLabel}
         </div>
-        <div className="rounded-lg bg-black/40 px-3 py-2">
-          <div className="text-[10px] uppercase tracking-wider text-gray-400">
-            {remainingSeconds !== null && remainingSeconds < 0
-              ? 'Depasse de'
-              : 'Restant'}
-          </div>
-          <div
-            className={`text-lg font-mono font-semibold tabular-nums ${
-              remainingSeconds !== null && remainingSeconds < 60
-                ? 'text-amber-300'
-                : 'text-white'
-            }`}
-          >
-            {remainingSeconds === null ? '—' : formatDuration(remainingSeconds)}
-          </div>
+        <div
+          role="timer"
+          aria-live="off"
+          aria-label={`${timerLabel} ${timerValue}`}
+          className={`text-4xl font-mono font-bold tabular-nums leading-none ${timerColorCls}`}
+        >
+          {timerValue}
+        </div>
+      </div>
+
+      {/* Bloc ecoule (secondaire, contexte) */}
+      <div className="rounded-lg bg-black/40 px-3 py-2 mb-3">
+        <div className="text-[10px] uppercase tracking-wider text-gray-400">
+          Ecoule
+        </div>
+        <div className="text-sm font-mono font-semibold text-white tabular-nums">
+          {formatDuration(elapsedSeconds)}
         </div>
       </div>
 
       {durationMs && (
         <div
-          className="h-1.5 rounded-full bg-white/10 overflow-hidden"
+          className="h-1.5 rounded-full bg-white/10 overflow-hidden mb-3"
           role="progressbar"
           aria-valuenow={Math.round(progress)}
           aria-valuemin={0}
@@ -176,6 +316,21 @@ export default function LiveSegmentBlock({
             }`}
             style={{ width: `${progress}%` }}
           />
+        </div>
+      )}
+
+      {/* Sous-bloc : prochain segment + countdown jusqu'a son demarrage. */}
+      {nextSegment && (
+        <div className="rounded-lg bg-black/30 px-3 py-2 text-xs text-gray-300 flex items-center justify-between gap-3 flex-wrap">
+          <div className="min-w-0 truncate">
+            <span className="text-gray-500">Suivant : </span>
+            <span className="text-white">
+              {nextSegment.title || TYPE_LABEL[nextSegment.type] || 'Segment'}
+            </span>
+          </div>
+          {renderNextStartHint() && (
+            <div className="shrink-0">{renderNextStartHint()}</div>
+          )}
         </div>
       )}
     </div>

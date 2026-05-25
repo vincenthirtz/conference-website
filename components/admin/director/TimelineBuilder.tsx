@@ -11,15 +11,18 @@
 //     parent via callbacks. La selection est aussi geree par le parent (pour
 //     que SegmentEditor reactif coute moins cher en re-renders).
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import SegmentCard from './SegmentCard';
 import EmptyState from '@/components/admin/EmptyState';
+import type { ComputedRunSchedule } from '@/utils/eventSchedule';
 import type { EventSegment } from '@/types/events';
 
 type Props = {
   segments: EventSegment[];
   selectedId: string | null;
   busy: boolean;
+  /** Planning calcule (Lot 6). Si null, on n'affiche pas les horaires. */
+  schedule?: ComputedRunSchedule | null;
   onSelect: (id: string) => void;
   onReorder: (orderedIds: string[]) => void;
   onStart: (segment: EventSegment) => void;
@@ -33,6 +36,7 @@ export default function TimelineBuilder({
   segments,
   selectedId,
   busy,
+  schedule,
   onSelect,
   onReorder,
   onStart,
@@ -94,6 +98,24 @@ export default function TimelineBuilder({
     setDragOverId(null);
   }
 
+  // Lookup O(1) du timing par segmentId pour eviter un .find() dans le render
+  // de chaque carte (NSegments potentiellement >20).
+  const timingById = useMemo(() => {
+    const map = new Map<
+      string,
+      { plannedStartAt: string; isAnchored: boolean }
+    >();
+    if (schedule) {
+      for (const t of schedule.segments) {
+        map.set(t.segmentId, {
+          plannedStartAt: t.plannedStartAt,
+          isAnchored: t.isAnchored,
+        });
+      }
+    }
+    return map;
+  }, [schedule]);
+
   return (
     <div className="space-y-2">
       {localSegments.length === 0 ? (
@@ -115,28 +137,38 @@ export default function TimelineBuilder({
         </div>
       ) : (
         <ul className="space-y-2" data-testid="timeline-list">
-          {localSegments.map((seg, idx) => (
-            <li key={seg.id}>
-              <SegmentCard
-                segment={seg}
-                index={idx}
-                isSelected={seg.id === selectedId}
-                isDragging={seg.id === draggingId}
-                dragOver={seg.id === dragOverId && seg.id !== draggingId}
-                busy={busy}
-                onSelect={() => onSelect(seg.id)}
-                onStart={() => onStart(seg)}
-                onSkip={() => onSkip(seg)}
-                onEnd={() => onEnd(seg)}
-                onDelete={() => onDelete(seg)}
-                onDragStart={(e) => handleDragStart(e, seg.id)}
-                onDragOver={(e) => handleDragOver(e, seg.id)}
-                onDrop={(e) => handleDrop(e, seg.id)}
-                onDragEnd={handleDragEnd}
-                onDragLeave={handleDragLeave}
-              />
-            </li>
-          ))}
+          {localSegments.map((seg, idx) => {
+            const timing = timingById.get(seg.id) ?? null;
+            const isLiveSegment =
+              schedule?.liveSegmentId === seg.id && seg.status === 'live';
+            const overrunSec =
+              isLiveSegment && schedule ? schedule.liveOverrunSec : 0;
+            return (
+              <li key={seg.id}>
+                <SegmentCard
+                  segment={seg}
+                  index={idx}
+                  isSelected={seg.id === selectedId}
+                  isDragging={seg.id === draggingId}
+                  dragOver={seg.id === dragOverId && seg.id !== draggingId}
+                  busy={busy}
+                  plannedStartAt={timing?.plannedStartAt ?? null}
+                  isAnchored={timing?.isAnchored ?? false}
+                  overrunSec={overrunSec}
+                  onSelect={() => onSelect(seg.id)}
+                  onStart={() => onStart(seg)}
+                  onSkip={() => onSkip(seg)}
+                  onEnd={() => onEnd(seg)}
+                  onDelete={() => onDelete(seg)}
+                  onDragStart={(e) => handleDragStart(e, seg.id)}
+                  onDragOver={(e) => handleDragOver(e, seg.id)}
+                  onDrop={(e) => handleDrop(e, seg.id)}
+                  onDragEnd={handleDragEnd}
+                  onDragLeave={handleDragLeave}
+                />
+              </li>
+            );
+          })}
         </ul>
       )}
       {localSegments.length > 0 && (

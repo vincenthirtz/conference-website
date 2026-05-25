@@ -19,9 +19,12 @@ import { useRouter } from 'next/router';
 import { useToast } from '@/components/Toast';
 import { useCasterSession } from '@/hooks/useCasterSession';
 import { useEventRunRealtime } from '@/hooks/useEventRunRealtime';
+import { useCockpitHeartbeat } from '@/hooks/useCockpitHeartbeat';
+import { useCueStream } from '@/hooks/useCueStream';
 import { logger } from '@/utils/logger';
 import type { EventRun, EventSegment } from '@/types/events';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
+import { computeRunSchedule } from '@/utils/eventSchedule';
 
 import CockpitHeader from '@/components/Caster/CockpitHeader';
 import LiveSegmentBlock from '@/components/Caster/LiveSegmentBlock';
@@ -29,6 +32,9 @@ import CockpitChecklist from '@/components/Caster/CockpitChecklist';
 import CockpitHotkeys from '@/components/Caster/CockpitHotkeys';
 import BriefingPanel from '@/components/Caster/BriefingPanel';
 import UpcomingAssignments from '@/components/Caster/UpcomingAssignments';
+import CueBanner from '@/components/Caster/CueBanner';
+import CueFeed from '@/components/Caster/CueFeed';
+import UrgentCueModal from '@/components/Caster/UrgentCueModal';
 
 // PushOptIn est dynamic (no-SSR) : il depend de Notification / serviceWorker.
 const PushOptIn = dynamic(() => import('@/components/shared/PushOptIn'), {
@@ -165,6 +171,80 @@ function CockpitPage() {
     );
   }, [segments]);
 
+  // Tick 1s pour les valeurs derivees du temps (countdown). Visibility-gated
+  // pour epargner la batterie mobile : on n'avance pas quand l'onglet est
+  // cache, on re-snap a Date.now() au retour visible.
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    let timer: ReturnType<typeof setInterval> | null = null;
+
+    const start = () => {
+      if (timer) return;
+      setNowMs(Date.now());
+      timer = setInterval(() => setNowMs(Date.now()), 1000);
+    };
+    const stop = () => {
+      if (!timer) return;
+      clearInterval(timer);
+      timer = null;
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') start();
+      else stop();
+    };
+
+    if (document.visibilityState === 'visible') start();
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      stop();
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, []);
+
+  // Planning calcule (meme source de verite que le Director). Recalcul a
+  // chaque tick 1s pour que liveOverrunSec et les plannedStartAt restent
+  // frais cote countdown. Le cout est negligeable (pure function sur N
+  // segments, N petit).
+  const schedule = useMemo(() => {
+    if (!run) return null;
+    return computeRunSchedule(run, segments, nowMs);
+  }, [run, segments, nowMs]);
+
+  // Run live attache (utilise pour cues + heartbeat). Si le run passe done,
+  // on coupe le stream cue mais on continue le heartbeat avec runId=null
+  // (presence "online sans run").
+  const liveRunId = run?.status === 'live' ? run.id : null;
+
+  // Heartbeat 20s (visibility-gated, body { event_run_id }).
+  useCockpitHeartbeat({
+    runId: liveRunId,
+    accessToken: session.accessToken,
+  });
+
+  // Stream cues (polling 3s, visibility-gated). Pas de polling si pas de
+  // run live (l API repond 409 si run!=live, useCueStream s arrete de seed).
+  const cueStream = useCueStream({
+    runId: liveRunId,
+    accessToken: session.accessToken,
+  });
+
+  // Set local des cues info/warn "vus" par le caster (pas trace en DB pour
+  // limiter le bruit). Reset quand le runId change.
+  const [seenLocally, setSeenLocally] = useState<Set<string>>(() => new Set());
+  useEffect(() => {
+    setSeenLocally(new Set());
+  }, [liveRunId]);
+  const markSeen = useCallback((cueId: string) => {
+    setSeenLocally((prev) => {
+      if (prev.has(cueId)) return prev;
+      const next = new Set(prev);
+      next.add(cueId);
+      return next;
+    });
+  }, []);
+
   const briefingMatchId = useMemo(() => {
     const candidate = currentSegment ?? nextSegment;
     if (!candidate) return null;
@@ -271,11 +351,15 @@ function CockpitPage() {
           </div>
         ) : null}
 
+        {/* Banniere cues : sticky, visible si un cue recent n est pas vu. */}
+        <CueBanner cues={cueStream.cues} seenLocally={seenLocally} />
+
         {/* Bloc segment en cours / prochain */}
         <LiveSegmentBlock
           run={run}
           currentSegment={currentSegment}
           nextSegment={nextSegment}
+          schedule={schedule}
         />
 
         {/* Briefing match si pertinent */}
@@ -283,6 +367,16 @@ function CockpitPage() {
           <BriefingPanel
             matchId={briefingMatchId}
             accessToken={session.accessToken}
+          />
+        )}
+
+        {/* Feed cues Director (au-dessus de la checklist : actionnable). */}
+        {liveRunId && (
+          <CueFeed
+            cues={cueStream.cues}
+            onAck={cueStream.ack}
+            seenLocally={seenLocally}
+            onMarkSeen={markSeen}
           />
         )}
 
@@ -320,6 +414,14 @@ function CockpitPage() {
         {/* PushOptIn (audience caster) — carte autonome */}
         <PushOptIn audience="caster" variant="card" loginPath="/caster/login" />
       </div>
+
+      {/* Modal bloquante pour cue urgent non ack. FIFO si plusieurs. */}
+      {cueStream.pendingUrgent && (
+        <UrgentCueModal
+          cue={cueStream.pendingUrgent}
+          onAck={cueStream.ack}
+        />
+      )}
     </div>
   );
 }

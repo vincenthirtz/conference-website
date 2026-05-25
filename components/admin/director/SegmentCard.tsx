@@ -23,6 +23,12 @@ type Props = {
   isDragging: boolean;
   dragOver: boolean;
   busy: boolean;
+  /** ISO planifie (Lot 6). Si null, on n'affiche pas d'horaire. */
+  plannedStartAt?: string | null;
+  /** True si planned_start_at vient d'un override Director. */
+  isAnchored?: boolean;
+  /** Overrun en secondes (>0 si depassement). Active visuel amber. */
+  overrunSec?: number;
   onSelect: () => void;
   onStart: () => void;
   onSkip: () => void;
@@ -36,6 +42,24 @@ type Props = {
   onDragLeave: () => void;
 };
 
+function formatHHMM(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return null;
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  } catch {
+    return null;
+  }
+}
+
+function formatOverrun(sec: number): string {
+  const total = Math.max(0, Math.floor(sec));
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `+${m}:${String(s).padStart(2, '0')}`;
+}
+
 export default function SegmentCard({
   segment,
   index,
@@ -43,6 +67,9 @@ export default function SegmentCard({
   isDragging,
   dragOver,
   busy,
+  plannedStartAt,
+  isAnchored,
+  overrunSec,
   onSelect,
   onStart,
   onSkip,
@@ -54,15 +81,22 @@ export default function SegmentCard({
   onDragEnd,
   onDragLeave,
 }: Props) {
+  const hasOverrun = !!overrunSec && overrunSec > 0;
   const baseClasses =
     'group relative rounded-xl border bg-neutral-800/60 transition-colors';
+  const overrunRing = hasOverrun
+    ? 'ring-2 ring-amber-400/60 animate-pulse'
+    : '';
   const borderClasses = isSelected
     ? 'border-purple-500/70 ring-2 ring-purple-500/30'
-    : 'border-neutral-700/60 hover:border-neutral-600';
+    : hasOverrun
+      ? 'border-amber-500/70'
+      : 'border-neutral-700/60 hover:border-neutral-600';
   const opacity = isDragging ? 'opacity-40' : 'opacity-100';
   const dragOverIndicator = dragOver
     ? 'before:absolute before:inset-x-0 before:-top-1 before:h-0.5 before:bg-purple-400 before:rounded-full'
     : '';
+  const plannedHHMM = formatHHMM(plannedStartAt);
 
   return (
     <div
@@ -72,7 +106,7 @@ export default function SegmentCard({
       onDrop={onDrop}
       onDragEnd={onDragEnd}
       onDragLeave={onDragLeave}
-      className={`${baseClasses} ${borderClasses} ${opacity} ${dragOverIndicator}`}
+      className={`${baseClasses} ${borderClasses} ${opacity} ${dragOverIndicator} ${overrunRing}`}
       onClick={onSelect}
       role="button"
       tabIndex={0}
@@ -115,6 +149,30 @@ export default function SegmentCard({
           {String(index + 1).padStart(2, '0')}
         </div>
 
+        {/* Horaire planifie (Lot 6) — gauche du titre, monospace */}
+        {plannedHHMM && (
+          <div
+            className="flex items-center justify-center px-1 min-w-[3.5rem] text-[11px] text-neutral-300 font-mono gap-1"
+            data-testid={`segment-time-${segment.id}`}
+            title={isAnchored ? 'Horaire ancre' : 'Horaire calcule'}
+          >
+            {isAnchored && (
+              <svg
+                width="10"
+                height="12"
+                viewBox="0 0 10 12"
+                fill="currentColor"
+                aria-hidden="true"
+                className="text-amber-300"
+                data-testid={`segment-anchor-icon-${segment.id}`}
+              >
+                <path d="M2 5h6v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5zm1.5-3.5a1.5 1.5 0 1 1 3 0V5h-3V1.5z" />
+              </svg>
+            )}
+            <span>{plannedHHMM}</span>
+          </div>
+        )}
+
         {/* Body */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -145,6 +203,16 @@ export default function SegmentCard({
             {typeof segment.duration_min === 'number' && (
               <span className="text-xs text-neutral-400">
                 {segment.duration_min} min
+              </span>
+            )}
+            {hasOverrun && (
+              <span
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold text-amber-100 bg-amber-500/30 border border-amber-400/60"
+                data-testid={`segment-overrun-${segment.id}`}
+                data-overrun-sec={Math.floor(overrunSec ?? 0)}
+                title={`Depassement de ${formatOverrun(overrunSec ?? 0)}`}
+              >
+                {formatOverrun(overrunSec ?? 0)}
               </span>
             )}
           </div>

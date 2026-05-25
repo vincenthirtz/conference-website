@@ -20,17 +20,22 @@ import RunStatusHeader from '@/components/admin/director/RunStatusHeader';
 import TimelineBuilder from '@/components/admin/director/TimelineBuilder';
 import SegmentEditor from '@/components/admin/director/SegmentEditor';
 import CasterStatusPanel from '@/components/admin/director/CasterStatusPanel';
+import CueComposer from '@/components/admin/director/CueComposer';
+import CueFeed from '@/components/admin/director/CueFeed';
 import AddSegmentModal from '@/components/admin/director/AddSegmentModal';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useEventRunRealtime } from '@/hooks/useEventRunRealtime';
+import { useOverrunWatcher } from '@/hooks/useOverrunWatcher';
 import { useToast } from '@/components/Toast';
 import { withStaffPage } from '@/utils/staff';
+import { computeRunSchedule } from '@/utils/eventSchedule';
 import type { StaffProps } from '@/types/admin';
 import type {
   EventBroadcastMessage,
   EventCasterChecklistItem,
+  EventCue,
   EventRun,
   EventRunWithSegments,
   EventSegment,
@@ -46,7 +51,7 @@ function DirectorPage(_props: StaffProps) {
   const runId =
     typeof router.query.runId === 'string' ? router.query.runId : null;
 
-  const { adminFetchJson } = useAdminFetch();
+  const { adminFetch, adminFetchJson } = useAdminFetch();
   // Pour les mutations frequentes (start/skip/end/save), on n'autorise pas le
   // replay automatique sur la meme cle — chaque clic est une intention
   // distincte, on regenere apres chaque succes.
@@ -61,6 +66,15 @@ function DirectorPage(_props: StaffProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+
+  // Comms : cue tout juste cree (optimistic, on l'affiche dans le feed avant le poll).
+  const [optimisticCue, setOptimisticCue] = useState<EventCue | null>(null);
+  // Liste reduite "id + name" des casters connus pour ce run, remontee par
+  // CasterStatusPanel (qui appelle /presence) et consommee par CueFeed
+  // (pour calculer "qui n'a PAS ack" sur les cues urgent).
+  const [casters, setCasters] = useState<
+    Array<{ cast_member_id: string; name: string }>
+  >([]);
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -140,6 +154,80 @@ function DirectorPage(_props: StaffProps) {
     () => segments.find((s) => s.id === selectedId) ?? null,
     [segments, selectedId]
   );
+
+  /* -----------------------------------------------------------
+   * Lot 6 — timing/drift
+   *
+   * On tick `nowMs` toutes les 1s pour que :
+   *   - le drift gauge se decale (segments deja faits OK, mais surtout le
+   *     marqueur "real now" du gauge avance en continu vs "planned now"),
+   *   - le `liveOverrunSec` calcule dans schedule s'incremente,
+   *   - le useOverrunWatcher hook re-evalue ses thresholds.
+   * 1s c'est tres bon marche (re-render leger d'un seul composant header +
+   * timeline), pas besoin de throttle plus loin.
+   * ---------------------------------------------------------*/
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const schedule = useMemo(
+    () => (run ? computeRunSchedule(run, segments, nowMs) : null),
+    [run, segments, nowMs]
+  );
+
+  /* -----------------------------------------------------------
+   * Lot 6 — auto-cue overrun T+5min.
+   *
+   * Deux mecanismes complementaires, PAS redondants :
+   *   - Idempotency-Key (header) : cache 24h cote DB (admin_idempotency).
+   *     Protege contre les RETRIES RESEAU du MEME caller (ex. re-mount du
+   *     watcher dans le meme onglet, double-click). Clef stable par segment.
+   *   - dedup_key (body) : partial UNIQUE INDEX cote DB (event_cues).
+   *     Protege contre les ecritures CONCURRENTES de callers DIFFERENTS —
+   *     ici client (ce hook) vs cron server-side `overrun-watcher-cron` qui
+   *     ecrit le meme cue si l'onglet Director est ferme. Le second writer
+   *     prend un 23505 cote handler, qui retourne 200 dedupReplayed=true.
+   *     Pour nous, c'est aussi un succes (res.ok = true).
+   * ---------------------------------------------------------*/
+  const sendOverrunAutoCue = useCallback(
+    async (segmentId: string, body: string) => {
+      if (!runId) return;
+      const dedupKey = `auto-overrun:${runId}:${segmentId}`;
+      const res = await adminFetch(`/api/admin/events/${runId}/cues`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': dedupKey,
+        },
+        body: JSON.stringify({
+          severity: 'urgent',
+          body,
+          dedup_key: dedupKey,
+        }),
+      });
+      if (!res.ok) {
+        let msg = `Auto-cue echoue (${res.status}).`;
+        try {
+          const payload = await res.json();
+          if (payload?.error) msg = String(payload.error);
+        } catch {
+          // ignore parse error
+        }
+        throw new Error(msg);
+      }
+    },
+    [adminFetch, runId]
+  );
+
+  useOverrunWatcher({
+    runId,
+    schedule,
+    segments,
+    sendAutoCue: sendOverrunAutoCue,
+    enabled: !!run && run.status === 'live',
+  });
 
   /* -----------------------------------------------------------
    * Actions: run-level
@@ -408,6 +496,7 @@ function DirectorPage(_props: StaffProps) {
   async function handleSaveSegment(patch: {
     title?: string;
     duration_min?: number | null;
+    planned_start_at?: string | null;
     broadcast_message?: EventBroadcastMessage | null;
     caster_checklist?: EventCasterChecklistItem[];
   }) {
@@ -458,6 +547,8 @@ function DirectorPage(_props: StaffProps) {
               <RunStatusHeader
                 run={run}
                 segments={segments}
+                schedule={schedule}
+                nowMs={nowMs}
                 onStartRun={handleStartRun}
                 onEndRun={handleEndRun}
                 busy={busy}
@@ -471,9 +562,16 @@ function DirectorPage(_props: StaffProps) {
                 />
               )}
 
-              <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                {/* Gauche : Timeline (60%) */}
-                <div className="lg:col-span-3">
+              {/*
+                Layout desktop (lg+) : 3 colonnes 40/30/30 via grid-cols-10.
+                Layout mobile : tout empile (Timeline → Editor → Comms →
+                Casters). L'ordre est expose via `order-*` classes en mobile,
+                pas via le DOM (le DOM reste : timeline, editor+casters,
+                comms, ce qui correspond a l'ordre desktop).
+              */}
+              <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
+                {/* Gauche : Timeline (40%) */}
+                <div className="lg:col-span-4 order-1">
                   <div className="mb-3 flex items-center justify-between">
                     <h2 className="text-sm font-semibold text-neutral-300 uppercase tracking-wide">
                       Timeline
@@ -486,6 +584,7 @@ function DirectorPage(_props: StaffProps) {
                     segments={segments}
                     selectedId={selectedId}
                     busy={busy}
+                    schedule={schedule}
                     onSelect={(id) => setSelectedId(id)}
                     onReorder={handleReorder}
                     onStart={handleStartSegment}
@@ -496,24 +595,50 @@ function DirectorPage(_props: StaffProps) {
                   />
                 </div>
 
-                {/* Droite : Editor + Casters (40%) */}
-                <div className="lg:col-span-2 space-y-6">
+                {/* Centre : Editor + Casters (30%) */}
+                <div className="lg:col-span-3 space-y-6 order-2 lg:order-2">
                   <div>
                     <h2 className="mb-3 text-sm font-semibold text-neutral-300 uppercase tracking-wide">
                       Edition
                     </h2>
                     <SegmentEditor
                       segment={selectedSegment}
+                      run={run}
                       busy={busy}
                       onSave={handleSaveSegment}
                     />
                   </div>
-                  <div>
+                  <div className="order-4 lg:order-none">
                     <h2 className="mb-3 text-sm font-semibold text-neutral-300 uppercase tracking-wide">
                       Casters
                     </h2>
-                    <CasterStatusPanel segments={segments} />
+                    <CasterStatusPanel
+                      segments={segments}
+                      runId={runId ?? ''}
+                      onPresenceChange={setCasters}
+                    />
                   </div>
+                </div>
+
+                {/* Droite : Comms (30%) — composer sticky + feed scrollable */}
+                <div className="lg:col-span-3 space-y-6 order-3 lg:order-3">
+                  <div>
+                    <h2 className="mb-3 text-sm font-semibold text-neutral-300 uppercase tracking-wide">
+                      Comms
+                    </h2>
+                    <div className="lg:sticky lg:top-20">
+                      <CueComposer
+                        runId={runId ?? ''}
+                        runStatus={run.status}
+                        onCueCreated={setOptimisticCue}
+                      />
+                    </div>
+                  </div>
+                  <CueFeed
+                    runId={runId ?? ''}
+                    casters={casters}
+                    optimisticCue={optimisticCue}
+                  />
                 </div>
               </div>
             </div>

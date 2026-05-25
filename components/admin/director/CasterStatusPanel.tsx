@@ -1,24 +1,23 @@
 // components/admin/director/CasterStatusPanel.tsx
-// Feature: Run-of-show — Lot 3.
+// Feature: Run-of-show — Lot 3 + Lot 5 (presence badges).
 // Colonne "Casters" de la page Director.
 //
-// Pour Lot 3, on n'affiche que les donnees disponibles :
-//   - cast_assignments lies aux matches referencees par les segments du run
-//   - acked_at (briefing acquitte ou non)
+// Donnees combinees :
+//   - cast_assignments (par match du run) → noms + briefing + ack.
+//   - GET /api/admin/events/{runId}/presence → statut online/idle/offline/unknown
+//     derive cote serveur depuis caster_presence.last_seen_at + event_run_id.
 //
-// Le statut "online cockpit" sera reel au Lot 4 quand l'auth caster + la
-// presence cockpit seront en place. Pour l'instant on affiche "non connecte"
-// partout (sans data fake). TODO Lot 4 : brancher la presence cockpit
-// (probablement via une table caster_sessions ou un signal realtime).
-//
-// Les assignments sont chargees une fois au mount (et a chaque changement de
-// la liste des match_ids), pas en realtime — un ack est rare et le polling
-// du Director (toutes les ~30s via interval ou refetch on focus) suffit.
+// Polling presence : 15s (le statut bouge lentement, pas la peine de spam).
+// Polling assignments : on-mount + on match_ids change (rare). Pas de poll
+// continu : un ack est rare et le Director peut cliquer ↻ pour forcer.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
+import { logger } from '@/utils/logger';
 import type { EventSegment } from '@/types/events';
+
+const PRESENCE_POLL_INTERVAL_MS = 15_000;
 
 type AssignmentRow = {
   id: string;
@@ -32,13 +31,30 @@ type AssignmentRow = {
     auth_user_id: string | null;
     image_url: string | null;
   } | null;
-  // Renvoye par GET /api/admin/matches/[matchId]/cast-assignments depuis le
-  // follow-up Lot 5. Garde optional par precaution (anciens caches PWA, etc.).
   acked_at?: string | null;
+};
+
+type PresenceStatus = 'online' | 'idle' | 'offline' | 'unknown';
+
+type PresenceItem = {
+  cast_member_id: string;
+  name: string;
+  image_url: string | null;
+  status: PresenceStatus;
+  last_seen_at: string | null;
+  user_agent?: string;
 };
 
 type Props = {
   segments: EventSegment[];
+  runId: string;
+  /**
+   * Permet au parent de recevoir la liste reduite "id + name" pour
+   * alimenter CueFeed (calcul "qui n'a PAS ack"). Optionnel.
+   */
+  onPresenceChange?: (
+    casters: Array<{ cast_member_id: string; name: string }>
+  ) => void;
 };
 
 function formatTime(d: string | null | undefined) {
@@ -53,13 +69,68 @@ function formatTime(d: string | null | undefined) {
   }
 }
 
-export default function CasterStatusPanel({ segments }: Props) {
+function formatRelativeShort(iso: string | null | undefined): string {
+  if (!iso) return 'inconnu';
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return 'inconnu';
+  const diffSec = Math.max(0, Math.floor((Date.now() - t) / 1000));
+  if (diffSec < 60) return `${diffSec}s`;
+  const m = Math.floor(diffSec / 60);
+  if (m < 60) return `${m}min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  const d = Math.floor(h / 24);
+  return `${d}j`;
+}
+
+const STATUS_STYLES: Record<
+  PresenceStatus,
+  { dot: string; pill: string; label: string }
+> = {
+  online: {
+    dot: 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]',
+    pill: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300',
+    label: 'En ligne',
+  },
+  idle: {
+    dot: 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.5)]',
+    pill: 'bg-amber-500/15 border-amber-500/40 text-amber-300',
+    label: 'Idle',
+  },
+  offline: {
+    dot: 'bg-neutral-500',
+    pill: 'bg-neutral-700/50 border-neutral-600/40 text-neutral-400',
+    label: 'Hors ligne',
+  },
+  unknown: {
+    dot: 'bg-neutral-700',
+    pill: 'bg-neutral-800/50 border-neutral-700/40 text-neutral-500',
+    label: 'Non connecte',
+  },
+};
+
+function presenceTooltip(p: PresenceItem | undefined): string {
+  if (!p) return 'Pas encore connecte';
+  if (p.status === 'unknown') return 'Pas encore connecte';
+  if (!p.last_seen_at) return 'Pas encore connecte';
+  const ago = formatRelativeShort(p.last_seen_at);
+  if (p.status === 'online') return `Dernier ping : il y a ${ago}`;
+  if (p.status === 'idle') return `Idle depuis ${ago}`;
+  return `Hors ligne depuis ${ago}`;
+}
+
+export default function CasterStatusPanel({
+  segments,
+  runId,
+  onPresenceChange,
+}: Props) {
   const { adminFetchJson } = useAdminFetch();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  // assignments: keyed by assignment id (unique). Une meme cast_member_id peut
-  // apparaitre sur plusieurs match → on affiche une ligne par assignment.
+  const [assignLoading, setAssignLoading] = useState(false);
+  const [assignError, setAssignError] = useState<string | null>(null);
   const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
+
+  const [presence, setPresence] = useState<PresenceItem[]>([]);
+  const [presenceError, setPresenceError] = useState<string | null>(null);
 
   const matchIds = useMemo(() => {
     const set = new Set<string>();
@@ -74,12 +145,9 @@ export default function CasterStatusPanel({ segments }: Props) {
       setAssignments([]);
       return;
     }
-    setLoading(true);
-    setError(null);
+    setAssignLoading(true);
+    setAssignError(null);
     try {
-      // L'endpoint d'admin est par match (pas de "list all" cross-match). On
-      // fait un fan-out parallele. Bornes : si on a 100 segments tous distincts,
-      // c'est 100 fetchs — mais en pratique un run a < 20 matches.
       const results = await Promise.all(
         matchIds.map(async (mid) => {
           try {
@@ -92,12 +160,12 @@ export default function CasterStatusPanel({ segments }: Props) {
           }
         })
       );
-      const flat = results.flat();
-      setAssignments(flat);
+      setAssignments(results.flat());
     } catch (err) {
-      setError((err as Error)?.message ?? 'Erreur de chargement.');
+      logger.error('[director-comms] assignments fetch error', err);
+      setAssignError((err as Error)?.message ?? 'Erreur de chargement.');
     } finally {
-      setLoading(false);
+      setAssignLoading(false);
     }
   }, [adminFetchJson, matchIds]);
 
@@ -105,31 +173,106 @@ export default function CasterStatusPanel({ segments }: Props) {
     fetchAssignments();
   }, [fetchAssignments]);
 
+  const fetchPresence = useCallback(async () => {
+    if (!runId) return;
+    try {
+      const json = await adminFetchJson<{ presence: PresenceItem[] }>(
+        `/api/admin/events/${runId}/presence`
+      );
+      setPresence(json.presence ?? []);
+      setPresenceError(null);
+    } catch (err) {
+      logger.error('[director-comms] presence fetch error', err);
+      setPresenceError((err as Error)?.message ?? 'Erreur presence.');
+    }
+  }, [adminFetchJson, runId]);
+
+  useEffect(() => {
+    fetchPresence();
+  }, [fetchPresence]);
+
+  // Polling presence, visibility-gated.
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (
+        typeof document !== 'undefined' &&
+        document.visibilityState !== 'visible'
+      ) {
+        return;
+      }
+      fetchPresence();
+    }, PRESENCE_POLL_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [fetchPresence]);
+
+  const presenceById = useMemo(() => {
+    const m = new Map<string, PresenceItem>();
+    for (const p of presence) m.set(p.cast_member_id, p);
+    return m;
+  }, [presence]);
+
+  // Remonte au parent la liste des casters distincts (utilisee par CueFeed
+  // pour calculer "qui n'a PAS ack"). On prefere la source presence (basee
+  // sur les assignments cote serveur) qui inclut nom + cast_member_id.
+  useEffect(() => {
+    if (!onPresenceChange) return;
+    const list = presence.map((p) => ({
+      cast_member_id: p.cast_member_id,
+      name: p.name,
+    }));
+    onPresenceChange(list);
+  }, [presence, onPresenceChange]);
+
+  const onlineCount = presence.filter((p) => p.status === 'online').length;
+  const totalCount = presence.length;
+
   return (
     <div className="rounded-2xl border border-neutral-700/50 bg-neutral-800/30 p-5">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-neutral-200">Casters</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-neutral-200">Casters</h3>
+          {totalCount > 0 && (
+            <span
+              className={`text-[11px] px-2 py-0.5 rounded-full border ${
+                onlineCount === totalCount
+                  ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                  : onlineCount > 0
+                    ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
+                    : 'bg-neutral-700/50 border-neutral-600/40 text-neutral-400'
+              }`}
+              aria-label={`${onlineCount} casters en ligne sur ${totalCount}`}
+            >
+              {onlineCount}/{totalCount} online
+            </span>
+          )}
+        </div>
         <button
           type="button"
-          onClick={fetchAssignments}
+          onClick={() => {
+            fetchAssignments();
+            fetchPresence();
+          }}
           className="text-xs text-neutral-400 hover:text-white"
           title="Rafraichir"
+          aria-label="Rafraichir les casters"
         >
           ↻
         </button>
       </div>
-      <p className="text-[11px] text-neutral-500 mb-3">
-        Etat de presence reel disponible au Lot 4 (cockpit caster). Pour
-        l&apos;instant, seul l&apos;ack du briefing est affiche.
-      </p>
 
-      {loading ? (
+      {presenceError && (
+        <div className="mb-2 rounded-lg bg-red-900/30 border border-red-500/40 px-3 py-1.5 text-[11px] text-red-300">
+          {presenceError}
+        </div>
+      )}
+
+      {assignLoading ? (
         <div className="py-6">
           <LoadingSpinner size="sm" />
         </div>
-      ) : error ? (
+      ) : assignError ? (
         <div className="rounded-lg bg-red-900/30 border border-red-500/40 px-3 py-2 text-xs text-red-300">
-          {error}
+          {assignError}
         </div>
       ) : matchIds.length === 0 ? (
         <p className="text-xs text-neutral-500">
@@ -142,19 +285,26 @@ export default function CasterStatusPanel({ segments }: Props) {
       ) : (
         <ul className="space-y-2">
           {assignments.map((a) => {
-            // L'endpoint admin /api/admin/matches/[matchId]/cast-assignments
-            // renvoie maintenant acked_at (follow-up Lot 5). Le rendu reste
-            // tolerant : si l'API future omet le champ, on affiche "indispo"
-            // plutot que d'inventer un statut.
             const ackedKnown = typeof a.acked_at !== 'undefined';
             const acked = ackedKnown && !!a.acked_at;
+            const p = presenceById.get(a.cast_member_id);
+            const status: PresenceStatus = p?.status ?? 'unknown';
+            const styles = STATUS_STYLES[status];
+            const tooltip = presenceTooltip(p);
             return (
               <li
                 key={a.id}
                 className="flex items-center gap-3 rounded-lg bg-neutral-900/40 border border-neutral-700/60 p-2.5"
               >
-                <div className="w-8 h-8 rounded-full bg-neutral-700/60 flex items-center justify-center text-xs font-bold text-neutral-200 flex-shrink-0">
-                  {a.cast_member?.name?.slice(0, 2).toUpperCase() ?? '??'}
+                <div className="relative">
+                  <div className="w-8 h-8 rounded-full bg-neutral-700/60 flex items-center justify-center text-xs font-bold text-neutral-200 flex-shrink-0">
+                    {a.cast_member?.name?.slice(0, 2).toUpperCase() ?? '??'}
+                  </div>
+                  <span
+                    className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-neutral-900 ${styles.dot}`}
+                    title={tooltip}
+                    aria-label={`Statut : ${styles.label}. ${tooltip}`}
+                  />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-white truncate">
@@ -192,8 +342,11 @@ export default function CasterStatusPanel({ segments }: Props) {
                       Ack indispo
                     </span>
                   )}
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-neutral-700/50 border-neutral-600/40 text-neutral-500">
-                    Non connecte
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${styles.pill}`}
+                    title={tooltip}
+                  >
+                    {styles.label}
                   </span>
                 </div>
               </li>

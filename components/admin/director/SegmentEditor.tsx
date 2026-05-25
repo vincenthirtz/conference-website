@@ -1,30 +1,43 @@
 // components/admin/director/SegmentEditor.tsx
-// Feature: Run-of-show — Lot 3.
+// Feature: Run-of-show — Lot 3 + Lot 6 (timing/drift).
 // Formulaire d'edition d'un segment. Le statut/ord/started_at/ended_at ne
 // sont PAS editables ici (controlees par /start /skip /end /reorder cote API).
 // Champs editables :
 //   - title (string)
 //   - duration_min (number?)
+//   - planned_start_at (ancrage horaire, Lot 6)
 //   - broadcast_message (objet structure)
 //   - caster_checklist (array d'items {key, label})
 //
 // La sauvegarde est manuelle ("Enregistrer") pour eviter les PATCH a chaque
 // keystroke + simplifier l'UX. On affichera un "dirty" indicator si besoin.
+//
+// Lot 6 : section "Horaire" en haut.
+//   - Mode "Auto (calcule)"  -> planned_start_at IS NULL.
+//   - Mode "Ancre"           -> planned_start_at = ISO derive de la date du
+//     run + HH:MM choisie par le Director. On combine `run.scheduled_at` (qui
+//     donne le jour) avec l'heure (HH:MM) saisie. Cle UX : pas de calendrier
+//     date, juste l'heure ; on assume que le Director ancre TOUJOURS dans la
+//     fenetre du jour du run.
 
 import { useEffect, useState } from 'react';
 import { segmentTypeLabel } from '@/utils/eventSegmentLabels';
 import type {
   EventBroadcastMessage,
   EventCasterChecklistItem,
+  EventRun,
   EventSegment,
 } from '@/types/events';
 
 type Props = {
   segment: EventSegment | null;
+  /** Run parent — utilise pour composer planned_start_at (date du run + heure saisie). */
+  run: EventRun | null;
   busy: boolean;
   onSave: (patch: {
     title?: string;
     duration_min?: number | null;
+    planned_start_at?: string | null;
     broadcast_message?: EventBroadcastMessage | null;
     caster_checklist?: EventCasterChecklistItem[];
   }) => Promise<void>;
@@ -33,6 +46,10 @@ type Props = {
 type FormState = {
   title: string;
   duration_min: string;
+  /** Mode "ancre" ON/OFF. */
+  anchorEnabled: boolean;
+  /** Heure HH:MM saisie quand anchorEnabled = true. */
+  anchorTime: string;
   bm_discord: string;
   bm_push_title: string;
   bm_push_body: string;
@@ -40,11 +57,69 @@ type FormState = {
   checklist: EventCasterChecklistItem[];
 };
 
+/**
+ * Convertit un ISO timestamp en "HH:MM" pour pre-remplir le champ time.
+ * On utilise le fuseau local (coherent avec ce que voit le Director).
+ */
+function isoToLocalHHMM(iso: string | null): string {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    const h = String(d.getHours()).padStart(2, '0');
+    const m = String(d.getMinutes()).padStart(2, '0');
+    return `${h}:${m}`;
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Combine la date (YYYY-MM-DD) du `runScheduledAt` avec une heure HH:MM en
+ * fuseau local et renvoie un ISO UTC. Renvoie null si l'heure est invalide.
+ */
+function composeAnchorIso(
+  runScheduledAt: string | null | undefined,
+  hhmm: string
+): string | null {
+  if (!runScheduledAt) return null;
+  const match = /^(\d{1,2}):(\d{2})$/.exec(hhmm.trim());
+  if (!match) return null;
+  const hours = Number.parseInt(match[1], 10);
+  const minutes = Number.parseInt(match[2], 10);
+  if (
+    !Number.isFinite(hours) ||
+    !Number.isFinite(minutes) ||
+    hours < 0 ||
+    hours > 23 ||
+    minutes < 0 ||
+    minutes > 59
+  ) {
+    return null;
+  }
+  const runDate = new Date(runScheduledAt);
+  if (Number.isNaN(runDate.getTime())) return null;
+  // On reconstruit a partir des composantes LOCALES du run pour eviter le
+  // glissement de jour pres de minuit UTC.
+  const anchored = new Date(
+    runDate.getFullYear(),
+    runDate.getMonth(),
+    runDate.getDate(),
+    hours,
+    minutes,
+    0,
+    0
+  );
+  return anchored.toISOString();
+}
+
 function toForm(segment: EventSegment | null): FormState {
   if (!segment) {
     return {
       title: '',
       duration_min: '',
+      anchorEnabled: false,
+      anchorTime: '',
       bm_discord: '',
       bm_push_title: '',
       bm_push_body: '',
@@ -59,6 +134,8 @@ function toForm(segment: EventSegment | null): FormState {
       typeof segment.duration_min === 'number'
         ? String(segment.duration_min)
         : '',
+    anchorEnabled: !!segment.planned_start_at,
+    anchorTime: isoToLocalHHMM(segment.planned_start_at),
     bm_discord: bm.discord ?? '',
     bm_push_title: bm.push_title ?? '',
     bm_push_body: bm.push_body ?? '',
@@ -79,7 +156,7 @@ function buildBroadcastMessage(form: FormState): EventBroadcastMessage | null {
   return Object.keys(bm).length === 0 ? null : bm;
 }
 
-export default function SegmentEditor({ segment, busy, onSave }: Props) {
+export default function SegmentEditor({ segment, run, busy, onSave }: Props) {
   const [form, setForm] = useState<FormState>(toForm(segment));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -125,6 +202,29 @@ export default function SegmentEditor({ segment, busy, onSave }: Props) {
     );
   }
 
+  function handleEnableAnchor() {
+    // Pre-remplit avec l'heure courante en local si rien n'est saisi.
+    const now = new Date();
+    const initial =
+      form.anchorTime ||
+      `${String(now.getHours()).padStart(2, '0')}:${String(
+        now.getMinutes()
+      ).padStart(2, '0')}`;
+    setForm((prev) => ({
+      ...prev,
+      anchorEnabled: true,
+      anchorTime: initial,
+    }));
+  }
+
+  function handleReleaseAnchor() {
+    setForm((prev) => ({
+      ...prev,
+      anchorEnabled: false,
+      anchorTime: '',
+    }));
+  }
+
   async function handleSave() {
     setError(null);
     if (!form.title.trim()) {
@@ -141,6 +241,26 @@ export default function SegmentEditor({ segment, busy, onSave }: Props) {
       }
       duration_min = n;
     }
+
+    // Validate planned_start_at : si l'utilisateur a active l'ancre, il DOIT
+    // fournir une heure valide. Sinon on n'envoie null que pour effacer une
+    // ancre PRE-EXISTANTE (sinon on n'inclut pas le champ — pas de PATCH no-op).
+    let planned_start_at: string | null | undefined;
+    if (form.anchorEnabled) {
+      if (!run?.scheduled_at) {
+        setError("Impossible d'ancrer : la date du run est introuvable.");
+        return;
+      }
+      const composed = composeAnchorIso(run.scheduled_at, form.anchorTime);
+      if (!composed) {
+        setError("Heure d'ancrage invalide. Format attendu : HH:MM.");
+        return;
+      }
+      planned_start_at = composed;
+    } else if (segment && segment.planned_start_at) {
+      planned_start_at = null;
+    }
+
     // Validate checklist : keys uniques + non-vides, labels non-vides.
     const seenKeys = new Set<string>();
     for (const it of form.checklist) {
@@ -162,6 +282,7 @@ export default function SegmentEditor({ segment, busy, onSave }: Props) {
       await onSave({
         title: form.title.trim(),
         duration_min,
+        ...(planned_start_at !== undefined ? { planned_start_at } : {}),
         broadcast_message: buildBroadcastMessage(form),
         caster_checklist: form.checklist,
       });
@@ -191,6 +312,72 @@ export default function SegmentEditor({ segment, busy, onSave }: Props) {
         >
           {saving ? 'Sauvegarde…' : 'Enregistrer'}
         </button>
+      </div>
+
+      {/* Section Horaire (Lot 6) — en HAUT pour signaler la criticite. */}
+      <div className="rounded-xl border border-neutral-700/40 bg-neutral-900/40 p-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <h4 className="text-xs font-semibold text-neutral-300 uppercase tracking-wide">
+            Horaire
+          </h4>
+          {form.anchorEnabled ? (
+            <span
+              className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-amber-300"
+              aria-label="Ancre"
+              data-testid="segment-anchor-active"
+            >
+              <svg
+                width="10"
+                height="12"
+                viewBox="0 0 10 12"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path d="M2 5h6v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5zm1.5-3.5a1.5 1.5 0 1 1 3 0V5h-3V1.5z" />
+              </svg>
+              Ancre
+            </span>
+          ) : (
+            <span className="text-[10px] uppercase tracking-wide text-neutral-500">
+              Auto (calcule)
+            </span>
+          )}
+        </div>
+
+        {form.anchorEnabled ? (
+          <div className="flex items-center gap-2">
+            <input
+              type="time"
+              value={form.anchorTime}
+              onChange={(e) => update('anchorTime', e.target.value)}
+              data-testid="segment-anchor-time"
+              className="px-2 py-1 rounded-md bg-neutral-900/80 border border-amber-500/40 text-white text-sm font-mono focus:outline-none focus:border-amber-400"
+            />
+            <button
+              type="button"
+              onClick={handleReleaseAnchor}
+              data-testid="segment-anchor-release"
+              className="px-2 py-1 rounded-md text-[11px] text-neutral-300 hover:text-white border border-neutral-700/60 hover:border-neutral-500"
+            >
+              Liberer
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] text-neutral-500">
+              L&apos;horaire est calcule depuis les segments precedents.
+            </p>
+            <button
+              type="button"
+              onClick={handleEnableAnchor}
+              data-testid="segment-anchor-enable"
+              disabled={!run?.scheduled_at}
+              className="px-2 py-1 rounded-md text-[11px] text-amber-200 border border-amber-500/40 hover:bg-amber-500/10 disabled:opacity-40"
+            >
+              Ancrer cet horaire
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="space-y-3">
