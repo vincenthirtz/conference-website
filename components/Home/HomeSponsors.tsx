@@ -70,7 +70,7 @@ export default function HomeSponsors({
       className="container mt-20 flex flex-col gap-8 px-4 md:px-0"
     >
       <div className="flex flex-col items-center text-center">
-        <div className="text-xl text-white font-semibold border-b-2 border-blue-400 mb-1">
+        <div className="section-eyebrow text-xl text-white font-semibold mb-1">
           Partenaires
         </div>
         <Heading

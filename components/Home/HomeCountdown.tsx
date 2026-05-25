@@ -40,9 +40,9 @@ function CountdownSkeleton({
       className="container px-4 md:px-0 mt-12 md:mt-16"
       aria-label="Compte à rebours avant le tournoi"
     >
-      <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-6 md:p-8 backdrop-blur-sm">
+      <div className="neon-card p-6 md:p-8">
         <div className="flex flex-col items-center text-center gap-1 mb-5">
-          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-200/80">
+          <span className="text-xs font-semibold uppercase tracking-[0.2em] neon-text-cyan">
             {label}
           </span>
           <span className="text-base md:text-lg text-gray-200">
@@ -60,7 +60,7 @@ function CountdownSkeleton({
           {(['jours', 'h', 'min', 's'] as const).map((cellLabel) => (
             <div
               key={cellLabel}
-              className="flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-[var(--bg-elevated)]/60 py-3 sm:py-4"
+              className="countdown-cell flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-[var(--bg-elevated)]/60 py-3 sm:py-4"
             >
               <span className="text-2xl sm:text-4xl font-extrabold text-white/30 tabular-nums leading-none">
                 ––
@@ -114,9 +114,9 @@ export default function HomeCountdown({
       className="container px-4 md:px-0 mt-12 md:mt-16"
       aria-label="Compte à rebours avant le tournoi"
     >
-      <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-6 md:p-8 backdrop-blur-sm">
+      <div className="neon-card p-6 md:p-8">
         <div className="flex flex-col items-center text-center gap-1 mb-5">
-          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-200/80">
+          <span className="text-xs font-semibold uppercase tracking-[0.2em] neon-text-cyan">
             {label}
           </span>
           <span className="text-base md:text-lg text-gray-200">
@@ -131,9 +131,9 @@ export default function HomeCountdown({
           {cells.map(({ value, label: cellLabel }) => (
             <div
               key={cellLabel}
-              className="flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-[var(--bg-elevated)]/60 py-3 sm:py-4"
+              className="countdown-cell flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-[var(--bg-elevated)]/60 py-3 sm:py-4"
             >
-              <span className="text-2xl sm:text-4xl font-extrabold text-white tabular-nums leading-none">
+              <span className="countdown-digit text-2xl sm:text-4xl font-extrabold text-white tabular-nums leading-none">
                 {pad(value)}
               </span>
               <span className="mt-1 text-[10px] sm:text-xs uppercase tracking-[0.18em] text-gray-400">

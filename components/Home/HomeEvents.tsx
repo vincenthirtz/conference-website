@@ -58,7 +58,7 @@ function EventCard({ event }: { event: HomepageEvent }) {
   const meta = LOCATION_META[event.location];
   const Icon = meta.Icon;
   return (
-    <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-purple-500/10 via-white/[0.03] to-cyan-500/10 p-6 md:p-8 backdrop-blur-sm">
+    <div className="neon-card p-6 md:p-8">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.16em] text-blue-200/80">
@@ -168,7 +168,7 @@ export default function HomeEvents({
   return (
     <section className="container mt-20 flex flex-col gap-6 px-4 md:px-0">
       <div className="flex flex-col items-center text-center">
-        <div className="text-xl text-white font-semibold border-b-2 border-blue-400 mb-1">
+        <div className="section-eyebrow text-xl text-white font-semibold mb-1">
           Agenda
         </div>
         <Heading

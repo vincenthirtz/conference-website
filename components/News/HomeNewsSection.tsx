@@ -86,7 +86,7 @@ function HomeNewsSection({
       id="news"
     >
       <div className="flex flex-col items-center text-center">
-        <div className="text-xl text-white font-semibold border-b-2 border-blue-400 mb-1">
+        <div className="section-eyebrow text-xl text-white font-semibold mb-1">
           Actualités
         </div>
         <Heading
@@ -165,7 +165,7 @@ function FeaturedCard({ item }: { item: HomeNewsItem }) {
   return (
     <Link
       href={`/news/${item.slug}`}
-      className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/5 transition hover:border-blue-300/70 hover:shadow-[0_24px_60px_rgba(0,0,0,0.4)]"
+      className="news-featured group relative flex h-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/5 transition-all duration-300"
     >
       {item.imageUrl ? (
         <div className="relative aspect-[16/9] w-full overflow-hidden">
@@ -184,7 +184,7 @@ function FeaturedCard({ item }: { item: HomeNewsItem }) {
       )}
       <div className="flex flex-1 flex-col gap-3 p-5 md:p-6">
         <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.16em] text-blue-200/80">
-          <span className="inline-flex items-center rounded-full border border-blue-300/40 bg-blue-500/15 px-2.5 py-1 text-[10px] font-semibold text-blue-50">
+          <span className="inline-flex items-center rounded-full border border-neon-cyan/50 bg-neon-cyan/10 px-2.5 py-1 text-[10px] font-semibold neon-text-cyan">
             À la une
           </span>
           {item.tag && (
@@ -207,7 +207,7 @@ function FeaturedCard({ item }: { item: HomeNewsItem }) {
         >
           {getExcerpt(item, 220)}
         </Paragraph>
-        <span className="mt-auto inline-flex items-center gap-1 text-sm font-medium text-blue-300 transition group-hover:gap-2">
+        <span className="mt-auto inline-flex items-center gap-1 text-sm font-medium neon-text-cyan transition group-hover:gap-2">
           Lire l&apos;article <span aria-hidden>→</span>
         </span>
       </div>
@@ -220,7 +220,7 @@ function CompactCard({ item }: { item: HomeNewsItem }) {
   return (
     <Link
       href={`/news/${item.slug}`}
-      className="group flex gap-3 overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-3 transition hover:border-blue-300/70"
+      className="news-compact group flex gap-3 overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-3 transition-all duration-300"
     >
       <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-xl bg-white/5">
         {item.imageUrl ? (
@@ -266,9 +266,9 @@ function FilterPill({
     <button
       type="button"
       onClick={onClick}
-      className={`px-3 py-1.5 rounded-full border text-xs uppercase tracking-[0.16em] transition ${
+      className={`filter-pill px-3 py-1.5 rounded-full border text-xs uppercase tracking-[0.16em] transition-all duration-300 ${
         active
-          ? 'border-blue-400 bg-blue-500/20 text-blue-50 shadow-[0_6px_18px_rgba(59,130,246,0.35)]'
+          ? 'filter-pill--active border-neon-cyan/60 bg-neon-cyan/15 text-white'
           : 'border-white/15 bg-white/5 text-gray-200 hover:border-white/30'
       }`}
     >

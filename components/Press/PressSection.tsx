@@ -22,7 +22,7 @@ function PressSection(): JSX.Element {
   return (
     <section className="container mt-20 flex flex-col gap-6 px-4 md:px-0">
       <div className="flex flex-col items-center text-center">
-        <div className="text-xl text-white font-semibold border-b-2 border-blue-400 mb-1">
+        <div className="section-eyebrow text-xl text-white font-semibold mb-1">
           Presse
         </div>
         <Heading
@@ -48,7 +48,7 @@ function PressSection(): JSX.Element {
             href={item.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-2xl border border-white/10 bg-white/5 p-5 flex flex-col gap-3 hover:border-blue-300/70 hover:shadow-[0_16px_40px_rgba(0,0,0,0.35)] transition w-full max-w-sm"
+            className="press-card rounded-2xl border border-white/10 bg-white/5 p-5 flex flex-col gap-3 transition-all duration-300 w-full max-w-sm"
           >
             {item.logo ? (
               /* eslint-disable-next-line @next/next/no-img-element */
@@ -66,8 +66,8 @@ function PressSection(): JSX.Element {
             <h3 className="text-lg font-semibold text-white leading-snug">
               {item.title}
             </h3>
-            <span className="text-sm text-blue-300 mt-auto">
-              Lire l&apos;article &rarr;
+            <span className="text-sm neon-text-cyan mt-auto inline-flex items-center gap-1 press-card__cta">
+              Lire l&apos;article <span aria-hidden>→</span>
             </span>
           </a>
         ))}
