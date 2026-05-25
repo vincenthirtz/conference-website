@@ -46,6 +46,15 @@ export type EventSegment = {
   status: EventSegmentStatus;
   started_at: string | null;
   ended_at: string | null;
+  /**
+   * Ancrage horaire absolu optionnel (override du Director).
+   * - NULL  = mode computed : planned calcule a la volee via
+   *           run.scheduled_at + sum(duration_min) des segments precedents.
+   * - Set   = mode ancre : ce segment demarre a HH:MM peu importe la derive
+   *           amont. UI affiche un cadenas.
+   * Cf. migration add_planned_start_at_to_event_segments.sql (lot 6 timing/drift).
+   */
+  planned_start_at: string | null;
   broadcast_message: EventBroadcastMessage | null;
   caster_checklist: EventCasterChecklistItem[];
   created_at: string;
@@ -56,4 +65,72 @@ export type EventSegment = {
 export type EventRunWithSegments = {
   run: EventRun;
   segments: EventSegment[];
+};
+
+// ---------------------------------------------------------------------------
+// Cues + presence (3e brique run-of-show, cf. migration
+// create_event_cues_and_presence_tables.sql).
+// ---------------------------------------------------------------------------
+
+/**
+ * Severite d'un cue Director -> casters.
+ * - info  : FYI, pas d'ack requis.
+ * - warn  : attention, pas d'ack requis.
+ * - urgent: action requise, ack obligatoire (tracé dans event_cue_acks).
+ */
+export type EventCueSeverity = 'info' | 'warn' | 'urgent';
+
+/**
+ * Cue (message court) broadcast par le Director vers tous les casters
+ * connectes a un event_run. Append-only cote DB.
+ */
+export type EventCue = {
+  id: string;
+  event_run_id: string;
+  severity: EventCueSeverity;
+  body: string;
+  created_by_user_id: string | null;
+  created_at: string;
+  expires_at: string | null;
+  /**
+   * Clef de dedup logique partagee entre le client (useOverrunWatcher dans le
+   * Director tab) et le cron server-side `overrun-watcher-cron`. Si renseignee,
+   * un partial UNIQUE INDEX cote DB garantit qu'au plus un cue existe par
+   * dedup_key. Convention auto-overrun T+5min : `auto-overrun:{runId}:{segmentId}`.
+   * NULL pour les cues manuels du Director (hors partial unique).
+   */
+  dedup_key: string | null;
+};
+
+/**
+ * Ack d'un cue urgent par un cast_member. PK composite (cue_id,
+ * cast_member_id) cote DB = un caster ne ack qu'une fois.
+ */
+export type EventCueAck = {
+  cue_id: string;
+  cast_member_id: string;
+  acked_at: string;
+};
+
+/**
+ * Statut de presence DERIVE a la lecture depuis caster_presence.last_seen_at.
+ * Seuils :
+ *   - online  : last_seen_at >= now() - 60s
+ *   - idle    : now() - 180s <= last_seen_at < now() - 60s
+ *   - offline : last_seen_at < now() - 180s (ou row absente)
+ */
+export type CasterPresenceStatus = 'online' | 'idle' | 'offline';
+
+/**
+ * Etat brut de presence cote DB. 1 row par caster (PK = cast_member_id),
+ * UPSERT au heartbeat (toutes les 20s depuis le cockpit). Le statut
+ * online/idle/offline n'est PAS stocke ; il se calcule depuis last_seen_at
+ * a la lecture.
+ */
+export type CasterPresence = {
+  cast_member_id: string;
+  event_run_id: string | null;
+  last_seen_at: string;
+  user_agent: string | null;
+  updated_at: string;
 };

@@ -67,7 +67,7 @@ async function handler(
   const { data: segments, error: segErr } = await admin
     .from('event_segments')
     .select(
-      'id, ord, type, match_id, title, duration_min, status, started_at, ended_at, broadcast_message, caster_checklist, created_at, updated_at'
+      'id, ord, type, match_id, title, duration_min, planned_start_at, status, started_at, ended_at, broadcast_message, caster_checklist, created_at, updated_at'
     )
     .eq('event_run_id', run.id)
     .eq('tenant_id', ctx.tenantId)

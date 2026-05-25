@@ -38,6 +38,8 @@ const UpdateSegmentSchema = z
   .object({
     title: z.string().trim().min(1).max(200).optional(),
     duration_min: z.number().int().positive().nullable().optional(),
+    // Lot 6 timing : override ancrage horaire absolu. null = unlock (revient au mode computed).
+    planned_start_at: z.string().datetime().nullable().optional(),
     broadcast_message: BroadcastMessageSchema.optional(),
     caster_checklist: z.array(ChecklistItemSchema).optional(),
   })
@@ -112,6 +114,8 @@ async function handler(
     if (body.title !== undefined) updatePayload.title = body.title;
     if (body.duration_min !== undefined)
       updatePayload.duration_min = body.duration_min;
+    if (body.planned_start_at !== undefined)
+      updatePayload.planned_start_at = body.planned_start_at;
     if (body.broadcast_message !== undefined)
       updatePayload.broadcast_message = body.broadcast_message;
     if (body.caster_checklist !== undefined)
@@ -130,7 +134,7 @@ async function handler(
       .eq('event_run_id', runId)
       .eq('tenant_id', ctx.tenantId)
       .select(
-        'id, ord, type, match_id, title, duration_min, status, started_at, ended_at, broadcast_message, caster_checklist, created_at, updated_at'
+        'id, ord, type, match_id, title, duration_min, planned_start_at, status, started_at, ended_at, broadcast_message, caster_checklist, created_at, updated_at'
       )
       .single();
 

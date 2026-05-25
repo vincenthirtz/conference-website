@@ -35,6 +35,14 @@
 [functions."web-push-dispatcher-cron"]
   schedule = "* * * * *"
 
+# Scheduled function: server-side fallback overrun escalation (lot 6).
+# Le client-side (useOverrunWatcher dans Director tab) fait l'escalation
+# T+0/T+2min/T+5min. Si l'onglet est ferme, ce cron prend le relais a
+# T+5min..T+7min (selon le tick). Dedup via event_cues.dedup_key (partial
+# unique index uq_event_cues_dedup_key). Scan cross-tenant via supabaseAdmin.
+[functions."overrun-watcher-cron"]
+  schedule = "*/2 * * * *"
+
 [[headers]]
   for = "/*"
   [headers.values]

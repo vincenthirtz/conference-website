@@ -48,6 +48,8 @@ const CreateSegmentSchema = z
     ord: z.number().int().nonnegative().optional(),
     match_id: z.string().uuid().nullable().optional(),
     duration_min: z.number().int().positive().nullable().optional(),
+    // Lot 6 timing : ancrage horaire absolu optionnel. NULL = computed cote UI.
+    planned_start_at: z.string().datetime().nullable().optional(),
     broadcast_message: BroadcastMessageSchema.optional(),
     caster_checklist: z.array(ChecklistItemSchema).optional(),
   })
@@ -161,6 +163,7 @@ async function handler(
     match_id: body.match_id ?? null,
     title: body.title,
     duration_min: body.duration_min ?? null,
+    planned_start_at: body.planned_start_at ?? null,
     status: 'upcoming' as const,
     broadcast_message: body.broadcast_message ?? null,
     caster_checklist: body.caster_checklist ?? [],
@@ -170,7 +173,7 @@ async function handler(
     .from('event_segments')
     .insert(insertPayload)
     .select(
-      'id, ord, type, match_id, title, duration_min, status, started_at, ended_at, broadcast_message, caster_checklist, created_at, updated_at'
+      'id, ord, type, match_id, title, duration_min, planned_start_at, status, started_at, ended_at, broadcast_message, caster_checklist, created_at, updated_at'
     )
     .single();
 
