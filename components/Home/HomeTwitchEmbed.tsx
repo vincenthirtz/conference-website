@@ -97,6 +97,7 @@ export default function HomeTwitchEmbed(): JSX.Element | null {
           title={`Twitch ${CHANNEL} live player`}
           allowFullScreen
           allow="autoplay; fullscreen"
+          loading="lazy"
           className="absolute inset-0 h-full w-full"
         />
       </div>

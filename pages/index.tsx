@@ -3,24 +3,34 @@ import dynamic from 'next/dynamic';
 import Head from 'next/head';
 import Header from '@/components/Header/header';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
-import HomeNewsSection, {
-  HomeNewsItem,
-} from '@/components/News/HomeNewsSection';
-import AnnouncementsTicker, {
-  type Announcement,
-} from '@/components/Ads/AnnouncementsTicker';
-import PressSection from '@/components/Press/PressSection';
+import { type HomeNewsItem } from '@/components/News/HomeNewsSection';
+import { type Announcement } from '@/components/Ads/AnnouncementsTicker';
 import HomeCountdown from '@/components/Home/HomeCountdown';
 import { type UpcomingTournament } from '@/components/Home/HomeUpcomingTournament';
-import HomeEvents from '@/components/Home/HomeEvents';
-import HomeIdahobitScrim from '@/components/Home/HomeIdahobitScrim';
-import HomeSponsors, { HomePartner } from '@/components/Home/HomeSponsors';
+import { type HomePartner } from '@/components/Home/HomeSponsors';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
+// Above-the-fold: Header + HomeCountdown stay direct imports.
+// HomeTwitchEmbed is client-only (handles auth/iframe).
 const HomeTwitchEmbed = dynamic(
   () => import('@/components/Home/HomeTwitchEmbed'),
   { ssr: false }
+);
+// Below-the-fold: code-split into separate chunks. SSR stays on so news
+// excerpts, tournament info and press logos remain in the initial HTML
+// (good for SEO and content visibility before JS hydrates).
+const HomeIdahobitScrim = dynamic(
+  () => import('@/components/Home/HomeIdahobitScrim')
+);
+const HomeEvents = dynamic(() => import('@/components/Home/HomeEvents'));
+const HomeNewsSection = dynamic(
+  () => import('@/components/News/HomeNewsSection')
+);
+const HomeSponsors = dynamic(() => import('@/components/Home/HomeSponsors'));
+const PressSection = dynamic(() => import('@/components/Press/PressSection'));
+const AnnouncementsTicker = dynamic(
+  () => import('@/components/Ads/AnnouncementsTicker')
 );
 
 type HomeProps = {
