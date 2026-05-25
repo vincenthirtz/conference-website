@@ -31,6 +31,10 @@ function Header(): JSX.Element {
         />
       </picture>
 
+      <div className="hero-aurora" aria-hidden="true">
+        <span className="hero-aurora__violet" />
+      </div>
+
       <div className="container w-full flex items-center justify-center">
         <div
           className="flex flex-col justify-center items-center w-full pt-20 sm:pt-28 md:pt-32 pb-12 md:pb-16"
