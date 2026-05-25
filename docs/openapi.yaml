@@ -1844,6 +1844,292 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/GameHero"
+    DraftEngineError:
+      type: object
+      description: |
+        Structured error returned by the draft engine endpoints (Lot 2).
+        `code` is the machine-readable reason; `error` is a human-readable
+        message. Additional context fields (`expected`, `got`, `format`,
+        `allowed`, `draftId`…) may be present depending on the code.
+      required:
+        - error
+        - code
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+          enum:
+            - MATCH_NOT_FOUND
+            - TOURNAMENT_NOT_FOUND
+            - GAME_NOT_DRAFTABLE
+            - FORMAT_NOT_SUPPORTED
+            - GAME_INDEX_OUT_OF_RANGE
+            - DRAFT_ALREADY_EXISTS
+            - DRAFT_NOT_FOUND
+            - SIDES_INVALID
+            - SIDES_REQUIRED
+            - DRAFT_NOT_IN_PROGRESS
+            - STEP_OUT_OF_ORDER
+            - HERO_NOT_FOUND
+            - HERO_WRONG_GAME
+            - HERO_ALREADY_BANNED
+            - HERO_ALREADY_PICKED
+            - HERO_FEARLESS_BLOCKED
+            - PICK_TIMER_INVALID
+            - DB_ERROR
+      additionalProperties: true
+    InitMatchDraftRequest:
+      type: object
+      required:
+        - gameIndex
+      properties:
+        gameIndex:
+          type: integer
+          minimum: 1
+          description: 1-based index of the game inside the match (bo3 → 1..3).
+        fearless:
+          type: boolean
+          description: |
+            Override the default fearless flag from the game's DraftFlow.
+            When true, a hero picked in any prior game of the match cannot
+            be picked again.
+        pickTimerSeconds:
+          type: integer
+          minimum: 5
+          maximum: 300
+          description: Per-step pick timer (Lot 3 wires the server-side enforcement).
+    SetMatchDraftSidesRequest:
+      type: object
+      required:
+        - team1Side
+        - team2Side
+      properties:
+        team1Side:
+          type: string
+          description: LoL = blue|red ; Dota = radiant|dire.
+        team2Side:
+          type: string
+          description: Must differ from team1Side.
+    CommitMatchDraftStepRequest:
+      type: object
+      required:
+        - stepNumber
+        - heroId
+      properties:
+        stepNumber:
+          type: integer
+          minimum: 1
+          description: Must equal current_step + 1.
+        heroId:
+          $ref: "#/components/schemas/Uuid"
+    DraftFlowStep:
+      type: object
+      required:
+        - step_number
+        - phase
+        - action
+        - side
+      properties:
+        step_number:
+          type: integer
+          minimum: 1
+        phase:
+          type: string
+          enum:
+            - ban_1
+            - pick_1
+            - ban_2
+            - pick_2
+            - ban_3
+            - pick_3
+        action:
+          type: string
+          enum:
+            - ban
+            - pick
+        side:
+          type: string
+          enum:
+            - team1
+            - team2
+    DraftFlow:
+      type: object
+      required:
+        - steps
+        - fearless
+      properties:
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/DraftFlowStep"
+        fearless:
+          type: boolean
+    MatchDraft:
+      type: object
+      description: Row of public.match_drafts (snake_case mirrors the DB).
+      required:
+        - id
+        - match_id
+        - game_index
+        - game
+        - current_step
+        - status
+        - fearless
+        - pick_timer_seconds
+        - tenant_id
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        match_id:
+          $ref: "#/components/schemas/Uuid"
+        game_index:
+          type: integer
+          minimum: 1
+        game:
+          type: string
+          enum:
+            - lol
+            - dota2
+        team1_side:
+          type: string
+          nullable: true
+          enum:
+            - blue
+            - red
+            - radiant
+            - dire
+            - null
+        team2_side:
+          type: string
+          nullable: true
+          enum:
+            - blue
+            - red
+            - radiant
+            - dire
+            - null
+        current_step:
+          type: integer
+          minimum: 0
+        status:
+          type: string
+          enum:
+            - pending
+            - in_progress
+            - completed
+            - cancelled
+        fearless:
+          type: boolean
+        pick_timer_seconds:
+          type: integer
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        tenant_id:
+          $ref: "#/components/schemas/Uuid"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    MatchDraftStep:
+      type: object
+      description: Row of public.match_draft_steps.
+      required:
+        - id
+        - draft_id
+        - step_number
+        - phase
+        - action
+        - side
+        - auto_picked
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        draft_id:
+          $ref: "#/components/schemas/Uuid"
+        step_number:
+          type: integer
+        phase:
+          type: string
+        action:
+          type: string
+          enum:
+            - ban
+            - pick
+        side:
+          type: string
+          enum:
+            - team1
+            - team2
+        hero_id:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        committed_at:
+          type: string
+          format: date-time
+          nullable: true
+        deadline_at:
+          type: string
+          format: date-time
+          nullable: true
+        auto_picked:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+    DraftState:
+      type: object
+      description: Assembled draft state returned by every Lot 2 endpoint.
+      required:
+        - draft
+        - flow
+        - steps
+        - nextStepIndex
+        - bannedHeroes
+        - team1Picks
+        - team2Picks
+      properties:
+        draft:
+          $ref: "#/components/schemas/MatchDraft"
+        flow:
+          $ref: "#/components/schemas/DraftFlow"
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/MatchDraftStep"
+        nextStepIndex:
+          type: integer
+          description: Zero-based index in `flow.steps` of the next step to play, or -1 once completed.
+        bannedHeroes:
+          type: array
+          items:
+            $ref: "#/components/schemas/GameHero"
+        team1Picks:
+          type: array
+          items:
+            $ref: "#/components/schemas/GameHero"
+        team2Picks:
+          type: array
+          items:
+            $ref: "#/components/schemas/GameHero"
+    MatchDraftStateResponse:
+      type: object
+      required:
+        - draft
+      properties:
+        draft:
+          oneOf:
+            - $ref: "#/components/schemas/DraftState"
+            - type: "null"
     PublicAnnouncement:
       type: object
       required:
@@ -8399,6 +8685,214 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /api/admin/matches/{matchId}/drafts:
+    parameters:
+      - $ref: "#/components/parameters/MatchId"
+    post:
+      tags:
+        - admin/matches
+      summary: Initialise a MOBA draft for (matchId, gameIndex) — Lot 2.
+      operationId: adminInitMatchDraft
+      description: |
+        Resolves the game slug from the match's tournament (`tournaments.game`,
+        must be `lol` or `dota2`), then creates a `match_drafts` row and seeds
+        all `match_draft_steps` from `config/games/<slug>.draftFlows[format]`.
+        409 if a draft already exists for (matchId, gameIndex). Honors the
+        `Idempotency-Key` header.
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InitMatchDraftRequest"
+      responses:
+        "201":
+          description: Newly created draft state.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchDraftStateResponse"
+        "400":
+          description: |
+            Invalid input — bad gameIndex, missing tournament game,
+            game has no draft phase, or pickTimerSeconds out of range.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DraftEngineError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Match or tournament not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DraftEngineError"
+        "409":
+          description: Draft already exists for (matchId, gameIndex).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DraftEngineError"
+  /api/admin/matches/{matchId}/drafts/{gameIndex}:
+    parameters:
+      - $ref: "#/components/parameters/MatchId"
+      - name: gameIndex
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+    get:
+      tags:
+        - admin/matches
+      summary: Read the assembled draft state for (matchId, gameIndex).
+      operationId: adminGetMatchDraft
+      description: |
+        Returns `{ draft: null }` when no draft has been initialised yet,
+        otherwise the full `DraftState` including the flow, the seeded
+        steps, the heroes resolved per ban/pick, and `nextStepIndex`.
+      security:
+        - StaffSession: []
+      responses:
+        "200":
+          description: Draft state (or null if not initialised).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchDraftStateResponse"
+        "400":
+          description: Invalid matchId or gameIndex.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/admin/matches/{matchId}/drafts/{gameIndex}/side:
+    parameters:
+      - $ref: "#/components/parameters/MatchId"
+      - name: gameIndex
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+    patch:
+      tags:
+        - admin/matches
+      summary: Assign team1Side + team2Side on a pending draft.
+      operationId: adminSetMatchDraftSides
+      description: |
+        Side enum is game-specific :
+        `lol` accepts `blue|red`, `dota2` accepts `radiant|dire`.
+        team1Side and team2Side must differ. Only allowed before any step
+        has been committed (`current_step = 0`). Honors the
+        `Idempotency-Key` header.
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetMatchDraftSidesRequest"
+      responses:
+        "200":
+          description: Updated draft state.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchDraftStateResponse"
+        "400":
+          description: Invalid side values or shape.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DraftEngineError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Match or draft not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DraftEngineError"
+        "409":
+          description: Draft already started or completed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DraftEngineError"
+  /api/admin/matches/{matchId}/drafts/{gameIndex}/commit:
+    parameters:
+      - $ref: "#/components/parameters/MatchId"
+      - name: gameIndex
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+    post:
+      tags:
+        - admin/matches
+      summary: Commit one ban/pick step on the draft.
+      operationId: adminCommitMatchDraftStep
+      description: |
+        `stepNumber` must equal `current_step + 1`. Transitions
+        pending → in_progress on step 1, in_progress → completed once the
+        last flow step is committed. Side selection is required before
+        step 1. Rejects heroes already banned/picked in this draft, and
+        when `fearless=true`, heroes picked in any prior game of the
+        same match. Honors the `Idempotency-Key` header.
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommitMatchDraftStepRequest"
+      responses:
+        "200":
+          description: Updated draft state.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchDraftStateResponse"
+        "400":
+          description: Invalid input (heroId not a UUID, wrong game for the hero…).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DraftEngineError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Match, draft, or hero not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DraftEngineError"
+        "409":
+          description: |
+            Step out of order, sides not set yet, hero already
+            banned/picked in this draft, or fearless-blocked across
+            previous games.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DraftEngineError"
   /api/admin/news:
     get:
       summary: List news posts (admin view, includes drafts).
