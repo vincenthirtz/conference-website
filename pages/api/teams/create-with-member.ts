@@ -42,7 +42,8 @@ type MemberResult = {
   user_id: string;
   role: string;
   captain: boolean;
-  battle_tag: string;
+  /** Lot 6 : NULL quand l'équipe n'est pas inscrite à un tournoi. */
+  battle_tag: string | null;
 };
 
 type ApiResponse =
@@ -146,11 +147,18 @@ export default async function handler(
       .json({ error: 'Provide a member to set as captain' });
   }
 
+  // Lot 6 : BattleTag obligatoire UNIQUEMENT lors d'une inscription à un
+  // tournoi. Hors tournoi (équipe scrim-only ou création sans engagement),
+  // le BattleTag reste validé s'il est fourni mais peut être laissé vide.
+  const tournamentRequiresBattleTag = !!(
+    body.tournament_id?.toString().trim()
+  );
+
   let memberRecords: {
     user_id: string;
     role: string;
     captain: boolean;
-    battle_tag: string;
+    battle_tag: string | null;
   }[] = [];
   let usersEmailMap: Map<string, string> | null = null;
   const ensureUsersEmailMap = async () => {
@@ -170,28 +178,39 @@ export default async function handler(
     return trimmed;
   };
 
+  // Lot 6 helper : valide le BattleTag de manière conditionnelle.
+  // - tournoi : required + format.
+  // - hors tournoi : optionnel (renvoie null si vide) + format si fourni.
+  const resolveBattleTag = (raw: string): string | null => {
+    const trimmed = (raw ?? '').trim();
+    if (!trimmed) {
+      if (tournamentRequiresBattleTag) {
+        throw new Error('BattleTag required for each member when registering to a tournament.');
+      }
+      return null;
+    }
+    return validateBattleTag(trimmed);
+  };
+
   if (cleanedMembers.length === 0 && wantsMember) {
     // Fallback to single member fields
     const resolvedRole = validateRole(body.member_role);
     const memberBattleTag = body.member_battle_tag?.trim() || '';
-    if (!memberBattleTag) {
+    let resolvedBattleTag: string | null;
+    try {
+      resolvedBattleTag = resolveBattleTag(memberBattleTag);
+    } catch (err: unknown) {
       return res
         .status(400)
-        .json({ error: 'BattleTag required for the member.' });
+        .json({ error: (err as Error)?.message || 'Invalid BattleTag' });
     }
     if (memberUserId) {
-      try {
-        memberRecords.push({
-          user_id: memberUserId,
-          role: resolvedRole,
-          captain: Boolean(body.set_captain),
-          battle_tag: validateBattleTag(memberBattleTag),
-        });
-      } catch (err: unknown) {
-        return res
-          .status(400)
-          .json({ error: (err as Error)?.message || 'Invalid BattleTag' });
-      }
+      memberRecords.push({
+        user_id: memberUserId,
+        role: resolvedRole,
+        captain: Boolean(body.set_captain),
+        battle_tag: resolvedBattleTag,
+      });
     } else if (memberEmail) {
       try {
         const emailMap = await ensureUsersEmailMap();
@@ -205,7 +224,7 @@ export default async function handler(
           user_id: userId,
           role: resolvedRole,
           captain: Boolean(body.set_captain),
-          battle_tag: validateBattleTag(memberBattleTag),
+          battle_tag: resolvedBattleTag,
         });
       } catch (err: unknown) {
         const message =
@@ -217,25 +236,22 @@ export default async function handler(
   } else if (cleanedMembers.length > 0) {
     for (const m of cleanedMembers) {
       const resolvedRole = validateRole(m.role);
-      if (!m.battle_tag) {
+      let resolvedBattleTag: string | null;
+      try {
+        resolvedBattleTag = resolveBattleTag(m.battle_tag);
+      } catch (err: unknown) {
         return res
           .status(400)
-          .json({ error: 'BattleTag required for each member.' });
+          .json({ error: (err as Error)?.message || 'Invalid BattleTag' });
       }
 
       if (m.user_id) {
-        try {
-          memberRecords.push({
-            user_id: m.user_id,
-            role: resolvedRole,
-            captain: Boolean(m.set_captain),
-            battle_tag: validateBattleTag(m.battle_tag),
-          });
-        } catch (err: unknown) {
-          return res
-            .status(400)
-            .json({ error: (err as Error)?.message || 'Invalid BattleTag' });
-        }
+        memberRecords.push({
+          user_id: m.user_id,
+          role: resolvedRole,
+          captain: Boolean(m.set_captain),
+          battle_tag: resolvedBattleTag,
+        });
         continue;
       }
 
@@ -253,7 +269,7 @@ export default async function handler(
           user_id: userId,
           role: resolvedRole,
           captain: Boolean(m.set_captain),
-          battle_tag: validateBattleTag(m.battle_tag),
+          battle_tag: resolvedBattleTag,
         });
       } catch (err: unknown) {
         const message =

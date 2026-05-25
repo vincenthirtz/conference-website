@@ -148,13 +148,28 @@ export default function PublicCreateTeamPage() {
         }))
         .filter((m) => m.email.length > 0);
 
-      const missingBattle = preparedMembers.find(
-        (m) => !m.battle_tag || !battleTagRegex.test(m.battle_tag)
-      );
-      if (preparedMembers.length && missingBattle) {
-        throw new Error(
-          'BattleTag requis pour chaque membre (format Pseudo#0000).'
+      // Lot 6 : BattleTag obligatoire uniquement quand l'équipe est créée
+      // dans le cadre d'une inscription à un tournoi (tournamentIdParam set).
+      // Hors tournoi, le champ reste validé s'il est saisi mais peut être
+      // laissé vide — utile pour les équipes "scrim only".
+      if (tournamentIdParam) {
+        const missingBattle = preparedMembers.find(
+          (m) => !m.battle_tag || !battleTagRegex.test(m.battle_tag)
         );
+        if (preparedMembers.length && missingBattle) {
+          throw new Error(
+            'BattleTag requis pour chaque membre (format Pseudo#0000) lors d\'une inscription à un tournoi.'
+          );
+        }
+      } else {
+        const invalidBattle = preparedMembers.find(
+          (m) => m.battle_tag && !battleTagRegex.test(m.battle_tag)
+        );
+        if (invalidBattle) {
+          throw new Error(
+            'Format BattleTag invalide (attendu : Pseudo#0000). Laisse vide si tu préfères ne pas le renseigner.'
+          );
+        }
       }
 
       const payload = {
@@ -459,7 +474,7 @@ export default function PublicCreateTeamPage() {
 
                       <div>
                         <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-gray-300 mb-1">
-                          BattleTag *
+                          BattleTag{tournamentIdParam ? ' *' : ''}
                         </label>
                         <input
                           value={member.battleTag}
@@ -468,8 +483,16 @@ export default function PublicCreateTeamPage() {
                           }
                           className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/70 focus:border-emerald-400/70 transition"
                           placeholder="Pseudo#0000"
-                          required={member.email.trim().length > 0}
+                          required={
+                            !!tournamentIdParam &&
+                            member.email.trim().length > 0
+                          }
                         />
+                        {!tournamentIdParam && (
+                          <p className="mt-1 text-[10px] text-gray-500">
+                            Optionnel hors inscription tournoi.
+                          </p>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-2 justify-between">

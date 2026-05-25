@@ -218,7 +218,11 @@ describe('POST /api/teams/create-with-member', () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it('400 when single member has no battle_tag', async () => {
+  // Lot 6 : BattleTag est devenu optionnel hors inscription tournoi.
+  // L'ancien test attendait 400 quand le BattleTag manquait — c'est
+  // maintenant un cas valide (l'équipe peut être scrim-only).
+  it('200 single member without battle_tag when no tournament_id (Lot 6)', async () => {
+    setAuthListUsers([{ id: 'u1', email: 'p@example.com' }]);
     const res = makeRes();
     await createWithMemberHandler(
       makeReq({
@@ -230,10 +234,35 @@ describe('POST /api/teams/create-with-member', () => {
       }),
       res
     );
-    expect(res.statusCode).toBe(400);
+    expect(res.statusCode).toBe(201);
+    // member créé avec battle_tag=null
+    const tm = (store.team_members as any[]) ?? [];
+    expect(tm.length).toBe(1);
+    expect(tm[0].battle_tag).toBeNull();
   });
 
-  it('500 when member battle_tag has invalid format (caught in email-flow try)', async () => {
+  it('400 single member without battle_tag WHEN tournament_id is set (Lot 6)', async () => {
+    setAuthListUsers([{ id: 'u1', email: 'p@example.com' }]);
+    store.tournaments = [
+      { id: 'tour-1', name: 'Cup', status: 'published' },
+    ] as any;
+    const res = makeRes();
+    await createWithMemberHandler(
+      makeReq({
+        body: {
+          name: 'Alpha',
+          tournament_id: 'tour-1',
+          member_email: 'p@example.com',
+          member_role: 'player',
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect((res.body as any).error).toMatch(/BattleTag/);
+  });
+
+  it('400 when member battle_tag has invalid format (Lot 6: validation moved upstream)', async () => {
     setAuthListUsers([{ id: 'u1', email: 'p@example.com' }]);
     const res = makeRes();
     await createWithMemberHandler(
@@ -247,10 +276,16 @@ describe('POST /api/teams/create-with-member', () => {
       }),
       res
     );
-    expect(res.statusCode).toBe(500);
+    // Lot 6 : la validation regex se fait avant le branchement email/user_id
+    // donc l'erreur remonte en 400 (client error) au lieu d'un 500 qui
+    // n'avait jamais beaucoup de sens.
+    expect(res.statusCode).toBe(400);
+    expect((res.body as any).error).toMatch(/BattleTag/);
   });
 
-  it('400 when bulk member missing battle_tag', async () => {
+  // Lot 6 : idem en mode bulk — battle_tag optionnel sans tournament_id.
+  it('201 bulk member without battle_tag when no tournament_id (Lot 6)', async () => {
+    setAuthListUsers([{ id: 'u1', email: 'p1@example.com' }]);
     const res = makeRes();
     await createWithMemberHandler(
       makeReq({
@@ -261,7 +296,29 @@ describe('POST /api/teams/create-with-member', () => {
       }),
       res
     );
+    expect(res.statusCode).toBe(201);
+    const tm = (store.team_members as any[]) ?? [];
+    expect(tm[0].battle_tag).toBeNull();
+  });
+
+  it('400 bulk member missing battle_tag WHEN tournament_id is set (Lot 6)', async () => {
+    setAuthListUsers([{ id: 'u1', email: 'p1@example.com' }]);
+    store.tournaments = [
+      { id: 'tour-1', name: 'Cup', status: 'published' },
+    ] as any;
+    const res = makeRes();
+    await createWithMemberHandler(
+      makeReq({
+        body: {
+          name: 'Alpha',
+          tournament_id: 'tour-1',
+          members: [{ email: 'p1@example.com', role: 'player' }],
+        },
+      }),
+      res
+    );
     expect(res.statusCode).toBe(400);
+    expect((res.body as any).error).toMatch(/BattleTag/);
   });
 
   it('200 auto-registers team to a published tournament', async () => {

@@ -286,6 +286,11 @@ export const ADMIN_LINKS: AdminLink[] = [
         minRole: 'manager',
         children: [
           {
+            title: 'Onboarding queue (unifiée)',
+            ref: '/admin/onboarding-queue',
+            minRole: 'manager',
+          },
+          {
             title: 'Liste des tenants',
             ref: '/admin/tenants',
             minRole: 'manager',
