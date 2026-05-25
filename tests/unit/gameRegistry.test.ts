@@ -9,12 +9,13 @@ import {
 } from '../../config/games';
 
 const VALID_FORMATS: readonly MatchFormat[] = ['bo1', 'bo3', 'bo5', 'bo7'];
-const VETO_GAMES = ['overwatch', 'valorant', 'cs2'] as const;
+const VETO_GAMES = ['overwatch', 'valorant', 'cs2', 'r6-siege', 'marvel-rivals'] as const;
+const EXPECTED_GAME_COUNT = 6;
 
 describe('game registry', () => {
   describe('listGames()', () => {
-    it('returns 4 games', () => {
-      expect(listGames()).toHaveLength(4);
+    it(`returns ${EXPECTED_GAME_COUNT} games`, () => {
+      expect(listGames()).toHaveLength(EXPECTED_GAME_COUNT);
     });
 
     it('slugs are unique', () => {
@@ -28,14 +29,21 @@ describe('game registry', () => {
       }
     });
 
-    it('GAME_SLUGS itself has 4 unique entries', () => {
-      expect(GAME_SLUGS).toHaveLength(4);
+    it(`GAME_SLUGS itself has ${EXPECTED_GAME_COUNT} unique entries`, () => {
+      expect(GAME_SLUGS).toHaveLength(EXPECTED_GAME_COUNT);
       expect(new Set(GAME_SLUGS).size).toBe(GAME_SLUGS.length);
     });
   });
 
   describe('per-game invariants', () => {
-    for (const slug of ['overwatch', 'valorant', 'cs2', 'rocket-league'] as const) {
+    for (const slug of [
+      'overwatch',
+      'valorant',
+      'cs2',
+      'rocket-league',
+      'r6-siege',
+      'marvel-rivals',
+    ] as const) {
       describe(slug, () => {
         const game = getGame(slug) as GameDef;
 

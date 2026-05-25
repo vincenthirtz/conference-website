@@ -7,8 +7,16 @@ import { OVERWATCH } from './overwatch';
 import { VALORANT } from './valorant';
 import { CS2 } from './cs2';
 import { ROCKET_LEAGUE } from './rocket-league';
+import { R6_SIEGE } from './r6-siege';
+import { MARVEL_RIVALS } from './marvel-rivals';
 
-export type GameSlug = 'overwatch' | 'valorant' | 'cs2' | 'rocket-league';
+export type GameSlug =
+  | 'overwatch'
+  | 'valorant'
+  | 'cs2'
+  | 'rocket-league'
+  | 'r6-siege'
+  | 'marvel-rivals';
 
 export type MatchFormat = 'bo1' | 'bo3' | 'bo5' | 'bo7';
 
@@ -39,6 +47,8 @@ const GAMES: Record<GameSlug, GameDef> = {
   valorant: VALORANT,
   cs2: CS2,
   'rocket-league': ROCKET_LEAGUE,
+  'r6-siege': R6_SIEGE,
+  'marvel-rivals': MARVEL_RIVALS,
 };
 
 export const GAME_SLUGS: readonly GameSlug[] = Object.keys(GAMES) as GameSlug[];
