@@ -58,7 +58,7 @@ test.describe.serial('Match dispute workflow E2E', () => {
         name: `E2E Dispute ${TS}`,
         slug: `e2e-dispute-${TS}`,
         status: 'running',
-        game: 'Overwatch',
+        game: 'overwatch',
       })
       .select('id')
       .single();

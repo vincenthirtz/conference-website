@@ -61,7 +61,7 @@ test.describe.serial('Bot stages & matches', () => {
         name: `Bot SM Tour ${TS}`,
         slug: `bot-sm-tour-${TS}`,
         status: 'published',
-        game: 'Overwatch',
+        game: 'overwatch',
       })
       .select('id')
       .single();

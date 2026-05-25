@@ -659,12 +659,12 @@ describe('/api/admin/tournaments', () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it('POST 201 creates tournament + auto-adds map pool', async () => {
+  it('POST 201 creates tournament + auto-adds map pool when game has veto', async () => {
     store.tournaments = [];
     store.tournament_maps = [];
     const res = makeRes();
     await adminTournamentsHandler(
-      makeReq({ method: 'POST', body: { name: 'Brand New Cup' } }, true),
+      makeReq({ method: 'POST', body: { name: 'Brand New Cup', game: 'overwatch' } }, true),
       res
     );
     expect(res.statusCode).toBe(201);

@@ -76,7 +76,7 @@ test.describe.serial('Bot read endpoints — setup', () => {
         name: `Bot Read Tour ${TS}`,
         slug: `bot-read-tour-${TS}`,
         status: 'published',
-        game: 'Overwatch',
+        game: 'overwatch',
         start_date: startsIn3Days,
       })
       .select('id')

@@ -94,7 +94,7 @@ test.describe.serial('Bot reminders — match_checkin fonctionnel', () => {
         name: `E2E Bot ${TS}`,
         slug: `e2e-bot-${TS}`,
         status: 'running',
-        game: 'Overwatch',
+        game: 'overwatch',
       })
       .select('id')
       .single();
@@ -270,7 +270,7 @@ test.describe.serial('Bot reminders — tournament_j1 fonctionnel', () => {
         name: `E2E J1 ${J1_TS}`,
         slug: `e2e-j1-${J1_TS}`,
         status: 'upcoming',
-        game: 'Overwatch',
+        game: 'overwatch',
         start_date: startAt,
       })
       .select('id')
@@ -433,7 +433,7 @@ test.describe.serial('Bot reminders — cast_briefing fonctionnel', () => {
         name: `E2E Cast ${CAST_TS}`,
         slug: `e2e-cast-${CAST_TS}`,
         status: 'running',
-        game: 'Overwatch',
+        game: 'overwatch',
       })
       .select('id')
       .single();

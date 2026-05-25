@@ -60,7 +60,7 @@ test.describe.serial('P4 — setup', () => {
         name: `P4 Tour ${TS}`,
         slug: `p4-tour-${TS}`,
         status: 'published',
-        game: 'Overwatch',
+        game: 'overwatch',
       })
       .select('id')
       .single();

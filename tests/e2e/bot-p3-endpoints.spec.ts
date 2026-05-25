@@ -63,7 +63,7 @@ test.describe.serial('Bot P3 — setup', () => {
         name: `P3 Tour ${TS}`,
         slug: `p3-tour-${TS}`,
         status: 'published',
-        game: 'Overwatch',
+        game: 'overwatch',
       })
       .select('id')
       .single();

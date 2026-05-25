@@ -85,7 +85,7 @@ test.describe.serial('Bot match discord writeback — validation & writes', () =
         name: `Bot Match Discord Tour ${TS}`,
         slug: `bot-match-discord-tour-${TS}`,
         status: 'published',
-        game: 'Overwatch',
+        game: 'overwatch',
       })
       .select('id')
       .single();

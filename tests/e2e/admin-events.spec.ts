@@ -118,7 +118,7 @@ test.describe.serial('Admin Director — golden path', () => {
         name: `E2E Director Tour ${TS}`,
         slug: `e2e-director-tour-${TS}`,
         status: 'running',
-        game: 'Overwatch',
+        game: 'overwatch',
       })
       .select('id')
       .single();

@@ -69,7 +69,7 @@ test.describe.serial('Bot tournaments — GET (list)', () => {
         name: `Bot Tour Pub ${TS}`,
         slug: `bot-tour-pub-${TS}`,
         status: 'published',
-        game: 'Overwatch',
+        game: 'overwatch',
       })
       .select('id')
       .single();
@@ -82,7 +82,7 @@ test.describe.serial('Bot tournaments — GET (list)', () => {
         name: `Bot Tour Draft ${TS}`,
         slug: `bot-tour-draft-${TS}`,
         status: 'draft',
-        game: 'Overwatch',
+        game: 'overwatch',
       })
       .select('id')
       .single();
@@ -227,7 +227,7 @@ test.describe.serial('Bot tournaments — POST (create)', () => {
       data: {
         actorDiscordUserId: ADMIN_DISCORD,
         name,
-        game: 'Overwatch',
+        game: 'overwatch',
         status: 'upcoming',
         max_teams: 16,
       },

@@ -24,7 +24,7 @@ test.describe('Stage completion & swiss rounds (direct supabase)', () => {
         name: TOURNAMENT_NAME,
         slug,
         status: 'running',
-        game: 'Overwatch',
+        game: 'overwatch',
       })
       .select('id')
       .maybeSingle();

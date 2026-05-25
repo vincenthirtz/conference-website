@@ -40,7 +40,7 @@ test.describe.serial('Check-in flow E2E', () => {
         name: `E2E Checkin ${TS}`,
         slug: `e2e-checkin-${TS}`,
         status: 'running',
-        game: 'Overwatch',
+        game: 'overwatch',
       })
       .select('id')
       .single();

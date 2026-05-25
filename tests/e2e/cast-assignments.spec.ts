@@ -85,7 +85,7 @@ test.describe.serial('Admin cast assignments API', () => {
         name: `E2E Cast Assign ${TS}`,
         slug: `e2e-cast-assign-${TS}`,
         status: 'running',
-        game: 'Overwatch',
+        game: 'overwatch',
       })
       .select('id')
       .single();

@@ -55,7 +55,7 @@ test.describe.serial('Teams import E2E (CSV + platform)', () => {
         name: `E2E Import ${TS}`,
         slug: `e2e-import-${TS}`,
         status: 'draft',
-        game: 'Overwatch',
+        game: 'overwatch',
       })
       .select('id')
       .single();

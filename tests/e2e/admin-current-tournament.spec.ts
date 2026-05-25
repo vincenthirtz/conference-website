@@ -52,7 +52,7 @@ test.describe.serial('Admin "Tournoi en cours" E2E', () => {
         name: `E2E Current ${TS}`,
         slug: `e2e-current-${TS}`,
         status: 'running',
-        game: 'Overwatch',
+        game: 'overwatch',
         format: 'bo3',
       })
       .select('id')

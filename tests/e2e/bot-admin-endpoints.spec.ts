@@ -72,7 +72,7 @@ test.describe.serial('Bot admin endpoints — setup', () => {
         name: `Bot Admin Tour ${TS}`,
         slug: `bot-admin-tour-${TS}`,
         status: 'draft',
-        game: 'Overwatch',
+        game: 'overwatch',
       })
       .select('id')
       .single();

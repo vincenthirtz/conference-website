@@ -49,7 +49,7 @@ test.describe.serial('Bot AC extra — setup', () => {
         name: `AC Extra Tour ${TS}`,
         slug: `ac-extra-tour-${TS}`,
         status: 'published',
-        game: 'Overwatch',
+        game: 'overwatch',
       })
       .select('id')
       .single();

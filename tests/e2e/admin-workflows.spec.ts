@@ -104,7 +104,7 @@ test.describe.serial('Admin workflows E2E (API)', () => {
         headers: { Authorization: `Bearer ${staffToken}` },
         data: {
           name,
-          game: 'Overwatch',
+          game: 'overwatch',
           status: 'draft',
         },
       });
@@ -140,7 +140,7 @@ test.describe.serial('Admin workflows E2E (API)', () => {
       const name = `E2E Tournoi ${TS}`;
       const res = await request.post('/api/admin/tournaments', {
         headers: { Authorization: `Bearer ${staffToken}` },
-        data: { name, game: 'Overwatch' },
+        data: { name, game: 'overwatch' },
       });
 
       expect(res.status()).toBe(409);
@@ -209,7 +209,7 @@ test.describe.serial('Admin workflows E2E (API)', () => {
           name: `E2E Scores ${TS}`,
           slug: `e2e-scores-${TS}`,
           status: 'running',
-          game: 'Overwatch',
+          game: 'overwatch',
         })
         .select('id')
         .maybeSingle();
@@ -362,7 +362,7 @@ test.describe.serial('Admin workflows E2E (API)', () => {
           name: `E2E Bracket ${TS}`,
           slug: `e2e-bracket-${TS}`,
           status: 'running',
-          game: 'Overwatch',
+          game: 'overwatch',
         })
         .select('id')
         .maybeSingle();

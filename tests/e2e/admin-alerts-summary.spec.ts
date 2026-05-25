@@ -54,7 +54,7 @@ test.describe.serial('Admin alerts summary E2E', () => {
         name: `E2E Alerts ${TS}`,
         slug: `e2e-alerts-${TS}`,
         status: 'running',
-        game: 'Overwatch',
+        game: 'overwatch',
       })
       .select('id')
       .single();

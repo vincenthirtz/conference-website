@@ -68,7 +68,7 @@ test.describe.serial('Bot autocomplete + dispute — setup', () => {
         name: `AC Tour Zorglub ${TS}`,
         slug: `ac-tour-zorglub-${TS}`,
         status: 'published',
-        game: 'Overwatch',
+        game: 'overwatch',
       })
       .select('id')
       .single();

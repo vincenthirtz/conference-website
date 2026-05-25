@@ -65,7 +65,7 @@ test.describe.serial('Quick wins — setup', () => {
         name: `QW Tour ${TS}`,
         slug: `qw-tour-${TS}`,
         status: 'published',
-        game: 'Overwatch',
+        game: 'overwatch',
       })
       .select('id')
       .single();

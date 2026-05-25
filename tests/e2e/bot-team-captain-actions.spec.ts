@@ -134,7 +134,7 @@ test.describe.serial('Bot captain actions — setup & shared fixtures', () => {
         name: `Bot Cap Tour ${TS}`,
         slug: `bot-cap-tour-${TS}`,
         status: 'published',
-        game: 'Overwatch',
+        game: 'overwatch',
       })
       .select('id')
       .single();

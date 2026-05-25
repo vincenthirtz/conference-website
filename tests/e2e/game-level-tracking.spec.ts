@@ -27,7 +27,7 @@ test.describe('Game-level tracking & map stats', () => {
         name: TOURNAMENT_NAME,
         slug,
         status: 'running',
-        game: 'Overwatch',
+        game: 'overwatch',
       })
       .select('id')
       .maybeSingle();

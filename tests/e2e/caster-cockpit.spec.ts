@@ -113,7 +113,7 @@ test.describe.serial('Caster cockpit — golden path', () => {
         name: `E2E Cockpit Tour ${TS}`,
         slug: `e2e-cockpit-tour-${TS}`,
         status: 'running',
-        game: 'Overwatch',
+        game: 'overwatch',
       })
       .select('id')
       .single();

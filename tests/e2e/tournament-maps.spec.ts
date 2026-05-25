@@ -19,7 +19,7 @@ test.describe('Tournament map pool CRUD (direct supabase)', () => {
         name: TOURNAMENT_NAME,
         slug,
         status: 'draft',
-        game: 'Overwatch',
+        game: 'overwatch',
       })
       .select('id')
       .maybeSingle();

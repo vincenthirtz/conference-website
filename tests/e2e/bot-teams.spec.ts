@@ -182,7 +182,7 @@ test.describe.serial('Bot tournament registration', () => {
         name: `Bot Reg Tour ${TS}`,
         slug: `bot-reg-tour-${TS}`,
         status: 'published',
-        game: 'Overwatch',
+        game: 'overwatch',
       })
       .select('id')
       .single();
@@ -207,7 +207,7 @@ test.describe.serial('Bot tournament registration', () => {
         name: `Bot Reg Draft ${TS}`,
         slug: `bot-reg-draft-${TS}`,
         status: 'draft',
-        game: 'Overwatch',
+        game: 'overwatch',
       })
       .select('id')
       .single();

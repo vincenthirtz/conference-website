@@ -21,7 +21,7 @@ test.describe('Public tournament page → team link', () => {
         name: TOURNAMENT_NAME,
         slug: TOURNAMENT_SLUG,
         status: 'running',
-        game: 'Overwatch',
+        game: 'overwatch',
         visibility: 'public',
       })
       .select('id')

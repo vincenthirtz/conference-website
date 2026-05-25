@@ -64,7 +64,7 @@ test.describe.serial('Cast dashboard E2E', () => {
         name: `E2E Cast ${TS}`,
         slug: `e2e-cast-${TS}`,
         status: 'running',
-        game: 'Overwatch',
+        game: 'overwatch',
       })
       .select('id')
       .single();
