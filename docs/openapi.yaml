@@ -1719,6 +1719,131 @@ components:
           type: string
           enum:
             - in_flight
+    CronSyncGameHeroesResult:
+      type: object
+      description: |
+        Summary returned by `syncAllGameHeroes()`. `success=false` indicates
+        at least one upstream sync failed (HTTP status will be 207 in that
+        case so the heartbeat write still happens).
+      required:
+        - success
+        - startedAt
+        - finishedAt
+        - durationMs
+        - games
+      properties:
+        success:
+          type: boolean
+        startedAt:
+          type: string
+          format: date-time
+        finishedAt:
+          type: string
+          format: date-time
+        durationMs:
+          type: integer
+          minimum: 0
+        games:
+          type: array
+          items:
+            type: object
+            required:
+              - game
+              - ok
+              - fetched
+              - upserted
+            properties:
+              game:
+                type: string
+                enum:
+                  - lol
+                  - dota2
+              ok:
+                type: boolean
+              fetched:
+                type: integer
+                minimum: 0
+                description: Number of rows received from the upstream API.
+              upserted:
+                type: integer
+                minimum: 0
+                description: Number of rows written to `game_heroes`.
+              error:
+                type: string
+                description: Only present when `ok=false`.
+    GameHero:
+      type: object
+      description: |
+        A champion (LoL) or hero (Dota 2) row from `public.game_heroes`,
+        exposed in camelCase. `attribute` is Dota-only
+        (`strength|agility|intelligence|universal`), `title` is LoL-only.
+      required:
+        - id
+        - game
+        - externalId
+        - key
+        - name
+        - roles
+        - imageUrl
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        game:
+          type: string
+          enum:
+            - lol
+            - dota2
+        externalId:
+          type: string
+          description: Riot champion key (numeric) for LoL, OpenDota hero id for Dota 2.
+        key:
+          type: string
+          description: Technical slug ("Aatrox", "antimage").
+        name:
+          type: string
+        title:
+          type: string
+          nullable: true
+        roles:
+          type: array
+          items:
+            type: string
+        attribute:
+          type: string
+          nullable: true
+          enum:
+            - strength
+            - agility
+            - intelligence
+            - universal
+            - null
+        imageUrl:
+          type: string
+          format: uri
+          description: Splash art URL on the upstream CDN.
+        iconUrl:
+          type: string
+          format: uri
+          nullable: true
+    GameHeroesResponse:
+      type: object
+      required:
+        - game
+        - total
+        - heroes
+      properties:
+        game:
+          type: string
+          enum:
+            - lol
+            - dota2
+        total:
+          type: integer
+          minimum: 0
+        heroes:
+          type: array
+          items:
+            $ref: "#/components/schemas/GameHero"
     PublicAnnouncement:
       type: object
       required:
@@ -13262,6 +13387,119 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /api/cron/sync-game-heroes:
+    get:
+      tags:
+        - cron
+      summary: Sync the global LoL/Dota 2 hero pool from Data Dragon + OpenDota.
+      operationId: cronSyncGameHeroesGet
+      description: |
+        Schedule: once per day at 04:00 UTC (`0 4 * * *`) via Netlify
+        scheduled function `sync-game-heroes-cron`. Fetches the current
+        Riot Data Dragon champion list (LoL) and the OpenDota hero list
+        (Dota 2), then upserts each row into `public.game_heroes` keyed by
+        `(game, external_id)`. Global pool — no tenant scoping.
+
+        Returns `200` on full success, `207` when one upstream sync
+        failed and the other succeeded (partial success).
+
+        Heartbeat: upserts `site_settings.last_cron_sync_game_heroes_at`
+        with the run's finishedAt ISO timestamp.
+
+        Auth: `Authorization: Bearer <CRON_SECRET>` header OR
+        `?secret=<CRON_SECRET>` query string. Both GET and POST accepted.
+      security:
+        - CronSecret: []
+      responses:
+        "200":
+          description: Sync summary — both LoL and Dota 2 succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CronSyncGameHeroesResult"
+        "207":
+          description: Partial success — at least one upstream sync failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CronSyncGameHeroesResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
+    post:
+      tags:
+        - cron
+      summary: Sync the global LoL/Dota 2 hero pool from Data Dragon + OpenDota.
+      operationId: cronSyncGameHeroesPost
+      description: |
+        Same as `GET /api/cron/sync-game-heroes`.
+      security:
+        - CronSecret: []
+      responses:
+        "200":
+          description: Sync summary — both LoL and Dota 2 succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CronSyncGameHeroesResult"
+        "207":
+          description: Partial success — at least one upstream sync failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CronSyncGameHeroesResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /api/games/{slug}/heroes:
+    get:
+      tags:
+        - public/misc
+      summary: List champions/heroes for a MOBA game (LoL, Dota 2).
+      operationId: getGameHeroes
+      security: []
+      description: |
+        Public read of the global `game_heroes` pool synced daily by
+        `/api/cron/sync-game-heroes`. Currently only `lol` and `dota2` have
+        a hero pool — any other valid `GameSlug` returns 404.
+
+        Cache: `public, s-maxage=3600, stale-while-revalidate=600`.
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - lol
+              - dota2
+        - name: includeDisabled
+          in: query
+          required: false
+          description: |
+            When `"1"` or `"true"`, includes soft-disabled heroes. Default
+            behaviour returns enabled-only.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Hero pool for the requested game, sorted by name.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GameHeroesResponse"
+        "404":
+          description: Unknown game slug or game has no hero pool.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerError"
   /api/announcements:
     get:
       tags:

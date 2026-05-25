@@ -52,6 +52,14 @@
 [functions."dispute-sla-cron"]
   schedule = "*/5 * * * *"
 
+# Scheduled function: refresh the global LoL/Dota 2 hero pool (Lot 1 — MOBA
+# draft system). Hits Riot Data Dragon + OpenDota once per day and upserts
+# into public.game_heroes. Off-peak UTC slot so upstream APIs are quiet and
+# we don't fight the European prime time. Heartbeat in site_settings under
+# `last_cron_sync_game_heroes_at`.
+[functions."sync-game-heroes-cron"]
+  schedule = "0 4 * * *"
+
 [[headers]]
   for = "/*"
   [headers.values]
