@@ -151,21 +151,21 @@ CHECK constraint). The list below documents the names emitted by the website
 today. The bot must tolerate unknown names (treat them as no-ops) so the
 catalog can grow without forcing a bot deploy.
 
-| Event name                      | Emitted by                                                                         | Payload `data` shape (high-level)                                                                                             |
-| ------------------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `match.starting`                | `pages/api/admin/matches/[matchId].ts` (status → ongoing)                          | `{ matchId, tournamentId?, scrimId?, team1Id, team2Id, scheduledAt, ..., enriched }`                                          |
-| `match.scheduled`               | Admin match meta update (`scheduled_at` set)                                       | `{ matchId, scheduledAt, ..., enriched }`                                                                                     |
-| `match.unscheduled`             | Admin match meta update (`scheduled_at` cleared)                                   | `{ matchId }`                                                                                                                 |
-| `match.finished`                | Score apply / admin                                                                | `{ matchId, team1Score, team2Score, winnerTeamId }`                                                                           |
-| `match.disputed`                | Admin `POST .../dispute`                                                           | `{ matchId, reason, openedBy }`                                                                                               |
-| `match.dispute.resolved`        | Admin `POST .../resolve-dispute`                                                   | `{ matchId, resolution, resolvedBy }`                                                                                         |
-| `dispute.sla_breached` (Lot 4)  | Cron `/api/cron/dispute-sla-check`                                                 | `{ matchId, tournamentId, disputeReason, disputeOpenedAt, ageMinutes, slaMinutes }`                                           |
-| `checkin.nudge` (Lot 5)         | Admin `POST /api/admin/matches/[matchId]/checkin-nudge`                            | `{ matchId, tournamentId, teamSide: 1 \| 2, scheduledAt, nudgedByStaffId, enriched }`                                          |
-| `tournament.finalized` (Lot 1)  | Admin `POST /api/admin/tournament/[id]/finalize`                                   | `{ tournament_id, tournament_name, rankings: [{ team_id, team_name, rank, prize }, ...] }`                                    |
-| `broadcast.state_changed` (Lot 7) | Admin `POST /api/admin/broadcast/state`                                          | `{ runId, runSlug, state: { v: 1, on_air, lower_third, pip }, currentSegmentId, matchId }`                                    |
-| `news.published`                | Admin / bot ingest                                                                 | `{ newsId, slug, title, tag, excerpt, imageUrl, publishedAt }`                                                                |
-| `team.*` / `scrim.*` / `cast.*` | various admin / bot routes                                                         | see emitter call sites                                                                                                        |
-| `event_segment.transitioned`    | Admin `/api/admin/events/.../segments/.../{start,skip,end}.ts` (Lot 2 run-of-show) | `{ runId, segmentId, fromStatus, toStatus, tenantId, broadcastMessage, segment: { ord, type, title, durationMin, matchId } }` |
+| Event name                        | Emitted by                                                                         | Payload `data` shape (high-level)                                                                                             |
+| --------------------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `match.starting`                  | `pages/api/admin/matches/[matchId].ts` (status → ongoing)                          | `{ matchId, tournamentId?, scrimId?, team1Id, team2Id, scheduledAt, ..., enriched }`                                          |
+| `match.scheduled`                 | Admin match meta update (`scheduled_at` set)                                       | `{ matchId, scheduledAt, ..., enriched }`                                                                                     |
+| `match.unscheduled`               | Admin match meta update (`scheduled_at` cleared)                                   | `{ matchId }`                                                                                                                 |
+| `match.finished`                  | Score apply / admin                                                                | `{ matchId, team1Score, team2Score, winnerTeamId }`                                                                           |
+| `match.disputed`                  | Admin `POST .../dispute`                                                           | `{ matchId, reason, openedBy }`                                                                                               |
+| `match.dispute.resolved`          | Admin `POST .../resolve-dispute`                                                   | `{ matchId, resolution, resolvedBy }`                                                                                         |
+| `dispute.sla_breached` (Lot 4)    | Cron `/api/cron/dispute-sla-check`                                                 | `{ matchId, tournamentId, disputeReason, disputeOpenedAt, ageMinutes, slaMinutes }`                                           |
+| `checkin.nudge` (Lot 5)           | Admin `POST /api/admin/matches/[matchId]/checkin-nudge`                            | `{ matchId, tournamentId, teamSide: 1 \| 2, scheduledAt, nudgedByStaffId, enriched }`                                         |
+| `tournament.finalized` (Lot 1)    | Admin `POST /api/admin/tournament/[id]/finalize`                                   | `{ tournament_id, tournament_name, rankings: [{ team_id, team_name, rank, prize }, ...] }`                                    |
+| `broadcast.state_changed` (Lot 7) | Admin `POST /api/admin/broadcast/state`                                            | `{ runId, runSlug, state: { v: 1, on_air, lower_third, pip }, currentSegmentId, matchId }`                                    |
+| `news.published`                  | Admin / bot ingest                                                                 | `{ newsId, slug, title, tag, excerpt, imageUrl, publishedAt }`                                                                |
+| `team.*` / `scrim.*` / `cast.*`   | various admin / bot routes                                                         | see emitter call sites                                                                                                        |
+| `event_segment.transitioned`      | Admin `/api/admin/events/.../segments/.../{start,skip,end}.ts` (Lot 2 run-of-show) | `{ runId, segmentId, fromStatus, toStatus, tenantId, broadcastMessage, segment: { ord, type, title, durationMin, matchId } }` |
 
 #### `event_segment.transitioned` (Lot 2 run-of-show)
 
@@ -424,13 +424,74 @@ body shapes live there. `Idem.` means the route honours `Idempotency-Key`.
 
 ### Announcements & moderation
 
-| Route                                                                                | Methods | Idem. | Rate-key                     |
-| ------------------------------------------------------------------------------------ | ------- | ----- | ---------------------------- |
-| [`announcements.ts`](../pages/api/bot/v1/announcements.ts)                           | POST    | yes   | `bot-announcements`          |
-| [`broadcast/on-air.ts`](../pages/api/bot/v1/broadcast/on-air.ts) (Lot 7)             | GET     | —     | `bot-broadcast-on-air`       |
-| [`disputes.ts`](../pages/api/bot/v1/disputes.ts)                                     | GET     | —     | `bot-disputes`               |
-| [`disputes/escalations.ts`](../pages/api/bot/v1/disputes/escalations.ts) (Lot 4)     | GET     | —     | `bot-disputes-escalations`   |
-| [`staff-logs.ts`](../pages/api/bot/v1/staff-logs.ts)                                 | GET     | —     | `bot-staff-logs`             |
+| Route                                                                            | Methods | Idem. | Rate-key                   |
+| -------------------------------------------------------------------------------- | ------- | ----- | -------------------------- |
+| [`announcements.ts`](../pages/api/bot/v1/announcements.ts)                       | POST    | yes   | `bot-announcements`        |
+| [`broadcast/on-air.ts`](../pages/api/bot/v1/broadcast/on-air.ts) (Lot 7)         | GET     | —     | `bot-broadcast-on-air`     |
+| [`disputes.ts`](../pages/api/bot/v1/disputes.ts)                                 | GET     | —     | `bot-disputes`             |
+| [`disputes/escalations.ts`](../pages/api/bot/v1/disputes/escalations.ts) (Lot 4) | GET     | —     | `bot-disputes-escalations` |
+| [`staff-logs.ts`](../pages/api/bot/v1/staff-logs.ts)                             | GET     | —     | `bot-staff-logs`           |
+
+#### `GET /api/bot/v1/disputes/escalations`
+
+Liste enrichie des disputes en cours pour le board staff (slash
+`/disputes-board`). Quand `?breached=true`, ne retient que les rows
+`classification === 'breached'` ET `escalation_pinged_at IS NULL` — la même
+sélection que le cron `dispute.sla_breached`, utile pour un re-ping manuel.
+
+**Auth** : `x-api-key` + tenant via per-tenant key ou `x-tenant-id`.
+
+**Query**
+
+- `tournament` _(optionnel)_ — UUID, filtre par tournoi.
+- `limit` _(optionnel, int, 1..50, defaut 30)_ — taille du board.
+- `breached` _(optionnel)_ — `'true'` pour ne garder que les breaches non
+  pingés.
+
+**Response 200**
+
+```json
+{
+  "escalations": [
+    {
+      "matchId": "uuid",
+      "tournament": {
+        "id": "uuid",
+        "name": "Spring Cup 2026",
+        "slug": "spring-cup-2026"
+      },
+      "team1": { "id": "uuid", "name": "Chaos Theory" },
+      "team2": { "id": "uuid", "name": "Phoenix Rising" },
+      "disputeReason": "Conteste le score 2-1 en finale",
+      "disputeOpenedAt": "2026-05-25T17:40:00.000Z",
+      "escalationPingedAt": null,
+      "disputeThreadId": "1300000000000000001",
+      "slaDueAt": "2026-05-25T18:40:00.000Z",
+      "ageMinutes": 62,
+      "slaMinutes": 60,
+      "classification": "breached"
+    }
+  ],
+  "count": 1,
+  "total": 1
+}
+```
+
+**Field shapes**
+
+- `disputeThreadId` : `string | null` — snowflake du thread forum Discord
+  créé sur `match.disputed` (colonne `matches.discord_dispute_thread_id`).
+  Permet au bot de construire un lien profond
+  `discord.com/channels/<guildId>/<disputeThreadId>` sans round-trip.
+  `null` quand le thread n'a jamais été créé (ex: dispute pré-Lot 4 ou
+  forum non configuré).
+- `slaDueAt` : `string | null` — ISO 8601 UTC, échéance SLA calculée
+  côté site (`disputeOpenedAt + slaMinutes`). Source unique pour éviter
+  toute dérive client/serveur. `null` quand `disputeOpenedAt` est absent
+  ou non parsable (cas dégénéré).
+
+**Errors** : `400` (tournament invalide), `401`, `500`.
+**Rate limit** : 30/min global. **Idempotency** : non (GET).
 
 ### Autocomplete (Discord choice-pickers)
 
@@ -1247,12 +1308,14 @@ sa ligne ici **et** dans la fixture.
 | `/bracket`                                                                                                       | public  | `GET /api/bot/v1/tournaments/:tournamentId/bracket`                                                                                   |
 | `/next-round`                                                                                                    | admin   | `POST /api/bot/v1/stages/:stageId/next-round`                                                                                         |
 | `/disputes`                                                                                                      | admin   | `GET /api/bot/v1/disputes`                                                                                                            |
+| `/disputes-board`                                                                                                | admin   | `GET /api/bot/v1/disputes/escalations?breached=true`                                                                                  |
 | `/resoudre-dispute`                                                                                              | admin   | `POST /api/bot/v1/matches/:matchId/resolve-dispute`                                                                                   |
 | `/forfait`                                                                                                       | admin   | `POST /api/bot/v1/matches/:matchId/forfeit`                                                                                           |
 | `/reset-match`                                                                                                   | admin   | `POST /api/bot/v1/matches/:matchId/reset`                                                                                             |
 | `/signalement`                                                                                                   | public  | _(pas d'endpoint — Discord-only, post staff channel)_                                                                                 |
 | `/finaliser-phase`                                                                                               | admin   | `POST /api/bot/v1/stages/:stageId/finalize`                                                                                           |
-| `auto-byes` _(pas de slash, appel direct)_                                                                       | admin   | `POST /api/bot/v1/stages/:stageId/auto-byes`                                                                                          |
+| `/auto-byes`                                                                                                     | admin   | `POST /api/bot/v1/stages/:stageId/auto-byes`                                                                                          |
+| `/transferer-capitaine`                                                                                          | captain | `POST /api/bot/v1/teams/:teamId/transfer-captain`                                                                                     |
 | `/classement`                                                                                                    | public  | `GET /api/bot/v1/leaderboards/teams`                                                                                                  |
 | `/sync-roles` / `/rs`                                                                                            | admin   | `GET /api/bot/v1/role-sync/snapshot`                                                                                                  |
 | `/annoncer`                                                                                                      | admin   | `POST /api/bot/v1/announcements`                                                                                                      |
