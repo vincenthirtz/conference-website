@@ -5509,24 +5509,22 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
   /api/bot/v1/autocomplete/cast-members:
-    post:
+    get:
       tags:
         - bot/autocomplete
       summary: Autocomplete des cast members par substring sur le nom.
       operationId: botAutocompleteCastMembers
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                q:
-                  type: string
-                limit:
-                  type: integer
-                  minimum: 1
-                  maximum: 25
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 25
       responses:
         "200":
           description: Resultats autocomplete.
@@ -6598,16 +6596,16 @@ paths:
         schema:
           type: string
           format: uuid
-    get:
-      summary: Inspect the next/current wave of a campaign.
-      operationId: adminGetBroadcastWave
+    post:
+      summary: Trigger processing of one broadcast wave for a campaign.
+      operationId: adminProcessBroadcastWave
       tags:
         - admin/broadcast
       security:
         - StaffSession: []
       responses:
         "200":
-          description: Wave details.
+          description: Wave processed.
           content:
             application/json:
               schema:
@@ -6779,6 +6777,50 @@ paths:
               schema:
                 type: object
                 additionalProperties: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    patch:
+      summary: Update / moderate an existing comment.
+      operationId: adminUpdateComment
+      tags:
+        - admin/content
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    delete:
+      summary: Delete a comment.
+      operationId: adminDeleteComment
+      tags:
+        - admin/content
+      security:
+        - StaffSession: []
+      responses:
+        "200":
+          description: Deleted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ok"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -7530,7 +7572,7 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
   /api/admin/helloasso/sync:
-    get:
+    post:
       summary: Force a HelloAsso sync (returns pending diff before applying).
       operationId: adminTriggerHelloAssoSync
       tags:
@@ -7550,13 +7592,12 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
   /api/admin/logout:
-    get:
+    post:
       summary: Clear the staff session cookie.
       operationId: adminLogout
       tags:
         - admin/misc
-      security:
-        - StaffSession: []
+      security: []
       responses:
         "200":
           description: Logged out.
@@ -7564,8 +7605,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Ok"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
   /api/admin/logs:
     get:
       summary: Read staff_logs (audit trail).
@@ -7607,12 +7646,12 @@ paths:
           $ref: "#/components/responses/Forbidden"
   /api/admin/me:
     patch:
-      summary: Patch the current staff user's profile.
+      summary: Patch the current user's profile (uses player bearer auth).
       operationId: adminPatchMe
       tags:
         - admin/users
       security:
-        - StaffSession: []
+        - PlayerBearer: []
       requestBody:
         required: true
         content:
@@ -8189,6 +8228,31 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+    patch:
+      summary: Update veto state (admin override).
+      operationId: adminPatchMatchVeto
+      tags:
+        - admin/matches
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Updated veto state.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VetoState"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
     delete:
       summary: Reset the veto for a match.
       operationId: adminDeleteMatchVeto
@@ -8358,18 +8422,6 @@ paths:
               schema:
                 type: object
                 additionalProperties: true
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-    delete:
-      summary: Reset push prefs to defaults.
-      operationId: adminDeleteNotificationPrefs
-      tags:
-        - admin/misc
-      security:
-        - StaffSession: []
-      responses:
-        "204":
-          description: Reset.
         "401":
           $ref: "#/components/responses/Unauthorized"
   /api/admin/notifications/subscribe:
@@ -8631,24 +8683,17 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
   /api/admin/pending-guild-links:
-    post:
-      summary: Create a pending guild link (claim ticket for a Discord guild).
+    get:
+      summary: List pending guild links (claim tickets for Discord guilds).
       description: Requires `owner` role.
-      operationId: adminCreatePendingGuildLink
+      operationId: adminListPendingGuildLinks
       tags:
         - admin/tenants
       security:
         - StaffSession: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
       responses:
-        "201":
-          description: Pending link created.
+        "200":
+          description: Pending links.
           content:
             application/json:
               schema:
@@ -8689,17 +8734,29 @@ paths:
         schema:
           type: string
           pattern: ^[0-9]{17,20}$
-    delete:
-      summary: Cancel an in-progress claim for a pending guild link.
+    post:
+      summary: Claim ownership of a pending guild link.
       description: Requires `owner` role.
-      operationId: adminCancelPendingGuildLinkClaim
+      operationId: adminClaimPendingGuildLink
       tags:
         - admin/tenants
       security:
         - StaffSession: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
       responses:
-        "204":
-          description: Cancelled.
+        "200":
+          description: Claim accepted.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -8962,22 +9019,28 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
   /api/admin/scrims/forward:
-    get:
-      summary: Resolve and redirect to the canonical scrim URL.
+    post:
+      summary: Forward a scrim request to one or more captains.
       operationId: adminForwardScrim
       tags:
         - admin/scrims
       security:
         - StaffSession: []
-      parameters:
-        - in: query
-          name: scrimId
-          schema:
-            type: string
-            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
       responses:
-        "302":
-          description: Redirect to canonical scrim URL.
+        "200":
+          description: Forwarded.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -9008,6 +9071,31 @@ paths:
     patch:
       summary: Patch scrim fields.
       operationId: adminPatchScrim
+      tags:
+        - admin/scrims
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Scrim"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    put:
+      summary: Replace scrim fields (full update).
+      operationId: adminPutScrim
       tags:
         - admin/scrims
       security:
@@ -9683,6 +9771,32 @@ paths:
   /api/admin/stages/{stageId}/bulk-matches:
     parameters:
       - $ref: "#/components/parameters/StageId"
+    post:
+      summary: Bulk-create matches in a stage.
+      operationId: adminStageBulkMatchesPost
+      tags:
+        - admin/stages
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Created.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
     patch:
       summary: Bulk-patch matches of a stage.
       operationId: adminStageBulkMatchesPatch
@@ -10451,21 +10565,23 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
   /api/admin/teams/add-member:
-    get:
-      summary: Search candidates eligible to be added as team member.
-      operationId: adminSearchTeamMemberCandidates
+    post:
+      summary: Add a member to a team (admin action).
+      operationId: adminAddTeamMember
       tags:
         - admin/teams
       security:
         - StaffSession: []
-      parameters:
-        - in: query
-          name: q
-          schema:
-            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
       responses:
         "200":
-          description: Candidates.
+          description: Member added.
           content:
             application/json:
               schema:
@@ -10571,12 +10687,12 @@ paths:
           $ref: "#/components/responses/Forbidden"
   /api/admin/teams/my:
     get:
-      summary: Read the team(s) that the current staff captains/operates.
+      summary: Read the team(s) that the current user captains/operates.
       operationId: adminGetMyTeams
       tags:
         - admin/teams
       security:
-        - StaffSession: []
+        - PlayerBearer: []
       responses:
         "200":
           description: Teams.
@@ -10588,12 +10704,12 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
     patch:
-      summary: Patch the team(s) the current staff captains/operates.
+      summary: Patch the team(s) the current user captains/operates.
       operationId: adminPatchMyTeams
       tags:
         - admin/teams
       security:
-        - StaffSession: []
+        - PlayerBearer: []
       requestBody:
         required: true
         content:
@@ -11306,13 +11422,20 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
   /api/admin/test-email:
-    get:
+    post:
       summary: Send a test transactional email to the current staff.
       operationId: adminTestEmail
       tags:
         - admin/misc
       security:
         - StaffSession: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
       responses:
         "200":
           description: Sent.
@@ -11419,6 +11542,31 @@ paths:
     patch:
       summary: Patch tournament fields.
       operationId: adminPatchTournament
+      tags:
+        - admin/tournaments
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tournament"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    put:
+      summary: Replace tournament fields (full update).
+      operationId: adminPutTournament
       tags:
         - admin/tournaments
       security:
@@ -12528,26 +12676,27 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
   /api/admin/upload:
-    get:
-      summary: Request a presigned URL to upload an asset.
-      description: Returns a presigned URL plus the final canonical asset URL.
-      operationId: adminGetUploadUrl
+    post:
+      summary: Upload an asset (multipart) or request a presigned URL.
+      operationId: adminUpload
       tags:
         - admin/misc
       security:
         - StaffSession: []
-      parameters:
-        - in: query
-          name: filename
-          schema:
-            type: string
-        - in: query
-          name: contentType
-          schema:
-            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: true
       responses:
         "200":
-          description: Presigned URL.
+          description: Upload result (asset URL or presigned URL).
           content:
             application/json:
               schema:
@@ -12558,11 +12707,10 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
   /api/admin/users:
-    get:
-      summary: Create a Supabase user on-the-fly (POST alias - admin role).
+    post:
+      summary: Create a Supabase user on-the-fly (admin role).
       description: |
-        Requires `admin` role. Despite the GET-style operationId, the handler
-        only accepts **POST**. Body: `{ email, password?, display_name?, role? }`.
+        Requires `admin` role. Body: `{ email, password?, display_name?, role? }`.
         If `password` is missing or shorter than 6 chars, a random 16-char one
         is generated. The plain password is never returned — it is sent to the
         user by email instead. Returns `passwordSentByEmail` boolean.
@@ -13898,10 +14046,9 @@ paths:
     get:
       tags:
         - public/auth
-      summary: Etat du lien Discord pour l'utilisateur connecte (cookie Supabase).
+      summary: Etat du lien Discord pour l'utilisateur connecte (lit cookie Supabase SSR).
       operationId: getDiscordLinkStatus
-      security:
-        - StaffSession: []
+      security: []
       responses:
         "200":
           description: Etat du lien.
@@ -13917,8 +14064,7 @@ paths:
         - public/auth
       summary: Supprime le lien Discord (pour relier un autre compte).
       operationId: deleteDiscordLink
-      security:
-        - StaffSession: []
+      security: []
       responses:
         "200":
           description: Lien supprime.
@@ -13938,8 +14084,7 @@ paths:
         Lit l'identite Discord attachee a auth.users (provider='discord'),
         upsert dans user_discord_links pour permettre les DMs du bot.
         Idempotent : un re-call rafraichit le username stocke.
-      security:
-        - StaffSession: []
+      security: []
       responses:
         "200":
           description: Lien etabli/refresh.
@@ -14854,6 +14999,98 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+    post:
+      tags:
+        - public/tournaments
+      summary: Ajoute des maps au pool d'un tournoi. Staff manager+.
+      operationId: createTournamentMaps
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Maps ajoutees.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    put:
+      tags:
+        - public/tournaments
+      summary: Remplace le pool de maps d'un tournoi. Staff manager+.
+      operationId: replaceTournamentMaps
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Maps remplacees.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    patch:
+      tags:
+        - public/tournaments
+      summary: Met a jour partiellement les maps d'un tournoi. Staff manager+.
+      operationId: patchTournamentMaps
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Maps mises a jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    delete:
+      tags:
+        - public/tournaments
+      summary: Supprime des maps du pool d'un tournoi. Staff manager+.
+      operationId: deleteTournamentMaps
+      security:
+        - StaffSession: []
+      responses:
+        "204":
+          description: Supprime.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /api/scrims:
     get:
       tags:
@@ -15570,6 +15807,48 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+    put:
+      tags:
+        - public/misc
+      summary: Remplace les champs d'un match. Staff manager+.
+      operationId: staffReplaceMatch
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Match mis a jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    delete:
+      tags:
+        - public/misc
+      summary: Supprime un match. Staff manager+.
+      operationId: staffDeleteMatch
+      security:
+        - StaffSession: []
+      responses:
+        "204":
+          description: Supprime.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /api/matches/{matchId}/games:
     parameters:
       - $ref: "#/components/parameters/MatchId"
@@ -15616,6 +15895,76 @@ paths:
                 additionalProperties: true
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    put:
+      tags:
+        - public/misc
+      summary: Remplace les games d'un match. Staff manager+.
+      operationId: staffReplaceMatchGames
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Games replaced.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    patch:
+      tags:
+        - public/misc
+      summary: Met a jour partiellement les games d'un match. Staff manager+.
+      operationId: staffPatchMatchGames
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Games updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    delete:
+      tags:
+        - public/misc
+      summary: Supprime les games d'un match. Staff manager+.
+      operationId: staffDeleteMatchGames
+      security:
+        - StaffSession: []
+      responses:
+        "204":
+          description: Supprime.
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":

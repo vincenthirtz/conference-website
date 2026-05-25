@@ -52,47 +52,14 @@ const ALLOWLIST_HANDLER_WITHOUT_SPEC = new Set<string>([
  * Drain this set over time — do NOT add new entries without filing a fix.
  */
 const ALLOWLIST_METHOD_MISMATCH = new Set<string>([
-  // openapi-gen agents missed/mis-assigned methods for these:
-  'GET /api/admin/broadcast/{campaignId}/wave',
-  'POST /api/admin/broadcast/{campaignId}/wave',
-  'DELETE /api/admin/comments',
-  'PATCH /api/admin/comments',
-  'GET /api/admin/helloasso/sync',
-  'POST /api/admin/helloasso/sync',
-  'GET /api/admin/logout',
-  'POST /api/admin/logout',
-  'PATCH /api/admin/matches/{matchId}/veto',
-  'DELETE /api/admin/notifications/prefs',
-  'DELETE /api/admin/pending-guild-links/{guildId}/claim',
-  'POST /api/admin/pending-guild-links/{guildId}/claim',
-  'POST /api/admin/pending-guild-links',
-  'GET /api/admin/pending-guild-links',
-  'PUT /api/admin/scrims/{scrimId}',
-  'GET /api/admin/scrims/forward',
-  'POST /api/admin/scrims/forward',
+  // Heuristic limitations only — handler truly accepts the method, but the
+  // regex-based `detectMethods()` misses it because the file uses a compound
+  // negative form `req.method !== 'POST' && req.method !== 'DELETE'` instead
+  // of a switch/case. Spec is correct; do not "fix" it by removing entries.
   'DELETE /api/admin/staff/{staffId}/pole-admin',
-  'POST /api/admin/stages/{stageId}/bulk-matches',
-  'GET /api/admin/teams/add-member',
-  'POST /api/admin/teams/add-member',
-  'GET /api/admin/test-email',
-  'POST /api/admin/test-email',
-  'PUT /api/admin/tournament/{id}',
-  'GET /api/admin/upload',
-  'POST /api/admin/upload',
-  'GET /api/admin/users',
-  'POST /api/admin/users',
-  'POST /api/bot/v1/autocomplete/cast-members',
-  'GET /api/bot/v1/autocomplete/cast-members',
-  'DELETE /api/matches/{matchId}/games',
-  'PATCH /api/matches/{matchId}/games',
-  'PUT /api/matches/{matchId}/games',
-  'DELETE /api/matches/{matchId}',
-  'PUT /api/matches/{matchId}',
+  // Heuristic limitation — handler accepts GET + POST, but detector only sees
+  // POST because the GET path is gated by `if (req.method !== 'GET')`.
   'GET /api/news',
-  'DELETE /api/tournament/{id}/maps',
-  'PATCH /api/tournament/{id}/maps',
-  'POST /api/tournament/{id}/maps',
-  'PUT /api/tournament/{id}/maps',
 ]);
 
 /**
@@ -103,14 +70,11 @@ const ALLOWLIST_METHOD_MISMATCH = new Set<string>([
  * actually public. Fix the spec, then drop the entry.
  */
 const ALLOWLIST_AUTH_MISMATCH = new Set<string>([
-  'GET /api/admin/logout', // handler is public (signOut endpoint)
-  'PATCH /api/admin/me', // uses withAuthRoute (player bearer)
-  'GET /api/admin/teams/my', // uses withAuthRoute
-  'PATCH /api/admin/teams/my', // uses withAuthRoute
-  'GET /api/auth/discord-link', // public, reads cookie SSR
-  'DELETE /api/auth/discord-link', // public
-  'POST /api/auth/link-discord', // public
-  'POST /api/news', // legacy bot ingest via BOT_API_KEY env (no withBotRoute wrapper)
+  // Legacy bot ingest: handler verifies BOT_API_KEY env inline (no
+  // withBotRoute wrapper), so `detectAuth()` reports `public`. The spec
+  // legitimately declares BotApiKey+BotTenantId security. Keep entry
+  // until the handler migrates to withBotRoute.
+  'POST /api/news',
 ]);
 
 /** Bot client URLs that intentionally don't have a matching openapi entry. */
