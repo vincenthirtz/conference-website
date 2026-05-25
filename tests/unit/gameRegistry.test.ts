@@ -10,7 +10,8 @@ import {
 
 const VALID_FORMATS: readonly MatchFormat[] = ['bo1', 'bo3', 'bo5', 'bo7'];
 const VETO_GAMES = ['overwatch', 'valorant', 'cs2', 'r6-siege', 'marvel-rivals'] as const;
-const EXPECTED_GAME_COUNT = 6;
+const DRAFT_GAMES = ['lol', 'dota2'] as const;
+const EXPECTED_GAME_COUNT = 8;
 
 describe('game registry', () => {
   describe('listGames()', () => {
@@ -43,6 +44,8 @@ describe('game registry', () => {
       'rocket-league',
       'r6-siege',
       'marvel-rivals',
+      'lol',
+      'dota2',
     ] as const) {
       describe(slug, () => {
         const game = getGame(slug) as GameDef;
@@ -102,6 +105,91 @@ describe('game registry', () => {
 
     it('has an empty map pool', () => {
       expect(rl.mapPool).toEqual([]);
+    });
+  });
+
+  describe('games with draft (MOBA)', () => {
+    for (const slug of DRAFT_GAMES) {
+      describe(slug, () => {
+        const game = getGame(slug) as GameDef;
+
+        it('has hasDraft = true and hasMapVeto = false', () => {
+          expect(game.hasDraft).toBe(true);
+          expect(game.hasMapVeto).toBe(false);
+        });
+
+        it('has an empty map pool', () => {
+          expect(game.mapPool).toEqual([]);
+        });
+
+        it('defines draftFlows for every advertised match format', () => {
+          expect(game.draftFlows).toBeDefined();
+          for (const fmt of game.matchFormats) {
+            expect(game.draftFlows![fmt]).toBeDefined();
+            expect(game.draftFlows![fmt]!.steps.length).toBeGreaterThan(0);
+          }
+        });
+
+        it('step_numbers are strictly increasing and start at 1', () => {
+          for (const fmt of game.matchFormats) {
+            const steps = game.draftFlows![fmt]!.steps;
+            expect(steps[0].step_number).toBe(1);
+            for (let i = 1; i < steps.length; i++) {
+              expect(steps[i].step_number).toBe(steps[i - 1].step_number + 1);
+            }
+          }
+        });
+
+        it('alternates between ban and pick phases (no pick→ban within same phase)', () => {
+          for (const fmt of game.matchFormats) {
+            const steps = game.draftFlows![fmt]!.steps;
+            for (const step of steps) {
+              const expectedAction = step.phase.startsWith('ban') ? 'ban' : 'pick';
+              expect(step.action).toBe(expectedAction);
+            }
+          }
+        });
+      });
+    }
+  });
+
+  describe('LoL Tournament Draft specifics', () => {
+    const lol = getGame('lol') as GameDef;
+    const flow = lol.draftFlows!.bo3!;
+
+    it('has exactly 20 steps (10 bans + 10 picks)', () => {
+      expect(flow.steps).toHaveLength(20);
+      const bans = flow.steps.filter((s) => s.action === 'ban');
+      const picks = flow.steps.filter((s) => s.action === 'pick');
+      expect(bans).toHaveLength(10);
+      expect(picks).toHaveLength(10);
+    });
+
+    it('balances bans and picks evenly per side (5/5/5/5)', () => {
+      const counts = { team1: { ban: 0, pick: 0 }, team2: { ban: 0, pick: 0 } };
+      for (const s of flow.steps) counts[s.side][s.action]++;
+      expect(counts.team1.ban).toBe(5);
+      expect(counts.team2.ban).toBe(5);
+      expect(counts.team1.pick).toBe(5);
+      expect(counts.team2.pick).toBe(5);
+    });
+  });
+
+  describe('Dota 2 Captains Mode specifics', () => {
+    const dota = getGame('dota2') as GameDef;
+    const flow = dota.draftFlows!.bo3!;
+
+    it('has 19 steps (9 bans + 10 picks)', () => {
+      expect(flow.steps).toHaveLength(19);
+      expect(flow.steps.filter((s) => s.action === 'ban')).toHaveLength(9);
+      expect(flow.steps.filter((s) => s.action === 'pick')).toHaveLength(10);
+    });
+
+    it('each team picks exactly 5 heroes', () => {
+      const team1Picks = flow.steps.filter((s) => s.side === 'team1' && s.action === 'pick').length;
+      const team2Picks = flow.steps.filter((s) => s.side === 'team2' && s.action === 'pick').length;
+      expect(team1Picks).toBe(5);
+      expect(team2Picks).toBe(5);
     });
   });
 

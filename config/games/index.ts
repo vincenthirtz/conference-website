@@ -3,12 +3,15 @@
 // Each game declares its capabilities (map veto, formats, draft phase).
 
 import type { VetoFlowStep } from '@/types/veto';
+import type { DraftFlow } from '@/types/draft';
 import { OVERWATCH } from './overwatch';
 import { VALORANT } from './valorant';
 import { CS2 } from './cs2';
 import { ROCKET_LEAGUE } from './rocket-league';
 import { R6_SIEGE } from './r6-siege';
 import { MARVEL_RIVALS } from './marvel-rivals';
+import { LOL } from './lol';
+import { DOTA2 } from './dota2';
 
 export type GameSlug =
   | 'overwatch'
@@ -16,7 +19,9 @@ export type GameSlug =
   | 'cs2'
   | 'rocket-league'
   | 'r6-siege'
-  | 'marvel-rivals';
+  | 'marvel-rivals'
+  | 'lol'
+  | 'dota2';
 
 export type MatchFormat = 'bo1' | 'bo3' | 'bo5' | 'bo7';
 
@@ -40,6 +45,13 @@ export type GameDef = {
   vetoFlows?: Partial<Record<MatchFormat, VetoFlowStep[]>>;
   /** Supported match formats for tournament creation. */
   matchFormats: MatchFormat[];
+  /**
+   * Whether matches in this game use a champion/hero draft phase (LoL, Dota 2).
+   * Orthogonal to hasMapVeto — a game can theoretically have both.
+   */
+  hasDraft?: boolean;
+  /** Draft flows keyed by match format. Required when hasDraft = true. */
+  draftFlows?: Partial<Record<MatchFormat, DraftFlow>>;
 };
 
 const GAMES: Record<GameSlug, GameDef> = {
@@ -49,6 +61,8 @@ const GAMES: Record<GameSlug, GameDef> = {
   'rocket-league': ROCKET_LEAGUE,
   'r6-siege': R6_SIEGE,
   'marvel-rivals': MARVEL_RIVALS,
+  lol: LOL,
+  dota2: DOTA2,
 };
 
 export const GAME_SLUGS: readonly GameSlug[] = Object.keys(GAMES) as GameSlug[];
