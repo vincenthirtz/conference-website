@@ -99,4 +99,13 @@ export type PropagationResult = {
   updatedLoseMatchId?: string | null;
   tiebreakerApplied?: 'map_diff' | 'seed' | 'extra_round' | null;
   tiebreakerMatchId?: string | null;
+  /**
+   * Match IDs whose state prevented this propagation. Today this is :
+   *   - `[matchId]` when the source match itself is in `disputed` status
+   *     (propagation skipped to avoid leaking a contested team downstream).
+   *
+   * The list lets callers raise a clear "X dispute(s) bloquent ce bracket"
+   * signal instead of silently no-op'ing. Always present (possibly empty).
+   */
+  blockedBy: string[];
 };

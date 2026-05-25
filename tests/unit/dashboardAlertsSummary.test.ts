@@ -38,6 +38,11 @@ function makeData(
     alerts: [],
     signals: {
       disputesOpen: { count: 0, matches: [] },
+      disputesBlockingDownstream: {
+        count: 0,
+        impactedMatchCount: 0,
+        matches: [],
+      },
       checkinNext24h: {
         upcoming: 0,
         bothCheckedIn: 0,

@@ -40,16 +40,19 @@ export async function propagateBracketForMatch(
       matchId,
       winnerTeamId: null,
       loserTeamId: null,
+      blockedBy: [],
     };
   }
 
   // Si match en dispute, on ne propage rien tant que la dispute n'est pas tranchee.
   // C'est la garantie que le bracket aval ne sera pas pollue par un score conteste.
+  // On signale le blocage via `blockedBy` pour que le caller puisse alerter.
   if (match.status === 'disputed') {
     return {
       matchId,
       winnerTeamId: null,
       loserTeamId: null,
+      blockedBy: [matchId],
     };
   }
 
@@ -82,6 +85,7 @@ export async function propagateBracketForMatch(
         loserTeamId: null,
         tiebreakerApplied,
         tiebreakerMatchId,
+        blockedBy: [],
       };
     }
 
@@ -170,6 +174,7 @@ export async function propagateBracketForMatch(
     updatedLoseMatchId,
     tiebreakerApplied,
     tiebreakerMatchId,
+    blockedBy: [],
   };
 }
 

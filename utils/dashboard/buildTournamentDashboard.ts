@@ -154,8 +154,23 @@ export type CronCheckinHeartbeat = {
   isStale: boolean;
 };
 
+export type DisputeBlockingDownstream = {
+  sourceMatchId: string;
+  impactedMatchIds: string[];
+};
+
+export type DisputesBlockingDownstreamSignal = {
+  count: number;
+  impactedMatchCount: number;
+  matches: DisputeBlockingDownstream[];
+};
+
 export type DashboardSignals = {
   disputesOpen: { count: number; matches: DisputedMatch[] };
+  /** Lot 3 — disputes whose result has already propagated to a downstream
+   *  match that is now `ongoing`/`finished`/`walkover`. Each entry breaks
+   *  bracket integrity until resolved. */
+  disputesBlockingDownstream: DisputesBlockingDownstreamSignal;
   checkinNext24h: {
     upcoming: number;
     bothCheckedIn: number;
@@ -346,6 +361,8 @@ export async function fetchDashboardData(
          team1_id, team2_id, winner_team_id, is_bye, bracket_side,
          match_format, team1_score, team2_score,
          dispute_reason, dispute_opened_at,
+         next_match_win_id, next_match_win_slot,
+         next_match_lose_id, next_match_lose_slot,
          team1_checked_in_at, team2_checked_in_at, forfeit_processed_at,
          completed_at`
       )
@@ -634,6 +651,61 @@ export async function fetchDashboardData(
         reason: m.dispute_reason ?? null,
         openedAt: m.dispute_opened_at ?? null,
       }));
+
+    // Disputes "qui bloquent l'aval" (Lot 3 — bracket propagation guards).
+    // Pour chaque match en dispute, on regarde s'il a propagé vers un match
+    // déjà ongoing/finished/walkover ET si ce slot porte toujours une de ses
+    // équipes. Si oui, le dispute est figé : on ne peut pas le résoudre sans
+    // toucher un match en cours. Le banner dashboard signale ça aux staff.
+    const matchById = new Map<string, (typeof matches)[number]>();
+    for (const m of matches) matchById.set(m.id, m);
+    const liveStatusesForBlock = new Set<string>([
+      'ongoing',
+      'finished',
+      'walkover',
+    ]);
+    const blockingDownstreamMatches: { sourceMatchId: string; impactedMatchIds: string[] }[] = [];
+    for (const d of disputedRows) {
+      const teamsOfDispute = new Set<string>();
+      if (d.team1_id) teamsOfDispute.add(d.team1_id);
+      if (d.team2_id) teamsOfDispute.add(d.team2_id);
+      const impacted: string[] = [];
+
+      const winId = (d as any).next_match_win_id as string | null | undefined;
+      const winSlot = (d as any).next_match_win_slot as 1 | 2 | null | undefined;
+      if (winId && winSlot) {
+        const wm = matchById.get(winId);
+        if (wm && liveStatusesForBlock.has(wm.status)) {
+          const slotTeam = winSlot === 1 ? wm.team1_id : wm.team2_id;
+          if (slotTeam && teamsOfDispute.has(slotTeam)) impacted.push(wm.id);
+        }
+      }
+
+      const loseId = (d as any).next_match_lose_id as string | null | undefined;
+      const loseSlot = (d as any).next_match_lose_slot as 1 | 2 | null | undefined;
+      if (loseId && loseSlot) {
+        const lm = matchById.get(loseId);
+        if (lm && liveStatusesForBlock.has(lm.status)) {
+          const slotTeam = loseSlot === 1 ? lm.team1_id : lm.team2_id;
+          if (slotTeam && teamsOfDispute.has(slotTeam)) impacted.push(lm.id);
+        }
+      }
+
+      if (impacted.length > 0) {
+        blockingDownstreamMatches.push({
+          sourceMatchId: d.id,
+          impactedMatchIds: impacted,
+        });
+      }
+    }
+    const disputesBlockingDownstream = {
+      count: blockingDownstreamMatches.length,
+      impactedMatchCount: blockingDownstreamMatches.reduce(
+        (acc, b) => acc + b.impactedMatchIds.length,
+        0
+      ),
+      matches: blockingDownstreamMatches.slice(0, 10),
+    };
 
     // Live matches — enrichis avec la map en cours (déduit des picks veto)
     const liveMatchesRows = matches.filter((m) => m.status === 'ongoing');
@@ -1061,6 +1133,7 @@ export async function fetchDashboardData(
 
     const signals: DashboardSignals = {
       disputesOpen: { count: disputedRows.length, matches: disputedMatches },
+      disputesBlockingDownstream,
       checkinNext24h: checkin24h,
       conflictsCount,
       conflictsList,

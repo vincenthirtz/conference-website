@@ -16,6 +16,7 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import { emitBotEvent } from '@/utils/botEvents';
 import { enrichMatchEvent } from '@/utils/matches/botEventEnrich';
+import { findDownstreamImpact } from '@/utils/bracket/disputeImpact';
 import type { MatchStatus } from '@/types/admin';
 
 import { logger } from '../../../../../utils/logger';
@@ -103,6 +104,19 @@ async function openDispute(
   if (match.status === 'cancelled') {
     return res.status(400).json({
       error: "Impossible d'ouvrir une dispute sur un match annule.",
+    });
+  }
+
+  // Garde-fou Lot 3 : si ce match a déjà propagé son vainqueur/perdant vers
+  // un match aval qui a démarré (ongoing/finished/walkover) ET qui carry
+  // toujours l'équipe propagée, on refuse. Sinon la dispute corromprait un
+  // match en cours.
+  const impact = await findDownstreamImpact(ctx.tenantId, matchId);
+  if (impact.impacted.length > 0) {
+    return res.status(409).json({
+      error: `Impossible d'ouvrir la dispute : ${impact.impacted.length} match(es) aval(s) déjà joué(s) ou en cours dépendent du résultat.`,
+      code: 'DOWNSTREAM_LOCKED',
+      blockedBy: impact.impacted,
     });
   }
 

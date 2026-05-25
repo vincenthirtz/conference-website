@@ -581,6 +581,30 @@ function MegaDashboardPage({ initialData, initialError }: Props) {
                     }}
                   />
                 )}
+                {sig.disputesBlockingDownstream?.count > 0 && (
+                  <ActionableAlert
+                    severity="error"
+                    icon={<span>🧱</span>}
+                    title={`${sig.disputesBlockingDownstream.count} dispute${
+                      sig.disputesBlockingDownstream.count > 1 ? 's' : ''
+                    } bloque${
+                      sig.disputesBlockingDownstream.count > 1 ? 'nt' : ''
+                    } ${sig.disputesBlockingDownstream.impactedMatchCount} match${
+                      sig.disputesBlockingDownstream.impactedMatchCount > 1
+                        ? 's'
+                        : ''
+                    } aval${
+                      sig.disputesBlockingDownstream.impactedMatchCount > 1
+                        ? ''
+                        : ''
+                    }`}
+                    message="Le résultat du match en dispute a déjà été propagé à un match aval qui a démarré. Résolvez la dispute puis ré-appliquez la propagation."
+                    cta={{
+                      label: 'Voir',
+                      href: `/admin/tournament/${tournamentId}/matches?status=disputed`,
+                    }}
+                  />
+                )}
                 {sig.conflictsCount > 0 && (
                   <div className="group relative">
                     <ActionableAlert

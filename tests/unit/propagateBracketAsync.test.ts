@@ -80,14 +80,32 @@ describe('propagateBracketForMatch — early returns', () => {
       matchId: 'm1',
       winnerTeamId: null,
       loserTeamId: null,
+      blockedBy: [],
     });
   });
 
-  it('returns null winner/loser when match status is disputed', async () => {
+  it('returns null winner/loser when match status is disputed AND flags blockedBy', async () => {
     seedMatches([{ id: 'm1', status: 'disputed' }]);
     const result = await propagateBracketForMatch(TENANT_ID, 'm1');
     expect(result.winnerTeamId).toBeNull();
     expect(result.loserTeamId).toBeNull();
+    // Lot 3 : on signale le blocage au caller plutôt que de no-op silencieusement.
+    expect(result.blockedBy).toEqual(['m1']);
+  });
+
+  it('happy path returns an empty blockedBy', async () => {
+    seedMatches([
+      {
+        id: 'm1',
+        winner_team_id: 'team-a',
+        next_match_win_id: 'm-win',
+        next_match_win_slot: 1,
+      },
+      { id: 'm-win', team1_id: null, status: 'pending' },
+    ]);
+    seedRegistrations([{ tournament_id: 't1', team_id: 'team-a' }]);
+    const result = await propagateBracketForMatch(TENANT_ID, 'm1');
+    expect(result.blockedBy).toEqual([]);
   });
 });
 
