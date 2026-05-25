@@ -159,6 +159,7 @@ catalog can grow without forcing a bot deploy.
 | `match.finished`                | Score apply / admin                                                                | `{ matchId, team1Score, team2Score, winnerTeamId }`                                                                           |
 | `match.disputed`                | Admin `POST .../dispute`                                                           | `{ matchId, reason, openedBy }`                                                                                               |
 | `match.dispute.resolved`        | Admin `POST .../resolve-dispute`                                                   | `{ matchId, resolution, resolvedBy }`                                                                                         |
+| `dispute.sla_breached` (Lot 4)  | Cron `/api/cron/dispute-sla-check`                                                 | `{ matchId, tournamentId, disputeReason, disputeOpenedAt, ageMinutes, slaMinutes }`                                           |
 | `news.published`                | Admin / bot ingest                                                                 | `{ newsId, slug, title, tag, excerpt, imageUrl, publishedAt }`                                                                |
 | `team.*` / `scrim.*` / `cast.*` | various admin / bot routes                                                         | see emitter call sites                                                                                                        |
 | `event_segment.transitioned`    | Admin `/api/admin/events/.../segments/.../{start,skip,end}.ts` (Lot 2 run-of-show) | `{ runId, segmentId, fromStatus, toStatus, tenantId, broadcastMessage, segment: { ord, type, title, durationMin, matchId } }` |
@@ -212,6 +213,45 @@ segment (i.e. silent transition — pure cockpit/timeline state change). The
 bot uses it as the canonical Discord copy when `toStatus === 'live'`. For
 `skipped` and `done`, the bot typically ignores `broadcastMessage` and just
 updates its own panel/state.
+
+#### `dispute.sla_breached` (Lot 4 Open Disputes Board)
+
+Emitted by `pages/api/cron/dispute-sla-check.ts` (Netlify scheduled
+function, every 5 minutes) for each `matches` row where:
+
+- `status = 'disputed'`
+- `now() - dispute_opened_at >= tenants.dispute_sla_minutes`
+- `escalation_pinged_at IS NULL`
+
+The cron then stamps `escalation_pinged_at = now()` so the next tick
+skips that match — **single escalation per breach**. The flag is reset to
+`null` when the admin resolves or cancels the dispute, allowing a
+subsequent re-open to fire a fresh escalation cycle.
+
+Payload :
+
+```json
+{
+  "id": "<event uuid>",
+  "event": "dispute.sla_breached",
+  "tenantId": "<uuid>",
+  "timestamp": "2026-05-25T18:42:00.000Z",
+  "data": {
+    "matchId": "<uuid>",
+    "tournamentId": "<uuid|null>",
+    "disputeReason": "Conteste le score 2-1 en finale",
+    "disputeOpenedAt": "2026-05-25T17:40:00.000Z",
+    "ageMinutes": 62,
+    "slaMinutes": 60
+  }
+}
+```
+
+The bot is expected to DM the configured staff role (or the
+`disputes_forum_channel_id` thread) once per event. For richer context
+the bot can pull `GET /api/bot/v1/disputes/escalations?breached=true`,
+which returns the full enriched list (team names, tournament, age,
+classification).
 
 ## Idempotency
 
@@ -332,11 +372,12 @@ body shapes live there. `Idem.` means the route honours `Idempotency-Key`.
 
 ### Announcements & moderation
 
-| Route                                                      | Methods | Idem. | Rate-key            |
-| ---------------------------------------------------------- | ------- | ----- | ------------------- |
-| [`announcements.ts`](../pages/api/bot/v1/announcements.ts) | POST    | yes   | `bot-announcements` |
-| [`disputes.ts`](../pages/api/bot/v1/disputes.ts)           | GET     | —     | `bot-disputes`      |
-| [`staff-logs.ts`](../pages/api/bot/v1/staff-logs.ts)       | GET     | —     | `bot-staff-logs`    |
+| Route                                                                            | Methods | Idem. | Rate-key                     |
+| -------------------------------------------------------------------------------- | ------- | ----- | ---------------------------- |
+| [`announcements.ts`](../pages/api/bot/v1/announcements.ts)                       | POST    | yes   | `bot-announcements`          |
+| [`disputes.ts`](../pages/api/bot/v1/disputes.ts)                                 | GET     | —     | `bot-disputes`               |
+| [`disputes/escalations.ts`](../pages/api/bot/v1/disputes/escalations.ts) (Lot 4) | GET     | —     | `bot-disputes-escalations`   |
+| [`staff-logs.ts`](../pages/api/bot/v1/staff-logs.ts)                             | GET     | —     | `bot-staff-logs`             |
 
 ### Autocomplete (Discord choice-pickers)
 

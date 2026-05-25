@@ -49,7 +49,8 @@ export type BotEventName =
   | 'registration.new'
   | 'helloasso.payment.received'
   | 'captain.support.opened'
-  | 'tournament.finalized';
+  | 'tournament.finalized'
+  | 'dispute.sla_breached';
 
 export type BotEventPayload = Record<string, unknown>;
 

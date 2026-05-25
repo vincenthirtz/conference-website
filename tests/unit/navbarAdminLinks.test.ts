@@ -51,7 +51,8 @@ describe('filterAdminLinks – owner role', () => {
   it('keeps every direct child of "Tournois"', () => {
     const tournois = findByTitle(links, 'Tournois');
     expect(tournois?.children).toBeDefined();
-    expect(tournois!.children!).toHaveLength(4);
+    // Lot 4 ajoute "Disputes ouvertes (board)" comme 5e enfant.
+    expect(tournois!.children!).toHaveLength(5);
   });
 
   it('keeps admin-only sub-sections of "Contenu" (Annonces, News, Twitch…)', () => {

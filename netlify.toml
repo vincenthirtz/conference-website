@@ -43,6 +43,15 @@
 [functions."overrun-watcher-cron"]
   schedule = "*/2 * * * *"
 
+# Scheduled function: dispute SLA breach detector (Lot 4 — Open Disputes Board).
+# Scans active tenants for matches `status='disputed'` whose
+# `dispute_opened_at` is older than `tenants.dispute_sla_minutes` AND
+# `escalation_pinged_at IS NULL`. Emits one `dispute.sla_breached` outbox
+# event per breach and stamps the match so it's not re-escalated. Bot picks
+# up the event and DMs the configured staff role.
+[functions."dispute-sla-cron"]
+  schedule = "*/5 * * * *"
+
 [[headers]]
   for = "/*"
   [headers.values]

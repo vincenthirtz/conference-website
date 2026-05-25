@@ -281,6 +281,9 @@ async function resolveDispute(
         dispute_resolution: trimmedResolution,
         dispute_resolved_by: resolverId,
         dispute_resolved_at: nowIso,
+        // Lot 4 : reset l'escalation pour qu'un eventual re-ouvrir
+        // declenche un nouveau cycle SLA propre.
+        escalation_pinged_at: null,
         updated_at: nowIso,
       })
       .eq('id', matchId);
@@ -372,6 +375,8 @@ async function resolveDispute(
       dispute_resolution: trimmedResolution,
       dispute_resolved_by: resolverId,
       dispute_resolved_at: nowIso,
+      // Lot 4 : reset SLA escalation marker (cf. cancelDispute).
+      escalation_pinged_at: null,
       updated_at: nowIso,
     })
     .eq('id', matchId)
@@ -474,6 +479,8 @@ async function cancelDispute(
       dispute_resolution: null,
       dispute_resolved_by: null,
       dispute_resolved_at: null,
+      // Lot 4 : reset SLA escalation marker (re-open redemarre proprement).
+      escalation_pinged_at: null,
       updated_at: nowIso,
     })
     .eq('id', matchId)

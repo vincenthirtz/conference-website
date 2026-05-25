@@ -33,6 +33,11 @@ export const ADMIN_LINKS: AdminLink[] = [
         ref: '/admin/tournaments',
         minRole: 'manager',
       },
+      {
+        title: 'Disputes ouvertes (board)',
+        ref: '/admin/disputes',
+        minRole: 'manager',
+      },
     ],
   },
   {
