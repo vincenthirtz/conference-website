@@ -13,6 +13,7 @@ import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { computeStageStandings } from '@/utils/stages/standings';
+import { computeProposedSeeding } from '@/utils/stages/autoSeed';
 import { createBracketSnapshot } from '@/utils/bracket/snapshot';
 import { isValidUUID } from '@/utils/apiHelpers';
 
@@ -97,23 +98,10 @@ async function handler(
       });
     }
 
-    // Get standings from source stage
-    const standings = await computeStageStandings(
-      ctx.tenantId,
-      sourceStageId,
-      sourceStage.stage_type || 'other'
-    );
-
-    if (standings.length === 0) {
-      return res
-        .status(400)
-        .json({ error: 'Aucun classement disponible pour le stage source.' });
-    }
-
     // Get round 1 matches of the target bracket (ordered by creation for positional consistency)
     const { data: bracketMatches, error: matchErr } = await supabaseAdmin
       .from('matches')
-      .select('id, round_number, team1_id, team2_id')
+      .select('id, round_number, team1_id, team2_id, status')
       .eq('tenant_id', ctx.tenantId)
       .eq('stage_id', targetStageId)
       .eq('round_number', 1)
@@ -130,14 +118,33 @@ async function handler(
       });
     }
 
-    const totalSlots = bracketMatches.length * 2;
-    const teamsToSeed = standings.slice(0, totalSlots);
-
-    // Build seeding order based on pattern
-    const seedOrder = buildSeedOrder(
-      bracketMatches.length,
-      seedingPattern as 'standard' | 'sequential'
+    // Lock guard : refuse re-seed once a round-1 match is live or done.
+    // Run this BEFORE the standings fetch so we fail fast and don't waste
+    // a costly aggregate when the stage is already locked.
+    const locked = bracketMatches.filter(
+      (m) =>
+        m.status === 'ongoing' ||
+        m.status === 'finished' ||
+        m.status === 'walkover'
     );
+    if (locked.length > 0) {
+      return res.status(409).json({
+        error: `Impossible de re-seed : ${locked.length} match(es) du round 1 sont déjà joué(s) ou en cours.`,
+      });
+    }
+
+    // Get standings from source stage
+    const standings = await computeStageStandings(
+      ctx.tenantId,
+      sourceStageId,
+      sourceStage.stage_type || 'other'
+    );
+
+    if (standings.length === 0) {
+      return res
+        .status(400)
+        .json({ error: 'Aucun classement disponible pour le stage source.' });
+    }
 
     // Snapshot bracket avant mutation (rollback admin via
     // /admin/stages/[id]/snapshots). Best-effort.
@@ -150,23 +157,13 @@ async function handler(
       logger.error('auto-seed: createBracketSnapshot failed', e)
     );
 
-    // Assign teams to match slots
-    const updates: SeededSlot[] = [];
-
-    for (let i = 0; i < seedOrder.length && i < teamsToSeed.length; i++) {
-      const { matchIndex, slot } = seedOrder[i];
-      if (matchIndex >= bracketMatches.length) continue;
-
-      const match = bracketMatches[matchIndex];
-      const team = teamsToSeed[i];
-
-      updates.push({
-        matchId: match.id,
-        slot,
-        teamId: team.teamId,
-        seed: team.rank,
-      });
-    }
+    // Compute proposed slot assignments via the shared util.
+    const updates: SeededSlot[] = computeProposedSeeding({
+      standings,
+      bracketMatches: bracketMatches.map((m) => ({ matchId: m.id })),
+      pattern: seedingPattern as 'standard' | 'sequential',
+    });
+    const teamsToSeed = standings.slice(0, bracketMatches.length * 2);
 
     // Apply updates
     for (const u of updates) {
@@ -239,66 +236,3 @@ async function handler(
   }
 }
 
-/**
- * Build seeding order for bracket matches.
- *
- * Standard seeding: places seeds so that 1 meets the lowest seed in the final,
- * 2 meets the second-lowest, etc. This avoids top seeds meeting early.
- *
- * For a bracket of size N (N matches in round 1, 2N teams):
- * Match 1: seed 1 vs seed 2N
- * Match 2: seed N+1 vs seed N
- * etc. (classic tournament seeding)
- */
-function buildSeedOrder(
-  numMatches: number,
-  pattern: 'standard' | 'sequential'
-): { matchIndex: number; slot: 1 | 2 }[] {
-  const totalTeams = numMatches * 2;
-  const order: { matchIndex: number; slot: 1 | 2 }[] = [];
-
-  if (pattern === 'sequential') {
-    // Simple: seed 1 in match 0 slot 1, seed 2 in match 0 slot 2, etc.
-    for (let i = 0; i < numMatches; i++) {
-      order.push({ matchIndex: i, slot: 1 });
-      order.push({ matchIndex: i, slot: 2 });
-    }
-    return order;
-  }
-
-  // Standard seeding: build proper bracket placement
-  // Generate the standard bracket positions for seeds 1..2N
-  const positions = generateBracketPositions(totalTeams);
-
-  for (const seed of positions) {
-    // seed is 1-based, convert to match and slot
-    const idx = seed - 1;
-    const matchIndex = Math.floor(idx / 2);
-    const slot: 1 | 2 = idx % 2 === 0 ? 1 : 2;
-    order.push({ matchIndex, slot });
-  }
-
-  return order;
-}
-
-/**
- * Generate standard bracket seeding positions.
- * Returns an array where index i contains the seed number placed at position i.
- * Uses recursive splitting: [1, 2N, N+1, N, ...] pattern.
- */
-function generateBracketPositions(size: number): number[] {
-  if (size === 2) return [1, 2];
-
-  const half = size / 2;
-  const topHalf = generateBracketPositions(half);
-
-  // For each position in the top half, create a pair:
-  // seed X goes to one side, seed (size + 1 - X) goes to the other
-  const result: number[] = [];
-  for (const seed of topHalf) {
-    result.push(seed);
-    result.push(size + 1 - seed);
-  }
-
-  return result;
-}

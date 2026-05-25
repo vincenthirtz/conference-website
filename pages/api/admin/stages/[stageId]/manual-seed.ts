@@ -169,7 +169,7 @@ async function handler(
     const matchIds = [...new Set(assignments.map((a) => a.matchId))];
     const { data: matches, error: matchErr } = await supabaseAdmin
       .from('matches')
-      .select('id, stage_id, round_number, team1_id, team2_id')
+      .select('id, stage_id, round_number, team1_id, team2_id, status')
       .eq('tenant_id', ctx.tenantId)
       .in('id', matchIds);
     if (matchErr) {
@@ -196,6 +196,21 @@ async function handler(
           error: `Match ${a.matchId} n'est pas dans le round 1.`,
         });
       }
+    }
+
+    // Lock guard : si un seul des matches ciblés est ongoing/finished/walkover,
+    // on refuse le re-seed pour éviter une corruption du bracket aval.
+    const locked = (matches ?? []).filter(
+      (m) =>
+        m.status === 'ongoing' ||
+        m.status === 'finished' ||
+        m.status === 'walkover'
+    );
+    if (locked.length > 0) {
+      return res.status(409).json({
+        error: `Impossible de re-seed : ${locked.length} match(es) déjà joué(s) ou en cours.`,
+        code: 'STAGE_LOCKED',
+      });
     }
 
     // ---- Conflits : slot déjà rempli ? ----

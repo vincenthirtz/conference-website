@@ -1190,6 +1190,39 @@ function AdminStagePage({ staff }: StaffProps) {
                         </button>
                       )}
 
+                      {stage.stage_type === 'bracket' && (
+                        <Link
+                          href={`/admin/stages/${stage.id}/seeding`}
+                          className="p-4 rounded-xl border text-left transition-all bg-indigo-900/20 border-indigo-700/50 hover:bg-indigo-900/30 hover:border-indigo-600/50"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-indigo-600/20 flex items-center justify-center">
+                              <svg
+                                className="w-5 h-5 text-indigo-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+                                />
+                              </svg>
+                            </div>
+                            <div>
+                              <div className="font-medium text-sm text-indigo-200">
+                                Seeding comparator
+                              </div>
+                              <div className="text-xs text-indigo-400/70">
+                                Comparer auto vs manuel côte-à-côte
+                              </div>
+                            </div>
+                          </div>
+                        </Link>
+                      )}
+
                       {stage.stage_type === 'swiss' && (
                         <button
                           type="button"

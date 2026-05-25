@@ -113,7 +113,12 @@ beforeEach(() => {
   fetchChallongeParticipants.mockClear();
   fetchStartGgParticipants.mockClear();
   importTeams.mockClear();
-  computeStageStandings.mockClear();
+  // `mockReset` (vs `mockClear`) drains queued `mockResolvedValueOnce` values
+  // too — needed since the auto-seed lock guard now runs BEFORE the standings
+  // fetch, so earlier tests can leave their one-shot mock unconsumed and
+  // poison the next test.
+  computeStageStandings.mockReset();
+  computeStageStandings.mockResolvedValue([] as any);
   setAuthUser({ id: 'user-1' });
   store.staff = [makeStaffRow('admin')] as any;
 });
