@@ -439,6 +439,17 @@ export default function TournamentPage({
                   </Button>
                 </Link>
 
+                {tournament.status === 'completed' && (
+                  <Link href={`${tournamentPath}/podium`}>
+                    <Button
+                      type="button"
+                      className="px-6 py-2.5 text-xs font-bold rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 text-black hover:from-amber-300 hover:to-yellow-400 shadow-lg shadow-amber-500/20 transition-all hover:scale-[1.02]"
+                    >
+                      Podium officiel
+                    </Button>
+                  </Link>
+                )}
+
                 {tournament.status !== 'completed' &&
                   tournament.status !== 'finished' && (
                     <Link href={`/team/create?tournament=${tournament.id}`}>

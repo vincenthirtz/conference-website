@@ -198,6 +198,8 @@ export function formatStaffLog(log: StaffLog) {
     delete_cast_assignment: 'Assignment caster supprimé',
     update_staff_role: 'Modification rôle staff',
     delete_staff_account: 'Suppression compte staff',
+    finalize_tournament: 'Clôture tournoi (podium gelé)',
+    unfinalize_tournament: 'Déverrouillage tournoi',
     other: 'Action staff',
   };
 

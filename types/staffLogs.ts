@@ -43,6 +43,8 @@ export type StaffLogAction =
   | 'delete_cast_assignment'
   | 'update_staff_role'
   | 'delete_staff_account'
+  | 'finalize_tournament'
+  | 'unfinalize_tournament'
   | 'other';
 
 export type StaffLog = {
