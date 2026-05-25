@@ -1,5 +1,48 @@
 @import 'tailwindcss';
 
+/* ─────────────────────────────────────────────────────────
+ * Tailwind v4 theme — neon palette + animations exposed as
+ * first-class utilities (bg-neon-*, shadow-neon-*, animate-*).
+ * Raw CSS-var versions live in :root below (used by globals.css
+ * @layer utilities and by component-level inline styles).
+ * ───────────────────────────────────────────────────────── */
+@theme {
+  --color-neon-cyan: #00f0ff;
+  --color-neon-magenta: #ff2ec8;
+  --color-neon-violet: #bb00ff;
+  --color-neon-pink: #ff3ea5;
+  --color-neon-blue: #4d8bff;
+
+  --shadow-neon-cyan:
+    0 0 8px rgba(0, 240, 255, 0.55), 0 0 22px rgba(0, 240, 255, 0.35),
+    0 0 44px rgba(77, 139, 255, 0.18);
+  --shadow-neon-cyan-strong:
+    0 0 12px rgba(0, 240, 255, 0.9), 0 0 32px rgba(0, 240, 255, 0.6),
+    0 0 64px rgba(77, 139, 255, 0.35);
+  --shadow-neon-magenta:
+    0 0 8px rgba(255, 46, 200, 0.55), 0 0 22px rgba(255, 46, 200, 0.35),
+    0 0 44px rgba(187, 0, 255, 0.18);
+  --shadow-neon-magenta-strong:
+    0 0 12px rgba(255, 46, 200, 0.9), 0 0 32px rgba(255, 46, 200, 0.6),
+    0 0 64px rgba(187, 0, 255, 0.35);
+  --shadow-neon-violet:
+    0 0 8px rgba(187, 0, 255, 0.55), 0 0 22px rgba(187, 0, 255, 0.35),
+    0 0 44px rgba(255, 46, 200, 0.18);
+  --shadow-neon-violet-strong:
+    0 0 12px rgba(187, 0, 255, 0.9), 0 0 32px rgba(187, 0, 255, 0.6),
+    0 0 64px rgba(255, 46, 200, 0.35);
+  --shadow-neon-tri:
+    0 0 12px rgba(0, 240, 255, 0.6), 0 0 24px rgba(255, 46, 200, 0.55),
+    0 0 52px rgba(187, 0, 255, 0.45);
+
+  --animate-glow-breathing: glow-breathing 4.5s ease-in-out infinite;
+  --animate-neon-flicker: neon-flicker 6s linear infinite;
+  --animate-neon-tri-flow: neon-tri-flow 8s ease-in-out infinite alternate;
+  --animate-neon-pulse: neon-pulse 2.8s ease-in-out infinite;
+  --animate-neon-pulse-magenta: neon-pulse-magenta 2.8s ease-in-out infinite;
+  --animate-neon-pulse-violet: neon-pulse-violet 2.8s ease-in-out infinite;
+}
+
 :root {
   /* ─────── Brand palette ─────── */
   --color-cyan: #2dccfd;
@@ -72,6 +115,65 @@
     0 14px 30px rgba(173, 32, 226, 0.35), 0 0 0 4px rgba(255, 156, 41, 0.28);
   --glow-warm-boost:
     0 18px 35px rgba(255, 156, 41, 0.3), 0 0 0 5px rgba(173, 32, 226, 0.24);
+
+  /* ─────── Neon palette (cyberpunk-intensified) ─────── */
+  --color-neon-cyan: #00f0ff;
+  --color-neon-magenta: #ff2ec8;
+  --color-neon-violet: #bb00ff;
+  --color-neon-pink: #ff3ea5;
+  --color-neon-blue: #4d8bff;
+
+  /* ─────── Neon glows (layered: tight + bloom + shadow) ─────── */
+  --glow-neon-cyan-soft:
+    0 0 8px rgba(0, 240, 255, 0.55), 0 0 22px rgba(0, 240, 255, 0.35),
+    0 0 44px rgba(77, 139, 255, 0.18);
+  --glow-neon-cyan-strong:
+    0 0 12px rgba(0, 240, 255, 0.9), 0 0 32px rgba(0, 240, 255, 0.6),
+    0 0 64px rgba(77, 139, 255, 0.35);
+  --glow-neon-magenta-soft:
+    0 0 8px rgba(255, 46, 200, 0.55), 0 0 22px rgba(255, 46, 200, 0.35),
+    0 0 44px rgba(187, 0, 255, 0.18);
+  --glow-neon-magenta-strong:
+    0 0 12px rgba(255, 46, 200, 0.9), 0 0 32px rgba(255, 46, 200, 0.6),
+    0 0 64px rgba(187, 0, 255, 0.35);
+  --glow-neon-violet-soft:
+    0 0 8px rgba(187, 0, 255, 0.55), 0 0 22px rgba(187, 0, 255, 0.35),
+    0 0 44px rgba(255, 46, 200, 0.18);
+  --glow-neon-violet-strong:
+    0 0 12px rgba(187, 0, 255, 0.9), 0 0 32px rgba(187, 0, 255, 0.6),
+    0 0 64px rgba(255, 46, 200, 0.35);
+  --glow-neon-tri-strong:
+    0 0 12px rgba(0, 240, 255, 0.6), 0 0 24px rgba(255, 46, 200, 0.55),
+    0 0 52px rgba(187, 0, 255, 0.45);
+
+  /* ─────── Neon gradients ─────── */
+  --gradient-neon-tri: linear-gradient(
+    135deg,
+    var(--color-neon-cyan) 0%,
+    var(--color-neon-magenta) 50%,
+    var(--color-neon-violet) 100%
+  );
+  --gradient-neon-tri-flow: linear-gradient(
+    90deg,
+    var(--color-neon-cyan),
+    var(--color-neon-magenta),
+    var(--color-neon-violet),
+    var(--color-neon-magenta),
+    var(--color-neon-cyan)
+  );
+  --gradient-neon-electric: linear-gradient(
+    135deg,
+    var(--color-neon-blue) 0%,
+    var(--color-neon-violet) 50%,
+    var(--color-neon-magenta) 100%
+  );
+  --gradient-neon-edge: linear-gradient(
+    120deg,
+    var(--color-neon-cyan),
+    transparent 40%,
+    transparent 60%,
+    var(--color-neon-magenta)
+  );
 }
 
 html,
@@ -1083,4 +1185,257 @@ select option {
 
 .cookie-settings-btn:hover {
   color: var(--color-cyan);
+}
+
+/* ─────────────────────────────────────────────────────────
+ * Neon design tokens — PR1 (cyberpunk: cyan/magenta/violet)
+ * Animations: glow-breathing, neon-pulse, neon-flicker, neon-shimmer
+ * Utilities: .neon-text-* / .neon-border-* / .neon-card / .neon-shimmer
+ * All animations respect prefers-reduced-motion (see bottom of block).
+ * ───────────────────────────────────────────────────────── */
+
+@keyframes glow-breathing {
+  0%,
+  100% {
+    filter: brightness(1) drop-shadow(0 0 6px currentColor);
+  }
+  50% {
+    filter: brightness(1.18) drop-shadow(0 0 14px currentColor);
+  }
+}
+
+@keyframes neon-pulse {
+  0%,
+  100% {
+    box-shadow: var(--glow-neon-cyan-soft);
+  }
+  50% {
+    box-shadow: var(--glow-neon-cyan-strong);
+  }
+}
+
+@keyframes neon-pulse-magenta {
+  0%,
+  100% {
+    box-shadow: var(--glow-neon-magenta-soft);
+  }
+  50% {
+    box-shadow: var(--glow-neon-magenta-strong);
+  }
+}
+
+@keyframes neon-pulse-violet {
+  0%,
+  100% {
+    box-shadow: var(--glow-neon-violet-soft);
+  }
+  50% {
+    box-shadow: var(--glow-neon-violet-strong);
+  }
+}
+
+/* Authentic neon-sign flicker (rare, asymmetric drops) */
+@keyframes neon-flicker {
+  0%,
+  18%,
+  22%,
+  25%,
+  53%,
+  57%,
+  100% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+  20%,
+  24%,
+  55% {
+    opacity: 0.78;
+    filter: brightness(0.85);
+  }
+}
+
+@keyframes neon-tri-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+@keyframes neon-shimmer {
+  0% {
+    transform: translateX(-120%) skewX(-18deg);
+  }
+  100% {
+    transform: translateX(220%) skewX(-18deg);
+  }
+}
+
+@layer utilities {
+  /* Animated tri-color neon text (cyan→magenta→violet) */
+  .neon-text-tri {
+    background: var(--gradient-neon-tri-flow);
+    background-size: 200% 100%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: neon-tri-flow 8s ease-in-out infinite alternate;
+  }
+
+  .neon-text-cyan {
+    color: var(--color-neon-cyan);
+    text-shadow:
+      0 0 6px rgba(0, 240, 255, 0.75),
+      0 0 18px rgba(0, 240, 255, 0.45);
+  }
+  .neon-text-magenta {
+    color: var(--color-neon-magenta);
+    text-shadow:
+      0 0 6px rgba(255, 46, 200, 0.75),
+      0 0 18px rgba(255, 46, 200, 0.45);
+  }
+  .neon-text-violet {
+    color: var(--color-neon-violet);
+    text-shadow:
+      0 0 6px rgba(187, 0, 255, 0.75),
+      0 0 18px rgba(187, 0, 255, 0.45);
+  }
+
+  /* Gradient border via masked outer ring (1px). Sits on any rounded element. */
+  .neon-border-tri {
+    position: relative;
+    isolation: isolate;
+  }
+  .neon-border-tri::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: var(--gradient-neon-tri);
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .neon-border-cyan {
+    border: 1px solid rgba(0, 240, 255, 0.55);
+    box-shadow: var(--glow-neon-cyan-soft);
+  }
+  .neon-border-magenta {
+    border: 1px solid rgba(255, 46, 200, 0.55);
+    box-shadow: var(--glow-neon-magenta-soft);
+  }
+  .neon-border-violet {
+    border: 1px solid rgba(187, 0, 255, 0.55);
+    box-shadow: var(--glow-neon-violet-soft);
+  }
+
+  /* Card preset: glassy bg + neon tri edge + soft inner glow */
+  .neon-card {
+    position: relative;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.04) 0%,
+        rgba(255, 255, 255, 0.015) 100%
+      );
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .neon-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: var(--gradient-neon-tri);
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0.55;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+  }
+  .neon-card:hover::before {
+    opacity: 1;
+  }
+  .neon-card:hover {
+    box-shadow: var(--glow-neon-tri-strong);
+  }
+
+  /* Shimmer overlay pass — apply on hover via .group/.neon-shimmer-host */
+  .neon-shimmer-host {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .neon-shimmer-host::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 40%;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.25) 50%,
+      transparent 100%
+    );
+    transform: translateX(-120%) skewX(-18deg);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .neon-shimmer-host:hover::after,
+  .neon-shimmer-host:focus-visible::after {
+    animation: neon-shimmer 1.1s ease-out 1;
+  }
+
+  /* Apply-as utilities for the keyframes above */
+  .anim-glow-breathing {
+    animation: glow-breathing 4.5s ease-in-out infinite;
+  }
+  .anim-neon-pulse {
+    animation: neon-pulse 2.8s ease-in-out infinite;
+  }
+  .anim-neon-pulse-magenta {
+    animation: neon-pulse-magenta 2.8s ease-in-out infinite;
+  }
+  .anim-neon-pulse-violet {
+    animation: neon-pulse-violet 2.8s ease-in-out infinite;
+  }
+  .anim-neon-flicker {
+    animation: neon-flicker 6s linear infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .neon-text-tri,
+  .anim-glow-breathing,
+  .anim-neon-pulse,
+  .anim-neon-pulse-magenta,
+  .anim-neon-pulse-violet,
+  .anim-neon-flicker {
+    animation: none !important;
+  }
+  .neon-shimmer-host:hover::after,
+  .neon-shimmer-host:focus-visible::after {
+    animation: none !important;
+  }
 }
