@@ -3507,7 +3507,7 @@ paths:
     patch:
       tags:
         - bot/teams
-      summary: Met a jour les champs editables d'une equipe (capitaine uniquement).
+      summary: Met a jour les champs editables d'une equipe (capitaine, ou staff admin/owner avec actorIsStaff:true).
       operationId: botUpdateTeam
       requestBody:
         required: true
@@ -3520,6 +3520,13 @@ paths:
               properties:
                 actorDiscordUserId:
                   $ref: "#/components/schemas/DiscordId"
+                actorIsStaff:
+                  type: boolean
+                  description: |
+                    Quand `true`, l'actor doit etre staff admin/owner
+                    (resolu via user_discord_links). Le check capitaine est
+                    skippe et l'action est aussi loggee dans staff_logs.
+                    Utilise par la commande Discord `/modifier-equipe-admin`.
                 name:
                   type: string
                   minLength: 2

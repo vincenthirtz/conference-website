@@ -14,6 +14,11 @@ const CAPTAIN_USER_ID = 'user-captain-1';
 const CAPTAIN_DISCORD = '900000000000000001';
 const OTHER_USER_ID = 'user-member-1';
 const OTHER_DISCORD = '900000000000000002';
+const ADMIN_USER_ID = 'user-admin-1';
+const ADMIN_DISCORD = '900000000000000003';
+const ADMIN_STAFF_ID = 'staff-admin-1';
+const MANAGER_USER_ID = 'user-manager-1';
+const MANAGER_DISCORD = '900000000000000004';
 // Conference tenant UUID — match DEFAULT_TENANT_ID in utils/tenant.ts. The
 // fallback resolveTenantId() injects this value into req.botContext.tenantId
 // when the bot doesn't send x-tenant-id, so fixtures must carry it too for
@@ -72,6 +77,12 @@ beforeEach(() => {
   store.user_discord_links = [
     { discord_user_id: CAPTAIN_DISCORD, auth_user_id: CAPTAIN_USER_ID },
     { discord_user_id: OTHER_DISCORD, auth_user_id: OTHER_USER_ID },
+    { discord_user_id: ADMIN_DISCORD, auth_user_id: ADMIN_USER_ID },
+    { discord_user_id: MANAGER_DISCORD, auth_user_id: MANAGER_USER_ID },
+  ] as any;
+  store.staff = [
+    { id: ADMIN_STAFF_ID, auth_user_id: ADMIN_USER_ID, role: 'admin' },
+    { id: 'staff-manager-1', auth_user_id: MANAGER_USER_ID, role: 'manager' },
   ] as any;
 });
 
@@ -181,5 +192,103 @@ describe('PATCH /api/bot/v1/teams/[teamId]', () => {
     await handler(makeReq({ method: 'GET', body: {} }), res);
     expect(res.statusCode).toBe(200);
     expect((res.body as any).team.id).toBe(TEAM_ID);
+  });
+
+  // -- Staff override path (/modifier-equipe-admin) ------------------------
+  // Le bot envoie `actorIsStaff: true` quand un admin/owner veut modifier
+  // n'importe quelle equipe. Le check capitaine est skippe ; requireBotStaff
+  // re-resolved le role cote API (admin|owner) et 403 sinon.
+
+  describe('actorIsStaff override', () => {
+    it('200 admin staff can edit a team they are not captain of', async () => {
+      const res = makeRes();
+      await handler(
+        makeReq({
+          body: {
+            actorDiscordUserId: ADMIN_DISCORD,
+            actorIsStaff: true,
+            name: 'Phoenix Reborn',
+          },
+        }),
+        res
+      );
+      expect(res.statusCode).toBe(200);
+      expect((res.body as any).team.name).toBe('Phoenix Reborn');
+      expect(store.teams[0].name).toBe('Phoenix Reborn');
+    });
+
+    it('403 actorIsStaff:true but Discord ID is not staff admin/owner', async () => {
+      const res = makeRes();
+      await handler(
+        makeReq({
+          body: {
+            actorDiscordUserId: OTHER_DISCORD,
+            actorIsStaff: true,
+            name: 'Hacked',
+          },
+        }),
+        res
+      );
+      expect(res.statusCode).toBe(403);
+      expect(store.teams[0].name).toBe('Phoenix');
+    });
+
+    it('403 actorIsStaff:true with manager role (admin/owner only)', async () => {
+      const res = makeRes();
+      await handler(
+        makeReq({
+          body: {
+            actorDiscordUserId: MANAGER_DISCORD,
+            actorIsStaff: true,
+            name: 'NopeManager',
+          },
+        }),
+        res
+      );
+      expect(res.statusCode).toBe(403);
+      expect(store.teams[0].name).toBe('Phoenix');
+    });
+
+    it('400 actorIsStaff:true without actorDiscordUserId', async () => {
+      const res = makeRes();
+      await handler(
+        makeReq({
+          body: { actorIsStaff: true, name: 'X' },
+        }),
+        res
+      );
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('404 actorIsStaff:true but team does not exist', async () => {
+      store.teams = [];
+      const res = makeRes();
+      await handler(
+        makeReq({
+          body: {
+            actorDiscordUserId: ADMIN_DISCORD,
+            actorIsStaff: true,
+            name: 'Ghost',
+          },
+        }),
+        res
+      );
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('still validates fields under staff override (name too short -> 400)', async () => {
+      const res = makeRes();
+      await handler(
+        makeReq({
+          body: {
+            actorDiscordUserId: ADMIN_DISCORD,
+            actorIsStaff: true,
+            name: 'A',
+          },
+        }),
+        res
+      );
+      expect(res.statusCode).toBe(400);
+    });
   });
 });

@@ -11,11 +11,20 @@
 //
 // Auth: x-api-key valide contre BOT_API_KEY. PATCH requiert en plus
 // actorDiscordUserId == captain_id (resolu via requireBotPlayer).
+//
+// Staff override: si le body contient `actorIsStaff: true`, requireBotStaff
+// remplace requireBotPlayer (Discord ID -> staff admin/owner) et le check
+// captain est skippe. Mute utilise par /modifier-equipe-admin (bot Discord).
+// Log dans staff_logs ('update_team') en plus de player_logs.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
-import { requireBotPlayer } from '@/utils/botActor';
+import {
+  requireBotPlayer,
+  requireBotStaff,
+  logBotStaffAction,
+} from '@/utils/botActor';
 import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
@@ -84,8 +93,40 @@ async function handlePatch(req: NextApiRequest, res: NextApiResponse) {
   }
 
   const body = (req.body ?? {}) as Record<string, unknown>;
-  const actor = await requireBotPlayer(req, res, body);
-  if (!actor) return;
+
+  // `actorIsStaff: true` -> override capitaine (cf. /modifier-equipe-admin).
+  // requireBotStaff repond 400/403 si Discord ID absent / pas staff
+  // admin|owner ; sinon on resout l'auth_user_id via user_discord_links
+  // pour le logPlayerAction.
+  const wantsStaffOverride = body.actorIsStaff === true;
+
+  let actorAuthUserId: string;
+  let actorDiscordUserId: string;
+  let actorStaffId: string | null = null;
+
+  if (wantsStaffOverride) {
+    const staff = await requireBotStaff(req, res, body);
+    if (!staff) return;
+    // requireBotStaff garantit role admin|owner -> link user_discord_links
+    // existe et auth_user_id est non-null. Garde defensive pour le typage.
+    if (!staff.authUserId) {
+      logger.error('[bot/team PATCH] staff actor without authUserId', staff);
+      return res
+        .status(500)
+        .json({ error: 'Staff actor non resolu (auth_user_id manquant)' });
+    }
+    actorAuthUserId = staff.authUserId;
+    actorStaffId = staff.staffId;
+    actorDiscordUserId =
+      typeof body.actorDiscordUserId === 'string'
+        ? body.actorDiscordUserId.trim()
+        : '';
+  } else {
+    const actor = await requireBotPlayer(req, res, body);
+    if (!actor) return;
+    actorAuthUserId = actor.authUserId;
+    actorDiscordUserId = actor.discordUserId;
+  }
 
   const { data: team, error: teamErr } = await loadTeam(
     idOrSlug,
@@ -97,7 +138,7 @@ async function handlePatch(req: NextApiRequest, res: NextApiResponse) {
   }
   if (!team) return res.status(404).json({ error: 'Equipe introuvable' });
 
-  if (team.captain_id !== actor.authUserId) {
+  if (!wantsStaffOverride && team.captain_id !== actorAuthUserId) {
     return res
       .status(403)
       .json({ error: 'Action réservée au capitaine de cette équipe.' });
@@ -217,14 +258,29 @@ async function handlePatch(req: NextApiRequest, res: NextApiResponse) {
     return res.status(500).json({ error: 'Échec de la mise à jour' });
   }
 
+  const changedFields = Object.keys(updates).filter((k) => k !== 'updated_at');
+
   void logPlayerAction({
-    actorAuthUserId: actor.authUserId,
-    actorDiscordUserId: actor.discordUserId,
+    actorAuthUserId,
+    actorDiscordUserId,
     action: 'update_team',
     entityType: 'team',
     entityId: team.id,
-    payload: { fields: Object.keys(updates).filter((k) => k !== 'updated_at') },
+    payload: {
+      fields: changedFields,
+      ...(wantsStaffOverride ? { via: 'staff_admin_override' } : {}),
+    },
   });
+
+  if (wantsStaffOverride) {
+    void logBotStaffAction({
+      staffId: actorStaffId,
+      action: 'update_team',
+      entity_type: 'team',
+      entity_id: team.id,
+      payload: { fields: changedFields },
+    });
+  }
 
   return res.status(200).json({ team: updated });
 }
