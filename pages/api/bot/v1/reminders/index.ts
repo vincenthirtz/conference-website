@@ -41,6 +41,7 @@ type MatchCheckinReminder = {
   teamName: string;
   opponentName: string;
   tournamentName: string | null;
+  scrimName: string | null;
   checkinUrl: string;
 };
 
@@ -125,7 +126,8 @@ async function collectMatchCheckinReminders(
        team1_checked_in_at, team2_checked_in_at,
        team1:team1_id (id, name, captain_id),
        team2:team2_id (id, name, captain_id),
-       tournament:tournament_id (id, name)`
+       tournament:tournament_id (id, name),
+       scrim:scrim_id (id, name)`
     )
     .eq('tenant_id', tenantId)
     .gte('scheduled_at', windowStart)
@@ -197,6 +199,7 @@ async function collectMatchCheckinReminders(
         teamName: team.name ?? `Équipe ${side}`,
         opponentName: opponentTeam?.name ?? 'Adversaire',
         tournamentName: m.tournament?.name ?? null,
+        scrimName: m.scrim?.name ?? null,
         checkinUrl: buildCheckinUrl(token),
       });
     }

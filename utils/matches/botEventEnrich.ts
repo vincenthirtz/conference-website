@@ -30,6 +30,7 @@ export type EnrichedMatchEvent = {
   tournamentId: string | null;
   tournamentName: string | null;
   scrimId: string | null;
+  scrimName: string | null;
   stageId: string | null;
   roundName: string | null;
   matchFormat: string | null;
@@ -86,7 +87,8 @@ export async function enrichMatchEvent(
         discord_dispute_thread_id,
         team1:team1_id(id, name, short_name, logo_url, discord_role_id, discord_channel_id, discord_voice_channel_id, captain_id),
         team2:team2_id(id, name, short_name, logo_url, discord_role_id, discord_channel_id, discord_voice_channel_id, captain_id),
-        tournament:tournament_id(id, name)
+        tournament:tournament_id(id, name),
+        scrim:scrim_id(id, name)
         `
       )
       .eq('id', matchId)
@@ -97,6 +99,7 @@ export async function enrichMatchEvent(
     const t1Raw = Array.isArray(m.team1) ? m.team1[0] : m.team1;
     const t2Raw = Array.isArray(m.team2) ? m.team2[0] : m.team2;
     const tnRaw = Array.isArray(m.tournament) ? m.tournament[0] : m.tournament;
+    const scRaw = Array.isArray(m.scrim) ? m.scrim[0] : m.scrim;
 
     const [t1Captain, t2Captain] = await Promise.all([
       fetchCaptainDiscordUserId(t1Raw?.captain_id ?? null),
@@ -133,6 +136,7 @@ export async function enrichMatchEvent(
       tournamentId: m.tournament_id ?? null,
       tournamentName: tnRaw?.name ?? null,
       scrimId: m.scrim_id ?? null,
+      scrimName: scRaw?.name ?? null,
       stageId: m.stage_id ?? null,
       roundName: m.round_name ?? null,
       matchFormat: m.match_format ?? null,

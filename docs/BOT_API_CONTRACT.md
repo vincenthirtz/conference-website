@@ -289,6 +289,8 @@ Payload :
     "scheduledAt": "2026-05-25T19:00:00.000Z",
     "nudgedByStaffId": "<uuid|null>",
     "enriched": {
+      "tournamentName": "<string|null>",
+      "scrimName": "<string|null>",
       "team1": { "captainDiscordUserId": "<snowflake|null>", ... },
       "team2": { "captainDiscordUserId": "<snowflake|null>", ... },
       "checkinUrl1": "https://site/checkin/<token>",

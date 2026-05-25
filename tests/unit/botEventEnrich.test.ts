@@ -78,6 +78,8 @@ describe('enrichMatchEvent', () => {
       matchId: 'match-1',
       tournamentId: 'tour-1',
       tournamentName: 'Spring Cup',
+      scrimId: null,
+      scrimName: null,
       stageId: 'stage-1',
       roundName: 'Quart de finale',
       matchFormat: 'BO5',
@@ -148,6 +150,41 @@ describe('enrichMatchEvent', () => {
     expect(enriched!.team2).toBeNull();
     expect(enriched!.team1!.captainDiscordUserId).toBeNull();
     expect(enriched!.tournamentName).toBeNull();
+  });
+
+  it('renvoie scrimName et tournamentName=null pour un match de scrim', async () => {
+    store.matches = [
+      {
+        id: 'match-scrim',
+        tournament_id: null,
+        scrim_id: 'scrim-1',
+        stage_id: null,
+        round_name: null,
+        match_format: 'BO3',
+        scheduled_at: '2026-06-02T20:00:00Z',
+        started_at: null,
+        status: 'pending',
+        team1_score: 0,
+        team2_score: 0,
+        lobby_code: null,
+        stream_url: null,
+        discord_thread_id: null,
+        discord_scheduled_event_id: null,
+        discord_dispute_thread_id: null,
+        team1: TEAM_1,
+        team2: TEAM_2,
+        tournament: null,
+        scrim: { id: 'scrim-1', name: 'Pulse vs Echo - Scrim Tactical' },
+      },
+    ];
+    store.user_discord_links = [];
+
+    const enriched = await enrichMatchEvent('match-scrim');
+    expect(enriched).not.toBeNull();
+    expect(enriched!.tournamentId).toBeNull();
+    expect(enriched!.tournamentName).toBeNull();
+    expect(enriched!.scrimId).toBe('scrim-1');
+    expect(enriched!.scrimName).toBe('Pulse vs Echo - Scrim Tactical');
   });
 
   it('supporte la forme tableau renvoyee parfois par PostgREST sur les jointures', async () => {
