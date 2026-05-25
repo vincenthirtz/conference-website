@@ -6858,6 +6858,39 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+  /api/admin/docs/openapi:
+    get:
+      summary: Return this OpenAPI spec (owner-only).
+      description: |
+        Serves `docs/openapi.yaml` raw (default) or as JSON when called
+        with `?format=json`. Powers the `/admin/api-docs` Swagger UI page.
+      operationId: adminGetOpenApiSpec
+      tags:
+        - admin/misc
+      security:
+        - StaffSession: []
+      parameters:
+        - in: query
+          name: format
+          required: false
+          schema:
+            type: string
+            enum: [yaml, json]
+            default: yaml
+      responses:
+        "200":
+          description: The OpenAPI spec.
+          content:
+            text/yaml:
+              schema: { type: string }
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/ServerError"
   /api/admin/disputes:
     get:
       summary: List open match disputes across the tenant.
