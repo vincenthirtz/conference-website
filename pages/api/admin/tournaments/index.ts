@@ -9,7 +9,7 @@ import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { parsePagination, sanitizeSearch } from '@/utils/apiHelpers';
 import slugify from 'slugify';
-import { OVERWATCH_MAPS } from '@/config/overwatch-maps';
+import { getGame, isGameSlug, GAME_SLUGS } from '@/config/games';
 
 import { logger } from '../../../../utils/logger';
 export type TournamentRow = {
@@ -153,6 +153,12 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
     });
   }
 
+  if (body.game != null && !isGameSlug(body.game)) {
+    return res.status(400).json({
+      error: `Invalid game. Supported: ${GAME_SLUGS.join(', ')}`,
+    });
+  }
+
   const slug =
     typeof body.slug === 'string' && body.slug.trim().length > 0
       ? body.slug.trim()
@@ -241,28 +247,31 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
     }
   }
 
-  // Auto-ajouter toutes les maps OW au pool du tournoi
-  try {
-    const mapRows = OVERWATCH_MAPS.map((m, idx) => ({
-      tenant_id: ctx.tenantId,
-      tournament_id: data.id,
-      map_name: m.name,
-      map_slug: slugify(m.name, { lower: true, strict: true }),
-      map_type: m.type,
-      image_url: m.image,
-      enabled: true,
-      order_index: idx,
-    }));
+  // Auto-ajouter le pool de maps du jeu au tournoi (si applicable)
+  const gameDef = data.game ? getGame(data.game) : null;
+  if (gameDef?.hasMapVeto && gameDef.mapPool.length > 0) {
+    try {
+      const mapRows = gameDef.mapPool.map((m, idx) => ({
+        tenant_id: ctx.tenantId,
+        tournament_id: data.id,
+        map_name: m.name,
+        map_slug: slugify(m.name, { lower: true, strict: true }),
+        map_type: m.type,
+        image_url: m.image,
+        enabled: true,
+        order_index: idx,
+      }));
 
-    const { error: mapsErr } = await supabaseAdmin!
-      .from('tournament_maps')
-      .insert(mapRows);
+      const { error: mapsErr } = await supabaseAdmin!
+        .from('tournament_maps')
+        .insert(mapRows);
 
-    if (mapsErr) {
-      logger.error('Auto-insert tournament_maps error:', mapsErr);
+      if (mapsErr) {
+        logger.error('Auto-insert tournament_maps error:', mapsErr);
+      }
+    } catch (mapsInsertErr) {
+      logger.error('Auto-insert tournament_maps exception:', mapsInsertErr);
     }
-  } catch (mapsInsertErr) {
-    logger.error('Auto-insert tournament_maps exception:', mapsInsertErr);
   }
 
   return res.status(201).json({ tournament: data });

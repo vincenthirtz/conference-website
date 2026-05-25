@@ -12,7 +12,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import { OVERWATCH_MAPS } from '@/config/overwatch-maps';
+import { getGame, isGameSlug, GAME_SLUGS } from '@/config/games';
 import { logger } from '@/utils/logger';
 
 const VALID_STATUSES = [
@@ -132,11 +132,21 @@ async function handleCreate(req: NextApiRequest, res: NextApiResponse) {
     maxTeams = body.max_teams;
   }
 
+  let game: string | null = null;
+  if (body.game != null) {
+    if (!isGameSlug(body.game)) {
+      return res.status(400).json({
+        error: `Invalid game. Supported: ${GAME_SLUGS.join(', ')}`,
+      });
+    }
+    game = body.game;
+  }
+
   const payload = {
     tenant_id: req.botContext!.tenantId,
     name,
     slug,
-    game: typeof body.game === 'string' ? body.game : null,
+    game,
     status: rawStatus as Status,
     start_date: startDate,
     end_date: endDate,
@@ -163,26 +173,29 @@ async function handleCreate(req: NextApiRequest, res: NextApiResponse) {
     payload: { name: data.name, slug: data.slug },
   });
 
-  // Auto-populate the tournament map pool with OW maps (parity with admin POST).
-  try {
-    const mapRows = OVERWATCH_MAPS.map((m, idx) => ({
-      tenant_id: req.botContext!.tenantId,
-      tournament_id: data.id,
-      map_name: m.name,
-      map_slug: slugify(m.name, { lower: true, strict: true }),
-      map_type: m.type,
-      image_url: m.image,
-      enabled: true,
-      order_index: idx,
-    }));
-    const { error: mapsErr } = await supabaseAdmin!
-      .from('tournament_maps')
-      .insert(mapRows);
-    if (mapsErr) {
-      logger.error('[bot/tournaments] auto-insert maps error', mapsErr);
+  // Auto-populate the tournament map pool (parity with admin POST).
+  const gameDef = data.game ? getGame(data.game) : null;
+  if (gameDef?.hasMapVeto && gameDef.mapPool.length > 0) {
+    try {
+      const mapRows = gameDef.mapPool.map((m, idx) => ({
+        tenant_id: req.botContext!.tenantId,
+        tournament_id: data.id,
+        map_name: m.name,
+        map_slug: slugify(m.name, { lower: true, strict: true }),
+        map_type: m.type,
+        image_url: m.image,
+        enabled: true,
+        order_index: idx,
+      }));
+      const { error: mapsErr } = await supabaseAdmin!
+        .from('tournament_maps')
+        .insert(mapRows);
+      if (mapsErr) {
+        logger.error('[bot/tournaments] auto-insert maps error', mapsErr);
+      }
+    } catch (e) {
+      logger.error('[bot/tournaments] auto-insert maps exception', e);
     }
-  } catch (e) {
-    logger.error('[bot/tournaments] auto-insert maps exception', e);
   }
 
   return res.status(201).json({ tournament: data });
