@@ -26,7 +26,7 @@ export default class MyDocument extends Document<MyDocumentProps> {
           {/* Preconnect to embed origins used on the homepage so the TCP/TLS
               handshake is paid in parallel with the HTML, not after JS hydration. */}
           <link rel="preconnect" href="https://player.twitch.tv" crossOrigin="" />
-          <link rel="preconnect" href="https://www.youtube-nocookie.com" crossOrigin="" />
+          <link rel="preconnect" href="https://www.youtube.com" crossOrigin="" />
           <link rel="dns-prefetch" href="https://static-cdn.jtvnw.net" />
           <link rel="dns-prefetch" href="https://i.ytimg.com" />
 

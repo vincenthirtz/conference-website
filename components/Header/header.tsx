@@ -99,7 +99,7 @@ function Header(): JSX.Element {
               >
                 <button
                   type="button"
-                  className="group flex w-full items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl bg-white/5 border border-white/15 hover:bg-white/10 hover:border-white/25 text-white font-medium text-sm sm:text-base backdrop-blur transition-all duration-300 hover:scale-105"
+                  className="hero-secondary-btn hero-secondary-btn--violet group flex w-full items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl bg-white/5 border border-white/15 text-white font-medium text-sm sm:text-base backdrop-blur transition-all duration-300"
                 >
                   <svg
                     className="w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-300 group-hover:scale-110"
@@ -117,7 +117,7 @@ function Header(): JSX.Element {
               >
                 <button
                   type="button"
-                  className="group flex w-full items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl bg-white/5 border border-white/15 hover:bg-white/10 hover:border-white/25 text-white font-medium text-sm sm:text-base backdrop-blur transition-all duration-300 hover:scale-105"
+                  className="hero-secondary-btn hero-secondary-btn--cyan group flex w-full items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl bg-white/5 border border-white/15 text-white font-medium text-sm sm:text-base backdrop-blur transition-all duration-300"
                 >
                   <svg
                     className="w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-300 group-hover:scale-110"
@@ -139,7 +139,7 @@ function Header(): JSX.Element {
               <Link href="/timeline-2026" className="flex-1 sm:flex-none">
                 <button
                   type="button"
-                  className="group flex w-full items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl bg-white/5 border border-white/15 hover:bg-white/10 hover:border-white/25 text-white font-medium text-sm sm:text-base backdrop-blur transition-all duration-300 hover:scale-105"
+                  className="hero-secondary-btn hero-secondary-btn--magenta group flex w-full items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl bg-white/5 border border-white/15 text-white font-medium text-sm sm:text-base backdrop-blur transition-all duration-300"
                 >
                   <svg
                     className="w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-300 group-hover:scale-110"
@@ -159,7 +159,7 @@ function Header(): JSX.Element {
               <Link href="/scrim" className="flex-1 sm:flex-none">
                 <button
                   type="button"
-                  className="group flex w-full items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl bg-cyan-500/15 border border-cyan-400/40 hover:bg-cyan-500/25 hover:border-cyan-300/60 text-white font-medium text-sm sm:text-base backdrop-blur transition-all duration-300 hover:scale-105"
+                  className="hero-secondary-btn hero-secondary-btn--scrim group flex w-full items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl bg-neon-cyan/15 border border-neon-cyan/40 text-white font-medium text-sm sm:text-base backdrop-blur transition-all duration-300"
                 >
                   <svg
                     className="w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-300 group-hover:scale-110"

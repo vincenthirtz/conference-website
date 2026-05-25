@@ -1716,3 +1716,82 @@ select option {
     transform: none;
   }
 }
+
+/* ─────────────────────────────────────────────────────────
+ * Hero secondary buttons (PR5): each picks up a different tri-palette
+ * tint on hover so the four CTAs feel distinguished without competing
+ * with the primary "Inscrire mon équipe" gradient.
+ *   --cyan  → FAQ      → cyan accent
+ *   --magenta → Roadmap → magenta accent
+ *   --violet → Discord  → violet accent
+ *   --scrim → Scrim    → already cyan-tinted bg, picks up stronger ring
+ * ───────────────────────────────────────────────────────── */
+.hero-secondary-btn {
+  position: relative;
+}
+
+.hero-secondary-btn:hover {
+  transform: scale(1.05);
+}
+
+.hero-secondary-btn--cyan:hover {
+  background: rgba(0, 240, 255, 0.12);
+  border-color: rgba(0, 240, 255, 0.5);
+  box-shadow:
+    0 0 0 1px rgba(0, 240, 255, 0.25),
+    0 0 18px rgba(0, 240, 255, 0.3);
+}
+
+.hero-secondary-btn--magenta:hover {
+  background: rgba(255, 46, 200, 0.12);
+  border-color: rgba(255, 46, 200, 0.5);
+  box-shadow:
+    0 0 0 1px rgba(255, 46, 200, 0.25),
+    0 0 18px rgba(255, 46, 200, 0.3);
+}
+
+.hero-secondary-btn--violet:hover {
+  background: rgba(187, 0, 255, 0.12);
+  border-color: rgba(187, 0, 255, 0.5);
+  box-shadow:
+    0 0 0 1px rgba(187, 0, 255, 0.25),
+    0 0 18px rgba(187, 0, 255, 0.3);
+}
+
+.hero-secondary-btn--scrim:hover {
+  background: rgba(0, 240, 255, 0.25);
+  border-color: rgba(0, 240, 255, 0.7);
+  box-shadow:
+    0 0 0 1px rgba(0, 240, 255, 0.4),
+    0 0 24px rgba(0, 240, 255, 0.4);
+}
+
+/* Global focus-visible rings — replaces default browser outline with a
+ * cyan neon ring that matches the design language. Scoped to interactive
+ * elements so we don't recolour focus outlines on form inputs (those use
+ * their own ring colours). */
+button:focus-visible,
+a:focus-visible,
+[role='button']:focus-visible {
+  outline: 2px solid var(--color-neon-cyan);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(0, 240, 255, 0.2);
+  border-radius: 4px;
+}
+
+/* Anchor scroll-margin so jumping to #news, #sponsors etc. doesn't
+ * land hidden behind the sticky navbar. */
+#news,
+#sponsors,
+#faq {
+  scroll-margin-top: 80px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-secondary-btn {
+    transition: none;
+  }
+  .hero-secondary-btn:hover {
+    transform: none;
+  }
+}
