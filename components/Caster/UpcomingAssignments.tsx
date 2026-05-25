@@ -46,9 +46,29 @@ export default function UpcomingAssignments({ assignments }: Props) {
       </div>
       <ul className="space-y-2.5">
         {assignments.map((a) => {
+          // Lot 9 : un assignment référence soit un match, soit un scrim.
+          // On normalise vers une vue commune pour l'affichage.
+          const isScrim = a.kind === 'scrim' && a.scrim;
           const m = a.match;
-          const when = m.scheduledAt
-            ? new Date(m.scheduledAt).toLocaleString('fr-FR', {
+          const s = a.scrim;
+          const scheduledAt = isScrim
+            ? (s?.scheduledAt ?? null)
+            : (m?.scheduledAt ?? null);
+          const team1Name = isScrim
+            ? (s?.team1?.name ?? 'TBD')
+            : (m?.team1?.name ?? 'TBD');
+          const team2Name = isScrim
+            ? (s?.team2?.name ?? 'TBD')
+            : (m?.team2?.name ?? 'TBD');
+          const streamUrl = isScrim ? (s?.streamUrl ?? null) : (m?.streamUrl ?? null);
+          const contextLine = isScrim
+            ? `Scrim${s?.slug ? ` — ${s.slug}` : ''}`
+            : m?.tournament
+              ? `${m.tournament.name}${m.roundName ? ` — ${m.roundName}` : ''}`
+              : null;
+          const kindBadge = isScrim ? 'Scrim' : 'Match';
+          const when = scheduledAt
+            ? new Date(scheduledAt).toLocaleString('fr-FR', {
                 weekday: 'short',
                 hour: '2-digit',
                 minute: '2-digit',
@@ -60,32 +80,38 @@ export default function UpcomingAssignments({ assignments }: Props) {
               className="rounded-xl border border-white/10 bg-black/30 p-3"
             >
               <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
-                <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-200">
-                  {a.role || 'Caster'}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                      isScrim
+                        ? 'bg-amber-500/20 text-amber-200'
+                        : 'bg-blue-500/20 text-blue-200'
+                    }`}
+                  >
+                    {kindBadge}
+                  </span>
+                  <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-200">
+                    {a.role || 'Caster'}
+                  </span>
+                </div>
                 <span className="text-[11px] text-gray-400">
-                  {when} • {relativeTime(m.scheduledAt)}
+                  {when} • {relativeTime(scheduledAt)}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-sm text-white">
-                <span className="truncate flex-1 text-right">
-                  {m.team1?.name || 'TBD'}
-                </span>
+                <span className="truncate flex-1 text-right">{team1Name}</span>
                 <span className="text-gray-500 text-xs">vs</span>
-                <span className="truncate flex-1">
-                  {m.team2?.name || 'TBD'}
-                </span>
+                <span className="truncate flex-1">{team2Name}</span>
               </div>
-              {m.tournament && (
+              {contextLine && (
                 <div className="text-[11px] text-gray-500 mt-1 truncate">
-                  {m.tournament.name}
-                  {m.roundName ? ` — ${m.roundName}` : ''}
+                  {contextLine}
                 </div>
               )}
-              {m.streamUrl && (
+              {streamUrl && (
                 <div className="mt-2">
                   <a
-                    href={m.streamUrl}
+                    href={streamUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-[11px] text-purple-300 hover:text-purple-200 underline"

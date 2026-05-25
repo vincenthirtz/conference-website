@@ -28,9 +28,20 @@ export type CasterProfile = {
   city: string | null;
 };
 
+type AssignmentTeam = {
+  id: string;
+  name: string;
+  shortName: string | null;
+  logoUrl: string | null;
+} | null;
+
+/** Lot 9 — assignment polymorphique : `kind` discrimine match vs scrim. */
 export type CasterUpcomingAssignment = {
   assignmentId: string;
   role: string | null;
+  /** Lot 9 default 'match' pour rétro-compat avec les rows pré-Lot 9. */
+  kind?: 'match' | 'scrim';
+  startsAt?: string;
   match: {
     id: string;
     scheduledAt: string | null;
@@ -39,24 +50,23 @@ export type CasterUpcomingAssignment = {
     roundName: string | null;
     streamUrl: string | null;
     lobbyCode: string | null;
-    team1: {
-      id: string;
-      name: string;
-      shortName: string | null;
-      logoUrl: string | null;
-    } | null;
-    team2: {
-      id: string;
-      name: string;
-      shortName: string | null;
-      logoUrl: string | null;
-    } | null;
+    team1: AssignmentTeam;
+    team2: AssignmentTeam;
     tournament: {
       id: string;
       name: string;
       slug: string;
     } | null;
-  };
+  } | null;
+  scrim?: {
+    id: string;
+    slug: string | null;
+    scheduledAt: string | null;
+    status: string;
+    streamUrl: string | null;
+    team1: AssignmentTeam;
+    team2: AssignmentTeam;
+  } | null;
 };
 
 export type CasterMeResponse = {

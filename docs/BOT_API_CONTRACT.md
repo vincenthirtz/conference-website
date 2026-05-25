@@ -473,20 +473,45 @@ suffit pour DM les casters de tous les tenants linkes.
     {
       "assignmentId": "uuid",
       "tenantId": "ce69a726-773e-4d12-b5eb-d2503aa752b4",
+      "kind": "match",
       "matchId": "uuid",
+      "scrimId": null,
       "matchStartsAt": "2026-05-20T20:00:00.000Z",
       "casterDiscordUserId": "9000…",
       "role": "Streameuse Overwatch",
       "teamA": { "id": "uuid", "name": "Chaos Theory" },
       "teamB": { "id": "uuid", "name": "Nova Storm" },
       "tournamentName": "Spring Cup 2026",
+      "scrimName": null,
+      "ackedAt": null
+    },
+    {
+      "assignmentId": "uuid",
+      "tenantId": "ce69a726-…",
+      "kind": "scrim",
+      "matchId": null,
+      "scrimId": "uuid",
+      "matchStartsAt": "2026-05-21T18:00:00.000Z",
+      "casterDiscordUserId": "9000…",
+      "role": "Caster",
+      "teamA": { "id": "uuid", "name": "Pulse" },
+      "teamB": { "id": "uuid", "name": "Echo" },
+      "tournamentName": null,
+      "scrimName": "Pulse vs Echo — Scrim Tactical",
       "ackedAt": null
     }
   ],
-  "count": 1,
+  "count": 2,
   "withinMinutes": 30
 }
 ```
+
+**Lot 9 (Scrims reuse)** : `cast_assignments` est désormais polymorphique
+(`match_id` XOR `scrim_id`, CHECK `chk_cast_assignments_entity_xor`). Les
+rows pré-Lot 9 conservent `kind: 'match'` + `matchId`, et les nouveaux
+assignments scrim ont `kind: 'scrim'` + `scrimId`. Le bot doit consommer
+les deux variantes pour le DM T-30 — la résolution du `guildId` reste
+sur `tenantId` (inchangée).
 
 **Errors** : `400` (withinMinutes hors plage), `401`, `500`.
 **Rate limit** : 60/min global. **Idempotency** : non.

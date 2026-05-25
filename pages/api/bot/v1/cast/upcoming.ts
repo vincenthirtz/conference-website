@@ -60,27 +60,49 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   // "upcoming".
   // crossTenant: true — pas de filtre `tenant_id`. Le bot va router via le
   // `tenantId` retourne par row (cf. note d'en-tete).
-  const { data, error } = await supabaseAdmin
-    .from('cast_assignments')
-    .select(
-      `id, tenant_id, match_id, briefing_at, acked_at, cast_member_id,
-       cast_member:cast_member_id (id, name, title, auth_user_id),
-       match:match_id (
-         id, status, scheduled_at, is_bye,
-         team1:team1_id (id, name, short_name),
-         team2:team2_id (id, name, short_name),
-         tournament:tournament_id (id, name, slug)
-       )`
-    )
-    .is('acked_at', null)
-    .order('briefing_at', { ascending: true });
+  // Lot 9 : cast_assignments est polymorphe (match_id XOR scrim_id). On
+  // requete les deux variantes en parallele puis on merge.
+  const [matchRes, scrimRes] = await Promise.all([
+    supabaseAdmin
+      .from('cast_assignments')
+      .select(
+        `id, tenant_id, match_id, briefing_at, acked_at, cast_member_id,
+         cast_member:cast_member_id (id, name, title, auth_user_id),
+         match:match_id (
+           id, status, scheduled_at, is_bye,
+           team1:team1_id (id, name, short_name),
+           team2:team2_id (id, name, short_name),
+           tournament:tournament_id (id, name, slug)
+         )`
+      )
+      .is('acked_at', null)
+      .not('match_id', 'is', null)
+      .order('briefing_at', { ascending: true }),
+    supabaseAdmin
+      .from('cast_assignments')
+      .select(
+        `id, tenant_id, scrim_id, briefing_at, acked_at, cast_member_id,
+         cast_member:cast_member_id (id, name, title, auth_user_id),
+         scrim:scrim_id (
+           id, name, slug, status, scheduled_date, stream_url,
+           team1:team1_id (id, name, short_name),
+           team2:team2_id (id, name, short_name)
+         )`
+      )
+      .is('acked_at', null)
+      .not('scrim_id', 'is', null)
+      .order('briefing_at', { ascending: true }),
+  ]);
 
-  if (error) {
-    logger.error('[bot/cast/upcoming] query error', error);
+  if (matchRes.error) {
+    logger.error('[bot/cast/upcoming] match query error', matchRes.error);
     return res.status(500).json({ error: 'Erreur de lecture' });
   }
+  if (scrimRes.error) {
+    logger.error('[bot/cast/upcoming] scrim query error', scrimRes.error);
+  }
 
-  const rows = (data ?? []).filter((row) => {
+  const matchRows = (matchRes.data ?? []).filter((row) => {
     const r = row as Record<string, unknown>;
     const matchRel = r.match;
     const m = Array.isArray(matchRel)
@@ -96,6 +118,24 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (!Number.isFinite(ts)) return false;
     return ts >= now.getTime() && ts <= windowEnd.getTime();
   });
+
+  const scrimRows = (scrimRes.data ?? []).filter((row) => {
+    const r = row as Record<string, unknown>;
+    const scrimRel = r.scrim;
+    const s = Array.isArray(scrimRel)
+      ? (scrimRel[0] as Record<string, unknown> | undefined)
+      : (scrimRel as Record<string, unknown> | null | undefined);
+    if (!s) return false;
+    const status = typeof s.status === 'string' ? s.status : '';
+    if (status === 'cancelled') return false;
+    const startsAt = s.scheduled_date;
+    if (typeof startsAt !== 'string') return false;
+    const ts = Date.parse(startsAt);
+    if (!Number.isFinite(ts)) return false;
+    return ts >= now.getTime() && ts <= windowEnd.getTime();
+  });
+
+  const rows = [...matchRows, ...scrimRows];
 
   // Batch resolve discord_user_id pour chaque caster.
   const authIds = rows
@@ -129,14 +169,23 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       | Record<string, unknown>
       | null
       | undefined;
+
     const matchRel = r.match;
     const m = (Array.isArray(matchRel) ? matchRel[0] : matchRel) as
       | Record<string, unknown>
       | null
       | undefined;
-    const t1Rel = m?.team1;
-    const t2Rel = m?.team2;
-    const tnRel = m?.tournament;
+    const scrimRel = r.scrim;
+    const s = (Array.isArray(scrimRel) ? scrimRel[0] : scrimRel) as
+      | Record<string, unknown>
+      | null
+      | undefined;
+
+    const isMatch = !!m;
+    const entity = isMatch ? m : s;
+    const t1Rel = entity?.team1;
+    const t2Rel = entity?.team2;
+    const tnRel = m?.tournament; // scrims n'ont pas de tournament FK
     const t1 = (Array.isArray(t1Rel) ? t1Rel[0] : t1Rel) as
       | Record<string, unknown>
       | null
@@ -155,13 +204,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return {
       assignmentId: r.id as string,
       tenantId: (r.tenant_id as string | null) ?? null,
-      matchId: r.match_id as string,
-      matchStartsAt: (m?.scheduled_at as string | null) ?? null,
+      kind: isMatch ? ('match' as const) : ('scrim' as const),
+      // Backward-compat : matchId reste rempli quand kind='match'.
+      matchId: isMatch ? (r.match_id as string) : null,
+      scrimId: isMatch ? null : (r.scrim_id as string),
+      matchStartsAt: isMatch
+        ? ((m?.scheduled_at as string | null) ?? null)
+        : ((s?.scheduled_date as string | null) ?? null),
       casterDiscordUserId: casterDiscord,
       role: (cm?.title as string | null) ?? null,
       teamA: t1 ? { id: t1.id as string, name: (t1.name as string | null) ?? null } : null,
       teamB: t2 ? { id: t2.id as string, name: (t2.name as string | null) ?? null } : null,
       tournamentName: (tn?.name as string | null) ?? null,
+      scrimName: isMatch ? null : ((s?.name as string | null) ?? null),
       ackedAt: (r.acked_at as string | null) ?? null,
     };
   });

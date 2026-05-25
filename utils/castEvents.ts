@@ -142,7 +142,9 @@ async function resolveMatch(matchId: string): Promise<MatchSnapshot | null> {
 
 type AssignmentInput = {
   assignmentId: string;
-  matchId: string;
+  /** Lot 9 : matchId XOR scrimId (cast_assignments polymorphique). */
+  matchId?: string | null;
+  scrimId?: string | null;
   castMemberId: string;
   briefingAt: string | null;
 };
@@ -166,16 +168,21 @@ export async function emitCastEvent(
       );
       return;
     }
+    const matchId = assignment.matchId ?? null;
+    const scrimId = assignment.scrimId ?? null;
     const [castMember, match] = await Promise.all([
       resolveCastMember(assignment.castMemberId),
-      resolveMatch(assignment.matchId),
+      matchId ? resolveMatch(matchId) : Promise.resolve(null),
     ]);
 
     await emitBotEvent(
       eventName,
       {
         assignmentId: assignment.assignmentId,
-        matchId: assignment.matchId,
+        // Lot 9 : on garde matchId/scrimId nuls explicites pour signaler la
+        // kind au bot consumer.
+        matchId,
+        scrimId,
         castMemberId: assignment.castMemberId,
         briefingAt: assignment.briefingAt,
         castMember,
