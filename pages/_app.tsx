@@ -32,6 +32,13 @@ const FloatingSocials = dynamic(
 const PushOptIn = dynamic(() => import('@/components/admin/PushOptIn'), {
   ssr: false,
 });
+const PWAInstallAndUpdate = dynamic(
+  () => import('@/components/PWAInstallAndUpdate'),
+  { ssr: false }
+);
+const OfflineBanner = dynamic(() => import('@/components/OfflineBanner'), {
+  ssr: false,
+});
 
 type AppPropsWithSeo = AppProps & {
   Component: AppProps['Component'] & { seo?: SeoProps };
@@ -86,6 +93,8 @@ function MyApp({ Component, pageProps, router }: AppPropsWithSeo) {
             <Component {...pageProps} />
           </main>
           {isAdmin && <PushOptIn />}
+          {(isAdmin || isCaster) && <PWAInstallAndUpdate />}
+          {(isAdmin || isCaster) && <OfflineBanner />}
           {!isCaster && <Footer />}
           {!isAdmin && !isCaster && <FloatingSocials />}
           <BackToTopButton />

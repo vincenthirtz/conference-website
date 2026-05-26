@@ -1,23 +1,155 @@
 // public/sw.js
-// Service Worker pour la PWA /admin — exclusivement dédié à Web Push.
+// Service Worker pour la PWA staff. Trois rôles :
+//   1. Web Push (notifications staff via bot_event_outbox, cf. dispatcher).
+//   2. App shell caching — la PWA installée reste utilisable hors-ligne :
+//      navigation network-first avec fallback /offline.html, assets statiques
+//      stale-while-revalidate.
+//   3. Background Sync — replay des mutations queue'd via IDB (cf.
+//      utils/bgSyncQueue.ts).
 //
-// Pas de cache offline en v1 (out of scope). Le SW est servi avec
-// `Service-Worker-Allowed: /` (cf. netlify.toml) pour pouvoir recevoir les
-// notifications même si l'utilisateur n'est pas physiquement sur /admin au
-// moment du push.
+// Le SW est servi avec `Service-Worker-Allowed: /` (cf. netlify.toml) pour
+// recevoir les notifications même hors /admin.
 //
-// Le `register()` côté client (cf. pages/_app.tsx) est gated derrière la
-// variable d'env `NEXT_PUBLIC_ENABLE_PWA === '1'` — uniquement positionnée
-// en production sur le dashboard Netlify (master).
+// `register()` côté client (pages/_app.tsx) est gated par
+// NEXT_PUBLIC_ENABLE_PWA === '1' (prod Netlify uniquement).
+//
+// Versioning du cache : bump SHELL_CACHE_VERSION quand le shell change.
+// L'activation nettoie les vieux caches. `skipWaiting()` reste activé tant
+// que l'update flow piloté côté client (Lot suivant) n'est pas en place ;
+// un nouveau SW prend le contrôle immédiatement.
 
-self.addEventListener('install', () => {
-  // Active immédiatement le nouveau SW sans attendre que tous les tabs soient
-  // fermés. Combine avec clients.claim() dans `activate` pour rollouts rapides.
-  self.skipWaiting();
+const SHELL_CACHE_VERSION = 'v1';
+const SHELL_CACHE = `wmc-shell-${SHELL_CACHE_VERSION}`;
+const RUNTIME_CACHE = `wmc-runtime-${SHELL_CACHE_VERSION}`;
+const OFFLINE_URL = '/offline.html';
+// Assets précachés à l'install. Tout doit être présent en build prod sinon
+// l'install échoue silencieusement et le SW reste sur l'ancienne version.
+const SHELL_PRECACHE = [OFFLINE_URL, '/favicon.ico', '/site.webmanifest'];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    (async () => {
+      const cache = await caches.open(SHELL_CACHE);
+      // addAll est atomique : si un seul fetch échoue, rien n'est mis en
+      // cache et l'install fail. cache.add() en série tolère les misses
+      // silencieusement, ce qu'on préfère ici (un asset manquant ne doit
+      // pas casser le SW entier).
+      await Promise.all(
+        SHELL_PRECACHE.map((url) =>
+          cache.add(url).catch(() => {
+            // Asset manquant — pas grave, on continue sans le précacher.
+          })
+        )
+      );
+      // Active immédiatement le nouveau SW. Le client peut détecter
+      // l'arrivée d'une nouvelle version via `controllerchange` et
+      // proposer un refresh (cf. Lot update flow).
+      await self.skipWaiting();
+    })()
+  );
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    (async () => {
+      // Nettoyage des anciens caches versionnés.
+      const keys = await caches.keys();
+      await Promise.all(
+        keys
+          .filter((k) => k.startsWith('wmc-') && k !== SHELL_CACHE && k !== RUNTIME_CACHE)
+          .map((k) => caches.delete(k))
+      );
+      await self.clients.claim();
+    })()
+  );
+});
+
+// ─────────────────────────────────────────────────────────
+// Fetch handler — stratégies par type de requête.
+//
+//   - Cross-origin                : passthrough (pas de cache).
+//   - /api/*, /sw.js              : passthrough (jamais cache).
+//   - Navigation (request.mode)   : network-first → cache → /offline.html.
+//   - Assets statiques same-origin : stale-while-revalidate.
+//
+// On ne touche pas aux POST/PUT/DELETE — seules les GET sont cacheables.
+// ─────────────────────────────────────────────────────────
+
+function isNavigation(request) {
+  return (
+    request.mode === 'navigate' ||
+    (request.method === 'GET' &&
+      request.headers.get('accept')?.includes('text/html'))
+  );
+}
+
+async function networkFirstNavigation(request) {
+  try {
+    const networkRes = await fetch(request);
+    // Cache les navigations 2xx pour fallback offline. On évite les redirects
+    // (3xx) et les erreurs (4xx/5xx) qui n'ont pas vocation à être servies
+    // offline.
+    if (networkRes.ok && networkRes.status >= 200 && networkRes.status < 300) {
+      const cache = await caches.open(RUNTIME_CACHE);
+      cache.put(request, networkRes.clone()).catch(() => {});
+    }
+    return networkRes;
+  } catch (_err) {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    const offline = await caches.match(OFFLINE_URL);
+    if (offline) return offline;
+    // Dernier recours : réponse minimale, ne devrait jamais arriver vu que
+    // /offline.html est précaché à l'install.
+    return new Response('Hors ligne', {
+      status: 503,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    });
+  }
+}
+
+async function staleWhileRevalidate(request) {
+  const cache = await caches.open(RUNTIME_CACHE);
+  const cached = await cache.match(request);
+  const fetchPromise = fetch(request)
+    .then((res) => {
+      // On cache uniquement les 2xx — un 404 cacheé ferait persister le miss.
+      if (res.ok) cache.put(request, res.clone()).catch(() => {});
+      return res;
+    })
+    .catch(() => null);
+  return cached || (await fetchPromise) || new Response('', { status: 504 });
+}
+
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  if (request.method !== 'GET') return;
+
+  const url = new URL(request.url);
+
+  // Cross-origin (Twitch, HelloAsso, push services) → passthrough.
+  if (url.origin !== self.location.origin) return;
+
+  // Jamais cacher : API, le SW lui-même, le manifest (qui peut changer
+  // entre deploys), et /_next/static/__next/ (Next.js gère son propre
+  // hashing — on laisse les chunks tomber dans le SWR plus bas).
+  if (
+    url.pathname.startsWith('/api/') ||
+    url.pathname === '/sw.js' ||
+    url.pathname === '/site.webmanifest'
+  ) {
+    return;
+  }
+
+  if (isNavigation(request)) {
+    event.respondWith(networkFirstNavigation(request));
+    return;
+  }
+
+  // Assets statiques same-origin (JS chunks, CSS, images, fonts) :
+  // stale-while-revalidate. Next.js inclut un hash dans le filename des
+  // chunks (immutable), donc cache-busting par URL fonctionne nativement.
+  event.respondWith(staleWhileRevalidate(request));
 });
 
 // Tente de poser un badge sur l'icône installée (Windows taskbar / macOS

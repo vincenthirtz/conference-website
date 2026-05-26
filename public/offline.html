@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hors ligne — OW Women's Cup</title>
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="theme-color" content="#0E0A1F" />
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          'Helvetica Neue', Arial, sans-serif;
+        background:
+          radial-gradient(ellipse at top, #1a0e3a 0%, #0e0a1f 60%) no-repeat,
+          #0e0a1f;
+        color: #f4f4f8;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        box-sizing: border-box;
+      }
+      .card {
+        max-width: 480px;
+        text-align: center;
+      }
+      .logo {
+        width: 96px;
+        height: 96px;
+        margin: 0 auto 24px;
+        display: block;
+        filter: drop-shadow(0 0 22px rgba(255, 46, 200, 0.45));
+      }
+      h1 {
+        font-size: 28px;
+        margin: 0 0 12px;
+        background: linear-gradient(135deg, #00f0ff, #ff2ec8, #bb00ff);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      p {
+        font-size: 16px;
+        line-height: 1.55;
+        color: #c4c4d4;
+        margin: 0 0 28px;
+      }
+      .actions {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      button {
+        font: inherit;
+        padding: 12px 22px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(255, 255, 255, 0.06);
+        color: #fff;
+        cursor: pointer;
+        transition:
+          background 120ms ease,
+          transform 120ms ease;
+      }
+      button:hover {
+        background: rgba(255, 255, 255, 0.12);
+      }
+      button.primary {
+        background: linear-gradient(135deg, #00f0ff, #ff2ec8);
+        border-color: transparent;
+        color: #0e0a1f;
+        font-weight: 600;
+      }
+      button.primary:hover {
+        transform: translateY(-1px);
+      }
+      .status {
+        margin-top: 18px;
+        font-size: 13px;
+        color: #8a8aa0;
+        min-height: 1.4em;
+      }
+      .status[data-online='true'] {
+        color: #00f0ff;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <img class="logo" src="/img/logos/2025-logo.png" alt="" />
+      <h1>Hors ligne</h1>
+      <p>
+        La connexion réseau est indisponible. Tes actions critiques (score,
+        broadcast, transition de segment) sont mises en file et rejouées
+        automatiquement dès que tu reviens en ligne.
+      </p>
+      <div class="actions">
+        <button class="primary" type="button" onclick="location.reload()">
+          Réessayer
+        </button>
+        <button type="button" onclick="history.back()">Retour</button>
+      </div>
+      <div class="status" id="status">Statut : hors ligne</div>
+    </main>
+    <script>
+      // Met à jour le statut en temps réel et auto-reload quand la
+      // connexion revient. navigator.onLine reste peu fiable mais combiné
+      // aux events online/offline ça donne un signal correct.
+      var status = document.getElementById('status');
+      function refresh() {
+        if (navigator.onLine) {
+          status.textContent = 'Connexion détectée — rechargement…';
+          status.dataset.online = 'true';
+          setTimeout(function () {
+            location.reload();
+          }, 400);
+        } else {
+          status.textContent = 'Statut : hors ligne';
+          status.dataset.online = 'false';
+        }
+      }
+      window.addEventListener('online', refresh);
+      window.addEventListener('offline', refresh);
+      refresh();
+    </script>
+  </body>
+</html>
