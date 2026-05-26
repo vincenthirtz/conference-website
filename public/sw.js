@@ -152,12 +152,21 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(staleWhileRevalidate(request));
 });
 
-// Tente de poser un badge sur l'icône installée (Windows taskbar / macOS
-// dock / Android launcher). Best-effort : si `setAppBadge` n'est pas dispo
-// (Safari, browser non-installé, OS sans support), on no-op silencieusement.
-function trySetAppBadge() {
+// Tente de poser un badge (avec compteur) sur l'icône installée
+// (Windows taskbar / macOS dock / Android launcher). Best-effort :
+// si `setAppBadge` n'est pas dispo (Safari, browser non-installé,
+// OS sans support), on no-op silencieusement.
+//
+// `count` peut être omis pour afficher juste un "dot" sans nombre (fallback
+// quand on n'a pas la valeur exacte). Avec un nombre, l'OS rend le badge
+// avec ce nombre (Windows tronque à 99+).
+function trySetAppBadge(count) {
   if ('setAppBadge' in self.navigator) {
-    self.navigator.setAppBadge().catch(() => {});
+    if (typeof count === 'number' && count > 0) {
+      self.navigator.setAppBadge(count).catch(() => {});
+    } else {
+      self.navigator.setAppBadge().catch(() => {});
+    }
   }
 }
 
@@ -194,8 +203,22 @@ self.addEventListener('push', (event) => {
     requireInteraction: false,
   };
 
+  // Badge V2 : le dispatcher inclut `data.unread_count` = nombre d'events
+  // non-ack'd AVANT celui-ci. On ajoute +1 pour le push qu'on est en train
+  // de show. Fallback dot si la valeur n'est pas fournie (anciens payloads
+  // ou push tiers).
+  const unreadBefore =
+    options.data && typeof options.data.unread_count === 'number'
+      ? options.data.unread_count
+      : null;
+  const badgeCount =
+    unreadBefore !== null && unreadBefore >= 0 ? unreadBefore + 1 : undefined;
+
   event.waitUntil(
-    Promise.all([self.registration.showNotification(title, options), trySetAppBadge()])
+    Promise.all([
+      self.registration.showNotification(title, options),
+      trySetAppBadge(badgeCount),
+    ])
   );
 });
 

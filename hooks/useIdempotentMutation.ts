@@ -32,6 +32,43 @@
 
 import { useCallback, useRef } from 'react';
 import { useAdminFetch, type AdminFetchOptions } from './useAdminFetch';
+import { enqueueMutation, isNetworkError } from '@/utils/bgSyncQueue';
+
+/**
+ * Erreur levée par `mutateJson` quand la requête a échoué sur erreur
+ * réseau et a été mise en file de Background Sync. Le caller peut la
+ * catcher pour distinguer "vraie erreur" d'un simple "queued, will retry" :
+ *
+ *   try { await mutateJson(url, init); }
+ *   catch (err) {
+ *     if (err instanceof BgSyncQueuedError) {
+ *       toast('Action en file, sera envoyée à la reconnexion');
+ *     } else {
+ *       toast(`Erreur: ${err.message}`);
+ *     }
+ *   }
+ *
+ * Sans handler explicite, l'OfflineBanner affichera quand même le compteur
+ * de file — l'utilisateur n'est jamais laissé dans le flou.
+ */
+export class BgSyncQueuedError extends Error {
+  readonly isBgSyncQueued = true;
+  constructor(
+    public readonly queueId: number,
+    public readonly url: string
+  ) {
+    super('Action mise en file pour synchronisation différée');
+    this.name = 'BgSyncQueued';
+  }
+}
+
+/**
+ * Header(s) custom posé sur les Response synthétiques retournées par
+ * `mutate` quand la requête a été queue'd. Permet aux callers qui inspectent
+ * la Response (vs ceux qui font juste `if (res.ok)`) de détecter le cas.
+ */
+const BG_SYNC_HEADER = 'X-BG-Sync';
+const BG_SYNC_ID_HEADER = 'X-BG-Sync-Id';
 
 function generateKey(): string {
   // crypto.randomUUID est dispo dans tous les navigateurs modernes + Node 19+
@@ -109,11 +146,40 @@ export function useIdempotentMutation(
       input: string,
       init: AdminFetchOptions = {}
     ): Promise<Response> => {
-      const res = await adminFetch(input, injectKey(init));
-      if (autoRegenerateOnSuccess && res.ok) {
-        keyRef.current = generateKey();
+      const finalInit = injectKey(init);
+      try {
+        const res = await adminFetch(input, finalInit);
+        if (autoRegenerateOnSuccess && res.ok) {
+          keyRef.current = generateKey();
+        }
+        return res;
+      } catch (err) {
+        // Erreur réseau = la requête n'a jamais atteint le serveur (DNS,
+        // wifi cut, CORS preflight failed, etc.). On enqueue pour le SW
+        // Background Sync et on renvoie une Response synthétique 202 que
+        // le caller peut détecter via le header X-BG-Sync.
+        if (isNetworkError(err)) {
+          const queueId = await enqueueMutation(input, finalInit as RequestInit);
+          // On régénère la clé : la mutation est "envoyée" (en file) du point
+          // de vue du caller, le prochain mutate doit avoir une nouvelle
+          // intention sinon le serveur dédupliquerait à tort.
+          if (autoRegenerateOnSuccess) {
+            keyRef.current = generateKey();
+          }
+          return new Response(
+            JSON.stringify({ queued: true, queueId }),
+            {
+              status: 202,
+              headers: {
+                'Content-Type': 'application/json',
+                [BG_SYNC_HEADER]: 'queued',
+                [BG_SYNC_ID_HEADER]: String(queueId),
+              },
+            }
+          );
+        }
+        throw err;
       }
-      return res;
     },
     [adminFetch, injectKey, autoRegenerateOnSuccess]
   );
@@ -123,12 +189,29 @@ export function useIdempotentMutation(
       input: string,
       init: AdminFetchOptions = {}
     ): Promise<T> => {
-      const out = await adminFetchJson<T>(input, injectKey(init));
-      // adminFetchJson throw sur erreur, donc si on arrive ici c'est 2xx.
-      if (autoRegenerateOnSuccess) {
-        keyRef.current = generateKey();
+      const finalInit = injectKey(init);
+      try {
+        const out = await adminFetchJson<T>(input, finalInit);
+        // adminFetchJson throw sur erreur, donc si on arrive ici c'est 2xx.
+        if (autoRegenerateOnSuccess) {
+          keyRef.current = generateKey();
+        }
+        return out;
+      } catch (err) {
+        if (isNetworkError(err)) {
+          const queueId = await enqueueMutation(input, finalInit as RequestInit);
+          if (autoRegenerateOnSuccess) {
+            keyRef.current = generateKey();
+          }
+          // Pour mutateJson, le contract est "retourne T ou throw" — on ne
+          // peut pas inventer un T synthétique typé. On throw un erreur
+          // dédiée pour que le caller puisse la distinguer (UX rassurante)
+          // ou la traiter comme une erreur normale (comportement par
+          // défaut : l'OfflineBanner indique déjà la queue).
+          throw new BgSyncQueuedError(queueId, input);
+        }
+        throw err;
       }
-      return out;
     },
     [adminFetchJson, injectKey, autoRegenerateOnSuccess]
   );

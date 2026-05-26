@@ -214,22 +214,41 @@ function AdminNotificationsPage({ staff }: Props) {
     refreshSubStatus();
   }, [refreshSubStatus]);
 
-  // ----- Clear app badge ---------------------------------------------------
+  // ----- Ack notifications + clear app badge -------------------------------
   // Le staff arrive sur la page notifications = il a vu ses notifs.
-  // On demande au SW de retirer le badge taskbar (Windows/macOS/Android
-  // installé en PWA). Best-effort : si pas de SW, pas de badge API, no-op.
+  // 1. POST /ack-all → marque acked_at = now() pour toutes ses deliveries
+  //    non-ack'd. Le prochain push enverra unread_count = 0 + 1 = badge 1
+  //    (pas N+1).
+  // 2. On demande au SW de retirer le badge taskbar (effet immédiat sans
+  //    attendre le prochain push).
+  // Best-effort : si l'ack-all échoue (offline), le SW BG Sync replay le
+  // POST plus tard ; le clear local s'applique quand même (rassurant).
   useEffect(() => {
-    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
-      return;
-    }
-    navigator.serviceWorker.ready
-      .then((reg) => {
-        reg.active?.postMessage({ type: 'clear-app-badge' });
-      })
-      .catch(() => {
-        // SW pas prêt / pas enregistré → no-op.
-      });
-  }, []);
+    let cancelled = false;
+    (async () => {
+      try {
+        await adminFetchJson('/api/admin/notifications/ack-all', {
+          method: 'POST',
+        });
+      } catch {
+        // Erreur réseau ou auth → on tente quand même le clear local du SW.
+      }
+      if (cancelled) return;
+      if (
+        typeof navigator !== 'undefined' &&
+        'serviceWorker' in navigator
+      ) {
+        navigator.serviceWorker.ready
+          .then((reg) => {
+            reg.active?.postMessage({ type: 'clear-app-badge' });
+          })
+          .catch(() => {});
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [adminFetchJson]);
 
   // ----- Chargement des prefs ----------------------------------------------
   useEffect(() => {

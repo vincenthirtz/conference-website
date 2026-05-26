@@ -362,6 +362,62 @@ async function loadSubscriptions(
 }
 
 /**
+ * Calcule le nombre d'events Web Push non-ack'd pour chaque user. Utilisé
+ * pour alimenter `data.unread_count` du payload Web Push (Badge API V2).
+ *
+ * Sémantique :
+ *   - Compte DISTINCT outbox_event_id (un event broadcasté à 3 devices ne
+ *     compte que 1, sinon le badge gonflerait avec le nombre de devices).
+ *   - Filtre status='delivered' AND acked_at IS NULL → l'index partiel
+ *     `idx_web_push_deliveries_unacked` accélère.
+ *   - Ne compte PAS l'event en cours d'envoi (qui n'est pas encore en DB) :
+ *     le SW additionne lui-même +1 quand il reçoit le push.
+ */
+async function loadUnreadCountByUser(
+  userIds: string[]
+): Promise<Map<string, number>> {
+  if (userIds.length === 0) return new Map();
+
+  const { data: subs, error: subsErr } = await supabaseAdmin
+    .from('push_subscriptions')
+    .select('id, user_id')
+    .in('user_id', userIds);
+  if (subsErr || !subs || subs.length === 0) {
+    if (subsErr) {
+      logger.error('[cron/web-push] unread-count subs error', subsErr);
+    }
+    return new Map();
+  }
+  const subToUser = new Map<string, string>();
+  for (const s of subs) subToUser.set(s.id, s.user_id);
+
+  const { data: rows, error: rowsErr } = await supabaseAdmin
+    .from('web_push_deliveries')
+    .select('outbox_event_id, subscription_id')
+    .in('subscription_id', Array.from(subToUser.keys()))
+    .eq('status', 'delivered')
+    .is('acked_at', null);
+  if (rowsErr || !rows) {
+    if (rowsErr) {
+      logger.error('[cron/web-push] unread-count rows error', rowsErr);
+    }
+    return new Map();
+  }
+
+  // Group by user → set of distinct event_ids → count.
+  const perUser = new Map<string, Set<string>>();
+  for (const row of rows) {
+    const userId = subToUser.get(row.subscription_id as string);
+    if (!userId) continue;
+    if (!perUser.has(userId)) perUser.set(userId, new Set());
+    perUser.get(userId)!.add(row.outbox_event_id as string);
+  }
+  const result = new Map<string, number>();
+  for (const [userId, set] of perUser) result.set(userId, set.size);
+  return result;
+}
+
+/**
  * INSERT ou UPDATE d'un row web_push_deliveries. Le UNIQUE
  * (outbox_event_id, subscription_id) garantit l'atomicité côté DB : si on
  * lose une race, l'INSERT échoue en 23505 et on retombe sur un UPDATE
@@ -582,6 +638,12 @@ export async function runWebPushDispatcher(): Promise<TickCounters> {
     events.map((e) => e.event_id)
   );
 
+  // Compteur d'events non-ack'd par user, alimenté lazy au fil des events
+  // (chaque event a une audience différente : staff du tenant, casters d'un
+  // match, etc.). Mutable : incrémenté en mémoire après chaque dispatch
+  // réussi pour que les events suivants du même tick voient un count à jour.
+  const unreadCountByUser = new Map<string, number>();
+
   for (const event of events) {
     if (Date.now() - startedAt > SOFT_TIME_BUDGET_MS) {
       counters.truncated_by_time_budget = true;
@@ -636,6 +698,19 @@ export async function runWebPushDispatcher(): Promise<TickCounters> {
     const subs = await loadSubscriptions(eligibleUserIds);
     if (subs.length === 0) continue;
 
+    // Lazy load des unread_count pour les users de cet event qu'on n'a pas
+    // encore vus dans ce tick. Un staff cross-tenant qui apparaît sur 2 events
+    // différents n'est chargé qu'une fois.
+    const usersToLoad = eligibleUserIds.filter(
+      (u) => !unreadCountByUser.has(u)
+    );
+    if (usersToLoad.length > 0) {
+      const fresh = await loadUnreadCountByUser(usersToLoad);
+      for (const u of usersToLoad) {
+        unreadCountByUser.set(u, fresh.get(u) ?? 0);
+      }
+    }
+
     const rendered = renderWebPushPayload(
       event.event_name as WebPushEventType,
       event.payload ?? {}
@@ -655,25 +730,35 @@ export async function runWebPushDispatcher(): Promise<TickCounters> {
       },
       {}
     );
-    const payloadJson = JSON.stringify({
-      title: rendered.title,
-      body: rendered.body,
-      icon: '/favicon.ico',
-      badge: '/favicon.ico',
-      data: {
-        url: rendered.url,
-        event_name: event.event_name,
-        ...(actionUrls && Object.keys(actionUrls).length > 0
-          ? { action_urls: actionUrls }
-          : {}),
-      },
-      tag: event.event_id,
-      // Re-notifie l'utilisateur si un push avec le même tag arrive (ex:
-      // match.starting suivi d'un autre match.starting plus tard). Sans
-      // renotify, le 2e remplace silencieusement le 1er.
-      renotify: true,
-      ...(actions && actions.length > 0 ? { actions } : {}),
-    });
+
+    // Le payload est construit PAR-SUB parce que `data.unread_count` varie
+    // par user (Badge API V2). Tous les autres champs sont identiques, mais
+    // sérialiser N fois est négligeable comparé au coût réseau du push.
+    const buildPayload = (sub: SubscriptionRow): string => {
+      const unreadCount = unreadCountByUser.get(sub.user_id) ?? 0;
+      return JSON.stringify({
+        title: rendered.title,
+        body: rendered.body,
+        icon: '/favicon.ico',
+        badge: '/favicon.ico',
+        data: {
+          url: rendered.url,
+          event_name: event.event_name,
+          // Compteur d'events non-ack'd AVANT celui-ci. Le SW ajoute +1
+          // lui-même (il est en train de show la notif courante).
+          unread_count: unreadCount,
+          ...(actionUrls && Object.keys(actionUrls).length > 0
+            ? { action_urls: actionUrls }
+            : {}),
+        },
+        tag: event.event_id,
+        // Re-notifie l'utilisateur si un push avec le même tag arrive (ex:
+        // match.starting suivi d'un autre match.starting plus tard). Sans
+        // renotify, le 2e remplace silencieusement le 1er.
+        renotify: true,
+        ...(actions && actions.length > 0 ? { actions } : {}),
+      });
+    };
 
     const existingForEvent =
       existingByEvent.get(event.event_id) ?? new Map<string, DeliveryRow>();
@@ -687,11 +772,25 @@ export async function runWebPushDispatcher(): Promise<TickCounters> {
           event,
           subscription: sub,
           existing: existingForEvent.get(sub.id),
-          payloadJson,
+          payloadJson: buildPayload(sub),
           vapidDetails,
         })
       )
     );
+
+    // Si l'event a été envoyé avec succès à au moins un sub d'un user, on
+    // incrémente son compteur in-memory pour que le prochain event de ce
+    // tick voie le count actualisé (sinon plusieurs events dans le même
+    // tick auraient tous le même unread_count, et SW gonflerait
+    // incorrectement le badge avec +1 chacun).
+    const sentForUsers = new Set<string>();
+    subs.forEach((sub, i) => {
+      if (results[i] === 'sent') sentForUsers.add(sub.user_id);
+    });
+    for (const userId of sentForUsers) {
+      const cur = unreadCountByUser.get(userId) ?? 0;
+      unreadCountByUser.set(userId, cur + 1);
+    }
 
     for (const r of results) {
       switch (r) {
