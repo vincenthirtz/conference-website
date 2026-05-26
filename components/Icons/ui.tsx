@@ -354,6 +354,53 @@ export function SupportIcon({
   );
 }
 
+export function AppIcon({
+  className,
+  fill,
+}: Readonly<SVGTypes>): JSX.Element {
+  const stroke = fill || 'currentColor';
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      {/* Smartphone outline */}
+      <rect
+        x="6"
+        y="2.5"
+        width="12"
+        height="19"
+        rx="2.5"
+        fill="none"
+        stroke={stroke}
+        strokeWidth="1.6"
+      />
+      {/* Speaker slot */}
+      <line
+        x1="10"
+        y1="5"
+        x2="14"
+        y2="5"
+        stroke={stroke}
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      {/* Home button */}
+      <circle cx="12" cy="18.5" r="0.9" fill={stroke} />
+      {/* Download arrow (install glyph) inside screen */}
+      <path
+        d="M12 9 v4 m-2 -2 l2 2 l2 -2"
+        fill="none"
+        stroke={stroke}
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function AboutIcon({
   className,
   fill,

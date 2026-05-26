@@ -15,4 +15,5 @@ export {
   LiveIcon,
   SupportIcon,
   AboutIcon,
+  AppIcon,
 } from './ui';

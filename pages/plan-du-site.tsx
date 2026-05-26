@@ -20,6 +20,7 @@ const siteSections: SiteSection[] = [
       { label: 'Timeline 2026', href: '/timeline-2026' },
       { label: 'Tous les tournois', href: '/tournaments' },
       { label: 'Jeux supportés', href: '/jeux' },
+      { label: "Installer l'app", href: '/app' },
     ],
   },
   {
