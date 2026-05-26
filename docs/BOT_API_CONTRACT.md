@@ -1373,6 +1373,81 @@ tenant courant + staff + route + body hash, TTL 5 min, 2xx only).
 
 ---
 
+## MOBA Draft system (LoL + Dota 2)
+
+Lots 1-3 — pool de héros global + moteur de draft + timer serveur, le
+tout pour les tournois `lol` / `dota2`. **Pas un endpoint bot** :
+exposé en HTTP standard côté admin (`withStaffRoute`) et public
+(spectator-friendly cache), avec un cron Netlify pour le timer.
+
+Tables sous-jacentes : `game_heroes` (pool global, RLS lecture
+publique), `match_drafts` (UNIQUE(match_id, game_index), scoped par
+tenant), `match_draft_steps` (FK vers `game_heroes`, séquence
+ban/pick avec `deadline_at` et `auto_picked`).
+
+Migrations :
+- [`create_draft_tables_for_lol_dota.sql`](../database/migrations/create_draft_tables_for_lol_dota.sql) (Lot 0).
+- [`extend_game_check_constraint_lol_dota.sql`](../database/migrations/extend_game_check_constraint_lol_dota.sql) (Lot 0).
+- [`enable_realtime_on_match_drafts.sql`](../database/migrations/enable_realtime_on_match_drafts.sql) (Lot 3, REPLICA IDENTITY FULL + publication).
+
+### Pool de héros (Lot 1)
+
+| Route                                                                              | Methods   | Auth      | Notes                                                                                                                                                       |
+| ---------------------------------------------------------------------------------- | --------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`pages/api/games/[slug]/heroes.ts`](../pages/api/games/[slug]/heroes.ts)          | GET       | public    | Liste les heroes du slug (`lol` ou `dota2`). 404 pour les jeux sans pool (ex. `overwatch`). `?includeDisabled=1` inclut les soft-disabled. Cache `s-maxage=3600, stale-while-revalidate=600`. |
+| [`pages/api/cron/sync-game-heroes.ts`](../pages/api/cron/sync-game-heroes.ts)      | POST, GET | CronSecret| 1×/jour à 04:00 UTC. Fetch Data Dragon (LoL) + OpenDota (Dota 2), upsert `(game, external_id)`. Retourne `207` en succès partiel. Heartbeat `site_settings.last_cron_sync_game_heroes_at`. |
+
+Source de mapping pure : [`utils/gameHeroesSync.ts`](../utils/gameHeroesSync.ts)
+(helpers `mapLolChampionToRow`, `mapDotaHeroToRow`, `dotaPrimaryAttrToAttribute`).
+
+### Engine + endpoints admin (Lot 2)
+
+Tous sous `pages/api/admin/matches/[matchId]/drafts/...`, wrappés par
+`withStaffRoute(handler, 'manager') + withAdminIdempotency(...)`.
+Erreurs structurées : `DraftEngineError` (18 codes machine-readable,
+détaillés dans `components.schemas.DraftEngineError` de `openapi.yaml`).
+
+| Route                                                                                                                                                       | Methods | Min role  | Notes                                                                                                                                                                          |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [`drafts/index.ts`](../pages/api/admin/matches/[matchId]/drafts/index.ts)                                                                                   | POST    | manager   | Init draft pour `gameIndex`. Résout le `game` depuis `tournaments.game`. Seed les `match_draft_steps` depuis `config/games/<slug>.draftFlows[format]`. 409 si déjà existant.    |
+| [`drafts/[gameIndex]/index.ts`](../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/index.ts)                                                           | GET     | manager   | Read assemblé du `DraftState` (draft + flow + steps + heroes résolus + `nextStepIndex`).                                                                                       |
+| [`drafts/[gameIndex]/side.ts`](../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/side.ts)                                                             | PATCH   | manager   | Assigne `team1_side` + `team2_side`. Enum game-specific (lol `blue/red`, dota2 `radiant/dire`). Pre-step uniquement.                                                            |
+| [`drafts/[gameIndex]/commit.ts`](../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/commit.ts)                                                         | POST    | manager   | Commit un ban/pick. Transition `pending → in_progress` sur step 1, auto-complete sur dernier step. Stamp `deadline_at` du step suivant. Bloque hero déjà banni/picked + fearless cross-game. |
+
+### Timer serveur + auto-pick (Lot 3)
+
+Captain UI (Lot 4) drive le countdown via Supabase Realtime (la
+migration `enable_realtime_on_match_drafts.sql` ajoute `match_drafts`
++ `match_draft_steps` à la publication `supabase_realtime` avec
+`REPLICA IDENTITY FULL`). Le cron Netlify est le catch-all quand
+personne ne regarde.
+
+| Route                                                                                                                                                       | Methods   | Auth        | Notes                                                                                                                                                                          |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [`drafts/[gameIndex]/start.ts`](../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/start.ts)                                                           | POST      | manager     | Transition explicite `pending → in_progress`. Stamp `started_at` + `deadline_at` sur step 1. Exige sides set.                                                                  |
+| [`drafts/[gameIndex]/auto-pick.ts`](../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/auto-pick.ts)                                                   | POST      | manager     | Trigger manuel : si `deadline_at < now()`, pick le premier hero éligible (alphabétique) avec `auto_picked=true`. Sinon `{ autoPicked: false }`.                                |
+| [`pages/api/cron/draft-auto-pick.ts`](../pages/api/cron/draft-auto-pick.ts)                                                                                 | POST, GET | CronSecret  | Schedule `* * * * *` (1 min). Scan cross-tenant des steps `deadline_at < now AND hero_id IS NULL`, applique l'auto-pick. Heartbeat `site_settings.last_cron_draft_auto_pick_at`. |
+
+Mécanique :
+- `commitDraftStep` stamp `deadline_at = now + pick_timer_seconds` sur le
+  step **suivant** après chaque commit (sauf dernier step).
+- `startDraft` fait pareil pour le step 1 (autrement le timer ne
+  démarrerait qu'au premier commit, ce qui défie le concept).
+- `applyAutoPickIfExpired` filtre les heroes éligibles : `game = draft.game`,
+  `enabled = true`, exclut bans + picks du draft courant, et si
+  `fearless && game_index > 1` exclut aussi les picks des games précédentes
+  du même match.
+- Stratégie de sélection : **premier alphabétique** (déterministe, équitable
+  en pratique). Pas de random pour rester testable.
+
+Idempotence : le cron est self-healing. Si un tick crashe après l'UPDATE
+du step mais avant l'UPDATE du draft, le tick suivant verra une
+incohérence (`hero_id` set mais `current_step` pas incrémenté) — à
+surveiller en prod. Le risque résiduel est documenté dans le code de
+`commitDraftStep` (pas de transaction multi-statement côté Supabase).
+
+---
+
 ## Where it lives
 
 - **Middleware** — [`utils/botAuth.ts`](../utils/botAuth.ts) (`withBotRoute`,

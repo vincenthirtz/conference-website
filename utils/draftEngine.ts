@@ -67,6 +67,7 @@ export type DraftEngineErrorCode =
   | 'SIDES_INVALID'
   | 'SIDES_REQUIRED'
   | 'DRAFT_NOT_IN_PROGRESS'
+  | 'DRAFT_NOT_PENDING'
   | 'STEP_OUT_OF_ORDER'
   | 'HERO_NOT_FOUND'
   | 'HERO_WRONG_GAME'
@@ -74,6 +75,8 @@ export type DraftEngineErrorCode =
   | 'HERO_ALREADY_PICKED'
   | 'HERO_FEARLESS_BLOCKED'
   | 'PICK_TIMER_INVALID'
+  | 'NO_ELIGIBLE_HERO'
+  | 'DEADLINE_NOT_REACHED'
   | 'DB_ERROR';
 
 function db() {
@@ -497,12 +500,105 @@ export async function setDraftSides(
   return assembleState(loaded);
 }
 
+// ---------------------------------------------------------------------------
+// Deadline helpers — Lot 3 (server-side timer).
+
+function computeDeadlineIso(pickTimerSeconds: number, nowMs: number): string {
+  return new Date(nowMs + pickTimerSeconds * 1000).toISOString();
+}
+
+async function stampDeadlineOnStep(
+  draftId: string,
+  stepNumber: number,
+  deadlineIso: string
+): Promise<void> {
+  const client = db();
+  const { error } = await client
+    .from('match_draft_steps')
+    .update({ deadline_at: deadlineIso })
+    .eq('draft_id', draftId)
+    .eq('step_number', stepNumber);
+  if (error) {
+    throw new DraftEngineError('DB_ERROR', error.message, 500);
+  }
+}
+
+export type StartDraftInput = {
+  matchId: string;
+  gameIndex: number;
+  tenantId: string;
+  /** Defaults to Date.now() ; injected by tests + the cron. */
+  now?: number;
+};
+
+/**
+ * Explicit transition pending → in_progress for a draft whose sides are
+ * already set. Stamps `started_at`, sets `deadline_at` on step 1.
+ * Idempotent on already-started drafts only when the caller hasn't already
+ * committed a step (returns the same state).
+ */
+export async function startDraft(input: StartDraftInput): Promise<DraftState> {
+  const client = db();
+  const ctx = await loadMatchContext(input.matchId, input.tenantId, input.gameIndex);
+  const existing = await loadDraftRowByGameIndex(
+    ctx.matchId,
+    input.gameIndex,
+    ctx.tenantId
+  );
+  if (!existing) {
+    throw new DraftEngineError('DRAFT_NOT_FOUND', 'Draft not found.', 404);
+  }
+  if (existing.status === 'completed' || existing.status === 'cancelled') {
+    throw new DraftEngineError(
+      'DRAFT_NOT_PENDING',
+      `Cannot start a ${existing.status} draft.`,
+      409
+    );
+  }
+  if (existing.current_step > 0) {
+    throw new DraftEngineError(
+      'DRAFT_NOT_PENDING',
+      'Draft has already started.',
+      409
+    );
+  }
+  if (!existing.team1_side || !existing.team2_side) {
+    throw new DraftEngineError(
+      'SIDES_REQUIRED',
+      'Set team1Side + team2Side before starting the draft.',
+      409
+    );
+  }
+
+  const nowMs = input.now ?? Date.now();
+  const startedAt = new Date(nowMs).toISOString();
+  const deadlineAt = computeDeadlineIso(existing.pick_timer_seconds, nowMs);
+
+  const { error: updErr } = await client
+    .from('match_drafts')
+    .update({ status: 'in_progress', started_at: startedAt })
+    .eq('id', existing.id)
+    .eq('tenant_id', ctx.tenantId);
+  if (updErr) {
+    throw new DraftEngineError('DB_ERROR', updErr.message, 500);
+  }
+
+  await stampDeadlineOnStep(existing.id, 1, deadlineAt);
+
+  const loaded = await loadFullDraft(existing.id, ctx.tenantId, ctx.flow);
+  return assembleState(loaded);
+}
+
 export type CommitDraftStepInput = {
   matchId: string;
   gameIndex: number;
   tenantId: string;
   stepNumber: number;
   heroId: string;
+  /** Marks the row `auto_picked=true` (used by the timer cron). */
+  autoPicked?: boolean;
+  /** Defaults to Date.now() ; injected by tests + the cron. */
+  now?: number;
 };
 
 export async function commitDraftStep(
@@ -652,10 +748,15 @@ export async function commitDraftStep(
     );
   }
 
-  const nowIso = new Date().toISOString();
+  const nowMs = input.now ?? Date.now();
+  const nowIso = new Date(nowMs).toISOString();
   const { error: updateStepErr } = await client
     .from('match_draft_steps')
-    .update({ hero_id: input.heroId, committed_at: nowIso })
+    .update({
+      hero_id: input.heroId,
+      committed_at: nowIso,
+      auto_picked: input.autoPicked ?? false,
+    })
     .eq('id', targetStep.id);
   if (updateStepErr) {
     throw new DraftEngineError('DB_ERROR', updateStepErr.message, 500);
@@ -680,6 +781,233 @@ export async function commitDraftStep(
     throw new DraftEngineError('DB_ERROR', draftUpdErr.message, 500);
   }
 
+  // Lot 3 : stamp the deadline on the next step so the cron / UI can race
+  // against it. Skipped on the last step (nothing left to play).
+  if (!isLastStep) {
+    const nextStepNumber = expected + 1;
+    const deadlineIso = computeDeadlineIso(existing.pick_timer_seconds, nowMs);
+    await stampDeadlineOnStep(existing.id, nextStepNumber, deadlineIso);
+  }
+
   const loaded = await loadFullDraft(existing.id, ctx.tenantId, ctx.flow);
   return assembleState(loaded);
+}
+
+// ---------------------------------------------------------------------------
+// Auto-pick — Lot 3 (server-side timer enforcement).
+
+export type AutoPickInput = {
+  draftId: string;
+  tenantId: string;
+  /** Defaults to Date.now() ; injected by tests + the cron. */
+  now?: number;
+};
+
+export type AutoPickResult = {
+  draftId: string;
+  matchId: string;
+  gameIndex: number;
+  stepNumber: number;
+  heroId: string;
+  state: DraftState;
+};
+
+/**
+ * If the current step of `draftId` is past its `deadline_at`, picks a
+ * deterministic eligible hero (first by alphabetical name) and commits
+ * it with `auto_picked = true`. Returns null when nothing to do (draft
+ * not in progress, step already committed, deadline in the future).
+ */
+export async function applyAutoPickIfExpired(
+  input: AutoPickInput
+): Promise<AutoPickResult | null> {
+  const client = db();
+  const draft = await loadDraftRowById(input.draftId, input.tenantId);
+  if (draft.status !== 'in_progress') return null;
+
+  // Resolve the match context so we get the flow + tenant-scoped check.
+  const ctx = await loadMatchContext(draft.match_id, input.tenantId, draft.game_index);
+
+  // Current step = current_step + 1 (1-based).
+  const expected = draft.current_step + 1;
+  if (expected > ctx.flow.steps.length) return null;
+
+  const { data: stepRow, error: stepErr } = await client
+    .from('match_draft_steps')
+    .select('id, step_number, action, side, hero_id, deadline_at')
+    .eq('draft_id', draft.id)
+    .eq('step_number', expected)
+    .maybeSingle();
+  if (stepErr) {
+    throw new DraftEngineError('DB_ERROR', stepErr.message, 500);
+  }
+  if (!stepRow || (stepRow as any).hero_id) return null;
+
+  const deadlineIso = (stepRow as any).deadline_at as string | null;
+  if (!deadlineIso) return null;
+  const nowMs = input.now ?? Date.now();
+  if (Date.parse(deadlineIso) > nowMs) return null;
+
+  // Build the eligible-hero list : same game, enabled, not already
+  // banned/picked in this draft, and (if fearless && gameIndex > 1) not
+  // picked in any prior game of this match.
+  const { data: poolRows, error: poolErr } = await client
+    .from('game_heroes')
+    .select('id, name')
+    .eq('game', draft.game)
+    .eq('enabled', true);
+  if (poolErr) {
+    throw new DraftEngineError('DB_ERROR', poolErr.message, 500);
+  }
+
+  const { data: usedSteps, error: usedErr } = await client
+    .from('match_draft_steps')
+    .select('hero_id')
+    .eq('draft_id', draft.id);
+  if (usedErr) {
+    throw new DraftEngineError('DB_ERROR', usedErr.message, 500);
+  }
+  const usedIds = new Set(
+    (usedSteps ?? [])
+      .map((s: any) => s.hero_id as string | null)
+      .filter((id): id is string => !!id)
+  );
+
+  if (draft.fearless && draft.game_index > 1) {
+    const { data: priorDrafts, error: priorErr } = await client
+      .from('match_drafts')
+      .select('id')
+      .eq('match_id', draft.match_id)
+      .eq('tenant_id', input.tenantId)
+      .lt('game_index', draft.game_index);
+    if (priorErr) {
+      throw new DraftEngineError('DB_ERROR', priorErr.message, 500);
+    }
+    const priorIds = (priorDrafts ?? []).map((d: any) => d.id as string);
+    if (priorIds.length > 0) {
+      const { data: priorPicks, error: priorPicksErr } = await client
+        .from('match_draft_steps')
+        .select('hero_id, action')
+        .in('draft_id', priorIds)
+        .eq('action', 'pick');
+      if (priorPicksErr) {
+        throw new DraftEngineError('DB_ERROR', priorPicksErr.message, 500);
+      }
+      for (const s of (priorPicks ?? []) as any[]) {
+        if (s.hero_id) usedIds.add(s.hero_id);
+      }
+    }
+  }
+
+  const eligible = ((poolRows ?? []) as { id: string; name: string }[]).filter(
+    (h) => !usedIds.has(h.id)
+  );
+  if (eligible.length === 0) {
+    throw new DraftEngineError(
+      'NO_ELIGIBLE_HERO',
+      'No eligible hero left for auto-pick.',
+      500
+    );
+  }
+  eligible.sort((a, b) => a.name.localeCompare(b.name));
+  const chosen = eligible[0];
+
+  const state = await commitDraftStep({
+    matchId: draft.match_id,
+    gameIndex: draft.game_index,
+    tenantId: input.tenantId,
+    stepNumber: expected,
+    heroId: chosen.id,
+    autoPicked: true,
+    now: nowMs,
+  });
+
+  return {
+    draftId: draft.id,
+    matchId: draft.match_id,
+    gameIndex: draft.game_index,
+    stepNumber: expected,
+    heroId: chosen.id,
+    state,
+  };
+}
+
+export type RunAutoPickTickInput = {
+  /** Defaults to Date.now() ; injected by tests. */
+  now?: number;
+  /** Cap so a single tick can't blow the function-seconds budget. */
+  limit?: number;
+};
+
+export type RunAutoPickTickSummary = {
+  scanned: number;
+  autoPicked: number;
+  errors: number;
+  results: AutoPickResult[];
+};
+
+/**
+ * Cross-tenant scan : every `in_progress` draft whose current step has a
+ * `deadline_at` in the past gets auto-picked. Errors on individual drafts
+ * are caught and counted so one bad draft doesn't block the rest of the
+ * tick.
+ */
+export async function runDraftAutoPickTick(
+  input: RunAutoPickTickInput = {}
+): Promise<RunAutoPickTickSummary> {
+  const client = db();
+  const nowMs = input.now ?? Date.now();
+  const nowIso = new Date(nowMs).toISOString();
+  const limit = Math.max(1, Math.min(input.limit ?? 50, 200));
+
+  const { data: rows, error } = await client
+    .from('match_draft_steps')
+    .select('draft_id, deadline_at')
+    .lt('deadline_at', nowIso)
+    .is('hero_id', null)
+    .limit(limit);
+  if (error) {
+    throw new DraftEngineError('DB_ERROR', error.message, 500);
+  }
+
+  // De-dupe : a draft's current step is unique, but a stale `deadline_at`
+  // on an earlier step (cleared after commit on real DB but possible on
+  // the in-memory mock) shouldn't trigger the same draft twice.
+  const draftIds = Array.from(
+    new Set(((rows ?? []) as any[]).map((r) => r.draft_id as string))
+  );
+
+  // Fetch each draft's tenant_id so we can scope the engine calls.
+  const summary: RunAutoPickTickSummary = {
+    scanned: draftIds.length,
+    autoPicked: 0,
+    errors: 0,
+    results: [],
+  };
+  if (draftIds.length === 0) return summary;
+
+  const { data: drafts, error: dErr } = await client
+    .from('match_drafts')
+    .select('id, tenant_id')
+    .in('id', draftIds)
+    .eq('status', 'in_progress');
+  if (dErr) {
+    throw new DraftEngineError('DB_ERROR', dErr.message, 500);
+  }
+  for (const d of ((drafts ?? []) as any[])) {
+    try {
+      const result = await applyAutoPickIfExpired({
+        draftId: d.id,
+        tenantId: d.tenant_id,
+        now: nowMs,
+      });
+      if (result) {
+        summary.autoPicked += 1;
+        summary.results.push(result);
+      }
+    } catch {
+      summary.errors += 1;
+    }
+  }
+  return summary;
 }

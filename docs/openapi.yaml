@@ -1847,7 +1847,7 @@ components:
     DraftEngineError:
       type: object
       description: |
-        Structured error returned by the draft engine endpoints (Lot 2).
+        Structured error returned by the draft engine endpoints (Lots 2-3).
         `code` is the machine-readable reason; `error` is a human-readable
         message. Additional context fields (`expected`, `got`, `format`,
         `allowed`, `draftId`…) may be present depending on the code.
@@ -1870,6 +1870,7 @@ components:
             - SIDES_INVALID
             - SIDES_REQUIRED
             - DRAFT_NOT_IN_PROGRESS
+            - DRAFT_NOT_PENDING
             - STEP_OUT_OF_ORDER
             - HERO_NOT_FOUND
             - HERO_WRONG_GAME
@@ -1877,6 +1878,8 @@ components:
             - HERO_ALREADY_PICKED
             - HERO_FEARLESS_BLOCKED
             - PICK_TIMER_INVALID
+            - NO_ELIGIBLE_HERO
+            - DEADLINE_NOT_REACHED
             - DB_ERROR
       additionalProperties: true
     InitMatchDraftRequest:
@@ -2130,6 +2133,52 @@ components:
           oneOf:
             - $ref: "#/components/schemas/DraftState"
             - type: "null"
+    DraftAutoPickResponse:
+      type: object
+      description: |
+        Return shape of `POST /api/admin/matches/.../auto-pick`. When the
+        current step's deadline is still in the future (or the step is
+        already committed, or the draft is not in_progress), the engine
+        is a no-op and the response carries `autoPicked: false` only.
+      required:
+        - autoPicked
+      properties:
+        autoPicked:
+          type: boolean
+        stepNumber:
+          type: integer
+          minimum: 1
+          description: Present when autoPicked = true.
+        heroId:
+          $ref: "#/components/schemas/Uuid"
+        draft:
+          $ref: "#/components/schemas/DraftState"
+    CronDraftAutoPickResult:
+      type: object
+      description: |
+        Tick summary returned by `/api/cron/draft-auto-pick`. `success` is
+        false only if at least one individual draft errored; per-draft
+        errors are caught so one bad row never blocks the rest.
+      required:
+        - success
+        - scanned
+        - autoPicked
+        - errors
+      properties:
+        success:
+          type: boolean
+        scanned:
+          type: integer
+          minimum: 0
+          description: |
+            Number of distinct drafts whose current step deadline_at was
+            in the past at the start of the tick.
+        autoPicked:
+          type: integer
+          minimum: 0
+        errors:
+          type: integer
+          minimum: 0
     PublicAnnouncement:
       type: object
       required:
@@ -8832,6 +8881,146 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DraftEngineError"
+  /api/admin/matches/{matchId}/drafts/{gameIndex}/start:
+    parameters:
+      - $ref: "#/components/parameters/MatchId"
+      - name: gameIndex
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+    post:
+      tags:
+        - admin/matches
+      summary: Arm the draft timer (Lot 3) — transition pending to in_progress.
+      operationId: adminStartMatchDraft
+      description: |
+        Stamps `started_at` + sets `deadline_at` on step 1 = now +
+        pick_timer_seconds so the captain UI / spectator UI / cron can
+        race against the clock. Requires sides to be assigned and
+        current_step = 0 (i.e. no commit yet).
+      security:
+        - StaffSession: []
+      responses:
+        "200":
+          description: Draft transitioned to in_progress with deadline armed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchDraftStateResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Match or draft not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DraftEngineError"
+        "409":
+          description: Sides not set yet, or draft already started/completed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DraftEngineError"
+  /api/admin/matches/{matchId}/drafts/{gameIndex}/auto-pick:
+    parameters:
+      - $ref: "#/components/parameters/MatchId"
+      - name: gameIndex
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+    post:
+      tags:
+        - admin/matches
+      summary: Manual trigger of the auto-pick logic on this draft (Lot 3).
+      operationId: adminAutoPickMatchDraft
+      description: |
+        If the current step's `deadline_at` is in the past, picks the
+        first alphabetical eligible hero and commits it with
+        `auto_picked=true`. Otherwise returns `200 { autoPicked: false }`.
+        Useful for manual recovery + the captain UI "auto-pick now"
+        button. The Netlify cron `/api/cron/draft-auto-pick` runs the
+        same logic across every tenant every minute.
+      security:
+        - StaffSession: []
+      responses:
+        "200":
+          description: Auto-pick outcome (either no-op or a fresh state).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DraftAutoPickResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Draft not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DraftEngineError"
+        "500":
+          description: |
+            No eligible hero left for auto-pick — extremely unlikely (LoL
+            pool ~170, Dota ~125) but the engine surfaces it explicitly.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DraftEngineError"
+  /api/cron/draft-auto-pick:
+    get:
+      tags:
+        - cron
+      summary: Auto-pick scan across every tenant (Lot 3 — draft timer).
+      operationId: cronDraftAutoPickGet
+      description: |
+        Schedule: every minute (`* * * * *`) via Netlify scheduled
+        function `draft-auto-pick-cron`. Scans `match_drafts`
+        status='in_progress' whose current `match_draft_steps.deadline_at`
+        is in the past, then auto-picks each one (first alphabetical
+        eligible hero, `auto_picked=true`). Heartbeat:
+        `site_settings.last_cron_draft_auto_pick_at`.
+
+        Auth: `Authorization: Bearer <CRON_SECRET>` header OR
+        `?secret=<CRON_SECRET>` query string. Both GET and POST accepted.
+      security:
+        - CronSecret: []
+      responses:
+        "200":
+          description: Tick summary.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CronDraftAutoPickResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
+    post:
+      tags:
+        - cron
+      summary: Auto-pick scan across every tenant (Lot 3 — draft timer).
+      operationId: cronDraftAutoPickPost
+      description: Same as `GET /api/cron/draft-auto-pick`.
+      security:
+        - CronSecret: []
+      responses:
+        "200":
+          description: Tick summary.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CronDraftAutoPickResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
   /api/admin/matches/{matchId}/drafts/{gameIndex}/commit:
     parameters:
       - $ref: "#/components/parameters/MatchId"

@@ -60,6 +60,15 @@
 [functions."sync-game-heroes-cron"]
   schedule = "0 4 * * *"
 
+# Scheduled function: server-side draft timer (Lot 3 — MOBA draft system).
+# Every minute, scans match_drafts status='in_progress' whose current
+# match_draft_steps.deadline_at has passed and auto-picks a deterministic
+# eligible hero. The captain UI (Lot 4) drives the live countdown via
+# Supabase Realtime — this cron is the catch-all when nobody is watching.
+# Heartbeat: site_settings.last_cron_draft_auto_pick_at.
+[functions."draft-auto-pick-cron"]
+  schedule = "* * * * *"
+
 [[headers]]
   for = "/*"
   [headers.values]

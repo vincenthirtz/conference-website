@@ -28,6 +28,8 @@ import initHandler from '../../pages/api/admin/matches/[matchId]/drafts/index';
 import stateHandler from '../../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/index';
 import sideHandler from '../../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/side';
 import commitHandler from '../../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/commit';
+import startHandler from '../../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/start';
+import autoPickHandler from '../../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/auto-pick';
 
 import { LOL } from '../../config/games/lol';
 import { DOTA2 } from '../../config/games/dota2';
@@ -620,5 +622,176 @@ describe('GET /api/admin/matches/[matchId]/drafts/[gameIndex]', () => {
     const res = makeRes();
     await stateHandler(req, res);
     expect(res.statusCode).toBe(400);
+  });
+});
+
+/* -----------------------------------------------------------
+ * POST /api/admin/matches/[matchId]/drafts/[gameIndex]/start  (Lot 3)
+ * ---------------------------------------------------------*/
+
+describe('POST /api/admin/matches/[matchId]/drafts/[gameIndex]/start', () => {
+  it('arms the deadline on step 1 and transitions to in_progress', async () => {
+    await initLolGame(MATCH_LOL_BO3, 1);
+    await setSides(MATCH_LOL_BO3, 1, 'blue', 'red');
+    const req = makeReq({
+      method: 'POST',
+      query: { matchId: MATCH_LOL_BO3, gameIndex: '1' },
+    });
+    const res = makeRes();
+    await startHandler(req, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.draft.draft.status).toBe('in_progress');
+    expect(res.body.draft.draft.started_at).toBeTruthy();
+    const step1 = res.body.draft.steps.find(
+      (s: any) => s.step_number === 1
+    );
+    expect(step1.deadline_at).toBeTruthy();
+    // step 2's deadline is set lazily on commit; not stamped by start.
+    const step2 = res.body.draft.steps.find(
+      (s: any) => s.step_number === 2
+    );
+    expect(step2.deadline_at).toBeFalsy();
+  });
+
+  it('rejects start when sides are not set', async () => {
+    await initLolGame(MATCH_LOL_BO3, 1);
+    const req = makeReq({
+      method: 'POST',
+      query: { matchId: MATCH_LOL_BO3, gameIndex: '1' },
+    });
+    const res = makeRes();
+    await startHandler(req, res);
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body.code).toBe('SIDES_REQUIRED');
+  });
+
+  it('rejects start after a step has been committed', async () => {
+    await initLolGame(MATCH_LOL_BO3, 1);
+    await setSides(MATCH_LOL_BO3, 1, 'blue', 'red');
+    await commitStep(MATCH_LOL_BO3, 1, 1, HERO_AATROX);
+
+    const req = makeReq({
+      method: 'POST',
+      query: { matchId: MATCH_LOL_BO3, gameIndex: '1' },
+    });
+    const res = makeRes();
+    await startHandler(req, res);
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body.code).toBe('DRAFT_NOT_PENDING');
+  });
+});
+
+/* -----------------------------------------------------------
+ * POST /api/admin/matches/[matchId]/drafts/[gameIndex]/auto-pick  (Lot 3)
+ * ---------------------------------------------------------*/
+
+describe('POST /api/admin/matches/[matchId]/drafts/[gameIndex]/auto-pick', () => {
+  it('is a no-op when the deadline is still in the future', async () => {
+    await initLolGame(MATCH_LOL_BO3, 1);
+    await setSides(MATCH_LOL_BO3, 1, 'blue', 'red');
+    // start the draft → deadline in 30s, well in the future.
+    const startReq = makeReq({
+      method: 'POST',
+      query: { matchId: MATCH_LOL_BO3, gameIndex: '1' },
+    });
+    await startHandler(startReq, makeRes());
+
+    const req = makeReq({
+      method: 'POST',
+      query: { matchId: MATCH_LOL_BO3, gameIndex: '1' },
+    });
+    const res = makeRes();
+    await autoPickHandler(req, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.autoPicked).toBe(false);
+  });
+
+  it('auto-picks the first alphabetical eligible hero once expired', async () => {
+    await initLolGame(MATCH_LOL_BO3, 1);
+    await setSides(MATCH_LOL_BO3, 1, 'blue', 'red');
+    const startReq = makeReq({
+      method: 'POST',
+      query: { matchId: MATCH_LOL_BO3, gameIndex: '1' },
+    });
+    await startHandler(startReq, makeRes());
+
+    // Move the step 1 deadline into the past directly in the mock store.
+    const step1 = (store.match_draft_steps as any[]).find(
+      (s) => s.step_number === 1
+    );
+    step1.deadline_at = '2000-01-01T00:00:00.000Z';
+
+    const req = makeReq({
+      method: 'POST',
+      query: { matchId: MATCH_LOL_BO3, gameIndex: '1' },
+    });
+    const res = makeRes();
+    await autoPickHandler(req, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.autoPicked).toBe(true);
+    expect(res.body.stepNumber).toBe(1);
+    // First alphabetical eligible LoL hero is Aatrox.
+    expect(res.body.heroId).toBe(HERO_AATROX);
+    const stepRow = res.body.draft.steps.find(
+      (s: any) => s.step_number === 1
+    );
+    expect(stepRow.auto_picked).toBe(true);
+    expect(stepRow.hero_id).toBe(HERO_AATROX);
+  });
+
+  it('returns 404 when no draft exists for (match, gameIndex)', async () => {
+    const req = makeReq({
+      method: 'POST',
+      query: { matchId: MATCH_LOL_BO3, gameIndex: '1' },
+    });
+    const res = makeRes();
+    await autoPickHandler(req, res);
+    expect(res.statusCode).toBe(404);
+    expect(res.body.code).toBe('DRAFT_NOT_FOUND');
+  });
+});
+
+/* -----------------------------------------------------------
+ * commitStep deadline propagation (Lot 3)
+ * ---------------------------------------------------------*/
+
+describe('commitDraftStep deadline propagation', () => {
+  it('stamps a deadline on the next step after each commit', async () => {
+    await initLolGame(MATCH_LOL_BO3, 1);
+    await setSides(MATCH_LOL_BO3, 1, 'blue', 'red');
+    const res = await commitStep(MATCH_LOL_BO3, 1, 1, HERO_AATROX);
+    expect(res.statusCode).toBe(200);
+    const step2 = res.body.draft.steps.find((s: any) => s.step_number === 2);
+    expect(step2.deadline_at).toBeTruthy();
+    const step3 = res.body.draft.steps.find((s: any) => s.step_number === 3);
+    expect(step3.deadline_at).toBeFalsy();
+  });
+
+  it('does not set a deadline after the final commit', async () => {
+    await initLolGame(MATCH_LOL_BO3, 1);
+    await setSides(MATCH_LOL_BO3, 1, 'blue', 'red');
+    const draft = (store.match_drafts as any[])[0];
+    draft.current_step = 19;
+    draft.status = 'in_progress';
+    const steps = (store.match_draft_steps as any[]).filter(
+      (s) => s.draft_id === draft.id
+    );
+    for (const s of steps.slice(0, 19)) {
+      s.hero_id = HERO_LUX;
+      s.committed_at = '2026-05-26T00:00:00.000Z';
+    }
+    const res = await commitStep(MATCH_LOL_BO3, 1, 20, HERO_GAREN);
+    expect(res.statusCode).toBe(200);
+    expect(res.body.draft.draft.status).toBe('completed');
+    // No step 21 to stamp.
+    const step20 = res.body.draft.steps.find(
+      (s: any) => s.step_number === 20
+    );
+    expect(step20.hero_id).toBe(HERO_GAREN);
   });
 });
