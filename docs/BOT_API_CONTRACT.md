@@ -1457,12 +1457,35 @@ d'endpoint nouveau — purement orchestration côté client des Lots 0-3.
 | [`pages/admin/matches/[matchId]/draft/[gameIndex].tsx`](../pages/admin/matches/[matchId]/draft/[gameIndex].tsx)                         | `withStaffPage('manager')`          | Captain UI : init → sides → start → boucle commit (clic sur hero) avec auto-pick fallback. Hero pool fetch via `/api/games/[slug]/heroes`. |
 
 Hooks dédiés :
-- [`useDraftState`](../hooks/useDraftState.ts) — fetch `/api/admin/.../drafts/:gameIndex` + abonnement `useRealtimeChannel` sur `match_drafts` (filter `id=eq.X`) ET `match_draft_steps` (filter `draft_id=eq.X`). Refetch sur chaque event.
+- [`useDraftState`](../hooks/useDraftState.ts) — fetch `/api/admin/.../drafts/:gameIndex` + abonnement `useRealtimeChannel` sur `match_drafts` (filter `id=eq.X`) ET `match_draft_steps` (filter `draft_id=eq.X`). Refetch sur chaque event. Accepte un `fetcher` override (Lot 5 spectator l'utilise pour passer un fetch non-authentifié).
 - [`useDraftTimer`](../hooks/useDraftTimer.ts) — countdown local 1s tick basé sur `deadline_at` du step courant. Couleurs : neutre > 10s, ambre 4-10s, rouge ≤3s, "AUTO-PICK" pulse quand expiré.
 
 Composants (`components/admin/draft/`) : `DraftStatusPanel`, `SidePicker`, `DraftBoard`, `HeroPool`, `DraftTimer`. Tous Tailwind-inline, pas de design system dédié.
 
 Toutes les mutations (init/sides/start/commit/auto-pick) passent par `useIdempotentMutation` → header `Idempotency-Key` auto-injecté + regen après chaque 2xx, donc retries safe.
+
+### Spectator UI + public read (Lot 5)
+
+Vue publique stream-friendly pour OBS browser sources. Aucune auth :
+URL partageable par l'orga du tournoi → l'opérateur l'embed dans
+OBS. Sécurité : l'id de match est un UUID inguessable + `match_drafts`
+a une policy RLS `select_public` (Lot 0).
+
+| Route                                                                                                                  | Methods | Auth   | Notes                                                                                                                                                                                                                  |
+| ---------------------------------------------------------------------------------------------------------------------- | ------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`pages/api/matches/[matchId]/drafts/[gameIndex].ts`](../pages/api/matches/[matchId]/drafts/[gameIndex].ts)            | GET     | public | Renvoie le `DraftState` assemblé (ou `null` si pas initialisé). Cache `s-maxage=5, stale-while-revalidate=15`. Tenant résolu implicitement via `matches.tenant_id`. 404 si le match n'existe pas, 400 sur IDs invalides. |
+| [`pages/draft/[matchId]/[gameIndex].tsx`](../pages/draft/[matchId]/[gameIndex].tsx)                                    | —       | public | Page React publique. URL : `/draft/<matchId>/<gameIndex>?title=<encoded title>`. Layout dark (OBS chromakey friendly), 2 colonnes de 5 picks (splash arts), ban row, timer central. `<meta name="robots" content="noindex">`. |
+
+Composants (`components/draft/`) :
+- `SpectatorView` — layout complet, réutilise `DraftTimer` du Lot 4. Sub-components inline : `TeamColumn` (5 picks splash), `PickSlot` (image + nom + title), `BanSlot` (icon grayscale + barré), `BansRow`, `StatusBadge`.
+
+Couleurs side (gradient sur chaque colonne d'équipe) :
+- `blue` → bleu Riot (`from-sky-600/40`)
+- `red` → rouge Riot (`from-rose-600/40`)
+- `radiant` → vert Valve (`from-emerald-600/40`)
+- `dire` → orange Valve (`from-orange-600/40`)
+
+Realtime : la page consomme le même `useDraftState` que la captain UI, mais avec un fetcher injecté (`fetch` natif sans Bearer) + endpoint public. L'abonnement Supabase Realtime fonctionne anonymement parce que les RLS sur `match_drafts` + `match_draft_steps` autorisent `SELECT` cross-user (`USING (true)`).
 
 ---
 

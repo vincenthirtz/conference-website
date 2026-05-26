@@ -1,15 +1,18 @@
 // hooks/useDraftState.ts
-// Fetches the assembled DraftState for (matchId, gameIndex) from the admin
-// API, then subscribes to Supabase Realtime on match_drafts +
-// match_draft_steps so every ban/pick/timer change refetches the state.
+// Fetches the assembled DraftState for (matchId, gameIndex), then subscribes
+// to Supabase Realtime on match_drafts + match_draft_steps so every
+// ban/pick/timer change refetches the state.
 //
-// Lot 4 (captain UI) consumes this directly; Lot 5 (spectator UI) will
-// pass `endpoint` to swap to the public read once we add it.
+// Lot 4 (captain UI) consumes the admin variant (default), Lot 5 (spectator
+// UI) injects a public fetcher + endpoint so OBS browser sources can
+// embed the draft without an auth session.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAdminFetch } from './useAdminFetch';
 import { useRealtimeChannel } from './useRealtimeChannel';
 import type { DraftState } from '@/types/draft';
+
+export type DraftStateFetcher = <T>(url: string) => Promise<T>;
 
 export type UseDraftStateOptions = {
   matchId: string;
@@ -17,10 +20,16 @@ export type UseDraftStateOptions = {
   /** When false, no fetch + no subscription. Useful while ids load. */
   enabled?: boolean;
   /**
-   * Override the read endpoint (defaults to the admin route). Lot 5 will
-   * point this at the public spectator route.
+   * Override the read endpoint. Defaults to the admin route; pass the
+   * public route from the spectator page.
    */
   endpoint?: string;
+  /**
+   * Override the fetcher. Defaults to authenticated admin fetch (Bearer
+   * + redirect-on-401). Pass an unauthenticated wrapper for the
+   * spectator/public page.
+   */
+  fetcher?: DraftStateFetcher;
 };
 
 export type UseDraftStateReturn = {
@@ -31,24 +40,26 @@ export type UseDraftStateReturn = {
   refresh: () => Promise<void>;
 };
 
-type AdminDraftResponse = { draft: DraftState | null };
+type DraftResponse = { draft: DraftState | null };
 
 export function useDraftState({
   matchId,
   gameIndex,
   enabled = true,
   endpoint,
+  fetcher,
 }: UseDraftStateOptions): UseDraftStateReturn {
   const { adminFetchJson } = useAdminFetch();
+  const effectiveFetcher = fetcher ?? adminFetchJson;
   const [state, setState] = useState<DraftState | null>(null);
   const [loading, setLoading] = useState<boolean>(enabled);
   const [error, setError] = useState<string | null>(null);
 
   // Stable ref so realtime callbacks always call the latest fetcher.
-  const adminFetchJsonRef = useRef(adminFetchJson);
+  const fetcherRef = useRef(effectiveFetcher);
   useEffect(() => {
-    adminFetchJsonRef.current = adminFetchJson;
-  }, [adminFetchJson]);
+    fetcherRef.current = effectiveFetcher;
+  }, [effectiveFetcher]);
 
   const url =
     endpoint ??
@@ -59,7 +70,7 @@ export function useDraftState({
     setLoading(true);
     setError(null);
     try {
-      const data = await adminFetchJsonRef.current<AdminDraftResponse>(url);
+      const data = await fetcherRef.current<DraftResponse>(url);
       setState(data.draft ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));

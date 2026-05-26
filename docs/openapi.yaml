@@ -14183,6 +14183,55 @@ paths:
           $ref: "#/components/responses/RateLimited"
         "500":
           $ref: "#/components/responses/ServerError"
+  /api/matches/{matchId}/drafts/{gameIndex}:
+    parameters:
+      - $ref: "#/components/parameters/MatchId"
+      - name: gameIndex
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+    get:
+      tags:
+        - public/misc
+      summary: Public spectator read of a MOBA draft (Lot 5).
+      operationId: getPublicMatchDraft
+      security: []
+      description: |
+        Unauthenticated read of the assembled `DraftState` for
+        (matchId, gameIndex). Returns `{ draft: null }` when no draft
+        has been initialised. Powers the stream-friendly OBS view at
+        `/draft/<matchId>/<gameIndex>`. The draft id is a UUID and
+        `match_drafts` already carries a `select_public` RLS policy,
+        so this is safe to expose tenant-agnostic.
+
+        Cache : `public, s-maxage=5, stale-while-revalidate=15`.
+        Realtime is the primary fan-out (clients subscribe to
+        `match_drafts` + `match_draft_steps` directly).
+      responses:
+        "200":
+          description: Draft state, or null if not initialised yet.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchDraftStateResponse"
+        "400":
+          description: Invalid matchId or gameIndex.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Match not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerError"
   /api/announcements:
     get:
       tags:
