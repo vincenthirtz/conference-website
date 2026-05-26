@@ -1446,6 +1446,24 @@ incohérence (`hero_id` set mais `current_step` pas incrémenté) — à
 surveiller en prod. Le risque résiduel est documenté dans le code de
 `commitDraftStep` (pas de transaction multi-statement côté Supabase).
 
+### Captain UI (Lot 4)
+
+Page admin staff-protected qui pilote un draft en live, branchée sur
+Supabase Realtime pour fan-out immédiat des bans/picks. Pas de bot, pas
+d'endpoint nouveau — purement orchestration côté client des Lots 0-3.
+
+| Route                                                                                                                                   | Auth                                | Notes                                                                                                                              |
+| --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| [`pages/admin/matches/[matchId]/draft/[gameIndex].tsx`](../pages/admin/matches/[matchId]/draft/[gameIndex].tsx)                         | `withStaffPage('manager')`          | Captain UI : init → sides → start → boucle commit (clic sur hero) avec auto-pick fallback. Hero pool fetch via `/api/games/[slug]/heroes`. |
+
+Hooks dédiés :
+- [`useDraftState`](../hooks/useDraftState.ts) — fetch `/api/admin/.../drafts/:gameIndex` + abonnement `useRealtimeChannel` sur `match_drafts` (filter `id=eq.X`) ET `match_draft_steps` (filter `draft_id=eq.X`). Refetch sur chaque event.
+- [`useDraftTimer`](../hooks/useDraftTimer.ts) — countdown local 1s tick basé sur `deadline_at` du step courant. Couleurs : neutre > 10s, ambre 4-10s, rouge ≤3s, "AUTO-PICK" pulse quand expiré.
+
+Composants (`components/admin/draft/`) : `DraftStatusPanel`, `SidePicker`, `DraftBoard`, `HeroPool`, `DraftTimer`. Tous Tailwind-inline, pas de design system dédié.
+
+Toutes les mutations (init/sides/start/commit/auto-pick) passent par `useIdempotentMutation` → header `Idempotency-Key` auto-injecté + regen après chaque 2xx, donc retries safe.
+
 ---
 
 ## Where it lives
