@@ -12,6 +12,10 @@
     "ref": "/tournament/ow-womens-cup-2026"
   },
   {
+    "title": "Jeux",
+    "ref": "/jeux"
+  },
+  {
     "title": "Éditions",
     "subMenu": [
       { "title": "2025", "ref": "/tournoi" },
