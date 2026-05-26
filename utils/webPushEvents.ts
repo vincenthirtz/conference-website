@@ -103,10 +103,26 @@ function matchUrl(payload: EventPayload): string {
   return '/admin/matches';
 }
 
+/**
+ * Action button rendue dans la notification (Windows / Android).
+ * `action` = identifiant logique (passé à `notificationclick` via
+ * `event.action`). `title` = libellé visible. `url` = deep-link à ouvrir
+ * quand le user clique sur ce bouton (fallback : `WebPushRendered.url`).
+ *
+ * Limite OS : Chrome/Edge affichent au max 2 actions ; les autres sont
+ * ignorées silencieusement. Safari n'affiche aucune action (no-op gracieux).
+ */
+export type WebPushAction = {
+  action: string;
+  title: string;
+  url?: string;
+};
+
 export type WebPushRendered = {
   title: string;
   body: string;
   url: string;
+  actions?: WebPushAction[];
 };
 
 /**
@@ -165,82 +181,108 @@ export function renderWebPushPayload(
   payload: EventPayload
 ): WebPushRendered {
   switch (eventName) {
-    case 'match.starting':
+    case 'match.starting': {
+      const url = matchUrl(payload);
       return {
         title: 'Match imminent',
         body: `${matchLabel(payload)} commence bientôt.`,
-        url: matchUrl(payload),
+        url,
+        actions: [{ action: 'view', title: 'Voir le match' }],
       };
-    case 'match.finished':
+    }
+    case 'match.finished': {
+      const url = matchUrl(payload);
       return {
         title: 'Match terminé',
         body: `${matchLabel(payload)} est terminé.`,
-        url: matchUrl(payload),
+        url,
+        actions: [{ action: 'view', title: 'Voir le match' }],
       };
-    case 'match.score_reported':
+    }
+    case 'match.score_reported': {
+      const url = matchUrl(payload);
       return {
         title: 'Score reporté',
         body: `${matchLabel(payload)} : un score a été reporté.`,
-        url: matchUrl(payload),
+        url,
+        actions: [{ action: 'view', title: 'Voir le match' }],
       };
-    case 'cast.assigned':
+    }
+    case 'cast.assigned': {
+      const url = matchUrl(payload);
       return {
         title: 'Cast assigné',
         body:
           str(payload, 'caster_name') || str(payload, 'display_name')
             ? `${str(payload, 'caster_name') || str(payload, 'display_name')} a été assigné·e au cast.`
             : 'Un caster a été assigné.',
-        url: matchUrl(payload),
+        url,
+        actions: [{ action: 'view', title: 'Voir le match' }],
       };
-    case 'cast.unassigned':
+    }
+    case 'cast.unassigned': {
+      const url = matchUrl(payload);
       return {
         title: 'Cast retiré',
         body:
           str(payload, 'caster_name') || str(payload, 'display_name')
             ? `${str(payload, 'caster_name') || str(payload, 'display_name')} a été retiré·e du cast.`
             : 'Un caster a été retiré.',
-        url: matchUrl(payload),
+        url,
+        actions: [{ action: 'view', title: 'Voir le match' }],
       };
-    case 'scrim.invitation':
+    }
+    case 'scrim.invitation': {
+      const url = str(payload, 'scrim_id')
+        ? `/admin/scrims/${str(payload, 'scrim_id')}`
+        : '/admin/scrims';
       return {
         title: 'Invitation scrim',
         body: str(payload, 'team_name')
           ? `Nouvelle invitation scrim pour ${str(payload, 'team_name')}.`
           : 'Nouvelle invitation scrim.',
-        url: str(payload, 'scrim_id')
-          ? `/admin/scrims/${str(payload, 'scrim_id')}`
-          : '/admin/scrims',
+        url,
+        actions: [{ action: 'view', title: 'Voir' }],
       };
-    case 'scrim.confirmed':
+    }
+    case 'scrim.confirmed': {
+      const url = str(payload, 'scrim_id')
+        ? `/admin/scrims/${str(payload, 'scrim_id')}`
+        : '/admin/scrims';
       return {
         title: 'Scrim confirmé',
         body: str(payload, 'team_name')
           ? `Scrim confirmé avec ${str(payload, 'team_name')}.`
           : 'Un scrim a été confirmé.',
-        url: str(payload, 'scrim_id')
-          ? `/admin/scrims/${str(payload, 'scrim_id')}`
-          : '/admin/scrims',
+        url,
+        actions: [{ action: 'view', title: 'Voir le scrim' }],
       };
-    case 'team.forfeit':
+    }
+    case 'team.forfeit': {
+      const url = str(payload, 'team_id')
+        ? `/admin/teams/${str(payload, 'team_id')}`
+        : '/admin/teams';
       return {
         title: 'Forfait équipe',
         body: str(payload, 'team_name')
           ? `${str(payload, 'team_name')} a déclaré forfait.`
           : 'Une équipe a déclaré forfait.',
-        url: str(payload, 'team_id')
-          ? `/admin/teams/${str(payload, 'team_id')}`
-          : '/admin/teams',
+        url,
+        actions: [{ action: 'view', title: "Voir l'équipe" }],
       };
+    }
     case 'news.published': {
       const title = str(payload, 'title');
+      const url = str(payload, 'slug')
+        ? `/news/${str(payload, 'slug')}`
+        : '/admin/news';
       return {
         title: 'Actualité publiée',
         body: title
           ? `« ${title} » est en ligne.`
           : 'Une actualité est en ligne.',
-        url: str(payload, 'slug')
-          ? `/news/${str(payload, 'slug')}`
-          : '/admin/news',
+        url,
+        actions: [{ action: 'read', title: 'Lire' }],
       };
     }
     case 'staff.role.changed':
@@ -252,12 +294,15 @@ export function renderWebPushPayload(
             : 'Un rôle staff a été modifié.',
         url: '/admin/staff',
       };
-    case 'checkin.opened':
+    case 'checkin.opened': {
+      const url = matchUrl(payload);
       return {
         title: 'Check-in ouvert',
         body: `${matchLabel(payload)} : check-in ouvert.`,
-        url: matchUrl(payload),
+        url,
+        actions: [{ action: 'view', title: 'Voir le match' }],
       };
+    }
     case 'registration.new':
       return {
         title: 'Nouvelle inscription',
@@ -283,16 +328,19 @@ export function renderWebPushPayload(
         url: '/admin/payments',
       };
     }
-    case 'captain.support.opened':
+    case 'captain.support.opened': {
+      const url = str(payload, 'ticket_id')
+        ? `/admin/support/${str(payload, 'ticket_id')}`
+        : '/admin/support';
       return {
         title: 'Ticket support',
         body: str(payload, 'team_name')
           ? `Nouveau ticket de ${str(payload, 'team_name')}.`
           : 'Nouveau ticket support.',
-        url: str(payload, 'ticket_id')
-          ? `/admin/support/${str(payload, 'ticket_id')}`
-          : '/admin/support',
+        url,
+        actions: [{ action: 'view', title: 'Ouvrir le ticket' }],
       };
+    }
     case 'event_segment.transitioned': {
       // Le dispatcher a déjà filtré via shouldPushForEvent : on sait que
       // toStatus === 'live' et segment.type === 'match' (sinon on ne serait
@@ -328,6 +376,7 @@ export function renderWebPushPayload(
         // segments du jour ; on évite /admin/events/<runId> qui suppose un
         // accès staff.
         url: '/caster/cockpit',
+        actions: [{ action: 'cockpit', title: 'Ouvrir le cockpit' }],
       };
     }
     default:

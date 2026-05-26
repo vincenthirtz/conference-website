@@ -4,6 +4,7 @@
   "description": "Tournoi Overwatch et communauté 100% féminine : staff inclusif, matchs commentés et actions pour rendre l'esport plus accessible.",
   "start_url": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
   "background_color": "#0E0A1F",
   "theme_color": "#0E0A1F",
   "orientation": "portrait-primary",

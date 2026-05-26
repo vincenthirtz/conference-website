@@ -1795,3 +1795,17 @@ a:focus-visible,
     transform: none;
   }
 }
+
+/* ─────────────────────────────────────────────────────────
+ * PWA — Window Controls Overlay (installé en standalone).
+ * Active uniquement quand le manifest opt-in WCO ET que le
+ * navigateur/OS le supporte (Edge/Chrome sur Windows 11).
+ * Réserve la hauteur du strip des contrôles fenêtre pour
+ * éviter que le contenu passe derrière min/max/close.
+ * Fallback gracieux : display: standalone classique sans
+ * cette règle. */
+@media (display-mode: window-controls-overlay) {
+  body {
+    padding-top: env(titlebar-area-height, 0);
+  }
+}

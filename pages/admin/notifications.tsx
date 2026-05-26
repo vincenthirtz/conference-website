@@ -214,6 +214,23 @@ function AdminNotificationsPage({ staff }: Props) {
     refreshSubStatus();
   }, [refreshSubStatus]);
 
+  // ----- Clear app badge ---------------------------------------------------
+  // Le staff arrive sur la page notifications = il a vu ses notifs.
+  // On demande au SW de retirer le badge taskbar (Windows/macOS/Android
+  // installé en PWA). Best-effort : si pas de SW, pas de badge API, no-op.
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+      return;
+    }
+    navigator.serviceWorker.ready
+      .then((reg) => {
+        reg.active?.postMessage({ type: 'clear-app-badge' });
+      })
+      .catch(() => {
+        // SW pas prêt / pas enregistré → no-op.
+      });
+  }, []);
+
   // ----- Chargement des prefs ----------------------------------------------
   useEffect(() => {
     let cancelled = false;

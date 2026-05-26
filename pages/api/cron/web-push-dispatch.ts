@@ -640,13 +640,39 @@ export async function runWebPushDispatcher(): Promise<TickCounters> {
       event.event_name as WebPushEventType,
       event.payload ?? {}
     );
+    // Sépare les `actions` (forme Notification API : {action, title}) des
+    // `action_urls` (forme custom SW : {action: url}). Les browsers ignorent
+    // les champs non-standard dans `actions`, donc on stocke les URLs dans
+    // `data.action_urls` que le SW lit dans son handler `notificationclick`.
+    const actions = rendered.actions?.map((a) => ({
+      action: a.action,
+      title: a.title,
+    }));
+    const actionUrls = rendered.actions?.reduce<Record<string, string>>(
+      (acc, a) => {
+        if (a.url) acc[a.action] = a.url;
+        return acc;
+      },
+      {}
+    );
     const payloadJson = JSON.stringify({
       title: rendered.title,
       body: rendered.body,
       icon: '/favicon.ico',
       badge: '/favicon.ico',
-      data: { url: rendered.url, event_name: event.event_name },
+      data: {
+        url: rendered.url,
+        event_name: event.event_name,
+        ...(actionUrls && Object.keys(actionUrls).length > 0
+          ? { action_urls: actionUrls }
+          : {}),
+      },
       tag: event.event_id,
+      // Re-notifie l'utilisateur si un push avec le même tag arrive (ex:
+      // match.starting suivi d'un autre match.starting plus tard). Sans
+      // renotify, le 2e remplace silencieusement le 1er.
+      renotify: true,
+      ...(actions && actions.length > 0 ? { actions } : {}),
     });
 
     const existingForEvent =

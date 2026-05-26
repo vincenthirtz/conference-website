@@ -20,6 +20,21 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
 });
 
+// Tente de poser un badge sur l'icône installée (Windows taskbar / macOS
+// dock / Android launcher). Best-effort : si `setAppBadge` n'est pas dispo
+// (Safari, browser non-installé, OS sans support), on no-op silencieusement.
+function trySetAppBadge() {
+  if ('setAppBadge' in self.navigator) {
+    self.navigator.setAppBadge().catch(() => {});
+  }
+}
+
+function tryClearAppBadge() {
+  if ('clearAppBadge' in self.navigator) {
+    self.navigator.clearAppBadge().catch(() => {});
+  }
+}
+
 self.addEventListener('push', (event) => {
   if (!event.data) return;
 
@@ -37,16 +52,37 @@ self.addEventListener('push', (event) => {
     badge: data.badge || '/favicon.ico',
     data: data.data || { url: '/admin' },
     tag: data.tag, // dedupe : un push avec le même tag remplace le précédent
+    // renotify : re-pinger l'utilisateur même si un push avec le même tag
+    // existe déjà (sans ça, le remplacement est silencieux). Sans tag, ce
+    // flag est ignoré — pas de bruit additionnel sur les notifs uniques.
+    renotify: data.renotify === true,
+    // Boutons d'action (Chrome/Edge sur desktop + Android). Browsers non
+    // supportés (Safari) ignorent silencieusement le champ.
+    actions: Array.isArray(data.actions) ? data.actions : undefined,
     requireInteraction: false,
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil(
+    Promise.all([self.registration.showNotification(title, options), trySetAppBadge()])
+  );
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl =
-    (event.notification.data && event.notification.data.url) || '/admin';
+  // Clic = le staff a vu la notif. Clear le badge (best-effort).
+  tryClearAppBadge();
+  const notifData = event.notification.data || {};
+  // Si l'utilisateur a cliqué sur une action button précise et que le
+  // dispatcher a fourni une URL pour cette action, on la prend. Sinon
+  // (clic sur le corps de la notif, ou action sans URL custom), on
+  // tombe sur l'URL par défaut.
+  const actionUrls =
+    notifData.action_urls && typeof notifData.action_urls === 'object'
+      ? notifData.action_urls
+      : null;
+  const actionUrl =
+    event.action && actionUrls ? actionUrls[event.action] : null;
+  const targetUrl = actionUrl || notifData.url || '/admin';
 
   event.waitUntil(
     self.clients
@@ -71,4 +107,11 @@ self.addEventListener('notificationclick', (event) => {
         return undefined;
       })
   );
+});
+
+// Permet au client de demander un clear (ex: page /admin/notifications montée).
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'clear-app-badge') {
+    tryClearAppBadge();
+  }
 });
