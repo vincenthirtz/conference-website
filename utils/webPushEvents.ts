@@ -59,6 +59,32 @@ export function isWebPushEventType(value: string): value is WebPushEventType {
  * du dispatcher quand sa team est concernée (match, scrim, forfait, check-in)
  * ou plus largement (news).
  */
+/**
+ * Renvoie l'URL côté joueuse pour un event donné, ou `null` si l'event n'a
+ * pas d'audience player (le dispatcher ne tente alors pas de fanout player).
+ *
+ * V1 : on route les events match-related vers `/player` (pas de page de
+ * détail match côté joueuse). Le SW gère la navigation au clic et l'auth
+ * player redirigera vers `/auth/login` si besoin.
+ */
+export function playerUrlForEvent(
+  eventName: string,
+  _payload: EventPayload
+): string | null {
+  switch (eventName) {
+    case 'match.starting':
+    case 'match.finished':
+    case 'match.score_reported':
+    case 'checkin.opened':
+      return '/player';
+    case 'news.published':
+      // V1 : pas de fanout player news (audience trop large), géré V2.
+      return null;
+    default:
+      return null;
+  }
+}
+
 export const PLAYER_PUSH_EVENT_TYPES = [
   'match.starting',
   'match.finished',

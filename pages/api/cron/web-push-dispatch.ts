@@ -60,6 +60,7 @@ import {
   WEB_PUSH_EVENT_TYPES,
   renderWebPushPayload,
   shouldPushForEvent,
+  playerUrlForEvent,
   type WebPushEventType,
 } from '@/utils/webPushEvents';
 
@@ -282,6 +283,47 @@ async function loadStaffUserIdsForTenant(tenantId: string): Promise<string[]> {
  * cast_member d'un autre tenant était assigné (ne devrait pas arriver),
  * le filtre opt-out aval le couvrirait.
  */
+/**
+ * Renvoie les auth user ids des joueuses des DEUX équipes d'un match.
+ * Utilisé pour le fanout player des events match-related (match.starting,
+ * match.finished, match.score_reported, checkin.opened) en plus du staff.
+ *
+ * Retourne un array vide si le match n'existe pas ou n'a pas d'équipes
+ * (cas bye, match pas encore seedé, etc.) — bénin, pas d'audience player
+ * = pas de push player pour cet event.
+ */
+async function loadPlayerUserIdsForMatch(matchId: string): Promise<string[]> {
+  const { data: match, error: matchErr } = await supabaseAdmin
+    .from('matches')
+    .select('team1_id, team2_id')
+    .eq('id', matchId)
+    .maybeSingle();
+  if (matchErr || !match) {
+    if (matchErr) {
+      logger.error('[cron/web-push] loadPlayerUserIdsForMatch match err', matchErr);
+    }
+    return [];
+  }
+  const teamIds = [match.team1_id, match.team2_id].filter(
+    (v): v is string => typeof v === 'string' && v.length > 0
+  );
+  if (teamIds.length === 0) return [];
+
+  const { data: members, error: memErr } = await supabaseAdmin
+    .from('team_members')
+    .select('user_id')
+    .in('team_id', teamIds);
+  if (memErr) {
+    logger.error('[cron/web-push] loadPlayerUserIdsForMatch members err', memErr);
+    return [];
+  }
+  const userIds = new Set<string>();
+  for (const r of (members ?? []) as Array<{ user_id: string | null }>) {
+    if (r.user_id) userIds.add(r.user_id);
+  }
+  return Array.from(userIds);
+}
+
 async function loadCasterUserIdsForMatch(matchId: string): Promise<string[]> {
   const { data: assignments, error: assignErr } = await supabaseAdmin
     .from('cast_assignments')
@@ -662,10 +704,10 @@ export async function runWebPushDispatcher(): Promise<TickCounters> {
       continue;
     }
 
-    // Recipients : par défaut staff du tenant + pole admins ; pour les
+    // Recipients staff : par défaut staff du tenant + pole admins ; pour les
     // transitions de segment match→live, on cible les casters assignés au
     // match uniquement (audience réduite, cf. loadCasterUserIdsForMatch).
-    let userIds: string[];
+    let staffUserIds: string[];
     if (event.event_name === 'event_segment.transitioned') {
       const data = (event.payload ?? {}) as Record<string, unknown>;
       const inner =
@@ -683,16 +725,49 @@ export async function runWebPushDispatcher(): Promise<TickCounters> {
         // en profondeur.
         continue;
       }
-      userIds = await loadCasterUserIdsForMatch(matchId);
+      staffUserIds = await loadCasterUserIdsForMatch(matchId);
     } else {
-      userIds = await loadStaffUserIdsForTenant(event.tenant_id);
+      staffUserIds = await loadStaffUserIdsForTenant(event.tenant_id);
     }
-    if (userIds.length === 0) continue;
 
-    // Filtrage opt-out.
-    const optedOut = await loadOptedOutUserIds(userIds, event.event_name);
-    const eligibleUserIds = userIds.filter((u) => !optedOut.has(u));
-    counters.skipped_prefs += userIds.length - eligibleUserIds.length;
+    // Recipients players : pour les events match-related (V1 chunk B), on
+    // ajoute les joueuses des 2 équipes du match. Le payload Web Push leur
+    // pointera vers /player (cf. playerUrlForEvent dans webPushEvents.ts)
+    // au lieu de /admin/matches/<id> (qui leur retournerait 403).
+    let playerUserIds: string[] = [];
+    if (
+      event.event_name === 'match.starting' ||
+      event.event_name === 'match.finished' ||
+      event.event_name === 'match.score_reported' ||
+      event.event_name === 'checkin.opened'
+    ) {
+      const data = (event.payload ?? {}) as Record<string, unknown>;
+      const inner =
+        data.data && typeof data.data === 'object'
+          ? (data.data as Record<string, unknown>)
+          : data;
+      const matchId =
+        typeof inner.match_id === 'string'
+          ? inner.match_id
+          : typeof inner.matchId === 'string'
+            ? inner.matchId
+            : null;
+      if (matchId) {
+        playerUserIds = await loadPlayerUserIdsForMatch(matchId);
+      }
+    }
+
+    // Audience combinée : staff prioritaire pour la perspective (un user
+    // staff qui joue aussi reçoit la version admin avec URL /admin/matches/...).
+    const staffSet = new Set(staffUserIds);
+    const allUserIds = Array.from(new Set([...staffUserIds, ...playerUserIds]));
+    if (allUserIds.length === 0) continue;
+
+    // Filtrage opt-out (s'applique aux deux audiences indistinctement —
+    // un user opt-out de match.starting ne le reçoit ni en staff ni en player).
+    const optedOut = await loadOptedOutUserIds(allUserIds, event.event_name);
+    const eligibleUserIds = allUserIds.filter((u) => !optedOut.has(u));
+    counters.skipped_prefs += allUserIds.length - eligibleUserIds.length;
     if (eligibleUserIds.length === 0) continue;
 
     const subs = await loadSubscriptions(eligibleUserIds);
@@ -731,23 +806,38 @@ export async function runWebPushDispatcher(): Promise<TickCounters> {
       {}
     );
 
+    // Pré-calcule l'URL côté joueuse une fois par event (la résolution
+    // dépend uniquement du event_name + payload, pas du sub).
+    const playerUrl = playerUrlForEvent(event.event_name, event.payload ?? {});
+
     // Le payload est construit PAR-SUB parce que `data.unread_count` varie
-    // par user (Badge API V2). Tous les autres champs sont identiques, mais
-    // sérialiser N fois est négligeable comparé au coût réseau du push.
+    // par user (Badge API V2) ET que l'URL bascule selon que le sub
+    // appartient à un user staff (URL admin) ou player (URL /player).
     const buildPayload = (sub: SubscriptionRow): string => {
       const unreadCount = unreadCountByUser.get(sub.user_id) ?? 0;
+      // Staff prioritaire : si le user est dans staffSet, on lui envoie la
+      // perspective admin (URL /admin/...). Sinon, on bascule sur l'URL
+      // player (/player) si l'event en a une, sinon fallback sur rendered.url.
+      const isStaffPerspective = staffSet.has(sub.user_id);
+      const url =
+        isStaffPerspective || !playerUrl ? rendered.url : playerUrl;
       return JSON.stringify({
         title: rendered.title,
         body: rendered.body,
         icon: '/favicon.ico',
         badge: '/favicon.ico',
         data: {
-          url: rendered.url,
+          url,
           event_name: event.event_name,
           // Compteur d'events non-ack'd AVANT celui-ci. Le SW ajoute +1
           // lui-même (il est en train de show la notif courante).
           unread_count: unreadCount,
-          ...(actionUrls && Object.keys(actionUrls).length > 0
+          // action_urls ne s'applique qu'à la perspective admin (les
+          // boutons d'action pointent vers des URLs /admin/...). Côté
+          // player on omet — le clic ouvrira data.url (/player).
+          ...(isStaffPerspective &&
+          actionUrls &&
+          Object.keys(actionUrls).length > 0
             ? { action_urls: actionUrls }
             : {}),
         },
@@ -756,7 +846,10 @@ export async function runWebPushDispatcher(): Promise<TickCounters> {
         // match.starting suivi d'un autre match.starting plus tard). Sans
         // renotify, le 2e remplace silencieusement le 1er.
         renotify: true,
-        ...(actions && actions.length > 0 ? { actions } : {}),
+        // actions admin uniquement (mêmes URLs que action_urls).
+        ...(isStaffPerspective && actions && actions.length > 0
+          ? { actions }
+          : {}),
       });
     };
 
