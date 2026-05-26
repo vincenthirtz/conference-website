@@ -27,7 +27,7 @@ const GAME_COPY: Record<GameSlug, { tagline: string; pitch: string }> = {
   'marvel-rivals': {
     tagline: '6v6 hero shooter Marvel.',
     pitch:
-      "Marvel Rivals propose Domination, Convoy et Convergence sur un pool de 11 cartes : tournois BO1/3/5 avec veto pour éviter les cartes « maison ».",
+      'Marvel Rivals propose Domination, Convoy et Convergence sur un pool de 11 cartes : tournois BO1/3/5 avec veto pour éviter les cartes « maison ».',
   },
   'rocket-league': {
     tagline: 'Voitures-fusées, 3v3, sport mécanique.',
@@ -146,6 +146,44 @@ function GameCard({ game }: { game: GameDef }) {
 function GamesPage() {
   const games = listGames();
 
+  // Stats calculées dynamiquement depuis le registry : si on ajoute un jeu,
+  // les chiffres suivent sans intervention.
+  const totalMaps = games.reduce((sum, g) => sum + g.mapPool.length, 0);
+  const vetoGames = games.filter((g) => g.hasMapVeto).length;
+  const draftGames = games.filter((g) => g.hasDraft).length;
+  const allFormats = new Set<string>();
+  for (const g of games) {
+    for (const f of g.matchFormats) allFormats.add(f);
+  }
+
+  const heroStats: { value: string; label: string; sub?: string }[] = [
+    {
+      value: String(games.length),
+      label: 'jeux supportés',
+      sub: 'FPS, MOBA, sport mécanique',
+    },
+    {
+      value: String(totalMaps),
+      label: 'maps cumulées',
+      sub: 'toutes pool confondues',
+    },
+    {
+      value: String(vetoGames),
+      label: 'jeux avec veto',
+      sub: 'séquences ESL / VCT auto',
+    },
+    {
+      value: String(draftGames),
+      label: 'jeux avec draft',
+      sub: 'LoL & Dota 2',
+    },
+    {
+      value: String(allFormats.size),
+      label: 'formats',
+      sub: 'BO1 → BO7 selon le jeu',
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
       {/* Hero */}
@@ -161,7 +199,7 @@ function GamesPage() {
             Multi-jeux
           </p>
           <h1 className="mt-4 text-4xl font-bold leading-tight sm:text-5xl md:text-6xl">
-            Les jeux de la scène OW Women&apos;s Cup
+            Les jeux supportés par le système de la Women&apos;s Cup
           </h1>
           <p className="mt-4 max-w-3xl text-lg text-gray-200">
             Notre stack tournoi (bracket, veto, draft, match threads Discord)
@@ -188,6 +226,37 @@ function GamesPage() {
       </div>
 
       <main className="mx-auto max-w-6xl space-y-16 px-4 pb-20 sm:px-6">
+        {/* En chiffres */}
+        <section aria-labelledby="stats-heading" className="-mt-6 sm:-mt-10">
+          <h2 id="stats-heading" className="sr-only">
+            En chiffres
+          </h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {heroStats.map((stat) => (
+              <div
+                key={stat.label}
+                className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-xl shadow-black/20"
+              >
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 blur-2xl"
+                />
+                <p className="relative text-3xl font-black leading-none text-white sm:text-4xl">
+                  {stat.value}
+                </p>
+                <p className="relative mt-1 text-xs uppercase tracking-[0.14em] text-purple-200">
+                  {stat.label}
+                </p>
+                {stat.sub && (
+                  <p className="relative mt-1 text-[11px] text-gray-400">
+                    {stat.sub}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* Grille de cartes jeu */}
         <section aria-labelledby="games-grid-heading" className="space-y-8">
           <div className="flex flex-col gap-2">
@@ -211,6 +280,103 @@ function GamesPage() {
             {games.map((game) => (
               <GameCard key={game.slug} game={game} />
             ))}
+          </div>
+        </section>
+
+        {/* Tableau comparatif */}
+        <section aria-labelledby="compare-heading" className="space-y-6">
+          <div className="flex flex-col gap-2">
+            <p className="text-xs uppercase tracking-[0.18em] text-gray-300">
+              Comparatif
+            </p>
+            <h2 id="compare-heading" className="text-3xl font-bold text-white">
+              Tout sur une grille
+            </h2>
+            <p className="text-sm text-gray-300 max-w-3xl">
+              Capacités du moteur tournoi par jeu. Utile pour choisir ton format
+              ou comparer deux titres rapidement.
+            </p>
+          </div>
+
+          <div className="overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03]">
+            <table className="w-full min-w-[640px] text-left text-sm">
+              <thead className="border-b border-white/10 bg-white/[0.04] text-[11px] uppercase tracking-[0.14em] text-gray-300">
+                <tr>
+                  <th scope="col" className="px-4 py-3 font-semibold">
+                    Jeu
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-semibold">
+                    Map veto
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-semibold">
+                    Draft
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-semibold">
+                    Maps
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-semibold">
+                    Formats
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {games.map((game) => {
+                  const gradient =
+                    GAME_GRADIENT[game.slug] ??
+                    'from-purple-500 via-fuchsia-500 to-pink-500';
+                  return (
+                    <tr
+                      key={game.slug}
+                      className="transition hover:bg-white/[0.03]"
+                    >
+                      <th
+                        scope="row"
+                        className="px-4 py-3 font-semibold text-white"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span
+                            aria-hidden
+                            className={`inline-block h-3 w-3 rounded-full bg-gradient-to-br ${gradient}`}
+                          />
+                          {game.label}
+                        </div>
+                      </th>
+                      <td className="px-4 py-3">
+                        {game.hasMapVeto ? (
+                          <span className="text-emerald-300">✓ Oui</span>
+                        ) : (
+                          <span className="text-gray-500">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {game.hasDraft ? (
+                          <span className="text-amber-300">✓ Oui</span>
+                        ) : (
+                          <span className="text-gray-500">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-gray-200">
+                        {game.mapPool.length > 0
+                          ? `${game.mapPool.length} maps`
+                          : 'Map fixe'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          {game.matchFormats.map((fmt) => (
+                            <span
+                              key={fmt}
+                              className="inline-flex items-center rounded border border-purple-300/30 bg-purple-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-purple-100"
+                            >
+                              {formatLabel(fmt)}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </section>
 
@@ -272,6 +438,251 @@ function GamesPage() {
           </div>
         </section>
 
+        {/* Bot Discord */}
+        <section aria-labelledby="bot-heading" className="space-y-6">
+          <div className="flex flex-col gap-2">
+            <p className="text-xs uppercase tracking-[0.18em] text-gray-300">
+              Discord
+            </p>
+            <h2 id="bot-heading" className="text-3xl font-bold text-white">
+              Le bot Discord, ton cockpit
+            </h2>
+            <p className="text-sm text-gray-300 max-w-3xl">
+              Tout passe par des commandes slash : inscription, match, veto,
+              draft, score, dispute. Une seule interface, identique pour tous
+              les jeux.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              {
+                title: 'Tournois & équipes',
+                scope: 'Universel',
+                commands: [
+                  '/creer-tournoi',
+                  '/publier-tournoi',
+                  '/inscrire-equipe',
+                  '/creer-mon-equipe',
+                  '/inviter',
+                  '/roster',
+                ],
+                detail:
+                  'Création, publication, inscriptions, gestion du roster. La commande /creer-tournoi propose les 8 jeux au choix.',
+              },
+              {
+                title: 'Match live',
+                scope: 'Universel',
+                commands: [
+                  '/next-match',
+                  '/checkin',
+                  '/report-score',
+                  '/bracket',
+                  '/forfait',
+                ],
+                detail:
+                  'Le bot ouvre un thread Discord par match, suit le check-in, collecte les scores et propage la victoire dans le bracket automatiquement.',
+              },
+              {
+                title: 'Map veto',
+                scope: '5 jeux',
+                badges: [
+                  'Overwatch',
+                  'Valorant',
+                  'CS2',
+                  'R6 Siege',
+                  'Marvel Rivals',
+                ],
+                detail:
+                  'Veto automatisé en DM avec les capitaines : alternance, timer, séquences ESL/VCT spécifiques au jeu. Aucune saisie manuelle côté staff.',
+              },
+              {
+                title: 'Draft MOBA',
+                scope: 'LoL & Dota 2',
+                commands: ['/draft-init'],
+                detail:
+                  'Tournament Draft (LoL) et Captains Mode (Dota 2) gérés de bout en bout : bans, picks, fearless draft, timer serveur et UI spectateur live.',
+              },
+              {
+                title: 'Cast & live',
+                scope: 'Universel',
+                commands: ['/lives', '/casters', '/assigner-cast', '/annoncer'],
+                detail:
+                  'Coordination des casters, attribution des matchs à caster, annonces multi-channels et relais des lives Twitch.',
+              },
+              {
+                title: 'Scrims & entraînement',
+                scope: 'Universel',
+                commands: ['/scrim'],
+                detail:
+                  'Création de scrims publics, recherche d’adversaire, fil dédié et rappels automatiques. Marche pour tous les jeux du registry.',
+              },
+              {
+                title: 'Disputes & arbitrage',
+                scope: 'Universel',
+                commands: [
+                  '/signalement',
+                  '/ma-dispute',
+                  '/disputes',
+                  '/resoudre-dispute',
+                ],
+                detail:
+                  'Forum disputes dédié, suivi par le staff arbitrage et notifications aux capitaines à chaque évolution.',
+              },
+              {
+                title: 'Stats & classement',
+                scope: 'Universel',
+                commands: ['/classement', '/stats', '/historique', '/profil'],
+                detail:
+                  'Classement live du tournoi, stats agrégées par équipe et joueur, historique des matchs avec replay du veto/draft.',
+              },
+              {
+                title: 'Aide & support',
+                scope: 'Universel',
+                commands: ['/help', '/aide-tournoi', '/demander-bot', '/me'],
+                detail:
+                  'Une aide contextuelle par commande, un canal /aide-tournoi pour le staff et l’enregistrement du bot sur d’autres serveurs.',
+              },
+            ].map((cap) => (
+              <div
+                key={cap.title}
+                className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.05] p-5 shadow-xl shadow-black/20 transition hover:border-white/25 hover:bg-white/[0.07]"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="text-lg font-semibold text-white">
+                    {cap.title}
+                  </h3>
+                  <span className="shrink-0 rounded-full border border-purple-300/30 bg-purple-500/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-purple-100">
+                    {cap.scope}
+                  </span>
+                </div>
+
+                <p className="text-sm leading-relaxed text-gray-300">
+                  {cap.detail}
+                </p>
+
+                {cap.commands && cap.commands.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {cap.commands.map((cmd) => (
+                      <code
+                        key={cmd}
+                        className="rounded-md border border-white/10 bg-neutral-900/80 px-2 py-0.5 text-[11px] font-mono text-cyan-200"
+                      >
+                        {cmd}
+                      </code>
+                    ))}
+                  </div>
+                )}
+
+                {cap.badges && cap.badges.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {cap.badges.map((b) => (
+                      <span
+                        key={b}
+                        className="rounded-md border border-emerald-300/30 bg-emerald-400/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-100"
+                      >
+                        {b}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-sm text-gray-300 sm:flex-row sm:items-center sm:justify-between">
+            <p className="flex-1">
+              <span className="font-semibold text-white">Multi-tenant :</span>{' '}
+              le bot peut tourner sur plusieurs serveurs Discord avec un
+              cloisonnement total des tournois, des équipes et des stats.
+              Pratique si une autre asso veut bénéficier de la même stack.
+            </p>
+            <Link
+              href="/onboard"
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-900/40 transition hover:brightness-110"
+            >
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="h-4 w-4 fill-current"
+              >
+                <path d="M20.317 4.369a19.79 19.79 0 0 0-4.885-1.514.075.075 0 0 0-.079.037 13.74 13.74 0 0 0-.608 1.249 18.27 18.27 0 0 0-5.487 0 12.65 12.65 0 0 0-.617-1.25.077.077 0 0 0-.079-.036A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.2 14.2 0 0 0 1.226-1.994.076.076 0 0 0-.041-.105 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.371-.291a.074.074 0 0 1 .078-.01c3.927 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .079.009c.12.099.245.198.372.292a.077.077 0 0 1-.006.128 12.3 12.3 0 0 1-1.873.891.077.077 0 0 0-.041.106c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.331c-1.182 0-2.157-1.086-2.157-2.42 0-1.333.956-2.42 2.157-2.42 1.21 0 2.176 1.096 2.157 2.42 0 1.334-.956 2.42-2.157 2.42zm7.974 0c-1.182 0-2.157-1.086-2.157-2.42 0-1.333.955-2.42 2.157-2.42 1.21 0 2.176 1.096 2.157 2.42 0 1.334-.946 2.42-2.157 2.42z" />
+              </svg>
+              Inviter le bot sur mon serveur
+            </Link>
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section aria-labelledby="faq-heading" className="space-y-6">
+          <div className="flex flex-col gap-2">
+            <p className="text-xs uppercase tracking-[0.18em] text-gray-300">
+              FAQ
+            </p>
+            <h2 id="faq-heading" className="text-3xl font-bold text-white">
+              Les questions qu&apos;on nous pose
+            </h2>
+            <p className="text-sm text-gray-300 max-w-3xl">
+              Une autre question ? Le canal{' '}
+              <code className="rounded border border-white/10 bg-neutral-900/80 px-1.5 py-0.5 font-mono text-[12px] text-cyan-200">
+                /aide-tournoi
+              </code>{' '}
+              du Discord est ouvert à toutes les capitaines.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {[
+              {
+                q: 'Mon jeu préféré n’est pas dans la liste, vous pouvez l’ajouter ?',
+                a: 'Oui — la stack est conçue pour ça. Ajouter un jeu se fait en déclarant son registry (pool de cartes ou flow de draft, formats supportés) et en mettant à jour la commande /creer-tournoi. Compte une à deux semaines selon la complexité. Ouvre une discussion via la page Contact pour qu’on en discute.',
+              },
+              {
+                q: 'Comment fonctionne le map veto exactement ?',
+                a: 'Le bot envoie un DM aux deux capitaines dès que le match est prêt. Chaque capitaine ban ou pick à son tour selon la séquence du jeu (ESL/Major pour CS2, VCT pour Valorant, etc.), avec un timer serveur. La séquence est rejouée dans le thread Discord et stockée pour l’historique du match.',
+              },
+              {
+                q: 'Pourquoi seuls LoL et Dota 2 ont un draft de héros ?',
+                a: 'Parce que ces deux jeux ont une vraie phase de draft formalisée (Tournament Draft pour LoL, Captains Mode pour Dota 2) où les bans/picks alternent. Les hero shooters comme Overwatch ou Marvel Rivals ont du hero swap libre en partie : il n’y a rien à drafter avant le match.',
+              },
+              {
+                q: 'Le bot peut-il tourner sur d’autres serveurs Discord ?',
+                a: 'Oui. Le bot est multi-tenant : on peut l’inviter sur n’importe quel serveur. Chaque serveur a ses propres tournois, équipes et stats, cloisonnés via un identifiant de tenant. Le bouton « Inviter le bot sur mon serveur » au-dessus lance la procédure self-service.',
+              },
+              {
+                q: 'Quel format choisir pour mon tournoi ?',
+                a: 'BO1 = match unique (rapide, idéal pour les phases de groupes). BO3 = standard compétitif, deux maps gagnantes sur trois. BO5 = grandes finales. BO7 = uniquement Rocket League (sport mécanique, parties courtes). Tu peux mélanger les formats : par exemple BO1 en poules et BO3 en élimination.',
+              },
+              {
+                q: 'Combien ça coûte pour utiliser le système ?',
+                a: 'Zéro. La stack est open et l’association OW Women’s Cup la maintient comme outil communautaire. Tu peux participer à nos tournois, ou inviter le bot sur ton serveur si tu organises les tiens — dans tous les cas il n’y a pas de licence.',
+              },
+              {
+                q: 'Est-ce que je peux suivre les matchs en direct sans installer le bot ?',
+                a: 'Oui : tous les matchs publics sont visibles sur ce site (bracket, scores, replay du veto et de la draft) et les casts Twitch sont relayés sur la page Live. Le bot est l’outil des joueuses et du staff, pas une obligation pour le public.',
+              },
+            ].map((item, idx) => (
+              <details
+                key={idx}
+                className="group rounded-2xl border border-white/10 bg-white/[0.04] open:border-purple-300/30 open:bg-white/[0.07]"
+              >
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-base font-semibold text-white transition hover:text-purple-200">
+                  <span>{item.q}</span>
+                  <span
+                    aria-hidden
+                    className="text-xl leading-none text-purple-300 transition group-open:rotate-45"
+                  >
+                    +
+                  </span>
+                </summary>
+                <div className="border-t border-white/10 px-5 py-4 text-sm leading-relaxed text-gray-300">
+                  {item.a}
+                </div>
+              </details>
+            ))}
+          </div>
+        </section>
+
         {/* CTA final */}
         <section className="rounded-2xl border border-white/10 bg-white/[0.05] p-6 sm:p-8 text-center">
           <p className="text-sm uppercase tracking-[0.14em] text-gray-300">
@@ -282,8 +693,8 @@ function GamesPage() {
           </h3>
           <p className="mt-3 text-sm text-gray-200 max-w-3xl mx-auto">
             La stack est conçue pour accueillir de nouveaux titres. Si la scène
-            féminine de ton jeu mérite un tournoi outillé comme le nôtre,
-            dis-le nous, on regarde ensemble.
+            féminine de ton jeu mérite un tournoi outillé comme le nôtre, dis-le
+            nous, on regarde ensemble.
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-3">
             <Link
