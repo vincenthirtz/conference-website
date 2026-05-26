@@ -186,7 +186,7 @@ function AdminScrimCreatePage(_props: StaffProps) {
               <input
                 value={form.game}
                 onChange={(e) => setForm({ ...form, game: e.target.value })}
-                placeholder="Overwatch 2"
+                placeholder="Overwatch"
                 className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
               />
             </div>

@@ -6,7 +6,7 @@ const CDN = 'https://overfast-api.tekrop.fr/static/maps';
 
 export const OVERWATCH: GameDef = {
   slug: 'overwatch',
-  label: 'Overwatch 2',
+  label: 'Overwatch',
   hasMapVeto: true,
   matchFormats: ['bo1', 'bo3', 'bo5'],
   mapPool: [

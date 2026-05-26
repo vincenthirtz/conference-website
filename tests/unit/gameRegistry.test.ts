@@ -198,7 +198,7 @@ describe('game registry', () => {
       const ow = getGame('overwatch');
       expect(ow).not.toBeNull();
       expect(ow!.slug).toBe('overwatch');
-      expect(ow!.label).toBe('Overwatch 2');
+      expect(ow!.label).toBe('Overwatch');
     });
 
     it('returns null for an unknown slug', () => {
