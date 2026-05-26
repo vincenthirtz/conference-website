@@ -21,5 +21,31 @@
       "sizes": "48x48",
       "type": "image/x-icon"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Notifications",
+      "short_name": "Notifs",
+      "description": "Préférences et statut Web Push",
+      "url": "/admin/notifications"
+    },
+    {
+      "name": "Cockpit cast",
+      "short_name": "Cockpit",
+      "description": "Mes segments du jour",
+      "url": "/caster/cockpit"
+    },
+    {
+      "name": "Tournois",
+      "short_name": "Tournois",
+      "description": "Tournois actifs et matchs",
+      "url": "/admin/tournaments"
+    },
+    {
+      "name": "Support",
+      "short_name": "Support",
+      "description": "Tickets ouverts",
+      "url": "/admin/support"
+    }
   ]
 }

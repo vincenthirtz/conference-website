@@ -21,6 +21,7 @@ import { useCasterSession } from '@/hooks/useCasterSession';
 import { useEventRunRealtime } from '@/hooks/useEventRunRealtime';
 import { useCockpitHeartbeat } from '@/hooks/useCockpitHeartbeat';
 import { useCueStream } from '@/hooks/useCueStream';
+import { useWakeLock } from '@/hooks/useWakeLock';
 import { logger } from '@/utils/logger';
 import type { EventRun, EventSegment } from '@/types/events';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
@@ -53,6 +54,12 @@ function CockpitPage() {
   const router = useRouter();
   const { addToast } = useToast();
   const session = useCasterSession();
+
+  // Empêche l'écran de s'éteindre tant que le caster est sur le cockpit
+  // (un BO3 peut durer 40 min sans frappe clavier — la mise en veille
+  // automatique masquait l'overlay broadcast côté studio). Best-effort :
+  // no-op sur Firefox / Safari < 16.4 / HTTP, ne casse rien.
+  useWakeLock(true);
 
   const [run, setRun] = useState<EventRun | null>(null);
   const [segments, setSegments] = useState<EventSegment[]>([]);

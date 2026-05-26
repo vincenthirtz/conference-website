@@ -115,3 +115,87 @@ self.addEventListener('message', (event) => {
     tryClearAppBadge();
   }
 });
+
+// ─────────────────────────────────────────────────────────
+// Background Sync — replay des mutations queue'd offline.
+// Schéma IDB partagé avec utils/bgSyncQueue.ts :
+//   DB : 'wmc-bg-sync' v1
+//   Store : 'mutations' (keyPath 'id', autoIncrement)
+//   Row : { id, url, method, headers, body, createdAt }
+// Tag attendu : 'wmc-mutations' (cf. SYNC_TAG côté client).
+// ─────────────────────────────────────────────────────────
+
+const BG_SYNC_DB = 'wmc-bg-sync';
+const BG_SYNC_STORE = 'mutations';
+const BG_SYNC_TAG = 'wmc-mutations';
+
+function openBgSyncDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(BG_SYNC_DB, 1);
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => resolve(req.result);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(BG_SYNC_STORE)) {
+        db.createObjectStore(BG_SYNC_STORE, { keyPath: 'id', autoIncrement: true });
+      }
+    };
+  });
+}
+
+function listQueuedMutations(db) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(BG_SYNC_STORE, 'readonly');
+    const req = tx.objectStore(BG_SYNC_STORE).getAll();
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => resolve(req.result || []);
+  });
+}
+
+function deleteQueuedMutation(db, id) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(BG_SYNC_STORE, 'readwrite');
+    const req = tx.objectStore(BG_SYNC_STORE).delete(id);
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => resolve();
+  });
+}
+
+async function replayQueuedMutations() {
+  const db = await openBgSyncDb();
+  try {
+    const rows = await listQueuedMutations(db);
+    for (const row of rows) {
+      try {
+        const res = await fetch(row.url, {
+          method: row.method,
+          headers: row.headers,
+          body: row.body,
+          // credentials:'include' pour que les cookies de session admin
+          // soient envoyés (le SW n'a pas accès à la session, le browser
+          // attache les cookies du domaine).
+          credentials: 'include',
+        });
+        if (res.ok) {
+          await deleteQueuedMutation(db, row.id);
+        } else if (res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429) {
+          // 4xx non-retryable (sauf 408/429) = la requête ne réussira pas
+          // au prochain replay. On retire pour ne pas spam-retry.
+          await deleteQueuedMutation(db, row.id);
+        }
+        // 5xx / 408 / 429 / network error → on laisse en file, sync
+        // rejouera au prochain tick.
+      } catch (_err) {
+        // Network toujours down — sync rejouera. Bénin.
+      }
+    }
+  } finally {
+    db.close();
+  }
+}
+
+self.addEventListener('sync', (event) => {
+  if (event.tag === BG_SYNC_TAG) {
+    event.waitUntil(replayQueuedMutations());
+  }
+});
