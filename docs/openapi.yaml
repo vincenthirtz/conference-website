@@ -2133,6 +2133,49 @@ components:
           oneOf:
             - $ref: "#/components/schemas/DraftState"
             - type: "null"
+    BotInitMatchDraftResponse:
+      type: object
+      description: |
+        Response shape of `POST /api/bot/v1/matches/:matchId/drafts`.
+        The bot uses `captains[].discordUserId` to DM each captain with
+        the captain UI link. `null` values mean the captain has not
+        linked Discord yet — the bot falls back to a channel post.
+      required:
+        - success
+        - draft
+        - captains
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        draft:
+          $ref: "#/components/schemas/DraftState"
+        captains:
+          type: array
+          minItems: 2
+          maxItems: 2
+          items:
+            type: object
+            required:
+              - teamSlot
+            properties:
+              teamSlot:
+                type: integer
+                enum:
+                  - 1
+                  - 2
+              teamId:
+                $ref: "#/components/schemas/Uuid"
+              teamName:
+                type: string
+                nullable: true
+              authUserId:
+                $ref: "#/components/schemas/Uuid"
+              discordUserId:
+                type: string
+                nullable: true
+                description: Snowflake or null when the captain hasn't linked Discord.
     DraftAutoPickResponse:
       type: object
       description: |
@@ -3382,6 +3425,60 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /api/bot/v1/matches/{matchId}/drafts:
+    parameters:
+      - $ref: "#/components/parameters/MatchId"
+    post:
+      tags:
+        - bot/matches
+      summary: Initialise un draft MOBA depuis le bot Discord (Lot 6).
+      operationId: botInitMatchDraft
+      description: |
+        Wrap autour de l'engine `initDraft` (Lot 2). Auth bot-only
+        (x-api-key + x-tenant-id). En plus du `DraftState` assemblé,
+        retourne la liste des deux capitaines avec leur Discord ID
+        résolu via `user_discord_links` pour que le bot puisse les DM
+        directement. Les capitaines non liés à Discord renvoient
+        `discordUserId: null` (le bot tombe sur un message canal).
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InitMatchDraftRequest"
+      responses:
+        "201":
+          description: Draft créé + résolution des capitaines.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BotInitMatchDraftResponse"
+        "400":
+          description: |
+            Invalid input — bad gameIndex, missing tournament game,
+            game has no draft phase, pickTimerSeconds out of range.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DraftEngineError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Match or tournament not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DraftEngineError"
+        "409":
+          description: Draft already exists for (matchId, gameIndex).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DraftEngineError"
         "500":
           $ref: "#/components/responses/ServerError"
   /api/bot/v1/matches/{matchId}/discord:

@@ -1464,6 +1464,33 @@ Composants (`components/admin/draft/`) : `DraftStatusPanel`, `SidePicker`, `Draf
 
 Toutes les mutations (init/sides/start/commit/auto-pick) passent par `useIdempotentMutation` → header `Idempotency-Key` auto-injecté + regen après chaque 2xx, donc retries safe.
 
+### Bot endpoint + slash command (Lot 6)
+
+Le bot Discord initialise les drafts via une commande slash
+`/draft-init` (sibling repo `docker-box/services/discord-bot`). Le
+endpoint bot côté site est un wrapper de `initDraft` qui résout en
+plus les Discord IDs des deux capitaines, pour permettre au bot de
+DM directement.
+
+| Route                                                                                                       | Methods | Auth                          | Notes                                                                                                                                                                                                          |
+| ----------------------------------------------------------------------------------------------------------- | ------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`pages/api/bot/v1/matches/[matchId]/drafts.ts`](../pages/api/bot/v1/matches/[matchId]/drafts.ts)           | POST    | `withBotRoute({ idempotent })` | Body `{ gameIndex, fearless? }`. Retourne `{ success, draft: DraftState, captains: [{ teamSlot, teamId, teamName, authUserId, discordUserId\|null }] }`. Rate-limit `bot-match-draft-init` (30/min). |
+
+Résolution capitaines :
+- `matches.team1_id / team2_id` → `teams.captain_id` (auth user id)
+- `auth.users.id` → `user_discord_links.discord_user_id`
+- Si le capitaine n'a pas lié son Discord (`discordUserId: null`),
+  le bot tombe sur un message dans le canal au lieu d'un DM.
+
+Slash command côté bot (`services/discord-bot/draft-init.js`) :
+- Options : `match-id` (string + autocomplete via `acMatches`),
+  `game-index` (integer, min 1), `fearless` (boolean optionnel).
+- Appelle `POST /api/bot/v1/matches/:matchId/drafts` via `postBotApi`
+  (auto-tag `x-api-key` + `x-tenant-id` + `Idempotency-Key`).
+- Sur succès, DM les capitaines avec deux liens : la captain UI
+  (`/admin/matches/:matchId/draft/:gameIndex`) et la spectator UI
+  (`/draft/:matchId/:gameIndex`). Fallback canal si DM échoue.
+
 ### Spectator UI + public read (Lot 5)
 
 Vue publique stream-friendly pour OBS browser sources. Aucune auth :
