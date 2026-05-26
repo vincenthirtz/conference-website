@@ -45,6 +45,9 @@ function makeRes() {
   return res;
 }
 
+const TEAM_1 = '550e8400-e29b-41d4-a716-446655440b01';
+const TEAM_2 = '550e8400-e29b-41d4-a716-446655440b02';
+
 beforeEach(() => {
   resetSupabaseMock();
   store.matches = [
@@ -53,9 +56,15 @@ beforeEach(() => {
       tenant_id: TENANT,
       tournament_id: TOURN,
       match_format: 'bo1',
+      team1_id: TEAM_1,
+      team2_id: TEAM_2,
     },
   ] as any;
   store.tournaments = [{ id: TOURN, game: 'lol', tenant_id: TENANT }] as any;
+  store.teams = [
+    { id: TEAM_1, name: 'Phoenix', tenant_id: TENANT },
+    { id: TEAM_2, name: 'Dragons', tenant_id: TENANT },
+  ] as any;
   store.game_heroes = [
     {
       id: HERO_AATROX,
@@ -100,7 +109,7 @@ beforeEach(() => {
 });
 
 describe('GET /api/matches/[matchId]/drafts/[gameIndex]', () => {
-  it('returns the assembled DraftState without auth', async () => {
+  it('returns the assembled DraftState + team names without auth', async () => {
     const req = makeReq({
       query: { matchId: MATCH, gameIndex: '1' },
     });
@@ -112,6 +121,10 @@ describe('GET /api/matches/[matchId]/drafts/[gameIndex]', () => {
     expect(res.body.draft.draft.status).toBe('in_progress');
     expect(res.body.draft.bannedHeroes).toHaveLength(1);
     expect(res.body.draft.bannedHeroes[0].id).toBe(HERO_AATROX);
+    expect(res.body.teams).toEqual({
+      team1Name: 'Phoenix',
+      team2Name: 'Dragons',
+    });
     expect(res.headers['Cache-Control']).toMatch(/s-maxage=5/);
   });
 

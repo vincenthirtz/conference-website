@@ -77,6 +77,7 @@ export type DraftEngineErrorCode =
   | 'PICK_TIMER_INVALID'
   | 'NO_ELIGIBLE_HERO'
   | 'DEADLINE_NOT_REACHED'
+  | 'STEP_ALREADY_COMMITTED'
   | 'DB_ERROR';
 
 function db() {
@@ -409,6 +410,79 @@ export async function initDraft(input: InitDraftInput): Promise<DraftState> {
   return assembleState(loaded);
 }
 
+export type DeleteDraftInput = {
+  matchId: string;
+  gameIndex: number;
+  tenantId: string;
+  /**
+   * When false (default), the engine refuses to delete a draft whose
+   * status is `in_progress` — staff must cancel it explicitly or wait
+   * for completion. `force=true` bypasses that guard.
+   */
+  force?: boolean;
+};
+
+export type DeleteDraftResult = {
+  deletedDraftId: string;
+  deletedSteps: number;
+};
+
+/**
+ * Drop a draft and its steps. Used to recover from a bad init
+ * (wrong game_index, wrong fearless flag, etc.) without dropping
+ * into SQL. Match-level rows are kept untouched.
+ */
+export async function deleteDraft(
+  input: DeleteDraftInput
+): Promise<DeleteDraftResult> {
+  const client = db();
+  // Resolve match → tenant scope (uses the same lookup as init/get so
+  // bad matchIds still produce a clean 404).
+  await loadMatchContext(input.matchId, input.tenantId, input.gameIndex);
+
+  const existing = await loadDraftRowByGameIndex(
+    input.matchId,
+    input.gameIndex,
+    input.tenantId
+  );
+  if (!existing) {
+    throw new DraftEngineError('DRAFT_NOT_FOUND', 'Draft not found.', 404);
+  }
+  if (existing.status === 'in_progress' && !input.force) {
+    throw new DraftEngineError(
+      'DRAFT_NOT_PENDING',
+      'Refusing to delete an in_progress draft. Pass force=true to override.',
+      409
+    );
+  }
+
+  // Steps first so we can report a count, then the parent. The schema
+  // also has ON DELETE CASCADE on match_draft_steps.draft_id → either
+  // path leaves the table clean.
+  const { data: deletedSteps, error: stepsErr } = await client
+    .from('match_draft_steps')
+    .delete()
+    .eq('draft_id', existing.id)
+    .select('id');
+  if (stepsErr) {
+    throw new DraftEngineError('DB_ERROR', stepsErr.message, 500);
+  }
+
+  const { error: draftErr } = await client
+    .from('match_drafts')
+    .delete()
+    .eq('id', existing.id)
+    .eq('tenant_id', input.tenantId);
+  if (draftErr) {
+    throw new DraftEngineError('DB_ERROR', draftErr.message, 500);
+  }
+
+  return {
+    deletedDraftId: existing.id,
+    deletedSteps: (deletedSteps ?? []).length,
+  };
+}
+
 export type GetDraftStateInput = {
   matchId: string;
   gameIndex: number;
@@ -686,7 +760,29 @@ export async function commitDraftStep(
   }
   const steps = (existingSteps ?? []) as MatchDraftStep[];
 
+  // Crash-window handling : if the target step already has hero_id set
+  // (e.g. UPDATE step succeeded then the draft UPDATE crashed), accept the
+  // retry only when the heroId matches — that's a true idempotent replay
+  // and we re-run the draft UPDATE to heal current_step. A mismatch means
+  // the operator is trying to commit a different hero on a step that's
+  // already locked in : surface it explicitly instead of silently
+  // overwriting the committed pick.
+  const targetStepRow = steps.find((s) => s.step_number === expected);
+  const idempotentReplay =
+    !!targetStepRow?.hero_id && targetStepRow.hero_id === input.heroId;
+  if (targetStepRow?.hero_id && !idempotentReplay) {
+    throw new DraftEngineError(
+      'STEP_ALREADY_COMMITTED',
+      `Step ${expected} already committed with a different hero.`,
+      409
+    );
+  }
+
   for (const step of steps) {
+    // Skip the current step in the dedup loop : either it's empty (normal
+    // path) or it carries the same heroId as the retry (idempotent replay
+    // path). The mismatch case was handled above.
+    if (step.step_number === expected) continue;
     if (step.hero_id !== input.heroId) continue;
     if (step.action === 'ban') {
       throw new DraftEngineError(

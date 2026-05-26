@@ -1880,6 +1880,7 @@ components:
             - PICK_TIMER_INVALID
             - NO_ELIGIBLE_HERO
             - DEADLINE_NOT_REACHED
+            - STEP_ALREADY_COMMITTED
             - DB_ERROR
       additionalProperties: true
     InitMatchDraftRequest:
@@ -2133,6 +2134,35 @@ components:
           oneOf:
             - $ref: "#/components/schemas/DraftState"
             - type: "null"
+        teams:
+          type: object
+          description: |
+            Resolved team names for the spectator UI auto-title (Lot 5
+            polish). Public endpoint only — admin GET omits this field.
+          properties:
+            team1Name:
+              type: string
+              nullable: true
+            team2Name:
+              type: string
+              nullable: true
+    DeleteMatchDraftResponse:
+      type: object
+      required:
+        - success
+        - deletedDraftId
+        - deletedSteps
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        deletedDraftId:
+          $ref: "#/components/schemas/Uuid"
+        deletedSteps:
+          type: integer
+          minimum: 0
+          description: Count of match_draft_steps rows removed.
     BotInitMatchDraftResponse:
       type: object
       description: |
@@ -8921,6 +8951,48 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+    delete:
+      tags:
+        - admin/matches
+      summary: Drop a draft + its steps (recovery from a bad init).
+      operationId: adminDeleteMatchDraft
+      description: |
+        Removes the draft row and all its steps so the operator can
+        re-init with the right gameIndex / fearless flag without
+        dropping into SQL. Refuses to delete an `in_progress` draft
+        unless `?force=1` is passed.
+      security:
+        - StaffSession: []
+      parameters:
+        - name: force
+          in: query
+          required: false
+          description: Pass `1` or `true` to bypass the in_progress guard.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Draft + steps deleted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteMatchDraftResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Draft not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DraftEngineError"
+        "409":
+          description: Refused — in_progress draft without force.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DraftEngineError"
   /api/admin/matches/{matchId}/drafts/{gameIndex}/side:
     parameters:
       - $ref: "#/components/parameters/MatchId"

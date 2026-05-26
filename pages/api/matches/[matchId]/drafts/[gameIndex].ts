@@ -50,12 +50,12 @@ export default async function handler(
   }
 
   try {
-    // Resolve the match's tenant_id so we can drive the engine without
-    // exposing the cross-tenant lookup pattern to public callers. If the
-    // match doesn't exist we return 404 with no tenant info leaked.
+    // Resolve the match's tenant_id + team ids so we can drive the engine
+    // without exposing the cross-tenant lookup pattern to public callers,
+    // AND surface the team names for the spectator UI's auto-title.
     const { data: matchRow, error: matchErr } = await supabaseAdmin
       .from('matches')
-      .select('id, tenant_id')
+      .select('id, tenant_id, team1_id, team2_id')
       .eq('id', matchId)
       .maybeSingle();
     if (matchErr) {
@@ -66,16 +66,44 @@ export default async function handler(
       return res.status(404).json({ error: 'Match not found' });
     }
 
+    const tenantId = (matchRow as any).tenant_id;
     const state = await getDraftState({
       matchId: matchId as string,
       gameIndex: gameIndexNum,
-      tenantId: (matchRow as any).tenant_id,
+      tenantId,
     });
+
+    // Fetch the two team names so the spectator UI can render
+    // "Phoenix vs. Dragons" without the caster having to pass ?title=.
+    // Best-effort : if the lookup fails or a team is missing, we just
+    // fall back to nulls and the UI degrades gracefully.
+    let team1Name: string | null = null;
+    let team2Name: string | null = null;
+    const teamIds = [
+      (matchRow as any).team1_id,
+      (matchRow as any).team2_id,
+    ].filter((v): v is string => typeof v === 'string');
+    if (teamIds.length > 0) {
+      const { data: teamRows } = await supabaseAdmin
+        .from('teams')
+        .select('id, name')
+        .in('id', teamIds);
+      const byId = new Map(
+        ((teamRows ?? []) as Array<{ id: string; name: string | null }>).map(
+          (t) => [t.id, t.name ?? null]
+        )
+      );
+      team1Name = byId.get((matchRow as any).team1_id) ?? null;
+      team2Name = byId.get((matchRow as any).team2_id) ?? null;
+    }
 
     // Short cache — Realtime is the primary fan-out, this is the fallback
     // for fresh tabs and reconnecting OBS browser sources.
     res.setHeader('Cache-Control', 'public, s-maxage=5, stale-while-revalidate=15');
-    return res.status(200).json({ draft: state });
+    return res.status(200).json({
+      draft: state,
+      teams: { team1Name, team2Name },
+    });
   } catch (err) {
     if (err instanceof DraftEngineError) {
       return res

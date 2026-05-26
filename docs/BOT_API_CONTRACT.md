@@ -1410,7 +1410,7 @@ détaillés dans `components.schemas.DraftEngineError` de `openapi.yaml`).
 | Route                                                                                                                                                       | Methods | Min role  | Notes                                                                                                                                                                          |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | [`drafts/index.ts`](../pages/api/admin/matches/[matchId]/drafts/index.ts)                                                                                   | POST    | manager   | Init draft pour `gameIndex`. Résout le `game` depuis `tournaments.game`. Seed les `match_draft_steps` depuis `config/games/<slug>.draftFlows[format]`. 409 si déjà existant.    |
-| [`drafts/[gameIndex]/index.ts`](../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/index.ts)                                                           | GET     | manager   | Read assemblé du `DraftState` (draft + flow + steps + heroes résolus + `nextStepIndex`).                                                                                       |
+| [`drafts/[gameIndex]/index.ts`](../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/index.ts)                                                           | GET, DELETE | manager   | GET = read assemblé du `DraftState`. DELETE = drop le draft + ses steps (recovery sans SQL). Refuse `in_progress` sauf `?force=1` → 409 `DRAFT_NOT_PENDING`.                  |
 | [`drafts/[gameIndex]/side.ts`](../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/side.ts)                                                             | PATCH   | manager   | Assigne `team1_side` + `team2_side`. Enum game-specific (lol `blue/red`, dota2 `radiant/dire`). Pre-step uniquement.                                                            |
 | [`drafts/[gameIndex]/commit.ts`](../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/commit.ts)                                                         | POST    | manager   | Commit un ban/pick. Transition `pending → in_progress` sur step 1, auto-complete sur dernier step. Stamp `deadline_at` du step suivant. Bloque hero déjà banni/picked + fearless cross-game. |
 
@@ -1440,11 +1440,18 @@ Mécanique :
 - Stratégie de sélection : **premier alphabétique** (déterministe, équitable
   en pratique). Pas de random pour rester testable.
 
-Idempotence : le cron est self-healing. Si un tick crashe après l'UPDATE
-du step mais avant l'UPDATE du draft, le tick suivant verra une
-incohérence (`hero_id` set mais `current_step` pas incrémenté) — à
-surveiller en prod. Le risque résiduel est documenté dans le code de
-`commitDraftStep` (pas de transaction multi-statement côté Supabase).
+Idempotence : `commitDraftStep` est explicitement crash-safe. Si un tick
+crashe après l'UPDATE du step mais avant l'UPDATE du draft (le cas
+"hero_id set, current_step pas incrémenté") :
+- **retry avec le même heroId** : l'engine détecte le replay, saute la
+  collision dedup, et ré-exécute l'UPDATE draft → état healed.
+- **retry avec un heroId différent** : l'engine refuse explicitement avec
+  `STEP_ALREADY_COMMITTED` (409) plutôt que d'écraser silencieusement la
+  valeur committed. Force l'opérateur à utiliser `DELETE /drafts/:gameIndex`
+  pour reset le draft proprement.
+
+Tests dédiés couvrent les deux scénarios dans `tests/unit/apiAdminMatchDrafts.test.ts`
+(describe `commitDraftStep partial-failure retry idempotency`).
 
 ### Captain UI (Lot 4)
 
@@ -1454,7 +1461,7 @@ d'endpoint nouveau — purement orchestration côté client des Lots 0-3.
 
 | Route                                                                                                                                   | Auth                                | Notes                                                                                                                              |
 | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| [`pages/admin/matches/[matchId]/draft/[gameIndex].tsx`](../pages/admin/matches/[matchId]/draft/[gameIndex].tsx)                         | `withStaffPage('manager')`          | Captain UI : init → sides → start → boucle commit (clic sur hero) avec auto-pick fallback. Hero pool fetch via `/api/games/[slug]/heroes`. |
+| [`pages/admin/matches/[matchId]/draft/[gameIndex].tsx`](../pages/admin/matches/[matchId]/draft/[gameIndex].tsx)                         | `withStaffPage('manager')` + loader SSR | Captain UI : init → sides → start → boucle commit (clic sur hero) avec auto-pick fallback. Hero pool fetch via `/api/games/[slug]/heroes`. **SSR pré-valide** que le match existe + tournament.game ∈ {lol, dota2} ; sinon `blockReason` prop → vue "Draft indisponible" propre (au lieu d'un toast 400 après clic). |
 
 Hooks dédiés :
 - [`useDraftState`](../hooks/useDraftState.ts) — fetch `/api/admin/.../drafts/:gameIndex` + abonnement `useRealtimeChannel` sur `match_drafts` (filter `id=eq.X`) ET `match_draft_steps` (filter `draft_id=eq.X`). Refetch sur chaque event. Accepte un `fetcher` override (Lot 5 spectator l'utilise pour passer un fetch non-authentifié).
@@ -1500,8 +1507,8 @@ a une policy RLS `select_public` (Lot 0).
 
 | Route                                                                                                                  | Methods | Auth   | Notes                                                                                                                                                                                                                  |
 | ---------------------------------------------------------------------------------------------------------------------- | ------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`pages/api/matches/[matchId]/drafts/[gameIndex].ts`](../pages/api/matches/[matchId]/drafts/[gameIndex].ts)            | GET     | public | Renvoie le `DraftState` assemblé (ou `null` si pas initialisé). Cache `s-maxage=5, stale-while-revalidate=15`. Tenant résolu implicitement via `matches.tenant_id`. 404 si le match n'existe pas, 400 sur IDs invalides. |
-| [`pages/draft/[matchId]/[gameIndex].tsx`](../pages/draft/[matchId]/[gameIndex].tsx)                                    | —       | public | Page React publique. URL : `/draft/<matchId>/<gameIndex>?title=<encoded title>`. Layout dark (OBS chromakey friendly), 2 colonnes de 5 picks (splash arts), ban row, timer central. `<meta name="robots" content="noindex">`. |
+| [`pages/api/matches/[matchId]/drafts/[gameIndex].ts`](../pages/api/matches/[matchId]/drafts/[gameIndex].ts)            | GET     | public | Renvoie `{ draft: DraftState\|null, teams: { team1Name, team2Name } }`. Les team names sont best-effort (null si team manquante). Cache `s-maxage=5, stale-while-revalidate=15`. Tenant résolu implicitement via `matches.tenant_id`. 404 si le match n'existe pas, 400 sur IDs invalides. |
+| [`pages/draft/[matchId]/[gameIndex].tsx`](../pages/draft/[matchId]/[gameIndex].tsx)                                    | —       | public | Page React publique. URL : `/draft/<matchId>/<gameIndex>?title=<encoded title>`. Si `?title=` absent, fallback automatique sur `team1Name vs. team2Name` (side-fetch). Layout dark (OBS chromakey friendly), 2 colonnes de 5 picks (splash arts), ban row, timer central. `<meta name="robots" content="noindex">`. |
 
 Composants (`components/draft/`) :
 - `SpectatorView` — layout complet, réutilise `DraftTimer` du Lot 4. Sub-components inline : `TeamColumn` (5 picks splash), `PickSlot` (image + nom + title), `BanSlot` (icon grayscale + barré), `BansRow`, `StatusBadge`.

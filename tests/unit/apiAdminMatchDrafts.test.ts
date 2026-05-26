@@ -626,6 +626,80 @@ describe('GET /api/admin/matches/[matchId]/drafts/[gameIndex]', () => {
 });
 
 /* -----------------------------------------------------------
+ * DELETE /api/admin/matches/[matchId]/drafts/[gameIndex]
+ * Recovery path : remove a bad init without dropping into SQL.
+ * ---------------------------------------------------------*/
+
+describe('DELETE /api/admin/matches/[matchId]/drafts/[gameIndex]', () => {
+  it('deletes a pending draft + all its steps', async () => {
+    await initLolGame(MATCH_LOL_BO3, 1);
+    expect(
+      (store.match_draft_steps as any[]).filter(
+        (s) => s.draft_id === (store.match_drafts as any[])[0].id
+      )
+    ).toHaveLength(20);
+
+    const req = makeReq({
+      method: 'DELETE',
+      query: { matchId: MATCH_LOL_BO3, gameIndex: '1' },
+    });
+    const res = makeRes();
+    await stateHandler(req, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.deletedSteps).toBe(20);
+    expect(store.match_drafts).toHaveLength(0);
+    expect(store.match_draft_steps).toHaveLength(0);
+  });
+
+  it('refuses to delete an in_progress draft without force', async () => {
+    await initLolGame(MATCH_LOL_BO3, 1);
+    await setSides(MATCH_LOL_BO3, 1, 'blue', 'red');
+    await commitStep(MATCH_LOL_BO3, 1, 1, HERO_AATROX);
+
+    const req = makeReq({
+      method: 'DELETE',
+      query: { matchId: MATCH_LOL_BO3, gameIndex: '1' },
+    });
+    const res = makeRes();
+    await stateHandler(req, res);
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body.code).toBe('DRAFT_NOT_PENDING');
+    expect(store.match_drafts).toHaveLength(1);
+  });
+
+  it('force=1 deletes an in_progress draft anyway', async () => {
+    await initLolGame(MATCH_LOL_BO3, 1);
+    await setSides(MATCH_LOL_BO3, 1, 'blue', 'red');
+    await commitStep(MATCH_LOL_BO3, 1, 1, HERO_AATROX);
+
+    const req = makeReq({
+      method: 'DELETE',
+      query: { matchId: MATCH_LOL_BO3, gameIndex: '1', force: '1' },
+    });
+    const res = makeRes();
+    await stateHandler(req, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(store.match_drafts).toHaveLength(0);
+  });
+
+  it('returns 404 when no draft exists for (matchId, gameIndex)', async () => {
+    const req = makeReq({
+      method: 'DELETE',
+      query: { matchId: MATCH_LOL_BO3, gameIndex: '1' },
+    });
+    const res = makeRes();
+    await stateHandler(req, res);
+
+    expect(res.statusCode).toBe(404);
+    expect(res.body.code).toBe('DRAFT_NOT_FOUND');
+  });
+});
+
+/* -----------------------------------------------------------
  * POST /api/admin/matches/[matchId]/drafts/[gameIndex]/start  (Lot 3)
  * ---------------------------------------------------------*/
 
@@ -759,6 +833,73 @@ describe('POST /api/admin/matches/[matchId]/drafts/[gameIndex]/auto-pick', () =>
 /* -----------------------------------------------------------
  * commitStep deadline propagation (Lot 3)
  * ---------------------------------------------------------*/
+
+/* -----------------------------------------------------------
+ * Partial-failure retry (commit) — confirms the natural idempotence
+ * survives a crash between the step UPDATE and the draft UPDATE.
+ * ---------------------------------------------------------*/
+
+describe('commitDraftStep partial-failure retry idempotency', () => {
+  it('retrying with the same heroId after step-UPDATE/draft-UPDATE crash heals the state', async () => {
+    await initLolGame(MATCH_LOL_BO3, 1);
+    await setSides(MATCH_LOL_BO3, 1, 'blue', 'red');
+    // Successful first commit puts current_step = 1, step 1 hero set.
+    const first = await commitStep(MATCH_LOL_BO3, 1, 1, HERO_AATROX);
+    expect(first.statusCode).toBe(200);
+
+    // Simulate the worst case : the next commit (step 2) wrote hero_id on
+    // step 2 in DB but crashed BEFORE updating match_drafts.current_step.
+    // We replay that state in the mock store : step 2 has the hero set,
+    // but the parent row is still at current_step = 1.
+    const draft = (store.match_drafts as any[]).find(
+      (d) => d.game_index === 1
+    );
+    const step2 = (store.match_draft_steps as any[]).find(
+      (s) => s.draft_id === draft.id && s.step_number === 2
+    );
+    step2.hero_id = HERO_AHRI;
+    step2.committed_at = '2026-05-26T00:00:00.000Z';
+    // draft.current_step intentionally left at 1 — the crash window.
+
+    // Retry the same commit with the same heroId — the engine should
+    // accept it (step matches expected, hero matches), re-stamp + bump
+    // current_step + arm step 3 deadline. State is healed.
+    const retry = await commitStep(MATCH_LOL_BO3, 1, 2, HERO_AHRI);
+    expect(retry.statusCode).toBe(200);
+    expect(retry.body.draft.draft.current_step).toBe(2);
+    const step2After = retry.body.draft.steps.find(
+      (s: any) => s.step_number === 2
+    );
+    expect(step2After.hero_id).toBe(HERO_AHRI);
+    const step3 = retry.body.draft.steps.find(
+      (s: any) => s.step_number === 3
+    );
+    expect(step3.deadline_at).toBeTruthy();
+  });
+
+  it('retrying with a DIFFERENT heroId after partial-failure is rejected', async () => {
+    await initLolGame(MATCH_LOL_BO3, 1);
+    await setSides(MATCH_LOL_BO3, 1, 'blue', 'red');
+    await commitStep(MATCH_LOL_BO3, 1, 1, HERO_AATROX);
+
+    // Same crash simulation : step 2 says hero_id=HERO_AHRI, draft still
+    // at current_step=1. A retry with a DIFFERENT hero must NOT silently
+    // overwrite the committed pick — the engine flags HERO_ALREADY_PICKED
+    // (or _BANNED) on the duplicate, surfacing the inconsistency.
+    const draft = (store.match_drafts as any[]).find(
+      (d) => d.game_index === 1
+    );
+    const step2 = (store.match_draft_steps as any[]).find(
+      (s) => s.draft_id === draft.id && s.step_number === 2
+    );
+    step2.hero_id = HERO_AHRI;
+    step2.committed_at = '2026-05-26T00:00:00.000Z';
+
+    const retry = await commitStep(MATCH_LOL_BO3, 1, 2, HERO_GAREN);
+    expect(retry.statusCode).toBe(409);
+    expect(retry.body.code).toBe('STEP_ALREADY_COMMITTED');
+  });
+});
 
 describe('commitDraftStep deadline propagation', () => {
   it('stamps a deadline on the next step after each commit', async () => {

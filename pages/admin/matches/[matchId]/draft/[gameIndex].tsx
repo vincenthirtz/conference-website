@@ -25,12 +25,22 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast/ToastContext';
 import { useDraftState } from '@/hooks/useDraftState';
 import { withStaffPage } from '@/utils/staff';
+import { supabaseAdmin } from '@/utils/supabase';
 import { isValidUUID } from '@/utils/apiHelpers';
+import { isGameSlug } from '@/config/games';
 import { DraftStatusPanel } from '@/components/admin/draft/DraftStatusPanel';
 import { DraftBoard } from '@/components/admin/draft/DraftBoard';
 import { SidePicker } from '@/components/admin/draft/SidePicker';
 import { HeroPool } from '@/components/admin/draft/HeroPool';
 import type { GameHero } from '@/types/draft';
+
+type PageProps = {
+  /** Set when the match can't host a draft — page renders a clean explainer. */
+  blockReason?: {
+    code: 'MATCH_NOT_FOUND' | 'NO_TOURNAMENT' | 'GAME_NOT_DRAFTABLE';
+    detail?: string;
+  };
+};
 
 type HeroesResponse = {
   game: 'lol' | 'dota2';
@@ -50,7 +60,27 @@ function errMsg(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
-function AdminDraftPage() {
+function AdminDraftPage({ blockReason }: PageProps) {
+  if (blockReason) {
+    const label =
+      blockReason.code === 'MATCH_NOT_FOUND'
+        ? 'Ce match est introuvable dans ton tenant.'
+        : blockReason.code === 'NO_TOURNAMENT'
+          ? 'Ce match n’est rattaché à aucun tournoi — impossible de résoudre le jeu.'
+          : `Ce match n’a pas de jeu draftable${
+              blockReason.detail ? ` (jeu actuel : ${blockReason.detail})` : ''
+            }. Le draft est uniquement disponible pour LoL et Dota 2.`;
+    return (
+      <main className="mx-auto max-w-3xl p-6 text-neutral-200">
+        <h1 className="text-2xl font-bold text-white">Draft indisponible</h1>
+        <p className="mt-3 text-neutral-300">{label}</p>
+      </main>
+    );
+  }
+  return <AdminDraftPageContent />;
+}
+
+function AdminDraftPageContent() {
   const router = useRouter();
   const matchIdRaw = router.query.matchId;
   const gameIndexRaw = router.query.gameIndex;
@@ -274,6 +304,50 @@ function AdminDraftPage() {
   );
 }
 
-export const getServerSideProps = withStaffPage('manager');
+// SSR validation : verify the match exists in the staff's tenant AND that
+// its tournament is tagged with a draftable game (lol / dota2). Surfaces a
+// clean "Draft indisponible" page instead of letting the operator click
+// "Initialise draft" and eat a 400 GAME_NOT_DRAFTABLE toast.
+export const getServerSideProps = withStaffPage<PageProps>(
+  'manager',
+  async (ctx, staffCtx) => {
+    const rawMatchId = ctx.params?.matchId;
+    const matchId = typeof rawMatchId === 'string' ? rawMatchId : '';
+    if (!isValidUUID(matchId) || !supabaseAdmin) {
+      return { blockReason: { code: 'MATCH_NOT_FOUND' } };
+    }
+
+    const { data: match } = await supabaseAdmin
+      .from('matches')
+      .select('id, tournament_id')
+      .eq('id', matchId)
+      .eq('tenant_id', staffCtx.tenantId)
+      .maybeSingle();
+    if (!match) {
+      return { blockReason: { code: 'MATCH_NOT_FOUND' } };
+    }
+    const tournamentId = (match as { tournament_id: string | null }).tournament_id;
+    if (!tournamentId) {
+      return { blockReason: { code: 'NO_TOURNAMENT' } };
+    }
+
+    const { data: tournament } = await supabaseAdmin
+      .from('tournaments')
+      .select('id, game')
+      .eq('id', tournamentId)
+      .maybeSingle();
+    const game = (tournament as { game: string | null } | null)?.game ?? null;
+    if (!game || !isGameSlug(game) || (game !== 'lol' && game !== 'dota2')) {
+      return {
+        blockReason: {
+          code: 'GAME_NOT_DRAFTABLE',
+          detail: game ?? undefined,
+        },
+      };
+    }
+
+    return {};
+  }
+);
 
 export default AdminDraftPage;
