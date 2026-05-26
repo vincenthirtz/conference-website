@@ -17,6 +17,7 @@ import QuickAction, {
 } from '@/components/player/QuickAction';
 import NextMatchCard from '@/components/player/NextMatchCard';
 import { PlayerDashboardSkeleton } from '@/components/player/Skeletons';
+import PushOptIn from '@/components/shared/PushOptIn';
 
 import { logger } from '../../utils/logger';
 type TeamInfo = {
@@ -321,6 +322,18 @@ export default function PlayerDashboard() {
               {error}
             </div>
           )}
+
+          {/* Push opt-in : carte visible tant que le user n'a pas activé /
+              refusé / "plus tard". Routes vers /api/player/push/subscribe.
+              loginPath='/auth/login' parce que c'est l'écran d'auth player
+              (vs /admin/login pour le staff). */}
+          <div className="mb-6">
+            <PushOptIn
+              audience="player"
+              variant="card"
+              loginPath="/auth/login"
+            />
+          </div>
 
           <div className="grid gap-6 md:grid-cols-2">
             <ProfileCard

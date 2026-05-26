@@ -48,6 +48,30 @@ export function isWebPushEventType(value: string): value is WebPushEventType {
   return (WEB_PUSH_EVENT_TYPES as readonly string[]).includes(value);
 }
 
+/**
+ * Sous-ensemble d'event_types pertinents pour une joueuse (vs staff). Utilisé
+ * par /api/player/push/prefs pour ne montrer dans l'UI que les toggles
+ * pertinents : pas la peine de proposer aux joueuses d'opt-out de
+ * `staff.role.changed` ou `helloasso.payment.received` qu'elles ne reçoivent
+ * jamais de toute façon.
+ *
+ * Critère d'inclusion : un event qu'une joueuse / capitaine pourrait recevoir
+ * du dispatcher quand sa team est concernée (match, scrim, forfait, check-in)
+ * ou plus largement (news).
+ */
+export const PLAYER_PUSH_EVENT_TYPES = [
+  'match.starting',
+  'match.finished',
+  'match.score_reported',
+  'checkin.opened',
+  'scrim.invitation',
+  'scrim.confirmed',
+  'team.forfeit',
+  'news.published',
+] as const satisfies readonly WebPushEventType[];
+
+export type PlayerPushEventType = (typeof PLAYER_PUSH_EVENT_TYPES)[number];
+
 /* ===========================================================================
  * Notification rendering — title / body / deep-link URL
  * ===========================================================================

@@ -48,6 +48,7 @@ function MyApp({ Component, pageProps, router }: AppPropsWithSeo) {
   const seo = (Component as any)?.seo as SeoProps | undefined;
   const isAdmin = router.pathname.startsWith('/admin');
   const isCaster = router.pathname.startsWith('/caster');
+  const isPlayer = router.pathname.startsWith('/player');
   // Routes "applicatives" (admin + cockpit caster) : pas d index, pas de
   // navbar/footer marketing par defaut (chaque page caster gere sa propre
   // chrome legere — cf. /caster/login, /caster/cockpit).
@@ -80,6 +81,16 @@ function MyApp({ Component, pageProps, router }: AppPropsWithSeo) {
           {isCaster && (
             <Head>
               <link rel="manifest" href="/caster/manifest.webmanifest" />
+              <meta name="apple-mobile-web-app-capable" content="yes" />
+              <meta
+                name="apple-mobile-web-app-status-bar-style"
+                content="default"
+              />
+            </Head>
+          )}
+          {isPlayer && (
+            <Head>
+              <link rel="manifest" href="/player/manifest.webmanifest" />
               <meta name="apple-mobile-web-app-capable" content="yes" />
               <meta
                 name="apple-mobile-web-app-status-bar-style"

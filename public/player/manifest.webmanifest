@@ -1,0 +1,51 @@
+{
+  "name": "OW Women's Cup – Espace joueur",
+  "short_name": "OWWC Joueur",
+  "description": "Espace joueur OW Women's Cup : profil, équipe, scrims, messages, check-in.",
+  "start_url": "/player",
+  "scope": "/player",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "categories": ["sports", "social"],
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  "handle_links": "preferred",
+  "background_color": "#0E0A1F",
+  "theme_color": "#0E0A1F",
+  "orientation": "portrait-primary",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "/img/logos/2025-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Mon espace",
+      "short_name": "Espace",
+      "description": "Tableau de bord joueur",
+      "url": "/player"
+    },
+    {
+      "name": "Messages",
+      "short_name": "Messages",
+      "description": "Messagerie inter-capitaines",
+      "url": "/player/messages"
+    },
+    {
+      "name": "Gérer mon équipe",
+      "short_name": "Équipe",
+      "description": "Roster, scrims, transferts",
+      "url": "/player/manage-team"
+    }
+  ]
+}

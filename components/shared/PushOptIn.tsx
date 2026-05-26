@@ -31,8 +31,21 @@ import {
   urlBase64ToUint8Array,
 } from '@/utils/webPush';
 
-export type PushAudience = 'admin' | 'caster' | 'public';
+export type PushAudience = 'admin' | 'caster' | 'player' | 'public';
 export type PushVariant = 'banner' | 'card';
+
+/**
+ * Endpoint cible côté serveur selon l'audience :
+ *   - admin/caster : /api/admin/notifications/subscribe (withStaffRoute caster).
+ *   - player       : /api/player/push/subscribe (withAuthRoute, n'importe quel
+ *                    auth user — un staff peut aussi s'y abonner s'il joue
+ *                    dans une équipe).
+ *   - public       : reserved future.
+ */
+function subscribeEndpoint(audience: PushAudience): string {
+  if (audience === 'player') return '/api/player/push/subscribe';
+  return '/api/admin/notifications/subscribe';
+}
 
 type Props = {
   audience: PushAudience;
@@ -56,6 +69,8 @@ const DEFAULT_MESSAGES: Record<PushAudience, string> = {
     'Active les notifications pour etre alerte des matches, disputes et inscriptions, meme quand l onglet est ferme.',
   caster:
     'Active les notifications pour recevoir tes assignations cast, briefings et signaux du Director, meme hors session.',
+  player:
+    'Active les notifications pour recevoir tes alertes de match, check-in, scrim et news, meme quand l onglet est ferme.',
   public:
     'Active les notifications pour recevoir les annonces de l event en direct.',
 };
@@ -160,7 +175,7 @@ export default function PushOptIn({
         applicationServerKey: urlBase64ToUint8Array(publicKey),
       });
 
-      await adminFetchJson('/api/admin/notifications/subscribe', {
+      await adminFetchJson(subscribeEndpoint(audience), {
         method: 'POST',
         body: JSON.stringify({
           subscription: subscription.toJSON(),
@@ -180,7 +195,9 @@ export default function PushOptIn({
       addToast(
         audience === 'caster'
           ? 'Notifications caster activees. Tu recevras tes assignations et signaux Director.'
-          : 'Notifications activees. Tu recevras les alertes match, scrim et support.',
+          : audience === 'player'
+            ? 'Notifications activees. Tu recevras tes alertes match, check-in et scrim.'
+            : 'Notifications activees. Tu recevras les alertes match, scrim et support.',
         'success'
       );
       setVisible(false);
