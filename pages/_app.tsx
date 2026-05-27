@@ -1,7 +1,7 @@
 import '@/styles/globals.css';
 import dynamic from 'next/dynamic';
 import Head from 'next/head';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Work_Sans } from 'next/font/google';
 import Footer from '@/components/Footer/footer';
 import Navbar from '@/components/Navbar/navbar';
@@ -55,6 +55,15 @@ function MyApp({ Component, pageProps, router }: AppPropsWithSeo) {
   const effectiveSeo: SeoProps =
     isAdmin || isCaster ? { ...seo, noindex: true } : { ...seo };
 
+  const manifestHref = useMemo(() => {
+    if (isAdmin) return '/admin/manifest.webmanifest';
+    if (isCaster) return '/caster/manifest.webmanifest';
+    if (isPlayer) return '/player/manifest.webmanifest';
+    return '/site.webmanifest';
+  }, [isAdmin, isCaster, isPlayer]);
+
+  const isAppScope = isAdmin || isCaster || isPlayer;
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (process.env.NEXT_PUBLIC_ENABLE_PWA !== '1') return;
@@ -68,36 +77,23 @@ function MyApp({ Component, pageProps, router }: AppPropsWithSeo) {
     <ErrorBoundary>
       <ToastProvider>
         <div className={workSans.variable}>
-          {isAdmin && (
-            <Head>
-              <link rel="manifest" href="/admin/manifest.webmanifest" />
-              <meta name="apple-mobile-web-app-capable" content="yes" />
+          <Head>
+            <link key="manifest" rel="manifest" href={manifestHref} />
+            {isAppScope && (
               <meta
+                key="apple-wac"
+                name="apple-mobile-web-app-capable"
+                content="yes"
+              />
+            )}
+            {isAppScope && (
+              <meta
+                key="apple-sbs"
                 name="apple-mobile-web-app-status-bar-style"
                 content="default"
               />
-            </Head>
-          )}
-          {isCaster && (
-            <Head>
-              <link rel="manifest" href="/caster/manifest.webmanifest" />
-              <meta name="apple-mobile-web-app-capable" content="yes" />
-              <meta
-                name="apple-mobile-web-app-status-bar-style"
-                content="default"
-              />
-            </Head>
-          )}
-          {isPlayer && (
-            <Head>
-              <link rel="manifest" href="/player/manifest.webmanifest" />
-              <meta name="apple-mobile-web-app-capable" content="yes" />
-              <meta
-                name="apple-mobile-web-app-status-bar-style"
-                content="default"
-              />
-            </Head>
-          )}
+            )}
+          </Head>
           <DefaultSeo {...effectiveSeo} />
           {!isCaster && <Navbar />}
           <main id="main-content">

@@ -130,13 +130,15 @@ self.addEventListener('fetch', (event) => {
   // Cross-origin (Twitch, HelloAsso, push services) → passthrough.
   if (url.origin !== self.location.origin) return;
 
-  // Jamais cacher : API, le SW lui-même, le manifest (qui peut changer
-  // entre deploys), et /_next/static/__next/ (Next.js gère son propre
-  // hashing — on laisse les chunks tomber dans le SWR plus bas).
+  // Jamais cacher : API, le SW lui-même, les manifests (qui peuvent changer
+  // entre deploys), et /_next/data/ (props SSR/SSG utilisés par le
+  // client-side router — les cacher en SWR sert des données stale et
+  // casse le JSON parsing si le buildId change après un deploy).
   if (
     url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/_next/data/') ||
     url.pathname === '/sw.js' ||
-    url.pathname === '/site.webmanifest'
+    url.pathname.endsWith('.webmanifest')
   ) {
     return;
   }

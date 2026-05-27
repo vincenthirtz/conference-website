@@ -64,7 +64,8 @@ export default class MyDocument extends Document<MyDocumentProps> {
             sizes="16x16"
             href="/favicon-16x16.png"
           />
-          <link rel="manifest" href="/site.webmanifest" />
+          {/* Manifest link managed in _app.tsx via next/head with key dedup
+              to avoid duplicate <link rel="manifest"> on scoped routes. */}
 
           {/* Additional SEO meta tags */}
           <meta
