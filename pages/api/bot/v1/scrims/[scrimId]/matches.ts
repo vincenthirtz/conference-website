@@ -8,9 +8,9 @@
 //   { actorDiscordUserId, matches: [{...}, ...] } // batch
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import {
   discordIdSchema,
@@ -112,11 +112,11 @@ async function handleList(
   return res.status(200).json({ matches: data ?? [] });
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { scrimId } = req.botQuery as z.infer<typeof matchesQuerySchema>;
 
   if (req.method === 'GET')
-    return handleList(res, scrimId, req.botContext!.tenantId);
+    return handleList(res, scrimId, req.botContext.tenantId);
 
   const body = (req.body ?? {}) as Record<string, unknown>;
   const input = req.botInput as z.infer<typeof matchesBodySchema>;
@@ -142,13 +142,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: scrim } = await supabaseAdmin
     .from('scrims')
     .select('id, name, team1_id, team2_id')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', scrimId)
     .maybeSingle();
   if (!scrim) return res.status(404).json({ error: 'Scrim introuvable' });
 
   const rows: Record<string, unknown>[] = inputs.map((mi) =>
-    normalizeMatch(scrimId, req.botContext!.tenantId, mi, {
+    normalizeMatch(scrimId, req.botContext.tenantId, mi, {
       team1Id: scrim.team1_id ?? null,
       team2Id: scrim.team2_id ?? null,
     })

@@ -12,9 +12,9 @@
 //
 // Auth : x-api-key (BOT_API_KEY).
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { resolveActorPlayer } from '@/utils/botActor';
 import { logger } from '@/utils/logger';
 
@@ -46,7 +46,7 @@ type TournamentReminder = {
 
 type Reminder = MatchReminder | TournamentReminder;
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const raw = req.query.discordUserId;
   const discordUserId = Array.isArray(raw) ? raw[0] : raw;
   if (!discordUserId || !DISCORD_ID_RE.test(discordUserId)) {
@@ -55,9 +55,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   const player = await resolveActorPlayer(discordUserId);
   if (!player) {
-    return res
-      .status(404)
-      .json({ error: 'Compte Discord non lié au site.' });
+    return res.status(404).json({ error: 'Compte Discord non lié au site.' });
   }
 
   // Les rappels concernent les matchs ou la joueuse est capitaine. On part
@@ -65,7 +63,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: captainedTeams, error: teamsErr } = await supabaseAdmin
     .from('teams')
     .select('id, name')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('captain_id', player.authUserId);
   if (teamsErr) {
     logger.error('[bot/player/reminders] teams error', teamsErr);
@@ -93,7 +91,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          team2:team2_id (id, name),
          tournament:tournament_id (id, name)`
       )
-      .eq('tenant_id', req.botContext!.tenantId)
+      .eq('tenant_id', req.botContext.tenantId)
       .or(
         `team1_id.in.(${captainedTeamIds.join(',')}),team2_id.in.(${captainedTeamIds.join(',')})`
       )
@@ -111,8 +109,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       const captainSide: 1 | 2 = captainedTeamIds.includes((m as any).team1_id)
         ? 1
         : 2;
-      const myTeamRel =
-        captainSide === 1 ? (m as any).team1 : (m as any).team2;
+      const myTeamRel = captainSide === 1 ? (m as any).team1 : (m as any).team2;
       const oppTeamRel =
         captainSide === 1 ? (m as any).team2 : (m as any).team1;
       const myTeam = Array.isArray(myTeamRel) ? myTeamRel[0] : myTeamRel;
@@ -160,7 +157,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
            tournament:tournament_id (id, name, start_date, status)
          )`
       )
-      .eq('tenant_id', req.botContext!.tenantId)
+      .eq('tenant_id', req.botContext.tenantId)
       .in('team_id', captainedTeamIds);
     if (srErr) {
       logger.error('[bot/player/reminders] stage_teams error', srErr);
@@ -179,7 +176,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         const startMs = Date.parse(tournament.start_date);
         if (!Number.isFinite(startMs)) continue;
         if (startMs < now.getTime() || startMs > windowEnd.getTime()) continue;
-        if (tournament.status === 'archived' || tournament.status === 'cancelled')
+        if (
+          tournament.status === 'archived' ||
+          tournament.status === 'cancelled'
+        )
           continue;
 
         const teamId = (r as any).team_id;

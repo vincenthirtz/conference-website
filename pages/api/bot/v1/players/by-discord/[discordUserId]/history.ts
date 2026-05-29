@@ -9,9 +9,9 @@
 //
 // Auth : x-api-key + discordUserId dans l'URL (l'info est publique).
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { resolveActorPlayer } from '@/utils/botActor';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
@@ -20,7 +20,7 @@ const DISCORD_ID_RE = /^[0-9]{15,25}$/;
 const MAX_LIMIT = 50;
 const DEFAULT_LIMIT = 10;
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const raw = req.query.discordUserId;
   const discordUserId = Array.isArray(raw) ? raw[0] : raw;
   if (!discordUserId || !DISCORD_ID_RE.test(discordUserId)) {
@@ -39,8 +39,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       : DEFAULT_LIMIT;
 
   const tournamentFilter =
-    typeof req.query.tournamentId === 'string' &&
-    req.query.tournamentId.trim()
+    typeof req.query.tournamentId === 'string' && req.query.tournamentId.trim()
       ? req.query.tournamentId.trim()
       : null;
   if (tournamentFilter && !isValidUUID(tournamentFilter)) {
@@ -51,7 +50,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: memberships, error: mErr } = await supabaseAdmin
     .from('team_members')
     .select('team_id')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('user_id', player.authUserId);
   if (mErr) {
     logger.error('[bot/history] memberships error', mErr);
@@ -78,7 +77,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
        team2:team2_id (id, name, short_name),
        tournament:tournament_id (id, name, slug)`
     )
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .in('status', ['finished', 'walkover'])
     .or(
       `team1_id.in.(${playerTeamIds.join(',')}),team2_id.in.(${playerTeamIds.join(',')})`
@@ -113,9 +112,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     };
     const t1 = Array.isArray(r.team1) ? r.team1[0] : r.team1;
     const t2 = Array.isArray(r.team2) ? r.team2[0] : r.team2;
-    const tour = Array.isArray(r.tournament)
-      ? r.tournament[0]
-      : r.tournament;
+    const tour = Array.isArray(r.tournament) ? r.tournament[0] : r.tournament;
     const playerOnTeam1 = !!r.team1_id && playerTeamSet.has(r.team1_id);
     const myTeamRel = playerOnTeam1 ? t1 : t2;
     const oppTeamRel = playerOnTeam1 ? t2 : t1;

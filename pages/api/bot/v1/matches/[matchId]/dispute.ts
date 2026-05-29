@@ -25,9 +25,9 @@
 //   - rejected reports               -> n/a (la table n'en stocke pas)
 // On expose uniquement les colonnes voulues, jamais via `select *`.
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
 
@@ -39,7 +39,7 @@ function queryString(v: unknown): string | null {
   return t ? t : null;
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const rawMatchId = req.query.matchId;
   const matchId = Array.isArray(rawMatchId) ? rawMatchId[0] : rawMatchId;
   if (!matchId || !isValidUUID(matchId)) {
@@ -80,7 +80,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
        team1:team1_id (id, name, captain_id),
        team2:team2_id (id, name, captain_id)`
     )
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', matchId)
     .maybeSingle();
   if (mErr) {
@@ -111,8 +111,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     });
   }
 
-  const openedAt =
-    (match as { dispute_opened_at: string | null }).dispute_opened_at;
+  const openedAt = (match as { dispute_opened_at: string | null })
+    .dispute_opened_at;
   const status = (match as { status: string }).status;
 
   // Pas de dispute (ni en cours, ni resolue) -> 404.
@@ -120,9 +120,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   // 'disputed' actuellement, soit dispute_opened_at est non null (resolue).
   const hasDispute = status === 'disputed' || !!openedAt;
   if (!hasDispute) {
-    return res
-      .status(404)
-      .json({ error: 'Pas de dispute sur ce match.' });
+    return res.status(404).json({ error: 'Pas de dispute sur ce match.' });
   }
 
   // Reports de score (max 2, un par side). On expose le score + le qui +
@@ -133,7 +131,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     .select(
       'team_side, team1_score, team2_score, discord_user_id, reported_at, updated_at'
     )
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('match_id', matchId);
 
   const reports = (reportRows ?? []).map((row) => {

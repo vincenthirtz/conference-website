@@ -13,14 +13,14 @@
 //
 // Auth : x-api-key (BOT_API_KEY).
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { logger } from '@/utils/logger';
 
 const DISCORD_ID_RE = /^[0-9]{15,25}$/;
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const raw = req.query.discordUserId;
   const discordUserId = Array.isArray(raw) ? raw[0] : raw;
   if (!discordUserId || !DISCORD_ID_RE.test(discordUserId)) {
@@ -51,7 +51,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: memberRows, error: memberErr } = await supabaseAdmin
     .from('team_members')
     .select('id, team_id')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('user_id', link.auth_user_id);
 
   if (memberErr) {
@@ -65,7 +65,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { count: mvpCnt, error: mvpErr } = await supabaseAdmin
       .from('match_mvp_polls')
       .select('id', { count: 'exact', head: true })
-      .eq('tenant_id', req.botContext!.tenantId)
+      .eq('tenant_id', req.botContext.tenantId)
       .in('winner_member_id', memberIds);
     if (mvpErr) {
       logger.error('[bot/player/stats] mvp count error', mvpErr);
@@ -95,7 +95,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data: team } = await supabaseAdmin
       .from('teams')
       .select('id, name, slug')
-      .eq('tenant_id', req.botContext!.tenantId)
+      .eq('tenant_id', req.botContext.tenantId)
       .eq('id', currentTeamId)
       .maybeSingle();
     if (team) teamMeta = team;

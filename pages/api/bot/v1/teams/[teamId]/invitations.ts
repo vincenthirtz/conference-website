@@ -11,9 +11,9 @@
 //          team. GET est public a la cle (x-api-key sur le bot suffit).
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotPlayer, resolveActorPlayer } from '@/utils/botActor';
 import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
 import { createInvitation } from '@/utils/teams/invitations';
@@ -54,7 +54,7 @@ const invitationsQuerySchema = z.object({
 });
 
 async function handleList(
-  req: NextApiRequest,
+  req: BotTenantRequest,
   res: NextApiResponse,
   teamId: string
 ) {
@@ -84,7 +84,7 @@ async function handleList(
       `id, user_id, team_id, type, status, comment, source, payload,
        created_at, processed_at`
     )
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('team_id', teamId)
     .eq('type', type)
     .order('created_at', { ascending: false })
@@ -144,7 +144,7 @@ async function handleList(
 }
 
 async function handleCreate(
-  req: NextApiRequest,
+  req: BotTenantRequest,
   res: NextApiResponse,
   teamId: string
 ) {
@@ -156,7 +156,7 @@ async function handleCreate(
   const { data: team, error: teamErr } = await supabaseAdmin
     .from('teams')
     .select('id, captain_id, name')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', teamId)
     .maybeSingle();
   if (teamErr) {
@@ -196,7 +196,7 @@ async function handleCreate(
   const battleTag =
     typeof input.battleTag === 'string' ? input.battleTag : undefined;
 
-  const result = await createInvitation(req.botContext!.tenantId, {
+  const result = await createInvitation(req.botContext.tenantId, {
     teamId: team.id,
     captainAuthUserId: actor.authUserId,
     captainDiscordUserId: actor.discordUserId,
@@ -228,7 +228,7 @@ async function handleCreate(
   });
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { teamId } = req.botQuery as z.infer<typeof invitationsQuerySchema>;
 
   if (req.method === 'GET') return handleList(req, res, teamId);

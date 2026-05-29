@@ -13,9 +13,9 @@
 //   priority?                   (defaut 0)
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import { discordIdSchema } from '@/utils/botValidation';
 import { sanitizeUrl } from '@/utils/apiHelpers';
@@ -70,7 +70,7 @@ function toISO(value: unknown): string | null {
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const input = req.botInput as z.infer<typeof announcementsBodySchema>;
 
   // requireBotStaff lit actorDiscordUserId sur req.body brut (non muté).
@@ -111,7 +111,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: inserted, error: insErr } = await supabaseAdmin
     .from('announcements')
     .insert({
-      tenant_id: req.botContext!.tenantId,
+      tenant_id: req.botContext.tenantId,
       title,
       message,
       cta_label: ctaLabel,

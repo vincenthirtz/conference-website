@@ -6,15 +6,15 @@
 //
 // Auth : x-api-key (BOT_API_KEY).
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { CHECKIN_OPEN_MINUTES } from '@/utils/checkin';
 import { logger } from '@/utils/logger';
 
 const DISCORD_ID_RE = /^[0-9]{15,25}$/;
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const raw = req.query.discordUserId;
   const discordUserId = Array.isArray(raw) ? raw[0] : raw;
   if (!discordUserId || !DISCORD_ID_RE.test(discordUserId)) {
@@ -41,7 +41,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: membership } = await supabaseAdmin
     .from('team_members')
     .select('team_id')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('user_id', link.auth_user_id)
     .maybeSingle();
 
@@ -71,7 +71,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
        team2:team2_id(id, name),
        tournament:tournament_id(id, name, slug)`
     )
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
     .in('status', ['pending', 'ongoing'])
     .gte('scheduled_at', cutoffISO)

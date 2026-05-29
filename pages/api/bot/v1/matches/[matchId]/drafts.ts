@@ -10,9 +10,9 @@
 // Auth : x-api-key (BOT_API_KEY) + x-tenant-id (resolved by withBotRoute).
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { uuidSchema } from '@/utils/botValidation';
 import { initDraft, DraftEngineError } from '@/utils/draftEngine';
 import { logger } from '@/utils/logger';
@@ -38,13 +38,13 @@ type CaptainInfo = {
   discordUserId: string | null;
 };
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { matchId } = req.botQuery as z.infer<typeof draftsQuerySchema>;
   const { gameIndex, fearless } = req.botInput as z.infer<
     typeof draftsBodySchema
   >;
 
-  const tenantId = req.botContext!.tenantId;
+  const tenantId = req.botContext.tenantId;
 
   // Init the draft via the engine (returns the assembled DraftState).
   let draftState;

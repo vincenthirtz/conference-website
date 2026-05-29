@@ -12,9 +12,9 @@
 //
 // Auth : x-api-key + actorDiscordUserId staff admin/owner.
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff } from '@/utils/botActor';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
@@ -28,13 +28,15 @@ function queryString(v: unknown): string | null {
   return t ? t : null;
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   // requireBotStaff lit actorDiscordUserId dans body OU query (on accepte
   // les deux ici puisque c'est un GET). Le helper actuel ne lit que body
   // donc on aplatit la query dans un body-like.
   const actorDiscordUserId =
     queryString(req.query.actorDiscordUserId) ??
-    queryString((req.body as Record<string, unknown> | null)?.actorDiscordUserId);
+    queryString(
+      (req.body as Record<string, unknown> | null)?.actorDiscordUserId
+    );
   const actor = await requireBotStaff(req, res, {
     actorDiscordUserId: actorDiscordUserId ?? '',
   });
@@ -59,7 +61,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       `id, action, entity_type, entity_id, tournament_id, payload, created_at,
        staff:staff!fk_staff_logs_staff(id, display_name, role)`
     )
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .order('created_at', { ascending: false })
     .limit(limit);
 
@@ -87,9 +89,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       tournamentId: (row as any).tournament_id ?? null,
       via: typeof payload?.via === 'string' ? payload.via : 'website',
       summary:
-        typeof payload?.action_type === 'string'
-          ? payload.action_type
-          : null,
+        typeof payload?.action_type === 'string' ? payload.action_type : null,
       staff: staffRel
         ? {
             id: staffRel.id,

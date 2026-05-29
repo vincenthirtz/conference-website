@@ -10,9 +10,9 @@
 //
 // Auth : x-api-key + actorDiscordUserId staff admin/owner (lu en query).
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff } from '@/utils/botActor';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
@@ -26,10 +26,12 @@ function queryString(v: unknown): string | null {
   return t ? t : null;
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const actorDiscordUserId =
     queryString(req.query.actorDiscordUserId) ??
-    queryString((req.body as Record<string, unknown> | null)?.actorDiscordUserId);
+    queryString(
+      (req.body as Record<string, unknown> | null)?.actorDiscordUserId
+    );
   const actor = await requireBotStaff(req, res, {
     actorDiscordUserId: actorDiscordUserId ?? '',
   });
@@ -55,7 +57,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
        team2:team2_id (id, name, short_name),
        tournament:tournament_id (id, name, slug)`
     )
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('status', 'disputed')
     .order('dispute_opened_at', { ascending: false })
     .limit(limit);
@@ -75,8 +77,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const matchIds = matches.map((m) => (m as { id: string }).id);
   const { data: reports } = await supabaseAdmin
     .from('match_score_reports')
-    .select('match_id, team_side, team1_score, team2_score, reported_at, updated_at')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .select(
+      'match_id, team_side, team1_score, team2_score, reported_at, updated_at'
+    )
+    .eq('tenant_id', req.botContext.tenantId)
     .in('match_id', matchIds);
 
   const reportsByMatch = new Map<

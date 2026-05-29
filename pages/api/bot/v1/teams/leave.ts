@@ -9,9 +9,9 @@
 // tournoi en cours.
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotPlayer } from '@/utils/botActor';
 import { discordIdSchema } from '@/utils/botValidation';
 import {
@@ -25,7 +25,7 @@ import { logger } from '@/utils/logger';
 // requireBotPlayer lit actorDiscordUserId dans le body brut (non muté).
 const leaveBodySchema = z.object({ actorDiscordUserId: discordIdSchema });
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const body = (req.body ?? {}) as Record<string, unknown>;
 
   const actor = await requireBotPlayer(req, res, body);
@@ -34,7 +34,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: membership, error: memberErr } = await supabaseAdmin
     .from('team_members')
     .select('id, team_id')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('user_id', actor.authUserId)
     .maybeSingle();
   if (memberErr) {
@@ -50,7 +50,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: team, error: teamErr } = await supabaseAdmin
     .from('teams')
     .select('captain_id')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', membership.team_id)
     .maybeSingle();
   if (teamErr) {
@@ -66,7 +66,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   const lockStatus = await isTeamRosterLocked(
-    req.botContext!.tenantId,
+    req.botContext.tenantId,
     membership.team_id
   );
   if (lockStatus.locked) {
@@ -76,7 +76,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { error: deleteErr } = await supabaseAdmin
     .from('team_members')
     .delete()
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', membership.id);
   if (deleteErr) {
     logger.error('[bot/teams/leave] delete error', deleteErr);
@@ -86,7 +86,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   void emitRoleSyncEvent(
     'team.member.removed',
     actor.authUserId,
-    req.botContext!.tenantId,
+    req.botContext.tenantId,
     {
       previousTeamId: membership.team_id,
       extras: { teamId: membership.team_id },

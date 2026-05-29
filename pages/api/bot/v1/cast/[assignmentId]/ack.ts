@@ -18,9 +18,9 @@
 //   - 503 : maintenance mode
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
 
@@ -29,7 +29,7 @@ const ackBodySchema = z.object({
 });
 const ackQuerySchema = z.object({ assignmentId: uuidSchema });
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { assignmentId } = req.botQuery as z.infer<typeof ackQuerySchema>;
   const { actorDiscordUserId } = req.botInput as z.infer<typeof ackBodySchema>;
 
@@ -39,7 +39,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       `id, acked_at, cast_member_id,
        cast_member:cast_member_id (id, auth_user_id)`
     )
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', assignmentId)
     .maybeSingle();
   if (aErr) {
@@ -101,7 +101,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { error: uErr } = await supabaseAdmin
     .from('cast_assignments')
     .update({ acked_at: ackedAt })
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', assignmentId);
   if (uErr) {
     logger.error('[bot/cast/ack] update error', uErr);

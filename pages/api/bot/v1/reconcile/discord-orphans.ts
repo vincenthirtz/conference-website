@@ -16,15 +16,15 @@
 // Pagination : query ?limit=N (default 200, max 500). Le bot peut paginer
 // via ?offset=M pour traiter par batch.
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { logger } from '@/utils/logger';
 
 const DEFAULT_LIMIT = 200;
 const MAX_LIMIT = 500;
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const limitRaw = Number(req.query.limit);
   const limit = Number.isFinite(limitRaw)
     ? Math.min(Math.max(Math.floor(limitRaw), 1), MAX_LIMIT)
@@ -41,7 +41,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     .select(
       'id, status, discord_thread_id, discord_scheduled_event_id, discord_dispute_thread_id'
     )
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .or(
       'discord_thread_id.not.is.null,discord_scheduled_event_id.not.is.null,discord_dispute_thread_id.not.is.null'
     )
@@ -58,7 +58,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: teams, error: teamErr } = await supabaseAdmin
     .from('teams')
     .select('id, name, discord_voice_channel_id')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .not('discord_voice_channel_id', 'is', null)
     .order('id', { ascending: true })
     .range(offset, offset + limit - 1);

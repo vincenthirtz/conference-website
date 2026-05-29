@@ -26,9 +26,9 @@
 
 import crypto from 'crypto';
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { discordIdSchema } from '@/utils/botValidation';
 import { sendWelcomeEmail } from '@/utils/email';
 import { upsertDiscordLink } from '@/utils/discordLinks';
@@ -90,7 +90,7 @@ function generatePassword(length = 16): string {
   return result.join('');
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const input = req.botInput as z.infer<typeof registerUserBodySchema>;
 
   const email = input.email;

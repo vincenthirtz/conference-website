@@ -11,9 +11,9 @@
 // Auth : x-api-key + actorDiscordUserId staff admin/owner.
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
@@ -29,7 +29,7 @@ const statusBodySchema = z.object({
 });
 const statusQuerySchema = z.object({ tournamentId: uuidSchema });
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { tournamentId } = req.botQuery as z.infer<typeof statusQuerySchema>;
 
   const actor = await requireBotStaff(req, res, req.body ?? {});
@@ -40,7 +40,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: tournament, error: tErr } = await supabaseAdmin
     .from('tournaments')
     .select('id, name, status')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', tournamentId)
     .maybeSingle();
   if (tErr) {
@@ -61,7 +61,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { count, error: cntErr } = await supabaseAdmin
       .from('tournament_stages')
       .select('id', { count: 'exact', head: true })
-      .eq('tenant_id', req.botContext!.tenantId)
+      .eq('tenant_id', req.botContext.tenantId)
       .eq('tournament_id', tournamentId);
     if (cntErr) {
       logger.error('[bot/tournament/status] stages count error', cntErr);
@@ -93,7 +93,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       status,
       updated_at: new Date().toISOString(),
     })
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', tournamentId)
     .select('id, name, status')
     .maybeSingle();

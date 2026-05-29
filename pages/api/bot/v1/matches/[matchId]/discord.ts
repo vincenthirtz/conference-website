@@ -14,9 +14,9 @@
 // supprime manuellement et qu'on veut autoriser le bot a en recreer un).
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
 
@@ -45,7 +45,7 @@ function readSnowflake(
   };
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { matchId } = req.botQuery as z.infer<typeof discordQuerySchema>;
 
   const body = (req.body ?? {}) as Record<string, unknown>;
@@ -75,7 +75,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     .select(
       'id, discord_thread_id, discord_scheduled_event_id, discord_dispute_thread_id'
     )
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', matchId)
     .maybeSingle();
   if (mErr) {
@@ -87,7 +87,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: updated, error: upErr } = await supabaseAdmin
     .from('matches')
     .update({ ...updates, updated_at: new Date().toISOString() })
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', matchId)
     .select(
       'id, discord_thread_id, discord_scheduled_event_id, discord_dispute_thread_id'

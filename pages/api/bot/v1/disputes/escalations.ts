@@ -15,9 +15,9 @@
 // Auth : x-api-key (and x-tenant-id when using the env key, per the
 // canonical bot contract).
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { listOpenDisputes } from '@/utils/disputes/slaBreaches';
 import { logger } from '@/utils/logger';
@@ -31,7 +31,7 @@ function queryString(v: unknown): string | null {
   return t ? t : null;
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const tournamentId = queryString(req.query.tournament);
   if (tournamentId && !isValidUUID(tournamentId)) {
     return res.status(400).json({ error: 'tournament invalide' });
@@ -44,7 +44,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       : DEFAULT_LIMIT;
   const breachedOnly = queryString(req.query.breached) === 'true';
 
-  const tenantId = req.botContext!.tenantId;
+  const tenantId = req.botContext.tenantId;
 
   try {
     const rows = await listOpenDisputes(tenantId, { tournamentId });

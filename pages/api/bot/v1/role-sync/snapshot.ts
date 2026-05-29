@@ -18,9 +18,9 @@
 //
 // Auth : x-api-key (BOT_API_KEY).
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { logger } from '@/utils/logger';
 
 type SnapshotUser = {
@@ -38,8 +38,8 @@ type SnapshotUser = {
   staffRole: string | null;
 };
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const tenantId = req.botContext!.tenantId;
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
+  const tenantId = req.botContext.tenantId;
   // 1) Tous les liens Discord (global table, pas de tenant_id)
   const { data: links, error: linksErr } = await supabaseAdmin!
     .from('user_discord_links')

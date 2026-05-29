@@ -10,9 +10,9 @@
 //   - status  : filtre exact ('draft' | 'published' | 'running' | etc.)
 //   - limit   : 1..25, defaut 25
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { escapePostgrestValue } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
 
@@ -25,7 +25,7 @@ function trimLabel(s: string): string {
     : s;
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const rawQ = req.query.q;
   const q = typeof rawQ === 'string' ? rawQ.trim() : '';
 
@@ -42,7 +42,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   let query = supabaseAdmin
     .from('tournaments')
     .select('id, name, slug, status')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .order('created_at', { ascending: false })
     .limit(limit);
 
@@ -61,9 +61,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   const results = (data ?? []).map((t) => ({
     value: t.id,
-    label: trimLabel(
-      `${t.name ?? '?'}${t.status ? ` (${t.status})` : ''}`
-    ),
+    label: trimLabel(`${t.name ?? '?'}${t.status ? ` (${t.status})` : ''}`),
   }));
 
   return res.status(200).json({ results });

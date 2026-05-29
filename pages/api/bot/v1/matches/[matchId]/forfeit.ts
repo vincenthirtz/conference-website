@@ -11,9 +11,9 @@
 // Auth : x-api-key + actorDiscordUserId staff admin/owner.
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff } from '@/utils/botActor';
 import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
 import { applyMatchScore } from '@/utils/matches/applyScore';
@@ -25,7 +25,7 @@ const forfeitBodySchema = z.object({
 });
 const forfeitQuerySchema = z.object({ matchId: uuidSchema });
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { matchId } = req.botQuery as z.infer<typeof forfeitQuerySchema>;
 
   const body = (req.body ?? {}) as Record<string, unknown>;
@@ -40,7 +40,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: match, error: mErr } = await supabaseAdmin
     .from('matches')
     .select('id, status, team1_id, team2_id, is_bye')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', matchId)
     .maybeSingle();
   if (mErr) {
@@ -63,7 +63,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   try {
     const result = await applyMatchScore({
-      tenantId: req.botContext!.tenantId,
+      tenantId: req.botContext.tenantId,
       matchId,
       forfeitTeamId,
       staffId: actor.staffId,

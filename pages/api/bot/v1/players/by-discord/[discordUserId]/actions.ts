@@ -18,9 +18,9 @@
 //   - limit              : 1..100, defaut 25
 //   - since              : ISO 8601, filtre created_at >= since
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { resolveActorPlayer, resolveActorStaff } from '@/utils/botActor';
 import { logger } from '@/utils/logger';
 
@@ -36,7 +36,7 @@ function queryString(v: unknown): string | null {
   return t ? t : null;
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const raw = req.query.discordUserId;
   const targetDiscordUserId = Array.isArray(raw) ? raw[0] : raw;
   if (!targetDiscordUserId || !DISCORD_ID_RE.test(targetDiscordUserId)) {
@@ -58,7 +58,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     } else {
       return res.status(403).json({
         error:
-          "Tu ne peux voir que ton propre audit log (sauf si tu es admin/owner).",
+          'Tu ne peux voir que ton propre audit log (sauf si tu es admin/owner).',
       });
     }
   }
@@ -76,7 +76,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!VALID_ROLES.has(role)) {
     return res
       .status(400)
-      .json({ error: `role invalide. Valeurs : ${[...VALID_ROLES].join(', ')}.` });
+      .json({
+        error: `role invalide. Valeurs : ${[...VALID_ROLES].join(', ')}.`,
+      });
   }
 
   const rawLimit = Number(req.query.limit);
@@ -98,7 +100,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
        actor_auth_user_id, actor_discord_user_id,
        target_auth_user_id, target_discord_user_id, payload`
     )
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .order('created_at', { ascending: false })
     .limit(limit);
 

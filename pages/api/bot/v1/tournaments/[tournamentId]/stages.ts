@@ -10,9 +10,9 @@
 
 import slugify from 'slugify';
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import {
   discordIdSchema,
@@ -54,7 +54,7 @@ const createStageBodySchema = z.object({
 });
 const createStageQuerySchema = z.object({ tournamentId: uuidSchema });
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { tournamentId } = req.botQuery as z.infer<
     typeof createStageQuerySchema
   >;
@@ -82,7 +82,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: tournament } = await supabaseAdmin
     .from('tournaments')
     .select('id')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', tournamentId)
     .maybeSingle();
   if (!tournament) {
@@ -94,7 +94,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data: lastStage } = await supabaseAdmin
       .from('tournament_stages')
       .select('order_index')
-      .eq('tenant_id', req.botContext!.tenantId)
+      .eq('tenant_id', req.botContext.tenantId)
       .eq('tournament_id', tournamentId)
       .order('order_index', { ascending: false })
       .limit(1)
@@ -114,7 +114,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: stage, error } = await supabaseAdmin
     .from('tournament_stages')
     .insert({
-      tenant_id: req.botContext!.tenantId,
+      tenant_id: req.botContext.tenantId,
       tournament_id: tournamentId,
       name,
       slug,

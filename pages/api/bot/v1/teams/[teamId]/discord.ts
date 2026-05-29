@@ -15,9 +15,9 @@
 // Passer null pour clearer un champ.
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
@@ -34,7 +34,7 @@ const discordWritebackBodySchema = z.object({
 });
 const discordQuerySchema = z.object({ teamId: uuidSchema });
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { teamId } = req.botQuery as z.infer<typeof discordQuerySchema>;
 
   const body = (req.body ?? {}) as Record<string, unknown>;
@@ -66,7 +66,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     .select(
       'id, name, discord_role_id, discord_channel_id, discord_voice_channel_id'
     )
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', teamId)
     .maybeSingle();
   if (tErr) {
@@ -86,7 +86,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: updated, error: upErr } = await supabaseAdmin
     .from('teams')
     .update({ ...updates, updated_at: new Date().toISOString() })
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', teamId)
     .select(
       'id, name, discord_role_id, discord_channel_id, discord_voice_channel_id'

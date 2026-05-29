@@ -14,12 +14,12 @@
 // l'outbox `event_segment.transitioned`. Mais elle permet au bot d'afficher
 // l'etat courant sans avoir a recoller les fragments via les events.
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { logger } from '@/utils/logger';
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const tenantId = req.botContext?.tenantId;
   if (!tenantId) {
     // Defense en profondeur — withBotRoute aurait du resoudre le tenantId

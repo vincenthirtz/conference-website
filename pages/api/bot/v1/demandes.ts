@@ -12,9 +12,9 @@
 //
 // Auth : x-api-key + actorDiscordUserId staff admin/owner.
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff } from '@/utils/botActor';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
@@ -36,17 +36,18 @@ function queryString(v: unknown): string | null {
   return t ? t : null;
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const actorDiscordUserId =
     queryString(req.query.actorDiscordUserId) ??
-    queryString((req.body as Record<string, unknown> | null)?.actorDiscordUserId);
+    queryString(
+      (req.body as Record<string, unknown> | null)?.actorDiscordUserId
+    );
   const actor = await requireBotStaff(req, res, {
     actorDiscordUserId: actorDiscordUserId ?? '',
   });
   if (!actor) return;
 
-  const status =
-    queryString(req.query.status)?.toLowerCase() ?? 'pending';
+  const status = queryString(req.query.status)?.toLowerCase() ?? 'pending';
   if (!VALID_STATUSES.has(status)) {
     return res.status(400).json({
       error: `status invalide. Valeurs : ${[...VALID_STATUSES].join(', ')}.`,
@@ -73,7 +74,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
        team:teams!team_id(id, name, slug, logo_url),
        tournament:tournaments!tournament_id(id, name, slug)`
     )
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .order('created_at', { ascending: false })
     .limit(limit);
 

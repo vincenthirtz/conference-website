@@ -12,9 +12,9 @@
 // bien lie a l'un des deux capitaines du match.
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
 import { redeemCheckinToken } from '@/utils/checkin';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
@@ -23,7 +23,7 @@ import { logger } from '@/utils/logger';
 const checkinBodySchema = z.object({ discordUserId: discordIdSchema });
 const checkinQuerySchema = z.object({ matchId: uuidSchema });
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { matchId } = req.botQuery as z.infer<typeof checkinQuerySchema>;
   const { discordUserId } = req.botInput as z.infer<typeof checkinBodySchema>;
 
@@ -36,7 +36,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
        team1:team1_id (id, name, captain_id),
        team2:team2_id (id, name, captain_id)`
     )
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', matchId)
     .maybeSingle();
 
@@ -99,7 +99,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     });
   }
 
-  const result = await redeemCheckinToken(req.botContext!.tenantId, token);
+  const result = await redeemCheckinToken(req.botContext.tenantId, token);
   if (!result.ok) {
     return res.status(400).json({ error: result.error });
   }

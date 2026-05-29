@@ -17,9 +17,9 @@
 // max_teams not exceeded, team has enough members, no double registration.
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import {
   logBotStaffAction,
   resolveActorPlayer,
@@ -42,11 +42,11 @@ const registerBodySchema = z.object({
 const teamsQuerySchema = z.object({ tournamentId: uuidSchema });
 
 async function handleList(
-  req: NextApiRequest,
+  req: BotTenantRequest,
   res: NextApiResponse,
   tournamentId: string
 ) {
-  const tenantId = req.botContext!.tenantId;
+  const tenantId = req.botContext.tenantId;
   // Verify tournament exists (cheap, gives a better error than empty list).
   const { data: tournament, error: tErr } = await supabaseAdmin
     .from('tournaments')
@@ -172,7 +172,7 @@ async function handleList(
 }
 
 async function handleRegister(
-  req: NextApiRequest,
+  req: BotTenantRequest,
   res: NextApiResponse,
   tournamentId: string
 ) {
@@ -194,7 +194,7 @@ async function handleRegister(
       const { data: teamCaptainRow } = await supabaseAdmin
         .from('teams')
         .select('captain_id')
-        .eq('tenant_id', req.botContext!.tenantId)
+        .eq('tenant_id', req.botContext.tenantId)
         .eq('id', teamId)
         .maybeSingle();
       if (teamCaptainRow?.captain_id === playerActor.authUserId) {
@@ -215,7 +215,7 @@ async function handleRegister(
   const { data: tournament, error: tourErr } = await supabaseAdmin
     .from('tournaments')
     .select('id, name, status, max_teams, min_players')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', tournamentId)
     .single();
   if (tourErr || !tournament) {
@@ -232,7 +232,7 @@ async function handleRegister(
   const { data: team, error: teamErr } = await supabaseAdmin
     .from('teams')
     .select('id, name')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', teamId)
     .maybeSingle();
   if (teamErr || !team) {
@@ -244,7 +244,7 @@ async function handleRegister(
     const { count: playerCount, error: countErr } = await supabaseAdmin
       .from('team_members')
       .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', req.botContext!.tenantId)
+      .eq('tenant_id', req.botContext.tenantId)
       .eq('team_id', teamId);
     if (countErr) {
       logger.error('[bot/tournaments/teams] count members error', countErr);
@@ -262,7 +262,7 @@ async function handleRegister(
     const { data: existingTeams, error: maxErr } = await supabaseAdmin
       .from('stage_teams')
       .select('team_id, tournament_stages!inner(tournament_id)')
-      .eq('tenant_id', req.botContext!.tenantId)
+      .eq('tenant_id', req.botContext.tenantId)
       .eq('tournament_stages.tournament_id', tournamentId);
     if (maxErr) {
       logger.error('[bot/tournaments/teams] max_teams check error', maxErr);
@@ -284,7 +284,7 @@ async function handleRegister(
     const { data: stage, error: stErr } = await supabaseAdmin
       .from('tournament_stages')
       .select('id, tournament_id')
-      .eq('tenant_id', req.botContext!.tenantId)
+      .eq('tenant_id', req.botContext.tenantId)
       .eq('id', stageId)
       .eq('tournament_id', tournamentId)
       .maybeSingle();
@@ -298,7 +298,7 @@ async function handleRegister(
     const { data: stages, error: stagesErr } = await supabaseAdmin
       .from('tournament_stages')
       .select('id')
-      .eq('tenant_id', req.botContext!.tenantId)
+      .eq('tenant_id', req.botContext.tenantId)
       .eq('tournament_id', tournamentId);
     if (stagesErr) {
       logger.error('[bot/tournaments/teams] stages list error', stagesErr);
@@ -316,7 +316,7 @@ async function handleRegister(
   const { data: existingRegs, error: existsErr } = await supabaseAdmin
     .from('stage_teams')
     .select('stage_id')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('team_id', teamId)
     .in('stage_id', targetStageIds);
   if (existsErr) {
@@ -331,7 +331,7 @@ async function handleRegister(
 
   // Insert
   const insertRows = targetStageIds.map((stgId) => ({
-    tenant_id: req.botContext!.tenantId,
+    tenant_id: req.botContext.tenantId,
     stage_id: stgId,
     team_id: teamId,
   }));
@@ -386,7 +386,7 @@ async function handleRegister(
   });
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { tournamentId } = req.botQuery as z.infer<typeof teamsQuerySchema>;
 
   if (req.method === 'GET') return handleList(req, res, tournamentId);

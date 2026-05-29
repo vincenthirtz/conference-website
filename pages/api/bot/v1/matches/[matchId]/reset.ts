@@ -12,9 +12,9 @@
 // Auth : x-api-key + actorDiscordUserId staff admin/owner.
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
@@ -29,7 +29,7 @@ const TERMINAL_BEFORE = new Set([
 const resetBodySchema = z.object({ actorDiscordUserId: discordIdSchema });
 const resetQuerySchema = z.object({ matchId: uuidSchema });
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { matchId } = req.botQuery as z.infer<typeof resetQuerySchema>;
 
   const body = (req.body ?? {}) as Record<string, unknown>;
@@ -43,7 +43,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       `id, tournament_id, status, team1_score, team2_score, winner_team_id,
        forfeit_team_id, is_bye, next_match_win_id, next_match_lose_id`
     )
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', matchId)
     .maybeSingle();
   if (mErr) {
@@ -64,7 +64,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data: tournament } = await supabaseAdmin
       .from('tournaments')
       .select('status')
-      .eq('tenant_id', req.botContext!.tenantId)
+      .eq('tenant_id', req.botContext.tenantId)
       .eq('id', match.tournament_id)
       .maybeSingle();
     if (tournament?.status === 'completed') {
@@ -98,7 +98,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       dispute_resolved_at: null,
       updated_at: new Date().toISOString(),
     })
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', matchId)
     .select('id, status')
     .maybeSingle();

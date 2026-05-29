@@ -6,9 +6,9 @@
 //
 // Reponse : { results: [{ value: '<uuid>', label: '<name>' }] }
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { escapePostgrestValue } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
 
@@ -21,7 +21,7 @@ function trimLabel(s: string): string {
     : s;
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const rawQ = req.query.q;
   const q = typeof rawQ === 'string' ? rawQ.trim() : '';
 
@@ -37,7 +37,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   let query = supabaseAdmin
     .from('cast_members')
     .select('id, name')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .order('name', { ascending: true })
     .limit(limit);
 

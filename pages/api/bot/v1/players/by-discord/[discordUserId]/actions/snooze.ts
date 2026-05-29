@@ -14,9 +14,9 @@
 // Idempotent : reappel = update (snoozed_until ecrase, updated_at refresh).
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { discordIdSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
 
@@ -47,7 +47,7 @@ const snoozeBodySchema = z.object({
 });
 const snoozeQuerySchema = z.object({ discordUserId: discordIdSchema });
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { discordUserId: pathDiscordUserId } = req.botQuery as z.infer<
     typeof snoozeQuerySchema
   >;
@@ -72,7 +72,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   // onConflict on utilise la PK composite.
   const { error } = await supabaseAdmin.from('player_action_snoozes').upsert(
     {
-      tenant_id: req.botContext!.tenantId,
+      tenant_id: req.botContext.tenantId,
       discord_user_id: pathDiscordUserId,
       action_key: actionKey,
       snoozed_until: snoozedUntil,

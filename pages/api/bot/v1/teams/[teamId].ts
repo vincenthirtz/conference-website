@@ -18,9 +18,9 @@
 // Log dans staff_logs ('update_team') en plus de player_logs.
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import {
   requireBotPlayer,
   requireBotStaff,
@@ -60,7 +60,7 @@ async function loadTeam(idOrSlug: string, tenantId: string) {
   return q.maybeSingle();
 }
 
-async function handleGet(req: NextApiRequest, res: NextApiResponse) {
+async function handleGet(req: BotTenantRequest, res: NextApiResponse) {
   const raw = req.query.teamId;
   const idOrSlug = Array.isArray(raw) ? raw[0] : raw;
   if (!idOrSlug) {
@@ -72,7 +72,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
 
   const { data: team, error } = await loadTeam(
     idOrSlug,
-    req.botContext!.tenantId
+    req.botContext.tenantId
   );
   if (error) {
     logger.error('[bot/team] fetch error', error);
@@ -85,7 +85,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
     const { data: m, error: mErr } = await supabaseAdmin
       .from('team_members')
       .select('id, user_id, role, battle_tag, is_substitute, created_at')
-      .eq('tenant_id', req.botContext!.tenantId)
+      .eq('tenant_id', req.botContext.tenantId)
       .eq('team_id', team.id)
       .order('created_at', { ascending: true });
     if (mErr) {
@@ -98,7 +98,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
   return res.status(200).json({ team, members });
 }
 
-async function handlePatch(req: NextApiRequest, res: NextApiResponse) {
+async function handlePatch(req: BotTenantRequest, res: NextApiResponse) {
   const raw = req.query.teamId;
   const idOrSlug = Array.isArray(raw) ? raw[0] : raw;
   if (!idOrSlug) {
@@ -143,7 +143,7 @@ async function handlePatch(req: NextApiRequest, res: NextApiResponse) {
 
   const { data: team, error: teamErr } = await loadTeam(
     idOrSlug,
-    req.botContext!.tenantId
+    req.botContext.tenantId
   );
   if (teamErr) {
     logger.error('[bot/team PATCH] fetch error', teamErr);
@@ -262,7 +262,7 @@ async function handlePatch(req: NextApiRequest, res: NextApiResponse) {
   const { data: updated, error: updErr } = await supabaseAdmin
     .from('teams')
     .update(updates)
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', team.id)
     .select(TEAM_SELECT_COLUMNS)
     .single();
@@ -298,7 +298,7 @@ async function handlePatch(req: NextApiRequest, res: NextApiResponse) {
   return res.status(200).json({ team: updated });
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   if (req.method === 'PATCH') return handlePatch(req, res);
   return handleGet(req, res);
 }

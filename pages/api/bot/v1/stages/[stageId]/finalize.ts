@@ -19,9 +19,9 @@
 //   force?             (defaut false) — bypass le garde matchs actifs
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
@@ -35,7 +35,7 @@ const finalizeBodySchema = z.object({
 });
 const finalizeQuerySchema = z.object({ stageId: uuidSchema });
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { stageId } = req.botQuery as z.infer<typeof finalizeQuerySchema>;
 
   const actor = await requireBotStaff(req, res, req.body ?? {});
@@ -47,7 +47,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: stage, error: stErr } = await supabaseAdmin
     .from('tournament_stages')
     .select('id, tournament_id, name, is_active')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', stageId)
     .maybeSingle();
   if (stErr) {
@@ -68,7 +68,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: activeMatches, error: amErr } = await supabaseAdmin
     .from('matches')
     .select('id, status, round_number')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('stage_id', stageId)
     .in('status', [...ACTIVE_STATUSES]);
   if (amErr) {
@@ -95,7 +95,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: updated, error: upErr } = await supabaseAdmin
     .from('tournament_stages')
     .update({ is_active: false, updated_at: new Date().toISOString() })
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', stageId)
     .select('id, name, is_active')
     .maybeSingle();

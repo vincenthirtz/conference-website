@@ -9,9 +9,9 @@
 //
 // Reponse : { results: [{ value: '<uuid>', label: '<...>' }] }
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { escapePostgrestValue, isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
 
@@ -24,7 +24,7 @@ function trimLabel(s: string): string {
     : s;
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const rawT = req.query.tournamentId;
   const tournamentId =
     typeof rawT === 'string' && rawT.trim() ? rawT.trim() : null;
@@ -49,7 +49,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   let query = supabaseAdmin
     .from('tournament_stages')
     .select('id, name, slug, stage_type, order_index')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('tournament_id', tournamentId)
     .order('order_index', { ascending: true })
     .limit(limit);
@@ -66,7 +66,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   const results = (data ?? []).map((s) => {
-    const row = s as { id: string; name?: string; stage_type?: string | null; order_index?: number | null };
+    const row = s as {
+      id: string;
+      name?: string;
+      stage_type?: string | null;
+      order_index?: number | null;
+    };
     const idx = typeof row.order_index === 'number' ? row.order_index : null;
     const prefix = idx != null ? `${idx + 1}. ` : '';
     const type = row.stage_type ? ` [${row.stage_type}]` : '';

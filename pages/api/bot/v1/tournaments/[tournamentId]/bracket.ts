@@ -10,11 +10,14 @@
 //
 // Auth : x-api-key (BOT_API_KEY).
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { isValidUUID } from '@/utils/apiHelpers';
-import { computeSwissStandings, rankSwissStandings } from '@/utils/swiss/standings';
+import {
+  computeSwissStandings,
+  rankSwissStandings,
+} from '@/utils/swiss/standings';
 import type { SwissMatchResult } from '@/types/swiss';
 import { logger } from '@/utils/logger';
 
@@ -89,7 +92,7 @@ function tournamentPointsFromMatch(
   return { p1: 0.5, p2: 0.5 };
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const rawT = req.query.tournamentId;
   const tournamentId = Array.isArray(rawT) ? rawT[0] : rawT;
   if (!tournamentId || !isValidUUID(tournamentId)) {
@@ -106,7 +109,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: tournament, error: tErr } = await supabaseAdmin
     .from('tournaments')
     .select('id, name, slug, status, start_date, end_date')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', tournamentId)
     .maybeSingle();
   if (tErr) {
@@ -119,10 +122,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   let stagesQuery = supabaseAdmin
     .from('tournament_stages')
-    .select(
-      'id, name, slug, stage_type, order_index, start_date, end_date'
-    )
-    .eq('tenant_id', req.botContext!.tenantId)
+    .select('id, name, slug, stage_type, order_index, start_date, end_date')
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('tournament_id', tournamentId)
     .order('order_index', { ascending: true });
   if (stageFilter) stagesQuery = stagesQuery.eq('id', stageFilter);
@@ -145,7 +146,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
        team1:team1_id (id, name, short_name, logo_url),
        team2:team2_id (id, name, short_name, logo_url)`
     )
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .in('stage_id', stageIds)
     .order('round_number', { ascending: true, nullsFirst: false });
   if (matchesErr) {
@@ -187,7 +188,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data: stageTeams, error: stErr } = await supabaseAdmin
       .from('stage_teams')
       .select('stage_id, team:team_id (id, name, short_name, logo_url)')
-      .eq('tenant_id', req.botContext!.tenantId)
+      .eq('tenant_id', req.botContext.tenantId)
       .in('stage_id', swissStageIds);
     if (stErr) {
       logger.error('[bot/bracket] stage_teams error', stErr);

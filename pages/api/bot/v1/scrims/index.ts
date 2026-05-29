@@ -7,9 +7,9 @@
 
 import slugify from 'slugify';
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import {
   discordIdSchema,
@@ -60,12 +60,12 @@ const scrimCreateBodySchema = z
     path: ['team2_id'],
   });
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   if (req.method === 'GET') return handleList(req, res);
   return handleCreate(req, res);
 }
 
-async function handleList(req: NextApiRequest, res: NextApiResponse) {
+async function handleList(req: BotTenantRequest, res: NextApiResponse) {
   const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
   const statusQ = req.query.status;
   const includeDrafts =
@@ -76,7 +76,7 @@ async function handleList(req: NextApiRequest, res: NextApiResponse) {
     .select(
       'id, name, slug, game, status, team1_id, team2_id, scheduled_date, is_public, created_at'
     )
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .order('scheduled_date', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false })
     .limit(limit);
@@ -100,7 +100,7 @@ async function handleList(req: NextApiRequest, res: NextApiResponse) {
   return res.status(200).json({ scrims: data ?? [] });
 }
 
-async function handleCreate(req: NextApiRequest, res: NextApiResponse) {
+async function handleCreate(req: BotTenantRequest, res: NextApiResponse) {
   const body = (req.body ?? {}) as Record<string, unknown>;
   const input = req.botInput as z.infer<typeof scrimCreateBodySchema>;
 
@@ -120,7 +120,7 @@ async function handleCreate(req: NextApiRequest, res: NextApiResponse) {
   const { data: existing } = await supabaseAdmin!
     .from('scrims')
     .select('id')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('slug', slug)
     .maybeSingle();
   if (existing) {
@@ -135,7 +135,7 @@ async function handleCreate(req: NextApiRequest, res: NextApiResponse) {
   const scheduledDate = input.scheduled_date ?? null;
 
   const payload = {
-    tenant_id: req.botContext!.tenantId,
+    tenant_id: req.botContext.tenantId,
     name,
     slug,
     game: input.game ?? null,

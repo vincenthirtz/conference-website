@@ -15,9 +15,9 @@
 // efface le champ.
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import { sanitizeUrl } from '@/utils/apiHelpers';
 import { uuidSchema } from '@/utils/botValidation';
@@ -34,7 +34,7 @@ const LOBBY_MAX = 200;
 // .optional().nullable(). On valide donc uniquement la query ici.
 const metaQuerySchema = z.object({ matchId: uuidSchema });
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { matchId } = req.botQuery as z.infer<typeof metaQuerySchema>;
 
   // GET : lecture des metadonnees minimales (team names + statut) sans
@@ -49,7 +49,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          team1:teams!matches_team1_id_fkey(id, name, short_name),
          team2:teams!matches_team2_id_fkey(id, name, short_name)`
       )
-      .eq('tenant_id', req.botContext!.tenantId)
+      .eq('tenant_id', req.botContext.tenantId)
       .eq('id', matchId)
       .maybeSingle();
     if (error) {
@@ -147,19 +147,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   if (Object.keys(updates).length === 0) {
-    return res
-      .status(400)
-      .json({
-        error:
-          'Aucun champ à mettre à jour (scheduledAt, lobbyCode, streamUrl, notes).',
-      });
+    return res.status(400).json({
+      error:
+        'Aucun champ à mettre à jour (scheduledAt, lobbyCode, streamUrl, notes).',
+    });
   }
 
   // Verify match exists + tournament not completed (mirror admin behaviour).
   const { data: match, error: mErr } = await supabaseAdmin
     .from('matches')
     .select('id, tournament_id, scrim_id, status, is_bye, scheduled_at')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', matchId)
     .maybeSingle();
   if (mErr) {
@@ -176,7 +174,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data: t } = await supabaseAdmin
       .from('tournaments')
       .select('status')
-      .eq('tenant_id', req.botContext!.tenantId)
+      .eq('tenant_id', req.botContext.tenantId)
       .eq('id', match.tournament_id)
       .maybeSingle();
     if (t?.status === 'completed') {
@@ -193,7 +191,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: updated, error: updErr } = await supabaseAdmin
     .from('matches')
     .update(updates)
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', matchId)
     .select(
       'id, status, scheduled_at, lobby_code, stream_url, notes, updated_at'
@@ -235,7 +233,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
               scheduledAt: next,
               enriched,
             },
-            req.botContext!.tenantId
+            req.botContext.tenantId
           );
         })().catch((e) =>
           logger.error('[botEvents] match.scheduled emit error:', e)
@@ -244,7 +242,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         void emitBotEvent(
           'match.unscheduled',
           { matchId },
-          req.botContext!.tenantId
+          req.botContext.tenantId
         ).catch((e) =>
           logger.error('[botEvents] match.unscheduled emit error:', e)
         );

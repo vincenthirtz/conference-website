@@ -28,9 +28,9 @@
 //
 // Auth : x-api-key (lecture publique cote bot, le path embarque l'identite).
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { resolveActorPlayer } from '@/utils/botActor';
 import { listPendingInvitationsForUser } from '@/utils/teams/invitations';
 import { logger } from '@/utils/logger';
@@ -73,7 +73,7 @@ function classifyGroup(now: Date, refAt: string | null): ActionGroup {
   return 'later';
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const raw = req.query.discordUserId;
   const discordUserId = Array.isArray(raw) ? raw[0] : raw;
   if (!discordUserId || !DISCORD_ID_RE.test(discordUserId)) {
@@ -91,7 +91,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: snoozeRows } = await supabaseAdmin
     .from('player_action_snoozes')
     .select('action_key, snoozed_until')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('discord_user_id', discordUserId);
   const snoozedUntilByKey = new Map<string, string>();
   for (const row of snoozeRows ?? []) {
@@ -105,7 +105,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: captainedTeams, error: teamsErr } = await supabaseAdmin
     .from('teams')
     .select('id, name')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('captain_id', player.authUserId);
   if (teamsErr) {
     logger.error('[bot/player/actions-todo] teams error', teamsErr);
@@ -129,7 +129,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          team1:team1_id (id, name),
          team2:team2_id (id, name)`
       )
-      .eq('tenant_id', req.botContext!.tenantId)
+      .eq('tenant_id', req.botContext.tenantId)
       .or(
         `team1_id.in.(${captainedTeamIds.join(',')}),team2_id.in.(${captainedTeamIds.join(',')})`
       )
@@ -150,7 +150,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       const isT1 = captainedTeamIds.includes(t1Id);
       const side: 1 | 2 = isT1 ? 1 : 2;
       const sideKey = side === 1 ? 'teamA' : 'teamB';
-      const checkedIn = side === 1 ? !!row.team1_checked_in_at : !!row.team2_checked_in_at;
+      const checkedIn =
+        side === 1 ? !!row.team1_checked_in_at : !!row.team2_checked_in_at;
       const refAt = row.scheduled_at as string | null;
 
       if (!checkedIn) {
@@ -195,7 +196,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data: latedMatches } = await supabaseAdmin
       .from('matches')
       .select('id, scheduled_at, status, team1_id, team2_id')
-      .eq('tenant_id', req.botContext!.tenantId)
+      .eq('tenant_id', req.botContext.tenantId)
       .or(
         `team1_id.in.(${captainedTeamIds.join(',')}),team2_id.in.(${captainedTeamIds.join(',')})`
       )
@@ -213,7 +214,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       const { data: reports } = await supabaseAdmin
         .from('match_score_reports')
         .select('match_id, team_side')
-        .eq('tenant_id', req.botContext!.tenantId)
+        .eq('tenant_id', req.botContext.tenantId)
         .in('match_id', lateMatchIds);
       const reportedBy = new Set<string>();
       for (const r of reports ?? []) {
@@ -246,7 +247,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   // --- Invitations team pending (joueur cible) ---------------------------
   const invs = await listPendingInvitationsForUser(
-    req.botContext!.tenantId,
+    req.botContext.tenantId,
     player.authUserId
   );
   if (invs.ok) {
@@ -260,10 +261,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         variant: null,
         refAt: d.payload?.expires_at ?? d.created_at,
         snoozedUntil: snoozedUntilByKey.get(key) ?? null,
-        group: classifyGroup(
-          now,
-          d.payload?.expires_at ?? d.created_at
-        ),
+        group: classifyGroup(now, d.payload?.expires_at ?? d.created_at),
         meta: { teamId: d.team_id ?? null },
       });
     }
@@ -279,7 +277,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Tri stable : urgent -> today -> later, puis refAt ascendant.
   const order: Record<ActionGroup, number> = { urgent: 0, today: 1, later: 2 };
   visible.sort((x, y) => {
-    if (order[x.group] !== order[y.group]) return order[x.group] - order[y.group];
+    if (order[x.group] !== order[y.group])
+      return order[x.group] - order[y.group];
     const xs = x.refAt ?? '';
     const ys = y.refAt ?? '';
     return xs.localeCompare(ys);

@@ -6,9 +6,9 @@
 // Auth: x-api-key valide contre BOT_API_KEY.
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import { isValidUUID } from '@/utils/apiHelpers';
 import {
@@ -63,13 +63,13 @@ const scrimPatchBodySchema = z.object({
   game: gameSlugSchema.nullable().optional(),
 });
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { scrimId: idOrSlug } = req.botQuery as z.infer<
     typeof scrimQuerySchema
   >;
 
   if (req.method === 'GET')
-    return handleGet(res, idOrSlug, req.botContext!.tenantId);
+    return handleGet(res, idOrSlug, req.botContext.tenantId);
   return handlePatch(req, res, idOrSlug);
 }
 
@@ -121,7 +121,7 @@ async function handleGet(
 }
 
 async function handlePatch(
-  req: NextApiRequest,
+  req: BotTenantRequest,
   res: NextApiResponse,
   idOrSlug: string
 ) {
@@ -135,7 +135,7 @@ async function handlePatch(
   let lookup = supabaseAdmin!
     .from('scrims')
     .select('*')
-    .eq('tenant_id', req.botContext!.tenantId);
+    .eq('tenant_id', req.botContext.tenantId);
   lookup = isValidUUID(idOrSlug)
     ? lookup.eq('id', idOrSlug)
     : lookup.eq('slug', idOrSlug);
@@ -172,7 +172,7 @@ async function handlePatch(
   const { data: after, error: updErr } = await supabaseAdmin!
     .from('scrims')
     .update(updatePayload)
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', before.id)
     .select('*')
     .single();

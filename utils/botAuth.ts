@@ -27,17 +27,6 @@ import { DEFAULT_TENANT_ID } from './tenant';
 // l'idempotency cache. Voir le commentaire dans le bloc idempotency.
 const DEFAULT_TENANT_ID_FOR_CACHE = DEFAULT_TENANT_ID;
 
-export function verifyBotApiKey(req: NextApiRequest): boolean {
-  const expected = process.env.BOT_API_KEY;
-  if (!expected) return false;
-  const provided = req.headers['x-api-key'];
-  if (typeof provided !== 'string' || provided.length === 0) return false;
-  const a = Buffer.from(provided);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
-  return crypto.timingSafeEqual(a, b);
-}
-
 /**
  * Per-tenant API key lookup (100% per-tenant — le fallback env legacy a été
  * retiré).

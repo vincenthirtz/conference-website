@@ -13,9 +13,9 @@
 // Auth: x-api-key valide contre BOT_API_KEY.
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import {
   discordIdSchema,
@@ -90,7 +90,7 @@ const scrimMatchQuerySchema = z.object({
   matchId: uuidSchema,
 });
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { scrimId, matchId } = req.botQuery as z.infer<
     typeof scrimMatchQuerySchema
   >;
@@ -107,7 +107,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     .select(
       'id, scrim_id, tournament_id, team1_id, team2_id, status, team1_score, team2_score'
     )
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', matchId)
     .maybeSingle();
   if (!match) return res.status(404).json({ error: 'Match introuvable' });
@@ -191,7 +191,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: after, error: updErr } = await supabaseAdmin
     .from('matches')
     .update(updatePayload)
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', matchId)
     .select('*')
     .single();
@@ -231,7 +231,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           streamUrl: after.stream_url ?? null,
           enriched,
         },
-        req.botContext!.tenantId
+        req.botContext.tenantId
       );
     })().catch((e) =>
       logger.error('[botEvents] match.starting emit error:', e)

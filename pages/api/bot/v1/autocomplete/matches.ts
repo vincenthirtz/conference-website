@@ -10,9 +10,9 @@
 //
 // Reponse : { results: [{ value: '<uuid>', label: '<...>' }] }
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { resolveActorPlayer } from '@/utils/botActor';
 import { escapePostgrestValue, isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
@@ -45,7 +45,7 @@ function formatScheduled(iso: string | null): string {
   return d.toISOString().slice(0, 16).replace('T', ' ');
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const rawQ = req.query.q;
   const q = typeof rawQ === 'string' ? rawQ.trim() : '';
 
@@ -93,13 +93,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data: memberships, error: mErr } = await supabaseAdmin
       .from('team_members')
       .select('team_id')
-      .eq('tenant_id', req.botContext!.tenantId)
+      .eq('tenant_id', req.botContext.tenantId)
       .eq('user_id', player.authUserId);
     if (mErr) {
       logger.error('[bot/autocomplete/matches] memberships error', mErr);
       return res.status(200).json({ results: [] });
     }
-    actorTeamIds = (memberships ?? []).map((m) => (m as { team_id: string }).team_id);
+    actorTeamIds = (memberships ?? []).map(
+      (m) => (m as { team_id: string }).team_id
+    );
     if (actorTeamIds.length === 0) {
       return res.status(200).json({ results: [] });
     }
@@ -112,7 +114,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
        team1:team1_id (id, name, short_name),
        team2:team2_id (id, name, short_name)`
     )
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .order('scheduled_at', { ascending: true, nullsFirst: false })
     .limit(limit);
 
@@ -128,9 +130,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // ailleurs). La recherche sur les noms d'equipes via la jointure est
     // couteuse en PostgREST ; le bot fera un filter client-side sur le label.
     const safe = escapePostgrestValue(q);
-    query = query.or(
-      `round_name.ilike.%${safe}%,group_key.ilike.%${safe}%`
-    );
+    query = query.or(`round_name.ilike.%${safe}%,group_key.ilike.%${safe}%`);
   }
 
   const { data, error } = await query;

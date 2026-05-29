@@ -8,8 +8,8 @@
 // Auth : x-api-key + actorDiscordUserId (lie au site).
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
-import { withBotRoute } from '@/utils/botAuth';
+import type { NextApiResponse } from 'next';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotPlayer } from '@/utils/botActor';
 import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
 import {
@@ -30,7 +30,7 @@ const invitationBodySchema = z.object({
 });
 const invitationQuerySchema = z.object({ demandeId: uuidSchema });
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { demandeId } = req.botQuery as z.infer<typeof invitationQuerySchema>;
   const { action } = req.botInput as z.infer<typeof invitationBodySchema>;
 
@@ -43,7 +43,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   if (action === 'accept') {
     const result = await acceptInvitation(
-      req.botContext!.tenantId,
+      req.botContext.tenantId,
       demandeId,
       actor.authUserId
     );
@@ -68,7 +68,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   if (action === 'reject') {
     const result = await rejectInvitation(
-      req.botContext!.tenantId,
+      req.botContext.tenantId,
       demandeId,
       actor.authUserId
     );
@@ -87,7 +87,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   // cancel
   const result = await cancelInvitation(
-    req.botContext!.tenantId,
+    req.botContext.tenantId,
     demandeId,
     actor.authUserId
   );

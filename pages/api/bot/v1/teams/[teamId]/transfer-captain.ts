@@ -9,9 +9,9 @@
 //         scrims pendant un tournoi. Admin uniquement peut forcer via UI.
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotPlayer, resolveActorPlayer } from '@/utils/botActor';
 import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
 import {
@@ -29,7 +29,7 @@ const transferCaptainBodySchema = z.object({
 });
 const transferCaptainQuerySchema = z.object({ teamId: uuidSchema });
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { teamId } = req.botQuery as z.infer<typeof transferCaptainQuerySchema>;
 
   const body = (req.body ?? {}) as Record<string, unknown>;
@@ -47,7 +47,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: team, error: teamErr } = await supabaseAdmin
     .from('teams')
     .select('id, captain_id')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', teamId)
     .maybeSingle();
   if (teamErr) {
@@ -74,7 +74,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: membership, error: memberErr } = await supabaseAdmin
     .from('team_members')
     .select('id')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('team_id', team.id)
     .eq('user_id', newCaptain.authUserId)
     .maybeSingle();
@@ -88,10 +88,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .json({ error: "Cette joueuse n'est pas membre de ton équipe." });
   }
 
-  const lockStatus = await isTeamRosterLocked(
-    req.botContext!.tenantId,
-    team.id
-  );
+  const lockStatus = await isTeamRosterLocked(req.botContext.tenantId, team.id);
   if (lockStatus.locked) {
     return res.status(409).json({ error: rosterLockErrorMessage(lockStatus) });
   }
@@ -102,7 +99,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       captain_id: newCaptain.authUserId,
       updated_at: new Date().toISOString(),
     })
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', team.id);
   if (updateErr) {
     logger.error('[bot/transfer-captain] update error', updateErr);
@@ -114,13 +111,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   void emitRoleSyncEvent(
     'team.captain.changed',
     actor.authUserId,
-    req.botContext!.tenantId,
+    req.botContext.tenantId,
     { extras: { teamId: team.id, role: 'previous' } }
   );
   void emitRoleSyncEvent(
     'team.captain.changed',
     newCaptain.authUserId,
-    req.botContext!.tenantId,
+    req.botContext.tenantId,
     { extras: { teamId: team.id, role: 'new' } }
   );
 

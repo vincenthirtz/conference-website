@@ -1517,7 +1517,7 @@ Realtime : la page consomme le même `useDraftState` que la captain UI, mais ave
 ## Where it lives
 
 - **Middleware** — [`utils/botAuth.ts`](../utils/botAuth.ts) (`withBotRoute`,
-  `verifyBotApiKey`, `bot_idempotency` table access).
+  `verifyBotApiKeyMultiTenant`, `bot_idempotency` table access).
 - **Rate limit primitives** — [`utils/rateLimit.ts`](../utils/rateLimit.ts).
 - **Maintenance toggle** — [`utils/maintenance.ts`](../utils/maintenance.ts).
 - **Idempotency DDL** — [`database/migrations/`](../database/migrations/)

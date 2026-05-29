@@ -17,9 +17,9 @@
 // applyMatchScore (propage le bracket), log staff_logs.
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { uuidSchema } from '@/utils/botValidation';
@@ -38,7 +38,7 @@ const VALID_RESUME = new Set(['pending', 'ongoing', 'finished', 'walkover']);
 // validé par requireBotStaff.
 const resolveDisputeQuerySchema = z.object({ matchId: uuidSchema });
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { matchId } = req.botQuery as z.infer<typeof resolveDisputeQuerySchema>;
 
   const body = (req.body ?? {}) as Record<string, unknown>;
@@ -106,7 +106,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: match, error: mErr } = await supabaseAdmin
     .from('matches')
     .select('id, tournament_id, status, team1_id, team2_id')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', matchId)
     .maybeSingle();
   if (mErr) {
@@ -124,11 +124,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     forfeitTeamId !== match.team1_id &&
     forfeitTeamId !== match.team2_id
   ) {
-    return res
-      .status(400)
-      .json({
-        error: 'forfeitTeamId ne correspond pas a une equipe du match.',
-      });
+    return res.status(400).json({
+      error: 'forfeitTeamId ne correspond pas a une equipe du match.',
+    });
   }
 
   const nowIso = new Date().toISOString();
@@ -148,7 +146,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         dispute_resolved_at: nowIso,
         updated_at: nowIso,
       })
-      .eq('tenant_id', req.botContext!.tenantId)
+      .eq('tenant_id', req.botContext.tenantId)
       .eq('id', matchId);
     if (clearErr) {
       logger.error('[bot/resolve-dispute] clear status error', clearErr);
@@ -159,7 +157,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     try {
       const result = await applyMatchScore({
-        tenantId: req.botContext!.tenantId,
+        tenantId: req.botContext.tenantId,
         matchId,
         team1Score: hasScoreOverride ? (t1 as number) : undefined,
         team2Score: hasScoreOverride ? (t2 as number) : undefined,
@@ -189,7 +187,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         const { data: row } = await supabaseAdmin
           .from('matches')
           .select('discord_dispute_thread_id')
-          .eq('tenant_id', req.botContext!.tenantId)
+          .eq('tenant_id', req.botContext.tenantId)
           .eq('id', matchId)
           .maybeSingle();
         await emitBotEvent(
@@ -203,7 +201,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             cancelled: false,
             discordDisputeThreadId: row?.discord_dispute_thread_id ?? null,
           },
-          req.botContext!.tenantId
+          req.botContext.tenantId
         );
       })().catch((err) =>
         logger.error('[botEvents] match.dispute.resolved emit error:', err)
@@ -226,7 +224,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           dispute_resolution: null,
           dispute_resolved_at: null,
         })
-        .eq('tenant_id', req.botContext!.tenantId)
+        .eq('tenant_id', req.botContext.tenantId)
         .eq('id', matchId);
       return res.status(500).json({
         error: `Echec de l'application du score : ${msg}. Dispute conservee.`,
@@ -246,7 +244,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       dispute_resolved_at: nowIso,
       updated_at: nowIso,
     })
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', matchId);
   if (updErr) {
     logger.error('[bot/resolve-dispute] simple update error', updErr);
@@ -270,7 +268,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data: row } = await supabaseAdmin
       .from('matches')
       .select('discord_dispute_thread_id')
-      .eq('tenant_id', req.botContext!.tenantId)
+      .eq('tenant_id', req.botContext.tenantId)
       .eq('id', matchId)
       .maybeSingle();
     await emitBotEvent(
@@ -284,7 +282,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         cancelled: false,
         discordDisputeThreadId: row?.discord_dispute_thread_id ?? null,
       },
-      req.botContext!.tenantId
+      req.botContext.tenantId
     );
   })().catch((err) =>
     logger.error('[botEvents] match.dispute.resolved emit error:', err)

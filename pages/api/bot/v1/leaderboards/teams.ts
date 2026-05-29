@@ -11,16 +11,16 @@
 //
 // Auth : x-api-key (lecture publique).
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
 
 const MAX_LIMIT = 100;
 const DEFAULT_LIMIT = 25;
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const periodRaw =
     typeof req.query.period === 'string'
       ? req.query.period.trim().toLowerCase()
@@ -34,8 +34,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       : DEFAULT_LIMIT;
 
   const tournamentFilter =
-    typeof req.query.tournamentId === 'string' &&
-    req.query.tournamentId.trim()
+    typeof req.query.tournamentId === 'string' && req.query.tournamentId.trim()
       ? req.query.tournamentId.trim()
       : null;
   if (tournamentFilter && !isValidUUID(tournamentFilter)) {
@@ -47,13 +46,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     .select(
       'team1_id, team2_id, winner_team_id, is_bye, completed_at, tournament_id'
     )
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .in('status', ['finished', 'walkover']);
   if (tournamentFilter) q = q.eq('tournament_id', tournamentFilter);
   if (period === 'month') {
-    const since = new Date(
-      Date.now() - 30 * 24 * 60 * 60 * 1000
-    ).toISOString();
+    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     q = q.gte('completed_at', since);
   }
 
@@ -101,15 +98,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   const teamIds = [...aggByTeam.keys()];
   if (teamIds.length === 0) {
-    return res
-      .status(200)
-      .json({ period, total: 0, leaderboard: [], tournamentId: tournamentFilter });
+    return res.status(200).json({
+      period,
+      total: 0,
+      leaderboard: [],
+      tournamentId: tournamentFilter,
+    });
   }
 
   const { data: teamsData, error: tErr } = await supabaseAdmin
     .from('teams')
     .select('id, name, short_name, slug, logo_url, country')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .in('id', teamIds);
   if (tErr) {
     logger.error('[bot/leaderboards/teams] teams error', tErr);

@@ -9,9 +9,9 @@
 // Cible : targetDiscordUserId (compte Discord lie au site).
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotPlayer, resolveActorPlayer } from '@/utils/botActor';
 import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
 import {
@@ -29,7 +29,7 @@ const kickMemberBodySchema = z.object({
 });
 const kickMemberQuerySchema = z.object({ teamId: uuidSchema });
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { teamId } = req.botQuery as z.infer<typeof kickMemberQuerySchema>;
 
   const body = (req.body ?? {}) as Record<string, unknown>;
@@ -44,7 +44,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: team, error: teamErr } = await supabaseAdmin
     .from('teams')
     .select('id, name, captain_id')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', teamId)
     .maybeSingle();
   if (teamErr) {
@@ -79,10 +79,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     });
   }
 
-  const lockStatus = await isTeamRosterLocked(
-    req.botContext!.tenantId,
-    team.id
-  );
+  const lockStatus = await isTeamRosterLocked(req.botContext.tenantId, team.id);
   if (lockStatus.locked) {
     return res.status(409).json({ error: rosterLockErrorMessage(lockStatus) });
   }
@@ -90,7 +87,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: member, error: fetchErr } = await supabaseAdmin
     .from('team_members')
     .select('id')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('team_id', team.id)
     .eq('user_id', target.authUserId)
     .maybeSingle();
@@ -107,7 +104,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { error: deleteErr } = await supabaseAdmin
     .from('team_members')
     .delete()
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', member.id);
   if (deleteErr) {
     logger.error('[bot/teams/members] delete error', deleteErr);
@@ -117,7 +114,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   void emitRoleSyncEvent(
     'team.member.removed',
     target.authUserId,
-    req.botContext!.tenantId,
+    req.botContext.tenantId,
     {
       previousTeamId: team.id,
       extras: { teamId: team.id },

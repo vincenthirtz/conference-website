@@ -23,8 +23,8 @@
 // Auth : x-api-key + actorDiscordUserId staff admin/owner.
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
-import { withBotRoute } from '@/utils/botAuth';
+import type { NextApiResponse } from 'next';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
 import { runSwissNextRound } from '@/utils/swiss/runNextRound';
@@ -41,7 +41,7 @@ const nextRoundBodySchema = z.object({
 });
 const nextRoundQuerySchema = z.object({ stageId: uuidSchema });
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { stageId } = req.botQuery as z.infer<typeof nextRoundQuerySchema>;
 
   const actor = await requireBotStaff(req, res, req.body ?? {});
@@ -50,7 +50,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const input = req.botInput as z.infer<typeof nextRoundBodySchema>;
 
   const result = await runSwissNextRound({
-    tenantId: req.botContext!.tenantId,
+    tenantId: req.botContext.tenantId,
     stageId,
     roundNumber: input.roundNumber,
     scoreConfig: input.scoreConfig,

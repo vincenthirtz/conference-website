@@ -14,9 +14,9 @@
 // mirror exact du admin route /api/admin/matches/[matchId]/veto.
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { uuidSchema } from '@/utils/botValidation';
@@ -97,7 +97,7 @@ async function handleGet(
 }
 
 async function handlePost(
-  req: NextApiRequest,
+  req: BotTenantRequest,
   res: NextApiResponse,
   matchId: string
 ) {
@@ -136,7 +136,7 @@ async function handlePost(
   const { data: match, error: mErr } = await supabaseAdmin
     .from('matches')
     .select('id, tournament_id, match_format, team1_id, team2_id')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', matchId)
     .maybeSingle();
   if (mErr || !match) {
@@ -151,7 +151,7 @@ async function handlePost(
   const { count, error: cErr } = await supabaseAdmin
     .from('match_map_vetos')
     .select('id', { count: 'exact', head: true })
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('match_id', matchId);
   if (cErr) {
     logger.error('[bot/veto] count error', cErr);
@@ -170,7 +170,7 @@ async function handlePost(
   const { data: existing } = await supabaseAdmin
     .from('match_map_vetos')
     .select('map_name')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('match_id', matchId);
   if ((existing ?? []).some((e) => (e as any).map_name === mapName)) {
     return res
@@ -181,7 +181,7 @@ async function handlePost(
   const { data: inserted, error: insErr } = await supabaseAdmin
     .from('match_map_vetos')
     .insert({
-      tenant_id: req.botContext!.tenantId,
+      tenant_id: req.botContext.tenantId,
       match_id: matchId,
       step_number: currentStep,
       action,
@@ -203,7 +203,7 @@ async function handlePost(
     const { data: allSteps } = await supabaseAdmin
       .from('match_map_vetos')
       .select('*')
-      .eq('tenant_id', req.botContext!.tenantId)
+      .eq('tenant_id', req.botContext.tenantId)
       .eq('match_id', matchId)
       .order('step_number', { ascending: true });
     const picked = (allSteps ?? []).filter(
@@ -211,7 +211,7 @@ async function handlePost(
     );
     if (picked.length > 0) {
       const gamePayloads = picked.map((s, idx) => ({
-        tenant_id: req.botContext!.tenantId,
+        tenant_id: req.botContext.tenantId,
         match_id: matchId,
         map_name: (s as any).map_name,
         map_order: idx,
@@ -251,7 +251,7 @@ async function handlePost(
 }
 
 async function handleDelete(
-  req: NextApiRequest,
+  req: BotTenantRequest,
   res: NextApiResponse,
   matchId: string
 ) {
@@ -262,13 +262,13 @@ async function handleDelete(
   const { data: stepsBefore } = await supabaseAdmin
     .from('match_map_vetos')
     .select('id')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('match_id', matchId);
 
   const { error } = await supabaseAdmin
     .from('match_map_vetos')
     .delete()
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('match_id', matchId);
   if (error) {
     logger.error('[bot/veto] reset error', error);
@@ -279,13 +279,13 @@ async function handleDelete(
   await supabaseAdmin
     .from('games')
     .delete()
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('match_id', matchId);
 
   const { data: match } = await supabaseAdmin
     .from('matches')
     .select('tournament_id')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', matchId)
     .maybeSingle();
 
@@ -304,11 +304,11 @@ async function handleDelete(
   });
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { matchId } = req.botQuery as z.infer<typeof vetoQuerySchema>;
 
   if (req.method === 'GET')
-    return handleGet(res, matchId, req.botContext!.tenantId);
+    return handleGet(res, matchId, req.botContext.tenantId);
   if (req.method === 'POST') return handlePost(req, res, matchId);
   if (req.method === 'DELETE') return handleDelete(req, res, matchId);
 

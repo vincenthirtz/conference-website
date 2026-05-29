@@ -13,9 +13,9 @@
 //
 // Auth : x-api-key + actorDiscordUserId staff admin/owner (lu en query).
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff } from '@/utils/botActor';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
@@ -30,7 +30,7 @@ function queryString(v: unknown): string | null {
   return t ? t : null;
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   // requireBotStaff lit dans body OU query — ici on est en GET donc query.
   const actorDiscordUserId =
     queryString(req.query.actorDiscordUserId) ??
@@ -61,9 +61,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const since = queryString(req.query.since);
 
   if (filterActorDiscord && !DISCORD_ID_RE.test(filterActorDiscord)) {
-    return res
-      .status(400)
-      .json({ error: 'filterActorDiscordUserId invalide' });
+    return res.status(400).json({ error: 'filterActorDiscordUserId invalide' });
   }
   if (filterTargetDiscord && !DISCORD_ID_RE.test(filterTargetDiscord)) {
     return res.status(400).json({ error: 'targetDiscordUserId invalide' });
@@ -75,9 +73,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(400).json({ error: 'targetAuthUserId invalide' });
   }
   if (since && Number.isNaN(Date.parse(since))) {
-    return res
-      .status(400)
-      .json({ error: 'since invalide (ISO 8601 attendu)' });
+    return res.status(400).json({ error: 'since invalide (ISO 8601 attendu)' });
   }
 
   const rawLimit = Number(req.query.limit);
@@ -93,7 +89,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
        entity_id, target_auth_user_id, target_discord_user_id, payload,
        created_at`
     )
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .order('created_at', { ascending: false })
     .limit(limit);
 

@@ -15,9 +15,9 @@
 
 import slugify from 'slugify';
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { sanitizeUrl } from '@/utils/apiHelpers';
 import { boundedString, discordIdSchema } from '@/utils/botValidation';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
@@ -61,7 +61,7 @@ const listTeamsQuerySchema = z.object({
   isJoinable: z.string().optional(),
 });
 
-async function handleList(req: NextApiRequest, res: NextApiResponse) {
+async function handleList(req: BotTenantRequest, res: NextApiResponse) {
   const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
   const offset = Math.max(0, Number(req.query.offset) || 0);
 
@@ -79,7 +79,7 @@ async function handleList(req: NextApiRequest, res: NextApiResponse) {
     .select(
       'id, name, slug, short_name, logo_url, country, is_active, is_joinable, discord_role_id, captain_id, created_at'
     )
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .order('name', { ascending: true })
     .range(offset, offset + limit - 1);
 
@@ -105,7 +105,7 @@ async function handleList(req: NextApiRequest, res: NextApiResponse) {
   return res.status(200).json({ teams: data ?? [] });
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   if (req.method === 'GET') return handleList(req, res);
 
   // Body validé par withBotRoute (createTeamBodySchema). name/description déjà
@@ -144,7 +144,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: existing } = await supabaseAdmin
     .from('teams')
     .select('id')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('slug', slug)
     .maybeSingle();
   if (existing) {
@@ -157,7 +157,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const description = body.description ?? '';
 
   const teamPayload: Record<string, unknown> = {
-    tenant_id: req.botContext!.tenantId,
+    tenant_id: req.botContext.tenantId,
     name,
     slug,
     captain_id: captainAuthId,
@@ -192,7 +192,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Add the captain as a team_member. Roll back the team on failure so a
   // retry can use the same slug.
   const { error: memberErr } = await supabaseAdmin.from('team_members').insert({
-    tenant_id: req.botContext!.tenantId,
+    tenant_id: req.botContext.tenantId,
     team_id: created.id,
     user_id: captainAuthId,
     role: 'captain',
@@ -202,7 +202,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     await supabaseAdmin
       .from('teams')
       .delete()
-      .eq('tenant_id', req.botContext!.tenantId)
+      .eq('tenant_id', req.botContext.tenantId)
       .eq('id', created.id);
     return res
       .status(500)
@@ -237,7 +237,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       captainDiscordUserId,
       discordRoleId: created.discord_role_id ?? null,
     },
-    req.botContext!.tenantId
+    req.botContext.tenantId
   ).catch((e) => logger.error('[botEvents] team.created emit error:', e));
 
   return res.status(201).json({ team: created });

@@ -14,9 +14,9 @@
 // autre process peut le reprendre.
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { boundedString } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
 
@@ -38,7 +38,7 @@ const lockBodySchema = z.object({
   action: z.unknown().optional(),
 });
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { name } = req.botQuery as z.infer<typeof lockQuerySchema>;
   const body = req.botInput as z.infer<typeof lockBodySchema>;
 
@@ -46,7 +46,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   // le UNIQUE est encore (name) global, mais phase 3 le transformera en
   // PK (tenant_id, name) — on filtre + ecrit deja tenant_id pour preparer
   // cette transition sans rupture.
-  const tenantId = req.botContext!.tenantId;
+  const tenantId = req.botContext.tenantId;
 
   const holder = body.holder;
 

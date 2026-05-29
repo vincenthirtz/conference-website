@@ -9,9 +9,9 @@
 
 import slugify from 'slugify';
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import { getGame, isGameSlug, GAME_SLUGS } from '@/config/games';
 import {
@@ -45,12 +45,12 @@ const createBodySchema = z.object({
   game: gameSlugSchema.optional(),
 });
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   if (req.method === 'GET') return handleList(req, res);
   return handleCreate(req, res);
 }
 
-async function handleList(req: NextApiRequest, res: NextApiResponse) {
+async function handleList(req: BotTenantRequest, res: NextApiResponse) {
   const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
   const statusQ = req.query.status;
   const includeDrafts =
@@ -61,7 +61,7 @@ async function handleList(req: NextApiRequest, res: NextApiResponse) {
     .select(
       'id, name, slug, game, status, start_date, end_date, max_teams, created_at'
     )
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .order('start_date', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false })
     .limit(limit);
@@ -86,7 +86,7 @@ async function handleList(req: NextApiRequest, res: NextApiResponse) {
   return res.status(200).json({ tournaments: data ?? [] });
 }
 
-async function handleCreate(req: NextApiRequest, res: NextApiResponse) {
+async function handleCreate(req: BotTenantRequest, res: NextApiResponse) {
   const actor = await requireBotStaff(req, res, req.body ?? {});
   if (!actor) return;
 
@@ -104,7 +104,7 @@ async function handleCreate(req: NextApiRequest, res: NextApiResponse) {
   const { data: existing } = await supabaseAdmin!
     .from('tournaments')
     .select('id')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('slug', slug)
     .maybeSingle();
   if (existing) {
@@ -138,7 +138,7 @@ async function handleCreate(req: NextApiRequest, res: NextApiResponse) {
   }
 
   const payload = {
-    tenant_id: req.botContext!.tenantId,
+    tenant_id: req.botContext.tenantId,
     name,
     slug,
     game,
@@ -173,7 +173,7 @@ async function handleCreate(req: NextApiRequest, res: NextApiResponse) {
   if (gameDef?.hasMapVeto && gameDef.mapPool.length > 0) {
     try {
       const mapRows = gameDef.mapPool.map((m, idx) => ({
-        tenant_id: req.botContext!.tenantId,
+        tenant_id: req.botContext.tenantId,
         tournament_id: data.id,
         map_name: m.name,
         map_slug: slugify(m.name, { lower: true, strict: true }),

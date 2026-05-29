@@ -10,9 +10,9 @@
 //           body: { actorDiscordUserId, assignmentId } OU { castMemberId }
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { uuidSchema } from '@/utils/botValidation';
@@ -110,7 +110,7 @@ async function handleList(
 }
 
 async function handleAssign(
-  req: NextApiRequest,
+  req: BotTenantRequest,
   res: NextApiResponse,
   matchId: string
 ) {
@@ -148,7 +148,7 @@ async function handleAssign(
     const { data: match } = await supabaseAdmin
       .from('matches')
       .select('scheduled_at')
-      .eq('tenant_id', req.botContext!.tenantId)
+      .eq('tenant_id', req.botContext.tenantId)
       .eq('id', matchId)
       .maybeSingle();
     if (match?.scheduled_at) {
@@ -167,7 +167,7 @@ async function handleAssign(
   const { data: inserted, error } = await supabaseAdmin
     .from('cast_assignments')
     .insert({
-      tenant_id: req.botContext!.tenantId,
+      tenant_id: req.botContext.tenantId,
       match_id: matchId,
       cast_member_id: castMemberId,
       briefing_at: briefingAtIso,
@@ -196,7 +196,7 @@ async function handleAssign(
 }
 
 async function handleUnassign(
-  req: NextApiRequest,
+  req: BotTenantRequest,
   res: NextApiResponse,
   matchId: string
 ) {
@@ -225,7 +225,7 @@ async function handleUnassign(
   let query = supabaseAdmin
     .from('cast_assignments')
     .delete()
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('match_id', matchId);
   if (assignmentId) query = query.eq('id', assignmentId);
   if (castMemberId) query = query.eq('cast_member_id', castMemberId);
@@ -250,11 +250,11 @@ async function handleUnassign(
   return res.status(200).json({ success: true, removed: count });
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { matchId } = req.botQuery as z.infer<typeof castQuerySchema>;
 
   if (req.method === 'GET')
-    return handleList(res, matchId, req.botContext!.tenantId);
+    return handleList(res, matchId, req.botContext.tenantId);
   if (req.method === 'POST') return handleAssign(req, res, matchId);
   if (req.method === 'DELETE') return handleUnassign(req, res, matchId);
 

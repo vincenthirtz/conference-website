@@ -11,20 +11,20 @@
 //
 // Cache HTTP : 60s (le statut live change peu en sub-minute).
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { fetchTwitchLiveStatus } from '@/utils/twitch';
 import { logger } from '@/utils/logger';
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const includeOffline =
     req.query.includeOffline === '1' || req.query.includeOffline === 'true';
 
   const { data: channelsData, error } = await supabaseAdmin
     .from('twitch_channels')
     .select('channel, label, badge, description, background_url')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('is_active', true)
     .order('sort_order', { ascending: true });
   if (error) {
@@ -80,7 +80,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const filtered = includeOffline ? enriched : enriched.filter((c) => c.live);
   const liveCount = enriched.filter((c) => c.live).length;
 
-  res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=30');
+  res.setHeader(
+    'Cache-Control',
+    'public, s-maxage=60, stale-while-revalidate=30'
+  );
   return res.status(200).json({
     channels: filtered,
     total: enriched.length,

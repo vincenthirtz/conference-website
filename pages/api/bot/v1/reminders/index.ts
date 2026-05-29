@@ -15,9 +15,9 @@
 //
 // Auth: x-api-key header validated against BOT_API_KEY.
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { buildCheckinUrl } from '@/utils/checkin';
 import {
   getDiscordLinksForUsers,
@@ -73,8 +73,8 @@ type Reminder =
   | TournamentJ1Reminder
   | CastBriefingReminder;
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const tenantId = req.botContext!.tenantId;
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
+  const tenantId = req.botContext.tenantId;
   const reminders: Reminder[] = [];
   const errors: string[] = [];
 

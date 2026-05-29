@@ -12,9 +12,9 @@
 //
 // Auth : x-api-key (lecture publique).
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
 
@@ -28,7 +28,7 @@ function queryString(v: unknown): string | null {
   return t ? t : null;
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const rawLimit = Number(req.query.limit);
   const limit =
     Number.isInteger(rawLimit) && rawLimit > 0
@@ -70,7 +70,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          tournament:tournament_id (id, name, slug)
        )`
     )
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .order('briefing_at', { ascending: true })
     .limit(limit);
 
@@ -147,7 +147,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             name: cm.name ?? null,
             authUserId: cm.auth_user_id ?? null,
             discordUserId: cm.auth_user_id
-              ? discordByAuth.get(cm.auth_user_id) ?? null
+              ? (discordByAuth.get(cm.auth_user_id) ?? null)
               : null,
           }
         : null,

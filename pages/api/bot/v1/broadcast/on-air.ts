@@ -8,14 +8,14 @@
 // Auth : x-api-key (+ x-tenant-id when using the env key, per the
 // canonical bot contract).
 
-import type { NextApiRequest, NextApiResponse } from 'next';
-import { withBotRoute } from '@/utils/botAuth';
+import type { NextApiResponse } from 'next';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { fetchLiveBroadcastState } from '@/utils/broadcast/liveState';
 import { logger } from '@/utils/logger';
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   try {
-    const tenantId = req.botContext!.tenantId;
+    const tenantId = req.botContext.tenantId;
     const state = await fetchLiveBroadcastState(tenantId);
     return res.status(200).json(state);
   } catch (err) {

@@ -11,9 +11,9 @@
 // (placeholder match), stage may be null (free-floating match), etc.
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { uuidSchema } from '@/utils/botValidation';
@@ -116,7 +116,7 @@ function normalizeMatch(
   };
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { tournamentId } = req.botQuery as z.infer<typeof matchesQuerySchema>;
 
   const body = (req.body ?? {}) as Record<string, unknown>;
@@ -146,7 +146,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: tournament } = await supabaseAdmin
     .from('tournaments')
     .select('id, name')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', tournamentId)
     .maybeSingle();
   if (!tournament) {
@@ -158,7 +158,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   for (let i = 0; i < inputs.length; i++) {
     const { row, error } = normalizeMatch(
       tournamentId,
-      req.botContext!.tenantId,
+      req.botContext.tenantId,
       inputs[i]
     );
     if (error) {

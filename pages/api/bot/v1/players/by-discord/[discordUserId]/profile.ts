@@ -14,9 +14,9 @@
 // Auth : x-api-key + actorDiscordUserId lie au site.
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { discordIdSchema } from '@/utils/botValidation';
 import {
   requireBotPlayer,
@@ -86,7 +86,7 @@ const profileBodySchema = z.object({
 });
 const profileQuerySchema = z.object({ discordUserId: discordIdSchema });
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { discordUserId: targetDiscordUserId } = req.botQuery as z.infer<
     typeof profileQuerySchema
   >;
@@ -171,7 +171,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { error: tmErr } = await supabaseAdmin
       .from('team_members')
       .update({ battle_tag: metaUpdates.battle_tag })
-      .eq('tenant_id', req.botContext!.tenantId)
+      .eq('tenant_id', req.botContext.tenantId)
       .eq('user_id', target.authUserId);
     if (tmErr) {
       logger.error(
