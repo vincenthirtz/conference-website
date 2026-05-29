@@ -21,11 +21,11 @@
 // Cross-tenant : no `x-tenant-id` header — the requester doesn't have a
 // tenant yet. Same exemption as `/tenants/link-guild`.
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { z } from 'zod';
 
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotCrossTenantRequest } from '@/utils/botAuth';
 import { logger } from '@/utils/logger';
 import { buildBotInviteUrl, tenantIdentityFields } from '@/utils/onboard';
 
@@ -59,7 +59,7 @@ const requestOnboardSchema = z.object({
   description: tenantIdentityFields.description,
 });
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotCrossTenantRequest, res: NextApiResponse) {
   // -----------------------------------------------------------------
   // 1) Validate body.
   // -----------------------------------------------------------------

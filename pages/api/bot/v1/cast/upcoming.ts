@@ -20,9 +20,9 @@
 // `tenantId -> guildId` cote tenant_config). Pas de filtre `tenant_id`
 // applique dans le SELECT.
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotCrossTenantRequest } from '@/utils/botAuth';
 import { logger } from '@/utils/logger';
 
 const MIN_WITHIN = 5;
@@ -37,7 +37,7 @@ const EXCLUDED_MATCH_STATUSES = new Set([
   'forfeit',
 ]);
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotCrossTenantRequest, res: NextApiResponse) {
   const rawWithin = Number(req.query.withinMinutes);
   if (
     req.query.withinMinutes !== undefined &&

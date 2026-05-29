@@ -283,7 +283,9 @@ describe('withBotRoute → crossTenant: true', () => {
   const CROSS_OPTS = {
     methods: ['GET'] as const,
     rateLimit: { max: 100, key: 'cross-tenant-test' },
-    crossTenant: true,
+    // `as const` : sans ça TS élargit `true` → `boolean`, qui ne matche aucun
+    // des overloads de withBotRoute ({ crossTenant?: false } | { crossTenant: true }).
+    crossTenant: true as const,
   };
 
   it('200 + botContext non posé quand la clé est valide', async () => {
@@ -291,7 +293,10 @@ describe('withBotRoute → crossTenant: true', () => {
     let seenTenantId: string | undefined;
     const handler = withBotRoute((req, res) => {
       called = true;
-      seenTenantId = req.botContext?.tenantId;
+      // Cast : BotCrossTenantRequest interdit la lecture de tenantId au type
+      // (c'est le but) ; ici on vérifie l'absence au RUNTIME via un cast.
+      seenTenantId = (req as { botContext?: { tenantId?: string } }).botContext
+        ?.tenantId;
       res.status(200).json({ ok: true });
     }, CROSS_OPTS);
 

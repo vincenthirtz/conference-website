@@ -16,9 +16,9 @@
 // Cas non-trouve : 404 avec code `GUILD_NOT_LINKED` (signal au bot qu'il faut
 // declencher le flow `POST /tenants/link-guild`).
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotCrossTenantRequest } from '@/utils/botAuth';
 import { logger } from '@/utils/logger';
 
 // Forme stable de la config Discord renvoyee. Si la row
@@ -52,7 +52,7 @@ function emptyDiscordConfig() {
 // (15-25) comme dans utils/botAuth.ts pour rester coherent.
 const GUILD_ID_RE = /^[0-9]{15,25}$/;
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotCrossTenantRequest, res: NextApiResponse) {
   const raw = req.query.guildId;
   const guildId = Array.isArray(raw) ? raw[0] : raw;
 

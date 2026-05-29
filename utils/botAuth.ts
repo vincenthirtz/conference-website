@@ -221,14 +221,54 @@ export type BotRouteOptions = {
   querySchema?: ZodType;
 };
 
+/**
+ * Requête bot sur une route TENANT-SCOPÉE. `withBotRoute` garantit
+ * `req.botContext.tenantId` (string non-null) avant d'appeler le handler — un
+ * handler peut typer son paramètre `req: BotTenantRequest` pour lire
+ * `req.botContext.tenantId` sans `!`.
+ */
+export type BotTenantRequest = NextApiRequest & {
+  botContext: { tenantId: string };
+};
+
+/**
+ * Requête bot sur une route `crossTenant: true` (global resolver type
+ * /tenants/all-configs, /events/pending). Le middleware NE résout PAS de tenant :
+ * `req.botContext` reste `undefined`. Typer un handler crossTenant
+ * `req: BotCrossTenantRequest` fait échouer à la COMPILATION toute lecture de
+ * `req.botContext.tenantId` — c'est précisément la classe de bug que ce type
+ * prévient (avant : `req.botContext!.tenantId` compilait et renvoyait undefined).
+ */
+export type BotCrossTenantRequest = NextApiRequest & {
+  botContext?: undefined;
+};
+
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 const DISCORD_ID_RE = /^[0-9]{15,25}$/;
 
+// Overloads : le type de `req` passé au handler est narrowé selon `crossTenant`.
+//   - crossTenant absent/false → BotTenantRequest (tenantId garanti)
+//   - crossTenant: true        → BotCrossTenantRequest (lire req.botContext
+//                                 .tenantId devient une erreur de compilation)
 export function withBotRoute(
   handler: (
-    req: NextApiRequest,
+    req: BotTenantRequest,
     res: NextApiResponse
   ) => unknown | Promise<unknown>,
+  options: BotRouteOptions & { crossTenant?: false }
+): NextApiHandler;
+export function withBotRoute(
+  handler: (
+    req: BotCrossTenantRequest,
+    res: NextApiResponse
+  ) => unknown | Promise<unknown>,
+  options: BotRouteOptions & { crossTenant: true }
+): NextApiHandler;
+export function withBotRoute(
+  // Signature d'implémentation : `any` pour rester compatible avec les deux
+  // overloads ci-dessus (le narrowing réel est porté par les signatures
+  // publiques BotTenantRequest / BotCrossTenantRequest).
+  handler: (req: any, res: NextApiResponse) => unknown | Promise<unknown>,
   options: BotRouteOptions
 ): NextApiHandler {
   const allowed = new Set(options.methods.map((m) => m.toUpperCase()));

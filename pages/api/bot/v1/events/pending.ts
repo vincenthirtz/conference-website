@@ -16,15 +16,15 @@
 // Auth : x-api-key (BOT_API_KEY). Pas d'acteur staff — c'est un endpoint
 // de service consomme par le bot lui-meme.
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotCrossTenantRequest } from '@/utils/botAuth';
 import { logger } from '@/utils/logger';
 
 const MAX_LIMIT = 200;
 const DEFAULT_LIMIT = 50;
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotCrossTenantRequest, res: NextApiResponse) {
   const rawLimit = Number(req.query.limit);
   const limit =
     Number.isInteger(rawLimit) && rawLimit > 0

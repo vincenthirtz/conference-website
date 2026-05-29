@@ -18,9 +18,9 @@
 // UUID, qui est la cle externe).
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotCrossTenantRequest } from '@/utils/botAuth';
 import { logger } from '@/utils/logger';
 
 // L'`id` dans l'URL est l'integer PK de bot_event_outbox (pas l'event_id UUID).
@@ -32,7 +32,7 @@ const ackQuerySchema = z.object({
   id: z.coerce.number().int().positive(),
 });
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotCrossTenantRequest, res: NextApiResponse) {
   const { id } = req.botQuery as z.infer<typeof ackQuerySchema>;
 
   const { data: row, error: fetchErr } = await supabaseAdmin

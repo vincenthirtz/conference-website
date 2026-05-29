@@ -10,9 +10,9 @@
 // Auth: x-api-key. Pas de pagination V1 (peu de guilds attendus, < 100). Si
 // le volume monte, ajouter `?limit=&offset=` ici.
 
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotCrossTenantRequest } from '@/utils/botAuth';
 import { logger } from '@/utils/logger';
 
 function emptyDiscordConfig() {
@@ -42,7 +42,7 @@ type DiscordConfigRow = ReturnType<typeof emptyDiscordConfig> & {
   guild_id: string;
 };
 
-async function handler(_req: NextApiRequest, res: NextApiResponse) {
+async function handler(_req: BotCrossTenantRequest, res: NextApiResponse) {
   // 1) Tous les guilds avec leur tenant.
   const { data: guildRows, error: guildErr } = await supabaseAdmin!
     .from('discord_guilds')

@@ -22,9 +22,9 @@
 // user_discord_links.
 
 import { z } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { discordIdSchema, scoreSchema, uuidSchema } from '@/utils/botValidation';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import { notifyScoreReportDispute } from '@/utils/discord';
@@ -55,7 +55,7 @@ function reportsAgree(
   return a.team1_score === b.team1_score && a.team2_score === b.team2_score;
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotTenantRequest, res: NextApiResponse) {
   // matchId (path) et body validés par withBotRoute (query/bodySchema).
   const { matchId } = req.botQuery as z.infer<typeof reportQuerySchema>;
   const { discordUserId, team1Score, team2Score } = req.botInput as z.infer<
@@ -75,7 +75,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
        team2:team2_id (id, name, captain_id),
        tournament:tournament_id (id, name)`
     )
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('id', matchId)
     .maybeSingle();
 
@@ -148,7 +148,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     .from('match_score_reports')
     .upsert(
       {
-        tenant_id: req.botContext!.tenantId,
+        tenant_id: req.botContext.tenantId,
         match_id: matchId,
         team_side: mySide,
         reported_by_auth_user_id: reportingAuthId,
@@ -193,7 +193,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: bothReports, error: reportsErr } = await supabaseAdmin
     .from('match_score_reports')
     .select('team_side, team1_score, team2_score, reported_at, updated_at')
-    .eq('tenant_id', req.botContext!.tenantId)
+    .eq('tenant_id', req.botContext.tenantId)
     .eq('match_id', matchId);
 
   if (reportsErr) {
@@ -231,7 +231,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           dispute_resolved_at: nowIso,
           updated_at: nowIso,
         })
-        .eq('tenant_id', req.botContext!.tenantId)
+        .eq('tenant_id', req.botContext.tenantId)
         .eq('id', matchId);
       if (clearErr) {
         logger.error('[bot/matches/report] clear dispute error', clearErr);
@@ -249,7 +249,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       // sendMatchResultDiscord ne fait rien si tournament_id manque).
       const isScrim = !!match.scrim_id;
       const result = await applyMatchScore({
-        tenantId: req.botContext!.tenantId,
+        tenantId: req.botContext.tenantId,
         matchId,
         team1Score: mine.team1_score,
         team2Score: mine.team2_score,
@@ -301,7 +301,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         dispute_resolved_at: null,
         updated_at: nowIso,
       })
-      .eq('tenant_id', req.botContext!.tenantId)
+      .eq('tenant_id', req.botContext.tenantId)
       .eq('id', matchId);
 
     if (disputeErr) {
@@ -325,7 +325,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           openedByStaffId: null,
           enriched,
         },
-        req.botContext!.tenantId
+        req.botContext.tenantId
       );
     })().catch((e) =>
       logger.error('[botEvents] match.disputed emit error', e)

@@ -22,10 +22,10 @@
 // Auth: x-api-key. `actorDiscordUserId` is not required.
 
 import crypto from 'crypto';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 
 import { supabaseAdmin } from '@/utils/supabase';
-import { withBotRoute } from '@/utils/botAuth';
+import { withBotRoute, type BotCrossTenantRequest } from '@/utils/botAuth';
 import { logger } from '@/utils/logger';
 import { sendOnboardSuccessEmail } from '@/utils/emailOnboard';
 import { getSiteUrl } from '@/utils/onboard';
@@ -47,7 +47,7 @@ type TenantRequestRow = {
   requested_name: string;
 };
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: BotCrossTenantRequest, res: NextApiResponse) {
   const body = (req.body ?? {}) as Record<string, unknown>;
 
   const guildId = typeof body.guild_id === 'string' ? body.guild_id.trim() : '';
