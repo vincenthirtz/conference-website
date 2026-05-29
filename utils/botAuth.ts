@@ -15,10 +15,12 @@
 
 import crypto from 'crypto';
 import type { NextApiHandler, NextApiRequest, NextApiResponse } from 'next';
+import type { ZodType } from 'zod';
 import { applyActorRateLimit, applyRateLimit } from './rateLimit';
 import { supabaseAdmin } from './supabase';
 import { isBotMaintenanceMode } from './maintenance';
 import { logger } from './logger';
+import { formatZodError } from './validation';
 import { DEFAULT_TENANT_ID } from './tenant';
 
 const UUID_RE =
@@ -222,6 +224,22 @@ export type BotRouteOptions = {
    *     docs/BOT_API_CONTRACT.md liste les 5 routes flaggees.
    */
   crossTenant?: boolean;
+  /**
+   * Schéma zod validant le body sur les méthodes non-safe (POST/PATCH/DELETE).
+   * En cas d'échec → 400 { error, code:'INVALID_BODY', fields }. Le résultat
+   * parsé/typé est injecté dans `req.botInput` (le handler le lit via
+   * `req.botInput as z.infer<typeof schema>`). `req.body` brut n'est PAS muté
+   * (l'idempotency le hash et le per-actor le lit). Pour une route multi-méthode
+   * dont les bodies diffèrent (POST vs DELETE), utiliser un `z.union`/discriminé.
+   */
+  bodySchema?: ZodType;
+  /**
+   * Schéma zod validant la query string (req.query). S'applique à toutes les
+   * méthodes. Échec → 400 { error, code:'INVALID_QUERY', fields }. Résultat
+   * dans `req.botQuery`. Note : req.query est toujours string|string[], donc le
+   * schéma doit coercer (z.coerce.number(), etc.) si besoin de types non-string.
+   */
+  querySchema?: ZodType;
 };
 
 /* ---------------------------------------------------------------------------
@@ -453,6 +471,34 @@ export function withBotRoute(
           return;
         }
       }
+    }
+
+    // Validation zod du body (méthodes non-safe) et de la query. Faite après
+    // l'auth + la résolution tenant + le per-actor (qui lisent le body brut),
+    // et avant l'idempotency (on ne cache pas un 400 de toute façon, et le
+    // body invalide ne doit pas être traité). On NE mute pas req.body : le
+    // résultat parsé va dans req.botInput / req.botQuery.
+    if (options.bodySchema && !SAFE_METHODS.has(method)) {
+      const parsed = options.bodySchema.safeParse(req.body ?? {});
+      if (!parsed.success) {
+        return res.status(400).json({
+          error: formatZodError(parsed.error),
+          code: 'INVALID_BODY',
+          fields: parsed.error.flatten().fieldErrors,
+        });
+      }
+      req.botInput = parsed.data;
+    }
+    if (options.querySchema) {
+      const parsed = options.querySchema.safeParse(req.query ?? {});
+      if (!parsed.success) {
+        return res.status(400).json({
+          error: formatZodError(parsed.error),
+          code: 'INVALID_QUERY',
+          fields: parsed.error.flatten().fieldErrors,
+        });
+      }
+      req.botQuery = parsed.data;
     }
 
     // Idempotency: only honored for unsafe methods.

@@ -10,34 +10,32 @@
 //
 // Auth : x-api-key + actorDiscordUserId staff admin/owner.
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import { isValidUUID } from '@/utils/apiHelpers';
+import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
 
-const ALLOWED_STATUSES = new Set(['draft', 'published']);
+// status est trimmé + minusculisé avant la vérification d'appartenance, comme
+// le faisait le handler historique.
+const statusBodySchema = z.object({
+  actorDiscordUserId: discordIdSchema,
+  status: z
+    .string()
+    .transform((s) => s.trim().toLowerCase())
+    .pipe(z.enum(['draft', 'published'])),
+});
+const statusQuerySchema = z.object({ tournamentId: uuidSchema });
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const raw = req.query.tournamentId;
-  const tournamentId = Array.isArray(raw) ? raw[0] : raw;
-  if (!tournamentId || !isValidUUID(tournamentId)) {
-    return res.status(400).json({ error: 'tournamentId invalide' });
-  }
+  const { tournamentId } = req.botQuery as z.infer<typeof statusQuerySchema>;
 
-  const body = (req.body ?? {}) as Record<string, unknown>;
-
-  const actor = await requireBotStaff(req, res, body);
+  const actor = await requireBotStaff(req, res, req.body ?? {});
   if (!actor) return;
 
-  const status =
-    typeof body.status === 'string' ? body.status.trim().toLowerCase() : '';
-  if (!ALLOWED_STATUSES.has(status)) {
-    return res.status(400).json({
-      error: `status requis ('draft' ou 'published').`,
-    });
-  }
+  const { status } = req.botInput as z.infer<typeof statusBodySchema>;
 
   const { data: tournament, error: tErr } = await supabaseAdmin
     .from('tournaments')
@@ -132,4 +130,6 @@ export default withBotRoute(handler, {
     perActor: { max: 5, windowMs: 60_000 },
   },
   idempotent: true,
+  bodySchema: statusBodySchema,
+  querySchema: statusQuerySchema,
 });

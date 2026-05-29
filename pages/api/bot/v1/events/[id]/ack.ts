@@ -17,18 +17,23 @@
 // L'id dans l'URL est l'integer `id` de bot_event_outbox (pas l'event_id
 // UUID, qui est la cle externe).
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
 import { logger } from '@/utils/logger';
 
+// L'`id` dans l'URL est l'integer PK de bot_event_outbox (pas l'event_id UUID).
+// req.query.id est une string → z.coerce.number().int().positive() reproduit
+// exactement le check historique `Number.isInteger(id) && id > 0`.
+// Pas de bodySchema : le body est vide pour cette route (on n'en rejette pas
+// l'absence).
+const ackQuerySchema = z.object({
+  id: z.coerce.number().int().positive(),
+});
+
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const raw = req.query.id;
-  const idStr = Array.isArray(raw) ? raw[0] : raw;
-  const id = Number(idStr);
-  if (!Number.isInteger(id) || id <= 0) {
-    return res.status(400).json({ error: 'id invalide (integer attendu)' });
-  }
+  const { id } = req.botQuery as z.infer<typeof ackQuerySchema>;
 
   const { data: row, error: fetchErr } = await supabaseAdmin
     .from('bot_event_outbox')
@@ -70,4 +75,5 @@ export default withBotRoute(handler, {
   rateLimit: { max: 120, key: 'bot-events-ack' },
   idempotent: true,
   crossTenant: true,
+  querySchema: ackQuerySchema,
 });

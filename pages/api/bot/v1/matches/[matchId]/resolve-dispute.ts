@@ -16,23 +16,30 @@
 // Effets : update status, dispute_resolution/by/at, applique le score via
 // applyMatchScore (propage le bracket), log staff_logs.
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import { isValidUUID } from '@/utils/apiHelpers';
+import { uuidSchema } from '@/utils/botValidation';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import { emitBotEvent } from '@/utils/botEvents';
 import { logger } from '@/utils/logger';
 
 const VALID_RESUME = new Set(['pending', 'ongoing', 'finished', 'walkover']);
 
+// Body conservé inline : la validation est fortement cross-champs et non
+// modélisable proprement en un seul schéma sans changer le comportement —
+// `hasScoreOverride` exige team1Score ET team2Score entiers >=0, `forfeitTeamId`
+// non-UUID est silencieusement ignoré (jamais 400), `winnerTeamId` "" = absent
+// mais non-vide non-UUID = 400, et l'obligation score|forfeit dépend de
+// resumeStatus. On valide donc seulement la query ici. actorDiscordUserId reste
+// validé par requireBotStaff.
+const resolveDisputeQuerySchema = z.object({ matchId: uuidSchema });
+
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const raw = req.query.matchId;
-  const matchId = Array.isArray(raw) ? raw[0] : raw;
-  if (!matchId || !isValidUUID(matchId)) {
-    return res.status(400).json({ error: 'matchId invalide' });
-  }
+  const { matchId } = req.botQuery as z.infer<typeof resolveDisputeQuerySchema>;
 
   const body = (req.body ?? {}) as Record<string, unknown>;
 
@@ -51,7 +58,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   const resumeStatusRaw =
-    typeof body.resumeStatus === 'string' ? body.resumeStatus.trim() : 'finished';
+    typeof body.resumeStatus === 'string'
+      ? body.resumeStatus.trim()
+      : 'finished';
   if (!VALID_RESUME.has(resumeStatusRaw)) {
     return res.status(400).json({
       error: `resumeStatus invalide. Valeurs : ${[...VALID_RESUME].join(', ')}.`,
@@ -110,10 +119,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .status(409)
       .json({ error: "Ce match n'est pas en dispute.", code: 'NOT_DISPUTED' });
   }
-  if (hasForfeit && forfeitTeamId !== match.team1_id && forfeitTeamId !== match.team2_id) {
+  if (
+    hasForfeit &&
+    forfeitTeamId !== match.team1_id &&
+    forfeitTeamId !== match.team2_id
+  ) {
     return res
       .status(400)
-      .json({ error: "forfeitTeamId ne correspond pas a une equipe du match." });
+      .json({
+        error: 'forfeitTeamId ne correspond pas a une equipe du match.',
+      });
   }
 
   const nowIso = new Date().toISOString();
@@ -290,4 +305,5 @@ export default withBotRoute(handler, {
     perActor: { max: 5, windowMs: 60_000 },
   },
   idempotent: true,
+  querySchema: resolveDisputeQuerySchema,
 });

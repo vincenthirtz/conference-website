@@ -7,10 +7,11 @@
 //
 // Auth : x-api-key + actorDiscordUserId (lie au site).
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { withBotRoute } from '@/utils/botAuth';
 import { requireBotPlayer } from '@/utils/botActor';
-import { isValidUUID } from '@/utils/apiHelpers';
+import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
 import {
   acceptInvitation,
   cancelInvitation,
@@ -18,27 +19,27 @@ import {
 } from '@/utils/teams/invitations';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 
-const ACTIONS = new Set(['accept', 'reject', 'cancel']);
+// action : trim + lowercase historique, puis enum strict. actorDiscordUserId
+// est lu par requireBotPlayer sur le body brut ; on le valide aussi ici.
+const invitationBodySchema = z.object({
+  actorDiscordUserId: discordIdSchema,
+  action: z
+    .string()
+    .transform((s) => s.trim().toLowerCase())
+    .pipe(z.enum(['accept', 'reject', 'cancel'])),
+});
+const invitationQuerySchema = z.object({ demandeId: uuidSchema });
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const raw = req.query.demandeId;
-  const demandeId = Array.isArray(raw) ? raw[0] : raw;
-  if (!demandeId || !isValidUUID(demandeId)) {
-    return res.status(400).json({ error: 'demandeId invalide' });
-  }
+  const { demandeId } = req.botQuery as z.infer<typeof invitationQuerySchema>;
+  const { action } = req.botInput as z.infer<typeof invitationBodySchema>;
 
-  const body = (req.body ?? {}) as Record<string, unknown>;
-
-  const actor = await requireBotPlayer(req, res, body);
+  const actor = await requireBotPlayer(
+    req,
+    res,
+    (req.body ?? {}) as Record<string, unknown>
+  );
   if (!actor) return;
-
-  const action =
-    typeof body.action === 'string' ? body.action.trim().toLowerCase() : '';
-  if (!ACTIONS.has(action)) {
-    return res
-      .status(400)
-      .json({ error: "action requise : 'accept', 'reject' ou 'cancel'." });
-  }
 
   if (action === 'accept') {
     const result = await acceptInvitation(
@@ -107,4 +108,6 @@ export default withBotRoute(handler, {
   methods: ['POST'],
   rateLimit: { max: 30, key: 'bot-invitations-action' },
   idempotent: true,
+  bodySchema: invitationBodySchema,
+  querySchema: invitationQuerySchema,
 });

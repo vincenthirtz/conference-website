@@ -8,10 +8,12 @@
 // /transferer-capitaine. Refus aussi si le roster est verrouille par un
 // tournoi en cours.
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
 import { requireBotPlayer } from '@/utils/botActor';
+import { discordIdSchema } from '@/utils/botValidation';
 import {
   isTeamRosterLocked,
   rosterLockErrorMessage,
@@ -19,6 +21,9 @@ import {
 import { emitRoleSyncEvent } from '@/utils/botRoleSync';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
+
+// requireBotPlayer lit actorDiscordUserId dans le body brut (non muté).
+const leaveBodySchema = z.object({ actorDiscordUserId: discordIdSchema });
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const body = (req.body ?? {}) as Record<string, unknown>;
@@ -34,7 +39,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     .maybeSingle();
   if (memberErr) {
     logger.error('[bot/teams/leave] membership lookup error', memberErr);
-    return res.status(500).json({ error: 'Erreur de chargement du membership' });
+    return res
+      .status(500)
+      .json({ error: 'Erreur de chargement du membership' });
   }
   if (!membership) {
     return res.status(400).json({ error: "Tu n'es membre d'aucune équipe." });
@@ -105,4 +112,5 @@ export default withBotRoute(handler, {
   methods: ['POST'],
   rateLimit: { max: 10, key: 'bot-team-leave' },
   idempotent: true,
+  bodySchema: leaveBodySchema,
 });

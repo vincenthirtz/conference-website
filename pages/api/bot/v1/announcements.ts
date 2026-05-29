@@ -12,16 +12,57 @@
 //   isActive?                   (defaut true)
 //   priority?                   (defaut 0)
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
+import { discordIdSchema } from '@/utils/botValidation';
 import { sanitizeUrl } from '@/utils/apiHelpers';
 import { notifyAnnouncement } from '@/utils/discord';
 import { logger } from '@/utils/logger';
 
 const TITLE_MAX = 200;
 const MESSAGE_MAX = 5000;
+
+// Sémantique historique préservée :
+//   - title/message : trim, non vide, bornes 200 / 5000.
+//   - ctaLabel : trim → null si vide.
+//   - ctaUrl : si fourni, doit passer sanitizeUrl (http/https) sinon REJET ;
+//     normalisé en null s'il est absent/vide.
+//   - startsAt/endsAt : si fournis (non vides), doivent être des dates
+//     parseables (→ ISO) sinon REJET ; absents → null.
+//   - isActive : défaut true (seul `false` désactive).
+//   - priority : nombre fini tronqué, défaut 0.
+//   - actorDiscordUserId : lu par requireBotStaff sur le body brut (non muté) ;
+//     validé ici aussi pour la cohérence du contrat.
+const announcementsBodySchema = z.object({
+  actorDiscordUserId: discordIdSchema,
+  title: z
+    .string()
+    .transform((s) => s.trim())
+    .pipe(z.string().min(1).max(TITLE_MAX)),
+  message: z
+    .string()
+    .transform((s) => s.trim())
+    .pipe(z.string().min(1).max(MESSAGE_MAX)),
+  ctaLabel: z
+    .unknown()
+    .transform((v) => (typeof v === 'string' ? v.trim() || null : null)),
+  // ctaUrl / startsAt / endsAt : rejet CONDITIONNEL (fourni-mais-invalide →
+  // 400 avec message dédié, absent → null). La sémantique historique ne se
+  // mappe pas sur un simple schéma (pas de rejet si absent), donc ces champs
+  // restent validés inline dans le handler à partir du body brut.
+  ctaUrl: z.string().optional(),
+  startsAt: z.string().optional(),
+  endsAt: z.string().optional(),
+  // isActive / priority : sémantique historique tolérante (n'importe quel type
+  // accepté ; seul `isActive === false` désactive, priority n'est utilisé que
+  // si c'est un number fini, sinon 0). On garde `z.unknown()` pour ne PAS
+  // rejeter un type inattendu que l'ancien code ignorait silencieusement.
+  isActive: z.unknown().optional(),
+  priority: z.unknown().optional(),
+});
 
 function toISO(value: unknown): string | null {
   if (typeof value !== 'string' || !value.trim()) return null;
@@ -30,47 +71,40 @@ function toISO(value: unknown): string | null {
 }
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const body = (req.body ?? {}) as Record<string, unknown>;
+  const input = req.botInput as z.infer<typeof announcementsBodySchema>;
 
-  const actor = await requireBotStaff(req, res, body);
+  // requireBotStaff lit actorDiscordUserId sur req.body brut (non muté).
+  const actor = await requireBotStaff(
+    req,
+    res,
+    (req.body ?? {}) as Record<string, unknown>
+  );
   if (!actor) return;
 
-  const title = typeof body.title === 'string' ? body.title.trim() : '';
-  if (!title) return res.status(400).json({ error: 'title requis' });
-  if (title.length > TITLE_MAX) {
-    return res.status(400).json({ error: `title trop long (max ${TITLE_MAX})` });
-  }
+  const title = input.title;
+  const message = input.message;
+  const ctaLabel = input.ctaLabel ?? null;
 
-  const message = typeof body.message === 'string' ? body.message.trim() : '';
-  if (!message) return res.status(400).json({ error: 'message requis' });
-  if (message.length > MESSAGE_MAX) {
-    return res
-      .status(400)
-      .json({ error: `message trop long (max ${MESSAGE_MAX})` });
-  }
-
-  const ctaLabel =
-    typeof body.ctaLabel === 'string' ? body.ctaLabel.trim() || null : null;
   const ctaUrl =
-    typeof body.ctaUrl === 'string' ? sanitizeUrl(body.ctaUrl) : null;
-  if (body.ctaUrl && !ctaUrl) {
+    typeof input.ctaUrl === 'string' ? sanitizeUrl(input.ctaUrl) : null;
+  if (input.ctaUrl && !ctaUrl) {
     return res
       .status(400)
       .json({ error: 'ctaUrl invalide (http/https attendu)' });
   }
 
-  const isActive = body.isActive !== false; // defaut true
+  const isActive = input.isActive !== false; // defaut true
   const priority =
-    typeof body.priority === 'number' && Number.isFinite(body.priority)
-      ? Math.trunc(body.priority)
+    typeof input.priority === 'number' && Number.isFinite(input.priority)
+      ? Math.trunc(input.priority)
       : 0;
 
-  const startsAt = toISO(body.startsAt);
-  const endsAt = toISO(body.endsAt);
-  if (body.startsAt && !startsAt) {
+  const startsAt = toISO(input.startsAt);
+  const endsAt = toISO(input.endsAt);
+  if (input.startsAt && !startsAt) {
     return res.status(400).json({ error: 'startsAt invalide (ISO 8601)' });
   }
-  if (body.endsAt && !endsAt) {
+  if (input.endsAt && !endsAt) {
     return res.status(400).json({ error: 'endsAt invalide (ISO 8601)' });
   }
 
@@ -101,7 +135,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       message,
       ctaLabel,
       ctaUrl,
-    }).catch((e) => logger.error('[bot/announcements] discord notify error', e));
+    }).catch((e) =>
+      logger.error('[bot/announcements] discord notify error', e)
+    );
   }
 
   await logBotStaffAction({
@@ -128,4 +164,5 @@ export default withBotRoute(handler, {
     perActor: { max: 3, windowMs: 60_000 },
   },
   idempotent: true,
+  bodySchema: announcementsBodySchema,
 });

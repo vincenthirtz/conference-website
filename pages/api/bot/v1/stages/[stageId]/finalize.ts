@@ -18,27 +18,31 @@
 //   actorDiscordUserId (staff admin/owner)
 //   force?             (defaut false) — bypass le garde matchs actifs
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import { isValidUUID } from '@/utils/apiHelpers';
+import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
 
 const ACTIVE_STATUSES = new Set(['pending', 'ongoing', 'disputed']);
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const raw = req.query.stageId;
-  const stageId = Array.isArray(raw) ? raw[0] : raw;
-  if (!stageId || !isValidUUID(stageId)) {
-    return res.status(400).json({ error: 'stageId invalide' });
-  }
+// force : seul `true` explicite bypasse le garde matchs-actifs (défaut false).
+const finalizeBodySchema = z.object({
+  actorDiscordUserId: discordIdSchema,
+  force: z.boolean().optional(),
+});
+const finalizeQuerySchema = z.object({ stageId: uuidSchema });
 
-  const body = (req.body ?? {}) as Record<string, unknown>;
-  const actor = await requireBotStaff(req, res, body);
+async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const { stageId } = req.botQuery as z.infer<typeof finalizeQuerySchema>;
+
+  const actor = await requireBotStaff(req, res, req.body ?? {});
   if (!actor) return;
 
-  const force = body.force === true;
+  const input = req.botInput as z.infer<typeof finalizeBodySchema>;
+  const force = input.force === true;
 
   const { data: stage, error: stErr } = await supabaseAdmin
     .from('tournament_stages')
@@ -131,4 +135,6 @@ export default withBotRoute(handler, {
     perActor: { max: 5, windowMs: 60_000 },
   },
   idempotent: true,
+  bodySchema: finalizeBodySchema,
+  querySchema: finalizeQuerySchema,
 });

@@ -10,31 +10,30 @@
 //
 // Auth : x-api-key + actorDiscordUserId staff admin/owner.
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
 import { requireBotStaff } from '@/utils/botActor';
-import { isValidUUID } from '@/utils/apiHelpers';
+import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import { logger } from '@/utils/logger';
 
+const forfeitBodySchema = z.object({
+  actorDiscordUserId: discordIdSchema,
+  forfeitTeamId: uuidSchema,
+});
+const forfeitQuerySchema = z.object({ matchId: uuidSchema });
+
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const raw = req.query.matchId;
-  const matchId = Array.isArray(raw) ? raw[0] : raw;
-  if (!matchId || !isValidUUID(matchId)) {
-    return res.status(400).json({ error: 'matchId invalide' });
-  }
+  const { matchId } = req.botQuery as z.infer<typeof forfeitQuerySchema>;
 
   const body = (req.body ?? {}) as Record<string, unknown>;
 
   const actor = await requireBotStaff(req, res, body);
   if (!actor) return;
 
-  const forfeitTeamId =
-    typeof body.forfeitTeamId === 'string' ? body.forfeitTeamId.trim() : '';
-  if (!isValidUUID(forfeitTeamId)) {
-    return res.status(400).json({ error: 'forfeitTeamId invalide' });
-  }
+  const { forfeitTeamId } = req.botInput as z.infer<typeof forfeitBodySchema>;
 
   // Lecture rapide pour donner un message d'erreur metier propre avant
   // applyMatchScore — sinon le helper renvoie un message generique.
@@ -52,7 +51,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(404).json({ error: 'Match introuvable' });
   }
   if (match.is_bye) {
-    return res.status(400).json({ error: 'Un match bye ne peut pas être marqué forfait.' });
+    return res
+      .status(400)
+      .json({ error: 'Un match bye ne peut pas être marqué forfait.' });
   }
   if (forfeitTeamId !== match.team1_id && forfeitTeamId !== match.team2_id) {
     return res
@@ -97,4 +98,6 @@ export default withBotRoute(handler, {
     perActor: { max: 5, windowMs: 60_000 },
   },
   idempotent: true,
+  bodySchema: forfeitBodySchema,
+  querySchema: forfeitQuerySchema,
 });

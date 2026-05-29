@@ -10,37 +10,38 @@
 //   - scoreForBye? (defaut 1)
 //   - propagate? (defaut true)
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import { isValidUUID } from '@/utils/apiHelpers';
+import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
 import {
   resetPropagationForMatch,
   propagateBracketForMatch,
 } from '@/utils/bracket/propagate';
 import { logger } from '@/utils/logger';
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const raw = req.query.stageId;
-  const stageId = Array.isArray(raw) ? raw[0] : raw;
-  if (!stageId || !isValidUUID(stageId)) {
-    return res.status(400).json({ error: 'stageId invalide' });
-  }
+// scoreForBye historique : nombre >= 0 (non forcément entier), défaut 1.
+// propagate : seul `false` explicite le désactive (défaut true).
+const autoByesBodySchema = z.object({
+  actorDiscordUserId: discordIdSchema,
+  roundNumber: z.number().int().optional(),
+  scoreForBye: z.number().min(0).optional(),
+  propagate: z.boolean().optional(),
+});
+const autoByesQuerySchema = z.object({ stageId: uuidSchema });
 
-  const body = (req.body ?? {}) as Record<string, unknown>;
-  const actor = await requireBotStaff(req, res, body);
+async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const { stageId } = req.botQuery as z.infer<typeof autoByesQuerySchema>;
+
+  const actor = await requireBotStaff(req, res, req.body ?? {});
   if (!actor) return;
 
-  const roundNumber =
-    typeof body.roundNumber === 'number' && Number.isInteger(body.roundNumber)
-      ? body.roundNumber
-      : undefined;
-  const scoreForBye =
-    typeof body.scoreForBye === 'number' && body.scoreForBye >= 0
-      ? body.scoreForBye
-      : 1;
-  const propagate = body.propagate !== false;
+  const input = req.botInput as z.infer<typeof autoByesBodySchema>;
+  const roundNumber = input.roundNumber;
+  const scoreForBye = input.scoreForBye ?? 1;
+  const propagate = input.propagate !== false;
 
   const { data: stage, error: stErr } = await supabaseAdmin
     .from('tournament_stages')
@@ -59,9 +60,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   let q = supabaseAdmin
     .from('matches')
-    .select(
-      `id, status, is_bye, round_number, team1_id, team2_id`
-    )
+    .select(`id, status, is_bye, round_number, team1_id, team2_id`)
     .eq('tenant_id', req.botContext!.tenantId)
     .eq('stage_id', stageId)
     .neq('status', 'cancelled');
@@ -74,7 +73,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   const candidates = (matches ?? []).filter((m) => {
-    const r = m as { is_bye: boolean | null; team1_id: string | null; team2_id: string | null };
+    const r = m as {
+      is_bye: boolean | null;
+      team1_id: string | null;
+      team2_id: string | null;
+    };
     if (r.is_bye) return false;
     const hasT1 = !!r.team1_id;
     const hasT2 = !!r.team2_id;
@@ -158,4 +161,6 @@ export default withBotRoute(handler, {
   methods: ['POST'],
   rateLimit: { max: 10, key: 'bot-stage-auto-byes' },
   idempotent: true,
+  bodySchema: autoByesBodySchema,
+  querySchema: autoByesQuerySchema,
 });

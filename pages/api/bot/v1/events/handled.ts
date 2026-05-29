@@ -14,29 +14,29 @@
 // Idempotent : même eventId peut être POST plusieurs fois sans erreur.
 // Auth : x-api-key (BOT_API_KEY).
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
-import { isValidUUID } from '@/utils/apiHelpers';
+import { uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
 
-type Body = {
-  eventId?: unknown;
-  source?: unknown;
-};
+// eventId : UUID requis (uuidSchema = ancien isValidUUID + trim).
+// source : optionnel. Sémantique historique = string acceptée seulement si
+// length <= 32, sinon traitée comme `null` (PAS de rejet). On reproduit ça
+// avec un transform qui nullifie les valeurs hors borne plutôt que de 400.
+const handledBodySchema = z.object({
+  eventId: uuidSchema,
+  source: z
+    .unknown()
+    .transform((v) => (typeof v === 'string' && v.length <= 32 ? v : null))
+    .optional(),
+});
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const body = (req.body ?? {}) as Body;
-  const eventId =
-    typeof body.eventId === 'string' ? body.eventId.trim() : null;
-  if (!eventId || !isValidUUID(eventId)) {
-    return res.status(400).json({ error: 'eventId UUID requis' });
-  }
-
-  const source =
-    typeof body.source === 'string' && body.source.length <= 32
-      ? body.source
-      : null;
+  const input = req.botInput as z.infer<typeof handledBodySchema>;
+  const eventId = input.eventId;
+  const source = input.source ?? null;
 
   // 1) Check d'abord pour distinguer wasNew vs existing. INSERT ON CONFLICT
   //    DO NOTHING ne dit pas directement si une row a été créée sans un
@@ -94,4 +94,5 @@ export default withBotRoute(handler, {
   methods: ['POST'],
   rateLimit: { max: 240, key: 'bot-events-handled' },
   idempotent: false, // l'endpoint est lui-même idempotent (INSERT ON CONFLICT)
+  bodySchema: handledBodySchema,
 });

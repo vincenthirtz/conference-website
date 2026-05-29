@@ -13,13 +13,20 @@
 // Passer null pour vider un champ (utile quand le thread/event Discord a ete
 // supprime manuellement et qu'on veut autoriser le bot a en recreer un).
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
-import { isValidUUID } from '@/utils/apiHelpers';
+import { uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
 
 const DISCORD_SNOWFLAKE_RE = /^[0-9]{15,25}$/;
+
+// matchId (path) seulement. Le body PATCH garde sa validation inline : la
+// distinction « clé absente » (champ non touché) vs « clé = null » (efface la
+// colonne) repose sur `key in body` via readSnowflake(), non modélisable
+// proprement en zod avec .optional().nullable().
+const discordQuerySchema = z.object({ matchId: uuidSchema });
 
 function readSnowflake(
   body: Record<string, unknown>,
@@ -39,11 +46,7 @@ function readSnowflake(
 }
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const raw = req.query.matchId;
-  const matchId = Array.isArray(raw) ? raw[0] : raw;
-  if (!matchId || !isValidUUID(matchId)) {
-    return res.status(400).json({ error: 'matchId invalide' });
-  }
+  const { matchId } = req.botQuery as z.infer<typeof discordQuerySchema>;
 
   const body = (req.body ?? {}) as Record<string, unknown>;
 
@@ -102,4 +105,5 @@ export default withBotRoute(handler, {
   methods: ['PATCH'],
   rateLimit: { max: 60, key: 'bot-match-discord' },
   idempotent: true,
+  querySchema: discordQuerySchema,
 });

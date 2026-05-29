@@ -8,11 +8,19 @@
 // Auth: x-api-key validated against BOT_API_KEY.
 
 import slugify from 'slugify';
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import { getGame, isGameSlug, GAME_SLUGS } from '@/config/games';
+import {
+  discordIdSchema,
+  slugSchema,
+  isoDateSchema,
+  boundedString,
+  gameSlugSchema,
+} from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
 
 const VALID_STATUSES = [
@@ -24,6 +32,18 @@ const VALID_STATUSES = [
   'cancelled',
 ] as const;
 type Status = (typeof VALID_STATUSES)[number];
+
+// POST body. GET (list) has no body so bodySchema only gates POST.
+const createBodySchema = z.object({
+  actorDiscordUserId: discordIdSchema,
+  name: boundedString(1, 255),
+  slug: slugSchema.optional(),
+  start_date: isoDateSchema.optional(),
+  end_date: isoDateSchema.optional(),
+  status: z.enum(VALID_STATUSES).optional(),
+  max_teams: z.number().int().min(1).optional(),
+  game: gameSlugSchema.optional(),
+});
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') return handleList(req, res);
@@ -67,19 +87,17 @@ async function handleList(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function handleCreate(req: NextApiRequest, res: NextApiResponse) {
-  const body = (req.body ?? {}) as Record<string, unknown>;
-
-  const actor = await requireBotStaff(req, res, body);
+  const actor = await requireBotStaff(req, res, req.body ?? {});
   if (!actor) return;
 
-  const name = typeof body.name === 'string' ? body.name.trim() : '';
-  if (!name) {
-    return res.status(400).json({ error: "Field 'name' is required" });
-  }
+  // Body validé par withBotRoute (bodySchema, non-safe methods only).
+  const input = req.botInput as z.infer<typeof createBodySchema>;
+
+  const name = input.name;
 
   const slug =
-    typeof body.slug === 'string' && body.slug.trim().length > 0
-      ? body.slug.trim()
+    input.slug && input.slug.length > 0
+      ? input.slug
       : slugify(name, { lower: true, strict: true });
 
   // Slug uniqueness check (mirrors the admin endpoint behaviour).
@@ -95,51 +113,28 @@ async function handleCreate(req: NextApiRequest, res: NextApiResponse) {
     });
   }
 
-  const startDate =
-    typeof body.start_date === 'string' ? body.start_date : null;
-  const endDate = typeof body.end_date === 'string' ? body.end_date : null;
-  if (startDate && Number.isNaN(Date.parse(startDate))) {
-    return res.status(400).json({ error: 'start_date is not a valid date' });
-  }
-  if (endDate && Number.isNaN(Date.parse(endDate))) {
-    return res.status(400).json({ error: 'end_date is not a valid date' });
-  }
+  const startDate = input.start_date ?? null;
+  const endDate = input.end_date ?? null;
   if (startDate && endDate && new Date(startDate) >= new Date(endDate)) {
     return res
       .status(400)
       .json({ error: 'start_date must be before end_date' });
   }
 
-  const rawStatus =
-    typeof body.status === 'string' && body.status ? body.status : 'draft';
-  if (!(VALID_STATUSES as readonly string[]).includes(rawStatus)) {
-    return res.status(400).json({
-      error: `Statut invalide. Valeurs : ${VALID_STATUSES.join(', ')}.`,
-    });
-  }
+  const rawStatus: Status = input.status ?? 'draft';
+  const maxTeams: number | null = input.max_teams ?? null;
 
-  let maxTeams: number | null = null;
-  if (body.max_teams !== undefined && body.max_teams !== null) {
-    if (
-      typeof body.max_teams !== 'number' ||
-      !Number.isInteger(body.max_teams) ||
-      body.max_teams < 1
-    ) {
-      return res
-        .status(400)
-        .json({ error: 'max_teams must be an integer >= 1' });
-    }
-    maxTeams = body.max_teams;
-  }
-
+  // gameSlugSchema valide la *forme* du slug ; on garde le contrôle
+  // d'appartenance à la liste réelle des jeux supportés (sémantique
+  // historique : un slug bien formé mais inconnu est rejeté).
   let game: string | null = null;
-  if (body.game != null) {
-    if (!isGameSlug(body.game)) {
+  if (input.game != null) {
+    if (!isGameSlug(input.game)) {
       return res.status(400).json({
         error: `Invalid game. Supported: ${GAME_SLUGS.join(', ')}`,
       });
     }
-    game = body.game;
+    game = input.game;
   }
 
   const payload = {
@@ -147,7 +142,7 @@ async function handleCreate(req: NextApiRequest, res: NextApiResponse) {
     name,
     slug,
     game,
-    status: rawStatus as Status,
+    status: rawStatus,
     start_date: startDate,
     end_date: endDate,
     max_teams: maxTeams,
@@ -205,4 +200,5 @@ export default withBotRoute(handler, {
   methods: ['GET', 'POST'],
   rateLimit: { max: 60, key: 'bot-tournaments' },
   idempotent: true,
+  bodySchema: createBodySchema,
 });

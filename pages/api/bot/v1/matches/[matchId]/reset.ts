@@ -11,11 +11,12 @@
 //
 // Auth : x-api-key + actorDiscordUserId staff admin/owner.
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import { isValidUUID } from '@/utils/apiHelpers';
+import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
 
 const TERMINAL_BEFORE = new Set([
@@ -25,12 +26,11 @@ const TERMINAL_BEFORE = new Set([
   'disputed',
 ]);
 
+const resetBodySchema = z.object({ actorDiscordUserId: discordIdSchema });
+const resetQuerySchema = z.object({ matchId: uuidSchema });
+
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const raw = req.query.matchId;
-  const matchId = Array.isArray(raw) ? raw[0] : raw;
-  if (!matchId || !isValidUUID(matchId)) {
-    return res.status(400).json({ error: 'matchId invalide' });
-  }
+  const { matchId } = req.botQuery as z.infer<typeof resetQuerySchema>;
 
   const body = (req.body ?? {}) as Record<string, unknown>;
 
@@ -54,7 +54,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(404).json({ error: 'Match introuvable' });
   }
   if (match.is_bye) {
-    return res.status(400).json({ error: 'Un match bye ne peut pas être reset.' });
+    return res
+      .status(400)
+      .json({ error: 'Un match bye ne peut pas être reset.' });
   }
 
   // Verifie si le tournoi parent est completed -> aligne sur applyMatchScore.
@@ -68,14 +70,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (tournament?.status === 'completed') {
       return res.status(403).json({
         error:
-          'Impossible de reset : le tournoi est terminé. Réouvrez-le d\'abord depuis l\'admin UI.',
+          "Impossible de reset : le tournoi est terminé. Réouvrez-le d'abord depuis l'admin UI.",
         code: 'TOURNAMENT_COMPLETED',
       });
     }
   }
 
   const wasFinalized = TERMINAL_BEFORE.has(match.status);
-  const hadPropagation = !!(match.next_match_win_id || match.next_match_lose_id);
+  const hadPropagation = !!(
+    match.next_match_win_id || match.next_match_lose_id
+  );
 
   const { data: updated, error: updErr } = await supabaseAdmin
     .from('matches')
@@ -142,4 +146,6 @@ export default withBotRoute(handler, {
     perActor: { max: 5, windowMs: 60_000 },
   },
   idempotent: true,
+  bodySchema: resetBodySchema,
+  querySchema: resetQuerySchema,
 });

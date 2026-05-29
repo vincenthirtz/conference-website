@@ -8,11 +8,12 @@
 // Auth : x-api-key + actorDiscordUserId doit etre le capitaine de la team.
 // Cible : targetDiscordUserId (compte Discord lie au site).
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
 import { requireBotPlayer, resolveActorPlayer } from '@/utils/botActor';
-import { isValidUUID } from '@/utils/apiHelpers';
+import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
 import {
   isTeamRosterLocked,
   rosterLockErrorMessage,
@@ -21,19 +22,24 @@ import { emitRoleSyncEvent } from '@/utils/botRoleSync';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 
-const DISCORD_ID_RE = /^[0-9]{15,25}$/;
+// actorDiscordUserId lu par requireBotPlayer (body brut, non muté).
+const kickMemberBodySchema = z.object({
+  actorDiscordUserId: discordIdSchema,
+  targetDiscordUserId: discordIdSchema,
+});
+const kickMemberQuerySchema = z.object({ teamId: uuidSchema });
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const raw = req.query.teamId;
-  const teamId = Array.isArray(raw) ? raw[0] : raw;
-  if (!teamId || !isValidUUID(teamId)) {
-    return res.status(400).json({ error: 'teamId invalide' });
-  }
+  const { teamId } = req.botQuery as z.infer<typeof kickMemberQuerySchema>;
 
   const body = (req.body ?? {}) as Record<string, unknown>;
 
   const actor = await requireBotPlayer(req, res, body);
   if (!actor) return;
+
+  const { targetDiscordUserId } = req.botInput as z.infer<
+    typeof kickMemberBodySchema
+  >;
 
   const { data: team, error: teamErr } = await supabaseAdmin
     .from('teams')
@@ -52,14 +58,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res
       .status(403)
       .json({ error: 'Action réservée au capitaine de cette équipe.' });
-  }
-
-  const targetDiscordUserId =
-    typeof body.targetDiscordUserId === 'string'
-      ? body.targetDiscordUserId.trim()
-      : '';
-  if (!DISCORD_ID_RE.test(targetDiscordUserId)) {
-    return res.status(400).json({ error: 'targetDiscordUserId requis' });
   }
 
   const target = await resolveActorPlayer(targetDiscordUserId);
@@ -148,4 +146,6 @@ export default withBotRoute(handler, {
   methods: ['DELETE'],
   rateLimit: { max: 20, key: 'bot-team-members-kick' },
   idempotent: true,
+  bodySchema: kickMemberBodySchema,
+  querySchema: kickMemberQuerySchema,
 });

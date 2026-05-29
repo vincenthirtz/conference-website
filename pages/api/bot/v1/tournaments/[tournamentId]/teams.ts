@@ -16,6 +16,7 @@
 // (/api/admin/teams/[teamId]/tournaments): tournament must be 'published',
 // max_teams not exceeded, team has enough members, no double registration.
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
@@ -24,12 +25,21 @@ import {
   resolveActorPlayer,
   resolveActorStaff,
 } from '@/utils/botActor';
-import { isValidUUID } from '@/utils/apiHelpers';
+import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 
-const DISCORD_ID_RE = /^[0-9]{15,25}$/;
 const STAFF_PRIVILEGED = new Set(['admin', 'owner']);
+
+// Body POST (l'inscription). Le bodySchema ne s'applique qu'au POST, donc le
+// GET (liste) n'est pas affecté. stageId est optionnel (toutes phases si absent).
+const registerBodySchema = z.object({
+  actorDiscordUserId: discordIdSchema,
+  teamId: uuidSchema,
+  stageId: uuidSchema.optional(),
+});
+// tournamentId (path param) — partagé GET + POST.
+const teamsQuerySchema = z.object({ tournamentId: uuidSchema });
 
 async function handleList(
   req: NextApiRequest,
@@ -166,27 +176,15 @@ async function handleRegister(
   res: NextApiResponse,
   tournamentId: string
 ) {
-  const body = (req.body ?? {}) as Record<string, unknown>;
-
-  const actorDiscordUserId =
-    typeof body.actorDiscordUserId === 'string'
-      ? body.actorDiscordUserId.trim()
-      : '';
-  if (!DISCORD_ID_RE.test(actorDiscordUserId)) {
-    return res.status(400).json({ error: 'actorDiscordUserId requis' });
-  }
-
-  const teamId = typeof body.teamId === 'string' ? body.teamId.trim() : '';
-  if (!isValidUUID(teamId)) {
-    return res.status(400).json({ error: 'teamId invalide' });
-  }
+  const { actorDiscordUserId, teamId, stageId } = req.botInput as z.infer<
+    typeof registerBodySchema
+  >;
 
   // Resolve actor : staff (admin/owner) OR captain of the target team.
   // Captain self-registration (/inscrire-mon-equipe) limits the action to
   // their own team; staff (/inscrire-equipe) can register any team.
   const staffActor = await resolveActorStaff(actorDiscordUserId);
-  const isStaff =
-    !!staffActor.role && STAFF_PRIVILEGED.has(staffActor.role);
+  const isStaff = !!staffActor.role && STAFF_PRIVILEGED.has(staffActor.role);
 
   let isCaptain = false;
   let captainAuthUserId: string | null = null;
@@ -211,13 +209,6 @@ async function handleRegister(
       error:
         "Action réservée aux admins/owners ou au capitaine de l'équipe ciblée.",
     });
-  }
-  const stageId =
-    typeof body.stageId === 'string' && body.stageId.trim()
-      ? body.stageId.trim()
-      : null;
-  if (stageId && !isValidUUID(stageId)) {
-    return res.status(400).json({ error: 'stageId invalide' });
   }
 
   // Tournament + status + max_teams
@@ -396,14 +387,7 @@ async function handleRegister(
 }
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { tournamentId } = req.query;
-  if (
-    !tournamentId ||
-    Array.isArray(tournamentId) ||
-    !isValidUUID(tournamentId)
-  ) {
-    return res.status(400).json({ error: 'tournamentId invalide' });
-  }
+  const { tournamentId } = req.botQuery as z.infer<typeof teamsQuerySchema>;
 
   if (req.method === 'GET') return handleList(req, res, tournamentId);
   if (req.method === 'POST') return handleRegister(req, res, tournamentId);
@@ -416,4 +400,6 @@ export default withBotRoute(handler, {
   methods: ['GET', 'POST'],
   rateLimit: { max: 30, key: 'bot-tournament-teams' },
   idempotent: true,
+  bodySchema: registerBodySchema,
+  querySchema: teamsQuerySchema,
 });

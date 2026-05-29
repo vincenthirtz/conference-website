@@ -7,11 +7,16 @@
 //   { actorDiscordUserId, match:  {...} }       // single
 //   { actorDiscordUserId, matches: [{...}, ...] } // batch
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import { isValidUUID } from '@/utils/apiHelpers';
+import {
+  discordIdSchema,
+  uuidSchema,
+  isoDateSchema,
+} from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
 
 const VALID_STATUSES = [
@@ -24,65 +29,58 @@ const VALID_STATUSES = [
   'postponed',
 ] as const;
 
-type MatchInput = {
-  status?: string;
-  is_bye?: boolean;
-  best_of?: number | null;
-  match_format?: string | null;
-  team1_id?: string | null;
-  team2_id?: string | null;
-  scheduled_at?: string | null;
-  stream_url?: string | null;
-  lobby_code?: string | null;
-  notes?: string | null;
-};
+// Schéma d'un match d'entrée (single ou élément du batch). Reproduit la
+// validation de normalizeMatch : team*_id UUID nullable, status enum (défaut
+// 'pending' appliqué côté handler), scheduled_at date ISO, best_of entier >= 1.
+const matchInputSchema = z.object({
+  status: z.enum(VALID_STATUSES).optional(),
+  is_bye: z.boolean().optional(),
+  best_of: z
+    .number()
+    .int()
+    .min(1, 'best_of doit etre un entier >= 1')
+    .nullish(),
+  match_format: z.string().nullish(),
+  team1_id: uuidSchema.nullish(),
+  team2_id: uuidSchema.nullish(),
+  scheduled_at: isoDateSchema.nullish(),
+  stream_url: z.string().nullish(),
+  lobby_code: z.string().nullish(),
+  notes: z.string().nullish(),
+});
+type MatchInput = z.infer<typeof matchInputSchema>;
+
+// Body POST : { actorDiscordUserId, match } OU { actorDiscordUserId, matches:[] }.
+// On valide les deux formes ; le handler choisit selon présence (préserve les
+// messages d'erreur "Body doit contenir...", "Aucun match", "Maximum 50").
+const matchesBodySchema = z.object({
+  actorDiscordUserId: discordIdSchema,
+  match: matchInputSchema.optional(),
+  matches: z.array(matchInputSchema).optional(),
+});
+const matchesQuerySchema = z.object({ scrimId: uuidSchema });
 
 function normalizeMatch(
   scrimId: string,
   tenantId: string,
   input: MatchInput,
   defaults: { team1Id: string | null; team2Id: string | null }
-): { row?: Record<string, unknown>; error?: string } {
-  if (input.team1_id && !isValidUUID(input.team1_id))
-    return { error: 'team1_id invalide' };
-  if (input.team2_id && !isValidUUID(input.team2_id))
-    return { error: 'team2_id invalide' };
-
-  const status = input.status ?? 'pending';
-  if (!(VALID_STATUSES as readonly string[]).includes(status)) {
-    return {
-      error: `status invalide. Valeurs : ${VALID_STATUSES.join(', ')}.`,
-    };
-  }
-
-  if (input.scheduled_at && Number.isNaN(Date.parse(input.scheduled_at))) {
-    return { error: 'scheduled_at invalide' };
-  }
-  if (
-    input.best_of !== undefined &&
-    input.best_of !== null &&
-    (!Number.isInteger(input.best_of) || (input.best_of as number) < 1)
-  ) {
-    return { error: 'best_of doit etre un entier >= 1' };
-  }
-
+): Record<string, unknown> {
   return {
-    row: {
-      tenant_id: tenantId,
-      tournament_id: null,
-      scrim_id: scrimId,
-      stage_id: null,
-      status,
-      is_bye: input.is_bye ?? false,
-      best_of: input.best_of ?? null,
-      match_format: input.match_format ?? null,
-      team1_id: input.team1_id ?? defaults.team1Id,
-      team2_id: input.team2_id ?? defaults.team2Id,
-      scheduled_at: input.scheduled_at ?? null,
-      stream_url: input.stream_url ?? null,
-      lobby_code: input.lobby_code ?? null,
-      notes: input.notes ?? null,
-    },
+    tenant_id: tenantId,
+    tournament_id: null,
+    scrim_id: scrimId,
+    stage_id: null,
+    status: input.status ?? 'pending',
+    is_bye: input.is_bye ?? false,
+    best_of: input.best_of ?? null,
+    match_format: input.match_format ?? null,
+    team1_id: input.team1_id ?? defaults.team1Id,
+    team2_id: input.team2_id ?? defaults.team2Id,
+    scheduled_at: input.scheduled_at ?? null,
+    stream_url: input.stream_url ?? null,
+    lobby_code: input.lobby_code ?? null,
+    notes: input.notes ?? null,
   };
 }
 
@@ -115,29 +113,26 @@ async function handleList(
 }
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { scrimId } = req.query;
-  if (!scrimId || Array.isArray(scrimId) || !isValidUUID(scrimId)) {
-    return res.status(400).json({ error: 'scrimId invalide' });
-  }
+  const { scrimId } = req.botQuery as z.infer<typeof matchesQuerySchema>;
 
-  if (req.method === 'GET') return handleList(res, scrimId, req.botContext!.tenantId);
+  if (req.method === 'GET')
+    return handleList(res, scrimId, req.botContext!.tenantId);
 
   const body = (req.body ?? {}) as Record<string, unknown>;
+  const input = req.botInput as z.infer<typeof matchesBodySchema>;
 
   const actor = await requireBotStaff(req, res, body);
   if (!actor) return;
 
   let inputs: MatchInput[];
-  if (Array.isArray(body.matches)) {
-    inputs = body.matches as MatchInput[];
-  } else if (body.match && typeof body.match === 'object') {
-    inputs = [body.match as MatchInput];
+  if (input.matches !== undefined) {
+    inputs = input.matches;
+  } else if (input.match !== undefined) {
+    inputs = [input.match];
   } else {
-    return res
-      .status(400)
-      .json({
-        error: "Body doit contenir 'match' (objet) ou 'matches' (tableau).",
-      });
+    return res.status(400).json({
+      error: "Body doit contenir 'match' (objet) ou 'matches' (tableau).",
+    });
   }
   if (inputs.length === 0)
     return res.status(400).json({ error: 'Aucun match a creer' });
@@ -152,15 +147,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     .maybeSingle();
   if (!scrim) return res.status(404).json({ error: 'Scrim introuvable' });
 
-  const rows: Record<string, unknown>[] = [];
-  for (let i = 0; i < inputs.length; i++) {
-    const { row, error } = normalizeMatch(scrimId, req.botContext!.tenantId, inputs[i], {
+  const rows: Record<string, unknown>[] = inputs.map((mi) =>
+    normalizeMatch(scrimId, req.botContext!.tenantId, mi, {
       team1Id: scrim.team1_id ?? null,
       team2Id: scrim.team2_id ?? null,
-    });
-    if (error) return res.status(400).json({ error: `match[${i}]: ${error}` });
-    if (row) rows.push(row);
-  }
+    })
+  );
 
   const { data: inserted, error: insErr } = await supabaseAdmin
     .from('matches')
@@ -192,4 +184,7 @@ export default withBotRoute(handler, {
   methods: ['GET', 'POST'],
   rateLimit: { max: 60, key: 'bot-scrim-matches' },
   idempotent: true,
+  // querySchema (scrimId UUID) sur GET + POST. bodySchema sur POST seulement.
+  querySchema: matchesQuerySchema,
+  bodySchema: matchesBodySchema,
 });

@@ -8,11 +8,12 @@
 // Garde : roster lock — un transfert change qui peut agir sur line-ups, scores,
 //         scrims pendant un tournoi. Admin uniquement peut forcer via UI.
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
 import { requireBotPlayer, resolveActorPlayer } from '@/utils/botActor';
-import { isValidUUID } from '@/utils/apiHelpers';
+import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
 import {
   isTeamRosterLocked,
   rosterLockErrorMessage,
@@ -21,27 +22,24 @@ import { emitRoleSyncEvent } from '@/utils/botRoleSync';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 
-const DISCORD_ID_RE = /^[0-9]{15,25}$/;
+// actorDiscordUserId lu par requireBotPlayer (body brut, non muté).
+const transferCaptainBodySchema = z.object({
+  actorDiscordUserId: discordIdSchema,
+  newCaptainDiscordUserId: discordIdSchema,
+});
+const transferCaptainQuerySchema = z.object({ teamId: uuidSchema });
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const raw = req.query.teamId;
-  const teamId = Array.isArray(raw) ? raw[0] : raw;
-  if (!teamId || !isValidUUID(teamId)) {
-    return res.status(400).json({ error: 'teamId invalide' });
-  }
+  const { teamId } = req.botQuery as z.infer<typeof transferCaptainQuerySchema>;
 
   const body = (req.body ?? {}) as Record<string, unknown>;
 
   const actor = await requireBotPlayer(req, res, body);
   if (!actor) return;
 
-  const newCaptainDiscordUserId =
-    typeof body.newCaptainDiscordUserId === 'string'
-      ? body.newCaptainDiscordUserId.trim()
-      : '';
-  if (!DISCORD_ID_RE.test(newCaptainDiscordUserId)) {
-    return res.status(400).json({ error: 'newCaptainDiscordUserId requis' });
-  }
+  const { newCaptainDiscordUserId } = req.botInput as z.infer<
+    typeof transferCaptainBodySchema
+  >;
   if (newCaptainDiscordUserId === actor.discordUserId) {
     return res.status(400).json({ error: 'Tu es déjà capitaine.' });
   }
@@ -149,4 +147,6 @@ export default withBotRoute(handler, {
   methods: ['POST'],
   rateLimit: { max: 10, key: 'bot-team-transfer-captain' },
   idempotent: true,
+  bodySchema: transferCaptainBodySchema,
+  querySchema: transferCaptainQuerySchema,
 });

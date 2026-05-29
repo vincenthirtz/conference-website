@@ -14,66 +14,44 @@
 // Body : { actorDiscordUserId, discordRoleId?, discordChannelId?, discordVoiceChannelId? }
 // Passer null pour clearer un champ.
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import { isValidUUID } from '@/utils/apiHelpers';
+import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
 
-// Discord snowflakes : 15-25 digits, comme les user IDs.
-const DISCORD_SNOWFLAKE_RE = /^[0-9]{15,25}$/;
+// Body : actorDiscordUserId (lu par requireBotStaff sur le body brut) + les 3
+// snowflakes Discord. nullable() = passer null pour clearer un champ ;
+// optional() = champ absent -> no-op. discordIdSchema applique le même
+// regex/trim que l'ex-DISCORD_SNOWFLAKE_RE inline.
+const discordWritebackBodySchema = z.object({
+  actorDiscordUserId: discordIdSchema,
+  discordRoleId: discordIdSchema.nullable().optional(),
+  discordChannelId: discordIdSchema.nullable().optional(),
+  discordVoiceChannelId: discordIdSchema.nullable().optional(),
+});
+const discordQuerySchema = z.object({ teamId: uuidSchema });
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const raw = req.query.teamId;
-  const teamId = Array.isArray(raw) ? raw[0] : raw;
-  if (!teamId || !isValidUUID(teamId)) {
-    return res.status(400).json({ error: 'teamId invalide' });
-  }
+  const { teamId } = req.botQuery as z.infer<typeof discordQuerySchema>;
 
   const body = (req.body ?? {}) as Record<string, unknown>;
   const actor = await requireBotStaff(req, res, body);
   if (!actor) return;
 
+  const input = req.botInput as z.infer<typeof discordWritebackBodySchema>;
   const updates: Record<string, string | null> = {};
 
-  if ('discordRoleId' in body) {
-    const v = body.discordRoleId;
-    if (v === null) {
-      updates.discord_role_id = null;
-    } else if (typeof v === 'string' && DISCORD_SNOWFLAKE_RE.test(v.trim())) {
-      updates.discord_role_id = v.trim();
-    } else {
-      return res
-        .status(400)
-        .json({ error: 'discordRoleId invalide (snowflake Discord attendu)' });
-    }
+  if (input.discordRoleId !== undefined) {
+    updates.discord_role_id = input.discordRoleId;
   }
-
-  if ('discordChannelId' in body) {
-    const v = body.discordChannelId;
-    if (v === null) {
-      updates.discord_channel_id = null;
-    } else if (typeof v === 'string' && DISCORD_SNOWFLAKE_RE.test(v.trim())) {
-      updates.discord_channel_id = v.trim();
-    } else {
-      return res.status(400).json({
-        error: 'discordChannelId invalide (snowflake Discord attendu)',
-      });
-    }
+  if (input.discordChannelId !== undefined) {
+    updates.discord_channel_id = input.discordChannelId;
   }
-
-  if ('discordVoiceChannelId' in body) {
-    const v = body.discordVoiceChannelId;
-    if (v === null) {
-      updates.discord_voice_channel_id = null;
-    } else if (typeof v === 'string' && DISCORD_SNOWFLAKE_RE.test(v.trim())) {
-      updates.discord_voice_channel_id = v.trim();
-    } else {
-      return res.status(400).json({
-        error: 'discordVoiceChannelId invalide (snowflake Discord attendu)',
-      });
-    }
+  if (input.discordVoiceChannelId !== undefined) {
+    updates.discord_voice_channel_id = input.discordVoiceChannelId;
   }
 
   if (Object.keys(updates).length === 0) {
@@ -138,4 +116,6 @@ export default withBotRoute(handler, {
   methods: ['PATCH'],
   rateLimit: { max: 30, key: 'bot-team-discord' },
   idempotent: true,
+  bodySchema: discordWritebackBodySchema,
+  querySchema: discordQuerySchema,
 });

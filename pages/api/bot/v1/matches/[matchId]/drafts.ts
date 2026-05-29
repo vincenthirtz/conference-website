@@ -9,12 +9,26 @@
 //
 // Auth : x-api-key (BOT_API_KEY) + x-tenant-id (resolved by withBotRoute).
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
-import { isValidUUID } from '@/utils/apiHelpers';
+import { uuidSchema } from '@/utils/botValidation';
 import { initDraft, DraftEngineError } from '@/utils/draftEngine';
 import { logger } from '@/utils/logger';
+
+// gameIndex : entier >= 1. z.coerce reproduit le Number(body.gameIndex) inline
+// (accepte "2" comme 2). fearless : booléen optionnel ; un non-booléen est
+// ignoré (catch(undefined)) pour préserver le `typeof === 'boolean' ? v : undefined`
+// historique qui ne rejetait jamais.
+const draftsBodySchema = z.object({
+  gameIndex: z.coerce
+    .number()
+    .int('gameIndex doit être un entier positif.')
+    .min(1, 'gameIndex doit être un entier positif.'),
+  fearless: z.boolean().optional().catch(undefined),
+});
+const draftsQuerySchema = z.object({ matchId: uuidSchema });
 
 type CaptainInfo = {
   teamSlot: 1 | 2;
@@ -25,21 +39,10 @@ type CaptainInfo = {
 };
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const rawMatchId = req.query.matchId;
-  const matchId = Array.isArray(rawMatchId) ? rawMatchId[0] : rawMatchId;
-  if (!matchId || !isValidUUID(matchId)) {
-    return res.status(400).json({ error: 'matchId invalide' });
-  }
-
-  const body = (req.body ?? {}) as Record<string, unknown>;
-  const gameIndex = Number(body.gameIndex);
-  if (!Number.isInteger(gameIndex) || gameIndex < 1) {
-    return res
-      .status(400)
-      .json({ error: 'gameIndex doit être un entier positif.' });
-  }
-  const fearless =
-    typeof body.fearless === 'boolean' ? body.fearless : undefined;
+  const { matchId } = req.botQuery as z.infer<typeof draftsQuerySchema>;
+  const { gameIndex, fearless } = req.botInput as z.infer<
+    typeof draftsBodySchema
+  >;
 
   const tenantId = req.botContext!.tenantId;
 
@@ -59,9 +62,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         .json({ error: err.message, code: err.code, ...(err.detail ?? {}) });
     }
     logger.error('[bot/matches/drafts] engine error', err);
-    return res
-      .status(500)
-      .json({ error: 'Erreur d’initialisation du draft.' });
+    return res.status(500).json({ error: 'Erreur d’initialisation du draft.' });
   }
 
   // Resolve the two captains so the bot can DM them. Best-effort —
@@ -70,8 +71,20 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   // (match → team ids, then teams + links) so we stay compatible with
   // the in-memory supabase mock that doesn't expand foreign-key embeds.
   const captains: CaptainInfo[] = [
-    { teamSlot: 1, teamId: null, teamName: null, authUserId: null, discordUserId: null },
-    { teamSlot: 2, teamId: null, teamName: null, authUserId: null, discordUserId: null },
+    {
+      teamSlot: 1,
+      teamId: null,
+      teamName: null,
+      authUserId: null,
+      discordUserId: null,
+    },
+    {
+      teamSlot: 2,
+      teamId: null,
+      teamName: null,
+      authUserId: null,
+      discordUserId: null,
+    },
   ];
   try {
     const { data: match, error: matchErr } = await supabaseAdmin
@@ -82,12 +95,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .maybeSingle();
     if (matchErr) throw matchErr;
 
-    const teamIds = [
-      (match as any)?.team1_id,
-      (match as any)?.team2_id,
-    ].filter((v): v is string => typeof v === 'string');
+    const teamIds = [(match as any)?.team1_id, (match as any)?.team2_id].filter(
+      (v): v is string => typeof v === 'string'
+    );
 
-    let teams: Array<{ id: string; name: string | null; captain_id: string | null }> = [];
+    let teams: Array<{
+      id: string;
+      name: string | null;
+      captain_id: string | null;
+    }> = [];
     if (teamIds.length > 0) {
       const { data, error } = await supabaseAdmin
         .from('teams')
@@ -111,7 +127,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       if (error) throw error;
       links = (data ?? []) as typeof links;
     }
-    const linkByAuthId = new Map(links.map((l) => [l.auth_user_id, l.discord_user_id]));
+    const linkByAuthId = new Map(
+      links.map((l) => [l.auth_user_id, l.discord_user_id])
+    );
 
     const slots: Array<{ slot: 1 | 2; teamId: string | null | undefined }> = [
       { slot: 1, teamId: (match as any)?.team1_id },
@@ -125,7 +143,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         teamId: team?.id ?? null,
         teamName: team?.name ?? null,
         authUserId: captainId,
-        discordUserId: captainId ? linkByAuthId.get(captainId) ?? null : null,
+        discordUserId: captainId ? (linkByAuthId.get(captainId) ?? null) : null,
       };
     }
   } catch (err) {
@@ -144,4 +162,6 @@ export default withBotRoute(handler, {
   methods: ['POST'],
   rateLimit: { max: 30, key: 'bot-match-draft-init' },
   idempotent: true,
+  bodySchema: draftsBodySchema,
+  querySchema: draftsQuerySchema,
 });

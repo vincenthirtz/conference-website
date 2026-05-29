@@ -14,11 +14,13 @@
 // Tout champ omis n'est pas touche. Passer une valeur explicite a null
 // efface le champ.
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
+import { sanitizeUrl } from '@/utils/apiHelpers';
+import { uuidSchema } from '@/utils/botValidation';
 import { emitBotEvent } from '@/utils/botEvents';
 import { enrichMatchEvent } from '@/utils/matches/botEventEnrich';
 import { logger } from '@/utils/logger';
@@ -26,12 +28,14 @@ import { logger } from '@/utils/logger';
 const NOTES_MAX = 2000;
 const LOBBY_MAX = 200;
 
+// matchId (path) seulement. Le body PATCH conserve sa validation inline : la
+// distinction « clé absente » (champ non touché) vs « clé = null » (efface la
+// colonne) repose sur l'opérateur `in`, que zod ne modélise pas proprement avec
+// .optional().nullable(). On valide donc uniquement la query ici.
+const metaQuerySchema = z.object({ matchId: uuidSchema });
+
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const raw = req.query.matchId;
-  const matchId = Array.isArray(raw) ? raw[0] : raw;
-  if (!matchId || !isValidUUID(matchId)) {
-    return res.status(400).json({ error: 'matchId invalide' });
-  }
+  const { matchId } = req.botQuery as z.infer<typeof metaQuerySchema>;
 
   // GET : lecture des metadonnees minimales (team names + statut) sans
   // auth d'acteur Discord — utilise par le bot pour afficher des labels
@@ -70,11 +74,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     } else if (typeof v === 'string') {
       const d = new Date(v);
       if (Number.isNaN(d.getTime())) {
-        return res.status(400).json({ error: 'scheduledAt invalide (ISO 8601 attendu)' });
+        return res
+          .status(400)
+          .json({ error: 'scheduledAt invalide (ISO 8601 attendu)' });
       }
       updates.scheduled_at = d.toISOString();
     } else {
-      return res.status(400).json({ error: 'scheduledAt doit être string ou null' });
+      return res
+        .status(400)
+        .json({ error: 'scheduledAt doit être string ou null' });
     }
   }
 
@@ -85,11 +93,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     } else if (typeof v === 'string') {
       const trimmed = v.trim();
       if (trimmed.length > LOBBY_MAX) {
-        return res.status(400).json({ error: `lobbyCode trop long (max ${LOBBY_MAX})` });
+        return res
+          .status(400)
+          .json({ error: `lobbyCode trop long (max ${LOBBY_MAX})` });
       }
       updates.lobby_code = trimmed || null;
     } else {
-      return res.status(400).json({ error: 'lobbyCode doit être string ou null' });
+      return res
+        .status(400)
+        .json({ error: 'lobbyCode doit être string ou null' });
     }
   }
 
@@ -111,7 +123,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         updates.stream_url = safe;
       }
     } else {
-      return res.status(400).json({ error: 'streamUrl doit être string ou null' });
+      return res
+        .status(400)
+        .json({ error: 'streamUrl doit être string ou null' });
     }
   }
 
@@ -122,7 +136,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     } else if (typeof v === 'string') {
       const trimmed = v.trim();
       if (trimmed.length > NOTES_MAX) {
-        return res.status(400).json({ error: `notes trop longues (max ${NOTES_MAX})` });
+        return res
+          .status(400)
+          .json({ error: `notes trop longues (max ${NOTES_MAX})` });
       }
       updates.notes = trimmed || null;
     } else {
@@ -133,7 +149,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (Object.keys(updates).length === 0) {
     return res
       .status(400)
-      .json({ error: 'Aucun champ à mettre à jour (scheduledAt, lobbyCode, streamUrl, notes).' });
+      .json({
+        error:
+          'Aucun champ à mettre à jour (scheduledAt, lobbyCode, streamUrl, notes).',
+      });
   }
 
   // Verify match exists + tournament not completed (mirror admin behaviour).
@@ -149,7 +168,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
   if (!match) return res.status(404).json({ error: 'Match introuvable' });
   if (match.is_bye) {
-    return res.status(400).json({ error: 'Un match bye ne peut pas être édité.' });
+    return res
+      .status(400)
+      .json({ error: 'Un match bye ne peut pas être édité.' });
   }
   if (match.tournament_id) {
     const { data: t } = await supabaseAdmin
@@ -189,7 +210,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     entity_type: 'match',
     entity_id: matchId,
     tournament_id: match.tournament_id ?? null,
-    payload: { mode: 'meta', fields: Object.keys(updates).filter((k) => k !== 'updated_at') },
+    payload: {
+      mode: 'meta',
+      fields: Object.keys(updates).filter((k) => k !== 'updated_at'),
+    },
   });
 
   // Scheduled event natif Discord : si /planifier vient de poser ou clearer
@@ -235,4 +259,5 @@ export default withBotRoute(handler, {
   methods: ['GET', 'PATCH'],
   rateLimit: { max: 30, key: 'bot-match-meta' },
   idempotent: true,
+  querySchema: metaQuerySchema,
 });

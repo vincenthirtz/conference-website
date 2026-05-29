@@ -22,41 +22,44 @@
 //
 // Auth : x-api-key + actorDiscordUserId staff admin/owner.
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { withBotRoute } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import { isValidUUID } from '@/utils/apiHelpers';
+import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
 import { runSwissNextRound } from '@/utils/swiss/runNextRound';
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const raw = req.query.stageId;
-  const stageId = Array.isArray(raw) ? raw[0] : raw;
-  if (!stageId || !isValidUUID(stageId)) {
-    return res.status(400).json({ error: 'stageId invalide' });
-  }
+const nextRoundBodySchema = z.object({
+  actorDiscordUserId: discordIdSchema,
+  roundNumber: z.number().int().optional(),
+  scoreConfig: z.record(z.string(), z.number()).optional(),
+  acceptRematches: z.boolean().optional(),
+  dryRun: z.boolean().optional(),
+  // Tri-state préservé : absent → undefined (laisse le défaut interne), présent
+  // → forcé à booléen. Lu via `=== true` dans le handler comme avant.
+  allowRematchesFallback: z.boolean().optional(),
+});
+const nextRoundQuerySchema = z.object({ stageId: uuidSchema });
 
-  const body = (req.body ?? {}) as Record<string, unknown>;
-  const actor = await requireBotStaff(req, res, body);
+async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const { stageId } = req.botQuery as z.infer<typeof nextRoundQuerySchema>;
+
+  const actor = await requireBotStaff(req, res, req.body ?? {});
   if (!actor) return;
+
+  const input = req.botInput as z.infer<typeof nextRoundBodySchema>;
 
   const result = await runSwissNextRound({
     tenantId: req.botContext!.tenantId,
     stageId,
-    roundNumber:
-      typeof body.roundNumber === 'number' &&
-      Number.isInteger(body.roundNumber)
-        ? body.roundNumber
-        : undefined,
-    scoreConfig:
-      body.scoreConfig && typeof body.scoreConfig === 'object'
-        ? (body.scoreConfig as Record<string, number>)
-        : undefined,
-    acceptRematches: body.acceptRematches === true,
-    dryRun: body.dryRun === true,
+    roundNumber: input.roundNumber,
+    scoreConfig: input.scoreConfig,
+    acceptRematches: input.acceptRematches === true,
+    dryRun: input.dryRun === true,
     allowRematchesFallback:
-      body.allowRematchesFallback === undefined
+      input.allowRematchesFallback === undefined
         ? undefined
-        : body.allowRematchesFallback === true,
+        : input.allowRematchesFallback === true,
   });
 
   if (!result.ok) {
@@ -109,4 +112,6 @@ export default withBotRoute(handler, {
     perActor: { max: 5, windowMs: 60_000 },
   },
   idempotent: true,
+  bodySchema: nextRoundBodySchema,
+  querySchema: nextRoundQuerySchema,
 });

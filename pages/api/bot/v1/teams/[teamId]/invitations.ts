@@ -10,16 +10,16 @@
 // Auth   : x-api-key. POST exige aussi actorDiscordUserId = capitaine de la
 //          team. GET est public a la cle (x-api-key sur le bot suffit).
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
 import { requireBotPlayer, resolveActorPlayer } from '@/utils/botActor';
-import { isValidUUID } from '@/utils/apiHelpers';
+import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
 import { createInvitation } from '@/utils/teams/invitations';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 
-const DISCORD_ID_RE = /^[0-9]{15,25}$/;
 const COMMENT_MAX = 1000;
 const MAX_LIMIT = 100;
 const DEFAULT_LIMIT = 25;
@@ -30,6 +30,28 @@ const VALID_STATUSES = new Set([
   'cancelled',
   'all',
 ]);
+
+// POST body (création d'invitation). actorDiscordUserId lu par requireBotPlayer
+// (body brut). comment/role/battleTag restent optionnels et libres : le handler
+// applique slice(COMMENT_MAX) sur comment et createInvitation valide role.
+// bodySchema ne s'applique qu'au POST (GET safe → skip).
+const createInvitationBodySchema = z.object({
+  actorDiscordUserId: discordIdSchema,
+  targetDiscordUserId: discordIdSchema,
+  comment: z.string().optional(),
+  role: z.string().optional(),
+  battleTag: z.string().optional(),
+});
+
+// querySchema (GET + POST) : teamId UUID requis. Les filtres GET (status/type/
+// limit) gardent leur parsing inline dans handleList pour préserver le message
+// d'erreur custom sur status et les valeurs par défaut.
+const invitationsQuerySchema = z.object({
+  teamId: uuidSchema,
+  status: z.string().optional(),
+  type: z.string().optional(),
+  limit: z.string().optional(),
+});
 
 async function handleList(
   req: NextApiRequest,
@@ -150,13 +172,8 @@ async function handleCreate(
       .json({ error: 'Action réservée au capitaine de cette équipe.' });
   }
 
-  const targetDiscordUserId =
-    typeof body.targetDiscordUserId === 'string'
-      ? body.targetDiscordUserId.trim()
-      : '';
-  if (!DISCORD_ID_RE.test(targetDiscordUserId)) {
-    return res.status(400).json({ error: 'targetDiscordUserId requis' });
-  }
+  const input = req.botInput as z.infer<typeof createInvitationBodySchema>;
+  const targetDiscordUserId = input.targetDiscordUserId;
   if (targetDiscordUserId === actor.discordUserId) {
     return res
       .status(400)
@@ -172,10 +189,12 @@ async function handleCreate(
   }
 
   const comment =
-    typeof body.comment === 'string' ? body.comment.trim().slice(0, COMMENT_MAX) : null;
-  const role = typeof body.role === 'string' ? body.role : undefined;
+    typeof input.comment === 'string'
+      ? input.comment.trim().slice(0, COMMENT_MAX)
+      : null;
+  const role = typeof input.role === 'string' ? input.role : undefined;
   const battleTag =
-    typeof body.battleTag === 'string' ? body.battleTag : undefined;
+    typeof input.battleTag === 'string' ? input.battleTag : undefined;
 
   const result = await createInvitation(req.botContext!.tenantId, {
     teamId: team.id,
@@ -210,11 +229,7 @@ async function handleCreate(
 }
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const raw = req.query.teamId;
-  const teamId = Array.isArray(raw) ? raw[0] : raw;
-  if (!teamId || !isValidUUID(teamId)) {
-    return res.status(400).json({ error: 'teamId invalide' });
-  }
+  const { teamId } = req.botQuery as z.infer<typeof invitationsQuerySchema>;
 
   if (req.method === 'GET') return handleList(req, res, teamId);
   if (req.method === 'POST') return handleCreate(req, res, teamId);
@@ -227,4 +242,6 @@ export default withBotRoute(handler, {
   methods: ['GET', 'POST'],
   rateLimit: { max: 60, key: 'bot-team-invitations' },
   idempotent: true,
+  bodySchema: createInvitationBodySchema,
+  querySchema: invitationsQuerySchema,
 });

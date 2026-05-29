@@ -5,11 +5,18 @@
 //
 // Auth: x-api-key valide contre BOT_API_KEY.
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import { isValidUUID } from '@/utils/apiHelpers';
+import {
+  discordIdSchema,
+  uuidSchema,
+  gameSlugSchema,
+  isoDateSchema,
+} from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
 
 const VALID_STATUSES = [
@@ -32,14 +39,37 @@ const PATCHABLE_FIELDS = [
   'game',
 ] as const;
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const rawId = req.query.scrimId;
-  const idOrSlug = Array.isArray(rawId) ? rawId[0] : rawId;
-  if (!idOrSlug) {
-    return res.status(400).json({ error: 'scrimId requis' });
-  }
+// scrimId est un id OU un slug : on ne peut pas le contraindre à un UUID. On
+// vérifie juste qu'il est non vide (le handler choisit eq('id') vs eq('slug')).
+const scrimQuerySchema = z.object({
+  scrimId: z.string().trim().min(1, 'scrimId requis').max(120),
+});
 
-  if (req.method === 'GET') return handleGet(res, idOrSlug, req.botContext!.tenantId);
+// PATCH : tous les champs sont optionnels (allowlist PATCHABLE_FIELDS). Les
+// champs absents ne sont pas écrits. status est un enum ; team*_id des UUID
+// nullable ; scheduled_date une date ISO ; game un slug de jeu. Les autres
+// (name, is_public, description, stream_url) restent libres comme dans le
+// handler historique (aucune validation inline au-delà du status/UUID/date).
+const scrimPatchBodySchema = z.object({
+  actorDiscordUserId: discordIdSchema,
+  name: z.string().optional(),
+  status: z.enum(VALID_STATUSES).optional(),
+  team1_id: uuidSchema.nullable().optional(),
+  team2_id: uuidSchema.nullable().optional(),
+  scheduled_date: isoDateSchema.nullable().optional(),
+  is_public: z.union([z.boolean(), z.string()]).optional(),
+  description: z.string().nullable().optional(),
+  stream_url: z.string().nullable().optional(),
+  game: gameSlugSchema.nullable().optional(),
+});
+
+async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const { scrimId: idOrSlug } = req.botQuery as z.infer<
+    typeof scrimQuerySchema
+  >;
+
+  if (req.method === 'GET')
+    return handleGet(res, idOrSlug, req.botContext!.tenantId);
   return handlePatch(req, res, idOrSlug);
 }
 
@@ -96,6 +126,7 @@ async function handlePatch(
   idOrSlug: string
 ) {
   const body = (req.body ?? {}) as Record<string, unknown>;
+  const input = req.botInput as z.infer<typeof scrimPatchBodySchema>;
 
   const actor = await requireBotStaff(req, res, body);
   if (!actor) return;
@@ -111,40 +142,17 @@ async function handlePatch(
   const { data: before } = await lookup.maybeSingle();
   if (!before) return res.status(404).json({ error: 'Scrim introuvable' });
 
+  // Allowlist : on n'écrit que les champs présents dans le body brut (le
+  // schéma a déjà validé/normalisé status/UUID/date/game). Présence détectée
+  // sur le body brut pour préserver la sémantique "champ omis = pas touché".
   const updatePayload: Record<string, unknown> = {};
   for (const field of PATCHABLE_FIELDS) {
     if (body[field as string] !== undefined) {
-      updatePayload[field] = body[field as string];
+      updatePayload[field] = (input as Record<string, unknown>)[field];
     }
   }
   if (Object.keys(updatePayload).length === 0) {
     return res.status(400).json({ error: 'Aucun champ a mettre a jour' });
-  }
-
-  if (
-    updatePayload.status !== undefined &&
-    !(VALID_STATUSES as readonly string[]).includes(
-      updatePayload.status as string
-    )
-  ) {
-    return res.status(400).json({
-      error: `Statut invalide. Valeurs : ${VALID_STATUSES.join(', ')}.`,
-    });
-  }
-
-  for (const teamField of ['team1_id', 'team2_id'] as const) {
-    const v = updatePayload[teamField];
-    if (v !== undefined && v !== null && !isValidUUID(v as string)) {
-      return res.status(400).json({ error: `${teamField} invalide` });
-    }
-  }
-
-  if (
-    updatePayload.scheduled_date !== undefined &&
-    updatePayload.scheduled_date !== null &&
-    Number.isNaN(Date.parse(updatePayload.scheduled_date as string))
-  ) {
-    return res.status(400).json({ error: 'scheduled_date invalide' });
   }
 
   const effectiveT1 =
@@ -192,4 +200,8 @@ export default withBotRoute(handler, {
   methods: ['GET', 'PATCH'],
   rateLimit: { max: 60, key: 'bot-scrim-id' },
   idempotent: true,
+  // querySchema s'applique aux deux méthodes (GET + PATCH) : scrimId requis.
+  // bodySchema ne s'applique qu'au PATCH (méthode non-safe).
+  querySchema: scrimQuerySchema,
+  bodySchema: scrimPatchBodySchema,
 });

@@ -28,6 +28,18 @@ declare module 'next' {
        */
       tenantId: string;
     };
+    /**
+     * Parsed + typed request body, set by `withBotRoute` when a `bodySchema`
+     * is provided (non-safe methods only). Handlers read it via a cast to the
+     * schema's inferred type: `const input = req.botInput as z.infer<typeof s>`.
+     * Left `undefined` when no bodySchema is configured.
+     */
+    botInput?: unknown;
+    /**
+     * Parsed + typed query string, set by `withBotRoute` when a `querySchema`
+     * is provided. Read via `req.botQuery as z.infer<typeof s>`.
+     */
+    botQuery?: unknown;
   }
 }
 

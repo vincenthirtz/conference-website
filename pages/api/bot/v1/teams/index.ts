@@ -14,18 +14,52 @@
 // l'insertion du membre echoue, l'equipe est supprimee (rollback).
 
 import slugify from 'slugify';
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
 import { sanitizeUrl } from '@/utils/apiHelpers';
+import { boundedString, discordIdSchema } from '@/utils/botValidation';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { emitBotEvent } from '@/utils/botEvents';
 import { logger } from '@/utils/logger';
 
-const DISCORD_ID_RE = /^[0-9]{15,25}$/;
 const NAME_MIN = 2;
 const NAME_MAX = 100;
 const DESC_MAX = 2000;
+
+// POST body. name 2-100, captainDiscordUserId requis. Le reste optionnel.
+// NB volontaire : logoUrl / website ne sont PAS validés via httpUrlSchema ici
+// — le handler historique les passe à sanitizeUrl() qui *null-ifie* une URL
+// invalide au lieu de rejeter la requête. Un httpUrlSchema renverrait 400 et
+// changerait le contrat. On garde donc des strings libres + sanitizeUrl dans
+// le handler. Idem `slug` : transformé via slugify, jamais rejeté.
+const createTeamBodySchema = z.object({
+  name: boundedString(NAME_MIN, NAME_MAX),
+  captainDiscordUserId: discordIdSchema,
+  slug: z.string().optional(),
+  shortName: z.string().optional(),
+  logoUrl: z.string().optional(),
+  // Borne sur la longueur APRÈS trim (comme le handler historique).
+  description: z
+    .string()
+    .transform((s) => s.trim())
+    .pipe(z.string().max(DESC_MAX))
+    .optional(),
+  country: z.string().optional(),
+  discord: z.string().optional(),
+  website: z.string().optional(),
+});
+
+// GET filtres (tous optionnels, coercition côté handler conservée).
+const listTeamsQuerySchema = z.object({
+  limit: z.string().optional(),
+  offset: z.string().optional(),
+  search: z.string().optional(),
+  country: z.string().optional(),
+  isActive: z.string().optional(),
+  isJoinable: z.string().optional(),
+});
 
 async function handleList(req: NextApiRequest, res: NextApiResponse) {
   const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
@@ -74,24 +108,12 @@ async function handleList(req: NextApiRequest, res: NextApiResponse) {
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') return handleList(req, res);
 
-  const body = (req.body ?? {}) as Record<string, unknown>;
+  // Body validé par withBotRoute (createTeamBodySchema). name/description déjà
+  // trimmés ; les autres champs optionnels sont des strings brutes (trim ici).
+  const body = req.botInput as z.infer<typeof createTeamBodySchema>;
 
-  const name = typeof body.name === 'string' ? body.name.trim() : '';
-  if (name.length < NAME_MIN || name.length > NAME_MAX) {
-    return res
-      .status(400)
-      .json({
-        error: `Le nom doit faire entre ${NAME_MIN} et ${NAME_MAX} caractères.`,
-      });
-  }
-
-  const captainDiscordUserId =
-    typeof body.captainDiscordUserId === 'string'
-      ? body.captainDiscordUserId.trim()
-      : '';
-  if (!DISCORD_ID_RE.test(captainDiscordUserId)) {
-    return res.status(400).json({ error: 'captainDiscordUserId requis' });
-  }
+  const name = body.name;
+  const captainDiscordUserId = body.captainDiscordUserId;
 
   // Resolve the captain via user_discord_links.
   const { data: link, error: linkErr } = await supabaseAdmin
@@ -131,13 +153,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     });
   }
 
-  const description =
-    typeof body.description === 'string' ? body.description.trim() : '';
-  if (description.length > DESC_MAX) {
-    return res
-      .status(400)
-      .json({ error: `Description trop longue (max ${DESC_MAX}).` });
-  }
+  // description : déjà trimmée + bornée par le schéma (DESC_MAX).
+  const description = body.description ?? '';
 
   const teamPayload: Record<string, unknown> = {
     tenant_id: req.botContext!.tenantId,
@@ -230,4 +247,6 @@ export default withBotRoute(handler, {
   methods: ['GET', 'POST'],
   rateLimit: { max: 60, key: 'bot-teams' },
   idempotent: true,
+  bodySchema: createTeamBodySchema,
+  querySchema: listTeamsQuerySchema,
 });

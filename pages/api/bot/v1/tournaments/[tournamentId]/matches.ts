@@ -10,12 +10,20 @@
 // All match fields except tournament_id are optional — teams may be null
 // (placeholder match), stage may be null (free-floating match), etc.
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import { isValidUUID } from '@/utils/apiHelpers';
+import { uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
+
+// Le body (single { match } | batch { matches }) garde sa validation inline :
+// elle produit des erreurs indexées par élément (`match[i]: ...`) que ni un
+// z.union ni un z.discriminatedUnion ne reproduiraient à l'identique. On ne
+// migre donc que la query du path param ici.
+const matchesQuerySchema = z.object({ tournamentId: uuidSchema });
 
 const VALID_STATUSES = [
   'pending',
@@ -109,14 +117,7 @@ function normalizeMatch(
 }
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { tournamentId } = req.query;
-  if (
-    !tournamentId ||
-    Array.isArray(tournamentId) ||
-    !isValidUUID(tournamentId)
-  ) {
-    return res.status(400).json({ error: 'tournamentId invalide' });
-  }
+  const { tournamentId } = req.botQuery as z.infer<typeof matchesQuerySchema>;
 
   const body = (req.body ?? {}) as Record<string, unknown>;
 
@@ -155,7 +156,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Normalize + validate each match
   const rows: Record<string, unknown>[] = [];
   for (let i = 0; i < inputs.length; i++) {
-    const { row, error } = normalizeMatch(tournamentId, req.botContext!.tenantId, inputs[i]);
+    const { row, error } = normalizeMatch(
+      tournamentId,
+      req.botContext!.tenantId,
+      inputs[i]
+    );
     if (error) {
       return res.status(400).json({ error: `match[${i}]: ${error}` });
     }
@@ -192,4 +197,5 @@ export default withBotRoute(handler, {
   methods: ['POST'],
   rateLimit: { max: 30, key: 'bot-matches' },
   idempotent: true,
+  querySchema: matchesQuerySchema,
 });

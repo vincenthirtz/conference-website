@@ -21,10 +21,11 @@
 // Auth : x-api-key (BOT_API_KEY). Identite du capitaine verifiee via
 // user_discord_links.
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
-import { isValidUUID } from '@/utils/apiHelpers';
+import { discordIdSchema, scoreSchema, uuidSchema } from '@/utils/botValidation';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import { notifyScoreReportDispute } from '@/utils/discord';
 import { emitBotEvent } from '@/utils/botEvents';
@@ -32,7 +33,13 @@ import { enrichMatchEvent } from '@/utils/matches/botEventEnrich';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 
-const DISCORD_ID_RE = /^[0-9]{15,25}$/;
+const reportBodySchema = z.object({
+  discordUserId: discordIdSchema,
+  team1Score: scoreSchema,
+  team2Score: scoreSchema,
+});
+const reportQuerySchema = z.object({ matchId: uuidSchema });
+
 const SITE_URL =
   process.env.SITE_URL ||
   process.env.NEXT_PUBLIC_SITE_URL ||
@@ -49,36 +56,11 @@ function reportsAgree(
 }
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const rawMatchId = req.query.matchId;
-  const matchId = Array.isArray(rawMatchId) ? rawMatchId[0] : rawMatchId;
-  if (!matchId || !isValidUUID(matchId)) {
-    return res.status(400).json({ error: 'matchId invalide' });
-  }
-
-  const body = (req.body ?? {}) as Record<string, unknown>;
-
-  const discordUserId =
-    typeof body.discordUserId === 'string' ? body.discordUserId.trim() : '';
-  if (!DISCORD_ID_RE.test(discordUserId)) {
-    return res.status(400).json({ error: 'discordUserId invalide' });
-  }
-
-  const team1Score = body.team1Score;
-  const team2Score = body.team2Score;
-  if (
-    typeof team1Score !== 'number' ||
-    typeof team2Score !== 'number' ||
-    !Number.isInteger(team1Score) ||
-    !Number.isInteger(team2Score) ||
-    team1Score < 0 ||
-    team2Score < 0 ||
-    team1Score > 99 ||
-    team2Score > 99
-  ) {
-    return res.status(400).json({
-      error: 'team1Score et team2Score doivent etre des entiers entre 0 et 99',
-    });
-  }
+  // matchId (path) et body validés par withBotRoute (query/bodySchema).
+  const { matchId } = req.botQuery as z.infer<typeof reportQuerySchema>;
+  const { discordUserId, team1Score, team2Score } = req.botInput as z.infer<
+    typeof reportBodySchema
+  >;
 
   // 1) Match + captains.
   //    scrim_id est lu pour distinguer les matches de scrim (pas de bracket
@@ -390,4 +372,6 @@ export default withBotRoute(handler, {
   methods: ['POST'],
   rateLimit: { max: 30, key: 'bot-match-report' },
   idempotent: true,
+  bodySchema: reportBodySchema,
+  querySchema: reportQuerySchema,
 });

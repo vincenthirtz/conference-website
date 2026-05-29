@@ -13,9 +13,11 @@
 //
 // Auth : x-api-key + actorDiscordUserId lie au site.
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
+import { discordIdSchema } from '@/utils/botValidation';
 import {
   requireBotPlayer,
   resolveActorPlayer,
@@ -24,19 +26,71 @@ import {
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 
-const DISCORD_ID_RE = /^[0-9]{15,25}$/;
 const BATTLE_TAG_RE = /^[A-Za-z0-9À-ɏ]+#[0-9]{4,6}$/;
 const DISPLAY_NAME_MAX = 50;
 const RANK_MAX = 30;
-const VALID_ROLES = new Set(['tank', 'damage', 'support']);
 const STAFF_PRIVILEGED = new Set(['admin', 'owner']);
 
+// displayName : optionnel ; null pour effacer ; sinon string trimmée bornée,
+// vide -> null (efface). Préserve la sémantique inline ('field' in body).
+const displayNameSchema = z
+  .string()
+  .transform((s) => s.trim())
+  .refine((s) => s.length <= DISPLAY_NAME_MAX, {
+    message: `displayName trop long (max ${DISPLAY_NAME_MAX}).`,
+  })
+  .transform((s) => s || null)
+  .nullable()
+  .optional();
+
+// battleTag : null pour effacer ; sinon format Name#0000 (vide autorisé -> null).
+const battleTagSchema = z
+  .string()
+  .transform((s) => s.trim())
+  .refine((s) => s === '' || BATTLE_TAG_RE.test(s), {
+    message: 'Format BattleTag invalide (ex: Pseudo#1234).',
+  })
+  .transform((s) => s || null)
+  .nullable()
+  .optional();
+
+// mainRole : enum Overwatch (lowercased) ; null pour effacer ; vide -> null.
+const ROLE_VALUES = ['tank', 'damage', 'support'] as const;
+const mainRoleSchema = z
+  .string()
+  .transform((s) => s.trim().toLowerCase())
+  .refine((s) => s === '' || (ROLE_VALUES as readonly string[]).includes(s), {
+    message: `mainRole invalide. Valeurs : ${ROLE_VALUES.join(', ')}.`,
+  })
+  .transform((s) => (s || null) as (typeof ROLE_VALUES)[number] | null)
+  .nullable()
+  .optional();
+
+// rank : str libre bornée ; null pour effacer ; vide -> null.
+const rankSchema = z
+  .string()
+  .transform((s) => s.trim())
+  .refine((s) => s.length <= RANK_MAX, {
+    message: `rank trop long (max ${RANK_MAX}).`,
+  })
+  .transform((s) => s || null)
+  .nullable()
+  .optional();
+
+const profileBodySchema = z.object({
+  actorDiscordUserId: discordIdSchema,
+  displayName: displayNameSchema,
+  battleTag: battleTagSchema,
+  mainRole: mainRoleSchema,
+  rank: rankSchema,
+});
+const profileQuerySchema = z.object({ discordUserId: discordIdSchema });
+
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const raw = req.query.discordUserId;
-  const targetDiscordUserId = Array.isArray(raw) ? raw[0] : raw;
-  if (!targetDiscordUserId || !DISCORD_ID_RE.test(targetDiscordUserId)) {
-    return res.status(400).json({ error: 'discordUserId invalide' });
-  }
+  const { discordUserId: targetDiscordUserId } = req.botQuery as z.infer<
+    typeof profileQuerySchema
+  >;
+  const input = req.botInput as z.infer<typeof profileBodySchema>;
 
   const body = (req.body ?? {}) as Record<string, unknown>;
 
@@ -53,7 +107,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     } else {
       return res.status(403).json({
         error:
-          "Tu ne peux modifier que ton propre profil (sauf si tu es admin/owner).",
+          'Tu ne peux modifier que ton propre profil (sauf si tu es admin/owner).',
       });
     }
   }
@@ -63,76 +117,24 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(404).json({ error: 'Compte cible non lié au site.' });
   }
 
-  // Build updates pour user_metadata
+  // Build updates pour user_metadata. On distingue "champ absent" (undefined,
+  // pas touché) de "champ présent" (string transformée -> string|null) en
+  // utilisant la clé dans le body brut (le schéma a déjà validé/normalisé).
   const metaUpdates: Record<string, string | null> = {};
   let battleTagChanged = false;
 
   if ('displayName' in body) {
-    const v = body.displayName;
-    if (v === null) {
-      metaUpdates.display_name = null;
-    } else if (typeof v === 'string') {
-      const trimmed = v.trim();
-      if (trimmed.length > DISPLAY_NAME_MAX) {
-        return res.status(400).json({
-          error: `displayName trop long (max ${DISPLAY_NAME_MAX}).`,
-        });
-      }
-      metaUpdates.display_name = trimmed || null;
-    } else {
-      return res.status(400).json({ error: 'displayName doit être string ou null' });
-    }
+    metaUpdates.display_name = input.displayName ?? null;
   }
-
   if ('battleTag' in body) {
-    const v = body.battleTag;
-    if (v === null) {
-      metaUpdates.battle_tag = null;
-      battleTagChanged = true;
-    } else if (typeof v === 'string') {
-      const trimmed = v.trim();
-      if (trimmed && !BATTLE_TAG_RE.test(trimmed)) {
-        return res
-          .status(400)
-          .json({ error: 'Format BattleTag invalide (ex: Pseudo#1234).' });
-      }
-      metaUpdates.battle_tag = trimmed || null;
-      battleTagChanged = true;
-    } else {
-      return res.status(400).json({ error: 'battleTag doit être string ou null' });
-    }
+    metaUpdates.battle_tag = input.battleTag ?? null;
+    battleTagChanged = true;
   }
-
   if ('mainRole' in body) {
-    const v = body.mainRole;
-    if (v === null) {
-      metaUpdates.main_role = null;
-    } else if (typeof v === 'string') {
-      const trimmed = v.trim().toLowerCase();
-      if (trimmed && !VALID_ROLES.has(trimmed)) {
-        return res.status(400).json({
-          error: `mainRole invalide. Valeurs : ${[...VALID_ROLES].join(', ')}.`,
-        });
-      }
-      metaUpdates.main_role = trimmed || null;
-    } else {
-      return res.status(400).json({ error: 'mainRole doit être string ou null' });
-    }
+    metaUpdates.main_role = input.mainRole ?? null;
   }
-
   if ('rank' in body) {
-    const v = body.rank;
-    if (v === null) {
-      metaUpdates.rank = null;
-    } else if (typeof v === 'string') {
-      const trimmed = v.trim();
-      if (trimmed.length > RANK_MAX) {
-        return res.status(400).json({ error: `rank trop long (max ${RANK_MAX}).` });
-      }
-      metaUpdates.rank = trimmed || null;
-    } else {
-      return res.status(400).json({ error: 'rank doit être string ou null' });
-    }
+    metaUpdates.rank = input.rank ?? null;
   }
 
   if (Object.keys(metaUpdates).length === 0) {
@@ -172,7 +174,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .eq('tenant_id', req.botContext!.tenantId)
       .eq('user_id', target.authUserId);
     if (tmErr) {
-      logger.error('[bot/profile] team_members battle_tag propagation error', tmErr);
+      logger.error(
+        '[bot/profile] team_members battle_tag propagation error',
+        tmErr
+      );
     }
   }
 
@@ -203,4 +208,6 @@ export default withBotRoute(handler, {
   methods: ['PATCH'],
   rateLimit: { max: 20, key: 'bot-player-profile' },
   idempotent: true,
+  bodySchema: profileBodySchema,
+  querySchema: profileQuerySchema,
 });

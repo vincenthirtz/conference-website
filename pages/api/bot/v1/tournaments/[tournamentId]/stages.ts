@@ -9,11 +9,18 @@
 // after the bot creates the bare stage.
 
 import slugify from 'slugify';
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import { isValidUUID } from '@/utils/apiHelpers';
+import {
+  discordIdSchema,
+  uuidSchema,
+  slugSchema,
+  isoDateSchema,
+  boundedString,
+} from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
 
 const VALID_STAGE_TYPES = [
@@ -25,67 +32,51 @@ const VALID_STAGE_TYPES = [
   'other',
 ] as const;
 
+// Le handler accepte les deux casses (snake_case + camelCase) pour
+// stage_type / order_index / is_public / is_active. Le schéma valide chaque
+// alias indépendamment ; la résolution alias→valeur reste dans le handler
+// pour préserver exactement la priorité historique (snake_case d'abord).
+const orderIndexSchema = z.number().int().min(0);
+const createStageBodySchema = z.object({
+  actorDiscordUserId: discordIdSchema,
+  name: boundedString(1, 255),
+  stage_type: z.enum(VALID_STAGE_TYPES).optional(),
+  stageType: z.enum(VALID_STAGE_TYPES).optional(),
+  slug: slugSchema.optional(),
+  start_date: isoDateSchema.optional(),
+  end_date: isoDateSchema.optional(),
+  order_index: orderIndexSchema.optional(),
+  orderIndex: orderIndexSchema.optional(),
+  is_public: z.boolean().optional(),
+  isPublic: z.boolean().optional(),
+  is_active: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+});
+const createStageQuerySchema = z.object({ tournamentId: uuidSchema });
+
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { tournamentId } = req.query;
-  if (
-    !tournamentId ||
-    Array.isArray(tournamentId) ||
-    !isValidUUID(tournamentId)
-  ) {
-    return res.status(400).json({ error: 'tournamentId invalide' });
-  }
+  const { tournamentId } = req.botQuery as z.infer<
+    typeof createStageQuerySchema
+  >;
 
-  const body = (req.body ?? {}) as Record<string, unknown>;
-
-  const actor = await requireBotStaff(req, res, body);
+  const actor = await requireBotStaff(req, res, req.body ?? {});
   if (!actor) return;
 
-  const name = typeof body.name === 'string' ? body.name.trim() : '';
-  if (!name) {
-    return res.status(400).json({ error: 'name requis' });
-  }
+  const input = req.botInput as z.infer<typeof createStageBodySchema>;
 
-  const stageType =
-    typeof body.stage_type === 'string' && body.stage_type
-      ? body.stage_type
-      : typeof body.stageType === 'string' && body.stageType
-        ? body.stageType
-        : 'other';
-  if (!(VALID_STAGE_TYPES as readonly string[]).includes(stageType)) {
-    return res.status(400).json({
-      error: `stage_type invalide. Valeurs : ${VALID_STAGE_TYPES.join(', ')}.`,
-    });
-  }
+  const name = input.name;
 
-  const startDate =
-    typeof body.start_date === 'string' ? body.start_date : null;
-  const endDate = typeof body.end_date === 'string' ? body.end_date : null;
-  if (startDate && Number.isNaN(Date.parse(startDate))) {
-    return res.status(400).json({ error: 'start_date invalide' });
-  }
-  if (endDate && Number.isNaN(Date.parse(endDate))) {
-    return res.status(400).json({ error: 'end_date invalide' });
-  }
+  const stageType = input.stage_type ?? input.stageType ?? 'other';
+
+  const startDate = input.start_date ?? null;
+  const endDate = input.end_date ?? null;
   if (startDate && endDate && new Date(startDate) >= new Date(endDate)) {
     return res
       .status(400)
       .json({ error: 'start_date doit être avant end_date' });
   }
 
-  let orderIndex =
-    typeof body.order_index === 'number'
-      ? body.order_index
-      : typeof body.orderIndex === 'number'
-        ? body.orderIndex
-        : null;
-  if (
-    orderIndex !== null &&
-    (!Number.isInteger(orderIndex) || orderIndex < 0)
-  ) {
-    return res
-      .status(400)
-      .json({ error: 'order_index doit être un entier >= 0' });
-  }
+  let orderIndex: number | null = input.order_index ?? input.orderIndex ?? null;
 
   // Verify tournament exists
   const { data: tournament } = await supabaseAdmin
@@ -113,13 +104,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     orderIndex = max + 1;
   }
 
-  const slug =
-    typeof body.slug === 'string' && body.slug.trim()
-      ? slugify(body.slug.trim(), { lower: true, strict: true })
-      : slugify(name, { lower: true, strict: true });
+  const slug = input.slug
+    ? slugify(input.slug, { lower: true, strict: true })
+    : slugify(name, { lower: true, strict: true });
 
-  const isPublic = body.is_public === true || body.isPublic === true;
-  const isActive = body.is_active === true || body.isActive === true;
+  const isPublic = input.is_public === true || input.isPublic === true;
+  const isActive = input.is_active === true || input.isActive === true;
 
   const { data: stage, error } = await supabaseAdmin
     .from('tournament_stages')
@@ -164,4 +154,6 @@ export default withBotRoute(handler, {
   methods: ['POST'],
   rateLimit: { max: 30, key: 'bot-stages' },
   idempotent: true,
+  bodySchema: createStageBodySchema,
+  querySchema: createStageQuerySchema,
 });

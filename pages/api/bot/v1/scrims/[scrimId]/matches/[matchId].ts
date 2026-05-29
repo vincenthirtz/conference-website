@@ -12,11 +12,16 @@
 //
 // Auth: x-api-key valide contre BOT_API_KEY.
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import { isValidUUID } from '@/utils/apiHelpers';
+import {
+  discordIdSchema,
+  uuidSchema,
+  isoDateSchema,
+} from '@/utils/botValidation';
 import { emitBotEvent } from '@/utils/botEvents';
 import { enrichMatchEvent } from '@/utils/matches/botEventEnrich';
 import { logger } from '@/utils/logger';
@@ -48,19 +53,50 @@ const PATCHABLE_FIELDS = [
   'completed_at',
 ] as const;
 
+// scoreSchema (0-99) ne convient pas ici : le handler historique borne juste
+// "entier >= 0" sans plafond. On reproduit cette borne pour ne pas changer la
+// sémantique (un score de scrim peut théoriquement dépasser 99).
+const matchScoreSchema = z
+  .number()
+  .int()
+  .min(0, 'team_score doit etre un entier >= 0');
+
+// PATCH : allowlist PATCHABLE_FIELDS, tous optionnels. Le contrôle
+// winner/forfeit "doit référencer team1/team2 du match" dépend de la row DB →
+// reste inline dans le handler. La dérivation du gagnant idem.
+const scrimMatchPatchBodySchema = z.object({
+  actorDiscordUserId: discordIdSchema,
+  team1_score: matchScoreSchema.nullish(),
+  team2_score: matchScoreSchema.nullish(),
+  winner_team_id: uuidSchema.nullish(),
+  forfeit_team_id: uuidSchema.nullish(),
+  status: z.enum(VALID_STATUSES).optional(),
+  best_of: z
+    .number()
+    .int()
+    .min(1, 'best_of doit etre un entier >= 1')
+    .nullish(),
+  match_format: z.string().nullish(),
+  stream_url: z.string().nullish(),
+  replay_url: z.string().nullish(),
+  lobby_code: z.string().nullish(),
+  notes: z.string().nullish(),
+  scheduled_at: isoDateSchema.nullish(),
+  started_at: isoDateSchema.nullish(),
+  completed_at: isoDateSchema.nullish(),
+});
+const scrimMatchQuerySchema = z.object({
+  scrimId: uuidSchema,
+  matchId: uuidSchema,
+});
+
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const scrimIdRaw = req.query.scrimId;
-  const matchIdRaw = req.query.matchId;
-  const scrimId = Array.isArray(scrimIdRaw) ? scrimIdRaw[0] : scrimIdRaw;
-  const matchId = Array.isArray(matchIdRaw) ? matchIdRaw[0] : matchIdRaw;
-  if (!scrimId || !isValidUUID(scrimId)) {
-    return res.status(400).json({ error: 'scrimId invalide' });
-  }
-  if (!matchId || !isValidUUID(matchId)) {
-    return res.status(400).json({ error: 'matchId invalide' });
-  }
+  const { scrimId, matchId } = req.botQuery as z.infer<
+    typeof scrimMatchQuerySchema
+  >;
 
   const body = (req.body ?? {}) as Record<string, unknown>;
+  const input = req.botInput as z.infer<typeof scrimMatchPatchBodySchema>;
 
   const actor = await requireBotStaff(req, res, body);
   if (!actor) return;
@@ -81,47 +117,23 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .json({ error: "Ce match n'appartient pas a ce scrim." });
   }
 
+  // Allowlist : on n'écrit que les champs présents dans le body brut (valeurs
+  // déjà validées/typées par le schéma). Présence détectée sur le body brut
+  // pour préserver "champ omis = pas touché".
   const updatePayload: Record<string, unknown> = {};
   for (const field of PATCHABLE_FIELDS) {
     if (body[field as string] !== undefined) {
-      updatePayload[field] = body[field as string];
+      updatePayload[field] = (input as Record<string, unknown>)[field];
     }
   }
   if (Object.keys(updatePayload).length === 0) {
     return res.status(400).json({ error: 'Aucun champ a mettre a jour' });
   }
 
-  // Validation
-  if (updatePayload.status !== undefined) {
-    if (
-      !(VALID_STATUSES as readonly string[]).includes(
-        updatePayload.status as string
-      )
-    ) {
-      return res.status(400).json({
-        error: `status invalide. Valeurs : ${VALID_STATUSES.join(', ')}.`,
-      });
-    }
-  }
-
-  for (const scoreField of ['team1_score', 'team2_score'] as const) {
-    const v = updatePayload[scoreField];
-    if (
-      v !== undefined &&
-      v !== null &&
-      (!Number.isInteger(v) || (v as number) < 0)
-    ) {
-      return res
-        .status(400)
-        .json({ error: `${scoreField} doit etre un entier >= 0` });
-    }
-  }
-
+  // Contrôle DB-dépendant : winner/forfeit doivent référencer une des équipes
+  // du match (les UUID eux-mêmes sont déjà validés par le schéma).
   for (const teamField of ['winner_team_id', 'forfeit_team_id'] as const) {
     const v = updatePayload[teamField];
-    if (v !== undefined && v !== null && !isValidUUID(v as string)) {
-      return res.status(400).json({ error: `${teamField} invalide` });
-    }
     if (
       v !== undefined &&
       v !== null &&
@@ -131,30 +143,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       return res.status(400).json({
         error: `${teamField} doit referencer team1_id ou team2_id du match`,
       });
-    }
-  }
-
-  if (
-    updatePayload.best_of !== undefined &&
-    updatePayload.best_of !== null &&
-    (!Number.isInteger(updatePayload.best_of) ||
-      (updatePayload.best_of as number) < 1)
-  ) {
-    return res.status(400).json({ error: 'best_of doit etre un entier >= 1' });
-  }
-
-  for (const dateField of [
-    'scheduled_at',
-    'started_at',
-    'completed_at',
-  ] as const) {
-    const v = updatePayload[dateField];
-    if (
-      v !== undefined &&
-      v !== null &&
-      Number.isNaN(Date.parse(v as string))
-    ) {
-      return res.status(400).json({ error: `${dateField} invalide` });
     }
   }
 
@@ -257,4 +245,6 @@ export default withBotRoute(handler, {
   methods: ['PATCH'],
   rateLimit: { max: 60, key: 'bot-scrim-match-patch' },
   idempotent: true,
+  bodySchema: scrimMatchPatchBodySchema,
+  querySchema: scrimMatchQuerySchema,
 });

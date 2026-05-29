@@ -13,9 +13,11 @@
 // TTL : si le bot crash mid-job, le lock expire après ttlSeconds et un
 // autre process peut le reprendre.
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
+import { boundedString } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
 
 const NAME_MAX_LEN = 64;
@@ -23,12 +25,22 @@ const HOLDER_MAX_LEN = 100;
 const TTL_MIN = 5;
 const TTL_MAX = 3600;
 
+// name (path) : string non vide ≤ 64 (trim). holder (body) : string non vide
+// ≤ 100 (trim). ttlSeconds / action : sémantique historique PERMISSIVE — pas
+// de rejet, `ttlSeconds` est coercé via Number() (défaut 60 si non fini) et
+// `action` vaut 'release' seulement si === 'release', sinon 'claim'. On les
+// laisse donc en z.unknown() pour ne rejeter aucun type que l'ancien code
+// tolérait.
+const lockQuerySchema = z.object({ name: boundedString(1, NAME_MAX_LEN) });
+const lockBodySchema = z.object({
+  holder: boundedString(1, HOLDER_MAX_LEN),
+  ttlSeconds: z.unknown().optional(),
+  action: z.unknown().optional(),
+});
+
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const raw = req.query.name;
-  const name = typeof raw === 'string' ? raw.trim() : '';
-  if (!name || name.length > NAME_MAX_LEN) {
-    return res.status(400).json({ error: 'name invalide (≤ 64 chars).' });
-  }
+  const { name } = req.botQuery as z.infer<typeof lockQuerySchema>;
+  const body = req.botInput as z.infer<typeof lockBodySchema>;
 
   // Multi-tenant (S3 / Phase 1c) : le lock est scope par tenant. Aujourd'hui
   // le UNIQUE est encore (name) global, mais phase 3 le transformera en
@@ -36,18 +48,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   // cette transition sans rupture.
   const tenantId = req.botContext!.tenantId;
 
-  const body = (req.body ?? {}) as {
-    holder?: unknown;
-    ttlSeconds?: unknown;
-    action?: unknown;
-  };
-  const holder =
-    typeof body.holder === 'string' ? body.holder.trim() : '';
-  if (!holder || holder.length > HOLDER_MAX_LEN) {
-    return res
-      .status(400)
-      .json({ error: 'holder requis (≤ 100 chars).' });
-  }
+  const holder = body.holder;
 
   const action = body.action === 'release' ? 'release' : 'claim';
 
@@ -142,4 +143,6 @@ export default withBotRoute(handler, {
   methods: ['POST'],
   rateLimit: { max: 120, key: 'bot-locks' },
   idempotent: false, // l'endpoint est atomique en interne
+  bodySchema: lockBodySchema,
+  querySchema: lockQuerySchema,
 });

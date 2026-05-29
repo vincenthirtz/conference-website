@@ -11,29 +11,21 @@
 // Auth: x-api-key (BOT_API_KEY) + verification que le discordUserId est
 // bien lie a l'un des deux capitaines du match.
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
-import { isValidUUID } from '@/utils/apiHelpers';
+import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
 import { redeemCheckinToken } from '@/utils/checkin';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 
-const DISCORD_ID_RE = /^[0-9]{15,25}$/;
+const checkinBodySchema = z.object({ discordUserId: discordIdSchema });
+const checkinQuerySchema = z.object({ matchId: uuidSchema });
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const rawMatchId = req.query.matchId;
-  const matchId = Array.isArray(rawMatchId) ? rawMatchId[0] : rawMatchId;
-  if (!matchId || !isValidUUID(matchId)) {
-    return res.status(400).json({ error: 'matchId invalide' });
-  }
-
-  const body = (req.body ?? {}) as Record<string, unknown>;
-  const discordUserId =
-    typeof body.discordUserId === 'string' ? body.discordUserId.trim() : '';
-  if (!DISCORD_ID_RE.test(discordUserId)) {
-    return res.status(400).json({ error: 'discordUserId invalide' });
-  }
+  const { matchId } = req.botQuery as z.infer<typeof checkinQuerySchema>;
+  const { discordUserId } = req.botInput as z.infer<typeof checkinBodySchema>;
 
   const { data: match, error: matchErr } = await supabaseAdmin
     .from('matches')
@@ -143,4 +135,6 @@ export default withBotRoute(handler, {
   methods: ['POST'],
   rateLimit: { max: 60, key: 'bot-match-checkin' },
   idempotent: true,
+  bodySchema: checkinBodySchema,
+  querySchema: checkinQuerySchema,
 });

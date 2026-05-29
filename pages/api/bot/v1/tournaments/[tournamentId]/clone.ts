@@ -10,23 +10,38 @@
 //   slug?              defaut: slugified(name) + suffix si conflit
 
 import slugify from 'slugify';
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import { isValidUUID } from '@/utils/apiHelpers';
+import {
+  discordIdSchema,
+  uuidSchema,
+  slugSchema,
+  boundedString,
+} from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const raw = req.query.tournamentId;
-  const sourceId = Array.isArray(raw) ? raw[0] : raw;
-  if (!sourceId || !isValidUUID(sourceId)) {
-    return res.status(400).json({ error: 'tournamentId invalide' });
-  }
+// Tighten the previously-weak (trim-only) validation to match the create
+// route's rules : name is a bounded non-empty string, slug must satisfy the
+// shared slug grammar before it is slugify-normalised below.
+const cloneBodySchema = z.object({
+  actorDiscordUserId: discordIdSchema,
+  name: boundedString(1, 255).optional(),
+  slug: slugSchema.optional(),
+});
+const cloneQuerySchema = z.object({ tournamentId: uuidSchema });
 
-  const body = (req.body ?? {}) as Record<string, unknown>;
-  const actor = await requireBotStaff(req, res, body);
+async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const { tournamentId: sourceId } = req.botQuery as z.infer<
+    typeof cloneQuerySchema
+  >;
+
+  const actor = await requireBotStaff(req, res, req.body ?? {});
   if (!actor) return;
+
+  const input = req.botInput as z.infer<typeof cloneBodySchema>;
 
   const { data: source, error: srcErr } = await supabaseAdmin
     .from('tournaments')
@@ -42,15 +57,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(404).json({ error: 'Tournoi source introuvable' });
   }
 
-  const cloneName =
-    typeof body.name === 'string' && body.name.trim()
-      ? body.name.trim()
-      : `${source.name} (copie)`;
+  const cloneName = input.name ? input.name : `${source.name} (copie)`;
 
-  let cloneSlug =
-    typeof body.slug === 'string' && body.slug.trim()
-      ? slugify(body.slug.trim(), { lower: true, strict: true })
-      : slugify(cloneName, { lower: true, strict: true });
+  let cloneSlug = input.slug
+    ? slugify(input.slug, { lower: true, strict: true })
+    : slugify(cloneName, { lower: true, strict: true });
 
   const { data: clash } = await supabaseAdmin
     .from('tournaments')
@@ -179,4 +190,6 @@ export default withBotRoute(handler, {
   methods: ['POST'],
   rateLimit: { max: 10, key: 'bot-tournament-clone' },
   idempotent: true,
+  bodySchema: cloneBodySchema,
+  querySchema: cloneQuerySchema,
 });

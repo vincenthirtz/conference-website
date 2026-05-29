@@ -13,14 +13,24 @@
 // La logique metier (validation step_number, ordre, generation games) est
 // mirror exact du admin route /api/admin/matches/[matchId]/veto.
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import { isValidUUID } from '@/utils/apiHelpers';
+import { uuidSchema } from '@/utils/botValidation';
 import { VETO_FLOWS } from '@/types/veto';
 import type { VetoStep, VetoAction } from '@/types/veto';
 import { logger } from '@/utils/logger';
+
+// Multi-méthode aux bodies divergents : POST = { actorDiscordUserId, mapName,
+// action, teamId?, mapType? } avec normalisation (action.toLowerCase(), trims),
+// DELETE = { actorDiscordUserId } seul. Un z.union ne discrimine pas proprement
+// (pas de champ discriminant) et perdrait la normalisation casse de `action`.
+// On valide donc seulement la query ici et on conserve la validation body inline
+// dans handlePost/handleDelete. actorDiscordUserId reste validé par requireBotStaff.
+const vetoQuerySchema = z.object({ matchId: uuidSchema });
 
 async function handleGet(
   res: NextApiResponse,
@@ -70,8 +80,8 @@ async function handleGet(
     format,
     team1Id: match.team1_id,
     team2Id: match.team2_id,
-    team1Name: match.team1_id ? teamNames[match.team1_id] ?? null : null,
-    team2Name: match.team2_id ? teamNames[match.team2_id] ?? null : null,
+    team1Name: match.team1_id ? (teamNames[match.team1_id] ?? null) : null,
+    team2Name: match.team2_id ? (teamNames[match.team2_id] ?? null) : null,
     flow,
     steps,
     currentStepIndex: steps.length,
@@ -96,8 +106,7 @@ async function handlePost(
   const actor = await requireBotStaff(req, res, body);
   if (!actor) return;
 
-  const mapName =
-    typeof body.mapName === 'string' ? body.mapName.trim() : '';
+  const mapName = typeof body.mapName === 'string' ? body.mapName.trim() : '';
   if (!mapName) {
     return res.status(400).json({ error: 'mapName requis' });
   }
@@ -238,9 +247,7 @@ async function handlePost(
     },
   });
 
-  return res
-    .status(201)
-    .json({ step: inserted, isComplete, gamesCreated });
+  return res.status(201).json({ step: inserted, isComplete, gamesCreated });
 }
 
 async function handleDelete(
@@ -298,13 +305,10 @@ async function handleDelete(
 }
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const raw = req.query.matchId;
-  const matchId = Array.isArray(raw) ? raw[0] : raw;
-  if (!matchId || !isValidUUID(matchId)) {
-    return res.status(400).json({ error: 'matchId invalide' });
-  }
+  const { matchId } = req.botQuery as z.infer<typeof vetoQuerySchema>;
 
-  if (req.method === 'GET') return handleGet(res, matchId, req.botContext!.tenantId);
+  if (req.method === 'GET')
+    return handleGet(res, matchId, req.botContext!.tenantId);
   if (req.method === 'POST') return handlePost(req, res, matchId);
   if (req.method === 'DELETE') return handleDelete(req, res, matchId);
 
@@ -316,4 +320,5 @@ export default withBotRoute(handler, {
   methods: ['GET', 'POST', 'DELETE'],
   rateLimit: { max: 30, key: 'bot-match-veto' },
   idempotent: true,
+  querySchema: vetoQuerySchema,
 });

@@ -25,19 +25,54 @@
 // 409 if the email is already in use or the Discord ID already linked.
 
 import crypto from 'crypto';
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
+import { discordIdSchema } from '@/utils/botValidation';
 import { sendWelcomeEmail } from '@/utils/email';
 import { upsertDiscordLink } from '@/utils/discordLinks';
 import { logger } from '@/utils/logger';
 
 const VALID_ROLES = ['player', 'caster', 'manager', 'admin'] as const;
 const STAFF_ROLES = new Set(['caster', 'manager', 'admin']);
-const DISCORD_ID_RE = /^[0-9]{15,25}$/;
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type Role = (typeof VALID_ROLES)[number];
+
+// Wire layer is camelCase. On préserve la sémantique historique exactement :
+//   - email : trim + lowercase, regex EMAIL_RE (`[^\s@]+@[^\s@]+\.[^\s@]+`).
+//   - discordUserId : snowflake 15-25 chiffres (discordIdSchema).
+//   - discordUsername / displayName : optionnels, trim + slice(0,100).
+//   - role : optionnel, défaut 'player'. 'owner' explicitement interdit via
+//     l'enum VALID_ROLES (qui ne le contient pas) → 400 INVALID_BODY.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const registerUserBodySchema = z.object({
+  email: z
+    .string()
+    .transform((s) => s.trim().toLowerCase())
+    .pipe(z.string().regex(EMAIL_RE, 'Email invalide')),
+  discordUserId: discordIdSchema,
+  // discordUsername / displayName : historiquement, un type non-string est
+  // silencieusement ignoré (→ null / ''), jamais rejeté. On garde z.unknown()
+  // + transform pour préserver cette tolérance exacte.
+  discordUsername: z.unknown().transform((v) => {
+    if (typeof v !== 'string') return null;
+    const trimmed = v.trim().slice(0, 100);
+    return trimmed.length > 0 ? trimmed : null;
+  }),
+  displayName: z
+    .unknown()
+    .transform((v) => (typeof v === 'string' ? v.trim().slice(0, 100) : '')),
+  // role : historiquement, une string vide / whitespace retombe sur 'player'
+  // (`body.role.trim()` falsy). On préserve ça en mappant '' → undefined avant
+  // l'enum, plutôt que de rejeter. `owner` n'est pas dans VALID_ROLES → rejet.
+  role: z.preprocess((v) => {
+    if (typeof v !== 'string') return v;
+    const trimmed = v.trim();
+    return trimmed === '' ? undefined : trimmed;
+  }, z.enum(VALID_ROLES).optional()),
+});
 
 function generatePassword(length = 16): string {
   const alphabet =
@@ -56,45 +91,13 @@ function generatePassword(length = 16): string {
 }
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const body = (req.body ?? {}) as Record<string, unknown>;
+  const input = req.botInput as z.infer<typeof registerUserBodySchema>;
 
-  const rawEmail = typeof body.email === 'string' ? body.email.trim() : '';
-  const email = rawEmail.toLowerCase();
-  if (!email || !EMAIL_RE.test(email)) {
-    return res.status(400).json({ error: 'Email invalide' });
-  }
-
-  const discordUserId =
-    typeof body.discordUserId === 'string' ? body.discordUserId.trim() : '';
-  if (!DISCORD_ID_RE.test(discordUserId)) {
-    return res.status(400).json({ error: 'discordUserId invalide' });
-  }
-
-  const discordUsername =
-    typeof body.discordUsername === 'string'
-      ? body.discordUsername.trim().slice(0, 100) || null
-      : null;
-
-  const displayName =
-    typeof body.displayName === 'string'
-      ? body.displayName.trim().slice(0, 100)
-      : '';
-
-  const rawRole =
-    typeof body.role === 'string' && body.role.trim()
-      ? body.role.trim()
-      : 'player';
-  if (rawRole === 'owner') {
-    return res
-      .status(400)
-      .json({ error: "Le rôle 'owner' ne peut pas être attribué via le bot." });
-  }
-  if (!(VALID_ROLES as readonly string[]).includes(rawRole)) {
-    return res.status(400).json({
-      error: `Rôle invalide. Valeurs : ${VALID_ROLES.join(', ')}.`,
-    });
-  }
-  const role = rawRole as Role;
+  const email = input.email;
+  const discordUserId = input.discordUserId;
+  const discordUsername = input.discordUsername ?? null;
+  const displayName = input.displayName ?? '';
+  const role: Role = input.role ?? 'player';
 
   // Refuse if this Discord account is already linked elsewhere.
   const { data: existingLink, error: linkLookupErr } = await supabaseAdmin
@@ -204,4 +207,5 @@ export default withBotRoute(handler, {
   methods: ['POST'],
   rateLimit: { max: 20, key: 'bot-register' },
   idempotent: true,
+  bodySchema: registerUserBodySchema,
 });

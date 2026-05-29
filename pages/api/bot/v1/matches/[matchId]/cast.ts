@@ -9,15 +9,23 @@
 //  DELETE : retire un assignment (staff admin/owner)
 //           body: { actorDiscordUserId, assignmentId } OU { castMemberId }
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import { isValidUUID } from '@/utils/apiHelpers';
+import { uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
 
-const SELECT =
-  `id, match_id, cast_member_id, briefing_at, briefing_reminder_sent_at,
+// Multi-méthode aux bodies divergents : POST = { actorDiscordUserId, castMemberId,
+// briefingAt? } et DELETE = { actorDiscordUserId, assignmentId? | castMemberId? }
+// (au moins un des deux, sémantique « ou exclusif » modélisée par des checks
+// inline). Pas de discriminant propre pour un z.union, donc on valide seulement
+// la query et on conserve la validation body inline dans handleAssign/handleUnassign.
+const castQuerySchema = z.object({ matchId: uuidSchema });
+
+const SELECT = `id, match_id, cast_member_id, briefing_at, briefing_reminder_sent_at,
    created_at,
    cast_member:cast_member_id (id, name, auth_user_id, image_url)`;
 
@@ -55,7 +63,10 @@ async function handleList(
   }
 
   const authIds = (data ?? [])
-    .map((a) => pickCastMember((a as Record<string, unknown>).cast_member)?.auth_user_id)
+    .map(
+      (a) =>
+        pickCastMember((a as Record<string, unknown>).cast_member)?.auth_user_id
+    )
     .filter((x): x is string => !!x);
 
   let discordByAuthId = new Map<string, string>();
@@ -84,7 +95,7 @@ async function handleList(
             name: cm.name,
             authUserId: cm.auth_user_id,
             discordUserId: cm.auth_user_id
-              ? discordByAuthId.get(cm.auth_user_id) ?? null
+              ? (discordByAuthId.get(cm.auth_user_id) ?? null)
               : null,
           }
         : null,
@@ -121,11 +132,15 @@ async function handleAssign(
     if (typeof v === 'string') {
       const d = new Date(v);
       if (Number.isNaN(d.getTime())) {
-        return res.status(400).json({ error: 'briefingAt invalide (ISO 8601 attendu)' });
+        return res
+          .status(400)
+          .json({ error: 'briefingAt invalide (ISO 8601 attendu)' });
       }
       briefingAtIso = d.toISOString();
     } else if (v !== null) {
-      return res.status(400).json({ error: 'briefingAt doit être string ou null' });
+      return res
+        .status(400)
+        .json({ error: 'briefingAt doit être string ou null' });
     }
   }
 
@@ -236,13 +251,10 @@ async function handleUnassign(
 }
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const raw = req.query.matchId;
-  const matchId = Array.isArray(raw) ? raw[0] : raw;
-  if (!matchId || !isValidUUID(matchId)) {
-    return res.status(400).json({ error: 'matchId invalide' });
-  }
+  const { matchId } = req.botQuery as z.infer<typeof castQuerySchema>;
 
-  if (req.method === 'GET') return handleList(res, matchId, req.botContext!.tenantId);
+  if (req.method === 'GET')
+    return handleList(res, matchId, req.botContext!.tenantId);
   if (req.method === 'POST') return handleAssign(req, res, matchId);
   if (req.method === 'DELETE') return handleUnassign(req, res, matchId);
 
@@ -254,4 +266,5 @@ export default withBotRoute(handler, {
   methods: ['GET', 'POST', 'DELETE'],
   rateLimit: { max: 30, key: 'bot-match-cast' },
   idempotent: true,
+  querySchema: castQuerySchema,
 });

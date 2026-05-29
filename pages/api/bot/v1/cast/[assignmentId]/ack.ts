@@ -17,27 +17,21 @@
 //   - 404 : assignment inconnu
 //   - 503 : maintenance mode
 
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
-import { isValidUUID } from '@/utils/apiHelpers';
+import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
 
-const DISCORD_ID_RE = /^[0-9]{15,25}$/;
+const ackBodySchema = z.object({
+  actorDiscordUserId: discordIdSchema,
+});
+const ackQuerySchema = z.object({ assignmentId: uuidSchema });
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const rawId = req.query.assignmentId;
-  const assignmentId = Array.isArray(rawId) ? rawId[0] : rawId;
-  if (!assignmentId || !isValidUUID(assignmentId)) {
-    return res.status(400).json({ error: 'assignmentId invalide' });
-  }
-
-  const body = (req.body ?? {}) as Record<string, unknown>;
-  const actorDiscordUserId =
-    typeof body.actorDiscordUserId === 'string' ? body.actorDiscordUserId.trim() : '';
-  if (!DISCORD_ID_RE.test(actorDiscordUserId)) {
-    return res.status(400).json({ error: 'actorDiscordUserId invalide' });
-  }
+  const { assignmentId } = req.botQuery as z.infer<typeof ackQuerySchema>;
+  const { actorDiscordUserId } = req.botInput as z.infer<typeof ackBodySchema>;
 
   const { data: assignment, error: aErr } = await supabaseAdmin
     .from('cast_assignments')
@@ -82,7 +76,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(500).json({ error: 'Erreur de verification caster' });
   }
   const casterDiscordId =
-    link && typeof (link as { discord_user_id: unknown }).discord_user_id === 'string'
+    link &&
+    typeof (link as { discord_user_id: unknown }).discord_user_id === 'string'
       ? (link as { discord_user_id: string }).discord_user_id
       : null;
 
@@ -124,4 +119,6 @@ export default withBotRoute(handler, {
   methods: ['POST'],
   rateLimit: { max: 30, key: 'cast.ack' },
   idempotent: true,
+  bodySchema: ackBodySchema,
+  querySchema: ackQuerySchema,
 });

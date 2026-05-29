@@ -6,11 +6,17 @@
 // Auth: x-api-key valide contre BOT_API_KEY.
 
 import slugify from 'slugify';
+import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import { isValidUUID } from '@/utils/apiHelpers';
+import {
+  discordIdSchema,
+  uuidSchema,
+  gameSlugSchema,
+  isoDateSchema,
+} from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
 
 const VALID_STATUSES = [
@@ -20,6 +26,39 @@ const VALID_STATUSES = [
   'completed',
   'cancelled',
 ] as const;
+
+const statusEnum = z.enum(VALID_STATUSES);
+
+// POST body. team1_id/team2_id distincts via .refine (préserve le check inline).
+// `slug` reste une string libre bornée (PAS slugSchema) : le handler historique
+// n'appliquait aucun regex sur un slug fourni, slugify n'agissant que sur le
+// fallback auto-généré. On préserve cette sémantique.
+const scrimCreateBodySchema = z
+  .object({
+    actorDiscordUserId: discordIdSchema,
+    name: z
+      .string()
+      .transform((s) => s.trim())
+      .refine((s) => s.length > 0, "Field 'name' is required")
+      .pipe(z.string().max(255)),
+    slug: z
+      .string()
+      .transform((s) => s.trim())
+      .pipe(z.string().max(120))
+      .optional(),
+    status: statusEnum.optional(),
+    team1_id: uuidSchema.nullish(),
+    team2_id: uuidSchema.nullish(),
+    scheduled_date: isoDateSchema.nullish(),
+    game: gameSlugSchema.nullish(),
+    is_public: z
+      .union([z.boolean(), z.literal('true'), z.literal('false')])
+      .optional(),
+  })
+  .refine((b) => !(b.team1_id && b.team2_id && b.team1_id === b.team2_id), {
+    message: 'team1_id et team2_id doivent etre distincts',
+    path: ['team2_id'],
+  });
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') return handleList(req, res);
@@ -63,16 +102,16 @@ async function handleList(req: NextApiRequest, res: NextApiResponse) {
 
 async function handleCreate(req: NextApiRequest, res: NextApiResponse) {
   const body = (req.body ?? {}) as Record<string, unknown>;
+  const input = req.botInput as z.infer<typeof scrimCreateBodySchema>;
 
   const actor = await requireBotStaff(req, res, body);
   if (!actor) return;
 
-  const name = typeof body.name === 'string' ? body.name.trim() : '';
-  if (!name) return res.status(400).json({ error: "Field 'name' is required" });
+  const name = input.name;
 
   const slug =
-    typeof body.slug === 'string' && body.slug.trim().length > 0
-      ? body.slug.trim()
+    input.slug && input.slug.length > 0
+      ? input.slug
       : slugify(`${name}-${Date.now().toString(36)}`, {
           lower: true,
           strict: true,
@@ -90,43 +129,21 @@ async function handleCreate(req: NextApiRequest, res: NextApiResponse) {
     });
   }
 
-  const status =
-    typeof body.status === 'string' && body.status ? body.status : 'draft';
-  if (!(VALID_STATUSES as readonly string[]).includes(status)) {
-    return res.status(400).json({
-      error: `Statut invalide. Valeurs : ${VALID_STATUSES.join(', ')}.`,
-    });
-  }
-
-  const team1Id =
-    typeof body.team1_id === 'string' ? (body.team1_id as string) : null;
-  const team2Id =
-    typeof body.team2_id === 'string' ? (body.team2_id as string) : null;
-  if (team1Id && !isValidUUID(team1Id))
-    return res.status(400).json({ error: 'team1_id invalide' });
-  if (team2Id && !isValidUUID(team2Id))
-    return res.status(400).json({ error: 'team2_id invalide' });
-  if (team1Id && team2Id && team1Id === team2Id)
-    return res
-      .status(400)
-      .json({ error: 'team1_id et team2_id doivent etre distincts' });
-
-  const scheduledDate =
-    typeof body.scheduled_date === 'string' ? body.scheduled_date : null;
-  if (scheduledDate && Number.isNaN(Date.parse(scheduledDate))) {
-    return res.status(400).json({ error: 'scheduled_date invalide' });
-  }
+  const status = input.status ?? 'draft';
+  const team1Id = input.team1_id ?? null;
+  const team2Id = input.team2_id ?? null;
+  const scheduledDate = input.scheduled_date ?? null;
 
   const payload = {
     tenant_id: req.botContext!.tenantId,
     name,
     slug,
-    game: typeof body.game === 'string' ? body.game : null,
+    game: input.game ?? null,
     status,
     team1_id: team1Id,
     team2_id: team2Id,
     scheduled_date: scheduledDate,
-    is_public: body.is_public === true || body.is_public === 'true',
+    is_public: input.is_public === true || input.is_public === 'true',
   };
 
   const { data, error } = await supabaseAdmin!
@@ -159,4 +176,8 @@ export default withBotRoute(handler, {
   methods: ['GET', 'POST'],
   rateLimit: { max: 60, key: 'bot-scrims' },
   idempotent: true,
+  // bodySchema ne s'applique qu'aux méthodes non-safe (POST). Le GET (liste)
+  // lit req.query directement — pas de querySchema pour ne pas contraindre le
+  // POST (qui n'a pas de query).
+  bodySchema: scrimCreateBodySchema,
 });
