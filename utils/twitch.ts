@@ -21,7 +21,13 @@ export type TwitchLiveStatus = {
 
 let cachedToken: { token: string; expiresAt: number } | null = null;
 
-function clientCreds(): { id: string; secret: string } | null {
+/**
+ * Reads the shared Twitch application credentials from env.
+ * Returns null if either var is missing (caller decides how to surface that
+ * without leaking which one is absent). Exported so the server-side OAuth
+ * exchange/refresh routes reuse the exact same source of creds.
+ */
+export function clientCreds(): { id: string; secret: string } | null {
   const id = process.env.TWITCH_CLIENT_ID;
   const secret = process.env.TWITCH_CLIENT_SECRET;
   if (!id || !secret) return null;
