@@ -26,16 +26,15 @@ endpoint so the bot side can be code-reviewed against a single page.
 | ----------- | ---------------------------------------------------------------- |
 | `x-api-key` | A bot API key (per-tenant from `tenant_secrets`, or legacy env). |
 
-- Comparison is **per-tenant first** : the provided key is sha256-hashed and
-  looked up in `tenant_secrets.bot_api_key_hash`. Match → the row's
-  `tenant_id` is authoritative for the request (`req.botContext.tenantId`).
-- Fallback : if no row matches, the key is constant-time compared with the
-  legacy global `BOT_API_KEY` env var. **This env var is a transition
-  fallback and should be retired once every tenant has been rotated** (see
-  [Per-tenant secrets rotation](#per-tenant-secrets-rotation) below).
-- Missing/empty header → `401 { error: "Invalid or missing API key." }`.
-- Neither per-tenant nor env key matches → `401`.
-- Per-tenant cache empty AND env unset → `500 { error: "Endpoint not configured." }`.
+- The provided key is sha256-hashed and looked up in
+  `tenant_secrets.bot_api_key_hash`. Match → the row's `tenant_id` is
+  authoritative for the request (`req.botContext.tenantId`).
+- **Per-tenant only** : the legacy global `BOT_API_KEY` env fallback has been
+  **removed** for `/api/bot/v1/*`. Every tenant MUST have its key seeded in
+  `tenant_secrets` (see [Per-tenant secrets rotation](#per-tenant-secrets-rotation)
+  below).
+- Missing/empty header, or a key matching no `tenant_secrets` row →
+  `401 { error: "Invalid or missing API key." }`.
 - The bot identifies the **acting user** via `actorDiscordUserId` in the
   body (writes) or query string (reads) — this is separate from auth and
   feeds the per-actor rate-limit and audit logs.
@@ -53,41 +52,34 @@ returns the two plain values **once** in the response body. The operator:
    printf '%s' '<new-webhook-secret>' | sudo podman secret create --replace discord_bot_webhook_secret -
    sudo systemctl restart discord-bot.service
    ```
-2. **Does NOT need to update Netlify env vars** for that tenant: once the
-   `tenant_secrets` row exists, the site stops consulting `BOT_API_KEY` /
-   `BOT_WEBHOOK_SECRET` env for it. The env entries remain as a fallback
-   for tenants that haven't been rotated yet.
-3. **End-state cleanup** (when every tenant has a `tenant_secrets` row):
-   delete `BOT_API_KEY` and `BOT_WEBHOOK_SECRET` from Netlify's dashboard.
-   Verify the rotated bot still authenticates after the next deploy.
-   The site will then refuse any unrotated bot — that's the point.
+2. **Does NOT need to update Netlify env vars** for the bot/v1 API: the site
+   resolves both the API key and the webhook signing secret per-tenant from
+   `tenant_secrets`. The env fallback for `/api/bot/v1/*` auth **and** webhook
+   signing has been **removed** — the site refuses any bot whose key isn't
+   seeded in `tenant_secrets`.
+3. **Netlify env cleanup**: `BOT_WEBHOOK_SECRET` is no longer read by the site
+   and can be deleted. `BOT_API_KEY` is still consumed by two **legacy non-v1**
+   routes (`POST /api/news` ingest and the `/api/support/ticket` bot path), so
+   keep it until those migrate — it no longer affects `/api/bot/v1/*` auth.
 
 ## Tenant identification
 
-The site is multi-tenant. Every `/api/bot/v1/*` call **must** declare which
-tenant it targets, either through a per-tenant API key (preferred) or
-through the `x-tenant-id` header (legacy fallback while we roll out
-per-tenant keys). The middleware ([`utils/botAuth.ts`](../utils/botAuth.ts))
-resolves the tenant once and stashes it on `req.botContext.tenantId`.
+The site is multi-tenant. The tenant for every `/api/bot/v1/*` call is
+determined **by the per-tenant API key** (`tenant_secrets.bot_api_key_hash`).
+The middleware ([`utils/botAuth.ts`](../utils/botAuth.ts)) resolves it once and
+stashes it on `req.botContext.tenantId`. The `x-tenant-id` header is now
+**informational only**.
 
 | Header        | Value                                                      |
 | ------------- | ---------------------------------------------------------- |
 | `x-tenant-id` | The tenant UUID (RFC 4122, any version). Case-insensitive. |
 
-- **Format**: must match `^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`.
-- **V2 (active)**: the header is **required** when the `x-api-key` matches
-  the legacy global `BOT_API_KEY` env var. Missing/empty → `400` with
-  `code: "MISSING_TENANT_ID"`. Non-UUID → `400` with
-  `code: "INVALID_TENANT_ID"`. Unknown tenant (no row in `tenants`) →
-  `404` with `code: "UNKNOWN_TENANT"`. The existence check is cached
-  in-process for 60s to avoid a Supabase round-trip per request.
-- **Per-tenant API key (authoritative)**: when the provided `x-api-key`
-  matches a row in `tenant_secrets.bot_api_key_hash`, the tenant id is
-  taken from the DB and the `x-tenant-id` header is **ignored**. If the
-  header is present and contradicts the key, a `warn` is logged but the
-  request still succeeds with the key's tenant id (the key wins). This
-  lets the bot ship one `bot_api_key` per linked guild without also
-  having to send a coherent header.
+- **Format** (if sent): `^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`, case-insensitive.
+- **Informational only / ignored**: the per-tenant API key is authoritative, so
+  the `x-tenant-id` header is **no longer required or validated**. If it is
+  present and contradicts the key, a `warn` is logged but the request still
+  succeeds with the key's tenant id (the key wins). This lets the bot ship one
+  `bot_api_key` per linked guild without also having to send a coherent header.
 - **Discord guild mapping**: the bot resolves the right UUID locally from
   `discord_guilds.guild_id` → `tenant_id`. It is not the site's job to
   guess the tenant from a Discord context.
@@ -105,11 +97,10 @@ resolves the tenant once and stashes it on `req.botContext.tenantId`.
 
 ### Error codes
 
-| Code                | Status | When                                                            |
-| ------------------- | ------ | --------------------------------------------------------------- |
-| `MISSING_TENANT_ID` | 400    | `x-tenant-id` header is absent or empty (legacy env auth only). |
-| `INVALID_TENANT_ID` | 400    | `x-tenant-id` header is present but not a valid UUID.           |
-| `UNKNOWN_TENANT`    | 404    | `x-tenant-id` is a valid UUID but no matching row in `tenants`. |
+Tenant resolution no longer emits dedicated error codes: the per-tenant key is
+authoritative, so an unrecognised key simply returns `401`
+(`Invalid or missing API key.`). The former `MISSING_TENANT_ID` /
+`INVALID_TENANT_ID` / `UNKNOWN_TENANT` codes were retired with the env fallback.
 
 Example:
 

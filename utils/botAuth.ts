@@ -23,9 +23,6 @@ import { logger } from './logger';
 import { formatZodError } from './validation';
 import { DEFAULT_TENANT_ID } from './tenant';
 
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 // Fallback tenant bucket pour les routes `crossTenant: true` qui utilisent
 // l'idempotency cache. Voir le commentaire dans le bloc idempotency.
 const DEFAULT_TENANT_ID_FOR_CACHE = DEFAULT_TENANT_ID;
@@ -42,56 +39,38 @@ export function verifyBotApiKey(req: NextApiRequest): boolean {
 }
 
 /**
- * Per-tenant API key lookup.
+ * Per-tenant API key lookup (100% per-tenant — le fallback env legacy a été
+ * retiré).
  *
- * V1 transition strategy: each tenant can be assigned its own bot API key via
+ * Each tenant is assigned its own bot API key via
  * `POST /api/admin/tenants/:id/rotate-secrets`. Incoming `x-api-key` is
- * sha256-hashed and looked up in `tenant_secrets.bot_api_key_hash`. If found,
- * we return the matching tenant id so `withBotRoute` can authoritatively set
- * `req.botContext.tenantId` (the `x-tenant-id` header is ignored if it
- * conflicts — the key wins).
+ * sha256-hashed and looked up in `tenant_secrets.bot_api_key_hash`. On match,
+ * the tenant id is returned and `withBotRoute` set `req.botContext.tenantId`
+ * authoritatively (the `x-tenant-id` header is informational only — the key
+ * wins).
  *
- * If the key doesn't match any row in `tenant_secrets`, we fall back to the
- * legacy global `BOT_API_KEY` env var (constant-time compare). On match,
- * `tenantId` is `null` and the caller falls back to `resolveTenantId(req)`
- * (header-based).
- *
- * Returns `{ ok: false }` if neither match.
+ * Il n'y a PLUS de fallback sur `BOT_API_KEY` env : chaque tenant DOIT avoir sa
+ * clé seedée dans `tenant_secrets`. Returns `{ ok: false }` si la clé ne matche
+ * aucune row (→ 401 côté middleware).
  */
 export async function verifyBotApiKeyMultiTenant(
   req: NextApiRequest
-): Promise<
-  | { ok: false }
-  | { ok: true; tenantId: string | null /* null = legacy env match */ }
-> {
+): Promise<{ ok: false } | { ok: true; tenantId: string }> {
   const provided = req.headers['x-api-key'];
   if (typeof provided !== 'string' || provided.length === 0) {
     return { ok: false };
   }
+  if (!supabaseAdmin) return { ok: false };
 
-  // 1. Per-tenant lookup (sha256(provided) → tenant_id)
-  if (supabaseAdmin) {
-    const hash = crypto.createHash('sha256').update(provided).digest('hex');
-    const { data } = await supabaseAdmin
-      .from('tenant_secrets')
-      .select('tenant_id')
-      .eq('bot_api_key_hash', hash)
-      .maybeSingle();
-    if (data?.tenant_id) {
-      return { ok: true, tenantId: data.tenant_id as string };
-    }
+  const hash = crypto.createHash('sha256').update(provided).digest('hex');
+  const { data } = await supabaseAdmin
+    .from('tenant_secrets')
+    .select('tenant_id')
+    .eq('bot_api_key_hash', hash)
+    .maybeSingle();
+  if (data?.tenant_id) {
+    return { ok: true, tenantId: data.tenant_id as string };
   }
-
-  // 2. Legacy global env fallback (constant-time compare)
-  const expected = process.env.BOT_API_KEY;
-  if (expected) {
-    const a = Buffer.from(provided);
-    const b = Buffer.from(expected);
-    if (a.length === b.length && crypto.timingSafeEqual(a, b)) {
-      return { ok: true, tenantId: null };
-    }
-  }
-
   return { ok: false };
 }
 
@@ -242,57 +221,6 @@ export type BotRouteOptions = {
   querySchema?: ZodType;
 };
 
-/* ---------------------------------------------------------------------------
- * Tenant existence cache (60s, in-memory)
- *
- * Le set de tenants change tres rarement (creation manuelle via /admin) et
- * une requete bot peut etre tres rapide, donc on cache les existences pour
- * eviter 1 round-trip Supabase par appel. Volontairement *local* a la
- * Lambda — pas besoin de coherence cross-instance, un nouveau tenant
- * deviendra valide sur la prochaine instance dans la minute qui suit.
- * Les hits/miss/expiry sont silencieux (pas de log).
- * ------------------------------------------------------------------------- */
-
-const TENANT_EXISTS_TTL_MS = 60_000;
-const tenantExistsCache = new Map<string, { exists: boolean; expiresAt: number }>();
-
-async function tenantExists(tenantId: string): Promise<boolean> {
-  const now = Date.now();
-  const cached = tenantExistsCache.get(tenantId);
-  if (cached && cached.expiresAt > now) {
-    return cached.exists;
-  }
-  if (!supabaseAdmin) {
-    // Sans DB on ne peut pas valider — on retourne true et on laissera le
-    // handler segfauter sur sa propre query (cas degrade improbable, deja
-    // bloque par le check supabaseAdmin plus haut).
-    return true;
-  }
-  const { data, error } = await supabaseAdmin
-    .from('tenants')
-    .select('id')
-    .eq('id', tenantId)
-    .maybeSingle();
-  if (error) {
-    // Erreur DB transitoire : on ne cache pas le verdict (next call retentera)
-    // et on laisse l'existence supposee vraie pour ne pas bloquer le trafic
-    // sur un hoquet Supabase.
-    logger.warn('[bot/tenant] tenant existence check failed', { tenantId });
-    return true;
-  }
-  const exists = Boolean(data);
-  tenantExistsCache.set(tenantId, {
-    exists,
-    expiresAt: now + TENANT_EXISTS_TTL_MS,
-  });
-  return exists;
-}
-
-/** Test-only : flush the tenant existence cache between scenarios. */
-export function __resetTenantExistsCache() {
-  tenantExistsCache.clear();
-}
-
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 const DISCORD_ID_RE = /^[0-9]{15,25}$/;
 
@@ -331,98 +259,44 @@ export function withBotRoute(
       return res.status(500).json({ error: 'Database unavailable.' });
     }
 
-    // Auth : per-tenant lookup (tenant_secrets.bot_api_key_hash) avec
-    // fallback sur l'env BOT_API_KEY pour la transition V1.
+    // Auth : per-tenant lookup uniquement (tenant_secrets.bot_api_key_hash).
+    // Plus de fallback env legacy — une clé qui ne matche aucun tenant → 401.
     const authResult = await verifyBotApiKeyMultiTenant(req);
     if (!authResult.ok) {
-      // Si aucune key per-tenant n'est seedee ET l'env est absent → c'est
-      // une erreur de config serveur, pas une mauvaise key.
-      if (!process.env.BOT_API_KEY) {
-        logger.error(
-          `[bot/${options.rateLimit.key}] BOT_API_KEY unset and no per-tenant key matched`
-        );
-        return res.status(500).json({ error: 'Endpoint not configured.' });
-      }
       return res.status(401).json({ error: 'Invalid or missing API key.' });
     }
 
-    // Multi-tenant scoping (V2, durci) :
+    // Multi-tenant scoping :
     //
     // 1. Si la route est `crossTenant: true` (global resolver type
     //    /tenants/all-configs, /events/pending), on ne touche pas a
-    //    `req.botContext.tenantId` — le handler ne doit pas le lire. Tout
-    //    le bloc de validation est skippe.
+    //    `req.botContext.tenantId` — le handler ne doit pas le lire.
     //
-    // 2. Sinon, si la key matche une row `tenant_secrets`, le tenantId est
-    //    *autoritaire* (provient directement de la DB) — on ignore le
-    //    header `x-tenant-id` meme s'il contredit. Un warn est emis en cas
-    //    de mismatch pour debug.
-    //
-    // 3. Sinon (fallback env legacy), le header devient REQUIS :
-    //      - absent       → 400 MISSING_TENANT_ID
-    //      - non-UUID     → 400 INVALID_TENANT_ID
-    //      - tenant absent en DB → 404 UNKNOWN_TENANT
-    //    Le cache `tenantExists()` evite 1 round-trip Supabase a chaque
-    //    requete bot (TTL 60s).
+    // 2. Sinon, la clé per-tenant est AUTORITAIRE : elle détermine le tenant
+    //    (le hash matche une row `tenant_secrets`). Le header `x-tenant-id`
+    //    n'est plus requis ni validé (le fallback env legacy a été retiré) ;
+    //    s'il est présent et contredit la clé, on warn (signal d'un bug bot).
     if (options.crossTenant !== true) {
-      let resolvedTenantId: string;
-
-      if (authResult.tenantId !== null) {
-        // Per-tenant key match : la key est autoritaire. Si un header
-        // contradictoire est present, on warn (signal d'un bug cote bot,
-        // pas un cas a 400 — la key gagne).
-        const rawHeader = req.headers['x-tenant-id'];
-        const headerValue = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
-        if (
-          typeof headerValue === 'string' &&
-          headerValue.length > 0 &&
-          headerValue.toLowerCase() !== authResult.tenantId.toLowerCase()
-        ) {
-          logger.warn(
-            '[bot/tenant] x-tenant-id header conflicts with per-tenant API key — key wins',
-            {
-              header: headerValue,
-              keyTenant: authResult.tenantId,
-              route: options.rateLimit.key,
-            }
-          );
-        }
-        resolvedTenantId = authResult.tenantId;
-      } else {
-        // Fallback env legacy : on durcit la lecture du header.
-        const rawHeader = req.headers['x-tenant-id'];
-        const headerValue = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
-
-        if (
-          headerValue === undefined ||
-          headerValue === null ||
-          (typeof headerValue === 'string' && headerValue.length === 0)
-        ) {
-          return res.status(400).json({
-            error: 'x-tenant-id header is required.',
-            code: 'MISSING_TENANT_ID',
-          });
-        }
-        if (typeof headerValue !== 'string' || !UUID_RE.test(headerValue)) {
-          return res.status(400).json({
-            error: 'x-tenant-id header must be a valid UUID.',
-            code: 'INVALID_TENANT_ID',
-          });
-        }
-
-        const candidate = headerValue.toLowerCase();
-        if (!(await tenantExists(candidate))) {
-          return res.status(404).json({
-            error: 'Unknown tenant id.',
-            code: 'UNKNOWN_TENANT',
-          });
-        }
-        resolvedTenantId = candidate;
+      const rawHeader = req.headers['x-tenant-id'];
+      const headerValue = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
+      if (
+        typeof headerValue === 'string' &&
+        headerValue.length > 0 &&
+        headerValue.toLowerCase() !== authResult.tenantId.toLowerCase()
+      ) {
+        logger.warn(
+          '[bot/tenant] x-tenant-id header conflicts with per-tenant API key — key wins',
+          {
+            header: headerValue,
+            keyTenant: authResult.tenantId,
+            route: options.rateLimit.key,
+          }
+        );
       }
 
       req.botContext = {
         ...(req.botContext ?? {}),
-        tenantId: resolvedTenantId,
+        tenantId: authResult.tenantId,
       };
     }
 

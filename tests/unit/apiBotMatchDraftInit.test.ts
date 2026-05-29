@@ -2,8 +2,12 @@
 // Bot-initiated draft init that wraps the Lot 2 engine + resolves the
 // two captains' Discord IDs.
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
+import { describe, it, expect, beforeEach } from 'vitest';
+import {
+  store,
+  resetSupabaseMock,
+  seedBotAuth,
+} from './__helpers__/supabaseMock';
 import botDraftInitHandler from '../../pages/api/bot/v1/matches/[matchId]/drafts';
 
 const CONFERENCE_TENANT = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
@@ -95,19 +99,20 @@ function seed() {
 
 beforeEach(() => {
   resetSupabaseMock();
-  process.env.BOT_API_KEY = 'test-key';
+  // Per-tenant bot auth: x-api-key resolves to CONFERENCE_TENANT_ID.
+  seedBotAuth();
   seed();
-});
-
-afterEach(() => {
-  delete process.env.BOT_API_KEY;
 });
 
 describe('POST /api/bot/v1/matches/[matchId]/drafts', () => {
   it('401 without api key', async () => {
     const res = makeRes();
     await botDraftInitHandler(
-      makeBotReq({ headers: { host: 'h' }, query: { matchId: MATCH }, body: { gameIndex: 1 } }),
+      makeBotReq({
+        headers: { host: 'h' },
+        query: { matchId: MATCH },
+        body: { gameIndex: 1 },
+      }),
       res
     );
     expect(res.statusCode).toBe(401);

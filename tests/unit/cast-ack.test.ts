@@ -1,8 +1,12 @@
 // tests/unit/cast-ack.test.ts
 // POST /api/bot/v1/cast/[assignmentId]/ack
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
+import { describe, it, expect, beforeEach } from 'vitest';
+import {
+  store,
+  resetSupabaseMock,
+  seedBotAuth,
+} from './__helpers__/supabaseMock';
 import handler from '../../pages/api/bot/v1/cast/[assignmentId]/ack';
 
 const ASSIGN_ID = '550e8400-e29b-41d4-a716-446655440b01';
@@ -20,7 +24,11 @@ const CONFERENCE_TENANT_ID = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
 function makeReq(over: Partial<any> = {}): any {
   return {
     method: 'POST',
-    headers: { host: 'h', 'x-api-key': 'test-key', 'x-tenant-id': CONFERENCE_TENANT_ID },
+    headers: {
+      host: 'h',
+      'x-api-key': 'test-key',
+      'x-tenant-id': CONFERENCE_TENANT_ID,
+    },
     query: { assignmentId: ASSIGN_ID },
     body: { actorDiscordUserId: CASTER_DISCORD },
     ...over,
@@ -43,7 +51,8 @@ function makeRes() {
 
 beforeEach(() => {
   resetSupabaseMock();
-  process.env.BOT_API_KEY = 'test-key';
+  // Per-tenant bot auth: x-api-key resolves to CONFERENCE_TENANT_ID.
+  seedBotAuth();
   // V2 strict tenant header — withBotRoute checks existence in `tenants`.
   store.tenants = [{ id: CONFERENCE_TENANT_ID }] as any;
   store.cast_assignments = [
@@ -66,10 +75,6 @@ beforeEach(() => {
     { auth_user_id: CASTER_AUTH, discord_user_id: CASTER_DISCORD },
     { auth_user_id: OTHER_AUTH, discord_user_id: OTHER_DISCORD },
   ] as any;
-});
-
-afterEach(() => {
-  delete process.env.BOT_API_KEY;
 });
 
 describe('POST /api/bot/v1/cast/[assignmentId]/ack', () => {
@@ -99,7 +104,10 @@ describe('POST /api/bot/v1/cast/[assignmentId]/ack', () => {
 
   it('403 when actor is not the caster', async () => {
     const res = makeRes();
-    await handler(makeReq({ body: { actorDiscordUserId: OTHER_DISCORD } }), res);
+    await handler(
+      makeReq({ body: { actorDiscordUserId: OTHER_DISCORD } }),
+      res
+    );
     expect(res.statusCode).toBe(403);
   });
 

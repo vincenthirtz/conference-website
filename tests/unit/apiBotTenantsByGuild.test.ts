@@ -6,14 +6,18 @@
 //   - 200 avec discord_config a defaut (vide) si aucune row config
 //   - 200 avec discord_config populee si row config presente
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 vi.mock('@/utils/supabase', async () => {
   const m = await import('./__helpers__/supabaseMock');
   return { supabaseAdmin: m.supabaseAdmin, getServerClient: m.getServerClient };
 });
 
-import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
+import {
+  store,
+  resetSupabaseMock,
+  seedBotAuth,
+} from './__helpers__/supabaseMock';
 import handler from '../../pages/api/bot/v1/tenants/by-guild/[guildId]';
 
 const CONFERENCE_TENANT_ID = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
@@ -45,11 +49,8 @@ function makeRes() {
 
 beforeEach(() => {
   resetSupabaseMock();
-  process.env.BOT_API_KEY = 'test-key';
-});
-
-afterEach(() => {
-  delete process.env.BOT_API_KEY;
+  // Per-tenant bot auth (crossTenant route still requires a valid x-api-key).
+  seedBotAuth();
 });
 
 describe('GET /api/bot/v1/tenants/by-guild/[guildId]', () => {

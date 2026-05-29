@@ -20,11 +20,12 @@
 // existence). Les routes crossTenant ignorent le header.
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
 import {
-  __resetTenantExistsCache,
-  __resetBotIdempotencyCache,
-} from '../../utils/botAuth';
+  store,
+  resetSupabaseMock,
+  seedBotAuth,
+} from './__helpers__/supabaseMock';
+import { __resetBotIdempotencyCache } from '../../utils/botAuth';
 import { __resetMaintenanceCache } from '../../utils/maintenance';
 
 import reportHandler from '../../pages/api/bot/v1/matches/[matchId]/report';
@@ -88,17 +89,17 @@ function makeReq(over: Partial<AnyReq> = {}): any {
 
 beforeEach(() => {
   resetSupabaseMock();
-  __resetTenantExistsCache();
   __resetMaintenanceCache();
-  process.env.BOT_API_KEY = 'test-key';
-  // withBotRoute (non-crossTenant) vérifie l'existence du tenant en DB.
-  store.tenants = [{ id: TENANT_ID }] as any;
-  store.site_settings = [{ key: 'bot_maintenance_mode', value: 'false' }] as any;
+  // Per-tenant bot auth : seed tenant_secrets so x-api-key 'test-key' resolves
+  // to the conference tenant (TENANT_ID). Also seeds the matching tenants row.
+  seedBotAuth({ tenantId: TENANT_ID });
+  store.site_settings = [
+    { key: 'bot_maintenance_mode', value: 'false' },
+  ] as any;
 });
 
 afterEach(async () => {
   await __resetBotIdempotencyCache();
-  delete process.env.BOT_API_KEY;
 });
 
 // Helper d'assertion : un 400 de la couche validation a bien la forme attendue.
@@ -175,7 +176,10 @@ describe('bot validation — matches/[matchId]/checkin', () => {
   it('400 INVALID_BODY when discordUserId too short', async () => {
     const res = makeRes();
     await checkinHandler(
-      makeReq({ query: { matchId: VALID_UUID }, body: { discordUserId: '123' } }),
+      makeReq({
+        query: { matchId: VALID_UUID },
+        body: { discordUserId: '123' },
+      }),
       res
     );
     expectInvalidBody(res);

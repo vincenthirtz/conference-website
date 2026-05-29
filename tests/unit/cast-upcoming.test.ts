@@ -6,8 +6,12 @@
 // `x-tenant-id` requis ; chaque row expose son propre `tenantId` pour que
 // le bot route vers le bon guild en un seul poll.
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
+import { describe, it, expect, beforeEach } from 'vitest';
+import {
+  store,
+  resetSupabaseMock,
+  seedBotAuth,
+} from './__helpers__/supabaseMock';
 import handler from '../../pages/api/bot/v1/cast/upcoming';
 
 const MATCH_A = '550e8400-e29b-41d4-a716-446655440a01';
@@ -64,7 +68,8 @@ function makeRes() {
 
 beforeEach(() => {
   resetSupabaseMock();
-  process.env.BOT_API_KEY = 'test-key';
+  // Per-tenant bot auth: x-api-key resolves to CONFERENCE_TENANT_ID.
+  seedBotAuth();
   // V2 strict tenant header — withBotRoute checks existence in `tenants`.
   store.tenants = [{ id: CONFERENCE_TENANT_ID }] as any;
 
@@ -87,7 +92,12 @@ beforeEach(() => {
       briefing_at: inTenMin,
       acked_at: null,
       // joined columns
-      cast_member: { id: CAST_MEMBER_A, name: 'Alice', title: 'Caster', auth_user_id: CASTER_AUTH_A },
+      cast_member: {
+        id: CAST_MEMBER_A,
+        name: 'Alice',
+        title: 'Caster',
+        auth_user_id: CASTER_AUTH_A,
+      },
       match: {
         id: MATCH_A,
         status: 'pending',
@@ -105,7 +115,12 @@ beforeEach(() => {
       cast_member_id: CAST_MEMBER_B,
       briefing_at: inTwentyMin,
       acked_at: null,
-      cast_member: { id: CAST_MEMBER_B, name: 'Bob', title: 'Caster', auth_user_id: CASTER_AUTH_B },
+      cast_member: {
+        id: CAST_MEMBER_B,
+        name: 'Bob',
+        title: 'Caster',
+        auth_user_id: CASTER_AUTH_B,
+      },
       match: {
         id: MATCH_B,
         status: 'pending',
@@ -123,7 +138,12 @@ beforeEach(() => {
       cast_member_id: CAST_MEMBER_A,
       briefing_at: inPast,
       acked_at: null,
-      cast_member: { id: CAST_MEMBER_A, name: 'Alice', title: 'Caster', auth_user_id: CASTER_AUTH_A },
+      cast_member: {
+        id: CAST_MEMBER_A,
+        name: 'Alice',
+        title: 'Caster',
+        auth_user_id: CASTER_AUTH_A,
+      },
       match: {
         id: MATCH_FINISHED,
         status: 'finished',
@@ -141,7 +161,12 @@ beforeEach(() => {
       cast_member_id: CAST_MEMBER_B,
       briefing_at: inTenMin,
       acked_at: new Date(now - 30 * 60_000).toISOString(),
-      cast_member: { id: CAST_MEMBER_B, name: 'Bob', title: 'Caster', auth_user_id: CASTER_AUTH_B },
+      cast_member: {
+        id: CAST_MEMBER_B,
+        name: 'Bob',
+        title: 'Caster',
+        auth_user_id: CASTER_AUTH_B,
+      },
       match: {
         id: MATCH_A,
         status: 'pending',
@@ -158,10 +183,6 @@ beforeEach(() => {
     { auth_user_id: CASTER_AUTH_A, discord_user_id: CASTER_DISCORD_A },
     { auth_user_id: CASTER_AUTH_B, discord_user_id: CASTER_DISCORD_B },
   ] as any;
-});
-
-afterEach(() => {
-  delete process.env.BOT_API_KEY;
 });
 
 describe('GET /api/bot/v1/cast/upcoming', () => {
@@ -197,7 +218,7 @@ describe('GET /api/bot/v1/cast/upcoming', () => {
     // makeReq() default headers volontairement sans x-tenant-id.
     await handler(makeReq(), res);
     expect(res.statusCode).toBe(200);
-    // Aucune erreur MISSING_TENANT_ID / INVALID_TENANT_ID emise.
+    // crossTenant route : aucune erreur liee a la resolution tenant.
     expect((res.body as any).error).toBeUndefined();
   });
 
@@ -228,7 +249,11 @@ describe('GET /api/bot/v1/cast/upcoming', () => {
           is_bye: false,
           team1: { id: TEAM_1, name: 'Team Alpha', short_name: 'TA' },
           team2: { id: TEAM_2, name: 'Team Beta', short_name: 'TB' },
-          tournament: { id: TOURNAMENT, name: 'Spring Cup', slug: 'spring-cup' },
+          tournament: {
+            id: TOURNAMENT,
+            name: 'Spring Cup',
+            slug: 'spring-cup',
+          },
         },
       },
       {
@@ -251,7 +276,11 @@ describe('GET /api/bot/v1/cast/upcoming', () => {
           is_bye: false,
           team1: { id: TEAM_1, name: 'Team Alpha', short_name: 'TA' },
           team2: { id: TEAM_2, name: 'Team Beta', short_name: 'TB' },
-          tournament: { id: TOURNAMENT, name: 'Spring Cup', slug: 'spring-cup' },
+          tournament: {
+            id: TOURNAMENT,
+            name: 'Spring Cup',
+            slug: 'spring-cup',
+          },
         },
       }
     );

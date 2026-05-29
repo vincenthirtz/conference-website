@@ -1,8 +1,12 @@
 // tests/unit/player-actions-enriched.test.ts
 // GET /api/bot/v1/players/by-discord/[discordUserId]/actions-todo
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
+import { describe, it, expect, beforeEach } from 'vitest';
+import {
+  store,
+  resetSupabaseMock,
+  seedBotAuth,
+} from './__helpers__/supabaseMock';
 import handler from '../../pages/api/bot/v1/players/by-discord/[discordUserId]/actions-todo';
 
 const PLAYER_AUTH = 'auth-player-1';
@@ -19,7 +23,11 @@ const CONFERENCE_TENANT_ID = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
 function makeReq(over: Partial<any> = {}): any {
   return {
     method: 'GET',
-    headers: { host: 'h', 'x-api-key': 'test-key', 'x-tenant-id': CONFERENCE_TENANT_ID },
+    headers: {
+      host: 'h',
+      'x-api-key': 'test-key',
+      'x-tenant-id': CONFERENCE_TENANT_ID,
+    },
     query: { discordUserId: PLAYER_DISCORD },
     body: {},
     ...over,
@@ -42,7 +50,8 @@ function makeRes() {
 
 beforeEach(() => {
   resetSupabaseMock();
-  process.env.BOT_API_KEY = 'test-key';
+  // Per-tenant bot auth: x-api-key resolves to CONFERENCE_TENANT_ID.
+  seedBotAuth();
   // V2 strict tenant header — withBotRoute checks existence in `tenants`.
   store.tenants = [{ id: CONFERENCE_TENANT_ID }] as any;
 
@@ -79,10 +88,6 @@ beforeEach(() => {
   store.match_score_reports = [] as any;
   store.demandes = [] as any;
   store.player_action_snoozes = [] as any;
-});
-
-afterEach(() => {
-  delete process.env.BOT_API_KEY;
 });
 
 describe('GET /api/bot/v1/players/by-discord/[id]/actions-todo', () => {

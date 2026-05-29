@@ -4,7 +4,7 @@
 //   - Public  : /api/scrims, /api/scrims/[id]
 //   - Bot     : /api/bot/scrims, /api/bot/scrims/[id]/matches
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { StaffMember } from '../../types/staff';
 
 const { logStaffActionMock } = vi.hoisted(() => ({
@@ -19,6 +19,7 @@ import {
   store,
   resetSupabaseMock,
   setAuthUser,
+  seedBotAuth,
 } from './__helpers__/supabaseMock';
 import { invalidateStaffCache } from '../../utils/staff';
 
@@ -144,10 +145,7 @@ describe('/api/admin/scrims', () => {
 
   it('POST 400 when name missing', async () => {
     const res = makeRes();
-    await adminScrimsHandler(
-      makeAuthedReq({ method: 'POST', body: {} }),
-      res
-    );
+    await adminScrimsHandler(makeAuthedReq({ method: 'POST', body: {} }), res);
     expect(res.statusCode).toBe(400);
   });
 
@@ -187,7 +185,11 @@ describe('/api/admin/scrims', () => {
     await adminScrimsHandler(
       makeAuthedReq({
         method: 'POST',
-        body: { name: 'Phoenix vs Dragons', team1_id: TEAM_A, team2_id: TEAM_B },
+        body: {
+          name: 'Phoenix vs Dragons',
+          team1_id: TEAM_A,
+          team2_id: TEAM_B,
+        },
       }),
       res
     );
@@ -533,22 +535,22 @@ describe('/api/scrims/[id] (public)', () => {
 
 describe('/api/bot/scrims', () => {
   beforeEach(() => {
-    process.env.BOT_API_KEY = 'test-key';
-  // V2 strict tenant header — withBotRoute checks existence in `tenants`.
-  store.tenants = [{ id: CONFERENCE_TENANT_ID }] as any;
+    seedBotAuth();
+    // V2 strict tenant header — withBotRoute checks existence in `tenants`.
+    store.tenants = [{ id: CONFERENCE_TENANT_ID }] as any;
     store.user_discord_links = [
       { discord_user_id: DISCORD_ID, auth_user_id: 'user-1' },
     ] as any;
   });
 
-  afterEach(() => {
-    delete process.env.BOT_API_KEY;
-  });
-
   function makeBotReq(over: Partial<any> = {}, method = 'POST'): any {
     return {
       method,
-      headers: { host: 'h', 'x-api-key': 'test-key', 'x-tenant-id': CONFERENCE_TENANT_ID },
+      headers: {
+        host: 'h',
+        'x-api-key': 'test-key',
+        'x-tenant-id': CONFERENCE_TENANT_ID,
+      },
       query: {},
       body: {},
       ...over,
@@ -633,8 +635,8 @@ describe('/api/bot/scrims', () => {
 
 describe('/api/bot/scrims/[scrimId]', () => {
   beforeEach(() => {
-    process.env.BOT_API_KEY = 'test-key';
-  store.tenants = [{ id: CONFERENCE_TENANT_ID }] as any;
+    seedBotAuth();
+    store.tenants = [{ id: CONFERENCE_TENANT_ID }] as any;
     store.user_discord_links = [
       { discord_user_id: DISCORD_ID, auth_user_id: 'user-1' },
     ] as any;
@@ -652,14 +654,14 @@ describe('/api/bot/scrims/[scrimId]', () => {
     ] as any;
   });
 
-  afterEach(() => {
-    delete process.env.BOT_API_KEY;
-  });
-
   function makeBotReq(over: Partial<any> = {}): any {
     return {
       method: 'GET',
-      headers: { host: 'h', 'x-api-key': 'test-key', 'x-tenant-id': CONFERENCE_TENANT_ID },
+      headers: {
+        host: 'h',
+        'x-api-key': 'test-key',
+        'x-tenant-id': CONFERENCE_TENANT_ID,
+      },
       query: { scrimId: SCRIM_ID },
       body: {},
       ...over,
@@ -668,10 +670,7 @@ describe('/api/bot/scrims/[scrimId]', () => {
 
   it('GET 401 without api key', async () => {
     const res = makeRes();
-    await botScrimIdHandler(
-      { ...makeBotReq(), headers: { host: 'h' } },
-      res
-    );
+    await botScrimIdHandler({ ...makeBotReq(), headers: { host: 'h' } }, res);
     expect(res.statusCode).toBe(401);
   });
 
@@ -770,8 +769,8 @@ describe('/api/bot/scrims/[scrimId]/matches/[matchId]', () => {
   const OTHER_MATCH_ID = '550e8400-e29b-41d4-a716-446655440c02';
 
   beforeEach(() => {
-    process.env.BOT_API_KEY = 'test-key';
-  store.tenants = [{ id: CONFERENCE_TENANT_ID }] as any;
+    seedBotAuth();
+    store.tenants = [{ id: CONFERENCE_TENANT_ID }] as any;
     store.user_discord_links = [
       { discord_user_id: DISCORD_ID, auth_user_id: 'user-1' },
     ] as any;
@@ -810,14 +809,14 @@ describe('/api/bot/scrims/[scrimId]/matches/[matchId]', () => {
     ] as any;
   });
 
-  afterEach(() => {
-    delete process.env.BOT_API_KEY;
-  });
-
   function makeBotReq(over: Partial<any> = {}): any {
     return {
       method: 'PATCH',
-      headers: { host: 'h', 'x-api-key': 'test-key', 'x-tenant-id': CONFERENCE_TENANT_ID },
+      headers: {
+        host: 'h',
+        'x-api-key': 'test-key',
+        'x-tenant-id': CONFERENCE_TENANT_ID,
+      },
       query: { scrimId: SCRIM_ID, matchId: MATCH_ID },
       body: { actorDiscordUserId: DISCORD_ID },
       ...over,
@@ -914,8 +913,8 @@ describe('/api/bot/scrims/[scrimId]/matches/[matchId]', () => {
 
 describe('/api/bot/scrims/[scrimId]/matches', () => {
   beforeEach(() => {
-    process.env.BOT_API_KEY = 'test-key';
-  store.tenants = [{ id: CONFERENCE_TENANT_ID }] as any;
+    seedBotAuth();
+    store.tenants = [{ id: CONFERENCE_TENANT_ID }] as any;
     store.user_discord_links = [
       { discord_user_id: DISCORD_ID, auth_user_id: 'user-1' },
     ] as any;
@@ -933,14 +932,14 @@ describe('/api/bot/scrims/[scrimId]/matches', () => {
     store.matches = [];
   });
 
-  afterEach(() => {
-    delete process.env.BOT_API_KEY;
-  });
-
   function makeBotReq(over: Partial<any> = {}): any {
     return {
       method: 'POST',
-      headers: { host: 'h', 'x-api-key': 'test-key', 'x-tenant-id': CONFERENCE_TENANT_ID },
+      headers: {
+        host: 'h',
+        'x-api-key': 'test-key',
+        'x-tenant-id': CONFERENCE_TENANT_ID,
+      },
       query: { scrimId: SCRIM_ID },
       body: {},
       ...over,

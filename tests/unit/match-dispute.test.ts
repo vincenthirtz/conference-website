@@ -1,8 +1,12 @@
 // tests/unit/match-dispute.test.ts
 // GET /api/bot/v1/matches/[matchId]/dispute (capitaine)
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
+import { describe, it, expect, beforeEach } from 'vitest';
+import {
+  store,
+  resetSupabaseMock,
+  seedBotAuth,
+} from './__helpers__/supabaseMock';
 import handler from '../../pages/api/bot/v1/matches/[matchId]/dispute';
 
 const MATCH_ID = '550e8400-e29b-41d4-a716-446655440a01';
@@ -24,7 +28,11 @@ const CONFERENCE_TENANT_ID = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
 function makeReq(over: Partial<any> = {}): any {
   return {
     method: 'GET',
-    headers: { host: 'h', 'x-api-key': 'test-key', 'x-tenant-id': CONFERENCE_TENANT_ID },
+    headers: {
+      host: 'h',
+      'x-api-key': 'test-key',
+      'x-tenant-id': CONFERENCE_TENANT_ID,
+    },
     query: { matchId: MATCH_ID, actorDiscordUserId: CAPTAIN_DISCORD },
     body: {},
     ...over,
@@ -47,7 +55,8 @@ function makeRes() {
 
 beforeEach(() => {
   resetSupabaseMock();
-  process.env.BOT_API_KEY = 'test-key';
+  // Per-tenant bot auth: x-api-key resolves to CONFERENCE_TENANT_ID.
+  seedBotAuth();
   // V2 strict tenant header — withBotRoute checks existence in `tenants`.
   store.tenants = [{ id: CONFERENCE_TENANT_ID }] as any;
 
@@ -72,7 +81,11 @@ beforeEach(() => {
       team1_id: TEAM_1,
       team2_id: TEAM_2,
       team1: { id: TEAM_1, name: 'Captained Team', captain_id: CAPTAIN_AUTH },
-      team2: { id: TEAM_2, name: 'Other Team', captain_id: 'auth-other-captain' },
+      team2: {
+        id: TEAM_2,
+        name: 'Other Team',
+        captain_id: 'auth-other-captain',
+      },
     },
     {
       id: MATCH_NO_DISPUTE,
@@ -86,7 +99,11 @@ beforeEach(() => {
       team1_id: TEAM_1,
       team2_id: TEAM_2,
       team1: { id: TEAM_1, name: 'Captained Team', captain_id: CAPTAIN_AUTH },
-      team2: { id: TEAM_2, name: 'Other Team', captain_id: 'auth-other-captain' },
+      team2: {
+        id: TEAM_2,
+        name: 'Other Team',
+        captain_id: 'auth-other-captain',
+      },
     },
   ] as any;
 
@@ -114,10 +131,6 @@ beforeEach(() => {
   ] as any;
 });
 
-afterEach(() => {
-  delete process.env.BOT_API_KEY;
-});
-
 describe('GET /api/bot/v1/matches/[matchId]/dispute', () => {
   it('401 without api key', async () => {
     const res = makeRes();
@@ -127,7 +140,12 @@ describe('GET /api/bot/v1/matches/[matchId]/dispute', () => {
 
   it('400 when matchId invalid', async () => {
     const res = makeRes();
-    await handler(makeReq({ query: { matchId: 'abc', actorDiscordUserId: CAPTAIN_DISCORD } }), res);
+    await handler(
+      makeReq({
+        query: { matchId: 'abc', actorDiscordUserId: CAPTAIN_DISCORD },
+      }),
+      res
+    );
     expect(res.statusCode).toBe(400);
   });
 
@@ -140,7 +158,9 @@ describe('GET /api/bot/v1/matches/[matchId]/dispute', () => {
   it('403 when actor is not a captain of either team', async () => {
     const res = makeRes();
     await handler(
-      makeReq({ query: { matchId: MATCH_ID, actorDiscordUserId: NON_CAPTAIN_DISCORD } }),
+      makeReq({
+        query: { matchId: MATCH_ID, actorDiscordUserId: NON_CAPTAIN_DISCORD },
+      }),
       res
     );
     expect(res.statusCode).toBe(403);
@@ -149,7 +169,9 @@ describe('GET /api/bot/v1/matches/[matchId]/dispute', () => {
   it('404 when match unknown', async () => {
     const res = makeRes();
     await handler(
-      makeReq({ query: { matchId: UNKNOWN_MATCH, actorDiscordUserId: CAPTAIN_DISCORD } }),
+      makeReq({
+        query: { matchId: UNKNOWN_MATCH, actorDiscordUserId: CAPTAIN_DISCORD },
+      }),
       res
     );
     expect(res.statusCode).toBe(404);
@@ -158,7 +180,12 @@ describe('GET /api/bot/v1/matches/[matchId]/dispute', () => {
   it('404 when match has no dispute', async () => {
     const res = makeRes();
     await handler(
-      makeReq({ query: { matchId: MATCH_NO_DISPUTE, actorDiscordUserId: CAPTAIN_DISCORD } }),
+      makeReq({
+        query: {
+          matchId: MATCH_NO_DISPUTE,
+          actorDiscordUserId: CAPTAIN_DISCORD,
+        },
+      }),
       res
     );
     expect(res.statusCode).toBe(404);
@@ -202,7 +229,14 @@ describe('GET /api/bot/v1/matches/[matchId]/dispute', () => {
     // Each report exposes only the documented fields
     for (const r of body.reports) {
       expect(Object.keys(r).sort()).toEqual(
-        ['scoreA', 'scoreB', 'submittedAt', 'submittedBy', 'teamId', 'teamName'].sort()
+        [
+          'scoreA',
+          'scoreB',
+          'submittedAt',
+          'submittedBy',
+          'teamId',
+          'teamName',
+        ].sort()
       );
     }
   });
@@ -210,11 +244,16 @@ describe('GET /api/bot/v1/matches/[matchId]/dispute', () => {
   it('captain on team2 also has access', async () => {
     store.user_discord_links = [
       ...(store.user_discord_links as any[]),
-      { discord_user_id: '900000000000000099', auth_user_id: 'auth-other-captain' },
+      {
+        discord_user_id: '900000000000000099',
+        auth_user_id: 'auth-other-captain',
+      },
     ] as any;
     const res = makeRes();
     await handler(
-      makeReq({ query: { matchId: MATCH_ID, actorDiscordUserId: '900000000000000099' } }),
+      makeReq({
+        query: { matchId: MATCH_ID, actorDiscordUserId: '900000000000000099' },
+      }),
       res
     );
     expect(res.statusCode).toBe(200);

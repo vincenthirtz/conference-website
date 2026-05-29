@@ -67,33 +67,31 @@ const MAX_ATTEMPTS = 3;
 const TIMEOUT_MS = 5_000;
 
 function isConfigured(): boolean {
-  // Le webhook URL est obligatoire (cible). Le secret par contre peut etre
-  // fourni soit par tenant_secrets, soit par l'env (transition V1) — on
-  // verifie sa presence per-tenant a l'emission.
+  // Le webhook URL est obligatoire (cible). Le secret est resolu per-tenant
+  // (tenant_secrets.bot_webhook_secret) au moment de l'emission ; absence de
+  // secret → livraison outbox-only (cf. resolveWebhookSecret).
   return Boolean(process.env.BOT_WEBHOOK_URL);
 }
 
 /**
  * Resolve the HMAC webhook secret to sign a push to the bot for `tenantId`.
  *
- * 1. Lookup `tenant_secrets.bot_webhook_secret` for the tenant — that secret
- *    is provisioned via `POST /api/admin/tenants/:id/rotate-secrets`.
- * 2. Fallback to `BOT_WEBHOOK_SECRET` env var (legacy global, V1 transition).
+ * Lookup `tenant_secrets.bot_webhook_secret` (provisioned via
+ * `POST /api/admin/tenants/:id/rotate-secrets`). Le fallback env legacy
+ * `BOT_WEBHOOK_SECRET` a été retiré : chaque tenant DOIT avoir son secret seedé.
  *
- * Returns `null` if neither is available — in that case the caller falls
- * back to outbox-only delivery (bot will pick it up via polling).
+ * Returns `null` if absent — in that case the caller falls back to outbox-only
+ * delivery (the bot will pick it up via polling), so a missing secret degrades
+ * gracefully instead of crashing the emit.
  */
 async function resolveWebhookSecret(tenantId: string): Promise<string | null> {
-  if (supabaseAdmin) {
-    const { data } = await supabaseAdmin
-      .from('tenant_secrets')
-      .select('bot_webhook_secret')
-      .eq('tenant_id', tenantId)
-      .maybeSingle();
-    const perTenant = (data?.bot_webhook_secret as string | undefined) ?? null;
-    if (perTenant) return perTenant;
-  }
-  return process.env.BOT_WEBHOOK_SECRET ?? null;
+  if (!supabaseAdmin) return null;
+  const { data } = await supabaseAdmin
+    .from('tenant_secrets')
+    .select('bot_webhook_secret')
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+  return (data?.bot_webhook_secret as string | undefined) ?? null;
 }
 
 async function persistOutbox(params: {

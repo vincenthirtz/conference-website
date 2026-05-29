@@ -13,10 +13,73 @@
 // Then seed `store.<table>` and (optionally) call `setAuthUser`/`setCookieUser`
 // in your test, and `resetSupabaseMock()` from `beforeEach`.
 
+import crypto from 'crypto';
+
 export type Row = Record<string, unknown>;
 export type Store = Record<string, Row[]>;
 
 export const store: Store = {};
+
+/**
+ * Conference tenant UUID — matches `DEFAULT_TENANT_ID` in `utils/tenant.ts`.
+ * Bot tests historically authenticated against this tenant via the (now
+ * removed) `BOT_API_KEY` env fallback + `x-tenant-id` header. With the new
+ * 100%-per-tenant auth, the in-memory `tenant_secrets` table must carry a row
+ * whose `bot_api_key_hash` is the sha256 of the test API key.
+ */
+export const CONFERENCE_TENANT_ID = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
+
+/** The plaintext API key every bot test sends via `x-api-key`. */
+export const BOT_TEST_API_KEY = 'test-key';
+
+/** Webhook secret seeded alongside the API key (read by botEvents). */
+export const BOT_TEST_WEBHOOK_SECRET = 'test-webhook-secret';
+
+/** sha256 hex of a plaintext API key (matches `verifyBotApiKeyMultiTenant`). */
+export function hashBotApiKey(plaintext: string): string {
+  return crypto.createHash('sha256').update(plaintext).digest('hex');
+}
+
+/**
+ * Seed a `tenant_secrets` row so `x-api-key: <apiKey>` resolves to `tenantId`
+ * under the new per-tenant-only bot auth. Pushes onto the existing array so
+ * multiple tenants can be seeded. Also ensures a matching `tenants` row exists
+ * (harmless for routes that no longer check tenant existence).
+ *
+ * Defaults reproduce the legacy idiom: `'test-key'` → CONFERENCE_TENANT_ID.
+ */
+export function seedBotAuth(
+  opts: {
+    /** Seed onto a specific store (defaults to the shared `store`). */
+    store?: Store;
+    tenantId?: string;
+    apiKey?: string;
+    webhookSecret?: string;
+    /**
+     * Also push a `tenants` row for the seeded tenant. Defaults to `true`.
+     * Set `false` for onboarding tests that assert on `store.tenants.length`
+     * (the per-tenant auth only needs `tenant_secrets`, not a `tenants` row).
+     */
+    withTenantRow?: boolean;
+  } = {}
+): { tenantId: string; apiKey: string } {
+  const s = opts.store ?? store;
+  const tenantId = opts.tenantId ?? CONFERENCE_TENANT_ID;
+  const apiKey = opts.apiKey ?? BOT_TEST_API_KEY;
+  const webhookSecret = opts.webhookSecret ?? BOT_TEST_WEBHOOK_SECRET;
+
+  (s.tenant_secrets ||= []).push({
+    tenant_id: tenantId,
+    bot_api_key_hash: hashBotApiKey(apiKey),
+    bot_webhook_secret: webhookSecret,
+  });
+  if (opts.withTenantRow !== false) {
+    if (!(s.tenants ||= []).some((r) => r.id === tenantId)) {
+      s.tenants.push({ id: tenantId });
+    }
+  }
+  return { tenantId, apiKey };
+}
 
 /** Names of tables that .from() has been called with — useful for asserting cache hits. */
 export const fromCalls: string[] = [];
@@ -36,7 +99,10 @@ let _cookieError: unknown = null;
  */
 type AdminUserEntry = {
   email: string | null;
-  identities?: Array<{ provider: string; identity_data?: Record<string, unknown> }>;
+  identities?: Array<{
+    provider: string;
+    identity_data?: Record<string, unknown>;
+  }>;
 };
 const _adminUsers = new Map<string, AdminUserEntry>();
 
@@ -93,7 +159,10 @@ export function setAdminUser(userId: string, email: string | null) {
  */
 export function setAdminUserIdentities(
   userId: string,
-  identities: Array<{ provider: string; identity_data?: Record<string, unknown> }>,
+  identities: Array<{
+    provider: string;
+    identity_data?: Record<string, unknown>;
+  }>,
   email: string | null = null
 ) {
   _adminUsers.set(userId, { email, identities });
@@ -184,8 +253,7 @@ class Builder {
     // bien sur son comportement strict.
     if (col === 'tenant_id') {
       this.filters.push(
-        (row) =>
-          row[col] === undefined || row[col] === null || row[col] === val
+        (row) => row[col] === undefined || row[col] === null || row[col] === val
       );
       return this;
     }

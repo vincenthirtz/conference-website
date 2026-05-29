@@ -9,7 +9,7 @@
 //   - 200 auto_claimed si owner_discord_id matche un tenant_request actif
 //     (status='pending_bot_invite', email_verified_at non-null, <7j).
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 vi.mock('@/utils/supabase', async () => {
   const m = await import('./__helpers__/supabaseMock');
@@ -22,10 +22,18 @@ vi.mock('@/utils/emailOnboard', () => ({
   sendOnboardSuccessEmail: (...args: unknown[]) => sendSuccessMock(...args),
 }));
 
-import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
+import {
+  store,
+  resetSupabaseMock,
+  seedBotAuth,
+} from './__helpers__/supabaseMock';
 import handler from '../../pages/api/bot/v1/tenants/link-guild';
 
 const CONFERENCE_TENANT_ID = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
+// Tenant porteur de la clé bot d'auth (distinct des tenants créés par
+// l'onboarding) afin que les assertions de count sur les rows *créées* par le
+// handler ne comptent pas la row d'auth seedée.
+const AUTH_TENANT_ID = 'f0f0f0f0-f0f0-4f0f-8f0f-f0f0f0f0f0f0';
 const KNOWN_GUILD_ID = '1259186540001890474';
 const NEW_GUILD_ID = '9999999999999999999';
 const OWNER_ID = '1111222233334444555';
@@ -56,13 +64,13 @@ function makeRes() {
 
 beforeEach(() => {
   resetSupabaseMock();
-  process.env.BOT_API_KEY = 'test-key';
+  // Per-tenant bot auth (crossTenant route still requires a valid x-api-key).
+  // withTenantRow:false + tenant d'auth dédié — ces tests asserent sur
+  // store.tenants.length / store.tenant_secrets.length pour vérifier les rows
+  // *créées* par l'onboarding, donc la row d'auth ne doit pas les polluer.
+  seedBotAuth({ tenantId: AUTH_TENANT_ID, withTenantRow: false });
   sendSuccessMock.mockReset();
   sendSuccessMock.mockResolvedValue({ success: true });
-});
-
-afterEach(() => {
-  delete process.env.BOT_API_KEY;
 });
 
 describe('POST /api/bot/v1/tenants/link-guild', () => {
@@ -246,9 +254,13 @@ describe('POST /api/bot/v1/tenants/link-guild', () => {
       expect(guilds[0].guild_id).toBe(NEW_GUILD_ID);
       expect(guilds[0].is_primary).toBe(true);
 
-      // tenant_secrets minted (hashed key)
-      expect((store.tenant_secrets ?? []).length).toBe(1);
-      const sec = (store.tenant_secrets ?? [])[0];
+      // tenant_secrets minted (hashed key) — on cible la row du tenant créé
+      // par l'onboarding (≠ la row d'auth seedée sur AUTH_TENANT_ID).
+      const mintedSecrets = (store.tenant_secrets ?? []).filter(
+        (r) => r.tenant_id !== AUTH_TENANT_ID
+      );
+      expect(mintedSecrets).toHaveLength(1);
+      const sec = mintedSecrets[0];
       expect(typeof sec.bot_api_key_hash).toBe('string');
       expect((sec.bot_api_key_hash as string).length).toBe(64);
       expect(typeof sec.bot_webhook_secret).toBe('string');

@@ -78,16 +78,18 @@ components:
       in: header
       name: x-api-key
       description: |
-        Bot API key. Per-tenant via `tenant_secrets.bot_api_key_hash`
-        (sha256), avec fallback legacy sur `BOT_API_KEY` env. Doit être
-        accompagné de `x-tenant-id` si l'auth utilise l'env legacy.
+        Bot API key, per-tenant uniquement : le sha256 du header est comparé à
+        `tenant_secrets.bot_api_key_hash` et détermine le tenant. Le fallback
+        env legacy `BOT_API_KEY` a été retiré pour `/api/bot/v1/*` ; une clé
+        inconnue renvoie 401.
     BotTenantId:
       type: apiKey
       in: header
       name: x-tenant-id
       description: |
-        UUID v4 du tenant. Requis quand l'auth est via env legacy
-        (`BOT_API_KEY`). Ignoré quand la clé est per-tenant.
+        UUID du tenant. Informationnel uniquement : la clé per-tenant est
+        autoritaire, le header n'est plus requis ni validé (ignoré, et la clé
+        gagne en cas de conflit).
     StaffSession:
       type: apiKey
       in: cookie

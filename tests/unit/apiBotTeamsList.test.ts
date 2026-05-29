@@ -3,23 +3,30 @@
 //   - GET /api/bot/teams (liste avec filtres)
 //   - GET /api/bot/teams/[teamId] (par UUID ou slug)
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
+import { describe, it, expect, beforeEach } from 'vitest';
+import {
+  store,
+  resetSupabaseMock,
+  seedBotAuth,
+  CONFERENCE_TENANT_ID,
+} from './__helpers__/supabaseMock';
 import botTeamsHandler from '../../pages/api/bot/v1/teams/index';
 import botTeamIdHandler from '../../pages/api/bot/v1/teams/[teamId]';
 
 const TEAM_A = '550e8400-e29b-41d4-a716-446655440b01';
 const TEAM_B = '550e8400-e29b-41d4-a716-446655440b02';
-// Conference tenant UUID — match DEFAULT_TENANT_ID in utils/tenant.ts. The
-// fallback resolveTenantId() injects this value into req.botContext.tenantId
-// when the bot doesn't send x-tenant-id, so fixtures must carry it too for
-// the S3 sweep tenant_id filters to match.
-const CONFERENCE_TENANT_ID = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
+// CONFERENCE_TENANT_ID (matches DEFAULT_TENANT_ID in utils/tenant.ts) and the
+// bot auth seed come from the shared mock helper. The per-tenant API key
+// (sha256 of 'test-key') maps the incoming x-api-key to this tenant.
 
 function makeBotReq(over: Partial<any> = {}, method = 'GET'): any {
   return {
     method,
-    headers: { host: 'h', 'x-api-key': 'test-key', 'x-tenant-id': CONFERENCE_TENANT_ID },
+    headers: {
+      host: 'h',
+      'x-api-key': 'test-key',
+      'x-tenant-id': CONFERENCE_TENANT_ID,
+    },
     query: {},
     body: {},
     ...over,
@@ -42,9 +49,8 @@ function makeRes() {
 
 beforeEach(() => {
   resetSupabaseMock();
-  process.env.BOT_API_KEY = 'test-key';
-  // V2 strict tenant header — withBotRoute checks existence in `tenants`.
-  store.tenants = [{ id: CONFERENCE_TENANT_ID }] as any;
+  // Per-tenant bot auth: seeds tenant_secrets so x-api-key 'test-key' → tenant.
+  seedBotAuth();
   store.teams = [
     {
       id: TEAM_A,
@@ -69,10 +75,6 @@ beforeEach(() => {
       captain_id: 'user-2',
     },
   ] as any;
-});
-
-afterEach(() => {
-  delete process.env.BOT_API_KEY;
 });
 
 /* GET /api/bot/teams */

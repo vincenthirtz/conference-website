@@ -5,8 +5,12 @@
 // supabase chainable ([__helpers__/supabaseMock]) joue le rôle de la DB —
 // le PATCH écrit dans store.teams via le builder de Builder.update().
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
+import { describe, it, expect, beforeEach } from 'vitest';
+import {
+  store,
+  resetSupabaseMock,
+  seedBotAuth,
+} from './__helpers__/supabaseMock';
 import handler from '../../pages/api/bot/v1/teams/[teamId]';
 
 const TEAM_ID = '550e8400-e29b-41d4-a716-446655440b01';
@@ -55,7 +59,8 @@ function makeRes() {
 
 beforeEach(() => {
   resetSupabaseMock();
-  process.env.BOT_API_KEY = 'test-key';
+  // Per-tenant bot auth: x-api-key resolves to CONFERENCE_TENANT_ID.
+  seedBotAuth();
   // V2 strict tenant header — withBotRoute checks existence in `tenants`.
   store.tenants = [{ id: CONFERENCE_TENANT_ID }] as any;
   store.teams = [
@@ -86,10 +91,6 @@ beforeEach(() => {
   ] as any;
 });
 
-afterEach(() => {
-  delete process.env.BOT_API_KEY;
-});
-
 describe('PATCH /api/bot/v1/teams/[teamId]', () => {
   it('401 without api key', async () => {
     const res = makeRes();
@@ -100,7 +101,10 @@ describe('PATCH /api/bot/v1/teams/[teamId]', () => {
   it('404 when team not found', async () => {
     store.teams = [];
     const res = makeRes();
-    await handler(makeReq({ body: { actorDiscordUserId: CAPTAIN_DISCORD, name: 'X' } }), res);
+    await handler(
+      makeReq({ body: { actorDiscordUserId: CAPTAIN_DISCORD, name: 'X' } }),
+      res
+    );
     expect(res.statusCode).toBe(404);
   });
 
@@ -117,7 +121,10 @@ describe('PATCH /api/bot/v1/teams/[teamId]', () => {
 
   it('400 when name too short', async () => {
     const res = makeRes();
-    await handler(makeReq({ body: { actorDiscordUserId: CAPTAIN_DISCORD, name: 'A' } }), res);
+    await handler(
+      makeReq({ body: { actorDiscordUserId: CAPTAIN_DISCORD, name: 'A' } }),
+      res
+    );
     expect(res.statusCode).toBe(400);
     expect((res.body as any).error).toMatch(/name doit faire/);
   });
@@ -126,7 +133,10 @@ describe('PATCH /api/bot/v1/teams/[teamId]', () => {
     const res = makeRes();
     await handler(
       makeReq({
-        body: { actorDiscordUserId: CAPTAIN_DISCORD, website: 'javascript:alert(1)' },
+        body: {
+          actorDiscordUserId: CAPTAIN_DISCORD,
+          website: 'javascript:alert(1)',
+        },
       }),
       res
     );
@@ -136,7 +146,10 @@ describe('PATCH /api/bot/v1/teams/[teamId]', () => {
 
   it('400 when no editable field is supplied', async () => {
     const res = makeRes();
-    await handler(makeReq({ body: { actorDiscordUserId: CAPTAIN_DISCORD } }), res);
+    await handler(
+      makeReq({ body: { actorDiscordUserId: CAPTAIN_DISCORD } }),
+      res
+    );
     expect(res.statusCode).toBe(400);
     expect((res.body as any).error).toMatch(/Aucun champ modifiable/);
   });

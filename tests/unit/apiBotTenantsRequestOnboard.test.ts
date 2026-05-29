@@ -1,7 +1,7 @@
 // tests/unit/apiBotTenantsRequestOnboard.test.ts
 //
 // Tests pour POST /api/bot/v1/tenants/request-onboard :
-//   - 401 sans BOT_API_KEY
+//   - 401 sans x-api-key (per-tenant auth)
 //   - 405 sur GET
 //   - 400 sur body invalide (slug invalide / reserve / nom vide / email
 //     malforme / discord_user_id non-snowflake / discord display name trop
@@ -19,7 +19,11 @@ vi.mock('@/utils/supabase', async () => {
   return { supabaseAdmin: m.supabaseAdmin, getServerClient: m.getServerClient };
 });
 
-import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
+import {
+  store,
+  resetSupabaseMock,
+  seedBotAuth,
+} from './__helpers__/supabaseMock';
 import handler from '../../pages/api/bot/v1/tenants/request-onboard';
 
 const DISCORD_ID = '1234567890123456789';
@@ -61,13 +65,13 @@ function validBody(overrides: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   resetSupabaseMock();
-  process.env.BOT_API_KEY = 'test-key';
+  // Per-tenant bot auth (crossTenant route still requires a valid x-api-key).
+  seedBotAuth();
   process.env.DISCORD_CLIENT_ID = '1380000000000000000';
   process.env.DISCORD_BOT_PERMISSIONS = '1099780063312';
 });
 
 afterEach(() => {
-  delete process.env.BOT_API_KEY;
   delete process.env.DISCORD_CLIENT_ID;
   delete process.env.DISCORD_BOT_PERMISSIONS;
 });
@@ -125,10 +129,7 @@ describe('POST /api/bot/v1/tenants/request-onboard', () => {
 
   it('400 si email malforme', async () => {
     const res = makeRes();
-    await handler(
-      makeReq(validBody({ requesterEmail: 'not-an-email' })),
-      res
-    );
+    await handler(makeReq(validBody({ requesterEmail: 'not-an-email' })), res);
     expect(res.statusCode).toBe(400);
     expect((res.body as any).code).toBe('INVALID_BODY');
     expect((res.body as any).fields.requesterEmail).toBeDefined();

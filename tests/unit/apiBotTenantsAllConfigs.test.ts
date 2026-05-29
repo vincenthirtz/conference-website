@@ -4,14 +4,18 @@
 //   - 200 vide si aucun guild
 //   - 200 avec tous les guilds + leur config (ou defauts vides si absent)
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 vi.mock('@/utils/supabase', async () => {
   const m = await import('./__helpers__/supabaseMock');
   return { supabaseAdmin: m.supabaseAdmin, getServerClient: m.getServerClient };
 });
 
-import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
+import {
+  store,
+  resetSupabaseMock,
+  seedBotAuth,
+} from './__helpers__/supabaseMock';
 import handler from '../../pages/api/bot/v1/tenants/all-configs';
 
 const CONFERENCE_TENANT_ID = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
@@ -44,11 +48,8 @@ function makeRes() {
 
 beforeEach(() => {
   resetSupabaseMock();
-  process.env.BOT_API_KEY = 'test-key';
-});
-
-afterEach(() => {
-  delete process.env.BOT_API_KEY;
+  // Per-tenant bot auth (crossTenant route still requires a valid x-api-key).
+  seedBotAuth();
 });
 
 describe('GET /api/bot/v1/tenants/all-configs', () => {

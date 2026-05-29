@@ -1,8 +1,12 @@
 // tests/unit/player-actions-snooze.test.ts
 // POST /api/bot/v1/players/by-discord/[discordUserId]/actions/snooze
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
+import { describe, it, expect, beforeEach } from 'vitest';
+import {
+  store,
+  resetSupabaseMock,
+  seedBotAuth,
+} from './__helpers__/supabaseMock';
 import handler from '../../pages/api/bot/v1/players/by-discord/[discordUserId]/actions/snooze';
 
 const PLAYER_DISCORD = '900000000000000001';
@@ -44,14 +48,11 @@ function makeRes() {
 
 beforeEach(() => {
   resetSupabaseMock();
-  process.env.BOT_API_KEY = 'test-key';
+  // Per-tenant bot auth: x-api-key resolves to CONFERENCE_TENANT_ID.
+  seedBotAuth();
   // V2 strict tenant header — withBotRoute checks existence in `tenants`.
   store.tenants = [{ id: CONFERENCE_TENANT_ID }] as any;
   store.player_action_snoozes = [] as any;
-});
-
-afterEach(() => {
-  delete process.env.BOT_API_KEY;
 });
 
 describe('POST /api/bot/v1/players/by-discord/[id]/actions/snooze', () => {
@@ -81,7 +82,13 @@ describe('POST /api/bot/v1/players/by-discord/[id]/actions/snooze', () => {
   it('403 when actor != path', async () => {
     const res = makeRes();
     await handler(
-      makeReq({ body: { actorDiscordUserId: OTHER_DISCORD, actionKey: VALID_ACTION_KEY, minutes: 60 } }),
+      makeReq({
+        body: {
+          actorDiscordUserId: OTHER_DISCORD,
+          actionKey: VALID_ACTION_KEY,
+          minutes: 60,
+        },
+      }),
       res
     );
     expect(res.statusCode).toBe(403);
@@ -90,7 +97,13 @@ describe('POST /api/bot/v1/players/by-discord/[id]/actions/snooze', () => {
   it('400 when actionKey missing/malformed', async () => {
     const res = makeRes();
     await handler(
-      makeReq({ body: { actorDiscordUserId: PLAYER_DISCORD, actionKey: 'ab', minutes: 60 } }),
+      makeReq({
+        body: {
+          actorDiscordUserId: PLAYER_DISCORD,
+          actionKey: 'ab',
+          minutes: 60,
+        },
+      }),
       res
     );
     expect(res.statusCode).toBe(400);
@@ -99,7 +112,13 @@ describe('POST /api/bot/v1/players/by-discord/[id]/actions/snooze', () => {
   it('400 when minutes < 15', async () => {
     const res = makeRes();
     await handler(
-      makeReq({ body: { actorDiscordUserId: PLAYER_DISCORD, actionKey: VALID_ACTION_KEY, minutes: 5 } }),
+      makeReq({
+        body: {
+          actorDiscordUserId: PLAYER_DISCORD,
+          actionKey: VALID_ACTION_KEY,
+          minutes: 5,
+        },
+      }),
       res
     );
     expect(res.statusCode).toBe(400);
@@ -108,7 +127,13 @@ describe('POST /api/bot/v1/players/by-discord/[id]/actions/snooze', () => {
   it('400 when minutes > 1440', async () => {
     const res = makeRes();
     await handler(
-      makeReq({ body: { actorDiscordUserId: PLAYER_DISCORD, actionKey: VALID_ACTION_KEY, minutes: 2000 } }),
+      makeReq({
+        body: {
+          actorDiscordUserId: PLAYER_DISCORD,
+          actionKey: VALID_ACTION_KEY,
+          minutes: 2000,
+        },
+      }),
       res
     );
     expect(res.statusCode).toBe(400);
@@ -126,14 +151,23 @@ describe('POST /api/bot/v1/players/by-discord/[id]/actions/snooze', () => {
     expect(until).toBeGreaterThan(before);
     // store mutated
     expect(store.player_action_snoozes.length).toBe(1);
-    expect((store.player_action_snoozes[0] as any).discord_user_id).toBe(PLAYER_DISCORD);
-    expect((store.player_action_snoozes[0] as any).action_key).toBe(VALID_ACTION_KEY);
+    expect((store.player_action_snoozes[0] as any).discord_user_id).toBe(
+      PLAYER_DISCORD
+    );
+    expect((store.player_action_snoozes[0] as any).action_key).toBe(
+      VALID_ACTION_KEY
+    );
   });
 
   it('default minutes = 60 when omitted', async () => {
     const res = makeRes();
     await handler(
-      makeReq({ body: { actorDiscordUserId: PLAYER_DISCORD, actionKey: VALID_ACTION_KEY } }),
+      makeReq({
+        body: {
+          actorDiscordUserId: PLAYER_DISCORD,
+          actionKey: VALID_ACTION_KEY,
+        },
+      }),
       res
     );
     expect(res.statusCode).toBe(200);
@@ -143,7 +177,13 @@ describe('POST /api/bot/v1/players/by-discord/[id]/actions/snooze', () => {
   it('idempotent upsert: 2nd call updates snoozed_until on the same row', async () => {
     const res1 = makeRes();
     await handler(
-      makeReq({ body: { actorDiscordUserId: PLAYER_DISCORD, actionKey: VALID_ACTION_KEY, minutes: 30 } }),
+      makeReq({
+        body: {
+          actorDiscordUserId: PLAYER_DISCORD,
+          actionKey: VALID_ACTION_KEY,
+          minutes: 30,
+        },
+      }),
       res1
     );
     expect(res1.statusCode).toBe(200);
@@ -154,7 +194,13 @@ describe('POST /api/bot/v1/players/by-discord/[id]/actions/snooze', () => {
 
     const res2 = makeRes();
     await handler(
-      makeReq({ body: { actorDiscordUserId: PLAYER_DISCORD, actionKey: VALID_ACTION_KEY, minutes: 120 } }),
+      makeReq({
+        body: {
+          actorDiscordUserId: PLAYER_DISCORD,
+          actionKey: VALID_ACTION_KEY,
+          minutes: 120,
+        },
+      }),
       res2
     );
     expect(res2.statusCode).toBe(200);
