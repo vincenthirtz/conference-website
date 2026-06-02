@@ -58,7 +58,7 @@ function normalizeSortDir(value: string | null | undefined): 'asc' | 'desc' {
   return value === 'asc' ? 'asc' : 'desc';
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+ 
 async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ResponseData>,

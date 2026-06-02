@@ -19,7 +19,7 @@ function Header(): JSX.Element {
           srcSet="/img/illustra-640.webp 640w, /img/illustra-1024.webp 1024w"
           sizes="(max-width: 768px) 640px, 1024px"
         />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
+        { }
         <img
           src="/img/illustra.png"
           alt=""
