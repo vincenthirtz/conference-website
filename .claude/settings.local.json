@@ -91,7 +91,10 @@
       "Bash(cp fourplayers.png /tmp/fourplayers.png.bak)",
       "Bash(sips --resampleWidth 1280 illustra.png --out illustra.png)",
       "Bash(sips -s format jpeg -s formatOptions 82 --resampleWidth 1280 fourplayers.png --out fourplayers.jpg)",
-      "WebFetch(domain:pagespeed.web.dev)"
+      "WebFetch(domain:pagespeed.web.dev)",
+      "mcp__claude_ai_Supabase__list_projects",
+      "mcp__claude_ai_Supabase__list_organizations",
+      "mcp__claude_ai_Supabase__execute_sql"
     ]
   }
 }

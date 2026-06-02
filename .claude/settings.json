@@ -87,7 +87,8 @@
       "Bash(pkill -f \"next dev\")",
       "Bash(git mv *)",
       "Bash(mv pages/api/teams/\\\\[id\\\\]/members.ts pages/api/teams/\\\\[teamId\\\\]/members.ts)",
-      "Bash(rmdir pages/api/teams/\\\\[id\\\\])"
+      "Bash(rmdir pages/api/teams/\\\\[id\\\\])",
+      "PowerShell(npx playwright test tests/e2e/pages.spec.ts tests/e2e/home.spec.ts --reporter=line 2>&1)"
     ],
     "additionalDirectories": [
       "/Users/Alicia/.claude",
