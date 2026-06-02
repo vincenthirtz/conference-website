@@ -8,7 +8,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { resolveTenantId } from '@/utils/tenant';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { logger } from '@/utils/logger';
 
@@ -34,7 +34,10 @@ export default async function handler(
   if (!supabaseAdmin)
     return res.status(500).json({ error: 'Service unavailable' });
 
-  const tenantId = resolveTenantIdForPublicRequest(req);
+  // The caster is a desktop app (no path-prefix), so it selects its tenant via
+  // the `x-tenant-id` header like the bot — falls back to DEFAULT_TENANT_ID when
+  // absent. Lets the Electron app point at the e2e tenant in E2E mode.
+  const tenantId = resolveTenantId(req);
 
   const { data, error } = await supabaseAdmin
     .from('tournaments')

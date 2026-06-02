@@ -4,7 +4,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { resolveTenantId } from '@/utils/tenant';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
@@ -30,7 +30,8 @@ export default async function handler(
     return res.status(400).json({ error: 'Invalid match id' });
   }
 
-  const tenantId = resolveTenantIdForPublicRequest(req);
+  // Tenant via `x-tenant-id` header (caster desktop app); default fallback.
+  const tenantId = resolveTenantId(req);
 
   const { data: match, error: matchErr } = await supabaseAdmin
     .from('matches')

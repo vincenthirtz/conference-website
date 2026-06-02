@@ -7,9 +7,11 @@
 //   - POST /api/twitch/exchange
 //   - POST /api/twitch/refresh
 //
-// The caster routes use supabaseAdmin + resolveTenantIdForPublicRequest
-// (posture identical to /api/scrims). supabase + rateLimit are auto-mocked by
-// tests/unit/__helpers__/testSetup.ts, so we just seed `store.<table>`.
+// The caster routes use supabaseAdmin + resolveTenantId (honors the
+// `x-tenant-id` header so the desktop caster can target a specific tenant —
+// e.g. the e2e tenant in E2E mode — falling back to DEFAULT_TENANT_ID).
+// supabase + rateLimit are auto-mocked by tests/unit/__helpers__/testSetup.ts,
+// so we just seed `store.<table>`.
 //
 // The Twitch routes call the EXTERNAL Twitch token endpoint via global fetch,
 // which we mock here, and read TWITCH_CLIENT_ID/SECRET from env.
@@ -61,6 +63,8 @@ function makeRes() {
 
 const VALID_UUID = '550e8400-e29b-41d4-a716-446655440000';
 const OTHER_UUID = '550e8400-e29b-41d4-a716-446655440099';
+const TENANT_E2E = 'e2e70000-0000-4000-8000-000000000001';
+const TENANT_OTHER = '11111111-1111-4111-8111-111111111111';
 
 beforeEach(() => {
   resetSupabaseMock();
@@ -73,10 +77,42 @@ beforeEach(() => {
 describe('GET /api/caster/tournaments', () => {
   it('returns 200 with tournaments scoped to running/published', async () => {
     store.tournaments = [
-      { id: 't1', name: 'Run', slug: 'run', game: 'lol', status: 'running', start_date: '2026-03-01', format_type: 'single_elim' },
-      { id: 't2', name: 'Pub', slug: 'pub', game: 'lol', status: 'published', start_date: '2026-02-01', format_type: 'swiss' },
-      { id: 't3', name: 'Draft', slug: 'draft', game: 'lol', status: 'draft', start_date: '2026-01-01', format_type: 'single_elim' },
-      { id: 't4', name: 'Arch', slug: 'arch', game: 'lol', status: 'archived', start_date: '2026-01-01', format_type: 'single_elim' },
+      {
+        id: 't1',
+        name: 'Run',
+        slug: 'run',
+        game: 'lol',
+        status: 'running',
+        start_date: '2026-03-01',
+        format_type: 'single_elim',
+      },
+      {
+        id: 't2',
+        name: 'Pub',
+        slug: 'pub',
+        game: 'lol',
+        status: 'published',
+        start_date: '2026-02-01',
+        format_type: 'swiss',
+      },
+      {
+        id: 't3',
+        name: 'Draft',
+        slug: 'draft',
+        game: 'lol',
+        status: 'draft',
+        start_date: '2026-01-01',
+        format_type: 'single_elim',
+      },
+      {
+        id: 't4',
+        name: 'Arch',
+        slug: 'arch',
+        game: 'lol',
+        status: 'archived',
+        start_date: '2026-01-01',
+        format_type: 'single_elim',
+      },
     ];
     const req = makeReq();
     const res = makeRes();
@@ -104,6 +140,40 @@ describe('GET /api/caster/tournaments', () => {
     await casterTournamentsHandler(req, res);
     expect(res.statusCode).toBe(405);
     expect(res.headers['Allow']).toBe('GET');
+  });
+
+  it('scopes the list to the x-tenant-id header when present', async () => {
+    store.tournaments = [
+      {
+        id: 'tA',
+        name: 'E2E',
+        slug: 'e2e',
+        game: 'overwatch',
+        status: 'running',
+        start_date: '2026-03-01',
+        format_type: 'single_elim',
+        tenant_id: TENANT_E2E,
+      },
+      {
+        id: 'tB',
+        name: 'Other',
+        slug: 'other',
+        game: 'overwatch',
+        status: 'running',
+        start_date: '2026-03-01',
+        format_type: 'single_elim',
+        tenant_id: TENANT_OTHER,
+      },
+    ];
+    const req = makeReq({
+      headers: { host: 'example.com', 'x-tenant-id': TENANT_E2E },
+    });
+    const res = makeRes();
+    await casterTournamentsHandler(req, res);
+
+    expect(res.statusCode).toBe(200);
+    const list = (res.body as any).tournaments;
+    expect(list.map((t: any) => t.id)).toEqual(['tA']);
   });
 });
 
@@ -136,11 +206,36 @@ describe('GET /api/caster/tournaments/[id]/matches', () => {
 
   it('returns 200 with matches scoped to the tournament + valid statuses', async () => {
     store.matches = [
-      { id: 'm1', tournament_id: VALID_UUID, status: 'pending', scheduled_at: '2026-03-01' },
-      { id: 'm2', tournament_id: VALID_UUID, status: 'ongoing', scheduled_at: '2026-03-02' },
-      { id: 'm3', tournament_id: VALID_UUID, status: 'finished', scheduled_at: '2026-03-03' },
-      { id: 'm4', tournament_id: VALID_UUID, status: 'cancelled', scheduled_at: '2026-03-04' },
-      { id: 'm5', tournament_id: OTHER_UUID, status: 'pending', scheduled_at: '2026-03-05' },
+      {
+        id: 'm1',
+        tournament_id: VALID_UUID,
+        status: 'pending',
+        scheduled_at: '2026-03-01',
+      },
+      {
+        id: 'm2',
+        tournament_id: VALID_UUID,
+        status: 'ongoing',
+        scheduled_at: '2026-03-02',
+      },
+      {
+        id: 'm3',
+        tournament_id: VALID_UUID,
+        status: 'finished',
+        scheduled_at: '2026-03-03',
+      },
+      {
+        id: 'm4',
+        tournament_id: VALID_UUID,
+        status: 'cancelled',
+        scheduled_at: '2026-03-04',
+      },
+      {
+        id: 'm5',
+        tournament_id: OTHER_UUID,
+        status: 'pending',
+        scheduled_at: '2026-03-05',
+      },
     ];
     const req = makeReq({ query: { id: VALID_UUID } });
     const res = makeRes();
@@ -194,11 +289,30 @@ describe('GET /api/caster/matches/[id]', () => {
 
   it('returns 200 with the match + its games', async () => {
     store.matches = [
-      { id: VALID_UUID, status: 'ongoing', best_of: 3, scheduled_at: '2026-03-01' },
+      {
+        id: VALID_UUID,
+        status: 'ongoing',
+        best_of: 3,
+        scheduled_at: '2026-03-01',
+      },
     ];
     store.games = [
-      { id: 'g1', match_id: VALID_UUID, map_name: 'Bind', map_order: 1, team1_score: 13, team2_score: 7 },
-      { id: 'g2', match_id: VALID_UUID, map_name: 'Haven', map_order: 2, team1_score: 9, team2_score: 13 },
+      {
+        id: 'g1',
+        match_id: VALID_UUID,
+        map_name: 'Bind',
+        map_order: 1,
+        team1_score: 13,
+        team2_score: 7,
+      },
+      {
+        id: 'g2',
+        match_id: VALID_UUID,
+        map_name: 'Haven',
+        map_order: 2,
+        team1_score: 9,
+        team2_score: 13,
+      },
       { id: 'g3', match_id: OTHER_UUID, map_name: 'Split', map_order: 1 },
     ];
     const req = makeReq({ query: { id: VALID_UUID } });
@@ -245,9 +359,30 @@ describe('GET /api/caster/tournaments/[id]/maps', () => {
 
   it('returns 200 with only enabled maps for the tournament', async () => {
     store.tournament_maps = [
-      { id: 'mp1', tournament_id: VALID_UUID, map_name: 'Ascent', map_type: 'standard', image_url: null, enabled: true },
-      { id: 'mp2', tournament_id: VALID_UUID, map_name: 'Bind', map_type: 'standard', image_url: null, enabled: false },
-      { id: 'mp3', tournament_id: OTHER_UUID, map_name: 'Haven', map_type: 'standard', image_url: null, enabled: true },
+      {
+        id: 'mp1',
+        tournament_id: VALID_UUID,
+        map_name: 'Ascent',
+        map_type: 'standard',
+        image_url: null,
+        enabled: true,
+      },
+      {
+        id: 'mp2',
+        tournament_id: VALID_UUID,
+        map_name: 'Bind',
+        map_type: 'standard',
+        image_url: null,
+        enabled: false,
+      },
+      {
+        id: 'mp3',
+        tournament_id: OTHER_UUID,
+        map_name: 'Haven',
+        map_type: 'standard',
+        image_url: null,
+        enabled: true,
+      },
     ];
     const req = makeReq({ query: { id: VALID_UUID } });
     const res = makeRes();
