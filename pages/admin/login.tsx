@@ -6,7 +6,7 @@ import { useRouter } from 'next/router';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
-import { supabaseClient } from '@/utils/supabase';
+import { supabaseClient, purgeSupabaseAuthStorage } from '@/utils/supabase';
 import { useSiteSetting } from '@/hooks/useSiteSettings';
 
 import { logger } from '../../utils/logger';
@@ -52,13 +52,19 @@ const AdminLoginPage = () => {
         }
 
         if (res.status === 401) {
-          await supabaseClient.auth.signOut();
+          await supabaseClient.auth
+            .signOut({ scope: 'local' })
+            .catch(() => {});
+          purgeSupabaseAuthStorage();
           if (!cancelled) {
             setError('Email ou mot de passe incorrect.');
           }
         }
       } catch (err) {
+        // Session locale corrompue/périmée : on la purge pour repartir propre
+        // (évite le « ça remarche en changeant de navigateur »).
         logger.error('[staff login] session check error:', err);
+        purgeSupabaseAuthStorage();
       } finally {
         if (!cancelled) setIsCheckingSession(false);
       }
@@ -110,7 +116,8 @@ const AdminLoginPage = () => {
       }
 
       if (res.status === 401) {
-        await supabaseClient.auth.signOut();
+        await supabaseClient.auth.signOut({ scope: 'local' }).catch(() => {});
+        purgeSupabaseAuthStorage();
         throw new Error('Email ou mot de passe incorrect.');
       }
 

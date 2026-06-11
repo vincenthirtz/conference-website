@@ -46,6 +46,40 @@ export const supabaseClient = createBrowserClient(
   SUPABASE_ANON_KEY!
 );
 
+/**
+ * Purge brute-force de toute session Supabase persistée côté navigateur
+ * (cookies `sb-*` + entrées localStorage).
+ *
+ * Filet de sécurité pour le cas « impossible de se connecter, mais ça remarche
+ * en changeant de navigateur » : une session locale corrompue ou périmée (refresh
+ * token invalide, cookie chunké à moitié écrit) bloque la reconnexion. Ce purge
+ * ne fait AUCUN appel réseau et ne dépend pas de l'état interne de supabase-js
+ * (qui peut justement être cassé et faire échouer `signOut()` global).
+ */
+export function purgeSupabaseAuthStorage(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const ls = window.localStorage;
+    for (let i = ls.length - 1; i >= 0; i--) {
+      const key = ls.key(i);
+      if (key && key.startsWith('sb-')) ls.removeItem(key);
+    }
+  } catch {
+    /* localStorage indisponible (mode privé strict) : on ignore */
+  }
+  try {
+    const cookies = document.cookie ? document.cookie.split(';') : [];
+    for (const raw of cookies) {
+      const name = raw.split('=')[0]?.trim();
+      if (name && name.startsWith('sb-')) {
+        document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`;
+      }
+    }
+  } catch {
+    /* document.cookie indisponible : on ignore */
+  }
+}
+
 /* -----------------------------------------------------------
  * 2) Client SERVER (SSR / API) basé sur les cookies
  *    - Utilisé dans getServerSideProps & API routes
