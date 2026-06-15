@@ -84,7 +84,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   if (!user) {
     return {
       redirect: {
-        destination: `/login?next=/team/${encodeURIComponent(slug)}/edit`,
+        destination: `/admin/login?next=/team/${encodeURIComponent(slug)}/edit`,
         permanent: false,
       },
     };

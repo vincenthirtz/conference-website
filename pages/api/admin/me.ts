@@ -1,8 +1,14 @@
 // pages/api/admin/me.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { z } from 'zod';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
+
+const patchProfileSchema = z.object({
+  displayName: z.string().trim().max(80).optional(),
+  avatarUrl: z.string().url().max(2048).nullable().optional(),
+});
 
 import { logger } from '../../../utils/logger';
 type MeResponse =
@@ -46,14 +52,22 @@ export default withAuthRoute(async function handler(
 
   // PATCH → mise à jour du profil staff (display_name / avatar_url)
   if (req.method === 'PATCH') {
-    const { displayName, avatarUrl } = req.body || {};
+    const parsed = patchProfileSchema.safeParse(req.body || {});
+    if (!parsed.success) {
+      return res.status(400).json({
+        error:
+          'Champs invalides : displayName (texte, 80 max), avatarUrl (URL valide, 2048 max).',
+      });
+    }
+
+    const { displayName, avatarUrl } = parsed.data;
     const updatePayload: Record<string, any> = {};
 
-    if (typeof displayName === 'string') {
+    if (displayName !== undefined) {
       updatePayload.display_name = displayName.trim() || null;
     }
-    if (typeof avatarUrl === 'string') {
-      updatePayload.avatar_url = avatarUrl.trim() || null;
+    if (avatarUrl !== undefined) {
+      updatePayload.avatar_url = avatarUrl ? avatarUrl.trim() : null;
     }
 
     if (Object.keys(updatePayload).length === 0) {

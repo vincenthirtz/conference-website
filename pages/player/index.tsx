@@ -325,13 +325,13 @@ export default function PlayerDashboard() {
 
           {/* Push opt-in : carte visible tant que le user n'a pas activé /
               refusé / "plus tard". Routes vers /api/player/push/subscribe.
-              loginPath='/auth/login' parce que c'est l'écran d'auth player
-              (vs /admin/login pour le staff). */}
+              loginPath='/admin/login' : login universel qui route captain/player
+              vers /player et le staff vers /admin. */}
           <div className="mb-6">
             <PushOptIn
               audience="player"
               variant="card"
-              loginPath="/auth/login"
+              loginPath="/admin/login"
             />
           </div>
 

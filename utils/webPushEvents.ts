@@ -65,7 +65,7 @@ export function isWebPushEventType(value: string): value is WebPushEventType {
  *
  * V1 : on route les events match-related vers `/player` (pas de page de
  * détail match côté joueuse). Le SW gère la navigation au clic et l'auth
- * player redirigera vers `/auth/login` si besoin.
+ * player redirigera vers `/admin/login` si besoin.
  */
 export function playerUrlForEvent(
   eventName: string,

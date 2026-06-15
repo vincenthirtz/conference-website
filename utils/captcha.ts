@@ -12,11 +12,36 @@ import crypto from 'crypto';
  * No external service or dependency required.
  */
 
-const CAPTCHA_SECRET =
-  process.env.CAPTCHA_SECRET ||
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.NEXT_SUPABASE_SERVICE_ROLE_KEY ||
-  'fallback-captcha-secret-change-me';
+function resolveCaptchaSecret(): string {
+  const explicit =
+    process.env.CAPTCHA_SECRET ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXT_SUPABASE_SERVICE_ROLE_KEY;
+
+  if (explicit) return explicit;
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'CAPTCHA_SECRET manquant en production : définissez la variable ' +
+        "d'environnement CAPTCHA_SECRET (le CAPTCHA serait sinon contournable)."
+    );
+  }
+
+  // Dev/test only: derive a non-public secret from the machine/runtime so the
+  // value is never a hardcoded public constant. Captcha stays functional locally.
+  console.warn(
+    '[captcha] CAPTCHA_SECRET absent — secret de développement éphémère utilisé. ' +
+      'Définissez CAPTCHA_SECRET pour un comportement stable.'
+  );
+  return crypto
+    .createHash('sha256')
+    .update(
+      `captcha-dev:${process.env.HOSTNAME ?? ''}:${process.cwd()}:${process.pid}`
+    )
+    .digest('hex');
+}
+
+const CAPTCHA_SECRET = resolveCaptchaSecret();
 
 /** Token lifetime in milliseconds (5 minutes). */
 const TOKEN_TTL_MS = 5 * 60 * 1000;

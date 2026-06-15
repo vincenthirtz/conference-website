@@ -8,8 +8,19 @@ import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
 import { supabaseClient, purgeSupabaseAuthStorage } from '@/utils/supabase';
 import { useSiteSetting } from '@/hooks/useSiteSettings';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../../utils/logger';
+
+// Valide une cible de redirection pour éviter les open redirects : on
+// n'accepte que les chemins internes (commence par '/' mais pas par '//',
+// qui serait un lien protocol-relative vers un domaine externe).
+// Même règle que pages/auth/discord-member.tsx.
+function safeNext(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  return raw.startsWith('/') && !raw.startsWith('//') ? raw : null;
+}
+
 const AdminLoginPage = () => {
   const router = useRouter();
   const { value: contactEmail } = useSiteSetting('contact_email');
@@ -40,14 +51,18 @@ const AdminLoginPage = () => {
         });
         const me = await res.json().catch(() => null);
 
+        const next = safeNext(router.query.next);
+
         if (res.ok && me?.role) {
-          router.replace(me.role === 'captain' ? '/player' : '/admin');
+          router.replace(
+            next ?? (me.role === 'captain' ? '/player' : '/admin')
+          );
           return;
         }
 
         // Pas staff mais session valide → joueur, rediriger vers le panel joueur
         if (res.status === 403) {
-          router.replace('/player');
+          router.replace(next ?? '/player');
           return;
         }
 
@@ -103,15 +118,19 @@ const AdminLoginPage = () => {
 
       const me = await res.json().catch(() => null);
 
+      const next = safeNext(router.query.next);
+
       if (res.ok && me?.role) {
-        // Captain → panel joueur, Staff → panel admin
-        await router.push(me.role === 'captain' ? '/player' : '/admin');
+        // ?next= valide prioritaire, sinon Captain → panel joueur, Staff → admin
+        await router.push(
+          next ?? (me.role === 'captain' ? '/player' : '/admin')
+        );
         return;
       }
 
       if (res.status === 403) {
         // Pas staff mais authentifié → joueur, rediriger vers le panel joueur
-        await router.push('/player');
+        await router.push(next ?? '/player');
         return;
       }
 
@@ -126,9 +145,9 @@ const AdminLoginPage = () => {
       }
     } catch (err: unknown) {
       logger.error('[staff login] error:', err);
+      // On n'expose jamais le message brut (souvent en anglais) à l'écran.
       setError(
-        (err as Error)?.message ||
-          'Une erreur est survenue pendant la connexion. Réessaie dans un instant.'
+        'Une erreur est survenue pendant la connexion. Réessaie dans un instant.'
       );
     } finally {
       setIsSubmitting(false);
@@ -282,7 +301,11 @@ const AdminLoginPage = () => {
                   </div>
 
                   {error && (
-                    <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-100">
+                    <div
+                      role="alert"
+                      aria-live="assertive"
+                      className="rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-100"
+                    >
                       {error}
                     </div>
                   )}
@@ -356,5 +379,13 @@ const AdminLoginPage = () => {
     </div>
   );
 };
+
+const adminLoginSeo: SeoProps = {
+  title: 'Connexion',
+  description:
+    "Connecte-toi à ton espace OW Women's Cup : panel joueuse, gestion d'équipe ou administration staff.",
+};
+
+AdminLoginPage.seo = adminLoginSeo;
 
 export default AdminLoginPage;

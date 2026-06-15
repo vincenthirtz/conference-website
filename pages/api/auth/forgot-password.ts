@@ -4,6 +4,7 @@
 // Supabase reset email.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { z } from 'zod';
 import { supabaseAdmin } from '@/utils/supabase';
 import { sendPasswordResetEmail } from '@/utils/email';
 import { applyRateLimit } from '@/utils/rateLimit';
@@ -16,18 +17,16 @@ const SITE_URL =
 
 const DEFAULT_REDIRECT_PATH = '/admin/reset-password';
 
-const ALLOWED_REDIRECT_PATHS = new Set(['/admin/reset-password']);
+const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+  // Un redirectPath inconnu n'est PAS une erreur : on l'ignore et on retombe
+  // sur le défaut (contrat historique). `.catch` neutralise la valeur invalide
+  // sans rejeter toute la requête, tout en gardant l'allow-list de sécurité.
+  redirectPath: z.enum(['/admin/reset-password']).optional().catch(undefined),
+});
 
-function isValidEmail(value: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
-
-function buildRedirectUrl(rawPath: unknown): string {
-  const path =
-    typeof rawPath === 'string' && ALLOWED_REDIRECT_PATHS.has(rawPath)
-      ? rawPath
-      : DEFAULT_REDIRECT_PATH;
-  return `${SITE_URL.replace(/\/$/, '')}${path}`;
+function buildRedirectUrl(path: string | undefined): string {
+  return `${SITE_URL.replace(/\/$/, '')}${path ?? DEFAULT_REDIRECT_PATH}`;
 }
 
 export default async function handler(
@@ -54,14 +53,14 @@ export default async function handler(
     return res.status(500).json({ error: 'Service indisponible' });
   }
 
-  const { email, redirectPath } = req.body || {};
+  const parsed = forgotPasswordSchema.safeParse(req.body || {});
 
-  if (typeof email !== 'string' || !isValidEmail(email.trim())) {
+  if (!parsed.success) {
     return res.status(400).json({ error: 'Email invalide' });
   }
 
-  const cleanEmail = email.trim().toLowerCase();
-  const redirectTo = buildRedirectUrl(redirectPath);
+  const cleanEmail = parsed.data.email.trim().toLowerCase();
+  const redirectTo = buildRedirectUrl(parsed.data.redirectPath);
 
   // Generic success response — never disclose whether the account exists.
   const ok = {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { supabaseClient } from '@/utils/supabase';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
@@ -14,6 +14,34 @@ function RegisterPage() {
   const [oauthLoading, setOauthLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [fieldError, setFieldError] = useState<
+    'battleTag' | 'password' | 'confirm' | null
+  >(null);
+
+  const battleTagRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const confirmRef = useRef<HTMLInputElement>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
+
+  // Format BattleTag annoncé : Pseudo#0000 (4 ou 5 chiffres).
+  const BATTLETAG_PATTERN = /^.+#[0-9]{4,5}$/;
+
+  // Message neutre, identique au chemin succès, pour ne pas révéler si un
+  // email est déjà enregistré (anti-énumération).
+  const NEUTRAL_SIGNUP_MSG =
+    "Si cette adresse n'est pas déjà utilisée, un email de confirmation vient d'être envoyé. Vérifie ta boîte mail, puis connecte-toi.";
+
+  const focusFirstError = (field: 'battleTag' | 'password' | 'confirm') => {
+    setFieldError(field);
+    const ref =
+      field === 'battleTag'
+        ? battleTagRef
+        : field === 'password'
+          ? passwordRef
+          : confirmRef;
+    // Laisse React peindre l'aria-invalid avant de déplacer le focus.
+    requestAnimationFrame(() => ref.current?.focus());
+  };
 
   const handleDiscordSignup = async () => {
     setErrorMsg(null);
@@ -50,18 +78,65 @@ function RegisterPage() {
     }
   };
 
+  function mapSignUpError(error: { message?: string; status?: number }): {
+    msg: string;
+    neutral: boolean;
+  } {
+    const raw = (error.message || '').toLowerCase();
+
+    // Email déjà enregistré → message neutre identique au chemin succès
+    // (anti-énumération).
+    if (
+      raw.includes('already registered') ||
+      raw.includes('already been registered') ||
+      raw.includes('user already')
+    ) {
+      return { msg: NEUTRAL_SIGNUP_MSG, neutral: true };
+    }
+
+    // Rate-limit Supabase.
+    if (
+      error.status === 429 ||
+      raw.includes('for security purposes') ||
+      raw.includes('rate limit') ||
+      raw.includes('too many')
+    ) {
+      return {
+        msg: 'Trop de tentatives. Patiente quelques instants avant de réessayer.',
+        neutral: false,
+      };
+    }
+
+    // Fallback générique : on n'expose jamais le message brut (anglais).
+    return {
+      msg: 'Impossible de créer le compte pour le moment. Réessaie dans un instant.',
+      neutral: false,
+    };
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErrorMsg(null);
     setSuccessMsg(null);
+    setFieldError(null);
 
-    if (password.trim().length < 6) {
-      setErrorMsg('Le mot de passe doit contenir au moins 6 caractères.');
+    // On valide la valeur brute du mot de passe (pas de .trim() : un mot de
+    // passe peut légitimement contenir des espaces).
+    if (password.length < 8) {
+      setErrorMsg('Le mot de passe doit contenir au moins 8 caractères.');
+      focusFirstError('password');
       return;
     }
 
     if (password !== confirm) {
       setErrorMsg('Les mots de passe ne correspondent pas.');
+      focusFirstError('confirm');
+      return;
+    }
+
+    if (battleTag.trim() && !BATTLETAG_PATTERN.test(battleTag.trim())) {
+      setErrorMsg('Le BattleTag doit être au format Pseudo#0000.');
+      focusFirstError('battleTag');
       return;
     }
 
@@ -70,29 +145,43 @@ function RegisterPage() {
     try {
       const { error } = await supabaseClient.auth.signUp({
         email: email.trim(),
-        password: password.trim(),
+        password,
         options: {
           data: {
             display_name: displayName || null,
             role: 'player',
-            battle_tag: battleTag || null,
+            battle_tag: battleTag.trim() || null,
           },
         },
       });
 
       if (error) {
-        throw new Error(error.message || 'Impossible de créer le compte.');
+        const { msg, neutral } = mapSignUpError(error);
+        if (neutral) {
+          // Comportement identique au succès : on n'indique pas que l'email
+          // est déjà pris.
+          setSuccessMsg(msg);
+          setEmail('');
+          setPassword('');
+          setConfirm('');
+          setBattleTag('');
+        } else {
+          setErrorMsg(msg);
+          requestAnimationFrame(() => errorRef.current?.focus());
+        }
+        return;
       }
 
-      setSuccessMsg(
-        'Compte créé. Vérifie tes emails pour confirmer, puis connecte-toi.'
-      );
+      setSuccessMsg(NEUTRAL_SIGNUP_MSG);
       setEmail('');
       setPassword('');
       setConfirm('');
       setBattleTag('');
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+    } catch {
+      setErrorMsg(
+        'Une erreur est survenue pendant la création du compte. Réessaie dans un instant.'
+      );
+      requestAnimationFrame(() => errorRef.current?.focus());
     } finally {
       setLoading(false);
     }
@@ -146,10 +235,15 @@ function RegisterPage() {
                   BattleTag (format Pseudo#0000)
                 </label>
                 <input
+                  ref={battleTagRef}
                   id="battleTag"
                   type="text"
                   value={battleTag}
                   onChange={(e) => setBattleTag(e.target.value)}
+                  aria-invalid={fieldError === 'battleTag' || undefined}
+                  aria-describedby={
+                    fieldError === 'battleTag' ? 'register-error' : undefined
+                  }
                   className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 focus:border-purple-400/80 transition"
                   placeholder="Ex: Gamerette#1234"
                 />
@@ -182,11 +276,17 @@ function RegisterPage() {
                   Mot de passe
                 </label>
                 <input
+                  ref={passwordRef}
                   id="password"
                   type="password"
+                  autoComplete="new-password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  aria-invalid={fieldError === 'password' || undefined}
+                  aria-describedby={
+                    fieldError === 'password' ? 'register-error' : undefined
+                  }
                   className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 focus:border-purple-400/80 transition"
                   placeholder="••••••••"
                 />
@@ -200,23 +300,39 @@ function RegisterPage() {
                   Confirmation
                 </label>
                 <input
+                  ref={confirmRef}
                   id="confirm"
                   type="password"
+                  autoComplete="new-password"
                   required
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}
+                  aria-invalid={fieldError === 'confirm' || undefined}
+                  aria-describedby={
+                    fieldError === 'confirm' ? 'register-error' : undefined
+                  }
                   className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 focus:border-purple-400/80 transition"
                   placeholder="••••••••"
                 />
               </div>
 
               {errorMsg && (
-                <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-100">
+                <div
+                  id="register-error"
+                  ref={errorRef}
+                  tabIndex={-1}
+                  role="alert"
+                  aria-live="assertive"
+                  className="rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-100 outline-none"
+                >
                   {errorMsg}
                 </div>
               )}
               {successMsg && (
-                <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-100">
+                <div
+                  role="status"
+                  className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-100"
+                >
                   {successMsg}
                 </div>
               )}
