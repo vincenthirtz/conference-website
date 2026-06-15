@@ -139,6 +139,26 @@ export function setCreateUserResult(result: typeof _createUserResult) {
   _createUserResult = result;
 }
 
+/** State returned by `supabaseAnonServer.auth.signUp()` + capture des appels. */
+let _signUpResult: {
+  data: { user: unknown | null };
+  error: { status?: number; message?: string } | null;
+} = {
+  data: { user: { id: 'signed-up-user' } },
+  error: null,
+};
+
+/** Inputs passés à `supabaseAnonServer.auth.signUp()` (pour assertions). */
+export const signUpCalls: Array<{
+  email: string;
+  password: string;
+  options?: { data?: Record<string, unknown> };
+}> = [];
+
+export function setSignUpResult(result: typeof _signUpResult) {
+  _signUpResult = result;
+}
+
 export function setAuthUser(user: unknown, error: unknown = null) {
   _authUser = user;
   _authError = error;
@@ -185,6 +205,11 @@ export function resetSupabaseMock() {
     data: { user: { id: 'gen-user', email: null } },
     error: null,
   };
+  _signUpResult = {
+    data: { user: { id: 'signed-up-user' } },
+    error: null,
+  };
+  signUpCalls.length = 0;
   _storageUploadResult = { error: null };
 }
 
@@ -557,3 +582,17 @@ export const getServerClient = () => ({
       }),
   },
 });
+
+/** Client anon serveur — utilisé par /api/auth/register (signUp public). */
+export const supabaseAnonServer = {
+  auth: {
+    signUp: (input: {
+      email: string;
+      password: string;
+      options?: { data?: Record<string, unknown> };
+    }) => {
+      signUpCalls.push(input);
+      return Promise.resolve(_signUpResult);
+    },
+  },
+};

@@ -78,42 +78,6 @@ function RegisterPage() {
     }
   };
 
-  function mapSignUpError(error: { message?: string; status?: number }): {
-    msg: string;
-    neutral: boolean;
-  } {
-    const raw = (error.message || '').toLowerCase();
-
-    // Email déjà enregistré → message neutre identique au chemin succès
-    // (anti-énumération).
-    if (
-      raw.includes('already registered') ||
-      raw.includes('already been registered') ||
-      raw.includes('user already')
-    ) {
-      return { msg: NEUTRAL_SIGNUP_MSG, neutral: true };
-    }
-
-    // Rate-limit Supabase.
-    if (
-      error.status === 429 ||
-      raw.includes('for security purposes') ||
-      raw.includes('rate limit') ||
-      raw.includes('too many')
-    ) {
-      return {
-        msg: 'Trop de tentatives. Patiente quelques instants avant de réessayer.',
-        neutral: false,
-      };
-    }
-
-    // Fallback générique : on n'expose jamais le message brut (anglais).
-    return {
-      msg: 'Impossible de créer le compte pour le moment. Réessaie dans un instant.',
-      neutral: false,
-    };
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErrorMsg(null);
@@ -142,46 +106,53 @@ function RegisterPage() {
 
     setLoading(true);
 
+    const focusError = () =>
+      requestAnimationFrame(() => errorRef.current?.focus());
+
     try {
-      const { error } = await supabaseClient.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          data: {
-            display_name: displayName || null,
-            role: 'player',
-            battle_tag: battleTag.trim() || null,
-          },
-        },
+      // L'inscription passe par la route serveur (validation + rate-limit +
+      // rôle forcé) au lieu d'un signUp direct depuis le navigateur.
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+          displayName: displayName.trim() || undefined,
+          battleTag: battleTag.trim() || undefined,
+        }),
       });
 
-      if (error) {
-        const { msg, neutral } = mapSignUpError(error);
-        if (neutral) {
-          // Comportement identique au succès : on n'indique pas que l'email
-          // est déjà pris.
-          setSuccessMsg(msg);
-          setEmail('');
-          setPassword('');
-          setConfirm('');
-          setBattleTag('');
-        } else {
-          setErrorMsg(msg);
-          requestAnimationFrame(() => errorRef.current?.focus());
-        }
+      if (res.ok) {
+        // Succès OU email déjà pris → même message neutre (anti-énumération).
+        setSuccessMsg(NEUTRAL_SIGNUP_MSG);
+        setEmail('');
+        setPassword('');
+        setConfirm('');
+        setBattleTag('');
         return;
       }
 
-      setSuccessMsg(NEUTRAL_SIGNUP_MSG);
-      setEmail('');
-      setPassword('');
-      setConfirm('');
-      setBattleTag('');
+      if (res.status === 429) {
+        setErrorMsg(
+          'Trop de tentatives. Patiente quelques instants avant de réessayer.'
+        );
+        focusError();
+        return;
+      }
+
+      const data = await res.json().catch(() => null);
+      setErrorMsg(
+        data?.code === 'VALIDATION' && typeof data.error === 'string'
+          ? data.error
+          : 'Impossible de créer le compte pour le moment. Réessaie dans un instant.'
+      );
+      focusError();
     } catch {
       setErrorMsg(
         'Une erreur est survenue pendant la création du compte. Réessaie dans un instant.'
       );
-      requestAnimationFrame(() => errorRef.current?.focus());
+      focusError();
     } finally {
       setLoading(false);
     }
@@ -379,7 +350,7 @@ function RegisterPage() {
             </form>
 
             <div className="mt-4 text-center text-sm text-gray-300 space-x-3">
-              <Link href="/admin/login" className="hover:text-white">
+              <Link href="/login" className="hover:text-white">
                 Connexion
               </Link>
               <span className="text-gray-600">•</span>

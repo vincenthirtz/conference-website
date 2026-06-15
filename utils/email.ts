@@ -177,7 +177,7 @@ export function sendWelcomeEmail(
       <p style="margin:0 0 20px;font-size:13px;color:#e74694;line-height:1.5;background:rgba(231,70,148,0.08);border:1px solid rgba(231,70,148,0.15);border-radius:8px;padding:10px 14px;">
         Nous vous recommandons de changer votre mot de passe d&egrave;s votre premi&egrave;re connexion.
       </p>
-      ${ctaButton(SITE_URL + '/admin/login', 'Se connecter')}
+      ${ctaButton(SITE_URL + '/login', 'Se connecter')}
     `),
   });
 }
@@ -214,7 +214,7 @@ export function sendTeamJoinEmail(
           </p>
         </td></tr>
       </table>
-      ${ctaButton(SITE_URL + '/admin/login', 'Voir mon équipe')}
+      ${ctaButton(SITE_URL + '/login', 'Voir mon équipe')}
     `),
   });
 }

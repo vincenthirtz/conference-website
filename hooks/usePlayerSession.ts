@@ -1,10 +1,10 @@
 // Centralised auth bootstrap for /player pages.
 //
 // Every player page used to repeat the same useEffect:
-//   getSession → if !user redirect /admin/login → setUser/setToken → loadData
+//   getSession → if !user redirect /login → setUser/setToken → loadData
 //
 // usePlayerSession returns a stable `{ user, token, loading, ready }` triple
-// and pushes the user toward `/admin/login` (or a configurable redirect) as
+// and pushes the user toward `/login` (or a configurable redirect) as
 // soon as we know they're anonymous. Pages should branch on `ready` (auth
 // resolved + user present) to load data; the rest of the page can render
 // a skeleton while loading is true.
@@ -23,14 +23,14 @@ export type PlayerSession = {
 };
 
 type Options = {
-  /** Where to send anonymous visitors. Defaults to /admin/login. */
+  /** Where to send anonymous visitors. Defaults to /login. */
   redirectTo?: string;
   /** Disable the auto-redirect when no user is found (caller handles UX). */
   redirect?: boolean;
 };
 
 export function usePlayerSession(options: Options = {}): PlayerSession {
-  const { redirectTo = '/admin/login', redirect = true } = options;
+  const { redirectTo = '/login', redirect = true } = options;
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);

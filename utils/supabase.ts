@@ -171,3 +171,23 @@ export const supabaseAdmin = SUPABASE_SERVICE_ROLE
       },
     })
   : null!;
+
+/* -----------------------------------------------------------
+ * 4) Client ANON côté serveur (sans persistance de session)
+ *    - Clé anon, mais pas de cookies/localStorage (≠ supabaseClient browser
+ *      et ≠ getServerClient qui lit la session via cookies).
+ *    - Pour des appels auth publics depuis une API route — ex. signUp côté
+ *      serveur, qui doit passer par la clé anon et déclencher les emails
+ *      Supabase, sans toucher à la session de l'appelant.
+ * ---------------------------------------------------------*/
+
+export const supabaseAnonServer = createClient(
+  SUPABASE_URL!,
+  SUPABASE_ANON_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  }
+);

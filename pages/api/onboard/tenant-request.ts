@@ -70,7 +70,7 @@ export default async function handler(
     return res.status(401).json({
       error: 'Vous devez être connecté via Discord pour soumettre une demande.',
       code: 'UNAUTHENTICATED',
-      hint: '/admin/login?next=/onboard/request',
+      hint: '/login?next=/onboard/request',
     });
   }
 
