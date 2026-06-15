@@ -71,7 +71,7 @@ test.describe.serial('Admin "Tournoi en cours" E2E', () => {
 
   /* ---------- Redirect entry-point ---------- */
 
-  test('GET /admin/tournoi-en-cours sans session redirige vers /admin/login', async ({
+  test('GET /admin/tournoi-en-cours sans session redirige vers /login', async ({
     request,
   }) => {
     const res = await request.get('/admin/tournoi-en-cours', {
@@ -80,7 +80,7 @@ test.describe.serial('Admin "Tournoi en cours" E2E', () => {
     });
     expect([302, 303, 307, 308]).toContain(res.status());
     const location = res.headers()['location'] || '';
-    expect(location).toContain('/admin/login');
+    expect(location).toContain('/login');
   });
 
   /* ---------- Dashboard API enrichie ---------- */

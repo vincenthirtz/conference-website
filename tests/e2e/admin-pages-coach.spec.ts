@@ -15,7 +15,7 @@ const skipIfNoServiceRole = () =>
 
 /** Helper: login via UI and wait for admin dashboard */
 async function loginAsCoach(page: import('@playwright/test').Page) {
-  await page.goto('/admin/login');
+  await page.goto('/login');
   await page.fill('input#email', COACH_EMAIL);
   await page.fill('input#password', COACH_PASSWORD);
   await page.click('button[type="submit"]');
@@ -30,7 +30,7 @@ async function expectPageLoaded(page: import('@playwright/test').Page) {
   await expect(body).toBeVisible({ timeout: 15000 });
 
   // Should not be redirected to login (session lost)
-  expect(page.url()).not.toContain('/admin/login');
+  expect(page.url()).not.toContain('/login');
 
   // Should not be on 403/500 error pages
   expect(page.url()).not.toContain('/403');
@@ -49,7 +49,7 @@ test.describe.serial('Admin pages — Test Coach', () => {
   test('Connexion au dashboard admin', async ({ page }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
-    await page.goto('/admin/login');
+    await page.goto('/login');
     await page.fill('input#email', COACH_EMAIL);
     await page.fill('input#password', COACH_PASSWORD);
     await page.click('button[type="submit"]');
@@ -445,8 +445,8 @@ test.describe.serial('Admin pages — Test Coach', () => {
     await page.waitForLoadState('networkidle');
 
     // Should redirect to login after logout
-    await page.waitForURL(/\/admin\/login/, { timeout: 15000 });
-    expect(page.url()).toContain('/admin/login');
+    await page.waitForURL(/\/login/, { timeout: 15000 });
+    expect(page.url()).toContain('/login');
   });
 
   test('Session perdue apres deconnexion — acces admin redirige vers login', async ({
@@ -458,8 +458,8 @@ test.describe.serial('Admin pages — Test Coach', () => {
     await page.goto('/admin/tournaments');
 
     // Should redirect to login
-    await page.waitForURL(/\/admin\/login/, { timeout: 15000 });
-    expect(page.url()).toContain('/admin/login');
+    await page.waitForURL(/\/login/, { timeout: 15000 });
+    expect(page.url()).toContain('/login');
   });
 
   // ─── Reconnexion apres deconnexion ──────────────────────────────

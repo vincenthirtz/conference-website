@@ -25,7 +25,7 @@ test.describe('Email change feature', () => {
   });
 
   // Note: Player email change tests are removed because the /register page
-  // no longer has a login form - players should use /admin/login
+  // no longer has a login form - players should use /login
   // The email change feature for players is tested via the staff tests below
 
   test.describe('Staff email change', () => {
@@ -37,7 +37,7 @@ test.describe('Email change feature', () => {
       test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
       // Login as staff
-      await page.goto('/admin/login');
+      await page.goto('/login');
       await page.fill('input#email', STAFF_EMAIL);
       await page.fill('input#password', password);
       await page.click('button[type="submit"]');
@@ -56,7 +56,7 @@ test.describe('Email change feature', () => {
       test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
       // Login as staff
-      await page.goto('/admin/login');
+      await page.goto('/login');
       await page.fill('input#email', STAFF_EMAIL);
       await page.fill('input#password', password);
       await page.click('button[type="submit"]');
@@ -82,7 +82,7 @@ test.describe('Email change feature', () => {
       test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
       // Login as staff
-      await page.goto('/admin/login');
+      await page.goto('/login');
       await page.fill('input#email', STAFF_EMAIL);
       await page.fill('input#password', password);
       await page.click('button[type="submit"]');

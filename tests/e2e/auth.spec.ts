@@ -48,7 +48,7 @@ test.describe.serial('Auth flow', () => {
     // Create staff with proper role
     await createTestStaff(STAFF_LOGIN_EMAIL, password, 'manager');
 
-    await page.goto('/admin/login');
+    await page.goto('/login');
     await page.fill('input#email', STAFF_LOGIN_EMAIL);
     await page.fill('input#password', password);
     await page.click('button[type="submit"]');
@@ -58,32 +58,32 @@ test.describe.serial('Auth flow', () => {
     await expect(page).toHaveURL(/admin/);
 
     // Verify we're on an admin page (not login)
-    expect(page.url()).not.toContain('/admin/login');
+    expect(page.url()).not.toContain('/login');
 
     // Déconnexion
     await page.goto('/admin/logout');
     await page.waitForTimeout(1000);
-    await expect(page).toHaveURL(/admin\/login/);
+    await expect(page).toHaveURL(/\/login/);
   });
 
   test('Connexion avec mauvais mot de passe échoue', async ({ page }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
-    await page.goto('/admin/login');
+    await page.goto('/login');
     await page.fill('input#email', STAFF_LOGIN_EMAIL);
     await page.fill('input#password', 'wrongpassword123');
     await page.click('button[type="submit"]');
 
     // Should show error and stay on login page
     await page.waitForTimeout(2000);
-    expect(page.url()).toContain('/admin/login');
+    expect(page.url()).toContain('/login');
   });
 
   test('Session persiste après refresh', async ({ page }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
     // Login
-    await page.goto('/admin/login');
+    await page.goto('/login');
     await page.fill('input#email', STAFF_LOGIN_EMAIL);
     await page.fill('input#password', password);
     await page.click('button[type="submit"]');
@@ -97,7 +97,7 @@ test.describe.serial('Auth flow', () => {
     // Should still be on admin (not redirected to login)
     const url = page.url();
     expect(url).toContain('/admin');
-    expect(url).not.toContain('/admin/login');
+    expect(url).not.toContain('/login');
 
     // Refresh the page
     await page.reload();
@@ -105,6 +105,6 @@ test.describe.serial('Auth flow', () => {
 
     // Should still be logged in
     const urlAfterRefresh = page.url();
-    expect(urlAfterRefresh).not.toContain('/admin/login');
+    expect(urlAfterRefresh).not.toContain('/login');
   });
 });

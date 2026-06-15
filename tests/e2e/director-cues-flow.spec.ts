@@ -11,7 +11,7 @@
  *   6. Manager voit le ack_count passer de 0/1 a 1/1 sur le CueFeed.
  *
  * Strategie d'auth : on cree un staff manager + un staff caster via
- * Supabase service role (cf. createTestStaff). Login via /admin/login pour
+ * Supabase service role (cf. createTestStaff). Login via /login pour
  * les deux (le caster a un staff row + cast_members lie, ce qui debloque
  * le cockpit sans passer par le magic-link).
  *
@@ -45,7 +45,7 @@ async function loginVia(
   email: string,
   password: string
 ) {
-  await page.goto('/admin/login');
+  await page.goto('/login');
   await page.fill('input#email', email);
   await page.fill('input#password', password);
   await page.click('button[type="submit"]');

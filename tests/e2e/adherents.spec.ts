@@ -7,7 +7,7 @@ test.describe('Admin adherents pages (sans auth)', () => {
     await page.waitForTimeout(1000);
 
     const url = page.url();
-    const redirectedToLogin = url.includes('/admin/login');
+    const redirectedToLogin = url.includes('/login');
     const redirectedTo403 = url.includes('/403');
 
     expect(
@@ -21,7 +21,7 @@ test.describe('Admin adherents pages (sans auth)', () => {
     await page.waitForTimeout(1000);
 
     const url = page.url();
-    const redirectedToLogin = url.includes('/admin/login');
+    const redirectedToLogin = url.includes('/login');
     const redirectedTo403 = url.includes('/403');
 
     expect(
@@ -35,7 +35,7 @@ test.describe('Admin adherents pages (sans auth)', () => {
     await page.waitForTimeout(1000);
 
     const url = page.url();
-    const redirectedToLogin = url.includes('/admin/login');
+    const redirectedToLogin = url.includes('/login');
     const redirectedTo403 = url.includes('/403');
 
     expect(

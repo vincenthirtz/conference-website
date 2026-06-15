@@ -62,8 +62,8 @@ test.describe("Formulaire d'inscription", () => {
     const loginLink = page.getByRole('link', { name: 'Connexion' });
     await expect(loginLink).toBeVisible({ timeout: 5000 });
 
-    // Vérifier que le lien pointe vers /admin/login
-    await expect(loginLink).toHaveAttribute('href', '/admin/login');
+    // Vérifier que le lien pointe vers /login
+    await expect(loginLink).toHaveAttribute('href', '/login');
   });
 });
 
@@ -99,7 +99,7 @@ test.describe("Formulaire de création d'équipe", () => {
 
 test.describe('Page admin login', () => {
   test('Le formulaire de login admin est accessible', async ({ page }) => {
-    await page.goto('/admin/login');
+    await page.goto('/login');
 
     await expect(page.locator('input#email')).toBeVisible();
     await expect(page.locator('input#password')).toBeVisible();
@@ -107,7 +107,7 @@ test.describe('Page admin login', () => {
   });
 
   test('Erreur avec identifiants invalides', async ({ page }) => {
-    await page.goto('/admin/login');
+    await page.goto('/login');
 
     await page.fill('input#email', 'fake@email.com');
     await page.fill('input#password', 'wrongpassword');

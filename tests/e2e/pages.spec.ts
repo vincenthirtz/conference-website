@@ -95,12 +95,12 @@ test.describe('Pages admin sans auth — redirection ou 403', () => {
       await page.goto(path);
       // Wait for the URL to settle on a login or 403 page rather than
       // sleeping arbitrarily — withStaffPage redirects via SSR.
-      await page.waitForURL(/\/admin\/login|\/403/, { timeout: 10000 });
+      await page.waitForURL(/\/login|\/403/, { timeout: 10000 });
       const url = page.url();
-      const ok = url.includes('/admin/login') || url.includes('/403');
+      const ok = url.includes('/login') || url.includes('/403');
       expect(
         ok,
-        `${path} devrait rediriger vers /admin/login ou /403. URL: ${url}`
+        `${path} devrait rediriger vers /login ou /403. URL: ${url}`
       ).toBeTruthy();
     });
   }

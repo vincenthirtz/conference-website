@@ -45,7 +45,7 @@ test.describe('Veto page protection', () => {
     );
     await page.waitForTimeout(1000);
     const url = page.url();
-    const redirected = url.includes('/admin/login') || url.includes('/403');
+    const redirected = url.includes('/login') || url.includes('/403');
     expect(
       redirected,
       `La page veto devrait rediriger vers login ou 403. URL actuelle: ${url}`

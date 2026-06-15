@@ -208,7 +208,7 @@ test.describe.serial('Diagnostic admin', () => {
     const context = await browser.newContext();
     const page = await context.newPage();
 
-    await page.goto(`${BASE_URL}/admin/login`);
+    await page.goto(`${BASE_URL}/login`);
     await page.waitForSelector('input#email', {
       state: 'visible',
       timeout: 10_000,
@@ -236,7 +236,7 @@ test.describe.serial('Diagnostic admin', () => {
     const page = await context.newPage();
 
     const start = Date.now();
-    await page.goto(`${BASE_URL}/admin/login`);
+    await page.goto(`${BASE_URL}/login`);
     await page.waitForSelector('input#email', {
       state: 'visible',
       timeout: 10_000,
@@ -297,7 +297,7 @@ test.describe.serial('Diagnostic admin', () => {
         const durationMs = Date.now() - start;
 
         const redirectedToLogin =
-          page.url().includes('/admin/login') || page.url().includes('/403');
+          page.url().includes('/login') || page.url().includes('/403');
 
         let stuckLoading = false;
         if (!timedOut && !redirectedToLogin) {
@@ -376,7 +376,7 @@ test.describe.serial('Diagnostic admin', () => {
         }
 
         const redirected =
-          page.url().includes('/admin/login') || page.url().includes('/403');
+          page.url().includes('/login') || page.url().includes('/403');
         const flags: string[] = [];
         if (timedOut) flags.push('TIMEOUT');
         if (httpStatus && httpStatus >= 500) flags.push(`HTTP ${httpStatus}`);
@@ -404,14 +404,14 @@ test.describe.serial('Diagnostic admin', () => {
         waitUntil: 'networkidle',
         timeout: 15_000,
       });
-      expect(page.url()).not.toContain('/admin/login');
+      expect(page.url()).not.toContain('/login');
 
       // Rafraichir la page (simule F5)
       await page.reload({ waitUntil: 'domcontentloaded', timeout: 15_000 });
 
       // Toujours sur la meme page, pas de redirect
       expect(page.url()).toContain('/admin/tournaments');
-      expect(page.url()).not.toContain('/admin/login');
+      expect(page.url()).not.toContain('/login');
 
       // Le contenu se charge correctement
       await assertNoStuckLoading(page);
@@ -492,7 +492,7 @@ test.describe.serial('Diagnostic admin', () => {
 
       // Verifier qu'on est bien sur la derniere page et pas sur /login
       expect(page.url()).toContain(pages[pages.length - 1]);
-      expect(page.url()).not.toContain('/admin/login');
+      expect(page.url()).not.toContain('/login');
 
       // Pas de crash : la page a du contenu
       await assertNoStuckLoading(page);

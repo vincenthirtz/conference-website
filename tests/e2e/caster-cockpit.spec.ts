@@ -9,7 +9,7 @@
  *
  * Strategie d'authentification : on cree un staff role='caster' via Supabase
  * service role (createTestStaff). Le caster a un compte email/password reel,
- * donc on se logue via /admin/login (qui partage le meme client supabaseClient
+ * donc on se logue via /login (qui partage le meme client supabaseClient
  * et donc les cookies sb-*). Une fois loge, on navigue vers /caster/cockpit.
  * Cela contourne le magic-link sans le casser cote tests.
  */
@@ -49,7 +49,7 @@ const cleanupAssignmentIds: string[] = [];
 let setupFailedReason: string | null = null;
 
 async function loginAsCaster(page: import('@playwright/test').Page) {
-  await page.goto('/admin/login');
+  await page.goto('/login');
   await page.fill('input#email', CASTER_EMAIL);
   await page.fill('input#password', CASTER_PASSWORD);
   await page.click('button[type="submit"]');
@@ -522,7 +522,7 @@ test.describe('Caster cockpit — edge cases', () => {
       .maybeSingle();
     test.skip(!existing, 'Cast member golden-path absent');
 
-    await page.goto('/admin/login');
+    await page.goto('/login');
     await page.fill('input#email', CASTER_EMAIL);
     await page.fill('input#password', CASTER_PASSWORD);
     await page.click('button[type="submit"]');

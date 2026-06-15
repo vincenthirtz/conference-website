@@ -3,7 +3,7 @@
 // E2E pour la page /admin/notifications (PWA Web Push UI).
 //
 // Couvre :
-//   - Auth gate : sans session, redirige vers /admin/login ou /403
+//   - Auth gate : sans session, redirige vers /login ou /403
 //   - Avec une session staff `admin`, la page s'affiche avec ses 2 sections
 //     (status + prefs) et le bouton de test
 //   - Toggle d'un event_type → PUT déclenché → reload → toggle persisté
@@ -25,7 +25,7 @@ const skipIfNoServiceRole = () =>
   !process.env.NEXT_SUPABASE_SERVICE_ROLE_KEY;
 
 async function loginAsAdmin(page: Page) {
-  await page.goto('/admin/login');
+  await page.goto('/login');
   await page.fill('input#email', ADMIN_EMAIL);
   await page.fill('input#password', TEST_PASSWORD);
   await page.click('button[type="submit"]');
@@ -40,7 +40,7 @@ test.describe('Admin notifications (sans auth)', () => {
     await page.waitForTimeout(1000);
 
     const url = page.url();
-    const redirectedToLogin = url.includes('/admin/login');
+    const redirectedToLogin = url.includes('/login');
     const redirectedTo403 = url.includes('/403');
 
     expect(

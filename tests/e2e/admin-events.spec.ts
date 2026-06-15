@@ -66,7 +66,7 @@ async function setCookieConsent(page: import('@playwright/test').Page) {
 }
 
 async function loginAsStaff(page: import('@playwright/test').Page) {
-  await page.goto('/admin/login');
+  await page.goto('/login');
   await setCookieConsent(page);
   await page.fill('input#email', STAFF_EMAIL);
   await page.fill('input#password', STAFF_PASSWORD);

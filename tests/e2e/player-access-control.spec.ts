@@ -14,7 +14,7 @@ async function cleanupUsers() {
 }
 
 // Note: Player-specific tests removed because /register no longer has a login form
-// Players use /admin/login like staff members
+// Players use /login like staff members
 
 test.describe('Access control', () => {
   test('Unauthenticated user cannot access admin pages', async ({ page }) => {
@@ -32,7 +32,7 @@ test.describe('Access control', () => {
 
       // Should either redirect to login or show 403
       const url = page.url();
-      const hasLoginRedirect = url.includes('/admin/login');
+      const hasLoginRedirect = url.includes('/login');
       const has403 = url.includes('/403');
 
       expect(
@@ -51,7 +51,7 @@ test.describe('Access control', () => {
 
       // Should not be redirected to login/403
       const url = page.url();
-      expect(url).not.toContain('/admin/login');
+      expect(url).not.toContain('/login');
       expect(url).not.toContain('/403');
     }
   });
@@ -73,7 +73,7 @@ test.describe('Staff access control', () => {
     await createTestStaff(STAFF_EMAIL, TEST_PASSWORD, 'manager');
 
     // Login via admin login page
-    await page.goto('/admin/login');
+    await page.goto('/login');
     await page.fill('input#email', STAFF_EMAIL);
     await page.fill('input#password', TEST_PASSWORD);
     await page.click('button[type="submit"]');
@@ -110,7 +110,7 @@ test.describe('Navbar visibility', () => {
     await createTestStaff(STAFF_EMAIL, TEST_PASSWORD, 'manager');
 
     // Login via admin login page
-    await page.goto('/admin/login');
+    await page.goto('/login');
     await page.fill('input#email', STAFF_EMAIL);
     await page.fill('input#password', TEST_PASSWORD);
     await page.click('button[type="submit"]');
@@ -132,7 +132,7 @@ test.describe('Navbar visibility', () => {
 
     // Staff should be logged in and see some admin-related UI
     // If not visible, that's also acceptable as long as we're not redirected
-    expect(isVisible || !page.url().includes('/admin/login')).toBeTruthy();
+    expect(isVisible || !page.url().includes('/login')).toBeTruthy();
 
     await cleanupUsers();
   });

@@ -8,7 +8,7 @@ test.describe('Admin pole-members pages (sans auth)', () => {
 
     const url = page.url();
     expect(
-      url.includes('/admin/login') || url.includes('/403'),
+      url.includes('/login') || url.includes('/403'),
       `/admin/pole-members devrait rediriger vers login ou 403. URL actuelle: ${url}`
     ).toBeTruthy();
   });
@@ -19,7 +19,7 @@ test.describe('Admin pole-members pages (sans auth)', () => {
 
     const url = page.url();
     expect(
-      url.includes('/admin/login') || url.includes('/403'),
+      url.includes('/login') || url.includes('/403'),
       `/admin/pole-members/new devrait rediriger vers login ou 403. URL actuelle: ${url}`
     ).toBeTruthy();
   });

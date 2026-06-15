@@ -32,7 +32,7 @@ test.describe('PWA — manifest link', () => {
     page,
   }) => {
     await page.goto('/admin');
-    await page.waitForURL(/\/admin\/login|\/403/, { timeout: 10000 });
+    await page.waitForURL(/\/login|\/403/, { timeout: 10000 });
     const links = page.locator('link[rel="manifest"]');
     await expect(links).toHaveCount(1);
     const href = await links.first().getAttribute('href');

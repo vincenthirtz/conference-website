@@ -35,7 +35,7 @@ test.describe.serial('Admin users management', () => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
     // Login as admin
-    await page.goto('/admin/login');
+    await page.goto('/login');
     await page.fill('input#email', ADMIN_EMAIL);
     await page.fill('input#password', TEST_PASSWORD);
     await page.click('button[type="submit"]');
@@ -71,7 +71,7 @@ test.describe.serial('Admin users management', () => {
     await createTestPlayer(TARGET_USER_EMAIL, TEST_PASSWORD);
 
     // Login as admin
-    await page.goto('/admin/login');
+    await page.goto('/login');
     await page.fill('input#email', ADMIN_EMAIL);
     await page.fill('input#password', TEST_PASSWORD);
     await page.click('button[type="submit"]');
@@ -104,7 +104,7 @@ test.describe.serial('Admin users management', () => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
     // Login as admin
-    await page.goto('/admin/login');
+    await page.goto('/login');
     await page.fill('input#email', ADMIN_EMAIL);
     await page.fill('input#password', TEST_PASSWORD);
     await page.click('button[type="submit"]');
@@ -164,7 +164,7 @@ test.describe.serial('Admin users management', () => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
     // Login as admin
-    await page.goto('/admin/login');
+    await page.goto('/login');
     await page.fill('input#email', ADMIN_EMAIL);
     await page.fill('input#password', TEST_PASSWORD);
     await page.click('button[type="submit"]');

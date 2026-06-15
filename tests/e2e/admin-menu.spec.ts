@@ -29,7 +29,7 @@ test.describe('Admin menu categories', () => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
     // Login
-    await page.goto('/admin/login');
+    await page.goto('/login');
     await page.fill('input#email', STAFF_EMAIL);
     await page.fill('input#password', password);
     await page.click('button[type="submit"]');
@@ -56,7 +56,7 @@ test.describe('Admin menu categories', () => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
     // Login
-    await page.goto('/admin/login');
+    await page.goto('/login');
     await page.fill('input#email', STAFF_EMAIL);
     await page.fill('input#password', password);
     await page.click('button[type="submit"]');

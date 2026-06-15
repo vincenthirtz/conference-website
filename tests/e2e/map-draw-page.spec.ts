@@ -9,7 +9,7 @@ test.describe('Page tirage de maps (sans auth → redirect)', () => {
     );
     await page.waitForTimeout(1000);
     const url = page.url();
-    const redirected = url.includes('/admin/login') || url.includes('/403');
+    const redirected = url.includes('/login') || url.includes('/403');
     expect(
       redirected,
       `La page map-draw devrait rediriger vers login ou 403. URL actuelle: ${url}`

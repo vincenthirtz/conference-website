@@ -13,7 +13,7 @@ const skipIfNoServiceRole = () =>
   !process.env.NEXT_SUPABASE_SERVICE_ROLE_KEY;
 
 async function loginAsAdmin(page: Page) {
-  await page.goto('/admin/login');
+  await page.goto('/login');
   await page.fill('input#email', ADMIN_EMAIL);
   await page.fill('input#password', TEST_PASSWORD);
   await page.click('button[type="submit"]');
