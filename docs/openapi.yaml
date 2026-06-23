@@ -278,6 +278,43 @@ components:
     Timestamp:
       type: string
       format: date-time
+    PlayerPushSubscription:
+      type: object
+      required:
+        - id
+        - endpoint
+        - created
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        endpoint:
+          type: string
+          format: uri
+        created:
+          type: boolean
+          description: "true si la subscription vient d'être créée (201), false si mise à jour (200)."
+    TwitchTokenResponse:
+      type: object
+      required:
+        - access_token
+        - refresh_token
+        - expires_in
+        - token_type
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        expires_in:
+          type: integer
+        scope:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+        token_type:
+          type: string
     DiscordId:
       type: string
       pattern: ^[0-9]{17,20}$
@@ -17644,3 +17681,584 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+  /api/admin/notifications/ack-all:
+    post:
+      summary: Acquitter toutes les notifications Web Push non-lues du staff courant.
+      description: |
+        Marque comme `acked_at` toutes les deliveries non-acquittées des
+        subscriptions du user staff courant (remet le compteur de badge à zéro).
+        `withStaffRoute(handler, 'caster')` — n'importe quel rôle staff.
+      operationId: adminNotificationsAckAll
+      tags:
+        - admin/misc
+      security:
+        - StaffSession: []
+      responses:
+        "200":
+          description: Notifications acquittées.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - count_cleared
+                properties:
+                  count_cleared:
+                    type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /api/admin/notifications/unread-count:
+    get:
+      summary: Compteur de notifications Web Push délivrées mais non-acquittées.
+      description: |
+        Source de vérité pour `setAppBadge(n)`. Compte les deliveries `delivered`
+        avec `acked_at IS NULL` pour les subscriptions du user staff courant.
+        `withStaffRoute(handler, 'caster')`.
+      operationId: adminNotificationsUnreadCount
+      tags:
+        - admin/misc
+      security:
+        - StaffSession: []
+      responses:
+        "200":
+          description: Nombre de notifications non-lues.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - count
+                properties:
+                  count:
+                    type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /api/auth/register:
+    post:
+      summary: Inscription joueur (validation serveur + rate-limit + rôle forcé).
+      description: |
+        Crée un compte via `supabase.auth.signUp` côté serveur. Le rôle est forcé
+        à `player`. Réponse neutre anti-énumération : `200 { status: "ok" }` même
+        si l'email est déjà enregistré. Endpoint public.
+      operationId: authRegister
+      tags:
+        - public
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+                  maxLength: 72
+                displayName:
+                  type: string
+                  maxLength: 80
+                battleTag:
+                  type: string
+                  description: "Format BattleTag : Pseudo#0000 (4 ou 5 chiffres)."
+      responses:
+        "200":
+          description: Inscription acceptée (réponse neutre).
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - ok
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /api/caster/tournaments:
+    get:
+      summary: Liste publique des tournois pour l'app caster (Electron).
+      description: |
+        Lecture publique tenant-scopée (`x-tenant-id`) via `supabaseAdmin`.
+        Statuts retenus : `running`, `published`.
+      operationId: casterListTournaments
+      tags:
+        - public
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/XTenantId"
+      responses:
+        "200":
+          description: Liste de tournois.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - tournaments
+                properties:
+                  tournaments:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          $ref: "#/components/schemas/Uuid"
+                        name:
+                          type: string
+                        slug:
+                          type: string
+                        game:
+                          type: string
+                        status:
+                          type: string
+                        start_date:
+                          allOf:
+                            - $ref: "#/components/schemas/Timestamp"
+                          nullable: true
+                        format_type:
+                          type: string
+                          nullable: true
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /api/caster/tournaments/{id}/maps:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Maps activées d'un tournoi (app caster).
+      description: Lecture publique tenant-scopée (`x-tenant-id`).
+      operationId: casterListTournamentMaps
+      tags:
+        - public
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/XTenantId"
+      responses:
+        "200":
+          description: Liste des maps activées.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - maps
+                properties:
+                  maps:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          $ref: "#/components/schemas/Uuid"
+                        map_name:
+                          type: string
+                        map_type:
+                          type: string
+                          nullable: true
+                        image_url:
+                          type: string
+                          nullable: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /api/caster/tournaments/{id}/matches:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Matchs d'un tournoi (app caster).
+      description: |
+        Lecture publique tenant-scopée (`x-tenant-id`). Statuts retenus :
+        `pending`, `ongoing`, `finished`.
+      operationId: casterListTournamentMatches
+      tags:
+        - public
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/XTenantId"
+      responses:
+        "200":
+          description: Liste des matchs.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - matches
+                properties:
+                  matches:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /api/caster/matches/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Détail d'un match + ses games (app caster).
+      description: Lecture publique tenant-scopée (`x-tenant-id`).
+      operationId: casterGetMatch
+      tags:
+        - public
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/XTenantId"
+      responses:
+        "200":
+          description: Match et ses games.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - match
+                  - games
+                properties:
+                  match:
+                    type: object
+                    additionalProperties: true
+                  games:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          $ref: "#/components/schemas/Uuid"
+                        map_name:
+                          type: string
+                          nullable: true
+                        map_order:
+                          type: integer
+                          nullable: true
+                        team1_score:
+                          type: integer
+                          nullable: true
+                        team2_score:
+                          type: integer
+                          nullable: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /api/player/push/prefs:
+    get:
+      summary: Préférences Web Push du joueur courant.
+      description: |
+        Renvoie les préférences fusionnées avec les défauts (`row absente =
+        enabled`) pour les event types joueur. `withAuthRoute`.
+      operationId: playerPushGetPrefs
+      tags:
+        - public
+      security:
+        - PlayerBearer: []
+      responses:
+        "200":
+          description: Préférences fusionnées.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - prefs
+                properties:
+                  prefs:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - event_type
+                        - enabled
+                      properties:
+                        event_type:
+                          type: string
+                        enabled:
+                          type: boolean
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
+    put:
+      summary: Mettre à jour les préférences Web Push du joueur courant.
+      description: |
+        Modèle opt-out : seules les préférences `enabled: false` sont persistées,
+        les autres sont supprimées (retour au défaut `enabled`). `withAuthRoute`.
+      operationId: playerPushPutPrefs
+      tags:
+        - public
+      security:
+        - PlayerBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - prefs
+              properties:
+                prefs:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - event_type
+                      - enabled
+                    properties:
+                      event_type:
+                        type: string
+                      enabled:
+                        type: boolean
+      responses:
+        "200":
+          description: Préférences mises à jour (état fusionné).
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - prefs
+                properties:
+                  prefs:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        event_type:
+                          type: string
+                        enabled:
+                          type: boolean
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /api/player/push/subscribe:
+    post:
+      summary: Enregistrer (ou mettre à jour) une subscription Web Push joueur.
+      description: |
+        Idempotent par endpoint : `201 created: true` à la création, `200
+        created: false` si l'endpoint existait déjà. `withAuthRoute`.
+      operationId: playerPushSubscribe
+      tags:
+        - public
+      security:
+        - PlayerBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - subscription
+              properties:
+                subscription:
+                  type: object
+                  required:
+                    - endpoint
+                    - keys
+                  properties:
+                    endpoint:
+                      type: string
+                      format: uri
+                      maxLength: 2048
+                    keys:
+                      type: object
+                      required:
+                        - p256dh
+                        - auth
+                      properties:
+                        p256dh:
+                          type: string
+                          maxLength: 512
+                        auth:
+                          type: string
+                          maxLength: 256
+                user_agent:
+                  type: string
+                  maxLength: 512
+                  nullable: true
+      responses:
+        "200":
+          description: Subscription existante mise à jour.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayerPushSubscription"
+        "201":
+          description: Subscription créée.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayerPushSubscription"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /api/player/push/unsubscribe:
+    delete:
+      summary: Supprimer une subscription Web Push du joueur courant.
+      description: |
+        Supprime uniquement les rows `user_id = current user`. Endpoint inconnu
+        ou appartenant à un autre user → `404` (anti-énumération). `withAuthRoute`.
+      operationId: playerPushUnsubscribe
+      tags:
+        - public
+      security:
+        - PlayerBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - endpoint
+              properties:
+                endpoint:
+                  type: string
+                  format: uri
+                  maxLength: 2048
+      responses:
+        "204":
+          description: Subscription supprimée.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /api/twitch/exchange:
+    post:
+      summary: Échange OAuth Twitch `authorization_code` (côté serveur).
+      description: |
+        Déplace l'échange de code côté serveur pour garder `TWITCH_CLIENT_SECRET`
+        hors du binaire caster. Endpoint public (rate-limité).
+      operationId: twitchExchange
+      tags:
+        - public
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - code
+                - redirectUri
+              properties:
+                code:
+                  type: string
+                redirectUri:
+                  type: string
+                  format: uri
+      responses:
+        "200":
+          description: Tokens Twitch.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TwitchTokenResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerError"
+        "502":
+          description: Échec de l'échange auprès de Twitch.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/twitch/refresh:
+    post:
+      summary: Rafraîchissement OAuth Twitch `refresh_token` (côté serveur).
+      description: |
+        Companion de `/api/twitch/exchange`. Garde `TWITCH_CLIENT_SECRET` côté
+        serveur quand le caster doit rafraîchir un access token. Endpoint public.
+      operationId: twitchRefresh
+      tags:
+        - public
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refresh_token
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        "200":
+          description: Tokens Twitch rafraîchis.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TwitchTokenResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerError"
+        "502":
+          description: Échec du refresh auprès de Twitch.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
