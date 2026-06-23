@@ -1,17 +1,11 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { supabaseAdmin } from '@/utils/supabase';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
 import { useUrlFilters } from '@/utils/useUrlFilters';
-import {
-  escapePostgrestValue,
-  sanitizeSearch,
-} from '@/utils/apiHelpers';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
-import { logger } from '../../../utils/logger';
 type AnnouncementRow = {
   id: string;
   title: string;
@@ -26,19 +20,22 @@ type AnnouncementRow = {
   updated_at: string;
 };
 
+type AnnouncementsApiResponse = {
+  items: AnnouncementRow[];
+  total: number | null;
+};
+
 type Props = {
   staff: {
     id: string;
     role: string;
     display_name: string;
   };
-  announcements: AnnouncementRow[];
-  total: number;
-  errorMsg: string | null;
 };
 
 const A_FILTER_KEYS = ['search', 'status', 'offset'] as const;
 const LIMIT = 20;
+const SEARCH_DEBOUNCE_MS = 300;
 
 function statusLabel(isActive: boolean) {
   return isActive ? 'Actif' : 'Inactif';
@@ -65,12 +62,10 @@ function formatDate(d: string | null) {
   }
 }
 
-function AdminAnnouncementsPage({
-  announcements,
-  total,
-  errorMsg: ssrError,
-}: Props) {
-  const router = useRouter();
+export const getServerSideProps = withStaffPage('admin');
+
+function AdminAnnouncementsPage(_props: Props) {
+  const { adminFetch, adminFetchJson } = useAdminFetch();
   const { filters, setFilter, setFilters } = useUrlFilters(A_FILTER_KEYS);
 
   const search = filters.search ?? '';
@@ -78,29 +73,82 @@ function AdminAnnouncementsPage({
   const offset = Number(filters.offset) || 0;
   const limit = LIMIT;
 
+  const [announcements, setAnnouncements] = useState<AnnouncementRow[]>([]);
+  const [total, setTotal] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
   const [searchInput, setSearchInput] = useState(search);
-  const [errorMsg, setErrorMsg] = useState<string | null>(ssrError);
   const [deleteTarget, setDeleteTarget] = useState<AnnouncementRow | null>(
     null
   );
   const [deleting, setDeleting] = useState(false);
-  const loading = false;
 
-  const fetchData = useCallback(() => {
-    router.replace(router.asPath, undefined, { scroll: false });
-  }, [router]);
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setErrorMsg(null);
+    try {
+      const params = new URLSearchParams();
+      params.set('limit', String(limit));
+      params.set('offset', String(offset));
+      params.set('includeTotal', '1');
+      // Toujours inclure inactifs côté API ; le filtrage statut est explicite.
+      params.set('includeInactive', 'true');
+      if (statusFilter) params.set('status', statusFilter);
+      if (search.trim()) params.set('search', search.trim());
+
+      const json = await adminFetchJson<AnnouncementsApiResponse>(
+        '/api/admin/announcements?' + params.toString()
+      );
+      setAnnouncements(json.items || []);
+      setTotal(typeof json.total === 'number' ? json.total : null);
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur lors du chargement');
+    } finally {
+      setLoading(false);
+    }
+  }, [adminFetchJson, limit, offset, search, statusFilter]);
+
+  // Refetch when the server-side query params change.
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData]);
+
+  // Keep the search input in sync if the URL search param changes externally.
+  useEffect(() => {
+    setSearchInput(search);
+  }, [search]);
+
+  // Debounced search → write to URL (~300ms) which triggers a refetch.
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function handleSearchChange(value: string) {
+    setSearchInput(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      const next = value.trim();
+      if (next === (search.trim() || '')) return;
+      setFilters({ search: next || null, offset: null });
+    }, SEARCH_DEBOUNCE_MS);
+  }
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (debounceRef.current) clearTimeout(debounceRef.current);
     setFilters({ search: searchInput.trim() || null, offset: null });
   }
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
   const handleDelete = async (item: AnnouncementRow) => {
     if (!item?.id) return;
     setDeleting(true);
     setErrorMsg(null);
     try {
-      const res = await fetch(`/api/admin/announcements/${item.id}`, {
+      const res = await adminFetch(`/api/admin/announcements/${item.id}`, {
         method: 'DELETE',
       });
       if (!res.ok) {
@@ -108,13 +156,15 @@ function AdminAnnouncementsPage({
         throw new Error(json?.error || 'Suppression impossible');
       }
       setDeleteTarget(null);
-      fetchData();
+      void fetchData();
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message || 'Erreur de suppression.');
     } finally {
       setDeleting(false);
     }
   };
+
+  const totalCount = total ?? 0;
 
   return (
     <>
@@ -132,7 +182,9 @@ function AdminAnnouncementsPage({
                   Gestion des annonces
                 </h1>
                 <p className="text-neutral-400 text-sm mt-1">
-                  {total} annonce{total > 1 ? 's' : ''}
+                  {total !== null
+                    ? `${totalCount} annonce${totalCount > 1 ? 's' : ''}`
+                    : 'Chargement...'}
                 </p>
               </div>
 
@@ -175,7 +227,7 @@ function AdminAnnouncementsPage({
               <span className="flex-1">{errorMsg}</span>
               <button
                 type="button"
-                onClick={() => fetchData()}
+                onClick={() => void fetchData()}
                 className="flex-shrink-0 px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-medium transition-colors"
               >
                 Réessayer
@@ -212,7 +264,7 @@ function AdminAnnouncementsPage({
                     placeholder="Titre ou message..."
                     className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={searchInput}
-                    onChange={(e) => setSearchInput(e.target.value)}
+                    onChange={(e) => handleSearchChange(e.target.value)}
                   />
                 </div>
               </div>
@@ -361,58 +413,63 @@ function AdminAnnouncementsPage({
           </section>
 
           {/* Pagination */}
-          <div className="flex justify-between items-center mt-6">
-            <button
-              type="button"
-              disabled={offset === 0}
-              onClick={() =>
-                setFilter('offset', String(Math.max(0, offset - limit)) || null)
-              }
-              className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+          {announcements.length > 0 && (
+            <div className="flex justify-between items-center mt-6">
+              <button
+                type="button"
+                disabled={offset === 0}
+                onClick={() =>
+                  setFilter(
+                    'offset',
+                    String(Math.max(0, offset - limit)) || null
+                  )
+                }
+                className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-              Précédent
-            </button>
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+                Précédent
+              </button>
 
-            <span className="text-neutral-400 text-sm">
-              {offset + 1} – {offset + announcements.length}
-              {total ? ` sur ${total}` : ''}
-            </span>
+              <span className="text-neutral-400 text-sm">
+                {offset + 1} – {offset + announcements.length}
+                {total !== null ? ` sur ${total}` : ''}
+              </span>
 
-            <button
-              type="button"
-              disabled={offset + limit >= total}
-              onClick={() => setFilter('offset', String(offset + limit))}
-              className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              Suivant
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+              <button
+                type="button"
+                disabled={total !== null && offset + limit >= total}
+                onClick={() => setFilter('offset', String(offset + limit))}
+                className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </button>
-          </div>
+                Suivant
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -437,53 +494,5 @@ function AdminAnnouncementsPage({
     </>
   );
 }
-
-export const getServerSideProps = withStaffPage('admin', async (ctx, staffCtx) => {
-  const { query } = ctx;
-  const search = sanitizeSearch(query.search);
-  const status = typeof query.status === 'string' ? query.status : null;
-  const offset = Math.max(0, Number(query.offset) || 0);
-
-  if (!supabaseAdmin) {
-    return { announcements: [], total: 0, errorMsg: 'Service indisponible' };
-  }
-
-  const { tenantId } = staffCtx;
-
-  let q = supabaseAdmin
-    .from('announcements')
-    .select('*', { count: 'exact' })
-    .eq('tenant_id', tenantId)
-    .order('priority', { ascending: false, nullsFirst: false })
-    .order('created_at', { ascending: false })
-    .range(offset, offset + LIMIT - 1);
-
-  if (status === 'active') {
-    q = q.eq('is_active', true);
-  } else if (status === 'inactive') {
-    q = q.eq('is_active', false);
-  }
-  if (search) {
-    const s = `%${escapePostgrestValue(search)}%`;
-    q = q.or(`title.ilike.${s},message.ilike.${s}`);
-  }
-
-  const { data, error, count } = await q;
-
-  if (error) {
-    logger.error('admin announcements SSR error:', error);
-    return {
-      announcements: [],
-      total: 0,
-      errorMsg: 'Erreur lors du chargement',
-    };
-  }
-
-  return {
-    announcements: (data || []) as AnnouncementRow[],
-    total: typeof count === 'number' ? count : (data?.length ?? 0),
-    errorMsg: null,
-  };
-});
 
 export default AdminAnnouncementsPage;

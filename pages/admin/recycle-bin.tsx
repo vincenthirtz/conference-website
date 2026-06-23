@@ -1,10 +1,11 @@
 // pages/admin/recycle-bin.tsx
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 type StaffShape = {
   id: string;
@@ -25,12 +26,21 @@ type DeletedItem = {
     | 'announcement'
     | 'partner'
     | 'cast_member'
-    | 'adherent';
+    | 'adherent'
+    | 'staff'
+    | 'scrim';
   name: string;
   details: string | null;
   deleted_at: string | null;
   tournament_id: string | null;
 };
+
+type RecycleBinResponse = {
+  items: DeletedItem[];
+  total: number;
+};
+
+const PAGE_SIZE = 50;
 
 export const getServerSideProps = withStaffPage('admin');
 
@@ -50,6 +60,10 @@ function typeLabel(type: string) {
       return 'Casteur';
     case 'adherent':
       return 'Adherent';
+    case 'staff':
+      return 'Staff';
+    case 'scrim':
+      return 'Scrim';
     default:
       return type;
   }
@@ -71,6 +85,10 @@ function typeColor(type: string) {
       return 'bg-cyan-600/20 text-cyan-300 border-cyan-500/30';
     case 'adherent':
       return 'bg-orange-600/20 text-orange-300 border-orange-500/30';
+    case 'staff':
+      return 'bg-rose-600/20 text-rose-300 border-rose-500/30';
+    case 'scrim':
+      return 'bg-teal-600/20 text-teal-300 border-teal-500/30';
     default:
       return 'bg-neutral-600/20 text-neutral-300 border-neutral-500/30';
   }
@@ -94,40 +112,43 @@ function formatDate(iso: string | null) {
 function AdminRecycleBinPage({ staff }: StaffProps) {
   const router = useRouter();
   const { addToast } = useToast();
+  const { adminFetchJson } = useAdminFetch();
 
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<DeletedItem[]>([]);
+  const [total, setTotal] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<string>('');
+  const [offset, setOffset] = useState(0);
   const [restoringId, setRestoringId] = useState<string | null>(null);
 
-  async function fetchItems() {
+  const fetchItems = useCallback(async () => {
     setLoading(true);
     setErrorMsg(null);
 
     try {
       const params = new URLSearchParams();
       if (typeFilter) params.set('type', typeFilter);
+      params.set('limit', String(PAGE_SIZE));
+      params.set('offset', String(offset));
 
-      const res = await fetch(`/api/admin/recycle-bin?${params.toString()}`);
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Erreur lors du chargement');
-      }
-
-      const json = await res.json();
+      const json = await adminFetchJson<RecycleBinResponse>(
+        `/api/admin/recycle-bin?${params.toString()}`
+      );
       setItems(json.items || []);
+      setTotal(typeof json.total === 'number' ? json.total : null);
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
-  }
+  }, [adminFetchJson, typeFilter, offset]);
 
+  // Recharge à chaque changement de filtre/page. Le reset d'offset sur
+  // changement de filtre est géré dans le onChange du select.
   useEffect(() => {
     fetchItems();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [typeFilter]);
+  }, [fetchItems]);
 
   async function handleRestore(item: DeletedItem) {
     if (
@@ -142,16 +163,10 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await fetch('/api/admin/recycle-bin', {
+      await adminFetchJson('/api/admin/recycle-bin', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: item.id, type: item.type }),
       });
-
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Erreur lors de la restauration');
-      }
 
       addToast(
         `${typeLabel(item.type)} "${item.name}" restaure avec succes.`,
@@ -202,6 +217,11 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
             <p className="text-neutral-400 text-sm mt-1">
               Elements desactives ou annules. Restaurez-les pour les remettre en
               service.
+              {total !== null && (
+                <span className="ml-1">
+                  {total} element{total > 1 ? 's' : ''} dans la corbeille.
+                </span>
+              )}
             </p>
           </div>
 
@@ -227,7 +247,11 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
             <select
               className="px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
+              onChange={(e) => {
+                // Tout changement de filtre repart à la page 1.
+                setOffset(0);
+                setTypeFilter(e.target.value);
+              }}
             >
               <option value="">Tous les types</option>
               <option value="stage">Phases</option>
@@ -237,6 +261,8 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
               <option value="partner">Partenaires</option>
               <option value="cast_member">Casteurs</option>
               <option value="adherent">Adherents</option>
+              <option value="staff">Staff</option>
+              <option value="scrim">Scrims</option>
             </select>
 
             <button
@@ -337,11 +363,62 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
             )}
           </section>
 
-          {!loading && items.length > 0 && (
-            <p className="mt-4 text-xs text-neutral-500">
-              {items.length} element{items.length > 1 ? 's' : ''} dans la
-              corbeille
-            </p>
+          {/* Pagination */}
+          {(items.length > 0 || offset > 0) && (
+            <div className="flex justify-between items-center mt-6">
+              <button
+                type="button"
+                disabled={offset === 0 || loading}
+                onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
+                className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+                Precedent
+              </button>
+
+              <span className="text-neutral-400 text-sm">
+                {items.length > 0 ? offset + 1 : 0} – {offset + items.length}
+                {total !== null ? ` sur ${total}` : ''}
+              </span>
+
+              <button
+                type="button"
+                disabled={
+                  loading ||
+                  (total !== null && offset + PAGE_SIZE >= total) ||
+                  (total === null && items.length < PAGE_SIZE)
+                }
+                onClick={() => setOffset(offset + PAGE_SIZE)}
+                className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                Suivant
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+            </div>
           )}
         </div>
       </div>

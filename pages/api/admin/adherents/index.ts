@@ -2,7 +2,11 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, StaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
-import { sanitizeSearch } from '@/utils/apiHelpers';
+import {
+  parsePagination,
+  sanitizeSearch,
+  escapePostgrestValue,
+} from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 
 import { logger } from '../../../../utils/logger';
@@ -58,22 +62,45 @@ async function handler(
 
   // GET - Liste des adhérents
   if (req.method === 'GET') {
-    const { limit = '100', paymentStatus, year, role, active } = req.query;
-    const limitNum = Math.max(1, Math.min(500, Number(limit) || 100));
+    const { paymentStatus, year, role, active, orderBy, orderDir } = req.query;
+
+    const { limit: limitNum, offset: offsetNum } = parsePagination(req, {
+      limit: 50,
+    });
     const search = sanitizeSearch(req.query.search);
+
+    const wantTotal =
+      req.query.includeTotal === '1' || req.query.includeTotal === 'true';
+
+    // Allowlist des colonnes triables (défaut: last_name asc, first_name asc).
+    const SORTABLE = new Set([
+      'last_name',
+      'first_name',
+      'member_number',
+      'join_date',
+      'current_year',
+      'payment_status',
+      'payment_amount',
+      'payment_date',
+      'role',
+      'created_at',
+    ]);
+    const sortCol =
+      typeof orderBy === 'string' && SORTABLE.has(orderBy) ? orderBy : null;
+    const ascending = orderDir === 'desc' ? false : true;
+
+    const SELECT_COLS =
+      'id, member_number, first_name, last_name, email, phone, join_date, current_year, payment_status, payment_amount, payment_date, payment_method, is_active, role, created_at';
 
     let query = admin
       .from('adherents')
-      .select('*')
-      .order('last_name', { ascending: true })
-      .order('first_name', { ascending: true })
-      .limit(limitNum);
+      .select(SELECT_COLS, { count: wantTotal ? 'exact' : undefined });
 
-    // Filtre par recherche (nom, prénom, email)
+    // Filtre par recherche (nom, prénom, email, n° adhérent)
     if (search) {
-      const searchTerm = `%${search}%`;
+      const s = `%${escapePostgrestValue(search)}%`;
       query = query.or(
-        `last_name.ilike.${searchTerm},first_name.ilike.${searchTerm},email.ilike.${searchTerm},member_number.ilike.${searchTerm}`
+        `last_name.ilike.${s},first_name.ilike.${s},email.ilike.${s},member_number.ilike.${s}`
       );
     }
 
@@ -84,7 +111,10 @@ async function handler(
 
     // Filtre par année
     if (year && typeof year === 'string') {
-      query = query.eq('current_year', parseInt(year, 10));
+      const parsedYear = parseInt(year, 10);
+      if (!Number.isNaN(parsedYear)) {
+        query = query.eq('current_year', parsedYear);
+      }
     }
 
     // Filtre par rôle
@@ -99,30 +129,68 @@ async function handler(
       query = query.eq('is_active', false);
     }
 
-    const { data, error } = await query;
+    // Tri serveur
+    if (sortCol) {
+      query = query.order(sortCol, { ascending });
+    } else {
+      query = query
+        .order('last_name', { ascending: true })
+        .order('first_name', { ascending: true });
+    }
+
+    // Pagination par offset
+    query = query.range(offsetNum, offsetNum + limitNum - 1);
+
+    const { data, error, count } = await query;
 
     if (error) {
       logger.error('[admin/adherents] list error', error);
       return res.status(500).json({ error: 'Failed to load members.' });
     }
 
-    // Récupérer les stats
+    // Stats : 5 count head queries légères en parallèle (pas de full-scan JS).
     const currentYear = new Date().getFullYear();
-    const { data: stats } = await admin
-      .from('adherents')
-      .select('payment_status, current_year')
-      .eq('is_active', true);
+    const [totalRes, currentYearRes, paidRes, pendingRes, overdueRes] =
+      await Promise.all([
+        admin
+          .from('adherents')
+          .select('id', { count: 'exact', head: true })
+          .eq('is_active', true),
+        admin
+          .from('adherents')
+          .select('id', { count: 'exact', head: true })
+          .eq('is_active', true)
+          .eq('current_year', currentYear),
+        admin
+          .from('adherents')
+          .select('id', { count: 'exact', head: true })
+          .eq('is_active', true)
+          .eq('payment_status', 'paid'),
+        admin
+          .from('adherents')
+          .select('id', { count: 'exact', head: true })
+          .eq('is_active', true)
+          .eq('payment_status', 'pending'),
+        admin
+          .from('adherents')
+          .select('id', { count: 'exact', head: true })
+          .eq('is_active', true)
+          .eq('payment_status', 'overdue'),
+      ]);
 
     const statsData = {
-      total: stats?.length || 0,
-      currentYear:
-        stats?.filter((a) => a.current_year === currentYear).length || 0,
-      paid: stats?.filter((a) => a.payment_status === 'paid').length || 0,
-      pending: stats?.filter((a) => a.payment_status === 'pending').length || 0,
-      overdue: stats?.filter((a) => a.payment_status === 'overdue').length || 0,
+      total: totalRes.count ?? 0,
+      currentYear: currentYearRes.count ?? 0,
+      paid: paidRes.count ?? 0,
+      pending: pendingRes.count ?? 0,
+      overdue: overdueRes.count ?? 0,
     };
 
-    return res.status(200).json({ items: data ?? [], stats: statsData });
+    return res.status(200).json({
+      items: data ?? [],
+      stats: statsData,
+      total: typeof count === 'number' ? count : null,
+    });
   }
 
   // POST - Créer un adhérent

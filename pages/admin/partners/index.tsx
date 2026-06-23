@@ -1,13 +1,10 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { supabaseAdmin } from '@/utils/supabase';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 
-import { logger } from '../../../utils/logger';
 type PartnerRow = {
   id: string;
   name: string;
@@ -22,16 +19,22 @@ type PartnerRow = {
   updated_at: string;
 };
 
+type PartnersApiResponse = {
+  items: PartnerRow[];
+  total: number | null;
+};
+
 type Props = {
   staff: {
     id: string;
     role: string;
     display_name: string;
   };
-  partners: PartnerRow[];
 };
 
-const P_FILTER_KEYS = ['category', 'active'] as const;
+const P_FILTER_KEYS = ['category', 'active', 'search'] as const;
+
+const PAGE_LIMIT = 50;
 
 const categoryLabels: Record<string, string> = {
   super: 'Super partenaire',
@@ -45,24 +48,80 @@ const categoryColors: Record<string, string> = {
   cultural: 'bg-emerald-600 text-white',
 };
 
-function AdminPartnersPage({ partners }: Props) {
-  const router = useRouter();
+function AdminPartnersPage(_props: Props) {
   const { adminFetchJson } = useAdminFetch();
   const { filters, setFilters } = useUrlFilters(P_FILTER_KEYS);
 
-  const categoryFilter = filters.category ?? null;
-  const activeFilter = filters.active ?? null;
-  const loading = false;
+  const categoryFilter = filters.category ?? '';
+  const activeFilter = filters.active ?? '';
+  const searchFilter = filters.search ?? '';
 
-  const fetchData = useCallback(() => {
-    router.replace(router.asPath, undefined, { scroll: false });
-  }, [router]);
+  // Champ de recherche local (debounce → query param `search`)
+  const [searchInput, setSearchInput] = useState(searchFilter);
+
+  const [partners, setPartners] = useState<PartnerRow[]>([]);
+  const [total, setTotal] = useState<number | null>(null);
+  const [offset, setOffset] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Garde le champ local en phase si l'URL change (navigation, partage de lien)
+  useEffect(() => {
+    setSearchInput(searchFilter);
+  }, [searchFilter]);
+
+  // Debounce ~300ms : propage la saisie vers le query param `search`
+  useEffect(() => {
+    if (searchInput === searchFilter) return;
+    const t = setTimeout(() => {
+      setOffset(0);
+      setFilters({ search: searchInput.trim() || null });
+    }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchInput]);
+
+  // Tout changement de filtre serveur revient à la première page
+  useEffect(() => {
+    setOffset(0);
+  }, [categoryFilter, activeFilter, searchFilter]);
+
+  const fetchPartners = useCallback(async () => {
+    setLoading(true);
+    setErrorMsg(null);
+    try {
+      const params = new URLSearchParams();
+      params.set('limit', String(PAGE_LIMIT));
+      params.set('offset', String(offset));
+      params.set('includeTotal', '1');
+      if (categoryFilter) params.set('category', categoryFilter);
+      if (activeFilter) params.set('active', activeFilter);
+      if (searchFilter) params.set('search', searchFilter);
+
+      const json = await adminFetchJson<PartnersApiResponse>(
+        '/api/admin/partners?' + params.toString()
+      );
+      setPartners(json.items || []);
+      setTotal(typeof json.total === 'number' ? json.total : null);
+    } catch (err: unknown) {
+      setErrorMsg(
+        (err as Error)?.message || 'Impossible de charger les partenaires.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [adminFetchJson, offset, categoryFilter, activeFilter, searchFilter]);
+
+  // Re-fetch à chaque changement de filtre serveur / pagination
+  useEffect(() => {
+    fetchPartners();
+  }, [fetchPartners]);
 
   const onDelete = async (id: string) => {
     if (!confirm('Supprimer ce partenaire ?')) return;
     try {
       await adminFetchJson(`/api/admin/partners/${id}`, { method: 'DELETE' });
-      fetchData();
+      fetchPartners();
     } catch (err: unknown) {
       alert((err as Error)?.message || 'Erreur de suppression.');
     }
@@ -74,11 +133,14 @@ function AdminPartnersPage({ partners }: Props) {
         method: 'PATCH',
         body: JSON.stringify({ isActive: !partner.is_active }),
       });
-      fetchData();
+      fetchPartners();
     } catch (err: unknown) {
       alert((err as Error)?.message || 'Erreur de modification.');
     }
   };
+
+  const showingFrom = partners.length > 0 ? offset + 1 : 0;
+  const showingTo = offset + partners.length;
 
   return (
     <>
@@ -96,7 +158,9 @@ function AdminPartnersPage({ partners }: Props) {
                   Gestion des partenaires
                 </h1>
                 <p className="text-neutral-400 text-sm mt-1">
-                  {partners.length} partenaire{partners.length > 1 ? 's' : ''}
+                  {total !== null
+                    ? `${total} partenaire${total > 1 ? 's' : ''}`
+                    : 'Chargement...'}
                 </p>
               </div>
 
@@ -122,6 +186,24 @@ function AdminPartnersPage({ partners }: Props) {
             </div>
           </div>
 
+          {/* Error Message */}
+          {errorMsg && (
+            <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
+              <svg
+                className="w-5 h-5 text-red-400 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              {errorMsg}
+            </div>
+          )}
+
           {/* Filters */}
           <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6">
             <div className="flex gap-4 flex-wrap items-end">
@@ -131,7 +213,7 @@ function AdminPartnersPage({ partners }: Props) {
                 </label>
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={categoryFilter || ''}
+                  value={categoryFilter}
                   onChange={(e) =>
                     setFilters({ category: e.target.value || null })
                   }
@@ -149,7 +231,7 @@ function AdminPartnersPage({ partners }: Props) {
                 </label>
                 <select
                   className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={activeFilter || ''}
+                  value={activeFilter}
                   onChange={(e) =>
                     setFilters({ active: e.target.value || null })
                   }
@@ -158,6 +240,34 @@ function AdminPartnersPage({ partners }: Props) {
                   <option value="true">Actifs</option>
                   <option value="false">Inactifs</option>
                 </select>
+              </div>
+
+              <div className="min-w-[220px] flex-1">
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Recherche
+                </label>
+                <div className="relative">
+                  <svg
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Nom du partenaire..."
+                    className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
           </section>
@@ -297,41 +407,66 @@ function AdminPartnersPage({ partners }: Props) {
               </div>
             )}
           </section>
+
+          {/* Pagination */}
+          {partners.length > 0 && (
+            <div className="flex justify-between items-center mt-6">
+              <button
+                type="button"
+                disabled={offset === 0}
+                onClick={() => setOffset(Math.max(0, offset - PAGE_LIMIT))}
+                className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+                Precedent
+              </button>
+
+              <span className="text-neutral-400 text-sm">
+                {showingFrom} – {showingTo}
+                {total !== null ? ` sur ${total}` : ''}
+              </span>
+
+              <button
+                type="button"
+                disabled={total !== null && offset + PAGE_LIMIT >= total}
+                onClick={() => setOffset(offset + PAGE_LIMIT)}
+                className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                Suivant
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </>
   );
 }
 
-export const getServerSideProps = withStaffPage('admin', async (ctx) => {
-  const { query } = ctx;
-  const category = typeof query.category === 'string' ? query.category : null;
-  const active = typeof query.active === 'string' ? query.active : null;
-
-  if (!supabaseAdmin) {
-    return { partners: [] };
-  }
-
-  let q = supabaseAdmin
-    .from('partners')
-    .select('*')
-    .order('display_order', { ascending: true })
-    .order('created_at', { ascending: true });
-
-  if (category && ['super', 'major', 'cultural'].includes(category)) {
-    q = q.eq('category', category);
-  }
-  if (active === 'true') q = q.eq('is_active', true);
-  if (active === 'false') q = q.eq('is_active', false);
-
-  const { data, error } = await q;
-
-  if (error) {
-    logger.error('admin partners SSR error:', error);
-    return { partners: [] };
-  }
-
-  return { partners: (data || []) as PartnerRow[] };
-});
+export const getServerSideProps = withStaffPage('admin');
 
 export default AdminPartnersPage;

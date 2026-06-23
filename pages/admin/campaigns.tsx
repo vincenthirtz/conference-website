@@ -105,8 +105,12 @@ function AdminCampaignsPage(_props: Props) {
   const router = useRouter();
 
   const [campaigns, setCampaigns] = useState<CampaignSummary[]>([]);
+  const [total, setTotal] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const [limit] = useState(25);
+  const [offset, setOffset] = useState(0);
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const activeCampaign = campaigns.find((c) => c.id === activeId) ?? null;
@@ -115,19 +119,23 @@ function AdminCampaignsPage(_props: Props) {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const res = await fetch('/api/admin/broadcast');
+      const params = new URLSearchParams();
+      params.set('limit', String(limit));
+      params.set('offset', String(offset));
+      const res = await fetch('/api/admin/broadcast?' + params.toString());
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         throw new Error(json.error || 'Impossible de charger les campagnes');
       }
       const json = await res.json();
       setCampaigns(json.campaigns || []);
+      setTotal(typeof json.total === 'number' ? json.total : null);
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [limit, offset]);
 
   useEffect(() => {
     fetchCampaigns();
@@ -172,6 +180,9 @@ function AdminCampaignsPage(_props: Props) {
                 <p className="text-neutral-400 text-sm mt-1">
                   Diffusion d&rsquo;annonces aux comptes confirm&eacute;s du
                   site (annonces, &eacute;v&eacute;nements, communaut&eacute;).
+                  {total !== null
+                    ? ` ${total} campagne${total > 1 ? 's' : ''} déclarée${total > 1 ? 's' : ''}.`
+                    : ''}
                 </p>
               </div>
               <div className="text-xs text-neutral-500 bg-neutral-800/50 px-3 py-2 rounded-xl border border-neutral-700/50">
@@ -230,6 +241,60 @@ function AdminCampaignsPage(_props: Props) {
                   onOpen={() => setActiveId(c.id)}
                 />
               ))}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {!loading && campaigns.length > 0 && (
+            <div className="flex justify-between items-center mt-6">
+              <button
+                type="button"
+                disabled={offset === 0}
+                onClick={() => setOffset(Math.max(0, offset - limit))}
+                className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+                Precedent
+              </button>
+
+              <span className="text-neutral-400 text-sm">
+                {offset + 1} – {offset + campaigns.length}
+                {total ? ` sur ${total}` : ''}
+              </span>
+
+              <button
+                type="button"
+                disabled={total !== null && offset + limit >= total}
+                onClick={() => setOffset(offset + limit)}
+                className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                Suivant
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
             </div>
           )}
         </div>
@@ -313,7 +378,10 @@ function CampaignCard({
         <Stat label="Audience" value={audience} />
         <Stat label="Envois cumulés" value={String(campaign.stats.totalSent)} />
         <Stat label="Échecs" value={String(campaign.stats.totalFailed)} />
-        <Stat label="Dernier envoi" value={formatDateTime(campaign.stats.lastRunAt)} />
+        <Stat
+          label="Dernier envoi"
+          value={formatDateTime(campaign.stats.lastRunAt)}
+        />
       </div>
 
       {campaign.schedule && (
@@ -326,13 +394,18 @@ function CampaignCard({
                 : 'En pause'}
           </span>
           <span className="text-neutral-300">
-            {campaign.schedule.sent} / {campaign.schedule.totalRecipients} envoy&eacute;s
+            {campaign.schedule.sent} / {campaign.schedule.totalRecipients}{' '}
+            envoy&eacute;s
             {campaign.schedule.failed > 0
               ? ` · ${campaign.schedule.failed} échec(s)`
               : ''}
           </span>
           <span className="text-neutral-400">
-            Vague : <strong className="text-neutral-200">{campaign.schedule.waveSize}</strong>/jour
+            Vague :{' '}
+            <strong className="text-neutral-200">
+              {campaign.schedule.waveSize}
+            </strong>
+            /jour
           </span>
           <span className="text-neutral-500">
             Dernière vague&nbsp;: {formatDateTime(campaign.schedule.lastWaveAt)}
@@ -406,14 +479,11 @@ function CampaignDrawer({
     setScheduleError(null);
     setScheduleNotice(null);
     try {
-      const res = await fetch(
-        `/api/admin/broadcast/${campaign.id}/schedule`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ waveSize: Math.floor(parsed) }),
-        }
-      );
+      const res = await fetch(`/api/admin/broadcast/${campaign.id}/schedule`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ waveSize: Math.floor(parsed) }),
+      });
       const json = await res.json();
       if (!res.ok || json.error) {
         throw new Error(json.error || 'Échec de la planification');
@@ -434,10 +504,9 @@ function CampaignDrawer({
     setScheduleError(null);
     setScheduleNotice(null);
     try {
-      const res = await fetch(
-        `/api/admin/broadcast/${campaign.id}/wave`,
-        { method: 'POST' }
-      );
+      const res = await fetch(`/api/admin/broadcast/${campaign.id}/wave`, {
+        method: 'POST',
+      });
       const json = await res.json();
       if (!res.ok || json.error) {
         throw new Error(json.error || 'Vague échouée');
@@ -467,10 +536,9 @@ function CampaignDrawer({
     setScheduleError(null);
     setScheduleNotice(null);
     try {
-      const res = await fetch(
-        `/api/admin/broadcast/${campaign.id}/schedule`,
-        { method: 'DELETE' }
-      );
+      const res = await fetch(`/api/admin/broadcast/${campaign.id}/schedule`, {
+        method: 'DELETE',
+      });
       const json = await res.json();
       if (!res.ok || json.error) {
         throw new Error(json.error || 'Annulation échouée');
@@ -597,197 +665,255 @@ function CampaignDrawer({
         className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-stretch justify-end"
         onClick={onClose}
       >
-      <div
-        className="w-full max-w-2xl h-full bg-neutral-900 border-l border-neutral-700/50 overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="sticky top-0 z-10 bg-neutral-900/95 backdrop-blur border-b border-neutral-800 px-6 py-4 flex items-center justify-between">
-          <div className="min-w-0">
-            <p className="text-xs uppercase tracking-wider text-neutral-500">
-              Campagne
-            </p>
-            <h2 className="text-lg font-semibold truncate">{campaign.name}</h2>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-2 text-neutral-400 hover:bg-neutral-800 hover:text-white transition-colors"
-            aria-label="Fermer"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
-
-        <div className="px-6 py-6 space-y-6">
-          <section>
-            <p className="text-sm text-neutral-300 leading-relaxed">
-              {campaign.description}
-            </p>
-            <div className="mt-4 grid grid-cols-1 gap-2 text-sm">
-              <Field label="Sujet">{campaign.subject}</Field>
-              <Field label="Audience">
-                {AUDIENCE_LABELS[campaign.audience] ?? campaign.audience}
-              </Field>
-              <Field label="ID">
-                <code className="font-mono text-xs">{campaign.id}</code>
-              </Field>
+        <div
+          className="w-full max-w-2xl h-full bg-neutral-900 border-l border-neutral-700/50 overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="sticky top-0 z-10 bg-neutral-900/95 backdrop-blur border-b border-neutral-800 px-6 py-4 flex items-center justify-between">
+            <div className="min-w-0">
+              <p className="text-xs uppercase tracking-wider text-neutral-500">
+                Campagne
+              </p>
+              <h2 className="text-lg font-semibold truncate">
+                {campaign.name}
+              </h2>
             </div>
-          </section>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg p-2 text-neutral-400 hover:bg-neutral-800 hover:text-white transition-colors"
+              aria-label="Fermer"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
 
-          {/* Live preview */}
-          <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-xl p-4">
-            <div className="flex flex-wrap items-end justify-between gap-3 mb-3">
+          <div className="px-6 py-6 space-y-6">
+            <section>
+              <p className="text-sm text-neutral-300 leading-relaxed">
+                {campaign.description}
+              </p>
+              <div className="mt-4 grid grid-cols-1 gap-2 text-sm">
+                <Field label="Sujet">{campaign.subject}</Field>
+                <Field label="Audience">
+                  {AUDIENCE_LABELS[campaign.audience] ?? campaign.audience}
+                </Field>
+                <Field label="ID">
+                  <code className="font-mono text-xs">{campaign.id}</code>
+                </Field>
+              </div>
+            </section>
+
+            {/* Live preview */}
+            <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-xl p-4">
+              <div className="flex flex-wrap items-end justify-between gap-3 mb-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-neutral-200">
+                    Aper&ccedil;u live
+                  </h3>
+                  <p className="text-xs text-neutral-500 mt-0.5">
+                    Rendu HTML r&eacute;el de l&rsquo;email. Modifie le label
+                    pour tester le greeting.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={previewLabel}
+                    onChange={(e) => setPreviewLabel(e.target.value)}
+                    placeholder="Vincent"
+                    maxLength={80}
+                    className="px-3 py-1.5 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs w-32"
+                  />
+                  <a
+                    href={previewSrc}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-xs font-medium transition-colors"
+                  >
+                    Ouvrir
+                  </a>
+                </div>
+              </div>
+              <div className="rounded-xl overflow-hidden border border-neutral-700/50 bg-neutral-950">
+                <iframe
+                  key={previewSrc}
+                  src={previewSrc}
+                  title="Aperçu de l'email"
+                  sandbox="allow-same-origin"
+                  className="w-full h-[520px] bg-white"
+                />
+              </div>
+            </section>
+
+            {/* Test send */}
+            <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-xl p-4">
+              <h3 className="text-sm font-semibold text-neutral-200 mb-1">
+                Envoyer un test
+              </h3>
+              <p className="text-xs text-neutral-500 mb-3">
+                Envoie cet email &agrave; une seule adresse pour le visualiser
+                dans ton inbox avant la diffusion.
+              </p>
+              <div className="flex flex-wrap gap-3 items-end">
+                <div className="flex-1 min-w-[200px]">
+                  <input
+                    type="email"
+                    placeholder="ton.email@example.com"
+                    value={testTo}
+                    onChange={(e) => setTestTo(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && runTest()}
+                    className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={runTest}
+                  disabled={testSending || !testTo.trim()}
+                  className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors flex items-center gap-2"
+                >
+                  {testSending ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : null}
+                  Envoyer le test
+                </button>
+              </div>
+              {testResult && (
+                <div
+                  className={`mt-3 px-3 py-2 rounded-xl border text-sm ${
+                    testResult.ok
+                      ? 'bg-emerald-900/40 border-emerald-500/50 text-emerald-300'
+                      : 'bg-red-900/40 border-red-500/50 text-red-300'
+                  }`}
+                >
+                  {testResult.msg}
+                </div>
+              )}
+            </section>
+
+            {/* Wave scheduling */}
+            <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-xl p-4 space-y-3">
               <div>
                 <h3 className="text-sm font-semibold text-neutral-200">
-                  Aper&ccedil;u live
+                  Programmation par vagues
                 </h3>
                 <p className="text-xs text-neutral-500 mt-0.5">
-                  Rendu HTML r&eacute;el de l&rsquo;email. Modifie le label
-                  pour tester le greeting.
+                  Snapshot la liste actuelle, puis le cron quotidien envoie
+                  <strong className="text-neutral-300"> waveSize </strong>
+                  emails par jour jusqu&rsquo;&agrave; &eacute;puisement.
+                  Recommand&eacute; pour rester sous le quota Brevo gratuit
+                  (300/jour).
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={previewLabel}
-                  onChange={(e) => setPreviewLabel(e.target.value)}
-                  placeholder="Vincent"
-                  maxLength={80}
-                  className="px-3 py-1.5 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs w-32"
-                />
-                <a
-                  href={previewSrc}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-xs font-medium transition-colors"
-                >
-                  Ouvrir
-                </a>
-              </div>
-            </div>
-            <div className="rounded-xl overflow-hidden border border-neutral-700/50 bg-neutral-950">
-              <iframe
-                key={previewSrc}
-                src={previewSrc}
-                title="Aperçu de l'email"
-                sandbox="allow-same-origin"
-                className="w-full h-[520px] bg-white"
-              />
-            </div>
-          </section>
 
-          {/* Test send */}
-          <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-neutral-200 mb-1">
-              Envoyer un test
-            </h3>
-            <p className="text-xs text-neutral-500 mb-3">
-              Envoie cet email &agrave; une seule adresse pour le visualiser dans
-              ton inbox avant la diffusion.
-            </p>
-            <div className="flex flex-wrap gap-3 items-end">
-              <div className="flex-1 min-w-[200px]">
-                <input
-                  type="email"
-                  placeholder="ton.email@example.com"
-                  value={testTo}
-                  onChange={(e) => setTestTo(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && runTest()}
-                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={runTest}
-                disabled={testSending || !testTo.trim()}
-                className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors flex items-center gap-2"
-              >
-                {testSending ? (
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : null}
-                Envoyer le test
-              </button>
-            </div>
-            {testResult && (
-              <div
-                className={`mt-3 px-3 py-2 rounded-xl border text-sm ${
-                  testResult.ok
-                    ? 'bg-emerald-900/40 border-emerald-500/50 text-emerald-300'
-                    : 'bg-red-900/40 border-red-500/50 text-red-300'
-                }`}
-              >
-                {testResult.msg}
-              </div>
-            )}
-          </section>
-
-          {/* Wave scheduling */}
-          <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-xl p-4 space-y-3">
-            <div>
-              <h3 className="text-sm font-semibold text-neutral-200">
-                Programmation par vagues
-              </h3>
-              <p className="text-xs text-neutral-500 mt-0.5">
-                Snapshot la liste actuelle, puis le cron quotidien envoie
-                <strong className="text-neutral-300"> waveSize </strong>
-                emails par jour jusqu&rsquo;&agrave; &eacute;puisement. Recommand&eacute;
-                pour rester sous le quota Brevo gratuit (300/jour).
-              </p>
-            </div>
-
-            {schedule ? (
-              <>
-                <div className="rounded-xl bg-neutral-900/50 border border-neutral-700/40 p-3">
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <span className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-200 border border-amber-500/30 text-[10px] uppercase tracking-wider font-semibold">
-                      {schedule.status === 'scheduled'
-                        ? 'En cours'
-                        : schedule.status === 'completed'
-                          ? 'Termin&eacute;e'
-                          : 'En pause'}
-                    </span>
-                    <span className="text-xs text-neutral-400">
-                      Vague : <strong className="text-neutral-200">{schedule.waveSize}</strong>/jour
-                    </span>
+              {schedule ? (
+                <>
+                  <div className="rounded-xl bg-neutral-900/50 border border-neutral-700/40 p-3">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <span className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-200 border border-amber-500/30 text-[10px] uppercase tracking-wider font-semibold">
+                        {schedule.status === 'scheduled'
+                          ? 'En cours'
+                          : schedule.status === 'completed'
+                            ? 'Termin&eacute;e'
+                            : 'En pause'}
+                      </span>
+                      <span className="text-xs text-neutral-400">
+                        Vague :{' '}
+                        <strong className="text-neutral-200">
+                          {schedule.waveSize}
+                        </strong>
+                        /jour
+                      </span>
+                    </div>
+                    <Progress
+                      sent={schedule.sent}
+                      failed={schedule.failed}
+                      pending={schedule.pending}
+                      total={schedule.totalRecipients}
+                    />
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-neutral-400">
+                      <span>
+                        <strong className="text-emerald-300">
+                          {schedule.sent}
+                        </strong>{' '}
+                        envoy&eacute;s
+                      </span>
+                      <span>
+                        <strong className="text-rose-300">
+                          {schedule.failed}
+                        </strong>{' '}
+                        &eacute;chec(s)
+                      </span>
+                      <span>
+                        <strong className="text-neutral-200">
+                          {schedule.pending}
+                        </strong>{' '}
+                        en attente
+                      </span>
+                      <span className="text-neutral-500">
+                        Derni&egrave;re vague :{' '}
+                        {formatDateTime(schedule.lastWaveAt)}
+                      </span>
+                    </div>
                   </div>
-                  <Progress
-                    sent={schedule.sent}
-                    failed={schedule.failed}
-                    pending={schedule.pending}
-                    total={schedule.totalRecipients}
-                  />
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-neutral-400">
-                    <span>
-                      <strong className="text-emerald-300">{schedule.sent}</strong> envoy&eacute;s
-                    </span>
-                    <span>
-                      <strong className="text-rose-300">{schedule.failed}</strong> &eacute;chec(s)
-                    </span>
-                    <span>
-                      <strong className="text-neutral-200">{schedule.pending}</strong> en attente
-                    </span>
-                    <span className="text-neutral-500">
-                      Derni&egrave;re vague : {formatDateTime(schedule.lastWaveAt)}
-                    </span>
-                  </div>
-                </div>
 
+                  <div className="flex flex-wrap items-end gap-2">
+                    <div>
+                      <label className="block text-xs text-neutral-400 mb-1">
+                        Modifier la taille
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="290"
+                        value={waveSize}
+                        onChange={(e) => setWaveSize(e.target.value)}
+                        className="px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm w-24"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={postSchedule}
+                      disabled={scheduleBusy}
+                      className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
+                    >
+                      Mettre &agrave; jour
+                    </button>
+                    <button
+                      type="button"
+                      onClick={triggerWaveNow}
+                      disabled={scheduleBusy || schedule.pending === 0}
+                      className="px-4 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
+                    >
+                      Lancer une vague maintenant
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelSchedule}
+                      disabled={scheduleBusy}
+                      className="px-4 py-2 rounded-xl border border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 disabled:opacity-50 text-sm font-medium transition-colors"
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                </>
+              ) : (
                 <div className="flex flex-wrap items-end gap-2">
                   <div>
                     <label className="block text-xs text-neutral-400 mb-1">
-                      Modifier la taille
+                      Emails par jour
                     </label>
                     <input
                       type="number"
@@ -795,6 +921,7 @@ function CampaignDrawer({
                       max="290"
                       value={waveSize}
                       onChange={(e) => setWaveSize(e.target.value)}
+                      placeholder="10"
                       className="px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm w-24"
                     />
                   </div>
@@ -802,269 +929,234 @@ function CampaignDrawer({
                     type="button"
                     onClick={postSchedule}
                     disabled={scheduleBusy}
-                    className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
+                    className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors flex items-center gap-2"
                   >
-                    Mettre &agrave; jour
-                  </button>
-                  <button
-                    type="button"
-                    onClick={triggerWaveNow}
-                    disabled={scheduleBusy || schedule.pending === 0}
-                    className="px-4 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
-                  >
-                    Lancer une vague maintenant
-                  </button>
-                  <button
-                    type="button"
-                    onClick={cancelSchedule}
-                    disabled={scheduleBusy}
-                    className="px-4 py-2 rounded-xl border border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 disabled:opacity-50 text-sm font-medium transition-colors"
-                  >
-                    Annuler
+                    {scheduleBusy ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : null}
+                    Planifier les vagues
                   </button>
                 </div>
-              </>
-            ) : (
-              <div className="flex flex-wrap items-end gap-2">
+              )}
+
+              {scheduleError && (
+                <div className="px-3 py-2 rounded-xl bg-red-900/40 border border-red-500/50 text-red-300 text-sm">
+                  {scheduleError}
+                </div>
+              )}
+              {scheduleNotice && (
+                <div className="px-3 py-2 rounded-xl bg-emerald-900/40 border border-emerald-500/50 text-emerald-300 text-sm">
+                  {scheduleNotice}
+                </div>
+              )}
+            </section>
+
+            {/* Broadcast */}
+            <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-xl p-4 space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold text-neutral-200 mb-1">
+                  Diffusion imm&eacute;diate
+                </h3>
+                <p className="text-xs text-neutral-500">
+                  Le quota Brevo gratuit est de 300 emails/jour. Au-del&agrave;,
+                  segmente l&rsquo;envoi avec
+                  <code className="mx-1 px-1.5 py-0.5 rounded bg-neutral-900 text-neutral-300 font-mono text-[11px]">
+                    limit
+                  </code>
+                  et
+                  <code className="mx-1 px-1.5 py-0.5 rounded bg-neutral-900 text-neutral-300 font-mono text-[11px]">
+                    offset
+                  </code>
+                  .
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-neutral-400 mb-1">
-                    Emails par jour
+                    Limite (vide = tout)
                   </label>
                   <input
                     type="number"
                     min="1"
-                    max="290"
-                    value={waveSize}
-                    onChange={(e) => setWaveSize(e.target.value)}
-                    placeholder="10"
-                    className="px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm w-24"
+                    value={limit}
+                    onChange={(e) => setLimit(e.target.value)}
+                    placeholder="ex. 250"
+                    className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   />
                 </div>
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1">
+                    Offset
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={offset}
+                    onChange={(e) => setOffset(e.target.value)}
+                    placeholder="0"
+                    className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={postSchedule}
-                  disabled={scheduleBusy}
-                  className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors flex items-center gap-2"
+                  onClick={runDryRun}
+                  disabled={dryRunBusy || sendBusy}
+                  className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors flex items-center gap-2"
                 >
-                  {scheduleBusy ? (
+                  {dryRunBusy ? (
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   ) : null}
-                  Planifier les vagues
+                  Pr&eacute;visualiser (dry-run)
                 </button>
-              </div>
-            )}
-
-            {scheduleError && (
-              <div className="px-3 py-2 rounded-xl bg-red-900/40 border border-red-500/50 text-red-300 text-sm">
-                {scheduleError}
-              </div>
-            )}
-            {scheduleNotice && (
-              <div className="px-3 py-2 rounded-xl bg-emerald-900/40 border border-emerald-500/50 text-emerald-300 text-sm">
-                {scheduleNotice}
-              </div>
-            )}
-          </section>
-
-          {/* Broadcast */}
-          <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-xl p-4 space-y-4">
-            <div>
-              <h3 className="text-sm font-semibold text-neutral-200 mb-1">
-                Diffusion imm&eacute;diate
-              </h3>
-              <p className="text-xs text-neutral-500">
-                Le quota Brevo gratuit est de 300 emails/jour. Au-del&agrave;,
-                segmente l&rsquo;envoi avec
-                <code className="mx-1 px-1.5 py-0.5 rounded bg-neutral-900 text-neutral-300 font-mono text-[11px]">
-                  limit
-                </code>
-                et
-                <code className="mx-1 px-1.5 py-0.5 rounded bg-neutral-900 text-neutral-300 font-mono text-[11px]">
-                  offset
-                </code>
-                .
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs text-neutral-400 mb-1">
-                  Limite (vide = tout)
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={limit}
-                  onChange={(e) => setLimit(e.target.value)}
-                  placeholder="ex. 250"
-                  className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-neutral-400 mb-1">
-                  Offset
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={offset}
-                  onChange={(e) => setOffset(e.target.value)}
-                  placeholder="0"
-                  className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={runDryRun}
-                disabled={dryRunBusy || sendBusy}
-                className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors flex items-center gap-2"
-              >
-                {dryRunBusy ? (
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : null}
-                Pr&eacute;visualiser (dry-run)
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirming(true)}
-                disabled={dryRunBusy || sendBusy}
-                className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors flex items-center gap-2"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                  />
-                </svg>
-                Lancer la diffusion
-              </button>
-            </div>
-
-            {actionError && (
-              <div className="px-3 py-2 rounded-xl bg-red-900/40 border border-red-500/50 text-red-300 text-sm">
-                {actionError}
-              </div>
-            )}
-
-            {dryRun && (
-              <div className="rounded-xl bg-neutral-900/50 border border-neutral-700/40 p-4">
-                <p className="text-xs text-neutral-500 uppercase tracking-wider mb-2">
-                  Aper&ccedil;u
-                </p>
-                <ul className="text-sm text-neutral-200 space-y-1">
-                  <li>
-                    Comptes confirm&eacute;s :{' '}
-                    <strong>{dryRun.totalConfirmedUsers}</strong>
-                  </li>
-                  <li>
-                    Envois pour ce batch : <strong>{dryRun.windowSize}</strong>
-                  </li>
-                  <li>
-                    Avec greeting personnalis&eacute; :{' '}
-                    <strong>{dryRun.withLabel}</strong>
-                  </li>
-                  <li>
-                    Sans label (greeting g&eacute;n&eacute;rique) :{' '}
-                    <strong>{dryRun.withoutLabel}</strong>
-                  </li>
-                </ul>
-              </div>
-            )}
-
-            {sendResult && (
-              <div className="rounded-xl bg-emerald-900/30 border border-emerald-500/40 p-4">
-                <p className="text-xs text-emerald-400 uppercase tracking-wider mb-2">
-                  Diffusion termin&eacute;e
-                </p>
-                <ul className="text-sm text-emerald-100 space-y-1">
-                  <li>
-                    Envoy&eacute;s : <strong>{sendResult.sent}</strong> /{' '}
-                    {sendResult.windowSize}
-                  </li>
-                  <li>
-                    &Eacute;checs : <strong>{sendResult.failed}</strong>
-                  </li>
-                </ul>
-                {sendResult.errors && sendResult.errors.length > 0 && (
-                  <details className="mt-2 text-xs text-red-200">
-                    <summary className="cursor-pointer text-red-300">
-                      {sendResult.errors.length} erreur(s) — voir le d&eacute;tail
-                    </summary>
-                    <ul className="mt-2 space-y-1 max-h-40 overflow-auto">
-                      {sendResult.errors.map((e, i) => (
-                        <li key={i} className="font-mono text-[11px]">
-                          {e}
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                )}
                 <button
                   type="button"
-                  onClick={onAfterSend}
-                  className="mt-3 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-medium transition-colors"
+                  onClick={() => setConfirming(true)}
+                  disabled={dryRunBusy || sendBusy}
+                  className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors flex items-center gap-2"
                 >
-                  Fermer et rafra&icirc;chir
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                    />
+                  </svg>
+                  Lancer la diffusion
                 </button>
               </div>
-            )}
-          </section>
-        </div>
-      </div>
 
-      {/* Confirm modal */}
-      {confirming && (
-        <div
-          className="fixed inset-0 z-[210] bg-black/70 flex items-center justify-center p-4"
-          onClick={() => !sendBusy && setConfirming(false)}
-        >
-          <div
-            className="w-full max-w-md rounded-2xl bg-neutral-900 border border-neutral-700 p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-lg font-semibold mb-2">Confirmer l&rsquo;envoi</h3>
-            <p className="text-sm text-neutral-300 mb-4">
-              Cette action va envoyer la campagne &laquo; {campaign.name} &raquo;
-              aux comptes confirm&eacute;s du site
-              {limit ? ` (limite : ${limit})` : ''}
-              {Number(offset) > 0 ? `, en sautant les ${offset} premiers` : ''}.
-              <br />
-              <strong>Action irr&eacute;versible.</strong>
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setConfirming(false)}
-                disabled={sendBusy}
-                className="px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-sm font-medium transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                type="button"
-                onClick={runSend}
-                disabled={sendBusy}
-                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-sm font-medium transition-colors flex items-center gap-2"
-              >
-                {sendBusy ? (
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : null}
-                Confirmer la diffusion
-              </button>
-            </div>
+              {actionError && (
+                <div className="px-3 py-2 rounded-xl bg-red-900/40 border border-red-500/50 text-red-300 text-sm">
+                  {actionError}
+                </div>
+              )}
+
+              {dryRun && (
+                <div className="rounded-xl bg-neutral-900/50 border border-neutral-700/40 p-4">
+                  <p className="text-xs text-neutral-500 uppercase tracking-wider mb-2">
+                    Aper&ccedil;u
+                  </p>
+                  <ul className="text-sm text-neutral-200 space-y-1">
+                    <li>
+                      Comptes confirm&eacute;s :{' '}
+                      <strong>{dryRun.totalConfirmedUsers}</strong>
+                    </li>
+                    <li>
+                      Envois pour ce batch :{' '}
+                      <strong>{dryRun.windowSize}</strong>
+                    </li>
+                    <li>
+                      Avec greeting personnalis&eacute; :{' '}
+                      <strong>{dryRun.withLabel}</strong>
+                    </li>
+                    <li>
+                      Sans label (greeting g&eacute;n&eacute;rique) :{' '}
+                      <strong>{dryRun.withoutLabel}</strong>
+                    </li>
+                  </ul>
+                </div>
+              )}
+
+              {sendResult && (
+                <div className="rounded-xl bg-emerald-900/30 border border-emerald-500/40 p-4">
+                  <p className="text-xs text-emerald-400 uppercase tracking-wider mb-2">
+                    Diffusion termin&eacute;e
+                  </p>
+                  <ul className="text-sm text-emerald-100 space-y-1">
+                    <li>
+                      Envoy&eacute;s : <strong>{sendResult.sent}</strong> /{' '}
+                      {sendResult.windowSize}
+                    </li>
+                    <li>
+                      &Eacute;checs : <strong>{sendResult.failed}</strong>
+                    </li>
+                  </ul>
+                  {sendResult.errors && sendResult.errors.length > 0 && (
+                    <details className="mt-2 text-xs text-red-200">
+                      <summary className="cursor-pointer text-red-300">
+                        {sendResult.errors.length} erreur(s) — voir le
+                        d&eacute;tail
+                      </summary>
+                      <ul className="mt-2 space-y-1 max-h-40 overflow-auto">
+                        {sendResult.errors.map((e, i) => (
+                          <li key={i} className="font-mono text-[11px]">
+                            {e}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
+                  <button
+                    type="button"
+                    onClick={onAfterSend}
+                    className="mt-3 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-medium transition-colors"
+                  >
+                    Fermer et rafra&icirc;chir
+                  </button>
+                </div>
+              )}
+            </section>
           </div>
         </div>
-      )}
+
+        {/* Confirm modal */}
+        {confirming && (
+          <div
+            className="fixed inset-0 z-[210] bg-black/70 flex items-center justify-center p-4"
+            onClick={() => !sendBusy && setConfirming(false)}
+          >
+            <div
+              className="w-full max-w-md rounded-2xl bg-neutral-900 border border-neutral-700 p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-lg font-semibold mb-2">
+                Confirmer l&rsquo;envoi
+              </h3>
+              <p className="text-sm text-neutral-300 mb-4">
+                Cette action va envoyer la campagne &laquo; {campaign.name}{' '}
+                &raquo; aux comptes confirm&eacute;s du site
+                {limit ? ` (limite : ${limit})` : ''}
+                {Number(offset) > 0
+                  ? `, en sautant les ${offset} premiers`
+                  : ''}
+                .
+                <br />
+                <strong>Action irr&eacute;versible.</strong>
+              </p>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setConfirming(false)}
+                  disabled={sendBusy}
+                  className="px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-sm font-medium transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={runSend}
+                  disabled={sendBusy}
+                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-sm font-medium transition-colors flex items-center gap-2"
+                >
+                  {sendBusy ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : null}
+                  Confirmer la diffusion
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

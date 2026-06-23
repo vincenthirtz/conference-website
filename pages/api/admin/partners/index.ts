@@ -2,10 +2,29 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, StaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
-import { sanitizeUrl } from '@/utils/apiHelpers';
+import {
+  sanitizeUrl,
+  parsePagination,
+  sanitizeSearch,
+  escapePostgrestValue,
+} from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 
 import { logger } from '../../../../utils/logger';
+
+// Colonnes effectivement rendues par la page admin partenaires.
+const PARTNER_COLUMNS =
+  'id, name, description, category, logo_url, website_url, note, display_order, is_active, created_at, updated_at';
+
+// Allowlist de tri (clé exposée → colonne DB).
+const SORT_COLUMNS: Record<string, string> = {
+  category: 'category',
+  display_order: 'display_order',
+  created_at: 'created_at',
+  name: 'name',
+};
+
+const VALID_CATEGORIES = ['super', 'major', 'cultural'];
 type PartnerPayload = {
   name?: string;
   description?: string;
@@ -32,18 +51,30 @@ async function handler(
   const admin = supabaseAdmin!;
 
   if (req.method === 'GET') {
-    const { limit = '50', category, active } = req.query;
-    const limitNum = Math.max(1, Math.min(200, Number(limit) || 50));
+    const { category, active, orderBy, orderDir, includeTotal } = req.query;
 
-    let query = admin
-      .from('partners')
-      .select('*')
-      .order('category', { ascending: true })
-      .order('display_order', { ascending: true })
-      .order('created_at', { ascending: true })
-      .limit(limitNum);
+    const { limit: limitNum, offset: offsetNum } = parsePagination(req, {
+      limit: 50,
+      maxLimit: 200,
+    });
+    const search = sanitizeSearch(req.query.search);
+
+    const wantTotal = includeTotal === '1' || includeTotal === 'true';
+
+    // Tri serveur via allowlist ; par défaut on garde l'ordre historique
+    // (category, display_order, created_at) tous ascendants.
+    const sortKey =
+      typeof orderBy === 'string' && orderBy in SORT_COLUMNS ? orderBy : null;
+    const ascending = orderDir === 'desc' ? false : true;
+
+    let query = admin.from('partners').select(PARTNER_COLUMNS, {
+      count: wantTotal ? 'exact' : undefined,
+    });
 
     if (category && typeof category === 'string') {
+      if (!VALID_CATEGORIES.includes(category)) {
+        return res.status(400).json({ error: 'Invalid category.' });
+      }
       query = query.eq('category', category);
     }
     if (active === 'true') {
@@ -52,14 +83,35 @@ async function handler(
       query = query.eq('is_active', false);
     }
 
-    const { data, error } = await query;
+    if (search) {
+      const safe = escapePostgrestValue(search);
+      query = query.ilike('name', `%${safe}%`);
+    }
+
+    if (sortKey) {
+      query = query.order(SORT_COLUMNS[sortKey], { ascending });
+    } else {
+      query = query
+        .order('category', { ascending: true })
+        .order('display_order', { ascending: true })
+        .order('created_at', { ascending: true });
+    }
+
+    query = query.range(offsetNum, offsetNum + limitNum - 1);
+
+    const { data, error, count } = await query;
 
     if (error) {
       logger.error('[admin/partners] list error', error);
       return res.status(500).json({ error: 'Failed to load partners.' });
     }
 
-    return res.status(200).json({ items: data ?? [] });
+    // Note: la table `partners` n'a pas de colonne tenant_id (table globale
+    // de la conférence) → pas de scoping tenant ici.
+    return res.status(200).json({
+      items: data ?? [],
+      total: typeof count === 'number' ? count : null,
+    });
   }
 
   if (req.method === 'POST') {
@@ -70,8 +122,7 @@ async function handler(
         .json({ error: 'Name, description and category are required.' });
     }
 
-    const validCategories = ['super', 'major', 'cultural'];
-    if (!validCategories.includes(body.category)) {
+    if (!VALID_CATEGORIES.includes(body.category)) {
       return res.status(400).json({
         error: 'Invalid category. Allowed values: super, major, cultural.',
       });

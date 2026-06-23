@@ -23,7 +23,10 @@ type CastMemberRow = {
 
 type ApiResponse = {
   items: CastMemberRow[];
+  total: number | null;
 };
+
+const PAGE_SIZE = 50;
 
 type Props = {
   staff: {
@@ -46,27 +49,67 @@ function statusColor(isActive: boolean) {
 function AdminCastMembersPage({ staff }: Props) {
   const [loading, setLoading] = useState(false);
   const [members, setMembers] = useState<CastMemberRow[]>([]);
+  const [total, setTotal] = useState<number | null>(null);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [status, setStatus] = useState<'all' | 'active' | 'inactive'>('all');
+  const [offset, setOffset] = useState(0);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [overIdx, setOverIdx] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const { adminFetch, adminFetchJson } = useAdminFetch();
 
+  // Le drag-reorder n'a de sens que sur la liste complète, triée par
+  // sort_order ASC, page 0. On le désactive dès qu'un filtre/recherche
+  // restreint ou réordonne le jeu de résultats côté serveur.
+  const canReorder =
+    !debouncedSearch.trim() && status === 'all' && offset === 0;
+
+  // Debounce de la recherche (~300ms) avant de requêter le serveur.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // Toute modification de recherche/filtre repart de la première page.
+  useEffect(() => {
+    setOffset(0);
+  }, [debouncedSearch, status]);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
 
     try {
+      const params = new URLSearchParams();
+      params.set('limit', String(PAGE_SIZE));
+      params.set('offset', String(offset));
+      params.set('includeTotal', '1');
+      if (status === 'active') {
+        params.set('status', 'active');
+      } else if (status === 'inactive') {
+        params.set('status', 'inactive');
+      } else {
+        // 'all' => inclure les inactives
+        params.set('includeInactive', 'true');
+      }
+      if (debouncedSearch.trim()) {
+        params.set('search', debouncedSearch.trim());
+      }
+
       const json = await adminFetchJson<ApiResponse>(
-        '/api/admin/cast-members?includeInactive=true'
+        `/api/admin/cast-members?${params.toString()}`
       );
 
       setMembers(json.items || []);
+      setTotal(typeof json.total === 'number' ? json.total : null);
     } catch (err) {
       logger.error('Error fetching cast members', err);
     } finally {
       setLoading(false);
     }
-  }, [adminFetchJson]);
+  }, [adminFetchJson, offset, status, debouncedSearch]);
 
   useEffect(() => {
     fetchData();
@@ -147,13 +190,6 @@ function AdminCastMembersPage({ staff }: Props) {
     [members, fetchData, adminFetch]
   );
 
-  const filteredMembers = members.filter(
-    (m) =>
-      m.name.toLowerCase().includes(search.toLowerCase()) ||
-      (m.title && m.title.toLowerCase().includes(search.toLowerCase())) ||
-      (m.city && m.city.toLowerCase().includes(search.toLowerCase()))
-  );
-
   return (
     <>
       <Head>
@@ -170,8 +206,11 @@ function AdminCastMembersPage({ staff }: Props) {
                   Pôle Production &amp; Cast
                 </h1>
                 <p className="text-neutral-400 text-sm mt-1">
-                  {members.length} casteuse{members.length > 1 ? 's' : ''}{' '}
-                  configurée{members.length > 1 ? 's' : ''}
+                  {total !== null
+                    ? `${total} casteuse${total > 1 ? 's' : ''} configurée${
+                        total > 1 ? 's' : ''
+                      }`
+                    : 'Chargement…'}
                 </p>
               </div>
 
@@ -197,33 +236,52 @@ function AdminCastMembersPage({ staff }: Props) {
             </div>
           </div>
 
-          {/* Search */}
+          {/* Search + Filters */}
           <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6">
-            <div className="flex-1 min-w-[200px]">
-              <label className="block text-sm text-neutral-400 mb-1">
-                Recherche
-              </label>
-              <div className="relative">
-                <svg
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+              <div className="sm:col-span-2">
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Recherche
+                </label>
+                <div className="relative">
+                  <svg
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Nom, titre ou ville..."
+                    className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
                   />
-                </svg>
-                <input
-                  type="text"
-                  placeholder="Nom, titre ou ville..."
-                  className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Statut
+                </label>
+                <select
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                  value={status}
+                  onChange={(e) =>
+                    setStatus(e.target.value as 'all' | 'active' | 'inactive')
+                  }
+                >
+                  <option value="all">Toutes</option>
+                  <option value="active">Actives</option>
+                  <option value="inactive">Inactives</option>
+                </select>
               </div>
             </div>
           </section>
@@ -234,7 +292,7 @@ function AdminCastMembersPage({ staff }: Props) {
               <div className="flex items-center justify-center py-20">
                 <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
               </div>
-            ) : filteredMembers.length === 0 ? (
+            ) : members.length === 0 ? (
               <div className="text-center py-20 text-neutral-400">
                 <svg
                   className="w-12 h-12 mx-auto mb-4 text-neutral-600"
@@ -249,7 +307,7 @@ function AdminCastMembersPage({ staff }: Props) {
                     d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
                   />
                 </svg>
-                {search
+                {debouncedSearch.trim() || status !== 'all'
                   ? 'Aucune casteuse trouvée'
                   : 'Aucune casteuse configurée'}
               </div>
@@ -260,10 +318,10 @@ function AdminCastMembersPage({ staff }: Props) {
                     Sauvegarde de l&apos;ordre…
                   </div>
                 )}
-                {filteredMembers.map((m, idx) => {
+                {members.map((m, idx) => {
                   const isDragging = dragIdx === idx;
                   const isOver = overIdx === idx;
-                  const canDrag = !search; // disable drag when filtering
+                  const canDrag = canReorder; // disable when filtering/paginating
                   return (
                     <div
                       key={m.id}
@@ -445,6 +503,62 @@ function AdminCastMembersPage({ staff }: Props) {
               </div>
             )}
           </section>
+
+          {/* Pagination */}
+          {members.length > 0 && (
+            <div className="flex justify-between items-center mt-6">
+              <button
+                type="button"
+                disabled={offset === 0 || loading}
+                onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
+                className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+                Précédent
+              </button>
+
+              <span className="text-neutral-400 text-sm">
+                {offset + 1} – {offset + members.length}
+                {total !== null ? ` sur ${total}` : ''}
+              </span>
+
+              <button
+                type="button"
+                disabled={
+                  loading || (total !== null && offset + PAGE_SIZE >= total)
+                }
+                onClick={() => setOffset(offset + PAGE_SIZE)}
+                className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                Suivant
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </>

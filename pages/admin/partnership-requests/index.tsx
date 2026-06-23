@@ -11,16 +11,14 @@ type RequestRow = {
   contact_name: string;
   email: string;
   phone: string | null;
-  website: string | null;
   category: 'super' | 'major' | 'cultural' | 'other';
   message: string;
   budget_range: string | null;
   status: string;
-  admin_notes: string | null;
   created_at: string;
-  read_at: string | null;
-  contacted_at: string | null;
 };
+
+const PAGE_SIZE = 50;
 
 type Props = {
   staff: {
@@ -77,30 +75,51 @@ function AdminPartnershipRequestsPage({ staff }: Props) {
   const [loading, setLoading] = useState(false);
   const [requests, setRequests] = useState<RequestRow[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
+  const [total, setTotal] = useState<number | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [offset, setOffset] = useState(0);
+
+  // Debounce de la recherche (requête serveur)
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // Tout changement de filtre/recherche réinitialise la pagination
+  useEffect(() => {
+    setOffset(0);
+  }, [statusFilter, categoryFilter, debouncedSearch]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
 
     try {
       const params = new URLSearchParams();
+      params.set('limit', String(PAGE_SIZE));
+      params.set('offset', String(offset));
+      params.set('includeTotal', '1');
       if (statusFilter) params.set('status', statusFilter);
       if (categoryFilter) params.set('category', categoryFilter);
+      if (debouncedSearch) params.set('search', debouncedSearch);
 
       const json = await adminFetchJson<{
         items?: RequestRow[];
         counts?: Record<string, number>;
+        total?: number | null;
       }>(`/api/admin/partnership-requests?${params.toString()}`);
 
       setRequests(json.items || []);
       setCounts(json.counts || {});
+      setTotal(typeof json.total === 'number' ? json.total : null);
     } catch (err) {
       logger.error('Error fetching partnership requests', err);
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, categoryFilter, adminFetchJson]);
+  }, [statusFilter, categoryFilter, debouncedSearch, offset, adminFetchJson]);
 
   useEffect(() => {
     fetchData();
@@ -136,7 +155,9 @@ function AdminPartnershipRequestsPage({ staff }: Props) {
                   Demandes de partenariat
                 </h1>
                 <p className="text-neutral-400 text-sm mt-1">
-                  {requests.length} demande{requests.length > 1 ? 's' : ''}
+                  {total !== null
+                    ? `${total} demande${total > 1 ? 's' : ''}`
+                    : `${requests.length} demande${requests.length > 1 ? 's' : ''}`}
                   {newCount > 0 && (
                     <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-blue-600 text-white">
                       {newCount} nouvelle{newCount > 1 ? 's' : ''}
@@ -224,6 +245,34 @@ function AdminPartnershipRequestsPage({ staff }: Props) {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div className="flex-1 min-w-[220px]">
+                <label className="block text-sm text-neutral-400 mb-1">
+                  Recherche
+                </label>
+                <div className="relative">
+                  <svg
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Entreprise, contact, email..."
+                    className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
           </section>
@@ -342,6 +391,60 @@ function AdminPartnershipRequestsPage({ staff }: Props) {
               </div>
             )}
           </section>
+
+          {/* Pagination */}
+          {requests.length > 0 && (
+            <div className="flex justify-between items-center mt-6">
+              <button
+                type="button"
+                disabled={offset === 0}
+                onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
+                className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+                Précédent
+              </button>
+
+              <span className="text-neutral-400 text-sm">
+                {offset + 1} – {offset + requests.length}
+                {total !== null ? ` sur ${total}` : ''}
+              </span>
+
+              <button
+                type="button"
+                disabled={total !== null && offset + PAGE_SIZE >= total}
+                onClick={() => setOffset(offset + PAGE_SIZE)}
+                className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                Suivant
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </>

@@ -1,10 +1,28 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
-import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
+import {
+  isValidUUID,
+  sanitizeUrl,
+  parsePagination,
+  sanitizeSearch,
+  escapePostgrestValue,
+} from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 
 import { logger } from '../../../../utils/logger';
+
+// Colonnes effectivement rendues par la page admin (pas de select('*')).
+const CAST_MEMBER_COLUMNS =
+  'id, name, title, description, image_url, twitch_url, city, is_active, is_promo, sort_order, auth_user_id, created_at, updated_at';
+
+// Allowlist de tri (clé exposée → colonne DB).
+const SORT_COLUMNS: Record<string, string> = {
+  sort_order: 'sort_order',
+  name: 'name',
+  created_at: 'created_at',
+  updated_at: 'updated_at',
+};
 type CastMemberPayload = {
   name?: string;
   title?: string | null;
@@ -40,29 +58,74 @@ async function handler(
   const admin = supabaseAdmin!;
 
   if (req.method === 'GET') {
-    const limit = Math.max(1, Math.min(200, Number(req.query.limit) || 100));
+    const { limit, offset } = parsePagination(req, {
+      limit: 50,
+      maxLimit: 200,
+    });
+    const search = sanitizeSearch(req.query.search);
     const includeInactive = req.query.includeInactive === 'true';
+    const includeTotal =
+      req.query.includeTotal === '1' || req.query.includeTotal === 'true';
+
+    // Filtre statut explicite : 'active' | 'inactive'. includeInactive=true =>
+    // pas de filtre (compat héritée). Sinon statut détermine le filtre.
+    const statusParam = Array.isArray(req.query.status)
+      ? req.query.status[0]
+      : req.query.status;
+
+    // Tri serveur via allowlist ; défaut historique = sort_order ASC.
+    const orderByParam = Array.isArray(req.query.orderBy)
+      ? req.query.orderBy[0]
+      : req.query.orderBy;
+    const orderDirParam = Array.isArray(req.query.orderDir)
+      ? req.query.orderDir[0]
+      : req.query.orderDir;
+    const orderColumn = SORT_COLUMNS[orderByParam ?? ''] ?? 'sort_order';
+    const ascending =
+      orderDirParam === 'desc'
+        ? false
+        : orderDirParam === 'asc'
+          ? true
+          : orderColumn === 'sort_order'; // défaut : sort_order ASC, autres DESC
 
     let query = admin
       .from('cast_members')
-      .select('*')
-      .eq('tenant_id', ctx.tenantId)
-      .order('sort_order', { ascending: true })
-      .order('created_at', { ascending: false })
-      .limit(limit);
+      .select(CAST_MEMBER_COLUMNS, {
+        count: includeTotal ? 'exact' : undefined,
+      })
+      .eq('tenant_id', ctx.tenantId);
 
-    if (!includeInactive) {
+    // Statut : 'active'/'inactive' prime, sinon compat includeInactive.
+    if (statusParam === 'active') {
+      query = query.eq('is_active', true);
+    } else if (statusParam === 'inactive') {
+      query = query.eq('is_active', false);
+    } else if (!includeInactive) {
       query = query.eq('is_active', true);
     }
 
-    const { data, error } = await query;
+    if (search) {
+      const s = `%${escapePostgrestValue(search)}%`;
+      query = query.or(`name.ilike.${s},title.ilike.${s},city.ilike.${s}`);
+    }
+
+    query = query
+      .order(orderColumn, { ascending })
+      // tri secondaire stable
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    const { data, error, count } = await query;
 
     if (error) {
       logger.error('[admin/cast-members] list error', error);
       return res.status(500).json({ error: 'Failed to load cast members.' });
     }
 
-    return res.status(200).json({ items: data ?? [] });
+    return res.status(200).json({
+      items: data ?? [],
+      total: typeof count === 'number' ? count : null,
+    });
   }
 
   if (req.method === 'POST') {
@@ -84,7 +147,10 @@ async function handler(
 
     let authUserId: string | null = null;
     if ('authUserId' in body && body.authUserId) {
-      if (typeof body.authUserId !== 'string' || !isValidUUID(body.authUserId)) {
+      if (
+        typeof body.authUserId !== 'string' ||
+        !isValidUUID(body.authUserId)
+      ) {
         return res.status(400).json({ error: 'authUserId invalide.' });
       }
       authUserId = body.authUserId;
@@ -116,8 +182,7 @@ async function handler(
       const isUniqueError = error.code === '23505';
       if (isCasterRoleError) {
         return res.status(400).json({
-          error:
-            'Le compte selectionne doit avoir le role staff "caster".',
+          error: 'Le compte selectionne doit avoir le role staff "caster".',
         });
       }
       if (isUniqueError) {
