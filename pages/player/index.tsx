@@ -73,6 +73,8 @@ const SVG_PATHS = {
   messages: 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z',
   team: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 7a4 4 0 100 8 4 4 0 000-8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75',
   publicTeam: 'M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3',
+  caster:
+    'M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3zM19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8',
 };
 
 function buildQuickActions(args: {
@@ -122,6 +124,14 @@ function buildQuickActions(args: {
     label: 'Page équipe',
     description: 'Profil public',
     iconPath: SVG_PATHS.publicTeam,
+  });
+
+  actions.push({
+    href: '/player/caster-application',
+    label: 'Devenir casteuse',
+    description: 'Rejoindre le cast',
+    iconPath: SVG_PATHS.caster,
+    tone: 'cyan',
   });
 
   return actions;
@@ -354,6 +364,22 @@ export default function PlayerDashboard() {
           <DiscordLinkCard />
 
           <NextMatchCard />
+
+          {/* Rejoindre le cast — toujours visible (indépendant de l'équipe) */}
+          {!team && (
+            <div className="mt-6 rounded-2xl border border-cyan-400/20 bg-cyan-500/[0.06] backdrop-blur-xl p-6">
+              <h2 className="text-lg font-semibold mb-4">Envie de caster ?</h2>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <QuickAction
+                  href="/player/caster-application"
+                  label="Devenir casteuse"
+                  description="Rejoindre le cast"
+                  iconPath={SVG_PATHS.caster}
+                  tone="cyan"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Actions rapides */}
           {team && (

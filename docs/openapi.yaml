@@ -17232,6 +17232,107 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+  /api/demandes/caster-application:
+    get:
+      tags:
+        - public/teams
+      summary: Recupere la derniere candidature caster du joueur connecte.
+      operationId: getCasterApplication
+      security:
+        - PlayerBearer: []
+      responses:
+        "200":
+          description: Derniere candidature caster, ou null si aucune.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  application:
+                    nullable: true
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      status:
+                        type: string
+                      comment:
+                        type: string
+                        nullable: true
+                      created_at:
+                        type: string
+                        format: date-time
+                      processed_at:
+                        type: string
+                        format: date-time
+                        nullable: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags:
+        - public/teams
+      summary: Soumet une candidature pour devenir caster.
+      operationId: submitCasterApplication
+      security:
+        - PlayerBearer: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                motivation:
+                  type: string
+                  maxLength: 1000
+                portfolioUrl:
+                  type: string
+                  format: uri
+                  maxLength: 300
+      responses:
+        "201":
+          description: Candidature creee.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  application:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      status:
+                        type: string
+                      created_at:
+                        type: string
+                        format: date-time
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          description: >-
+            Conflit metier. `code` vaut `ALREADY_STAFF` (le joueur fait deja
+            partie du staff actif) ou `ALREADY_PENDING` (une candidature caster
+            est deja en attente).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                    enum:
+                      - ALREADY_STAFF
+                      - ALREADY_PENDING
+                  existingDemandeId:
+                    type: string
+                    format: uuid
   /api/demandes/join:
     get:
       tags:

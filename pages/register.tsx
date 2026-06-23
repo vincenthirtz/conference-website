@@ -359,6 +359,28 @@ function RegisterPage() {
               </Link>
             </div>
           </div>
+
+          {/* Encart cast : pas un champ du formulaire — l'inscription force
+              toujours le rôle joueur. La candidature se fait depuis l'espace
+              joueuse, donc on route vers le login (auth requise) avec un
+              ?next= vers la page de candidature. */}
+          <div className="mt-4 rounded-2xl border border-cyan-400/20 bg-cyan-500/[0.06] backdrop-blur-xl p-4 text-sm text-cyan-50">
+            <p className="flex items-start gap-2">
+              <span aria-hidden="true" className="text-base leading-none">
+                🎙️
+              </span>
+              <span>
+                Tu veux caster nos matchs ? Crée ton compte, puis fais ta
+                demande depuis ton espace joueuse.{' '}
+                <Link
+                  href="/login?next=/player/caster-application"
+                  className="font-semibold underline decoration-cyan-300/60 underline-offset-2 hover:text-white"
+                >
+                  Rejoindre le cast
+                </Link>
+              </span>
+            </p>
+          </div>
         </div>
       </main>
     </div>

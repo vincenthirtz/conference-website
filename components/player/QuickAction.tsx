@@ -1,13 +1,19 @@
 import Link from 'next/link';
 import type { JSX, ReactNode } from 'react';
 
-export type QuickActionTone = 'default' | 'blue' | 'emerald' | 'purple';
+export type QuickActionTone =
+  | 'default'
+  | 'blue'
+  | 'emerald'
+  | 'purple'
+  | 'cyan';
 
 const TONE_CLASSES: Record<QuickActionTone, string> = {
   default: 'border-white/10 bg-white/5 hover:bg-white/10',
   blue: 'border-blue-400/20 bg-blue-500/10 hover:bg-blue-500/20',
   emerald: 'border-emerald-400/20 bg-emerald-500/10 hover:bg-emerald-500/20',
   purple: 'border-purple-400/20 bg-purple-500/10 hover:bg-purple-500/20',
+  cyan: 'border-cyan-400/20 bg-cyan-500/10 hover:bg-cyan-500/20',
 };
 
 const ICON_TONE: Record<QuickActionTone, string> = {
@@ -15,6 +21,7 @@ const ICON_TONE: Record<QuickActionTone, string> = {
   blue: 'text-blue-400',
   emerald: 'text-emerald-400',
   purple: 'text-purple-400',
+  cyan: 'text-cyan-400',
 };
 
 export type QuickActionProps = {

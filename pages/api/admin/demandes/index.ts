@@ -23,6 +23,7 @@ export type DemandeType =
   | 'captain_request'
   | 'team_registration'
   | 'scrim'
+  | 'caster_application'
   | 'other';
 
 export type DemandeStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
@@ -674,6 +675,90 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
             }
           }
         }
+      }
+    }
+  }
+
+  // 3c) Side-effects: when approving a caster_application, promote the user to
+  // staff role 'caster'. Idempotent + never downgrades:
+  //   - no staff row  → INSERT { role:'caster', is_active:true }
+  //   - inactive row  → reactivate (is_active=true), role untouched
+  //   - active row    → leave as-is (an owner/admin/manager keeps their role)
+  // Each promotion is isolated in its own try/catch so one failure doesn't
+  // break the rest of the batch (mirrors the other side-effects above).
+  if (newStatus === 'approved' && afterList) {
+    for (const d of afterList as DemandeRow[]) {
+      if (d.type !== 'caster_application' || !d.user_id) continue;
+
+      try {
+        // Resolve email + display_name for the staff row. Prefer the auth user
+        // (source of truth); fall back to the demande payload snapshot.
+        let email: string | null = (d.payload as any)?.user_email ?? null;
+        let displayName: string | null =
+          (d.payload as any)?.user_display_name ?? null;
+
+        try {
+          const { data: authData } =
+            await supabaseAdmin.auth.admin.getUserById(d.user_id);
+          if (authData?.user) {
+            const meta = (authData.user.user_metadata ?? {}) as Record<
+              string,
+              unknown
+            >;
+            email = authData.user.email ?? email;
+            displayName =
+              (meta.display_name as string) ||
+              (meta.full_name as string) ||
+              displayName;
+          }
+        } catch (authEx) {
+          logger.error(
+            '[admin/demandes] caster_application getUserById error:',
+            authEx
+          );
+        }
+
+        const { data: existingStaff } = await supabaseAdmin
+          .from('staff')
+          .select('id, role, is_active')
+          .eq('auth_user_id', d.user_id)
+          .maybeSingle();
+
+        if (!existingStaff) {
+          const { error: staffInsertErr } = await supabaseAdmin
+            .from('staff')
+            .insert({
+              auth_user_id: d.user_id,
+              role: 'caster',
+              email,
+              display_name: displayName,
+              is_active: true,
+            });
+          if (staffInsertErr) {
+            logger.error(
+              '[admin/demandes] caster_application staff insert error:',
+              staffInsertErr
+            );
+          }
+        } else if (existingStaff.is_active === false) {
+          // Reactivate without touching role (never downgrade).
+          const { error: reactivateErr } = await supabaseAdmin
+            .from('staff')
+            .update({ is_active: true })
+            .eq('id', existingStaff.id);
+          if (reactivateErr) {
+            logger.error(
+              '[admin/demandes] caster_application reactivate error:',
+              reactivateErr
+            );
+          }
+        }
+        // Active staff row already exists → leave role untouched (no downgrade).
+      } catch (casterEx) {
+        logger.error(
+          '[admin/demandes] caster_application promotion exception:',
+          casterEx
+        );
       }
     }
   }
