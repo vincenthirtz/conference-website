@@ -53,16 +53,23 @@ const registerUserBodySchema = z.object({
     .transform((s) => s.trim().toLowerCase())
     .pipe(z.string().regex(EMAIL_RE, 'Email invalide')),
   discordUserId: discordIdSchema,
-  // discordUsername / displayName : historiquement, un type non-string est
-  // silencieusement ignoré (→ null / ''), jamais rejeté. On garde z.unknown()
-  // + transform pour préserver cette tolérance exacte.
-  discordUsername: z.unknown().transform((v) => {
-    if (typeof v !== 'string') return null;
-    const trimmed = v.trim().slice(0, 100);
-    return trimmed.length > 0 ? trimmed : null;
-  }),
+  // discordUsername / displayName : historiquement, un type non-string OU une
+  // clé absente est silencieusement ignoré (→ null / ''), jamais rejeté. On
+  // garde z.unknown() + transform pour préserver cette tolérance exacte.
+  // `.optional()` est requis depuis zod 4.4 : sans lui, une clé absente est
+  // rejetée (« expected nonoptional, received undefined ») au lieu de retomber
+  // sur la valeur par défaut.
+  discordUsername: z
+    .unknown()
+    .optional()
+    .transform((v) => {
+      if (typeof v !== 'string') return null;
+      const trimmed = v.trim().slice(0, 100);
+      return trimmed.length > 0 ? trimmed : null;
+    }),
   displayName: z
     .unknown()
+    .optional()
     .transform((v) => (typeof v === 'string' ? v.trim().slice(0, 100) : '')),
   // role : historiquement, une string vide / whitespace retombe sur 'player'
   // (`body.role.trim()` falsy). On préserve ça en mappant '' → undefined avant

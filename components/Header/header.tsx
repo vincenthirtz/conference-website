@@ -8,7 +8,7 @@ function Header(): JSX.Element {
 
   return (
     <header className="hero-section relative isolate overflow-hidden">
-      <picture aria-hidden="true">
+      <picture>
         <source
           type="image/avif"
           srcSet="/img/illustra-640.avif 640w, /img/illustra-1024.avif 1024w"

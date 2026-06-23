@@ -134,24 +134,31 @@ export function getServerClient(
   res: SupabaseServerRes
 ) {
   return createServerClient(SUPABASE_URL!, SUPABASE_ANON_KEY!, {
+    // @supabase/ssr 0.12 : adaptateur cookies `getAll`/`setAll` (l'ancien trio
+    // get/set/remove est déprécié). La suppression passe désormais par un
+    // `setAll` avec value '' + options d'expiration fournies par supabase-js,
+    // donc plus besoin de forcer maxAge:0 nous-mêmes.
     cookies: {
-      get(name: string) {
-        return req.cookies?.[name];
+      getAll() {
+        return Object.entries(req.cookies ?? {})
+          .filter(
+            (entry): entry is [string, string] => entry[1] !== undefined
+          )
+          .map(([name, value]) => ({ name, value }));
       },
-      set(name: string, value: string, options: CookieOptions) {
-        appendSetCookie(
-          res,
-          serialize(name, value, hardenCookieOptions(name, options))
-        );
-      },
-      remove(name: string, options: CookieOptions) {
-        appendSetCookie(
-          res,
-          serialize(name, '', {
-            ...hardenCookieOptions(name, options),
-            maxAge: 0,
-          })
-        );
+      setAll(cookiesToSet, headers) {
+        for (const { name, value, options } of cookiesToSet) {
+          appendSetCookie(
+            res,
+            serialize(name, value, hardenCookieOptions(name, options))
+          );
+        }
+        // En-têtes anti-cache (Cache-Control/Expires/Pragma) à poser sur toute
+        // réponse qui écrit des cookies d'auth : empêche un CDN/proxy de servir
+        // la session d'un utilisateur à un autre.
+        for (const [key, headerValue] of Object.entries(headers ?? {})) {
+          res.setHeader(key, headerValue);
+        }
       },
     },
   });

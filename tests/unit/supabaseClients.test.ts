@@ -12,8 +12,8 @@ vi.unmock('@/utils/supabase');
 vi.unmock('../../utils/supabase');
 
 // Capture the options passed to createServerClient so we can drive the cookie
-// callbacks (set / remove) directly. We can't easily call them through the
-// real Supabase auth flow without making network calls.
+// callbacks (getAll / setAll, @supabase/ssr 0.12) directly. We can't easily
+// call them through the real Supabase auth flow without making network calls.
 const captured: { opts: any } = { opts: null };
 vi.mock('@supabase/ssr', async () => {
   const actual =
@@ -67,25 +67,35 @@ describe('utils/supabase', () => {
     expect(captured.opts).toBeTruthy();
     const cookies = captured.opts.cookies;
 
-    // get
-    expect(cookies.get('sb-access')).toBe('tok');
+    // getAll
+    expect(cookies.getAll()).toEqual([{ name: 'sb-access', value: 'tok' }]);
 
-    // First set: no existing Set-Cookie → string
-    cookies.set('sb-1', 'v1', {});
+    // First setAll: no existing Set-Cookie → string
+    cookies.setAll([{ name: 'sb-1', value: 'v1', options: {} }], {});
     expect(typeof headers['Set-Cookie']).toBe('string');
 
-    // Second set: existing string → array
-    cookies.set('sb-2', 'v2', { sameSite: 'strict' });
+    // Second setAll: existing string → array
+    cookies.setAll(
+      [{ name: 'sb-2', value: 'v2', options: { sameSite: 'strict' } }],
+      {}
+    );
     expect(Array.isArray(headers['Set-Cookie'])).toBe(true);
 
-    // Third set: existing array → push
-    cookies.set('sb-3', 'v3', {});
+    // Third setAll: existing array → push
+    cookies.setAll([{ name: 'sb-3', value: 'v3', options: {} }], {});
     expect((headers['Set-Cookie'] as string[]).length).toBeGreaterThanOrEqual(
       3
     );
 
-    // remove → goes through hardenCookieOptions + appendSetCookie
-    cookies.remove('sb-1', {});
+    // removal → setAll with empty value + expiry options (supabase-js shape)
+    cookies.setAll([{ name: 'sb-1', value: '', options: { maxAge: 0 } }], {});
+
+    // anti-cache headers (0.12) are forwarded onto the response
+    cookies.setAll(
+      [{ name: 'sb-4', value: 'v4', options: {} }],
+      { 'Cache-Control': 'private, no-store' }
+    );
+    expect(headers['Cache-Control']).toBe('private, no-store');
   });
 
   it('sb-* auth cookies are NOT httpOnly so the browser client can read them', async () => {
@@ -103,7 +113,10 @@ describe('utils/supabase', () => {
     mod.getServerClient(req, res);
     const cookies = captured.opts.cookies;
 
-    cookies.set('sb-myproject-auth-token', 'token-value', {});
+    cookies.setAll(
+      [{ name: 'sb-myproject-auth-token', value: 'token-value', options: {} }],
+      {}
+    );
     const setCookie = headers['Set-Cookie'];
     const serialized = Array.isArray(setCookie) ? setCookie[0] : setCookie;
     expect(serialized).toContain('sb-myproject-auth-token=token-value');
@@ -112,9 +125,12 @@ describe('utils/supabase', () => {
     // "Session staff manquante."
     expect(serialized?.toLowerCase()).not.toContain('httponly');
 
-    // remove must also keep sb-* cookies non-httpOnly
+    // removal must also keep sb-* cookies non-httpOnly
     headers['Set-Cookie'] = '';
-    cookies.remove('sb-myproject-auth-token', {});
+    cookies.setAll(
+      [{ name: 'sb-myproject-auth-token', value: '', options: { maxAge: 0 } }],
+      {}
+    );
     const removed = headers['Set-Cookie'];
     const removedSerialized = Array.isArray(removed) ? removed[0] : removed;
     expect(removedSerialized?.toLowerCase()).not.toContain('httponly');
@@ -135,7 +151,7 @@ describe('utils/supabase', () => {
     mod.getServerClient(req, res);
     const cookies = captured.opts.cookies;
 
-    cookies.set('custom-session', 'opaque', {});
+    cookies.setAll([{ name: 'custom-session', value: 'opaque', options: {} }], {});
     const serialized = headers['Set-Cookie'];
     const value = Array.isArray(serialized) ? serialized[0] : serialized;
     expect(value).toContain('custom-session=opaque');
