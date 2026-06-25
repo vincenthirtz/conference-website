@@ -202,6 +202,9 @@ export function formatStaffLog(log: StaffLog) {
     unfinalize_tournament: 'Déverrouillage tournoi',
     checkin_manual_nudge: 'Relance check-in (Discord)',
     broadcast_state_update: 'Mise à jour état broadcast',
+    blacklist_add: 'Ajout blacklist joueur',
+    blacklist_update: 'Modification blacklist joueur',
+    blacklist_remove: 'Suppression blacklist joueur',
     other: 'Action staff',
   };
 

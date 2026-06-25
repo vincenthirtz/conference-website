@@ -142,21 +142,22 @@ CHECK constraint). The list below documents the names emitted by the website
 today. The bot must tolerate unknown names (treat them as no-ops) so the
 catalog can grow without forcing a bot deploy.
 
-| Event name                        | Emitted by                                                                         | Payload `data` shape (high-level)                                                                                             |
-| --------------------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `match.starting`                  | `pages/api/admin/matches/[matchId].ts` (status → ongoing)                          | `{ matchId, tournamentId?, scrimId?, team1Id, team2Id, scheduledAt, ..., enriched }`                                          |
-| `match.scheduled`                 | Admin match meta update (`scheduled_at` set)                                       | `{ matchId, scheduledAt, ..., enriched }`                                                                                     |
-| `match.unscheduled`               | Admin match meta update (`scheduled_at` cleared)                                   | `{ matchId }`                                                                                                                 |
-| `match.finished`                  | Score apply / admin                                                                | `{ matchId, team1Score, team2Score, winnerTeamId }`                                                                           |
-| `match.disputed`                  | Admin `POST .../dispute`                                                           | `{ matchId, reason, openedBy }`                                                                                               |
-| `match.dispute.resolved`          | Admin `POST .../resolve-dispute`                                                   | `{ matchId, resolution, resolvedBy }`                                                                                         |
-| `dispute.sla_breached` (Lot 4)    | Cron `/api/cron/dispute-sla-check`                                                 | `{ matchId, tournamentId, disputeReason, disputeOpenedAt, ageMinutes, slaMinutes }`                                           |
-| `checkin.nudge` (Lot 5)           | Admin `POST /api/admin/matches/[matchId]/checkin-nudge`                            | `{ matchId, tournamentId, teamSide: 1 \| 2, scheduledAt, nudgedByStaffId, enriched }`                                         |
-| `tournament.finalized` (Lot 1)    | Admin `POST /api/admin/tournament/[id]/finalize`                                   | `{ tournament_id, tournament_name, rankings: [{ team_id, team_name, rank, prize }, ...] }`                                    |
-| `broadcast.state_changed` (Lot 7) | Admin `POST /api/admin/broadcast/state`                                            | `{ runId, runSlug, state: { v: 1, on_air, lower_third, pip }, currentSegmentId, matchId }`                                    |
-| `news.published`                  | Admin / bot ingest                                                                 | `{ newsId, slug, title, tag, excerpt, imageUrl, publishedAt }`                                                                |
-| `team.*` / `scrim.*` / `cast.*`   | various admin / bot routes                                                         | see emitter call sites                                                                                                        |
-| `event_segment.transitioned`      | Admin `/api/admin/events/.../segments/.../{start,skip,end}.ts` (Lot 2 run-of-show) | `{ runId, segmentId, fromStatus, toStatus, tenantId, broadcastMessage, segment: { ord, type, title, durationMin, matchId } }` |
+| Event name                        | Emitted by                                                                                    | Payload `data` shape (high-level)                                                                                             |
+| --------------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `match.starting`                  | `pages/api/admin/matches/[matchId].ts` (status → ongoing)                                     | `{ matchId, tournamentId?, scrimId?, team1Id, team2Id, scheduledAt, ..., enriched }`                                          |
+| `match.scheduled`                 | Admin match meta update (`scheduled_at` set)                                                  | `{ matchId, scheduledAt, ..., enriched }`                                                                                     |
+| `match.unscheduled`               | Admin match meta update (`scheduled_at` cleared)                                              | `{ matchId }`                                                                                                                 |
+| `match.finished`                  | Score apply / admin                                                                           | `{ matchId, team1Score, team2Score, winnerTeamId }`                                                                           |
+| `match.disputed`                  | Admin `POST .../dispute`                                                                      | `{ matchId, reason, openedBy }`                                                                                               |
+| `match.dispute.resolved`          | Admin `POST .../resolve-dispute`                                                              | `{ matchId, resolution, resolvedBy }`                                                                                         |
+| `dispute.sla_breached` (Lot 4)    | Cron `/api/cron/dispute-sla-check`                                                            | `{ matchId, tournamentId, disputeReason, disputeOpenedAt, ageMinutes, slaMinutes }`                                           |
+| `checkin.nudge` (Lot 5)           | Admin `POST /api/admin/matches/[matchId]/checkin-nudge`                                       | `{ matchId, tournamentId, teamSide: 1 \| 2, scheduledAt, nudgedByStaffId, enriched }`                                         |
+| `tournament.finalized` (Lot 1)    | Admin `POST /api/admin/tournament/[id]/finalize`                                              | `{ tournament_id, tournament_name, rankings: [{ team_id, team_name, rank, prize }, ...] }`                                    |
+| `broadcast.state_changed` (Lot 7) | Admin `POST /api/admin/broadcast/state`                                                       | `{ runId, runSlug, state: { v: 1, on_air, lower_third, pip }, currentSegmentId, matchId }`                                    |
+| `news.published`                  | Admin / bot ingest                                                                            | `{ newsId, slug, title, tag, excerpt, imageUrl, publishedAt }`                                                                |
+| `registration.blacklisted`        | `utils/moderation/blacklist.ts` (`alertIfBlacklisted`) at register / team create / add-member | `{ context, matchedOn, strength, reason, matchCount, matches[], battleTag?, displayName?, discordUserId? }`                   |
+| `team.*` / `scrim.*` / `cast.*`   | various admin / bot routes                                                                    | see emitter call sites                                                                                                        |
+| `event_segment.transitioned`      | Admin `/api/admin/events/.../segments/.../{start,skip,end}.ts` (Lot 2 run-of-show)            | `{ runId, segmentId, fromStatus, toStatus, tenantId, broadcastMessage, segment: { ord, type, title, durationMin, matchId } }` |
 
 #### `event_segment.transitioned` (Lot 2 run-of-show)
 
@@ -296,6 +297,58 @@ The bot DMs the captain of `teamSide`, posts a fresh check-in prompt
 template). If `enriched.team{N}.captainDiscordUserId` is null, the bot
 logs and skips — the team probably has no linked captain.
 
+#### `registration.blacklisted` (Blacklist joueurs)
+
+Emitted by `utils/moderation/blacklist.ts` (`alertIfBlacklisted`) when a
+blacklisted player **registers or is registered** at one of the interception
+points (no registration is ever blocked — alert only):
+
+- `pages/api/auth/register.ts` — account creation (`context: 'register'`).
+- `pages/api/teams/create-with-member.ts` — team creation (`context: 'team_create'`).
+- `pages/api/teams/add-member.ts` — captain adding a member (`context: 'add_member'`).
+
+The matcher (`checkBlacklist`) compares `battle_tag` / `discord_user_id`
+(**strong** match) and `display_name` (**soft**, case-insensitive) against the
+tenant's `active` blacklist rows. On any match a **single aggregated** event is
+emitted (no spam if several rows match); `matchedOn` / `strength` / `reason`
+reflect the strongest match, and `matches[]` carries every hit.
+
+Payload :
+
+```json
+{
+  "id": "<event uuid>",
+  "event": "registration.blacklisted",
+  "tenantId": "<uuid>",
+  "timestamp": "2026-06-25T18:42:00.000Z",
+  "data": {
+    "context": "register",
+    "matchedOn": "battle_tag",
+    "strength": "strong",
+    "reason": "Triche avérée — finale 2026",
+    "matchCount": 1,
+    "matches": [
+      {
+        "id": "<blacklist row uuid>",
+        "matchedOn": "battle_tag",
+        "strength": "strong",
+        "reason": "Triche avérée — finale 2026"
+      }
+    ],
+    "battleTag": "smurf#1234",
+    "displayName": "ToxicPlayer",
+    "discordUserId": "1300000000000000001"
+  }
+}
+```
+
+`context` is one of `register | team_create | add_member`. `matchedOn` is one
+of `battle_tag | display_name | discord_user_id`; `strength` is `strong | soft`.
+The identifier fields (`battleTag` / `displayName` / `discordUserId`) are only
+present when supplied at the interception point. The bot posts an alert embed in
+the configured `staff_log_channel_id` (battletag, criterion, strength, reason) —
+it does **not** ban or kick automatically (human decision).
+
 ## Idempotency
 
 Opt-in per route via `idempotent: true` in `withBotRoute({ ... })`. Only
@@ -415,13 +468,14 @@ body shapes live there. `Idem.` means the route honours `Idempotency-Key`.
 
 ### Announcements & moderation
 
-| Route                                                                            | Methods | Idem. | Rate-key                   |
-| -------------------------------------------------------------------------------- | ------- | ----- | -------------------------- |
-| [`announcements.ts`](../pages/api/bot/v1/announcements.ts)                       | POST    | yes   | `bot-announcements`        |
-| [`broadcast/on-air.ts`](../pages/api/bot/v1/broadcast/on-air.ts) (Lot 7)         | GET     | —     | `bot-broadcast-on-air`     |
-| [`disputes.ts`](../pages/api/bot/v1/disputes.ts)                                 | GET     | —     | `bot-disputes`             |
-| [`disputes/escalations.ts`](../pages/api/bot/v1/disputes/escalations.ts) (Lot 4) | GET     | —     | `bot-disputes-escalations` |
-| [`staff-logs.ts`](../pages/api/bot/v1/staff-logs.ts)                             | GET     | —     | `bot-staff-logs`           |
+| Route                                                                            | Methods         | Idem.  | Rate-key                   |
+| -------------------------------------------------------------------------------- | --------------- | ------ | -------------------------- |
+| [`announcements.ts`](../pages/api/bot/v1/announcements.ts)                       | POST            | yes    | `bot-announcements`        |
+| [`broadcast/on-air.ts`](../pages/api/bot/v1/broadcast/on-air.ts) (Lot 7)         | GET             | —      | `bot-broadcast-on-air`     |
+| [`disputes.ts`](../pages/api/bot/v1/disputes.ts)                                 | GET             | —      | `bot-disputes`             |
+| [`disputes/escalations.ts`](../pages/api/bot/v1/disputes/escalations.ts) (Lot 4) | GET             | —      | `bot-disputes-escalations` |
+| [`moderation/blacklist.ts`](../pages/api/bot/v1/moderation/blacklist.ts)         | GET/POST/DELETE | DELETE | `bot-moderation`           |
+| [`staff-logs.ts`](../pages/api/bot/v1/staff-logs.ts)                             | GET             | —      | `bot-staff-logs`           |
 
 #### `GET /api/bot/v1/disputes/escalations`
 
@@ -483,6 +537,98 @@ sélection que le cron `dispute.sla_breached`, utile pour un re-ping manuel.
 
 **Errors** : `400` (tournament invalide), `401`, `500`.
 **Rate limit** : 30/min global. **Idempotency** : non (GET).
+
+#### `GET/POST/DELETE /api/bot/v1/moderation/blacklist` (Blacklist joueurs)
+
+Liste de modération des joueurs bannis (slash `/blacklist list|add|remove`).
+La table `player_blacklist` est service-role only (RLS default-deny) ; tous les
+accès sont scopés par tenant. Le bot lit la liste pour scanner les membres du
+serveur Discord et alerter sur un pseudo / battletag / compte banni présent.
+Voir [docs/BLACKLIST_DESIGN.md](BLACKLIST_DESIGN.md).
+
+**Auth** : `x-api-key` + tenant via per-tenant key (`crossTenant: false`).
+Les écritures (POST/DELETE) exigent en plus `actorDiscordUserId` lié à un staff
+`admin`/`owner` (sinon `403`).
+
+**Rate limit** : 30/min global + 10/min par acteur Discord (`bot-moderation`).
+
+##### `GET` — liste les entrées actives
+
+Renvoie uniquement les entrées `active = true` du tenant, triées
+`created_at desc`.
+
+**Response 200**
+
+```json
+{
+  "blacklist": [
+    {
+      "id": "uuid",
+      "battleTag": "smurf#1234",
+      "displayName": "ToxicPlayer",
+      "discordUserId": "1300000000000000001",
+      "reason": "Triche avérée — finale 2026"
+    }
+  ]
+}
+```
+
+`battleTag` est stocké/normalisé en lowercase. Chaque champ identifiant peut
+être `null` (au moins un est non-null par construction).
+
+##### `POST` — ajoute une entrée (`/blacklist add`)
+
+**Body**
+
+- `actorDiscordUserId` _(requis)_ — snowflake du staff auteur.
+- `battleTag` _(optionnel)_ — normalisé lowercase à l'écriture.
+- `displayName` _(optionnel)_ — pseudo.
+- `discordUserId` _(optionnel)_ — snowflake banni.
+- `reason` _(optionnel)_ — motif du ban.
+- Au moins un de `battleTag` / `displayName` / `discordUserId` est requis
+  (sinon `400 INVALID_BODY`).
+
+`banned_by` reste `null` (l'acteur est un compte Discord, pas un `auth.users`) ;
+l'auteur est tracé dans `notes` (`added via Discord by <actorDiscordUserId>`).
+**Idempotency** : non (un ré-ajout crée une nouvelle row — n'envoie pas de
+`Idempotency-Key`).
+
+**Response 201**
+
+```json
+{
+  "entry": {
+    "id": "uuid",
+    "battleTag": "smurf#1234",
+    "displayName": null,
+    "discordUserId": null,
+    "reason": "Triche avérée"
+  }
+}
+```
+
+##### `DELETE` — désactive une entrée (`/blacklist remove`)
+
+Soft-disable (`active = false`, conserve l'historique). Sélecteur prioritaire :
+`id` > `discordUserId` > `battleTag`.
+
+**Body**
+
+- `actorDiscordUserId` _(requis)_ — staff auteur.
+- `id` _(optionnel, uuid)_ **ou** `battleTag` _(optionnel)_ **ou**
+  `discordUserId` _(optionnel)_ — au moins un sélecteur requis.
+
+**Idempotency** : oui (`Idempotency-Key` honoré — un retry ne redésactive pas
+deux fois).
+
+**Response 200**
+
+```json
+{ "removed": 1 }
+```
+
+**Errors** : `400` (body invalide / pas de sélecteur), `401`, `403` (acteur
+non staff), `404` (aucune entrée active correspondante), `500`.
 
 ### Autocomplete (Discord choice-pickers)
 
@@ -1377,16 +1523,17 @@ tenant), `match_draft_steps` (FK vers `game_heroes`, séquence
 ban/pick avec `deadline_at` et `auto_picked`).
 
 Migrations :
+
 - [`create_draft_tables_for_lol_dota.sql`](../database/migrations/create_draft_tables_for_lol_dota.sql) (Lot 0).
 - [`extend_game_check_constraint_lol_dota.sql`](../database/migrations/extend_game_check_constraint_lol_dota.sql) (Lot 0).
 - [`enable_realtime_on_match_drafts.sql`](../database/migrations/enable_realtime_on_match_drafts.sql) (Lot 3, REPLICA IDENTITY FULL + publication).
 
 ### Pool de héros (Lot 1)
 
-| Route                                                                              | Methods   | Auth      | Notes                                                                                                                                                       |
-| ---------------------------------------------------------------------------------- | --------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`pages/api/games/[slug]/heroes.ts`](../pages/api/games/[slug]/heroes.ts)          | GET       | public    | Liste les heroes du slug (`lol` ou `dota2`). 404 pour les jeux sans pool (ex. `overwatch`). `?includeDisabled=1` inclut les soft-disabled. Cache `s-maxage=3600, stale-while-revalidate=600`. |
-| [`pages/api/cron/sync-game-heroes.ts`](../pages/api/cron/sync-game-heroes.ts)      | POST, GET | CronSecret| 1×/jour à 04:00 UTC. Fetch Data Dragon (LoL) + OpenDota (Dota 2), upsert `(game, external_id)`. Retourne `207` en succès partiel. Heartbeat `site_settings.last_cron_sync_game_heroes_at`. |
+| Route                                                                         | Methods   | Auth       | Notes                                                                                                                                                                                         |
+| ----------------------------------------------------------------------------- | --------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`pages/api/games/[slug]/heroes.ts`](../pages/api/games/[slug]/heroes.ts)     | GET       | public     | Liste les heroes du slug (`lol` ou `dota2`). 404 pour les jeux sans pool (ex. `overwatch`). `?includeDisabled=1` inclut les soft-disabled. Cache `s-maxage=3600, stale-while-revalidate=600`. |
+| [`pages/api/cron/sync-game-heroes.ts`](../pages/api/cron/sync-game-heroes.ts) | POST, GET | CronSecret | 1×/jour à 04:00 UTC. Fetch Data Dragon (LoL) + OpenDota (Dota 2), upsert `(game, external_id)`. Retourne `207` en succès partiel. Heartbeat `site_settings.last_cron_sync_game_heroes_at`.    |
 
 Source de mapping pure : [`utils/gameHeroesSync.ts`](../utils/gameHeroesSync.ts)
 (helpers `mapLolChampionToRow`, `mapDotaHeroToRow`, `dotaPrimaryAttrToAttribute`).
@@ -1398,28 +1545,30 @@ Tous sous `pages/api/admin/matches/[matchId]/drafts/...`, wrappés par
 Erreurs structurées : `DraftEngineError` (18 codes machine-readable,
 détaillés dans `components.schemas.DraftEngineError` de `openapi.yaml`).
 
-| Route                                                                                                                                                       | Methods | Min role  | Notes                                                                                                                                                                          |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [`drafts/index.ts`](../pages/api/admin/matches/[matchId]/drafts/index.ts)                                                                                   | POST    | manager   | Init draft pour `gameIndex`. Résout le `game` depuis `tournaments.game`. Seed les `match_draft_steps` depuis `config/games/<slug>.draftFlows[format]`. 409 si déjà existant.    |
-| [`drafts/[gameIndex]/index.ts`](../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/index.ts)                                                           | GET, DELETE | manager   | GET = read assemblé du `DraftState`. DELETE = drop le draft + ses steps (recovery sans SQL). Refuse `in_progress` sauf `?force=1` → 409 `DRAFT_NOT_PENDING`.                  |
-| [`drafts/[gameIndex]/side.ts`](../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/side.ts)                                                             | PATCH   | manager   | Assigne `team1_side` + `team2_side`. Enum game-specific (lol `blue/red`, dota2 `radiant/dire`). Pre-step uniquement.                                                            |
-| [`drafts/[gameIndex]/commit.ts`](../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/commit.ts)                                                         | POST    | manager   | Commit un ban/pick. Transition `pending → in_progress` sur step 1, auto-complete sur dernier step. Stamp `deadline_at` du step suivant. Bloque hero déjà banni/picked + fearless cross-game. |
+| Route                                                                                               | Methods     | Min role | Notes                                                                                                                                                                                        |
+| --------------------------------------------------------------------------------------------------- | ----------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`drafts/index.ts`](../pages/api/admin/matches/[matchId]/drafts/index.ts)                           | POST        | manager  | Init draft pour `gameIndex`. Résout le `game` depuis `tournaments.game`. Seed les `match_draft_steps` depuis `config/games/<slug>.draftFlows[format]`. 409 si déjà existant.                 |
+| [`drafts/[gameIndex]/index.ts`](../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/index.ts)   | GET, DELETE | manager  | GET = read assemblé du `DraftState`. DELETE = drop le draft + ses steps (recovery sans SQL). Refuse `in_progress` sauf `?force=1` → 409 `DRAFT_NOT_PENDING`.                                 |
+| [`drafts/[gameIndex]/side.ts`](../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/side.ts)     | PATCH       | manager  | Assigne `team1_side` + `team2_side`. Enum game-specific (lol `blue/red`, dota2 `radiant/dire`). Pre-step uniquement.                                                                         |
+| [`drafts/[gameIndex]/commit.ts`](../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/commit.ts) | POST        | manager  | Commit un ban/pick. Transition `pending → in_progress` sur step 1, auto-complete sur dernier step. Stamp `deadline_at` du step suivant. Bloque hero déjà banni/picked + fearless cross-game. |
 
 ### Timer serveur + auto-pick (Lot 3)
 
 Captain UI (Lot 4) drive le countdown via Supabase Realtime (la
 migration `enable_realtime_on_match_drafts.sql` ajoute `match_drafts`
-+ `match_draft_steps` à la publication `supabase_realtime` avec
-`REPLICA IDENTITY FULL`). Le cron Netlify est le catch-all quand
-personne ne regarde.
 
-| Route                                                                                                                                                       | Methods   | Auth        | Notes                                                                                                                                                                          |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [`drafts/[gameIndex]/start.ts`](../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/start.ts)                                                           | POST      | manager     | Transition explicite `pending → in_progress`. Stamp `started_at` + `deadline_at` sur step 1. Exige sides set.                                                                  |
-| [`drafts/[gameIndex]/auto-pick.ts`](../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/auto-pick.ts)                                                   | POST      | manager     | Trigger manuel : si `deadline_at < now()`, pick le premier hero éligible (alphabétique) avec `auto_picked=true`. Sinon `{ autoPicked: false }`.                                |
-| [`pages/api/cron/draft-auto-pick.ts`](../pages/api/cron/draft-auto-pick.ts)                                                                                 | POST, GET | CronSecret  | Schedule `* * * * *` (1 min). Scan cross-tenant des steps `deadline_at < now AND hero_id IS NULL`, applique l'auto-pick. Heartbeat `site_settings.last_cron_draft_auto_pick_at`. |
+- `match_draft_steps` à la publication `supabase_realtime` avec
+  `REPLICA IDENTITY FULL`). Le cron Netlify est le catch-all quand
+  personne ne regarde.
+
+| Route                                                                                                     | Methods   | Auth       | Notes                                                                                                                                                                            |
+| --------------------------------------------------------------------------------------------------------- | --------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`drafts/[gameIndex]/start.ts`](../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/start.ts)         | POST      | manager    | Transition explicite `pending → in_progress`. Stamp `started_at` + `deadline_at` sur step 1. Exige sides set.                                                                    |
+| [`drafts/[gameIndex]/auto-pick.ts`](../pages/api/admin/matches/[matchId]/drafts/[gameIndex]/auto-pick.ts) | POST      | manager    | Trigger manuel : si `deadline_at < now()`, pick le premier hero éligible (alphabétique) avec `auto_picked=true`. Sinon `{ autoPicked: false }`.                                  |
+| [`pages/api/cron/draft-auto-pick.ts`](../pages/api/cron/draft-auto-pick.ts)                               | POST, GET | CronSecret | Schedule `* * * * *` (1 min). Scan cross-tenant des steps `deadline_at < now AND hero_id IS NULL`, applique l'auto-pick. Heartbeat `site_settings.last_cron_draft_auto_pick_at`. |
 
 Mécanique :
+
 - `commitDraftStep` stamp `deadline_at = now + pick_timer_seconds` sur le
   step **suivant** après chaque commit (sauf dernier step).
 - `startDraft` fait pareil pour le step 1 (autrement le timer ne
@@ -1434,6 +1583,7 @@ Mécanique :
 Idempotence : `commitDraftStep` est explicitement crash-safe. Si un tick
 crashe après l'UPDATE du step mais avant l'UPDATE du draft (le cas
 "hero_id set, current_step pas incrémenté") :
+
 - **retry avec le même heroId** : l'engine détecte le replay, saute la
   collision dedup, et ré-exécute l'UPDATE draft → état healed.
 - **retry avec un heroId différent** : l'engine refuse explicitement avec
@@ -1450,11 +1600,12 @@ Page admin staff-protected qui pilote un draft en live, branchée sur
 Supabase Realtime pour fan-out immédiat des bans/picks. Pas de bot, pas
 d'endpoint nouveau — purement orchestration côté client des Lots 0-3.
 
-| Route                                                                                                                                   | Auth                                | Notes                                                                                                                              |
-| --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| [`pages/admin/matches/[matchId]/draft/[gameIndex].tsx`](../pages/admin/matches/[matchId]/draft/[gameIndex].tsx)                         | `withStaffPage('manager')` + loader SSR | Captain UI : init → sides → start → boucle commit (clic sur hero) avec auto-pick fallback. Hero pool fetch via `/api/games/[slug]/heroes`. **SSR pré-valide** que le match existe + tournament.game ∈ {lol, dota2} ; sinon `blockReason` prop → vue "Draft indisponible" propre (au lieu d'un toast 400 après clic). |
+| Route                                                                                                           | Auth                                    | Notes                                                                                                                                                                                                                                                                                                                |
+| --------------------------------------------------------------------------------------------------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`pages/admin/matches/[matchId]/draft/[gameIndex].tsx`](../pages/admin/matches/[matchId]/draft/[gameIndex].tsx) | `withStaffPage('manager')` + loader SSR | Captain UI : init → sides → start → boucle commit (clic sur hero) avec auto-pick fallback. Hero pool fetch via `/api/games/[slug]/heroes`. **SSR pré-valide** que le match existe + tournament.game ∈ {lol, dota2} ; sinon `blockReason` prop → vue "Draft indisponible" propre (au lieu d'un toast 400 après clic). |
 
 Hooks dédiés :
+
 - [`useDraftState`](../hooks/useDraftState.ts) — fetch `/api/admin/.../drafts/:gameIndex` + abonnement `useRealtimeChannel` sur `match_drafts` (filter `id=eq.X`) ET `match_draft_steps` (filter `draft_id=eq.X`). Refetch sur chaque event. Accepte un `fetcher` override (Lot 5 spectator l'utilise pour passer un fetch non-authentifié).
 - [`useDraftTimer`](../hooks/useDraftTimer.ts) — countdown local 1s tick basé sur `deadline_at` du step courant. Couleurs : neutre > 10s, ambre 4-10s, rouge ≤3s, "AUTO-PICK" pulse quand expiré.
 
@@ -1470,17 +1621,19 @@ endpoint bot côté site est un wrapper de `initDraft` qui résout en
 plus les Discord IDs des deux capitaines, pour permettre au bot de
 DM directement.
 
-| Route                                                                                                       | Methods | Auth                          | Notes                                                                                                                                                                                                          |
-| ----------------------------------------------------------------------------------------------------------- | ------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`pages/api/bot/v1/matches/[matchId]/drafts.ts`](../pages/api/bot/v1/matches/[matchId]/drafts.ts)           | POST    | `withBotRoute({ idempotent })` | Body `{ gameIndex, fearless? }`. Retourne `{ success, draft: DraftState, captains: [{ teamSlot, teamId, teamName, authUserId, discordUserId\|null }] }`. Rate-limit `bot-match-draft-init` (30/min). |
+| Route                                                                                             | Methods | Auth                           | Notes                                                                                                                                                                                                |
+| ------------------------------------------------------------------------------------------------- | ------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`pages/api/bot/v1/matches/[matchId]/drafts.ts`](../pages/api/bot/v1/matches/[matchId]/drafts.ts) | POST    | `withBotRoute({ idempotent })` | Body `{ gameIndex, fearless? }`. Retourne `{ success, draft: DraftState, captains: [{ teamSlot, teamId, teamName, authUserId, discordUserId\|null }] }`. Rate-limit `bot-match-draft-init` (30/min). |
 
 Résolution capitaines :
+
 - `matches.team1_id / team2_id` → `teams.captain_id` (auth user id)
 - `auth.users.id` → `user_discord_links.discord_user_id`
 - Si le capitaine n'a pas lié son Discord (`discordUserId: null`),
   le bot tombe sur un message dans le canal au lieu d'un DM.
 
 Slash command côté bot (`services/discord-bot/draft-init.js`) :
+
 - Options : `match-id` (string + autocomplete via `acMatches`),
   `game-index` (integer, min 1), `fearless` (boolean optionnel).
 - Appelle `POST /api/bot/v1/matches/:matchId/drafts` via `postBotApi`
@@ -1496,15 +1649,17 @@ URL partageable par l'orga du tournoi → l'opérateur l'embed dans
 OBS. Sécurité : l'id de match est un UUID inguessable + `match_drafts`
 a une policy RLS `select_public` (Lot 0).
 
-| Route                                                                                                                  | Methods | Auth   | Notes                                                                                                                                                                                                                  |
-| ---------------------------------------------------------------------------------------------------------------------- | ------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`pages/api/matches/[matchId]/drafts/[gameIndex].ts`](../pages/api/matches/[matchId]/drafts/[gameIndex].ts)            | GET     | public | Renvoie `{ draft: DraftState\|null, teams: { team1Name, team2Name } }`. Les team names sont best-effort (null si team manquante). Cache `s-maxage=5, stale-while-revalidate=15`. Tenant résolu implicitement via `matches.tenant_id`. 404 si le match n'existe pas, 400 sur IDs invalides. |
-| [`pages/draft/[matchId]/[gameIndex].tsx`](../pages/draft/[matchId]/[gameIndex].tsx)                                    | —       | public | Page React publique. URL : `/draft/<matchId>/<gameIndex>?title=<encoded title>`. Si `?title=` absent, fallback automatique sur `team1Name vs. team2Name` (side-fetch). Layout dark (OBS chromakey friendly), 2 colonnes de 5 picks (splash arts), ban row, timer central. `<meta name="robots" content="noindex">`. |
+| Route                                                                                                       | Methods | Auth   | Notes                                                                                                                                                                                                                                                                                                               |
+| ----------------------------------------------------------------------------------------------------------- | ------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`pages/api/matches/[matchId]/drafts/[gameIndex].ts`](../pages/api/matches/[matchId]/drafts/[gameIndex].ts) | GET     | public | Renvoie `{ draft: DraftState\|null, teams: { team1Name, team2Name } }`. Les team names sont best-effort (null si team manquante). Cache `s-maxage=5, stale-while-revalidate=15`. Tenant résolu implicitement via `matches.tenant_id`. 404 si le match n'existe pas, 400 sur IDs invalides.                          |
+| [`pages/draft/[matchId]/[gameIndex].tsx`](../pages/draft/[matchId]/[gameIndex].tsx)                         | —       | public | Page React publique. URL : `/draft/<matchId>/<gameIndex>?title=<encoded title>`. Si `?title=` absent, fallback automatique sur `team1Name vs. team2Name` (side-fetch). Layout dark (OBS chromakey friendly), 2 colonnes de 5 picks (splash arts), ban row, timer central. `<meta name="robots" content="noindex">`. |
 
 Composants (`components/draft/`) :
+
 - `SpectatorView` — layout complet, réutilise `DraftTimer` du Lot 4. Sub-components inline : `TeamColumn` (5 picks splash), `PickSlot` (image + nom + title), `BanSlot` (icon grayscale + barré), `BansRow`, `StatusBadge`.
 
 Couleurs side (gradient sur chaque colonne d'équipe) :
+
 - `blue` → bleu Riot (`from-sky-600/40`)
 - `red` → rouge Riot (`from-rose-600/40`)
 - `radiant` → vert Valve (`from-emerald-600/40`)

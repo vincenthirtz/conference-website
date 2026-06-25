@@ -6586,6 +6586,75 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/EventSegment"
+  /api/bot/v1/moderation/blacklist:
+    get:
+      tags:
+        - bot/misc
+      summary: Liste les entrees blacklist actives du tenant (scan membres Discord).
+      operationId: botListBlacklist
+      responses:
+        "200":
+          description: Entrees blacklist actives.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  blacklist:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+    post:
+      tags:
+        - bot/misc
+      summary: Ajoute une entree blacklist (slash /blacklist add, staff only).
+      operationId: botAddBlacklist
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "201":
+          description: Entree creee.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    delete:
+      tags:
+        - bot/misc
+      summary: Desactive une entree blacklist (slash /blacklist remove, staff only).
+      operationId: botRemoveBlacklist
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Entree desactivee.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/bot/v1/staff-logs:
     get:
       tags:
@@ -9290,6 +9359,131 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DraftEngineError"
+  /api/admin/moderation/blacklist:
+    get:
+      summary: List blacklist entries for the current tenant (search, active filter).
+      operationId: adminListBlacklist
+      tags:
+        - admin/content
+      security:
+        - StaffSession: []
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: active
+          in: query
+          schema:
+            type: string
+            enum: ["true", "false"]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Blacklist entries.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      summary: Create a blacklist entry (at least one identifier required).
+      operationId: adminCreateBlacklist
+      tags:
+        - admin/content
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "201":
+          description: Created.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/admin/moderation/blacklist/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      summary: Update a blacklist entry (reason / notes / active toggle).
+      operationId: adminUpdateBlacklist
+      tags:
+        - admin/content
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Delete a blacklist entry.
+      operationId: adminDeleteBlacklist
+      tags:
+        - admin/content
+      security:
+        - StaffSession: []
+      responses:
+        "204":
+          description: Deleted.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/admin/news:
     get:
       summary: List news posts (admin view, includes drafts).

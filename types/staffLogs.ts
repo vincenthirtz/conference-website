@@ -47,6 +47,9 @@ export type StaffLogAction =
   | 'unfinalize_tournament'
   | 'checkin_manual_nudge'
   | 'broadcast_state_update'
+  | 'blacklist_add'
+  | 'blacklist_update'
+  | 'blacklist_remove'
   | 'other';
 
 export type StaffLog = {
