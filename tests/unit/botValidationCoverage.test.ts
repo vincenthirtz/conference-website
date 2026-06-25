@@ -47,6 +47,13 @@ const INLINE_VALIDATION_ALLOWLIST = new Map<string, string>([
     // (flow onboarding, contrat de réponse spécifique).
     'inline: own safeParse with bespoke INVALID_BODY response shape',
   ],
+  [
+    'pages/api/bot/v1/moderation/blacklist.ts',
+    // Handler unique GET/POST/DELETE avec un schéma zod distinct par méthode
+    // (addSchema vs removeSchema, GET sans body) — pas exprimable par un seul
+    // bodySchema sur withBotRoute. Chaque write fait son propre safeParse.
+    'inline: per-method zod schemas (addSchema/removeSchema), single GET/POST/DELETE handler',
+  ],
 ]);
 
 function walkTs(dir: string, out: string[] = []): string[] {
@@ -136,7 +143,9 @@ describe('bot write routes engage the validation framework', () => {
     for (const [rel] of INLINE_VALIDATION_ALLOWLIST) {
       const route = byRel.get(rel);
       if (!route) {
-        stale.push(`${rel} — no longer a bot write route (remove from allowlist)`);
+        stale.push(
+          `${rel} — no longer a bot write route (remove from allowlist)`
+        );
       } else if (route.hasSchema) {
         stale.push(
           `${rel} — now declares a schema option (remove from allowlist)`

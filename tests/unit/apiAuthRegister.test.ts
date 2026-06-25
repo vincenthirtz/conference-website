@@ -1,9 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// La route n'utilise que `supabaseAnonServer` de @/utils/supabase.
+// La route utilise `supabaseAnonServer` (signUp) + `supabaseAdmin` (check
+// blacklist fire-and-forget via alertIfBlacklisted) de @/utils/supabase.
 vi.mock('@/utils/supabase', async () => {
   const m = await import('./__helpers__/supabaseMock');
-  return { supabaseAnonServer: m.supabaseAnonServer };
+  return {
+    supabaseAnonServer: m.supabaseAnonServer,
+    supabaseAdmin: m.supabaseAdmin,
+  };
 });
 
 import {
