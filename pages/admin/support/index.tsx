@@ -99,6 +99,9 @@ function AdminSupportPage(_: StaffProps) {
   const [selected, setSelected] = useState<Ticket | null>(null);
   const [resolutionNote, setResolutionNote] = useState('');
   const [updating, setUpdating] = useState(false);
+  const [blacklistRows, setBlacklistRows] = useState<string[]>(['']);
+  const [blacklistReason, setBlacklistReason] = useState('');
+  const [blacklisting, setBlacklisting] = useState(false);
 
   const status = filters.status ?? '';
   const severity = filters.severity ?? '';
@@ -132,6 +135,80 @@ function AdminSupportPage(_: StaffProps) {
   function openDetail(t: Ticket) {
     setSelected(t);
     setResolutionNote(t.resolution_note || '');
+    setBlacklistRows(['']);
+    setBlacklistReason(
+      `Signalement #${t.id.slice(0, 8)} (${CATEGORY_LABEL[t.category]})`
+    );
+  }
+
+  function setBlacklistRow(index: number, value: string) {
+    setBlacklistRows((rows) => rows.map((r, i) => (i === index ? value : r)));
+  }
+
+  function addBlacklistRow() {
+    setBlacklistRows((rows) => [...rows, '']);
+  }
+
+  function removeBlacklistRow(index: number) {
+    setBlacklistRows((rows) => {
+      const next = rows.filter((_, i) => i !== index);
+      return next.length > 0 ? next : [''];
+    });
+  }
+
+  async function addToBlacklist() {
+    if (!selected) return;
+    const entries = blacklistRows
+      .map((r) => r.trim())
+      .filter((r) => r.length > 0);
+    if (entries.length === 0) {
+      addToast('Aucun pseudo à ajouter.', 'error');
+      return;
+    }
+
+    const reason = blacklistReason.trim() || null;
+    const notes = `ticket_id: ${selected.id}`;
+
+    setBlacklisting(true);
+    try {
+      const results = await Promise.all(
+        entries.map(async (value) => {
+          const body: Record<string, unknown> = { reason, notes };
+          if (value.includes('#')) {
+            body.battle_tag = value;
+          } else {
+            body.display_name = value;
+          }
+          try {
+            const res = await fetch('/api/admin/moderation/blacklist', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body),
+            });
+            return res.ok;
+          } catch {
+            return false;
+          }
+        })
+      );
+
+      const added = results.filter(Boolean).length;
+      const failed = results.length - added;
+
+      if (failed === 0) {
+        addToast(
+          `${added} pseudo${added > 1 ? 's' : ''} ajouté${added > 1 ? 's' : ''} à la blacklist.`,
+          'success'
+        );
+        setBlacklistRows(['']);
+      } else if (added === 0) {
+        addToast(`Échec de l'ajout (${failed} en erreur).`, 'error');
+      } else {
+        addToast(`${added} ajouté(s), ${failed} en erreur.`, 'error');
+      }
+    } finally {
+      setBlacklisting(false);
+    }
   }
 
   async function updateStatus(newStatus: Status, note?: string) {
@@ -440,6 +517,89 @@ function AdminSupportPage(_: StaffProps) {
                   {formatDateFr(selected.resolved_at)}
                 </Field>
               )}
+            </div>
+
+            <div className="space-y-3 border-t border-neutral-700 pt-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-200">
+                  Ajouter à la blacklist
+                </label>
+                <p className="text-xs text-neutral-500 mt-1">
+                  Une ligne par pseudo. Si la valeur contient «&nbsp;#&nbsp;»
+                  elle est traitée comme un BattleTag, sinon comme un pseudo
+                  d&apos;affichage.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                {blacklistRows.map((row, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={row}
+                      onChange={(e) => setBlacklistRow(i, e.target.value)}
+                      placeholder="Pseudo ou BattleTag (ex: Joueur#1234)"
+                      className="flex-1 px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeBlacklistRow(i)}
+                      disabled={blacklisting}
+                      aria-label="Retirer la ligne"
+                      className="p-2 rounded-lg text-neutral-400 hover:text-red-300 hover:bg-neutral-700 transition-colors disabled:opacity-50"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addBlacklistRow}
+                  disabled={blacklisting}
+                  className="text-xs text-blue-300 hover:text-blue-200 transition-colors disabled:opacity-50"
+                >
+                  + Ajouter une ligne
+                </button>
+              </div>
+
+              <div>
+                <label className="block text-xs text-neutral-500 uppercase tracking-wide mb-1">
+                  Raison (optionnel)
+                </label>
+                <input
+                  type="text"
+                  value={blacklistReason}
+                  onChange={(e) => setBlacklistReason(e.target.value)}
+                  placeholder="Raison de l'ajout à la blacklist"
+                  className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                />
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={addToBlacklist}
+                  disabled={
+                    blacklisting ||
+                    blacklistRows.every((r) => r.trim().length === 0)
+                  }
+                  className="px-3 py-2 rounded-xl bg-red-700 hover:bg-red-600 text-sm font-medium transition-colors disabled:opacity-50"
+                >
+                  {blacklisting ? 'Ajout…' : 'Ajouter à la blacklist'}
+                </button>
+              </div>
             </div>
 
             <div className="space-y-3 border-t border-neutral-700 pt-4">

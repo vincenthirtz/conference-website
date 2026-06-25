@@ -213,6 +213,11 @@ export const ADMIN_LINKS: AdminLink[] = [
         ref: '/admin/support',
         minRole: 'manager',
       },
+      {
+        title: 'Blacklist joueurs',
+        ref: '/admin/moderation/blacklist',
+        minRole: 'manager',
+      },
     ],
   },
   {
