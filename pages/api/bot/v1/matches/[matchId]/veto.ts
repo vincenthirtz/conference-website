@@ -318,7 +318,14 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
 
 export default withBotRoute(handler, {
   methods: ['GET', 'POST', 'DELETE'],
-  rateLimit: { max: 30, key: 'bot-match-veto' },
+  rateLimit: {
+    max: 30,
+    key: 'bot-match-veto',
+    // Mutation staff (POST/DELETE via requireBotStaff, actorDiscordUserId dans
+    // le body) : aligné sur resolve-dispute/reset. N'affecte pas le GET (pas
+    // d'actorDiscordUserId fourni en lecture).
+    perActor: { max: 5, windowMs: 60_000 },
+  },
   idempotent: true,
   querySchema: vetoQuerySchema,
 });

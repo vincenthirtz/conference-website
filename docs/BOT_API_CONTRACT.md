@@ -389,9 +389,24 @@ doesn't break during a deploy. The mode is toggled via
 - **Global** — every route has its own bucket keyed by IP (or the configured
   store key). Limit hit → `429`.
 - **Per-actor** — opt-in per route. When set, the limiter additionally caps
-  requests keyed on `actorDiscordUserId` (body for writes, query for reads)
-  with the Discord-ID regex `^[0-9]{15,25}$`. Protects against one Discord
-  user draining the global IP bucket.
+  requests keyed on the actor's Discord id with the regex `^[0-9]{15,25}$`.
+  The field read defaults to `actorDiscordUserId` (staff convention, body for
+  writes / query for reads); captain-facing routes (`/report`, `/checkin`)
+  send the id under `discordUserId` and the limiter is configured to key on
+  that field instead. Protects against one Discord user draining the global
+  IP bucket.
+
+  Routes with a per-actor cap (all `windowMs = 60 s`):
+
+  | Route                                 | Cap / actor | Actor field          | Actor kind |
+  | ------------------------------------- | ----------- | -------------------- | ---------- |
+  | `matches/:matchId/forfeit`            | 5           | `actorDiscordUserId` | staff      |
+  | `matches/:matchId/reset`              | 5           | `actorDiscordUserId` | staff      |
+  | `matches/:matchId/resolve-dispute`    | 5           | `actorDiscordUserId` | staff      |
+  | `matches/:matchId/veto` (POST/DELETE) | 5           | `actorDiscordUserId` | staff      |
+  | `matches/:matchId/cast` (POST/DELETE) | 5           | `actorDiscordUserId` | staff      |
+  | `matches/:matchId/report`             | 5           | `discordUserId`      | captain    |
+  | `matches/:matchId/checkin`            | 10          | `discordUserId`      | captain    |
 
 Default window is 60 s. The bot should respect `Retry-After` when it appears.
 

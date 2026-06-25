@@ -133,7 +133,12 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
 
 export default withBotRoute(handler, {
   methods: ['POST'],
-  rateLimit: { max: 60, key: 'bot-match-checkin' },
+  rateLimit: {
+    max: 60,
+    key: 'bot-match-checkin',
+    // Action par capitaine : borne par acteur (id sous `discordUserId`).
+    perActor: { max: 10, windowMs: 60_000, actorField: 'discordUserId' },
+  },
   idempotent: true,
   bodySchema: checkinBodySchema,
   querySchema: checkinQuerySchema,

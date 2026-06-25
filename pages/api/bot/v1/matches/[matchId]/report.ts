@@ -370,7 +370,14 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
 
 export default withBotRoute(handler, {
   methods: ['POST'],
-  rateLimit: { max: 30, key: 'bot-match-report' },
+  rateLimit: {
+    max: 30,
+    key: 'bot-match-report',
+    // Action par capitaine : on borne aussi par acteur pour qu'un seul
+    // capitaine ne draine pas le bucket IP global. L'id du capitaine est
+    // envoyé sous `discordUserId` (pas `actorDiscordUserId`), d'où actorField.
+    perActor: { max: 5, windowMs: 60_000, actorField: 'discordUserId' },
+  },
   idempotent: true,
   bodySchema: reportBodySchema,
   querySchema: reportQuerySchema,

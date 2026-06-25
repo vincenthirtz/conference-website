@@ -165,10 +165,17 @@ export type BotRouteOptions = {
      * time. If present, applies an extra cap keyed on the actor — useful so
      * one Discord user spamming /forfait doesn't drain the global IP bucket
      * for everyone. Pair with the global max for combined protection.
+     *
+     * `actorField` overrides which body/query field holds the actor's Discord
+     * id. Defaults to `actorDiscordUserId` (staff convention). Captain-facing
+     * routes (e.g. /report, /checkin) send the id under `discordUserId`, so
+     * they pass `actorField: 'discordUserId'` to key the sub-limit on the
+     * captain without renaming the request field (contract-stable).
      */
     perActor?: {
       max: number;
       windowMs?: number;
+      actorField?: string;
     };
   };
   /**
@@ -347,16 +354,18 @@ export function withBotRoute(
     // query si fourni en options. Compatible avec les routes qui lisent
     // l'acteur en query (GET) et celles qui le lisent en body (POST/PATCH).
     if (options.rateLimit.perActor) {
+      const actorField =
+        options.rateLimit.perActor.actorField || 'actorDiscordUserId';
       const actorFromBody =
-        typeof (req.body as Record<string, unknown> | null)
-          ?.actorDiscordUserId === 'string'
+        typeof (req.body as Record<string, unknown> | null)?.[actorField] ===
+        'string'
           ? (
-              (req.body as Record<string, unknown>).actorDiscordUserId as string
+              (req.body as Record<string, unknown>)[actorField] as string
             ).trim()
           : '';
       const actorFromQuery =
-        typeof req.query.actorDiscordUserId === 'string'
-          ? req.query.actorDiscordUserId.trim()
+        typeof req.query[actorField] === 'string'
+          ? (req.query[actorField] as string).trim()
           : '';
       const actorKey = actorFromBody || actorFromQuery;
       if (actorKey && DISCORD_ID_RE.test(actorKey)) {
