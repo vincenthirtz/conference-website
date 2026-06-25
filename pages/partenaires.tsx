@@ -232,6 +232,8 @@ function PartnersPage({ partners }: PartnersPageProps) {
                             <img
                               src={partner.logo_url}
                               alt={`Logo ${partner.name}`}
+                              width={120}
+                              height={56}
                               loading="lazy"
                               decoding="async"
                               className="max-h-14 w-auto object-contain drop-shadow"

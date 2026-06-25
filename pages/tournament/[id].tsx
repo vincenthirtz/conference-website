@@ -719,6 +719,8 @@ export default function TournamentPage({
                           <img
                             src={team.logo_url}
                             alt={team.name}
+                            width={56}
+                            height={56}
                             loading="lazy"
                             decoding="async"
                             className="w-full h-full object-cover"

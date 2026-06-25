@@ -292,7 +292,28 @@ export default function PlayerDashboard() {
   }
 
   if (!user) {
-    return null;
+    return (
+      <>
+        <Head>
+          <title>Mon espace joueur | OW Women&apos;s Cup</title>
+        </Head>
+        <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
+          <main className="max-w-md mx-auto px-4 py-10 pt-32 text-center">
+            <h1 className="text-3xl font-bold text-gradient">Espace joueur</h1>
+            <p className="mt-4 text-gray-300">
+              Connecte-toi pour accéder à ton espace : profil, équipe et
+              prochains matchs.
+            </p>
+            <Link
+              href="/login?next=/player"
+              className="mt-8 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-purple-500/20 transition hover:brightness-110"
+            >
+              Se connecter
+            </Link>
+          </main>
+        </div>
+      </>
+    );
   }
 
   const displayName =

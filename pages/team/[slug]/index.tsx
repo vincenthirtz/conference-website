@@ -23,6 +23,23 @@ import {
 } from '@/utils/markdown/teamPublicMarkdown';
 
 import { logger } from '../../../utils/logger';
+
+const SITE_NAME = "OW Women's Cup";
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || '';
+const CANONICAL_BASE = BASE_URL || 'https://owwomenscup.fr';
+
+function toAbsoluteUrl(path: string | null | undefined): string | undefined {
+  if (!path) return undefined;
+  if (path.startsWith('http')) return path;
+  return `${CANONICAL_BASE}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
+function truncate(text: string, max = 155): string {
+  const clean = text.replace(/\s+/g, ' ').trim();
+  if (clean.length <= max) return clean;
+  return `${clean.slice(0, max - 1).trimEnd()}…`;
+}
+
 function safeHref(url: string): string | undefined {
   try {
     const full = url.startsWith('http') ? url : `https://${url}`;
@@ -523,6 +540,23 @@ export default function TeamPage({
   const achievements = (team.achievements ?? []).filter((a) => a && a.title);
   const sponsors = (team.sponsors ?? []).filter((s) => s && s.name);
 
+  // SEO
+  const seoDescription = description
+    ? truncate(description, 155)
+    : `Découvrez l'équipe ${team.name} sur OW Women's Cup : effectif, palmarès et actualités.`;
+  const canonicalUrl = `${CANONICAL_BASE}/team/${encodeURIComponent(
+    team.slug || team.id
+  )}`;
+  const seoImage = toAbsoluteUrl(team.banner_url || team.logo_url);
+  const teamLd = {
+    '@context': 'https://schema.org',
+    '@type': 'SportsTeam',
+    name: team.name,
+    url: canonicalUrl,
+    ...(team.logo_url && { logo: toAbsoluteUrl(team.logo_url) }),
+    ...(description && { description: truncate(description, 300) }),
+  };
+
   const embedSrc =
     team.embed_provider === 'youtube' && team.embed_id
       ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(team.embed_id)}`
@@ -533,10 +567,26 @@ export default function TeamPage({
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <Head>
-        <title>{team.name} | OW Women&apos;s Cup</title>
+        <title>{`${team.name} | ${SITE_NAME}`}</title>
+        <meta name="description" content={seoDescription} />
+        <link rel="canonical" href={canonicalUrl} />
+        <meta property="og:type" content="profile" />
+        <meta property="og:site_name" content={SITE_NAME} />
+        <meta property="og:title" content={`${team.name} | ${SITE_NAME}`} />
+        <meta property="og:description" content={seoDescription} />
+        <meta property="og:url" content={canonicalUrl} />
+        {seoImage && <meta property="og:image" content={seoImage} />}
+        {seoImage && <meta property="og:image:alt" content={team.name} />}
         <meta
-          name="description"
-          content={description || `Page de l'équipe ${team.name}`}
+          name="twitter:card"
+          content={seoImage ? 'summary_large_image' : 'summary'}
+        />
+        <meta name="twitter:title" content={`${team.name} | ${SITE_NAME}`} />
+        <meta name="twitter:description" content={seoDescription} />
+        {seoImage && <meta name="twitter:image" content={seoImage} />}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(teamLd) }}
         />
       </Head>
 
@@ -1252,6 +1302,8 @@ function MemberCard({
           <img
             src={avatar}
             alt=""
+            width={48}
+            height={48}
             loading="lazy"
             className="w-12 h-12 rounded-lg object-cover border border-white/10"
             style={accent ? { borderColor: `${accent}66` } : undefined}

@@ -1,3 +1,4 @@
+import Head from 'next/head';
 import Link from 'next/link';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
@@ -109,9 +110,28 @@ const faqs: Faq[] = [
   },
 ];
 
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faqs.map((faq) => ({
+    '@type': 'Question',
+    name: faq.question,
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: faq.answer,
+    },
+  })),
+};
+
 function Inscription2026Page() {
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
+      <Head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+        />
+      </Head>
       {/* Hero */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
@@ -139,7 +159,7 @@ function Inscription2026Page() {
               href={REGISTER_HREF}
               className="rounded-full bg-gradient-to-r from-pink-500 to-orange-400 px-6 py-3 text-sm font-bold text-black shadow-lg shadow-pink-500/20 transition hover:brightness-110"
             >
-              Inscrire mon équipe ↗
+              Inscrire mon équipe <span aria-hidden="true">↗</span>
             </Link>
             <a
               href={DISCORD_INVITE}
@@ -147,7 +167,7 @@ function Inscription2026Page() {
               rel="noreferrer noopener"
               className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
             >
-              Discord ↗
+              Discord <span aria-hidden="true">↗</span>
             </a>
             <a
               href="#faq"
@@ -235,14 +255,14 @@ function Inscription2026Page() {
                         rel="noreferrer noopener"
                         className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-purple-200 underline decoration-purple-400/60 underline-offset-4 transition hover:text-white"
                       >
-                        {step.cta.label} ↗
+                        {step.cta.label} <span aria-hidden="true">↗</span>
                       </a>
                     ) : (
                       <Link
                         href={step.cta.href}
                         className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-purple-200 underline decoration-purple-400/60 underline-offset-4 transition hover:text-white"
                       >
-                        {step.cta.label} ↗
+                        {step.cta.label} <span aria-hidden="true">↗</span>
                       </Link>
                     ))}
                 </div>
@@ -270,7 +290,7 @@ function Inscription2026Page() {
               href={REGISTER_HREF}
               className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-orange-400 px-6 py-3 text-sm font-bold text-black shadow-lg shadow-pink-500/20 transition hover:brightness-110"
             >
-              Inscrire mon équipe ↗
+              Inscrire mon équipe <span aria-hidden="true">↗</span>
             </Link>
           </div>
         </section>
@@ -326,7 +346,7 @@ function Inscription2026Page() {
               rel="noreferrer noopener"
               className="rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
             >
-              Discord ↗
+              Discord <span aria-hidden="true">↗</span>
             </a>
             <Link
               href="/contact"

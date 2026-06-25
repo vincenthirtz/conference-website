@@ -409,6 +409,8 @@ function Tournoi() {
             className="w-7 h-7 rounded border-2"
             style={{ borderColor: color }}
             alt={team.name}
+            width={28}
+            height={28}
             loading="lazy"
             decoding="async"
           />

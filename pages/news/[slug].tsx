@@ -233,10 +233,16 @@ export default function NewsSlugPage({
             {error}
           </div>
         ) : (
-          <>
+          <article>
             <div className="mt-6 flex flex-col gap-3">
               <div className="flex items-center gap-3 text-xs uppercase tracking-[0.16em] text-blue-200/80">
-                <span>{displayDate || 'News'}</span>
+                {articlePublishedTime ? (
+                  <time dateTime={articlePublishedTime}>
+                    {displayDate || 'News'}
+                  </time>
+                ) : (
+                  <span>{displayDate || 'News'}</span>
+                )}
                 {formattedTag && (
                   <span className="px-3 py-1 rounded-full border border-blue-300/40 bg-blue-500/10 text-[10px] tracking-[0.14em] text-blue-100">
                     {formattedTag}
@@ -250,8 +256,11 @@ export default function NewsSlugPage({
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={imageUrl}
-                  alt={title}
-                  className="mt-4 w-full rounded-2xl border border-white/10 object-cover"
+                  alt=""
+                  width={1200}
+                  height={630}
+                  loading="eager"
+                  className="mt-4 w-full rounded-2xl border border-white/10 object-cover aspect-[1200/630]"
                 />
               )}
             </div>
@@ -275,7 +284,7 @@ export default function NewsSlugPage({
             </div>
 
             {newsId && <Comments newsId={newsId} />}
-          </>
+          </article>
         )}
       </div>
     </div>
@@ -379,22 +388,38 @@ function Comments({ newsId }: { newsId: string }) {
 
       <form onSubmit={handleSubmit} className="space-y-3">
         <div className="grid gap-3 md:grid-cols-[1fr_0.6fr]">
-          <textarea
-            rows={3}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="Partage ton avis..."
-            className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/70 focus:border-purple-400/70 transition"
-          />
+          <div>
+            <label htmlFor="comment-content" className="sr-only">
+              Votre commentaire
+            </label>
+            <textarea
+              id="comment-content"
+              rows={3}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="Partage ton avis..."
+              className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/70 focus:border-purple-400/70 transition"
+            />
+          </div>
           <div className="flex flex-col gap-2">
+            <label htmlFor="comment-author" className="sr-only">
+              Nom (optionnel)
+            </label>
             <input
+              id="comment-author"
               type="text"
               value={author}
               onChange={(e) => setAuthor(e.target.value)}
               placeholder="Nom (optionnel)"
               className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/70 focus:border-purple-400/70 transition"
             />
+            <label htmlFor="comment-captcha" className="sr-only">
+              {captchaQuestion
+                ? `Question anti-spam : combien font ${captchaQuestion} ?`
+                : 'Question anti-spam'}
+            </label>
             <input
+              id="comment-captcha"
               type="text"
               value={captchaAnswer}
               onChange={(e) => setCaptchaAnswer(e.target.value)}

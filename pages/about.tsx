@@ -265,6 +265,9 @@ function AboutPage({ videoUrl }: AboutPageProps) {
                       <img
                         src={`https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`}
                         alt="Aper\u00e7u vid\u00e9o OW Women's Cup"
+                        width={1280}
+                        height={720}
+                        loading="eager"
                         className="absolute inset-0 w-full h-full object-cover"
                       />
                     ) : (
