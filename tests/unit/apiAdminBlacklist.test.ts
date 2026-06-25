@@ -31,7 +31,7 @@ vi.mock('@/utils/supabase', async () => {
 });
 
 const { logStaffActionMock } = vi.hoisted(() => ({
-  logStaffActionMock: vi.fn(async () => undefined),
+  logStaffActionMock: vi.fn(async (_params?: any) => undefined),
 }));
 vi.mock('@/utils/staffLogs', () => ({
   logStaffAction: logStaffActionMock,

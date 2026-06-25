@@ -3,6 +3,8 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { useToast } from '@/components/Toast';
 
 type StaffShape = {
   id: string;
@@ -439,6 +441,8 @@ function CampaignDrawer({
   onRefresh: () => void | Promise<void>;
 }) {
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
+  const { mutateJson } = useIdempotentMutation();
+  const { addToast } = useToast();
 
   // Live HTML preview
   const [previewLabel, setPreviewLabel] = useState('');
@@ -475,48 +479,95 @@ function CampaignDrawer({
       );
       return;
     }
+    const wave = Math.floor(parsed);
+
+    const recipientLine =
+      schedule && typeof schedule.totalRecipients === 'number'
+        ? `${schedule.totalRecipients} destinataire(s) au total`
+        : 'la liste actuelle des comptes confirmés';
+    const ok = await confirm({
+      title: schedule
+        ? 'Mettre à jour la programmation ?'
+        : 'Programmer cette campagne par vagues ?',
+      subtitle:
+        `Campagne « ${campaign.name} » : envoi de ${wave} email(s)/jour ` +
+        `vers ${recipientLine}, jusqu'à épuisement. Les envois partiront ` +
+        'automatiquement via le cron quotidien.',
+      variant: 'warning',
+      confirmLabel: schedule ? 'Mettre à jour' : 'Programmer',
+      cancelLabel: 'Annuler',
+    });
+    if (!ok) return;
+
     setScheduleBusy(true);
     setScheduleError(null);
     setScheduleNotice(null);
     try {
-      const res = await fetch(`/api/admin/broadcast/${campaign.id}/schedule`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ waveSize: Math.floor(parsed) }),
-      });
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error || 'Échec de la planification');
-      }
+      const json = await mutateJson<{ totalRecipients: number }>(
+        `/api/admin/broadcast/${campaign.id}/schedule`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ waveSize: wave }),
+        }
+      );
       setScheduleNotice(
-        `Planning enregistré : ${json.totalRecipients} destinataire(s), ${Math.floor(parsed)}/jour.`
+        `Planning enregistré : ${json.totalRecipients} destinataire(s), ${wave}/jour.`
+      );
+      addToast(
+        `Programmation enregistrée : ${json.totalRecipients} destinataire(s).`,
+        'success'
       );
       await onRefresh();
     } catch (err: unknown) {
-      setScheduleError((err as Error).message);
+      const msg = (err as Error)?.message || 'Échec de la planification';
+      setScheduleError(msg);
+      addToast(msg, 'error');
     } finally {
       setScheduleBusy(false);
     }
   }
 
   async function triggerWaveNow() {
+    const pending = schedule?.pending;
+    const recipientLine =
+      typeof pending === 'number'
+        ? `${pending} destinataire(s) en attente`
+        : 'les destinataires restants';
+    const ok = await confirm({
+      title: 'Lancer une vague maintenant ?',
+      subtitle:
+        `Campagne « ${campaign.name} » : envoi immédiat de ${recipientLine} ` +
+        `(plafonné à ${schedule?.waveSize ?? '?'} par vague). Action ` +
+        'irréversible — les emails partent réellement.',
+      variant: 'warning',
+      confirmLabel: 'Envoyer la vague',
+      cancelLabel: 'Annuler',
+    });
+    if (!ok) return;
+
     setScheduleBusy(true);
     setScheduleError(null);
     setScheduleNotice(null);
     try {
-      const res = await fetch(`/api/admin/broadcast/${campaign.id}/wave`, {
+      const json = await mutateJson<{
+        sent: number;
+        failed: number;
+        remainingPending: number;
+      }>(`/api/admin/broadcast/${campaign.id}/wave`, {
         method: 'POST',
       });
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error || 'Vague échouée');
-      }
       setScheduleNotice(
         `Vague envoyée : ${json.sent} succès / ${json.failed} échec(s) — ${json.remainingPending} restants.`
       );
+      addToast(
+        `Vague envoyée : ${json.sent} succès, ${json.failed} échec(s).`,
+        json.failed > 0 ? 'warning' : 'success'
+      );
       await onRefresh();
     } catch (err: unknown) {
-      setScheduleError((err as Error).message);
+      const msg = (err as Error)?.message || 'Vague échouée';
+      setScheduleError(msg);
+      addToast(msg, 'error');
     } finally {
       setScheduleBusy(false);
     }
@@ -536,17 +587,16 @@ function CampaignDrawer({
     setScheduleError(null);
     setScheduleNotice(null);
     try {
-      const res = await fetch(`/api/admin/broadcast/${campaign.id}/schedule`, {
+      await mutateJson(`/api/admin/broadcast/${campaign.id}/schedule`, {
         method: 'DELETE',
       });
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error || 'Annulation échouée');
-      }
       setScheduleNotice('Programmation annulée.');
+      addToast('Programmation annulée.', 'success');
       await onRefresh();
     } catch (err: unknown) {
-      setScheduleError((err as Error).message);
+      const msg = (err as Error)?.message || 'Annulation échouée';
+      setScheduleError(msg);
+      addToast(msg, 'error');
     } finally {
       setScheduleBusy(false);
     }
@@ -576,26 +626,30 @@ function CampaignDrawer({
   }
 
   async function runTest() {
-    if (!testTo.trim()) return;
+    const to = testTo.trim();
+    if (!to) return;
     setTestSending(true);
     setTestResult(null);
     try {
-      const res = await fetch(`/api/admin/broadcast/${campaign.id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ testTo: testTo.trim() }),
-      });
-      const json = await res.json();
+      const json = await mutateJson<{ success?: boolean; error?: string }>(
+        `/api/admin/broadcast/${campaign.id}`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ testTo: to }),
+        }
+      );
       if (json.success) {
-        setTestResult({
-          ok: true,
-          msg: `Email de test envoyé à ${testTo.trim()}.`,
-        });
+        setTestResult({ ok: true, msg: `Email de test envoyé à ${to}.` });
+        addToast(`Email de test envoyé à ${to}.`, 'success');
       } else {
-        setTestResult({ ok: false, msg: json.error || 'Échec' });
+        const msg = json.error || 'Échec';
+        setTestResult({ ok: false, msg });
+        addToast(msg, 'error');
       }
-    } catch {
-      setTestResult({ ok: false, msg: 'Erreur réseau' });
+    } catch (err: unknown) {
+      const msg = (err as Error)?.message || 'Erreur réseau';
+      setTestResult({ ok: false, msg });
+      addToast(msg, 'error');
     } finally {
       setTestSending(false);
     }
@@ -633,15 +687,13 @@ function CampaignDrawer({
     setSendBusy(true);
     setActionError(null);
     try {
-      const res = await fetch(`/api/admin/broadcast/${campaign.id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildBody({})),
-      });
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error || 'Envoi échoué');
-      }
+      const json = await mutateJson<SendResult & { errors?: string[] }>(
+        `/api/admin/broadcast/${campaign.id}`,
+        {
+          method: 'POST',
+          body: JSON.stringify(buildBody({})),
+        }
+      );
       setSendResult({
         totalConfirmedUsers: json.totalConfirmedUsers,
         windowSize: json.windowSize,
@@ -649,9 +701,15 @@ function CampaignDrawer({
         failed: json.failed,
         errors: json.errors,
       });
+      addToast(
+        `Diffusion terminée : ${json.sent} envoyé(s), ${json.failed} échec(s).`,
+        json.failed > 0 ? 'warning' : 'success'
+      );
       setConfirming(false);
     } catch (err: unknown) {
-      setActionError((err as Error).message);
+      const msg = (err as Error)?.message || 'Envoi échoué';
+      setActionError(msg);
+      addToast(msg, 'error');
       setConfirming(false);
     } finally {
       setSendBusy(false);

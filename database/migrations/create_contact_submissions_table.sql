@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS contact_submissions (
   message TEXT NOT NULL,
   status TEXT DEFAULT 'new' CHECK (status IN ('new', 'read', 'replied', 'archived', 'spam')),
   admin_notes TEXT,
-  ip_address TEXT,x
+  ip_address TEXT,
   user_agent TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),

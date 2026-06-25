@@ -4,11 +4,22 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
+import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { logStaffAction } from '@/utils/staffLogs';
 import { getCampaign, processCampaignWave } from '@/utils/broadcasts';
 
 import { logger } from '../../../../../utils/logger';
-export default withStaffRoute(handler, 'admin');
+
+// Idempotency : l'UI admin envoie un header `Idempotency-Key` (via
+// useIdempotentMutation). Sans gate, un double-POST (double-clic, retry
+// réseau) déclencherait DEUX envois de vague. withAdminIdempotency rejoue
+// la réponse 2xx mémorisée (5 min, scope = staff+route+key+body) → le 2e
+// POST avec la même clé ne ré-envoie aucun email. Header absent → handler
+// exécuté normalement (rétro-compatible).
+export default withStaffRoute(
+  withAdminIdempotency(handler, { key: 'broadcast-wave' }),
+  'admin'
+);
 
 async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   if (req.method !== 'POST') {

@@ -64,7 +64,17 @@ export default withAuthRoute(async function handler(
   const safeQuery = escapePostgrestValue(query);
 
   try {
-    // Collect candidate user IDs from multiple sources, then batch-fetch memberships
+    // SÉCURITÉ — scoping tenant strict.
+    //
+    // L'ancienne implémentation énumérait `auth.users` (listUsers perPage:50)
+    // puis filtrait en mémoire. Problème : `auth.users` est GLOBAL à toute
+    // l'instance Supabase (tous tenants confondus) → fuite d'emails d'autres
+    // tenants + recherche non déterministe (on ne voyait que les 50 premiers
+    // users tous tenants). On ne touche plus jamais à `auth.users` pour la
+    // recherche : les candidats viennent uniquement de tables tenant-scopées
+    // (`team_members` filtré par tenant_id, `profiles`). Les emails ne sont
+    // résolus (getUserById) QUE pour des candidats déjà confirmés du tenant
+    // courant, donc aucun email cross-tenant ne peut être renvoyé.
     type Candidate = {
       id: string;
       email: string | null;
@@ -74,43 +84,13 @@ export default withAuthRoute(async function handler(
     const candidates: Candidate[] = [];
     const seenUserIds = new Set<string>();
 
-    // 1) Search by email/display_name in auth.users
-    const { data: authUsers, error: authError } =
-      await supabaseAdmin.auth.admin.listUsers({
-        perPage: 50,
-      });
-
-    if (!authError && authUsers?.users) {
-      const lowerQuery = query.toLowerCase();
-      const matchingUsers = authUsers.users.filter(
-        (u) =>
-          u.email?.toLowerCase().includes(lowerQuery) ||
-          (u.user_metadata?.display_name as string)
-            ?.toLowerCase()
-            .includes(lowerQuery)
-      );
-
-      for (const authUser of matchingUsers.slice(0, 15)) {
-        if (!seenUserIds.has(authUser.id)) {
-          seenUserIds.add(authUser.id);
-          candidates.push({
-            id: authUser.id,
-            email: authUser.email || null,
-            display_name:
-              (authUser.user_metadata?.display_name as string) || null,
-            battle_tag_hint: null,
-          });
-        }
-      }
-    }
-
-    // 2) Search by battle_tag in team_members (scoped au tenant)
+    // 1) Recherche par battle_tag / display_name dans team_members (scopé tenant)
     const { data: membersByTag } = await supabaseAdmin
       .from('team_members')
-      .select('user_id, battle_tag, team_id')
+      .select('user_id, battle_tag, display_name, team_id')
       .eq('tenant_id', tenantId)
-      .ilike('battle_tag', `%${safeQuery}%`)
-      .limit(15);
+      .or(`battle_tag.ilike.%${safeQuery}%,display_name.ilike.%${safeQuery}%`)
+      .limit(20);
 
     if (membersByTag) {
       for (const member of membersByTag) {
@@ -119,19 +99,26 @@ export default withAuthRoute(async function handler(
           candidates.push({
             id: member.user_id,
             email: null,
-            display_name: null,
+            display_name: member.display_name || null,
             battle_tag_hint: member.battle_tag || null,
           });
         }
       }
     }
 
-    // 3) Search in profiles table
+    // 2) Recherche dans profiles (username / battle_tag).
+    //
+    // `profiles` n'est pas (encore) tenant-scopé en colonne, mais on ne
+    // résout AUCUN email à partir de profiles : on ne fait que collecter des
+    // ids candidats. L'email n'est résolu qu'après avoir confirmé l'id comme
+    // membre du tenant courant (voir l'intersection ci-dessous), donc une row
+    // profiles d'un autre tenant ne révèle jamais d'email — au pire elle
+    // apparaît avec un email null si l'user n'a aucune appartenance au tenant.
     const { data: profiles } = await supabaseAdmin
       .from('profiles')
       .select('id, username, battle_tag')
       .or(`username.ilike.%${safeQuery}%,battle_tag.ilike.%${safeQuery}%`)
-      .limit(15);
+      .limit(20);
 
     if (profiles) {
       for (const profile of profiles) {
@@ -175,8 +162,14 @@ export default withAuthRoute(async function handler(
       }
     }
 
-    // Batch-fetch auth data for candidates missing email
-    const needsAuth = limitedCandidates.filter((c) => !c.email);
+    // Résolution des emails : UNIQUEMENT pour les candidats confirmés comme
+    // membres du tenant courant (présents dans membershipMap). On ne résout
+    // jamais l'email d'un id qui ne participe pas au tenant — un id remonté
+    // par `profiles` (table non scopée) sans appartenance au tenant reste avec
+    // email = null. C'est le garde-fou anti-fuite cross-tenant.
+    const needsAuth = limitedCandidates.filter(
+      (c) => !c.email && membershipMap.has(c.id)
+    );
     const authMap = new Map<
       string,
       { email: string | null; display_name: string | null }
