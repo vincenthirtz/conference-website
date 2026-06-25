@@ -141,32 +141,42 @@ test.describe('API /api/helloasso/checkout', () => {
 // ─── API webhook endpoint ──────────────────────────────────────
 
 test.describe('API /api/helloasso/webhook', () => {
-  test('POST avec payload invalide renvoie 400', async ({ request }) => {
+  // Le webhook exige désormais un secret partagé (?token= ou
+  // x-helloasso-signature). Le secret réel n'étant pas exposé aux tests e2e,
+  // on vérifie surtout que les requêtes NON authentifiées sont rejetées
+  // (anti-spoofing de paiements), sans dépendre de la config env.
+  const VALID_PAYLOAD = {
+    eventType: 'Payment',
+    data: {
+      id: 12345,
+      amount: 2500,
+      state: 'Authorized',
+      payer: {
+        firstName: 'Test',
+        lastName: 'Donor',
+        email: 'test@example.com',
+      },
+    },
+  };
+
+  test('POST sans secret est rejeté (401 ou 503 fail-closed)', async ({
+    request,
+  }) => {
     const res = await request.post('/api/helloasso/webhook', {
-      data: { foo: 'bar' },
+      data: VALID_PAYLOAD,
     });
-    expect(res.status()).toBe(400);
+    // 401 si le secret est configuré (token absent/incorrect),
+    // 503 si HELLOASSO_WEBHOOK_SECRET n'est pas configuré (fail-closed).
+    // Dans les deux cas : pas de 200 → pas d'event de paiement émis.
+    expect([401, 503]).toContain(res.status());
   });
 
-  test('POST avec payload valide renvoie 200', async ({ request }) => {
-    const res = await request.post('/api/helloasso/webhook', {
-      data: {
-        eventType: 'Payment',
-        data: {
-          id: 12345,
-          amount: 2500,
-          state: 'Authorized',
-          payer: {
-            firstName: 'Test',
-            lastName: 'Donor',
-            email: 'test@example.com',
-          },
-        },
-      },
-    });
-    expect(res.status()).toBe(200);
-    const body = await res.json();
-    expect(body.ok).toBe(true);
+  test('POST avec token bidon est rejeté', async ({ request }) => {
+    const res = await request.post(
+      '/api/helloasso/webhook?token=definitely-wrong-secret',
+      { data: VALID_PAYLOAD }
+    );
+    expect([401, 503]).toContain(res.status());
   });
 
   test('GET renvoie 405', async ({ request }) => {

@@ -9,7 +9,7 @@
 //  - pages/api/helloasso/webhook.ts
 //  - utils/helloasso.ts (token + checkout + memberships + payments + forms)
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const {
   sendPartnershipStaffEmail,
@@ -433,24 +433,64 @@ describe('/api/helloasso/checkout', () => {
  * ---------------------------------------------------------*/
 
 describe('/api/helloasso/webhook', () => {
+  const ORIG_SECRET = process.env.HELLOASSO_WEBHOOK_SECRET;
+
+  afterEach(() => {
+    if (ORIG_SECRET === undefined) {
+      delete process.env.HELLOASSO_WEBHOOK_SECRET;
+    } else {
+      process.env.HELLOASSO_WEBHOOK_SECRET = ORIG_SECRET;
+    }
+  });
+
   it('405 on GET', async () => {
     const res = makeRes();
     await webhookHandler(makeReq({ method: 'GET' }), res);
     expect(res.statusCode).toBe(405);
   });
 
-  it('400 on invalid payload', async () => {
+  it('503 fail-closed when secret not configured', async () => {
+    delete process.env.HELLOASSO_WEBHOOK_SECRET;
     const res = makeRes();
-    await webhookHandler(makeReq({ method: 'POST', body: {} }), res);
+    await webhookHandler(
+      makeReq({ method: 'POST', body: { eventType: 'Order', data: {} } }),
+      res
+    );
+    expect(res.statusCode).toBe(503);
+  });
+
+  it('401 when secret configured but token missing/wrong', async () => {
+    process.env.HELLOASSO_WEBHOOK_SECRET = 'right-secret';
+    const res = makeRes();
+    await webhookHandler(
+      makeReq({
+        method: 'POST',
+        query: { token: 'wrong-secret' },
+        body: { eventType: 'Order', data: {} },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('400 on invalid payload (with valid secret)', async () => {
+    process.env.HELLOASSO_WEBHOOK_SECRET = 'right-secret';
+    const res = makeRes();
+    await webhookHandler(
+      makeReq({ method: 'POST', query: { token: 'right-secret' }, body: {} }),
+      res
+    );
     expect(res.statusCode).toBe(400);
   });
 
-  it('200 on valid payload', async () => {
+  it('200 on valid payload with valid token (query param)', async () => {
+    process.env.HELLOASSO_WEBHOOK_SECRET = 'right-secret';
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     const res = makeRes();
     await webhookHandler(
       makeReq({
         method: 'POST',
+        query: { token: 'right-secret' },
         body: {
           eventType: 'Order',
           data: {
@@ -458,6 +498,29 @@ describe('/api/helloasso/webhook', () => {
             state: 'Authorized',
             payer: { email: 'p@x.com' },
           },
+        },
+      }),
+      res
+    );
+    consoleSpy.mockRestore();
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).ok).toBe(true);
+  });
+
+  it('200 on valid payload with valid secret via header', async () => {
+    process.env.HELLOASSO_WEBHOOK_SECRET = 'right-secret';
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const res = makeRes();
+    await webhookHandler(
+      makeReq({
+        method: 'POST',
+        headers: {
+          host: 'h',
+          'x-helloasso-signature': 'right-secret',
+        },
+        body: {
+          eventType: 'Order',
+          data: { amount: 100, state: 'Authorized' },
         },
       }),
       res
