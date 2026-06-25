@@ -7,6 +7,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
+import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
@@ -15,7 +16,15 @@ import { emitBotEvent } from '@/utils/botEvents';
 import { enrichMatchEvent } from '@/utils/matches/botEventEnrich';
 
 import { logger } from '../../../../utils/logger';
-export default withStaffRoute(handler, 'manager'); // rôle min : manager
+// Idempotency-Key (optionnel) : l'UI admin (ScoreEntryModal via
+// useIdempotentMutation) envoie une clé sur le PATCH de score. Un rejeu avec
+// la même clé rejoue la réponse cache (5 min) au lieu de re-propager le
+// bracket. Header absent → comportement normal (rétro-compatible). Les GET
+// sont ignorés par le wrapper (méthode sûre).
+export default withStaffRoute(
+  withAdminIdempotency(handler, { key: 'admin-match-update' }),
+  'manager'
+); // rôle min : manager
 
 async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   const { matchId } = req.query;

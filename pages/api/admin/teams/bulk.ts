@@ -10,6 +10,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
+import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { logStaffAction } from '@/utils/staffLogs';
 
 import { logger } from '../../../../utils/logger';
@@ -25,7 +26,14 @@ type ApiResponse =
   | { success: boolean; count: number; action: string }
   | { error: string };
 
-export default withStaffRoute(handler, 'manager');
+// Idempotency-Key (optionnel) : l'UI admin (bulk teams via
+// useIdempotentMutation) envoie une clé. Un rejeu avec la même clé rejoue la
+// réponse cache (5 min) au lieu de re-supprimer / re-modifier en masse.
+// Header absent → comportement normal (rétro-compatible).
+export default withStaffRoute(
+  withAdminIdempotency(handler, { key: 'admin-teams-bulk' }),
+  'manager'
+);
 
 async function handler(
   req: NextApiRequest,

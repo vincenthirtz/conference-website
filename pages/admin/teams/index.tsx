@@ -7,6 +7,10 @@ import { withStaffPage } from '@/utils/staff';
 import { supabaseAdmin } from '@/utils/supabase';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import {
+  useIdempotentMutation,
+  BgSyncQueuedError,
+} from '@/hooks/useIdempotentMutation';
 import EmptyState from '@/components/admin/EmptyState';
 import { SkeletonListRow } from '@/components/admin/Skeleton';
 import { useUrlFilters } from '@/utils/useUrlFilters';
@@ -51,6 +55,8 @@ function AdminTeamsListPage({
 }: AdminTeamsProps) {
   const { addToast } = useToast();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
+  const { mutateJson: mutateDelete } = useIdempotentMutation();
+  const { mutateJson: mutateBulk } = useIdempotentMutation();
   const router = useRouter();
   const { filters, setFilter, setFilters } = useUrlFilters(FILTER_KEYS);
 
@@ -136,17 +142,24 @@ function AdminTeamsListPage({
     setDeleting(true);
     setErrorMsg(null);
     try {
-      const res = await fetch(`/api/admin/teams/${team.id}`, {
-        method: 'DELETE',
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok || json.error) {
-        throw new Error(json.error || 'Échec de la suppression');
+      // Idempotency-Key : un re-clic après timeout ne relance pas la
+      // suppression (l'endpoint rejoue la 1ère réponse).
+      const json = await mutateDelete<{ error?: string }>(
+        `/api/admin/teams/${team.id}`,
+        { method: 'DELETE' }
+      );
+      if (json?.error) {
+        throw new Error(json.error);
       }
       setDeleteTarget(null);
       fetchTeams();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      const msg =
+        err instanceof BgSyncQueuedError
+          ? 'Hors-ligne : la suppression sera envoyée à la reconnexion.'
+          : ((err as Error)?.message ?? 'Erreur inattendue');
+      setErrorMsg(msg);
+      addToast(msg, err instanceof BgSyncQueuedError ? 'info' : 'error');
     } finally {
       setDeleting(false);
     }
@@ -211,18 +224,16 @@ function AdminTeamsListPage({
         body.tournamentId = assignTournamentId;
       }
 
-      const res = await fetch('/api/admin/teams/bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      // Idempotency-Key : un re-clic après timeout ne relance pas la
+      // suppression/désactivation en masse (l'endpoint rejoue la 1ère réponse).
+      const json = await mutateBulk<{ count: number }>(
+        '/api/admin/teams/bulk',
+        {
+          method: 'POST',
+          body: JSON.stringify(body),
+        }
+      );
 
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Erreur');
-      }
-
-      const json = await res.json();
       const labels: Record<string, string> = {
         delete: 'supprimee(s)',
         activate: 'activee(s)',
@@ -237,7 +248,12 @@ function AdminTeamsListPage({
       setBulkAction('');
       fetchTeams();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur');
+      const msg =
+        err instanceof BgSyncQueuedError
+          ? 'Hors-ligne : l’action groupée sera envoyée à la reconnexion.'
+          : ((err as Error)?.message ?? 'Erreur');
+      setErrorMsg(msg);
+      addToast(msg, err instanceof BgSyncQueuedError ? 'info' : 'error');
     } finally {
       setBulkProcessing(false);
     }

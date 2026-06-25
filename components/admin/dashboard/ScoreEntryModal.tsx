@@ -3,6 +3,11 @@
 // Appelle PATCH /api/admin/matches/[matchId] avec { team1Score, team2Score, status }.
 
 import { useState } from 'react';
+import {
+  useIdempotentMutation,
+  BgSyncQueuedError,
+} from '@/hooks/useIdempotentMutation';
+import { useToast } from '@/components/Toast';
 
 type Props = {
   open: boolean;
@@ -45,6 +50,8 @@ export default function ScoreEntryModal({
   const [markFinished, setMarkFinished] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { mutateJson } = useIdempotentMutation();
+  const { addToast } = useToast();
 
   if (!open) return null;
 
@@ -62,9 +69,10 @@ export default function ScoreEntryModal({
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/matches/${matchId}`, {
+      // mutateJson injecte l'Idempotency-Key : un retry réseau ne re-propage
+      // pas l'avancement du bracket (l'endpoint rejoue la 1ère réponse).
+      await mutateJson(`/api/admin/matches/${matchId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           team1Score: t1,
           team2Score: t2,
@@ -72,14 +80,15 @@ export default function ScoreEntryModal({
           propagate: true,
         }),
       });
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Échec de la saisie du score');
-      }
       onSuccess?.();
       onClose();
     } catch (e: unknown) {
-      setError((e as Error)?.message ?? 'Erreur inattendue');
+      const msg =
+        e instanceof BgSyncQueuedError
+          ? 'Hors-ligne : la saisie sera envoyée à la reconnexion.'
+          : ((e as Error)?.message ?? 'Erreur inattendue');
+      setError(msg);
+      addToast(msg, e instanceof BgSyncQueuedError ? 'info' : 'error');
     } finally {
       setSubmitting(false);
     }

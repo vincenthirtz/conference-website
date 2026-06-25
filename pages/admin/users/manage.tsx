@@ -1,9 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import { withStaffPage } from '@/utils/staff';
+import {
+  withStaffPage,
+  STAFF_ROLES,
+  STAFF_ROLE_RANK,
+  type StaffRole,
+} from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 
 import { logger } from '../../../utils/logger';
 type StaffShape = {
@@ -87,6 +93,35 @@ function formatDate(d: string | null) {
   }
 }
 
+/**
+ * Miroir EXACT des gardes de pages/api/admin/users/manage.ts (l.355-385).
+ *
+ * 1. targetIsProtected : un owner/admin ne peut être modifié que par un owner.
+ *    (Côté API la cible est protégée si son rôle user_metadata OU son rôle
+ *    staff vaut owner|admin ; côté client on ne dispose que d'un rôle combiné
+ *    `u.role`, on applique donc la même règle dessus.)
+ * 2. anti-escalade : un non-owner ne peut octroyer un rôle staff de rang >= au
+ *    sien. Les rôles non-staff (member, player, ...) passent toujours.
+ */
+function isTargetProtected(targetRole: string | null): boolean {
+  const r = targetRole?.toLowerCase();
+  return r === 'owner' || r === 'admin';
+}
+
+function canGrantRole(
+  requesterRole: string | null,
+  role: string
+): boolean {
+  if (requesterRole === 'owner') return true;
+  const isStaffRole = (STAFF_ROLES as readonly string[]).includes(role);
+  if (!isStaffRole) return true; // member/player : révocation toujours permise
+  const newRank = STAFF_ROLE_RANK[role as StaffRole];
+  const requesterRank = requesterRole
+    ? (STAFF_ROLE_RANK[requesterRole as StaffRole] ?? -1)
+    : -1;
+  return newRank < requesterRank;
+}
+
 export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState<UserLite[]>([]);
@@ -102,6 +137,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
   const [updating, setUpdating] = useState<string | null>(null);
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   // Battle tag edit modal
   const [editingBattleTag, setEditingBattleTag] = useState<{
@@ -163,6 +199,41 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
   }
 
   const changeRole = async (userId: string, role: string) => {
+    const targetUser = users.find((u) => u.id === userId);
+    const previousRole = targetUser?.role ?? null;
+    if (previousRole === role) return;
+
+    // Garde UI miroir de l'API : ne pas même tenter une action qui sera
+    // refusée 403 côté serveur (modifier un owner/admin, ou octroyer un rôle
+    // >= au sien sans être owner).
+    if (
+      isTargetProtected(previousRole) &&
+      staff.role !== 'owner'
+    ) {
+      addToast(
+        'Seul un owner peut modifier un compte owner ou admin.',
+        'error'
+      );
+      return;
+    }
+    if (!canGrantRole(staff.role, role)) {
+      addToast(
+        'Vous ne pouvez pas octroyer un rôle égal ou supérieur au vôtre.',
+        'error'
+      );
+      return;
+    }
+
+    const ok = await confirm({
+      title: `Changer le rôle vers « ${roleLabel(role)} » ?`,
+      subtitle:
+        `Cet utilisateur passera de « ${roleLabel(previousRole)} » à ` +
+        `« ${roleLabel(role)} ». Action à privilège.`,
+      variant: 'warning',
+      confirmLabel: 'Changer le rôle',
+    });
+    if (!ok) return;
+
     setUpdating(userId);
     try {
       await adminFetchJson('/api/admin/users/manage', {
@@ -175,8 +246,9 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       );
       addToast('Rôle mis à jour', 'success');
     } catch (err: unknown) {
-      alert(
-        (err as Error)?.message || 'Erreur lors de la mise à jour du rôle.'
+      addToast(
+        (err as Error)?.message || 'Erreur lors de la mise à jour du rôle.',
+        'error'
       );
     } finally {
       setUpdating(null);
@@ -278,12 +350,13 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
 
   const resendCredentials = async (user: UserLite) => {
     if (!user.email) return;
-    if (
-      !confirm(
-        `Réinitialiser le mot de passe et envoyer les identifiants à ${user.email} ?`
-      )
-    )
-      return;
+    const ok = await confirm({
+      title: 'Réinitialiser le mot de passe ?',
+      subtitle: `Un nouveau mot de passe sera généré et envoyé à ${user.email}.`,
+      variant: 'warning',
+      confirmLabel: 'Envoyer',
+    });
+    if (!ok) return;
 
     setResendingUser(user.id);
     try {
@@ -338,6 +411,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
 
   return (
     <>
+      {confirmDialog}
       <Head>
         <title>Admin – Gestion des inscrits</title>
       </Head>
@@ -587,18 +661,40 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
 
                     {/* Actions */}
                     <div className="flex-shrink-0 flex items-center gap-2">
-                      <select
-                        value={u.role || 'member'}
-                        onChange={(e) => changeRole(u.id, e.target.value)}
-                        disabled={updating === u.id}
-                        className="px-3 py-1.5 rounded-lg bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                      >
-                        {ROLES.map((r) => (
-                          <option key={r} value={r}>
-                            {roleLabel(r)}
-                          </option>
-                        ))}
-                      </select>
+                      {(() => {
+                        // Cible protégée (owner/admin) éditable par un owner
+                        // uniquement → on verrouille tout le select.
+                        const targetLocked =
+                          isTargetProtected(u.role) && staff.role !== 'owner';
+                        return (
+                          <select
+                            value={u.role || 'member'}
+                            onChange={(e) => changeRole(u.id, e.target.value)}
+                            disabled={updating === u.id || targetLocked}
+                            title={
+                              targetLocked
+                                ? 'Seul un owner peut modifier un compte owner ou admin.'
+                                : undefined
+                            }
+                            className="px-3 py-1.5 rounded-lg bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {ROLES.map((r) => {
+                              // Toujours afficher le rôle courant (sinon le
+                              // <select> contrôlé n'aurait aucune option
+                              // correspondant à sa value). Les autres options
+                              // non-octroyables sont désactivées.
+                              const grantable =
+                                r === (u.role || 'member') ||
+                                canGrantRole(staff.role, r);
+                              return (
+                                <option key={r} value={r} disabled={!grantable}>
+                                  {roleLabel(r)}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        );
+                      })()}
 
                       <button
                         type="button"
