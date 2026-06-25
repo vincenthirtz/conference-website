@@ -140,7 +140,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     logger.error('[upload] Supabase Storage error:', uploadError);
     return res.status(500).json({
       error: "Impossible d'uploader le fichier",
-      detail: uploadError.message,
     });
   }
 

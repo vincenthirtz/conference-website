@@ -964,9 +964,7 @@ export default async function handler(
       });
     }
     logger.error('[cron/web-push] unexpected error:', err);
-    return res
-      .status(500)
-      .json({ error: 'Internal server error', detail: String(err) });
+    return res.status(500).json({ error: 'Internal server error' });
   } finally {
     _dispatcherInFlight = false;
   }

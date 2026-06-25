@@ -133,7 +133,6 @@ export default withAuthRoute(async function handler(
     logger.error('[team-upload-image] storage error:', uploadError);
     return res.status(500).json({
       error: "Impossible d'uploader le fichier",
-      detail: uploadError.message,
     });
   }
 

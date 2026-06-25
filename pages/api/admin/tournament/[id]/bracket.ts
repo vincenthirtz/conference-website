@@ -180,8 +180,6 @@ async function handleGenerate(
     logger.error('bracket generate insert error:', insertError);
     return res.status(500).json({
       error: 'Failed to create bracket matches',
-      detail: insertError.message,
-      code: insertError.code,
     });
   }
 
@@ -259,7 +257,6 @@ async function handleGenerate(
         .eq('tenant_id', ctx.tenantId);
       return res.status(500).json({
         error: 'Failed to link bracket matches, all matches rolled back',
-        detail: linkErrors,
       });
     }
   }
@@ -651,7 +648,6 @@ async function handleGenerateDoubleElim(
     logger.error('double elim generate insert error:', insertError);
     return res.status(500).json({
       error: 'Failed to create double elimination matches',
-      detail: insertError.message,
     });
   }
 
@@ -880,7 +876,6 @@ async function handleGenerateDoubleElim(
     return res.status(500).json({
       error:
         'Failed to link double elimination bracket, all matches rolled back',
-      detail: linkErrors,
     });
   }
 
