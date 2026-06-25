@@ -7,8 +7,10 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
-import { supabaseAnonServer } from '@/utils/supabase';
+import { supabaseAnonServer, supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { alertIfBlacklisted } from '@/utils/moderation/blacklist';
 
 import { logger } from '../../../utils/logger';
 
@@ -62,6 +64,8 @@ export default async function handler(
 
   const { email, password, displayName, battleTag } = parsed.data;
 
+  const tenantId = resolveTenantIdForPublicRequest(req);
+
   const { error } = await supabaseAnonServer.auth.signUp({
     email: email.trim().toLowerCase(),
     password,
@@ -108,6 +112,14 @@ export default async function handler(
       code: 'SERVER',
     });
   }
+
+  // Blacklist : alerte (ne bloque pas) si le pseudo/battletag est banni. On le
+  // fait APRÈS un signUp sans erreur pour ne pas alerter sur un échec d'autre
+  // nature. Fire-and-forget : l'inscription répond OK quoi qu'il arrive.
+  void alertIfBlacklisted(supabaseAdmin, tenantId, 'register', {
+    battleTag,
+    displayName,
+  });
 
   // Supabase renvoie un succès neutre (sans erreur) même pour un email déjà
   // pris quand la confirmation email est active → on reste neutre nous aussi.

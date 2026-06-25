@@ -56,6 +56,7 @@
 --   - staff.role.changed
 --   - checkin.opened
 --   - registration.new
+--   - registration.blacklisted
 --   - helloasso.payment.received
 --   - captain.support.opened
 -- Pas de CHECK constraint sur event_type : la liste évolue souvent et un

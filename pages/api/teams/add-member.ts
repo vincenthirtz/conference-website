@@ -21,6 +21,7 @@ import {
 } from '@/utils/teams/addMember';
 import { withAuthRoute } from '@/utils/staff';
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { alertIfBlacklisted } from '@/utils/moderation/blacklist';
 
 import { logger } from '../../../utils/logger';
 type AddMemberResponse =
@@ -136,6 +137,12 @@ export default withAuthRoute(async function handler(
     }
     const member = { id: insertResult.memberId };
     const memberPayload = { role: validatedRole };
+
+    // Blacklist : alerte (ne bloque pas) si le membre ajouté est banni.
+    // Fire-and-forget, ne change pas la réponse.
+    void alertIfBlacklisted(supabaseAdmin, tenantId, 'add_member', {
+      battleTag: battleTagValue,
+    });
 
     // Send team join email. On attend le resultat pour pouvoir le surfacer
     // au client (warning si l'email a echoue) plutot que de l'enterrer en log.

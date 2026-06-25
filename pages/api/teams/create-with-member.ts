@@ -10,6 +10,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { sanitizeUrl, validateRole } from '@/utils/apiHelpers';
 import { emitBotEvent } from '@/utils/botEvents';
 import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { alertIfBlacklisted } from '@/utils/moderation/blacklist';
 
 import { logger } from '../../../utils/logger';
 type Body = {
@@ -556,6 +557,15 @@ export default async function handler(
     infoParts.push(
       "L'inscription au tournoi n'a pas pu être effectuée (nombre de joueurs insuffisant ou tournoi complet). Vous pourrez vous inscrire plus tard."
     );
+  }
+
+  // Blacklist : alerte (ne bloque pas) si un membre inséré est banni. On itère
+  // sur les battletags des membres effectivement insérés. Fire-and-forget.
+  for (const m of insertedMembers) {
+    if (!m.battle_tag) continue;
+    void alertIfBlacklisted(supabaseAdmin, tenantId, 'team_create', {
+      battleTag: m.battle_tag,
+    });
   }
 
   // Bot push : team.created -> le bot cree le salon vocal natif de l'equipe
