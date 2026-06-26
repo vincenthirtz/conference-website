@@ -93,9 +93,30 @@ export default async function handler(
     return res.status(500).json({ error: 'Échec de la génération du lien' });
   }
 
-  void sendPasswordResetEmail({ to: cleanEmail, actionLink }).catch((e) =>
-    logger.error('[api/auth/forgot-password] email send error:', e)
-  );
+  // On ATTEND l'envoi (plus de fire-and-forget) : si Brevo échoue (quota
+  // 300/j atteint, erreur API…), l'ancien code renvoyait quand même un faux
+  // « email envoyé ». On surface désormais l'échec pour que l'utilisateur
+  // puisse réessayer au lieu d'attendre un email qui n'arrivera jamais.
+  // Note anti-énumération : un compte inexistant repart en succès générique
+  // plus haut (404 → ok) SANS tentative d'envoi ; seul un compte existant dont
+  // l'envoi échoue voit ce 502 — compromis assumé (les échecs Brevo sont rares).
+  let sendResult;
+  try {
+    sendResult = await sendPasswordResetEmail({ to: cleanEmail, actionLink });
+  } catch (e) {
+    sendResult = { success: false, error: (e as Error)?.message };
+  }
+
+  if (!sendResult?.success) {
+    logger.error(
+      '[api/auth/forgot-password] email send failed:',
+      sendResult.error
+    );
+    return res.status(502).json({
+      error:
+        "L'email n'a pas pu être envoyé pour le moment. Réessayez dans quelques instants.",
+    });
+  }
 
   return res.status(200).json(ok);
 }

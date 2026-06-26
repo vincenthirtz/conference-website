@@ -2,7 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { StaffMember } from '../../types/staff';
 
 const { sendPasswordResetEmail } = vi.hoisted(() => ({
-  sendPasswordResetEmail: vi.fn(async () => undefined),
+  sendPasswordResetEmail: vi.fn(
+    async (): Promise<{ success: boolean; error?: string }> => ({
+      success: true,
+    })
+  ),
 }));
 vi.mock('@/utils/email', () => ({ sendPasswordResetEmail }));
 
@@ -199,6 +203,20 @@ describe('POST /api/auth/forgot-password', () => {
     expect(sendPasswordResetEmail).toHaveBeenCalledOnce();
     const args = (sendPasswordResetEmail.mock.calls[0] as any[])[0];
     expect(args.to).toBe('me@example.com');
+  });
+
+  it('returns 502 when the email provider fails (no false success)', async () => {
+    sendPasswordResetEmail.mockResolvedValueOnce({
+      success: false,
+      error: 'Brevo error',
+    });
+    const res = makeRes();
+    await forgotPasswordHandler(
+      makeReq({ method: 'POST', body: { email: 'me@example.com' } }),
+      res
+    );
+    expect(res.statusCode).toBe(502);
+    expect((res.body as any).error).toBeTruthy();
   });
 
   it('returns the same success when the user is unknown (no enumeration)', async () => {
