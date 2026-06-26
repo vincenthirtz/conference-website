@@ -12,56 +12,68 @@ export default function AdminResetPasswordPage() {
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
+  // sessionReady = l'init est terminée ; sessionValid = une session de
+  // récupération a réellement été établie. On ne montre le formulaire que si
+  // sessionValid, sinon le lien est expiré/déjà utilisé et `updateUser`
+  // échouerait silencieusement après saisie.
+  const [sessionValid, setSessionValid] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (!router.isReady) return;
 
     async function initSession() {
+      let established = false;
+      let msg: string | null = null;
+
       // 1) PKCE flow : Supabase envoie ?code=xxx dans la query string
       const code = router.query.code as string | undefined;
       if (code) {
-        const { error } =
+        const { data, error } =
           await supabaseClient.auth.exchangeCodeForSession(code);
         if (error) {
-          setErrorMsg(
-            error.message ||
-              'Impossible de restaurer la session de récupération.'
-          );
+          msg = error.message || 'Lien de récupération invalide ou déjà utilisé.';
+        } else {
+          established = !!data?.session;
         }
-        setSessionReady(true);
-        return;
-      }
-
-      // 2) Legacy implicit flow : tokens dans le hash fragment
-      if (typeof window !== 'undefined') {
-        const hash = window.location.hash.replace(/^#/, '');
-        const params = new URLSearchParams(hash);
+      } else if (typeof window !== 'undefined') {
+        // 2) Legacy implicit flow : tokens (ou erreur) dans le hash fragment
+        const params = new URLSearchParams(
+          window.location.hash.replace(/^#/, '')
+        );
+        const errDesc = params.get('error_description');
         const access_token = params.get('access_token');
         const refresh_token = params.get('refresh_token');
-        if (access_token && refresh_token) {
-          const { error } = await supabaseClient.auth.setSession({
+        if (errDesc) {
+          msg = decodeURIComponent(errDesc);
+        } else if (access_token && refresh_token) {
+          const { data, error } = await supabaseClient.auth.setSession({
             access_token,
             refresh_token,
           });
           if (error) {
-            setErrorMsg(
+            msg =
               error.message ||
-                'Impossible de restaurer la session de récupération.'
-            );
+              'Impossible de restaurer la session de récupération.';
+          } else {
+            established = !!data?.session;
           }
-          setSessionReady(true);
-          return;
         }
       }
 
       // 3) Fallback : session déjà active (cookie)
-      const { error, data } = await supabaseClient.auth.getSession();
-      if (error || !data.session) {
-        setErrorMsg(
-          "Lien invalide ou session absente. Rouvre le lien de réinitialisation depuis l'email."
-        );
+      if (!established) {
+        const { data } = await supabaseClient.auth.getSession();
+        if (data?.session) established = true;
       }
+
+      if (!established && !msg) {
+        msg =
+          'Lien invalide, expiré ou déjà utilisé. Redemande un nouveau lien de réinitialisation.';
+      }
+
+      if (msg) setErrorMsg(msg);
+      setSessionValid(established);
       setSessionReady(true);
     }
 
@@ -72,9 +84,9 @@ export default function AdminResetPasswordPage() {
     e.preventDefault();
     setErrorMsg(null);
 
-    if (!sessionReady) {
+    if (!sessionValid) {
       setErrorMsg(
-        'Session de récupération non prête, réessaie dans un instant.'
+        'Lien expiré ou déjà utilisé. Redemande un nouveau lien de réinitialisation.'
       );
       return;
     }
@@ -140,6 +152,23 @@ export default function AdminResetPasswordPage() {
               <p className="text-sm text-neutral-300">
                 Chargement de la session…
               </p>
+            ) : !sessionValid ? (
+              <div className="space-y-4">
+                <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-3 text-sm text-red-100">
+                  {errorMsg || 'Lien invalide, expiré ou déjà utilisé.'}
+                </div>
+                <p className="text-xs text-gray-400">
+                  Les liens de réinitialisation sont à usage unique : ne les
+                  ouvre qu&apos;une seule fois. Demande un nouveau lien
+                  ci-dessous.
+                </p>
+                <Link
+                  href="/admin/forgot-password"
+                  className="block w-full text-center rounded-xl py-2 text-sm font-semibold bg-purple-600 hover:bg-purple-500 transition"
+                >
+                  Redemander un lien
+                </Link>
+              </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
