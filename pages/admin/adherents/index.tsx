@@ -3,6 +3,8 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 import { logger } from '../../../utils/logger';
@@ -86,6 +88,8 @@ function AdminAdherentsPage({ staff }: Props) {
 
   const currentYear = new Date().getFullYear();
   const { adminFetch, adminFetchJson } = useAdminFetch();
+  const { addToast } = useToast();
+  const { confirm, dialog } = useConfirmDialog();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -153,7 +157,12 @@ function AdminAdherentsPage({ staff }: Props) {
   ]);
 
   const onDelete = async (id: string, name: string) => {
-    if (!confirm(`Supprimer l'adhérent "${name}" ?`)) return;
+    const ok = await confirm({
+      title: `Supprimer l'adhérent "${name}" ?`,
+      variant: 'danger',
+      confirmLabel: 'Supprimer',
+    });
+    if (!ok) return;
     try {
       const res = await adminFetch(`/api/admin/adherents/${id}`, {
         method: 'DELETE',
@@ -164,7 +173,7 @@ function AdminAdherentsPage({ staff }: Props) {
       }
       fetchData();
     } catch (err: unknown) {
-      alert((err as Error)?.message || 'Erreur de suppression.');
+      addToast((err as Error)?.message || 'Erreur de suppression.', 'error');
     }
   };
 
@@ -193,7 +202,7 @@ function AdminAdherentsPage({ staff }: Props) {
       }
       fetchData();
     } catch (err: unknown) {
-      alert((err as Error)?.message || 'Erreur de modification.');
+      addToast((err as Error)?.message || 'Erreur de modification.', 'error');
     }
   };
 
@@ -222,6 +231,7 @@ function AdminAdherentsPage({ staff }: Props) {
 
   return (
     <>
+      {dialog}
       <Head>
         <title>Admin - Adhérents</title>
       </Head>

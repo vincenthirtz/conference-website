@@ -6,6 +6,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import {
   TOURNAMENT_TEMPLATES,
   type TournamentTemplate,
@@ -48,6 +49,7 @@ export const getServerSideProps = withStaffPage('manager');
 function AdminTournamentTemplatesPage({ staff }: StaffProps) {
   const router = useRouter();
   const { addToast } = useToast();
+  const { confirm, dialog } = useConfirmDialog();
 
   const [customTemplates, setCustomTemplates] = useState<TournamentTemplate[]>(
     []
@@ -130,7 +132,12 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
   }
 
   async function handleDelete(templateId: string) {
-    if (!confirm('Supprimer ce template personnalise ?')) return;
+    const ok = await confirm({
+      title: 'Supprimer ce template personnalise ?',
+      variant: 'danger',
+      confirmLabel: 'Supprimer',
+    });
+    if (!ok) return;
 
     setDeletingId(templateId);
     setErrorMsg(null);
@@ -246,6 +253,7 @@ function AdminTournamentTemplatesPage({ staff }: StaffProps) {
 
   return (
     <>
+      {dialog}
       <Head>
         <title>Admin – Templates de tournoi</title>
       </Head>

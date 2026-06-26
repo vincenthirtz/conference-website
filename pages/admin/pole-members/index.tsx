@@ -3,6 +3,8 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import { withStaffPage } from '@/utils/staff';
+import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import {
   POLE_KEYS,
@@ -50,6 +52,8 @@ function AdminPoleMembersPage({ staff }: Props) {
   const [search, setSearch] = useState('');
   const [poleFilter, setPoleFilter] = useState<'all' | PoleKey>('all');
   const { adminFetch, adminFetchJson } = useAdminFetch();
+  const { addToast } = useToast();
+  const { confirm, dialog } = useConfirmDialog();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -70,7 +74,12 @@ function AdminPoleMembersPage({ staff }: Props) {
   }, [fetchData]);
 
   const onDelete = async (id: string) => {
-    if (!confirm('Supprimer ce membre du pôle ?')) return;
+    const ok = await confirm({
+      title: 'Supprimer ce membre du pôle ?',
+      variant: 'danger',
+      confirmLabel: 'Supprimer',
+    });
+    if (!ok) return;
     try {
       const res = await adminFetch(`/api/admin/pole-members/${id}`, {
         method: 'DELETE',
@@ -81,7 +90,7 @@ function AdminPoleMembersPage({ staff }: Props) {
       }
       fetchData();
     } catch (err: unknown) {
-      alert((err as Error)?.message || 'Erreur de suppression.');
+      addToast((err as Error)?.message || 'Erreur de suppression.', 'error');
     }
   };
 
@@ -97,7 +106,7 @@ function AdminPoleMembersPage({ staff }: Props) {
       }
       fetchData();
     } catch (err: unknown) {
-      alert((err as Error)?.message || 'Erreur de modification.');
+      addToast((err as Error)?.message || 'Erreur de modification.', 'error');
     }
   };
 
@@ -121,6 +130,7 @@ function AdminPoleMembersPage({ staff }: Props) {
 
   return (
     <>
+      {dialog}
       <Head>
         <title>Admin – Pôles de l&apos;asso</title>
       </Head>

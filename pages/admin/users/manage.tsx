@@ -372,17 +372,12 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       );
 
       if (json.warning) {
-        alert(json.warning);
+        addToast(json.warning, 'warning');
+      } else {
+        addToast(`Identifiants envoyés à ${user.email}`, 'success');
       }
-
-      addToast(
-        json.warning
-          ? `⚠ ${json.warning}`
-          : `Identifiants envoyés à ${user.email}`,
-        'success'
-      );
     } catch (err: unknown) {
-      alert((err as Error)?.message || "Erreur lors de l'envoi.");
+      addToast((err as Error)?.message || "Erreur lors de l'envoi.", 'error');
     } finally {
       setResendingUser(null);
     }
@@ -403,7 +398,10 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       setDeletingUser(null);
       addToast('Utilisateur supprimé', 'success');
     } catch (err: unknown) {
-      alert((err as Error)?.message || 'Erreur lors de la suppression.');
+      addToast(
+        (err as Error)?.message || 'Erreur lors de la suppression.',
+        'error'
+      );
     } finally {
       setDeleteLoading(false);
     }

@@ -122,7 +122,7 @@ function AdminSiteSettingsPage({ staff }: Props) {
       addToast('Paramètre sauvegardé avec succès', 'success');
       fetchData();
     } catch (err: unknown) {
-      alert((err as Error)?.message || 'Erreur de sauvegarde.');
+      addToast((err as Error)?.message || 'Erreur de sauvegarde.', 'error');
     } finally {
       setSaving(null);
     }

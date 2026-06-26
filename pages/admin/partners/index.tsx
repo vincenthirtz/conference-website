@@ -3,6 +3,8 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
 import { useUrlFilters } from '@/utils/useUrlFilters';
+import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 type PartnerRow = {
@@ -50,6 +52,8 @@ const categoryColors: Record<string, string> = {
 
 function AdminPartnersPage(_props: Props) {
   const { adminFetchJson } = useAdminFetch();
+  const { addToast } = useToast();
+  const { confirm, dialog } = useConfirmDialog();
   const { filters, setFilters } = useUrlFilters(P_FILTER_KEYS);
 
   const categoryFilter = filters.category ?? '';
@@ -118,12 +122,17 @@ function AdminPartnersPage(_props: Props) {
   }, [fetchPartners]);
 
   const onDelete = async (id: string) => {
-    if (!confirm('Supprimer ce partenaire ?')) return;
+    const ok = await confirm({
+      title: 'Supprimer ce partenaire ?',
+      variant: 'danger',
+      confirmLabel: 'Supprimer',
+    });
+    if (!ok) return;
     try {
       await adminFetchJson(`/api/admin/partners/${id}`, { method: 'DELETE' });
       fetchPartners();
     } catch (err: unknown) {
-      alert((err as Error)?.message || 'Erreur de suppression.');
+      addToast((err as Error)?.message || 'Erreur de suppression.', 'error');
     }
   };
 
@@ -135,7 +144,7 @@ function AdminPartnersPage(_props: Props) {
       });
       fetchPartners();
     } catch (err: unknown) {
-      alert((err as Error)?.message || 'Erreur de modification.');
+      addToast((err as Error)?.message || 'Erreur de modification.', 'error');
     }
   };
 
@@ -144,6 +153,7 @@ function AdminPartnersPage(_props: Props) {
 
   return (
     <>
+      {dialog}
       <Head>
         <title>Admin - Partenaires</title>
       </Head>

@@ -3,6 +3,8 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import { withStaffPage } from '@/utils/staff';
+import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 import { logger } from '../../../utils/logger';
@@ -43,6 +45,8 @@ function statusColor(isActive: boolean) {
 
 function AdminTwitchChannelsPage({ staff }: Props) {
   const { adminFetch, adminFetchJson } = useAdminFetch();
+  const { addToast } = useToast();
+  const { confirm, dialog } = useConfirmDialog();
   const [loading, setLoading] = useState(false);
   const [channels, setChannels] = useState<TwitchChannelRow[]>([]);
   const [search, setSearch] = useState('');
@@ -70,14 +74,19 @@ function AdminTwitchChannelsPage({ staff }: Props) {
   }, [fetchData]);
 
   const onDelete = async (id: string) => {
-    if (!confirm('Supprimer cette chaîne ?')) return;
+    const ok = await confirm({
+      title: 'Supprimer cette chaîne ?',
+      variant: 'danger',
+      confirmLabel: 'Supprimer',
+    });
+    if (!ok) return;
     try {
       await adminFetchJson(`/api/admin/twitch-channels/${id}`, {
         method: 'DELETE',
       });
       fetchData();
     } catch (err: unknown) {
-      alert((err as Error)?.message || 'Erreur de suppression.');
+      addToast((err as Error)?.message || 'Erreur de suppression.', 'error');
     }
   };
 
@@ -89,7 +98,7 @@ function AdminTwitchChannelsPage({ staff }: Props) {
       });
       fetchData();
     } catch (err: unknown) {
-      alert((err as Error)?.message || 'Erreur de modification.');
+      addToast((err as Error)?.message || 'Erreur de modification.', 'error');
     }
   };
 
@@ -126,13 +135,13 @@ function AdminTwitchChannelsPage({ staff }: Props) {
         );
       } catch (err: unknown) {
         logger.error('Reorder error', err);
-        alert('Erreur lors de la sauvegarde de l\u2019ordre.');
+        addToast('Erreur lors de la sauvegarde de l\u2019ordre.', 'error');
         fetchData();
       } finally {
         setSaving(false);
       }
     },
-    [channels, fetchData, adminFetch]
+    [channels, fetchData, adminFetch, addToast]
   );
 
   const filteredChannels = channels.filter(
@@ -144,6 +153,7 @@ function AdminTwitchChannelsPage({ staff }: Props) {
 
   return (
     <>
+      {dialog}
       <Head>
         <title>Admin – Chaînes Twitch</title>
       </Head>

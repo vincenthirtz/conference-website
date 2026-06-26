@@ -5,6 +5,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 type StaffShape = {
@@ -112,6 +113,7 @@ function formatDate(iso: string | null) {
 function AdminRecycleBinPage({ staff }: StaffProps) {
   const router = useRouter();
   const { addToast } = useToast();
+  const { confirm, dialog } = useConfirmDialog();
   const { adminFetchJson } = useAdminFetch();
 
   const [loading, setLoading] = useState(true);
@@ -151,13 +153,12 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
   }, [fetchItems]);
 
   async function handleRestore(item: DeletedItem) {
-    if (
-      !confirm(
-        `Restaurer ${typeLabel(item.type).toLowerCase()} "${item.name}" ?`
-      )
-    ) {
-      return;
-    }
+    const ok = await confirm({
+      title: `Restaurer ${typeLabel(item.type).toLowerCase()} "${item.name}" ?`,
+      variant: 'info',
+      confirmLabel: 'Restaurer',
+    });
+    if (!ok) return;
 
     setRestoringId(item.id);
     setErrorMsg(null);
@@ -182,6 +183,7 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
 
   return (
     <>
+      {dialog}
       <Head>
         <title>Admin – Corbeille</title>
       </Head>

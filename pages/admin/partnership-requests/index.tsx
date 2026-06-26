@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
+import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 import { logger } from '../../../utils/logger';
@@ -72,6 +74,8 @@ function formatDate(d: string | null) {
 
 function AdminPartnershipRequestsPage({ staff }: Props) {
   const { adminFetchJson } = useAdminFetch();
+  const { addToast } = useToast();
+  const { confirm, dialog } = useConfirmDialog();
   const [loading, setLoading] = useState(false);
   const [requests, setRequests] = useState<RequestRow[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
@@ -126,14 +130,19 @@ function AdminPartnershipRequestsPage({ staff }: Props) {
   }, [fetchData]);
 
   const onDelete = async (id: string) => {
-    if (!confirm('Supprimer cette demande ?')) return;
+    const ok = await confirm({
+      title: 'Supprimer cette demande ?',
+      variant: 'danger',
+      confirmLabel: 'Supprimer',
+    });
+    if (!ok) return;
     try {
       await adminFetchJson(`/api/admin/partnership-requests/${id}`, {
         method: 'DELETE',
       });
       fetchData();
     } catch (err: unknown) {
-      alert((err as Error)?.message || 'Erreur de suppression.');
+      addToast((err as Error)?.message || 'Erreur de suppression.', 'error');
     }
   };
 
@@ -141,6 +150,7 @@ function AdminPartnershipRequestsPage({ staff }: Props) {
 
   return (
     <>
+      {dialog}
       <Head>
         <title>Admin - Demandes de partenariat</title>
       </Head>

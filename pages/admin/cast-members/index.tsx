@@ -3,6 +3,8 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import { withStaffPage } from '@/utils/staff';
+import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 
 import { logger } from '../../../utils/logger';
@@ -58,6 +60,8 @@ function AdminCastMembersPage({ staff }: Props) {
   const [overIdx, setOverIdx] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const { adminFetch, adminFetchJson } = useAdminFetch();
+  const { addToast } = useToast();
+  const { confirm, dialog } = useConfirmDialog();
 
   // Le drag-reorder n'a de sens que sur la liste complète, triée par
   // sort_order ASC, page 0. On le désactive dès qu'un filtre/recherche
@@ -116,7 +120,12 @@ function AdminCastMembersPage({ staff }: Props) {
   }, [fetchData]);
 
   const onDelete = async (id: string) => {
-    if (!confirm('Supprimer cette casteuse ?')) return;
+    const ok = await confirm({
+      title: 'Supprimer cette casteuse ?',
+      variant: 'danger',
+      confirmLabel: 'Supprimer',
+    });
+    if (!ok) return;
     try {
       const res = await adminFetch(`/api/admin/cast-members/${id}`, {
         method: 'DELETE',
@@ -127,7 +136,7 @@ function AdminCastMembersPage({ staff }: Props) {
       }
       fetchData();
     } catch (err: unknown) {
-      alert((err as Error)?.message || 'Erreur de suppression.');
+      addToast((err as Error)?.message || 'Erreur de suppression.', 'error');
     }
   };
 
@@ -143,7 +152,7 @@ function AdminCastMembersPage({ staff }: Props) {
       }
       fetchData();
     } catch (err: unknown) {
-      alert((err as Error)?.message || 'Erreur de modification.');
+      addToast((err as Error)?.message || 'Erreur de modification.', 'error');
     }
   };
 
@@ -181,17 +190,18 @@ function AdminCastMembersPage({ staff }: Props) {
         );
       } catch (err: unknown) {
         logger.error('Reorder error', err);
-        alert('Erreur lors de la sauvegarde de l\u2019ordre.');
+        addToast('Erreur lors de la sauvegarde de l\u2019ordre.', 'error');
         fetchData();
       } finally {
         setSaving(false);
       }
     },
-    [members, fetchData, adminFetch]
+    [members, fetchData, adminFetch, addToast]
   );
 
   return (
     <>
+      {dialog}
       <Head>
         <title>Admin – Casteuses</title>
       </Head>
