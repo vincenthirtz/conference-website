@@ -26,9 +26,24 @@ export default function AdminResetPasswordPage() {
       let established = false;
       let msg: string | null = null;
 
-      // 1) PKCE flow : Supabase envoie ?code=xxx dans la query string
+      // 0) token_hash flow (recommandé pour les emails custom) : le lien pointe
+      // directement ici avec ?token_hash=…&type=recovery, et verifyOtp établit
+      // la session SANS dépendre d'un code_verifier PKCE — lequel est absent du
+      // navigateur quand le lien est généré côté serveur (admin.generateLink).
+      const tokenHash = router.query.token_hash as string | undefined;
       const code = router.query.code as string | undefined;
-      if (code) {
+      if (tokenHash) {
+        const { data, error } = await supabaseClient.auth.verifyOtp({
+          type: 'recovery',
+          token_hash: tokenHash,
+        });
+        if (error) {
+          msg = error.message || 'Lien invalide, expiré ou déjà utilisé.';
+        } else {
+          established = !!data?.session;
+        }
+      } else if (code) {
+        // 1) PKCE flow : Supabase envoie ?code=xxx (fallback legacy)
         const { data, error } =
           await supabaseClient.auth.exchangeCodeForSession(code);
         if (error) {
@@ -78,7 +93,7 @@ export default function AdminResetPasswordPage() {
     }
 
     initSession();
-  }, [router.isReady, router.query.code]);
+  }, [router.isReady, router.query.token_hash, router.query.code]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

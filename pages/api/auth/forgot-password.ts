@@ -85,13 +85,22 @@ export default async function handler(
     return res.status(500).json({ error: 'Échec de la génération du lien' });
   }
 
-  const actionLink = data?.properties?.action_link;
-  if (!actionLink) {
+  // On envoie un lien `token_hash` qui pointe DIRECTEMENT vers notre page de
+  // reset, et non l'`action_link` (/auth/v1/verify, à usage unique) qui, en flux
+  // PKCE, renvoie un ?code que le navigateur ne peut PAS échanger (le
+  // code_verifier n'existe pas côté client : le lien est généré côté serveur).
+  // Avec token_hash + verifyOtp côté page, aucune dépendance au code_verifier.
+  // Cf. https://supabase.com/docs/guides/auth/auth-email-templates
+  const tokenHash = data?.properties?.hashed_token;
+  if (!tokenHash) {
     logger.error(
-      '[api/auth/forgot-password] generateLink returned no action_link'
+      '[api/auth/forgot-password] generateLink returned no hashed_token'
     );
     return res.status(500).json({ error: 'Échec de la génération du lien' });
   }
+  const actionLink = `${redirectTo}?token_hash=${encodeURIComponent(
+    tokenHash
+  )}&type=recovery`;
 
   // On ATTEND l'envoi (plus de fire-and-forget) : si Brevo échoue (quota
   // 300/j atteint, erreur API…), l'ancien code renvoyait quand même un faux
