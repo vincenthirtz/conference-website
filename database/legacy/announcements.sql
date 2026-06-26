@@ -1,3 +1,8 @@
+-- ARCHIVÉ le 2026-06-26 : versionné dans migrations/create_announcements_table.sql
+--   (DDL repris à l'identique). RLS / tenant_id / deleted_at portés par leurs
+--   migrations dédiées. Conservé pour historique — NE PAS exécuter, NE PAS appliquer.
+-- =====================================================================
+
 -- Table: public.announcements
 -- Bandeau d'annonces publicitaires / messages sponsorisés affichés sur la home.
 

@@ -1,3 +1,8 @@
+-- ARCHIVÉ le 2026-06-26 : DATA FIX one-shot (UPDATE de lignes news existantes),
+--   commenté/manuel (preview SELECT + UPDATE à décommenter). Aucun schéma, aucune
+--   reproductibilité attendue. NE PAS versionner. Conservé pour historique uniquement.
+-- =====================================================================
+
 -- Fix existing team join news: add player name in title/excerpt/content + team logo as image
 -- Preview first (SELECT), then run the UPDATE
 

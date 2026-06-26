@@ -1,3 +1,9 @@
+-- ARCHIVÉ le 2026-06-26 : SEED de configuration one-shot (UPSERT d'une ligne
+--   site_settings 'homepage_event_date' avec une date d'événement spécifique). C'est
+--   de la DONNÉE de prod réglée à la main, pas du schéma -> non versionné en migration.
+--   À ré-appliquer manuellement si la date d'événement change. Conservé pour historique.
+-- =====================================================================
+
 -- Set homepage_event_date used by the home countdown.
 -- Stores an ISO 8601 timestamp with timezone offset so that JS Date parses
 -- it consistently (no UTC fallback). For Paris in summer (CEST) use +02:00,

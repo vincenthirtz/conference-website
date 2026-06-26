@@ -1,3 +1,10 @@
+-- ARCHIVÉ le 2026-06-26 : consolidé dans migrations/create_demandes_table.sql
+--   (FK nommées demandes_user_id_fkey / demandes_team_id_fkey /
+--   demandes_tournament_id_fkey intégrées au CREATE TABLE). Ce script faisait un
+--   DROP COLUMN + re-ADD destructif conditionnel : NE PAS rejouer en prod.
+--   Conservé pour historique — NE PAS exécuter, NE PAS appliquer.
+-- =====================================================================
+
 -- database/demandes_fix_foreign_keys.sql
 -- Fix foreign key relationships for PostgREST compatibility
 -- Run this in Supabase SQL Editor

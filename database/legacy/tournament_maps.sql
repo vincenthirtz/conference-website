@@ -1,3 +1,9 @@
+-- ARCHIVÉ le 2026-06-26 : le CREATE TABLE tournament_maps a été versionné dans
+--   migrations/create_tournament_maps_table.sql (DDL + index repris à l'identique).
+--   Le SEED de map-pool VOD du tournoi 734b6fdb… contenu ici est de la DONNÉE one-shot
+--   et n'est PAS repris en migration. Conservé pour historique uniquement.
+-- =====================================================================
+
 -- Table: public.tournament_maps
 -- Schema inferred from pages/api/tournament/[id]/maps.ts
 

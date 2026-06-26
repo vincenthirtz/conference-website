@@ -1,3 +1,9 @@
+-- ARCHIVÉ le 2026-06-26 : versionné dans migrations/create_demandes_table.sql
+--   (table + colonnes + index + trigger + RLS/policies consolidés). Les noms de FK
+--   explicites venaient de demandes_fix_foreign_keys.sql, eux aussi consolidés dans
+--   la migration. Conservé pour historique — NE PAS exécuter, NE PAS appliquer.
+-- =====================================================================
+
 -- database/demandes.sql
 -- Migration pour ajouter les colonnes manquantes à la table demandes
 -- Exécuter ce script dans le SQL Editor de Supabase

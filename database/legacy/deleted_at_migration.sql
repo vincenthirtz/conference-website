@@ -1,3 +1,10 @@
+-- ARCHIVÉ le 2026-06-26 : versionné dans
+--   migrations/add_deleted_at_soft_delete_columns.sql (colonnes + backfill + index
+--   repris à l'identique). NB : la mutation finale du CHECK demandes_type_check de ce
+--   fichier a été VOLONTAIREMENT exclue de la migration (déjà gérée + étendue par la
+--   chaîne add_*_type_to_demandes). Conservé pour historique — NE PAS exécuter.
+-- =====================================================================
+
 -- database/deleted_at_migration.sql
 -- Harmonise le pattern de soft-delete : ajoute deleted_at TIMESTAMPTZ à toutes les
 -- tables qui utilisent is_active ou status='cancelled' pour le soft-delete.

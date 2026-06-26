@@ -1,3 +1,11 @@
+-- ARCHIVÉ le 2026-06-26 : SUPERSÉDÉ / OBSOLÈTE.
+--   Ce script imposait team_members.battle_tag NOT NULL ; la colonne a depuis été
+--   rendue NULLABLE par migrations/relax_team_members_battle_tag_nullable.sql (Lot 6).
+--   Rejouer ce fichier RÉGRESSERAIT l'état prod (réimpose NOT NULL + DEFAULT + CHECK +
+--   UPDATE des lignes). NE PAS exécuter. La contrainte de format et la colonne
+--   existent déjà en prod ; rien à versionner. Conservé pour historique uniquement.
+-- =====================================================================
+
 -- Ajout du BattleTag obligatoire sur les membres d'équipe
 ALTER TABLE public.team_members
 ADD COLUMN IF NOT EXISTS battle_tag text NOT NULL DEFAULT 'Unknown#0000';

@@ -1,3 +1,9 @@
+-- ARCHIVÉ le 2026-06-26 : SUPERSÉDÉ par
+--   migrations/replace_team_stats_view_matview_with_view.sql. Cette MATERIALIZED VIEW
+--   souffrait d'un bug de fraîcheur (jamais REFRESH) et a été remplacée par une VIEW
+--   non-matérialisée. NE PAS recréer la matview. Conservé pour historique uniquement.
+-- =====================================================================
+
 -- Vue matérialisée pour les stats équipes.
 -- Source : tables matches / games / teams / tournaments.
 -- À exécuter sur Supabase puis REFRESH MATERIALIZED VIEW team_stats_view;

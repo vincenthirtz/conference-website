@@ -1,3 +1,8 @@
+-- ARCHIVÉ le 2026-06-26 : versionné dans migrations/create_news_comments_table.sql
+--   (DDL repris à l'identique). RLS porté par migrations/enable_rls_news_tables.sql.
+--   Conservé pour historique uniquement — NE PAS exécuter, NE PAS appliquer.
+-- =====================================================================
+
 -- Table: news_comments
 CREATE TABLE IF NOT EXISTS public.news_comments (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

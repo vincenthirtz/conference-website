@@ -1,3 +1,9 @@
+-- ARCHIVÉ le 2026-06-26 : DATA FIX one-shot (backfill winner_team_id des matches
+--   terminés à partir des scores). Effet ponctuel, déjà appliqué en prod. Idempotent
+--   par nature (ne touche que winner_team_id IS NULL) mais sans valeur de schéma.
+--   NON versionné. Conservé pour historique uniquement.
+-- =====================================================================
+
 -- ============================================================
 -- Script: Mise à jour de winner_team_id pour les matchs terminés
 -- Description: Remplit winner_team_id basé sur les scores pour

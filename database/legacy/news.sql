@@ -1,3 +1,8 @@
+-- ARCHIVÉ le 2026-06-26 : versionné dans migrations/create_news_table.sql
+--   (DDL repris à l'identique). RLS porté par migrations/enable_rls_news_tables.sql.
+--   Conservé pour historique uniquement — NE PAS exécuter, NE PAS appliquer.
+-- =====================================================================
+
 -- Table: public.news
 -- News posts managed by admin staff only.
 

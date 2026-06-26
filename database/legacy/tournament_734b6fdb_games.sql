@@ -1,3 +1,8 @@
+-- ARCHIVÉ le 2026-06-26 : SEED de données one-shot (matches + games + scores du
+--   tournoi 734b6fdb…, IDs forcés). Donnée spécifique, pas du schéma -> non versionné.
+--   Conservé pour historique uniquement.
+-- =====================================================================
+
 -- Seed matches & maps for tournament 734b6fdb-dfe8-4565-a6b3-38c6423d0929
 -- Scores pulled from the /tournoi page (round robin BO3 + final BO5).
 -- Assumes the teams "Phénix", "Avoidgers", "Onna Bugeisha" and "Sparkles" already exist in public.teams.

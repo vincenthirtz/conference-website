@@ -1,3 +1,8 @@
+-- ARCHIVÉ le 2026-06-26 : versionné dans
+--   migrations/add_last_post_tracking_to_discord_webhooks.sql (patch additif repris
+--   à l'identique). Conservé pour historique — NE PAS exécuter, NE PAS appliquer.
+-- =====================================================================
+
 -- database/discord_webhook_last_post.sql
 -- Migration optionnelle pour activer le widget "Discord webhook health" du dashboard.
 -- Sans cette migration, le dashboard affiche uniquement le statut de configuration

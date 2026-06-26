@@ -1,3 +1,8 @@
+-- ARCHIVÉ le 2026-06-26 : SEED de données one-shot (calendrier 56 matches du
+--   tournoi e8fa740c…). Donnée spécifique, pas du schéma -> non versionné en migration.
+--   Conservé pour historique uniquement.
+-- =====================================================================
+
 -- Seed schedule for women's tournament e8fa740c-d92b-49d8-a654-05a37d0eea3b
 -- 56 matches across 14 rounds (J), 8 participants playing a double round-robin.
 -- Teams are not yet assigned (team1_id/team2_id NULL); the seeded participant slots
