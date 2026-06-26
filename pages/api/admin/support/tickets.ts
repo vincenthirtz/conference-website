@@ -1,12 +1,15 @@
 // pages/api/admin/support/tickets.ts
 // Admin: list support tickets with filters.
-// GET: ?status=&severity=&category=&tournament_id=&offset=&limit=
+// GET: ?status=&severity=&category=&tournament_id=&search=&offset=&limit=
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
+import { escapePostgrestValue } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../utils/logger';
+
+const SEARCH_MAX_LENGTH = 100;
 const VALID_STATUSES = ['open', 'in_progress', 'resolved', 'closed'] as const;
 const VALID_SEVERITIES = ['low', 'medium', 'high'] as const;
 const VALID_CATEGORIES = ['dispute', 'behavior', 'technical', 'other'] as const;
@@ -56,6 +59,26 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
   if (typeof tournament_id === 'string' && tournament_id) {
     q = q.eq('tournament_id', tournament_id);
+  }
+
+  // Free-text search (admin UI ?search=). Applies on top of the other
+  // filters: matches when subject OR message OR reporter_name contains the
+  // substring (case-insensitive). PostgREST-sensitive characters (, . * ( ) \)
+  // are stripped via escapePostgrestValue so user input can't alter the .or()
+  // structure; the surrounding %…% keeps it a substring match.
+  const rawSearch = req.query.search;
+  const search =
+    typeof rawSearch === 'string'
+      ? rawSearch.trim().slice(0, SEARCH_MAX_LENGTH)
+      : '';
+  if (search) {
+    const safe = escapePostgrestValue(search);
+    if (safe) {
+      const pattern = `%${safe}%`;
+      q = q.or(
+        `subject.ilike.${pattern},message.ilike.${pattern},reporter_name.ilike.${pattern}`
+      );
+    }
   }
 
   const { data, error, count } = await q;

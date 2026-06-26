@@ -447,4 +447,136 @@ describe('GET /api/admin/support/tickets', () => {
     );
     expect((res.body as any).tickets.map((t: any) => t.id)).toEqual(['t2']);
   });
+
+  // NOTE: the in-memory supabase mock treats `.or()` as a no-op (see
+  // __helpers__/supabaseMock.ts), so these tests cannot truly exercise the
+  // subject/message/reporter_name OR substring matching. They instead assert
+  // that the `search` param is accepted, keeps the response contract intact,
+  // composes with the other filters/pagination, and never throws on inputs
+  // containing PostgREST-sensitive characters. The actual OR matching is
+  // covered by e2e against a real PostgREST.
+  it('accepts ?search= without breaking the response contract', async () => {
+    store.support_tickets = [
+      {
+        id: 't1',
+        status: 'open',
+        severity: 'high',
+        category: 'dispute',
+        subject: 'Joueur absent',
+        message: 'Le joueur ne se présente pas',
+        reporter_name: 'Alice',
+        created_at: '2026-04-01',
+      },
+      {
+        id: 't2',
+        status: 'open',
+        severity: 'low',
+        category: 'other',
+        subject: 'Question',
+        message: 'Comment ça marche',
+        reporter_name: 'Bob',
+        created_at: '2026-04-02',
+      },
+    ] as any;
+    const res = makeRes();
+    await supportTicketsHandler(
+      makeReq({ query: { search: 'joueur' } }, true),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const body = res.body as any;
+    // Same response shape as without search.
+    expect(Array.isArray(body.tickets)).toBe(true);
+    expect(body).toHaveProperty('total');
+    expect(body).toHaveProperty('limit');
+    expect(body).toHaveProperty('offset');
+    expect(body.tickets[0]).toHaveProperty('subject');
+    expect(body.tickets[0]).toHaveProperty('reporter_name');
+  });
+
+  it('composes ?search= with status filter and pagination', async () => {
+    store.support_tickets = [
+      {
+        id: 't1',
+        status: 'open',
+        severity: 'high',
+        category: 'dispute',
+        subject: 'Litige map',
+        message: 'msg',
+        reporter_name: 'Alice',
+        created_at: '2026-04-01',
+      },
+      {
+        id: 't2',
+        status: 'closed',
+        severity: 'low',
+        category: 'other',
+        subject: 'Autre',
+        message: 'msg',
+        reporter_name: 'Bob',
+        created_at: '2026-04-02',
+      },
+    ] as any;
+    const res = makeRes();
+    // .eq('status') IS honored by the mock, .or() is not — so we can still
+    // assert the search param does not disturb the status filter / paging.
+    await supportTicketsHandler(
+      makeReq(
+        { query: { search: 'litige', status: 'open', limit: '10', offset: '0' } },
+        true
+      ),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const body = res.body as any;
+    expect(body.tickets.map((t: any) => t.id)).toEqual(['t1']);
+    expect(body.limit).toBe(10);
+    expect(body.offset).toBe(0);
+  });
+
+  it('does not throw on PostgREST-sensitive characters in ?search=', async () => {
+    store.support_tickets = [
+      {
+        id: 't1',
+        status: 'open',
+        severity: 'medium',
+        category: 'other',
+        subject: 'x',
+        message: 'y',
+        reporter_name: 'z',
+        created_at: '2026',
+      },
+    ] as any;
+    const res = makeRes();
+    await supportTicketsHandler(
+      makeReq({ query: { search: 'a,b.c*(d)\\e' } }, true),
+      res
+    );
+    // Sensitive chars are stripped by escapePostgrestValue; request still 200s.
+    expect(res.statusCode).toBe(200);
+    expect(Array.isArray((res.body as any).tickets)).toBe(true);
+  });
+
+  it('ignores a whitespace-only ?search=', async () => {
+    store.support_tickets = [
+      {
+        id: 't1',
+        status: 'open',
+        severity: 'medium',
+        category: 'other',
+        subject: 's',
+        message: 'm',
+        reporter_name: 'r',
+        created_at: '2026',
+      },
+    ] as any;
+    const res = makeRes();
+    await supportTicketsHandler(
+      makeReq({ query: { search: '   ' } }, true),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    // Behaves like no search at all → all tickets returned.
+    expect((res.body as any).tickets).toHaveLength(1);
+  });
 });

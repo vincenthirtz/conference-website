@@ -5,6 +5,8 @@ import { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
+import LoadingSpinner from '@/components/admin/LoadingSpinner';
+import EmptyState from '@/components/admin/EmptyState';
 import type { StaffProps } from '@/types/admin';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 
@@ -33,7 +35,9 @@ type Ticket = {
   updated_at: string;
 };
 
-const FILTER_KEYS = ['status', 'severity', 'category'] as const;
+const FILTER_KEYS = ['status', 'severity', 'category', 'search'] as const;
+
+const PAGE_SIZE = 50;
 
 const CATEGORY_LABEL: Record<Category, string> = {
   dispute: '⚖️ Litige',
@@ -94,6 +98,8 @@ function AdminSupportPage(_: StaffProps) {
   const { filters, setFilters } = useUrlFilters(FILTER_KEYS);
 
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [total, setTotal] = useState<number | null>(null);
+  const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [selected, setSelected] = useState<Ticket | null>(null);
@@ -106,6 +112,30 @@ function AdminSupportPage(_: StaffProps) {
   const status = filters.status ?? '';
   const severity = filters.severity ?? '';
   const category = filters.category ?? '';
+  const search = filters.search ?? '';
+
+  // Champ de recherche local (debounce → query param `search`).
+  const [searchInput, setSearchInput] = useState(search);
+
+  // Garde le champ local synchronisé si l'URL change (navigation, lien partagé).
+  useEffect(() => {
+    setSearchInput(search);
+  }, [search]);
+
+  // Debounce ~300ms : propage la saisie vers le query param `search`.
+  useEffect(() => {
+    if (searchInput === search) return;
+    const t = setTimeout(() => {
+      setFilters({ search: searchInput.trim() || null });
+    }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchInput]);
+
+  // Tout changement de filtre/recherche repart de la première page.
+  useEffect(() => {
+    setOffset(0);
+  }, [status, severity, category, search]);
 
   const fetchTickets = useCallback(async () => {
     setLoading(true);
@@ -114,6 +144,9 @@ function AdminSupportPage(_: StaffProps) {
     if (status) params.set('status', status);
     if (severity) params.set('severity', severity);
     if (category) params.set('category', category);
+    if (search) params.set('search', search);
+    params.set('limit', String(PAGE_SIZE));
+    params.set('offset', String(offset));
     try {
       const res = await fetch(
         `/api/admin/support/tickets?${params.toString()}`
@@ -121,12 +154,13 @@ function AdminSupportPage(_: StaffProps) {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Erreur');
       setTickets(json.tickets || []);
+      setTotal(typeof json.total === 'number' ? json.total : null);
     } catch (err) {
       setErrorMsg((err as Error).message);
     } finally {
       setLoading(false);
     }
-  }, [status, severity, category]);
+  }, [status, severity, category, search, offset]);
 
   useEffect(() => {
     fetchTickets();
@@ -283,6 +317,29 @@ function AdminSupportPage(_: StaffProps) {
 
           {/* Filters */}
           <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-4 mb-4 flex flex-wrap gap-3">
+            <div className="relative flex-1 min-w-[220px]">
+              <svg
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+              <input
+                type="text"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Rechercher (sujet, message, auteur)…"
+                className="w-full pl-10 pr-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              />
+            </div>
+
             <select
               className="px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 text-sm"
               value={status}
@@ -334,13 +391,19 @@ function AdminSupportPage(_: StaffProps) {
           )}
 
           {loading ? (
-            <div className="flex items-center justify-center py-20">
-              <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
-            </div>
+            <LoadingSpinner
+              className="py-20"
+              label="Chargement des tickets…"
+            />
           ) : tickets.length === 0 ? (
-            <div className="text-center py-20 text-neutral-500 text-sm">
-              Aucun ticket à afficher.
-            </div>
+            <EmptyState
+              title="Aucun ticket à afficher"
+              description={
+                status || severity || category || search
+                  ? 'Aucun ticket ne correspond aux filtres ou à la recherche.'
+                  : 'Aucun ticket de support pour le moment.'
+              }
+            />
           ) : (
             <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
               <div className="divide-y divide-neutral-700/50">
@@ -412,6 +475,65 @@ function AdminSupportPage(_: StaffProps) {
                 ))}
               </div>
             </section>
+          )}
+
+          {/* Pagination */}
+          {(tickets.length > 0 || offset > 0) && (
+            <div className="flex justify-between items-center mt-6">
+              <button
+                type="button"
+                disabled={offset === 0 || loading}
+                onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
+                className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+                Précédent
+              </button>
+
+              <span className="text-neutral-400 text-sm">
+                {tickets.length > 0 ? offset + 1 : 0} –{' '}
+                {offset + tickets.length}
+                {total !== null ? ` sur ${total}` : ''}
+              </span>
+
+              <button
+                type="button"
+                disabled={
+                  loading ||
+                  (total !== null && offset + PAGE_SIZE >= total) ||
+                  (total === null && tickets.length < PAGE_SIZE)
+                }
+                onClick={() => setOffset(offset + PAGE_SIZE)}
+                className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                Suivant
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+            </div>
           )}
         </div>
       </div>
