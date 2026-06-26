@@ -1,55 +1,21 @@
 // pages/api/caster/tournaments/index.ts
-// Public read-only: list of tournaments for the caster app.
+// DEPRECATED legacy alias. Canonical route: /api/caster/v1/tournaments.
 //
-// The Electron caster used to query the `tournaments` table directly. This
-// versioned HTTP endpoint decouples it from the DB schema. Tournament data is
-// already public (shown on the site), so the posture matches /api/scrims:
-// public GET, tenant-scoped read via supabaseAdmin.
+// Kept functional for the Electron caster app (still on the legacy path) but
+// stamps Deprecation/Sunset/Link headers. Body logic lives in
+// utils/casterApi.ts so v1 and legacy can never drift. See
+// docs/CASTER_API_CONTRACT.md.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { supabaseAdmin } from '@/utils/supabase';
-import { resolveTenantId } from '@/utils/tenant';
-import { applyRateLimit } from '@/utils/rateLimit';
-import { logger } from '@/utils/logger';
+import {
+  handleCasterTournamentsList,
+  markCasterLegacyDeprecated,
+} from '@/utils/casterApi';
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', 'GET');
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  if (
-    applyRateLimit(
-      req,
-      res,
-      { max: 60, windowMs: 60_000 },
-      'caster-tournaments'
-    )
-  )
-    return;
-
-  if (!supabaseAdmin)
-    return res.status(500).json({ error: 'Service unavailable' });
-
-  // The caster is a desktop app (no path-prefix), so it selects its tenant via
-  // the `x-tenant-id` header like the bot — falls back to DEFAULT_TENANT_ID when
-  // absent. Lets the Electron app point at the e2e tenant in E2E mode.
-  const tenantId = resolveTenantId(req);
-
-  const { data, error } = await supabaseAdmin
-    .from('tournaments')
-    .select('id, name, slug, game, status, start_date, format_type')
-    .eq('tenant_id', tenantId)
-    .in('status', ['running', 'published'])
-    .order('start_date', { ascending: false, nullsFirst: false });
-
-  if (error) {
-    logger.error('[caster/tournaments] list error:', error);
-    return res.status(500).json({ error: 'Failed to load tournaments' });
-  }
-
-  return res.status(200).json({ tournaments: data ?? [] });
+  markCasterLegacyDeprecated(res, '/api/caster/v1/tournaments');
+  await handleCasterTournamentsList(req, res, 'caster-tournaments');
 }

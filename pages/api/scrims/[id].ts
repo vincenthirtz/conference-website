@@ -6,6 +6,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { applyRateLimit } from '@/utils/rateLimit';
 import { logger } from '../../../utils/logger';
 
 export default async function handler(
@@ -16,6 +17,10 @@ export default async function handler(
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'scrims-detail'))
+    return;
+
   if (!supabaseAdmin)
     return res.status(500).json({ error: 'Service unavailable' });
 
@@ -41,7 +46,9 @@ export default async function handler(
     .eq('tenant_id', tenantId)
     .neq('status', 'draft');
 
-  scrimQuery = matchByUuid ? scrimQuery.eq('id', id) : scrimQuery.eq('slug', id);
+  scrimQuery = matchByUuid
+    ? scrimQuery.eq('id', id)
+    : scrimQuery.eq('slug', id);
 
   const { data: scrim, error: scrimErr } = await scrimQuery.maybeSingle();
   if (scrimErr) {

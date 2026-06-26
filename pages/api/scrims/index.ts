@@ -5,7 +5,20 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { applyRateLimit } from '@/utils/rateLimit';
 import { logger } from '../../../utils/logger';
+
+// Canonical scrim status enum (mirrors `scrims.status` CHECK constraint and
+// types/admin.ts ScrimStatus). The public list endpoint validates the `status`
+// query param against this so an unknown value 400s loudly instead of silently
+// returning an empty list.
+const VALID_SCRIM_STATUSES = [
+  'draft',
+  'scheduled',
+  'running',
+  'completed',
+  'cancelled',
+] as const;
 
 export default async function handler(
   req: NextApiRequest,
@@ -16,11 +29,29 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  if (applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'scrims-list'))
+    return;
+
   if (!supabaseAdmin)
     return res.status(500).json({ error: 'Service unavailable' });
 
   const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
-  const statusQ = req.query.status;
+  const rawStatus = req.query.status;
+  const statusQ = Array.isArray(rawStatus) ? rawStatus[0] : rawStatus;
+
+  // Validate `status` BEFORE the .eq() : an unrecognised value would otherwise
+  // match nothing and return `{ scrims: [] }` with a 200, which looks like
+  // "no scrims" rather than "bad query". Reject explicitly.
+  if (
+    typeof statusQ === 'string' &&
+    statusQ &&
+    !(VALID_SCRIM_STATUSES as readonly string[]).includes(statusQ)
+  ) {
+    return res.status(400).json({
+      error: `Invalid status. Expected one of: ${VALID_SCRIM_STATUSES.join(', ')}.`,
+      code: 'INVALID_STATUS',
+    });
+  }
 
   const tenantId = resolveTenantIdForPublicRequest(req);
 
@@ -43,6 +74,7 @@ export default async function handler(
     .limit(limit);
 
   if (typeof statusQ === 'string' && statusQ) {
+    // Already validated against VALID_SCRIM_STATUSES above.
     query = query.eq('status', statusQ);
   }
 

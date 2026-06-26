@@ -2518,10 +2518,9 @@ components:
           type: string
           enum:
             - draft
-            - open
             - scheduled
-            - in_progress
-            - finished
+            - running
+            - completed
             - cancelled
         scheduled_date:
           oneOf:
@@ -16484,10 +16483,10 @@ paths:
           schema:
             type: string
             enum:
-              - open
+              - draft
               - scheduled
-              - in_progress
-              - finished
+              - running
+              - completed
               - cancelled
         - name: limit
           in: query
@@ -16511,6 +16510,10 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/PublicScrim"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /api/scrims/{id}:
     parameters:
       - name: id
@@ -16545,6 +16548,8 @@ paths:
                       additionalProperties: true
         "404":
           $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /api/public/scrim-requests:
     post:
       tags:
@@ -18096,8 +18101,11 @@ paths:
           $ref: "#/components/responses/ServerError"
   /api/caster/tournaments:
     get:
-      summary: Liste publique des tournois pour l'app caster (Electron).
+      summary: "[DEPRECATED] Liste publique des tournois pour l'app caster."
+      deprecated: true
       description: |
+        **Déprécié** (Sunset 2026-12-23). Alias de `/api/caster/v1/tournaments`
+        — réponses identiques + headers `Deprecation`/`Sunset`/`Link`.
         Lecture publique tenant-scopée (`x-tenant-id`) via `supabaseAdmin`.
         Statuts retenus : `running`, `published`.
       operationId: casterListTournaments
@@ -18149,8 +18157,12 @@ paths:
           type: string
           format: uuid
     get:
-      summary: Maps activées d'un tournoi (app caster).
-      description: Lecture publique tenant-scopée (`x-tenant-id`).
+      summary: "[DEPRECATED] Maps activées d'un tournoi (app caster)."
+      deprecated: true
+      description: |
+        **Déprécié** (Sunset 2026-12-23). Alias de
+        `/api/caster/v1/tournaments/{id}/maps`. Lecture publique tenant-scopée
+        (`x-tenant-id`).
       operationId: casterListTournamentMaps
       tags:
         - public
@@ -18195,10 +18207,13 @@ paths:
           type: string
           format: uuid
     get:
-      summary: Matchs d'un tournoi (app caster).
+      summary: "[DEPRECATED] Matchs d'un tournoi (app caster)."
+      deprecated: true
       description: |
-        Lecture publique tenant-scopée (`x-tenant-id`). Statuts retenus :
-        `pending`, `ongoing`, `finished`.
+        **Déprécié** (Sunset 2026-12-23). Alias de
+        `/api/caster/v1/tournaments/{id}/matches`. Lecture publique
+        tenant-scopée (`x-tenant-id`). Statuts retenus : `pending`, `ongoing`,
+        `finished`.
       operationId: casterListTournamentMatches
       tags:
         - public
@@ -18233,8 +18248,12 @@ paths:
           type: string
           format: uuid
     get:
-      summary: Détail d'un match + ses games (app caster).
-      description: Lecture publique tenant-scopée (`x-tenant-id`).
+      summary: "[DEPRECATED] Détail d'un match + ses games (app caster)."
+      deprecated: true
+      description: |
+        **Déprécié** (Sunset 2026-12-23). Alias de
+        `/api/caster/v1/matches/{id}`. Lecture publique tenant-scopée
+        (`x-tenant-id`).
       operationId: casterGetMatch
       tags:
         - public
@@ -18278,6 +18297,204 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /api/caster/v1/tournaments:
+    get:
+      summary: "[v1] Liste publique des tournois pour l'app caster (Electron)."
+      description: |
+        Route canonique versionnée. Lecture publique tenant-scopée
+        (`x-tenant-id`) via `supabaseAdmin`. Statuts retenus : `running`,
+        `published`. Voir `docs/CASTER_API_CONTRACT.md`.
+      operationId: casterV1ListTournaments
+      tags:
+        - public
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/XTenantId"
+      responses:
+        "200":
+          description: Liste de tournois.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - tournaments
+                properties:
+                  tournaments:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          $ref: "#/components/schemas/Uuid"
+                        name:
+                          type: string
+                        slug:
+                          type: string
+                        game:
+                          type: string
+                        status:
+                          type: string
+                        start_date:
+                          allOf:
+                            - $ref: "#/components/schemas/Timestamp"
+                          nullable: true
+                        format_type:
+                          type: string
+                          nullable: true
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /api/caster/v1/tournaments/{id}/maps:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: "[v1] Maps activées d'un tournoi (app caster)."
+      description: Route canonique. Lecture publique tenant-scopée (`x-tenant-id`).
+      operationId: casterV1ListTournamentMaps
+      tags:
+        - public
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/XTenantId"
+      responses:
+        "200":
+          description: Liste des maps activées.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - maps
+                properties:
+                  maps:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          $ref: "#/components/schemas/Uuid"
+                        map_name:
+                          type: string
+                        map_type:
+                          type: string
+                          nullable: true
+                        image_url:
+                          type: string
+                          nullable: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /api/caster/v1/tournaments/{id}/matches:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: "[v1] Matchs d'un tournoi (app caster)."
+      description: |
+        Route canonique. Lecture publique tenant-scopée (`x-tenant-id`).
+        Statuts retenus : `pending`, `ongoing`, `finished`. Inclut
+        `stream_url`.
+      operationId: casterV1ListTournamentMatches
+      tags:
+        - public
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/XTenantId"
+      responses:
+        "200":
+          description: Liste des matchs.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - matches
+                properties:
+                  matches:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /api/caster/v1/matches/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: "[v1] Détail d'un match + ses games (app caster)."
+      description: |
+        Route canonique. Lecture publique tenant-scopée (`x-tenant-id`).
+        Le `match` inclut `stream_url` (aligné sur la liste des matchs).
+      operationId: casterV1GetMatch
+      tags:
+        - public
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/XTenantId"
+      responses:
+        "200":
+          description: Match et ses games.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - match
+                  - games
+                properties:
+                  match:
+                    type: object
+                    additionalProperties: true
+                  games:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          $ref: "#/components/schemas/Uuid"
+                        map_name:
+                          type: string
+                          nullable: true
+                        map_order:
+                          type: integer
+                          nullable: true
+                        team1_score:
+                          type: integer
+                          nullable: true
+                        team2_score:
+                          type: integer
+                          nullable: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
         "500":
           $ref: "#/components/responses/ServerError"
   /api/player/push/prefs:

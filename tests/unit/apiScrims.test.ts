@@ -460,6 +460,32 @@ describe('/api/scrims (public)', () => {
     expect(scrims).toHaveLength(1);
     expect(scrims[0].name).toBe('Visible');
   });
+
+  it('GET 400 on invalid status (INVALID_STATUS, not silent empty list)', async () => {
+    const res = makeRes();
+    await publicScrimsHandler(
+      makeReq({ query: { status: 'running_nope' } }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect((res.body as any).code).toBe('INVALID_STATUS');
+  });
+
+  it('GET accepts a valid status filter', async () => {
+    store.scrims = [
+      {
+        id: SCRIM_ID,
+        name: 'Running scrim',
+        slug: 'running-scrim',
+        status: 'running',
+        is_public: true,
+      },
+    ] as any;
+    const res = makeRes();
+    await publicScrimsHandler(makeReq({ query: { status: 'running' } }), res);
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).scrims).toHaveLength(1);
+  });
 });
 
 describe('/api/scrims/[id] (public)', () => {
