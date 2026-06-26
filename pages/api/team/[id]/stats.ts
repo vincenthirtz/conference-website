@@ -24,15 +24,35 @@ type Team = {
   country?: string | null;
 };
 
+/**
+ * Aggregated global stats for a team, across all tournaments.
+ *
+ * The underlying `team_stats_view` exposes one row PER (team_id, tournament_id)
+ * with the per-tournament columns `matches_played`, `wins`, `losses`, `draws`,
+ * `maps_won`, `maps_lost`, `winrate`. We sum those across tournaments and
+ * recompute the winrate so the shape below matches exactly what the front-end
+ * (`pages/team/[slug]/stats.tsx`) reads.
+ */
 type TeamStatsView = {
   team_id: string;
   team_name: string;
   total_matches: number;
   wins: number;
   losses: number;
-  winrate: number; // 0–1
+  draws: number;
+  winrate: number | null; // 0–1, null if no match played
   total_maps_won: number;
   total_maps_lost: number;
+};
+
+/** Raw per-tournament row as exposed by `team_stats_view`. */
+type TeamStatsViewRow = {
+  matches_played: number | null;
+  wins: number | null;
+  losses: number | null;
+  draws: number | null;
+  maps_won: number | null;
+  maps_lost: number | null;
 };
 
 type MatchRow = {
@@ -107,19 +127,39 @@ export default async function handler(
       return res.status(404).json({ error: 'Team not found' });
     }
 
-    // 2) Stats globales depuis la vue team_stats_view (si elle existe)
+    // 2) Stats globales depuis la vue team_stats_view (si elle existe).
+    //    La vue expose UNE ligne par tournoi pour une équipe : on récupère
+    //    toutes les lignes et on agrège across tournois (somme des compteurs,
+    //    winrate recalculé).
     let stats: TeamStatsView | null = null;
     try {
-      const { data: statsData, error: sErr } = await supabaseAdmin
+      const { data: statsRows, error: sErr } = await supabaseAdmin
         .from('team_stats_view')
-        .select('*')
-        .eq('team_id', id)
-        .maybeSingle();
+        .select('matches_played, wins, losses, draws, maps_won, maps_lost')
+        .eq('team_id', id);
 
       if (sErr) {
         logger.error('team_stats_view error:', sErr);
-      } else if (statsData) {
-        stats = statsData as TeamStatsView;
+      } else if (statsRows && statsRows.length > 0) {
+        const rows = statsRows as TeamStatsViewRow[];
+        const totalMatches = sum(rows, (r) => r.matches_played);
+        const wins = sum(rows, (r) => r.wins);
+        const losses = sum(rows, (r) => r.losses);
+        const draws = sum(rows, (r) => r.draws);
+        const totalMapsWon = sum(rows, (r) => r.maps_won);
+        const totalMapsLost = sum(rows, (r) => r.maps_lost);
+
+        stats = {
+          team_id: team.id,
+          team_name: team.name,
+          total_matches: totalMatches,
+          wins,
+          losses,
+          draws,
+          winrate: totalMatches > 0 ? wins / totalMatches : null,
+          total_maps_won: totalMapsWon,
+          total_maps_lost: totalMapsLost,
+        };
       }
     } catch (e) {
       logger.error('team_stats_view not available:', e);
@@ -180,6 +220,15 @@ export default async function handler(
     logger.error('[/api/team/[id]/stats] internal error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
+}
+
+/* -----------------------------------------------------------
+ * Helpers stats globales
+ * ---------------------------------------------------------*/
+
+/** Somme une colonne numérique nullable sur un ensemble de lignes. */
+function sum<T>(rows: T[], pick: (row: T) => number | null | undefined): number {
+  return rows.reduce((acc, row) => acc + (pick(row) ?? 0), 0);
 }
 
 /* -----------------------------------------------------------

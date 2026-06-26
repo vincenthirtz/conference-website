@@ -908,16 +908,20 @@ describe('/api/team/[id]/stats', () => {
         country: 'FR',
       },
     ] as any;
+    // team_stats_view expose une ligne par tournoi avec les colonnes
+    // `matches_played` / `maps_won` / `maps_lost` ; le handler agrège et
+    // recalcule le winrate (3 / 4 = 0.75).
     store.team_stats_view = [
       {
         team_id: TEAM_A,
         team_name: 'Alpha',
-        total_matches: 4,
+        tournament_id: 't1',
+        matches_played: 4,
         wins: 3,
         losses: 1,
-        winrate: 0.75,
-        total_maps_won: 9,
-        total_maps_lost: 5,
+        draws: 0,
+        maps_won: 9,
+        maps_lost: 5,
       },
     ] as any;
     store.matches = [
