@@ -16,13 +16,17 @@ import { logger } from '../utils/logger';
 
 type TournamentsPageProps = {
   tournaments: Tournament[];
+  // Distingue une panne de chargement (Supabase indisponible / erreur requête)
+  // d'une liste légitimement vide. Sans ce flag, une panne afficherait
+  // « Aucun tournoi », message trompeur.
+  loadError: boolean;
 };
 
 export const getStaticProps: GetStaticProps<
   TournamentsPageProps
 > = async () => {
   if (!supabaseAdmin) {
-    return { props: { tournaments: [] }, revalidate: 60 };
+    return { props: { tournaments: [], loadError: true }, revalidate: 60 };
   }
 
   // S5d: getStaticProps n'a pas accès au req → DEFAULT_TENANT_ID.
@@ -50,18 +54,59 @@ export const getStaticProps: GetStaticProps<
 
   if (error) {
     logger.error('[tournaments] fetch error:', error);
-    return { props: { tournaments: [] }, revalidate: 60 };
+    return { props: { tournaments: [], loadError: true }, revalidate: 60 };
   }
 
   return {
     props: {
       tournaments: (data || []) as Tournament[],
+      loadError: false,
     },
     revalidate: 600, // Rebuild every 10 minutes
   };
 };
 
-function TournamentsPage({ tournaments }: TournamentsPageProps) {
+function TournamentsPage({ tournaments, loadError }: TournamentsPageProps) {
+  if (loadError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
+        <main className="container mx-auto px-4 pt-24 pb-16 max-w-6xl">
+          <section className="text-center py-16" role="alert">
+            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center">
+              <svg
+                className="w-8 h-8 text-red-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+                />
+              </svg>
+            </div>
+            <h1 className="text-xl font-semibold mb-2">
+              Impossible de charger les tournois
+            </h1>
+            <p className="text-gray-400 mb-6">
+              Une erreur est survenue de notre côté. Réessayez dans quelques
+              instants.
+            </p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 rounded-md bg-purple-500 hover:bg-purple-400 text-sm font-semibold transition-colors"
+            >
+              Réessayer
+            </button>
+          </section>
+        </main>
+      </div>
+    );
+  }
+
   return <TournamentsList tournaments={tournaments} />;
 }
 

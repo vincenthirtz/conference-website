@@ -1,9 +1,9 @@
 import Link from 'next/link';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
+import { ACTIVE_WOMEN_TOURNAMENT_ID } from '@/utils/activeEdition';
 
-const WOMEN_TOURNAMENT_ID_2026 = 'e8fa740c-d92b-49d8-a654-05a37d0eea3b';
 const DISCORD_INVITE = 'https://discord.gg/gERSsjC3Vd';
-const REGISTER_TEAM_HREF = `/team/create?tournament=${WOMEN_TOURNAMENT_ID_2026}`;
+const REGISTER_TEAM_HREF = `/team/create?tournament=${ACTIVE_WOMEN_TOURNAMENT_ID}`;
 
 type Feature = {
   title: string;
