@@ -15,18 +15,37 @@ import {
 } from './__helpers__/supabaseMock';
 
 import createWithMemberHandler from '../../pages/api/teams/create-with-member';
+import { generateChallenge } from '../../utils/captcha';
 
 /* -----------------------------------------------------------
  * Helpers
  * ---------------------------------------------------------*/
 
+/**
+ * Génère un couple { captchaToken, captchaAnswer } valide pour le secret HMAC
+ * actif (le même module captcha est utilisé par le handler). Le endpoint
+ * /api/teams/create-with-member est public et exige désormais un captcha avant
+ * toute création de compte ; on l'injecte par défaut dans le body de test.
+ */
+function validCaptcha(): { captchaToken: string; captchaAnswer: string } {
+  const { token } = generateChallenge();
+  const decoded = JSON.parse(
+    Buffer.from(token, 'base64url').toString()
+  ) as { answer: number };
+  return { captchaToken: token, captchaAnswer: String(decoded.answer) };
+}
+
 function makeReq(over: Partial<any> = {}): any {
+  const { body: overBody, ...rest } = over;
+  // Captcha valide par défaut, fusionné avec le body fourni par le test.
+  // Un test qui veut tester le rejet captcha peut écraser captchaToken/Answer.
+  const body = { ...validCaptcha(), ...(overBody ?? {}) };
   return {
     method: 'POST',
     headers: { host: 'h' },
     query: {},
-    body: {},
-    ...over,
+    ...rest,
+    body,
   };
 }
 

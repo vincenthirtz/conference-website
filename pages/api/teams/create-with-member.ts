@@ -11,6 +11,7 @@ import { sanitizeUrl, validateRole } from '@/utils/apiHelpers';
 import { emitBotEvent } from '@/utils/botEvents';
 import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 import { alertIfBlacklisted } from '@/utils/moderation/blacklist';
+import { verifyCaptcha } from '@/utils/captcha';
 
 import { logger } from '../../../utils/logger';
 type Body = {
@@ -28,6 +29,15 @@ type Body = {
   set_captain?: boolean;
   members?: MemberInput[];
   tournament_id?: string | null;
+  // Anti-abuse : ce endpoint est PUBLIC (flux d'inscription anonyme, cf.
+  // pages/team/create.tsx — page "Créer une équipe" sans session). Il peut
+  // créer des comptes auth à partir des emails du roster
+  // (findOrCreateUserByEmail) et envoyer des emails. On exige donc un captcha
+  // HMAC (challenge GET /api/captcha) + un honeypot AVANT toute résolution ou
+  // création d'utilisateur, sur le même modèle que pages/api/news/comments.ts.
+  honeypot?: string | null;
+  captchaToken?: string | null;
+  captchaAnswer?: string | null;
 };
 
 type MemberInput = {
@@ -64,7 +74,19 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Rate limiting: 5 team creations per hour
+  // Rate limiting (durci) : ce endpoint public crée des équipes ET des comptes
+  // auth (via les emails du roster). On garde une fenêtre courte agressive
+  // (anti-burst) en plus de la fenêtre horaire (anti-volume soutenu). Le
+  // premier des deux seuils atteint bloque (429).
+  if (
+    applyRateLimit(
+      req,
+      res,
+      { max: 3, windowMs: 5 * 60 * 1000 },
+      'create-team-burst'
+    )
+  )
+    return;
   if (
     applyRateLimit(
       req,
@@ -79,9 +101,27 @@ export default async function handler(
     return res.status(503).json({ error: 'Service unavailable.' });
   }
 
+  const body: Body = req.body || {};
+
+  // Anti-bot : honeypot (champ caché jamais rempli par un humain) + captcha
+  // HMAC. Vérifiés AVANT toute résolution/création d'utilisateur pour qu'un
+  // bot ne puisse pas créer de comptes auth ni déclencher d'emails sans
+  // résoudre le challenge. Cohérent avec pages/api/news/comments.ts.
+  if (body.honeypot && `${body.honeypot}`.trim().length > 0) {
+    return res.status(400).json({ error: 'Bot detected' });
+  }
+  const captchaResult = verifyCaptcha(
+    (body.captchaToken || '').toString(),
+    (body.captchaAnswer || '').toString()
+  );
+  if (!captchaResult.valid) {
+    return res
+      .status(400)
+      .json({ error: captchaResult.error || 'Captcha invalide' });
+  }
+
   const tenantId = resolveTenantIdForPublicRequest(req);
 
-  const body: Body = req.body || {};
   const name = (body.name || '').trim();
 
   if (!name || name.length < 2) {

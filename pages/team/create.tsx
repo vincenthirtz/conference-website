@@ -71,6 +71,32 @@ export default function PublicCreateTeamPage() {
     null
   );
 
+  // Captcha anti-bot (endpoint public + création de comptes côté serveur).
+  // On récupère un challenge HMAC depuis /api/captcha au montage et après
+  // chaque soumission (le token est à usage unique / TTL 5 min).
+  const [captchaToken, setCaptchaToken] = useState('');
+  const [captchaQuestion, setCaptchaQuestion] = useState('');
+  const [captchaAnswer, setCaptchaAnswer] = useState('');
+  // Honeypot : champ caché, jamais rempli par un humain.
+  const [honeypot, setHoneypot] = useState('');
+
+  const refreshCaptcha = () => {
+    fetch('/api/captcha')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.token && data?.question) {
+          setCaptchaToken(data.token);
+          setCaptchaQuestion(data.question);
+          setCaptchaAnswer('');
+        }
+      })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    refreshCaptcha();
+  }, []);
+
   useEffect(() => {
     if (!tournamentIdParam) return;
     fetch(`/api/tournaments`)
@@ -182,6 +208,9 @@ export default function PublicCreateTeamPage() {
         discord: discord || null,
         members: preparedMembers,
         tournament_id: tournamentIdParam || null,
+        captchaToken,
+        captchaAnswer,
+        honeypot,
       };
 
       const res = await fetch('/api/teams/create-with-member', {
@@ -193,6 +222,9 @@ export default function PublicCreateTeamPage() {
       const json: CreateResponse = await res.json();
 
       if (!res.ok || (json as any)?.error) {
+        // Le token captcha est à usage unique : on en récupère un nouveau pour
+        // que l'utilisateur puisse réessayer sans recharger la page.
+        refreshCaptcha();
         const message = (json as any)?.error || "Impossible de créer l'équipe";
         throw new Error(message);
       }
@@ -207,6 +239,8 @@ export default function PublicCreateTeamPage() {
       setDiscord('');
       setMembers([{ id: 'm-0', email: '', role: 'player', battleTag: '' }]);
       setCaptainIndex(null);
+      // Nouveau challenge captcha pour une éventuelle prochaine création.
+      refreshCaptcha();
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
     } finally {
@@ -538,6 +572,55 @@ export default function PublicCreateTeamPage() {
                     n&apos;existe, il est créé automatiquement avant d&apos;être
                     ajouté.
                   </p>
+                </div>
+              </section>
+
+              {/* Honeypot : caché aux humains (aria-hidden + hors flux), piège à bots. */}
+              <div
+                aria-hidden="true"
+                style={{
+                  position: 'absolute',
+                  left: '-9999px',
+                  width: '1px',
+                  height: '1px',
+                  overflow: 'hidden',
+                }}
+              >
+                <label>
+                  Ne pas remplir
+                  <input
+                    type="text"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    value={honeypot}
+                    onChange={(e) => setHoneypot(e.target.value)}
+                  />
+                </label>
+              </div>
+
+              <section className="space-y-2">
+                <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-gray-300">
+                  Vérification anti-bot *
+                </label>
+                <div className="flex items-center gap-3">
+                  <span className="rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white font-mono">
+                    {captchaQuestion ? `${captchaQuestion} = ?` : '… = ?'}
+                  </span>
+                  <input
+                    required
+                    inputMode="numeric"
+                    value={captchaAnswer}
+                    onChange={(e) => setCaptchaAnswer(e.target.value)}
+                    className="w-32 rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/70 focus:border-emerald-400/70 transition"
+                    placeholder="Réponse"
+                  />
+                  <button
+                    type="button"
+                    onClick={refreshCaptcha}
+                    className="text-xs text-gray-400 hover:text-white"
+                  >
+                    Autre question ↻
+                  </button>
                 </div>
               </section>
 

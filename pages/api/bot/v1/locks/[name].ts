@@ -72,6 +72,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     ? Math.min(Math.max(ttlRaw, TTL_MIN), TTL_MAX)
     : 60;
   const now = Date.now();
+  const nowIso = new Date(now).toISOString();
   const expiresAt = new Date(now + ttl * 1000).toISOString();
 
   // Check existing lock — si actif (expires_at > now), on refuse.
@@ -92,19 +93,57 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
         expiresAt: existing.expires_at,
       });
     }
-    // Lock expiré OU même holder → upsert (renouvellement).
-    const { error: updErr } = await supabaseAdmin
+
+    // Lock expiré OU même holder → takeover/renouvellement.
+    //
+    // ATOMICITE : on ne fait PAS confiance au read ci-dessus (un autre process
+    // peut prendre le lock entre le SELECT et l'UPDATE). L'UPDATE est donc
+    // CONDITIONNEL côté DB. On distingue les deux cas pour garder des filtres
+    // 100% paramétrés via .eq()/.lte() (PostgREST échappe ces valeurs) — on
+    // n'interpole JAMAIS `holder` (chaîne user-controlée bornée mais non
+    // restreinte en caractères) dans un .or() string, ce qui exposerait à une
+    // injection de filtre PostgREST.
+    //
+    //   - sameHolder  → renouvellement, guard .eq('holder', holder)
+    //   - sinon (donc expiré, car !stillActive ici) → takeover, guard
+    //     .lte('expires_at', nowIso) : ne matche que si le lock est TOUJOURS
+    //     expiré au moment de l'écriture.
+    //
+    // `.select()` renvoie les lignes réellement mises à jour. 0 ligne → un
+    // autre process a gagné la course : on relit et on renvoie acquired:false.
+    let updateQuery = supabaseAdmin
       .from('bot_locks')
       .update({
         holder,
-        acquired_at: new Date().toISOString(),
+        acquired_at: nowIso,
         expires_at: expiresAt,
       })
       .eq('tenant_id', tenantId)
       .eq('name', name);
+    updateQuery = sameHolder
+      ? updateQuery.eq('holder', holder)
+      : updateQuery.lte('expires_at', nowIso);
+
+    const { data: updatedRows, error: updErr } =
+      await updateQuery.select('holder, expires_at');
     if (updErr) {
       logger.error('[bot/locks] update error', updErr);
       return res.status(500).json({ error: 'Échec du claim.' });
+    }
+    if (!updatedRows || updatedRows.length === 0) {
+      // Course perdue : le lock a été (re)pris par un autre process actif
+      // entre notre SELECT et notre UPDATE. On relit l'état courant.
+      const { data: current } = await supabaseAdmin
+        .from('bot_locks')
+        .select('holder, expires_at')
+        .eq('tenant_id', tenantId)
+        .eq('name', name)
+        .maybeSingle();
+      return res.status(200).json({
+        acquired: false,
+        currentHolder: current?.holder ?? null,
+        expiresAt: current?.expires_at ?? null,
+      });
     }
     return res.status(200).json({ acquired: true, expiresAt });
   }

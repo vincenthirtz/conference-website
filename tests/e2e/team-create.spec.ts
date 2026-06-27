@@ -1,5 +1,24 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { deleteTeamsByName, deleteTestUser } from '../utils/supabaseTestClient';
+
+/**
+ * Le formulaire public de création d'équipe exige désormais un captcha HMAC
+ * (anti-abus : l'endpoint peut créer des comptes auth). Le challenge est une
+ * opération arithmétique affichée sous la forme "a OP b = ?". On lit la
+ * question rendue, on calcule la réponse et on la saisit avant de soumettre.
+ */
+async function solveCaptcha(page: Page): Promise<void> {
+  const questionLocator = page.getByText(/[0-9]+\s*[+\-×]\s*[0-9]+\s*=\s*\?/);
+  await expect(questionLocator).toBeVisible({ timeout: 10000 });
+  const raw = (await questionLocator.textContent()) ?? '';
+  const match = raw.match(/(-?\d+)\s*([+\-×])\s*(-?\d+)/);
+  if (!match) throw new Error(`Captcha question illisible: "${raw}"`);
+  const a = parseInt(match[1], 10);
+  const op = match[2];
+  const b = parseInt(match[3], 10);
+  const answer = op === '+' ? a + b : op === '-' ? a - b : a * b;
+  await page.getByPlaceholder('Réponse').fill(String(answer));
+}
 
 const TEAM_NAME = `E2E Team ${Date.now()}`;
 const PLAYER_EMAIL = 'hirtzvincent+testjoueur@gmail.com';
@@ -54,6 +73,8 @@ test.describe.serial('Team creation page', () => {
     await page.getByPlaceholder('joueuse@email.tld').fill(PLAYER_EMAIL);
     await page.getByPlaceholder('player / coach / sub').fill('player');
     await page.getByPlaceholder('Pseudo#0000').fill(PLAYER_BTAG);
+
+    await solveCaptcha(page);
 
     await page.getByRole('button', { name: "Créer l'équipe" }).click();
 
@@ -120,6 +141,8 @@ test.describe.serial('Team creation page', () => {
       await roleInput.fill('player');
       await btagInput.fill(EXTRA_MEMBER_BTAGS[i]);
     }
+
+    await solveCaptcha(page);
 
     await page.getByRole('button', { name: "Créer l'équipe" }).click();
 
