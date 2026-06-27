@@ -11,8 +11,8 @@ npm run start            # Start production server
 npm run lint             # ESLint with auto-fix
 npm run format           # Prettier write
 npm run format:check     # Prettier check
-npm run test             # Playwright e2e tests (94 specs)
-npm run test:unit        # Vitest unit tests (~174 specs)
+npm run test             # Playwright e2e tests (95 specs)
+npm run test:unit        # Vitest unit tests (185 files, ~3350 tests)
 npm run test:unit:watch  # Vitest watch mode
 npm run test:unit:coverage  # Vitest + v8 coverage (utils/** + pages/api/**)
 ```
@@ -43,11 +43,11 @@ The site sits at the center of a small ecosystem:
 
 - **pages/** — Next.js pages and API routes
   - **pages/api/admin/** — staff-gated admin endpoints (cookie session)
-  - **pages/api/bot/v1/** — Discord-bot API. Contract: [docs/BOT_API_CONTRACT.md](docs/BOT_API_CONTRACT.md). Auth: `x-api-key` per-tenant (+ legacy env fallback) and `x-tenant-id`. Idempotency + rate limits. Sibling repo: `docker-box/services/discord-bot/`.
+  - **pages/api/bot/v1/** — Discord-bot API. Contract: [docs/BOT_API_CONTRACT.md](docs/BOT_API_CONTRACT.md). Auth: `x-api-key` per-tenant (`tenant_secrets`, no env fallback) + `x-tenant-id`. Idempotency + rate limits. Sibling repo: `docker-box/services/discord-bot/`.
   - **pages/api/caster/** — caster-cockpit endpoints (caster session)
   - **pages/api/player/** — player espace endpoints (user session)
   - **pages/api/cron/** — invoked by Netlify scheduled functions
-  - **pages/api/** — public endpoints (matches, news, teams, Twitch, HelloAsso, captcha, support)
+  - **pages/api/** — public endpoints (matches, news, teams, Twitch, HelloAsso, captcha, support). Public team creation (`teams/create-with-member`) is anonymous-by-design but captcha + honeypot + rate-limit gated. The legacy `POST /api/news` ingest (global `BOT_API_KEY`) rejects an unknown/inactive `x-tenant-id` with `400 UNKNOWN_TENANT`.
   - **pages/admin/** — admin dashboard (tournaments, teams, news, broadcast, scrims, disputes, demandes, onboarding queue, site settings, stats, logs, users, etc.)
   - **pages/caster/** — caster cockpit (`/caster/cockpit`)
   - **pages/player/** — player espace (`/player/*`)
@@ -59,13 +59,13 @@ The site sits at the center of a small ecosystem:
 - **types/** — domain TS types (`bracket`, `swiss`, `draft`, `events`, `matches`, `stages`, `staff`, `validation`, …)
 - **config/** — static config (speakers, teams, social links, past results)
 - **database/** — Postgres SQL
-  - **database/migrations/** — versioned migrations (~119 files)
+  - **database/migrations/** — versioned migrations (~137 files)
   - **database/seeds/** — seed data
   - Loose `*.sql` patches at root (legacy)
 - **netlify/functions/** — Netlify scheduled functions (cron entry points calling `/api/cron/*`)
 - **docs/** — [BOT_API_CONTRACT.md](docs/BOT_API_CONTRACT.md), [ONBOARDING.md](docs/ONBOARDING.md), [openapi.yaml](docs/openapi.yaml)
-- **tests/e2e/** — Playwright specs (~94)
-- **tests/unit/** — Vitest specs (~174, heavy API-route coverage with in-memory Supabase mock under `tests/unit/__helpers__/`)
+- **tests/e2e/** — Playwright specs (~95)
+- **tests/unit/** — Vitest specs (~185 files, heavy API-route coverage with in-memory Supabase mock under `tests/unit/__helpers__/`)
 - **scripts/** — small ops scripts (`create-team-news.mjs`, `merge-openapi.mjs`)
 - **proxy.ts** — Edge middleware: per-request CSP nonce, Turnstile allowances, PWA worker/manifest allowances
 
