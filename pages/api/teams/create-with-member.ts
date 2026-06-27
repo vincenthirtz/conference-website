@@ -321,58 +321,49 @@ export default async function handler(
     }
   }
 
-  const attemptPayload = () => {
-    const base: Record<string, any> = {
-      name,
-      short_name: body.short_name?.toString().trim() || null,
-      logo_url: sanitizeUrl(body.logo_url) || null,
-      country: body.country?.toString().trim() || null,
-      description: description || null,
-      discord: sanitizeUrl(body.discord) || null,
-      website: sanitizeUrl(body.website) || null,
-      tenant_id: tenantId,
-      // Une nouvelle équipe est ouverte au recrutement par défaut. On le pose
-      // EXPLICITEMENT (plutôt que de dépendre du défaut DB) : robuste si le
-      // défaut change, et testable directement sur le payload d'insert.
-      is_joinable: true,
-    };
-    return base;
+  const teamPayload: Record<string, any> = {
+    name,
+    short_name: body.short_name?.toString().trim() || null,
+    logo_url: sanitizeUrl(body.logo_url) || null,
+    country: body.country?.toString().trim() || null,
+    description: description || null,
+    discord: sanitizeUrl(body.discord) || null,
+    website: sanitizeUrl(body.website) || null,
+    tenant_id: tenantId,
+    // Une nouvelle équipe est ouverte au recrutement par défaut. On le pose
+    // EXPLICITEMENT (plutôt que de dépendre du défaut DB) : robuste si le
+    // défaut change, et testable directement sur le payload d'insert.
+    is_joinable: true,
   };
 
-  const maxAttempts = 3;
-  let createdTeam: Record<string, any> | null = null;
-  let lastError: any = null;
+  // Insert unique (pas de retry-loop) : le slug est auto-généré et
+  // DÉSAMBIGUÏSÉ par le trigger DB `teams_set_slug()` (suffixes -2, -3… en cas
+  // de collision, cf. database/migrations/add_team_slug.sql), donc une
+  // collision de slug ne fait JAMAIS échouer l'insert. L'ancienne boucle
+  // `maxAttempts` ré-insérait un payload IDENTIQUE — elle ne pouvait donc
+  // résoudre aucune contrainte unique (même nom/slug → même résultat). On
+  // renvoie l'erreur directement : 409 sur un conflit d'unicité résiduel,
+  // 500 sinon.
+  const { data: createdTeam, error: createErr } = await supabaseAdmin
+    .from('teams')
+    .insert(teamPayload)
+    .select('*')
+    .maybeSingle();
 
-  for (let i = 0; i < maxAttempts; i++) {
-    const payload = attemptPayload();
-
-    const { data, error } = await supabaseAdmin
-      .from('teams')
-      .insert(payload)
-      .select('*')
-      .maybeSingle();
-
-    if (!error && data) {
-      createdTeam = data;
-      break;
-    }
-
-    lastError = error;
-    const message = error?.message?.toLowerCase() || '';
+  if (createErr || !createdTeam) {
+    logger.error('[/api/teams/create-with-member] create error:', createErr);
+    const message = createErr?.message?.toLowerCase() || '';
     const isDuplicate =
       message.includes('duplicate') || message.includes('unique');
-
-    if (!isDuplicate) {
-      break;
+    if (isDuplicate) {
+      return res.status(409).json({
+        error: 'Une équipe avec ce nom existe déjà. Choisis un autre nom.',
+      });
     }
-  }
-
-  if (!createdTeam) {
-    logger.error('[/api/teams/create-with-member] create error:', lastError);
     return res.status(500).json({
       error:
-        lastError?.message ||
-        'Failed to create team. Try again with another name/slug.',
+        createErr?.message ||
+        'Failed to create team. Try again with another name.',
     });
   }
 

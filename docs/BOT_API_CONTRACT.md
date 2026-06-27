@@ -62,6 +62,19 @@ returns the two plain values **once** in the response body. The operator:
    routes (`POST /api/news` ingest and the `/api/support/ticket` bot path), so
    keep it until those migrate — it no longer affects `/api/bot/v1/*` auth.
 
+   > **`POST /api/news` (legacy ingest) — tenant model.** This route authenticates
+   > with the **global** `BOT_API_KEY` and selects the target tenant from the
+   > client `x-tenant-id` header (the key is **not** per-tenant authoritative
+   > here, unlike `/api/bot/v1/*`). The caller
+   > `services/discord-bot/news-forwarder.js` sends `x-api-key: BOT_API_KEY` +
+   > a guild-resolved `x-tenant-id`. It is **not** migrated to `withBotRoute`
+   > because that would require a per-tenant key seeded in `tenant_secrets`,
+   > which this caller does not send → migrate bot **and** site together. As a
+   > hardening that preserves the legacy contract, the route now **rejects an
+   > unknown or inactive `x-tenant-id` with `400 UNKNOWN_TENANT`** (the
+   > `DEFAULT_TENANT_ID` fallback stays valid), so a global-key holder can no
+   > longer write news into an arbitrary/spoofed tenant bucket.
+
 ## Tenant identification
 
 The site is multi-tenant. The tenant for every `/api/bot/v1/*` call is

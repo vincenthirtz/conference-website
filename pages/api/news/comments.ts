@@ -131,6 +131,31 @@ async function createComment(
 
   const tenantId = resolveTenantIdForPublicRequest(req);
 
+  // Vérifie que l'article ciblé existe ET appartient au tenant résolu ET est
+  // publié. Sans ce check, un POST pouvait attacher un commentaire à un
+  // news_id arbitraire (autre tenant, brouillon, ou inexistant) → rows
+  // orphelines / cross-tenant. On lit avec le client service-role (supabaseAdmin
+  // si dispo) pour ne pas dépendre des RLS publiques.
+  const { data: newsRow, error: newsErr } = await client
+    .from('news')
+    .select('id, status')
+    .eq('id', trimmedNewsId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+
+  if (newsErr) {
+    logger.error('[/api/news/comments] news lookup error:', newsErr);
+    return res.status(500).json({ error: 'Failed to create comment' });
+  }
+  if (!newsRow) {
+    return res.status(404).json({ error: 'Article introuvable' });
+  }
+  if ((newsRow as { status?: string }).status !== 'published') {
+    return res
+      .status(403)
+      .json({ error: 'Les commentaires sont fermés sur cet article.' });
+  }
+
   const { data, error } = await client
     .from('news_comments')
     .insert({

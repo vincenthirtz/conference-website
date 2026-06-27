@@ -280,6 +280,9 @@ describe('/api/news/comments', () => {
 
   it('POST 201 inserts a valid comment', async () => {
     const { token, answer } = freshCaptcha();
+    // Le handler vérifie désormais que l'article existe + est publié pour le
+    // tenant résolu avant d'insérer. On seede la news ciblée en 'published'.
+    store.news = [{ id: 'n1', status: 'published' }] as any;
     store.news_comments = [];
     const res = makeRes();
     await newsCommentsHandler(
@@ -298,6 +301,48 @@ describe('/api/news/comments', () => {
     expect(res.statusCode).toBe(201);
     expect(store.news_comments.length).toBe(1);
     expect((store.news_comments[0] as any).author_name).toBe('Alice');
+  });
+
+  it('POST 404 when the target news does not exist', async () => {
+    const { token, answer } = freshCaptcha();
+    store.news = [];
+    store.news_comments = [];
+    const res = makeRes();
+    await newsCommentsHandler(
+      makeReq({
+        method: 'POST',
+        body: {
+          newsId: 'does-not-exist',
+          content: 'Comment on a ghost article.',
+          captchaToken: token,
+          captchaAnswer: String(answer),
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(404);
+    expect(store.news_comments.length).toBe(0);
+  });
+
+  it('POST 403 when the target news is a draft', async () => {
+    const { token, answer } = freshCaptcha();
+    store.news = [{ id: 'n-draft', status: 'draft' }] as any;
+    store.news_comments = [];
+    const res = makeRes();
+    await newsCommentsHandler(
+      makeReq({
+        method: 'POST',
+        body: {
+          newsId: 'n-draft',
+          content: 'Trying to comment on a draft.',
+          captchaToken: token,
+          captchaAnswer: String(answer),
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(403);
+    expect(store.news_comments.length).toBe(0);
   });
 });
 

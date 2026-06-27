@@ -15102,8 +15102,10 @@ paths:
       operationId: ingestNewsArticle
       description: |
         Endpoint d'ingest legacy : auth via BOT_API_KEY (env legacy global, pas
-        per-tenant). Pour la nouvelle surface bot, utiliser
-        /api/bot/v1/* avec auth per-tenant.
+        per-tenant). Le tenant cible est choisi par le header `x-tenant-id`
+        (et NON par la cle, contrairement a /api/bot/v1/*). Un `x-tenant-id`
+        inconnu ou inactif renvoie 400 (`UNKNOWN_TENANT`). Pour la nouvelle
+        surface bot, utiliser /api/bot/v1/* avec auth per-tenant.
       security:
         - BotApiKey: []
           BotTenantId: []
@@ -15211,6 +15213,9 @@ paths:
         - public/news
       summary: Poste un commentaire (captcha + honeypot + rate-limit IP).
       operationId: createNewsComment
+      description: |
+        L'article cible (newsId) doit exister pour le tenant resolu ET etre
+        publie : sinon 404 (inconnu) ou 403 (brouillon / commentaires fermes).
       security: []
       requestBody:
         required: true
@@ -15232,6 +15237,10 @@ paths:
                     $ref: "#/components/schemas/NewsComment"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
   /api/onboard/tenant-request:

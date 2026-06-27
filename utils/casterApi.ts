@@ -8,6 +8,31 @@
 //
 // Keeping the body here means v1 and legacy can never drift: both import the
 // exact same query + shaping logic. See docs/CASTER_API_CONTRACT.md.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+// SÉCURITÉ — posture "public GET, scoped by tenant" (VOLONTAIRE, contractuel).
+//
+// Ces handlers n'ont PAS de gate d'auth (pas de withCasterRoute / token) ET
+// résolvent le tenant depuis le header client `x-tenant-id` (resolveTenantId).
+// Ce n'est PAS un leak : c'est documenté et autoritaire dans
+// docs/CASTER_API_CONTRACT.md (tableau "public GET"), et les champs renvoyés
+// sont DÉJÀ publics sur le site :
+//   - les matchs (status pending/ongoing/finished, scheduled_at, round_name,
+//     scores, noms d'équipes) sont déjà servis à tout visiteur par la page
+//     publique pages/tournament/[id].tsx (select sur `matches`, filtre
+//     `neq('status','cancelled')`, même tenant scoping) ;
+//   - `stream_url` est une URL Twitch publique par nature ;
+//   - on n'expose PAS `lobby_code` ni aucun champ interne (le dashboard riche
+//     caster, lui, passe par /api/cast/[matchId] qui EST gated
+//     `withStaffRoute('caster')`).
+//
+// Le `x-tenant-id` ne sert qu'à choisir un sous-ensemble de données déjà
+// publiques d'un autre tenant : aucune élévation de privilège possible. Si un
+// jour ces routes devaient exposer des données non-publiées / internes, il
+// FAUDRAIT alors ajouter un gate `withCasterRoute` (cf. utils/casterAuth.ts)
+// + valider le tenant résolu contre le caster authentifié — ce n'est pas le
+// cas aujourd'hui.
+// ─────────────────────────────────────────────────────────────────────────────
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from './supabase';

@@ -127,9 +127,40 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
       .json({ error: 'Database service unavailable (missing service role).' });
   }
 
-  // POST is bot-authenticated (x-api-key + x-tenant-id) — use resolveTenantId,
-  // which reads the bot header. Falls back to DEFAULT_TENANT_ID si absent.
+  // ─────────────────────────────────────────────────────────────────────────
+  // LEGACY route (non-v1). Auth = global `BOT_API_KEY` env (constant-time),
+  // PAS la clé per-tenant de `tenant_secrets`. Le tenant cible est donc choisi
+  // par le HEADER client `x-tenant-id` (via resolveTenantId), pas par la clé.
+  //
+  // Pourquoi on NE migre PAS vers `withBotRoute` ici (cf. docs/BOT_API_CONTRACT
+  // .md §"Per-tenant secrets rotation") : le caller legacy
+  // `services/discord-bot/news-forwarder.js` envoie `x-api-key: BOT_API_KEY`
+  // (clé GLOBALE) + `x-tenant-id: <guild→tenant>`. Il n'envoie PAS de clé
+  // per-tenant seedée dans `tenant_secrets`. Passer la route sous
+  // `withBotRoute` ferait donc échouer toute ingestion (401) tant que le bot
+  // n'a pas migré côté envoi. → à migrer en PAIRE bot+site, hors scope ici.
+  //
+  // Durcissement appliqué SANS casser le contrat legacy : le header peut
+  // toujours choisir le tenant, mais on REFUSE un tenant inexistant ou inactif
+  // — un détenteur de la clé globale ne peut donc plus écrire dans un bucket
+  // tenant arbitraire/usurpé (data orpheline). Le DEFAULT_TENANT_ID reste
+  // toujours valide (fallback sans header).
   const tenantId = resolveTenantId(req);
+
+  const { data: tenantRow, error: tenantErr } = await supabaseAdmin
+    .from('tenants')
+    .select('id, is_active')
+    .eq('id', tenantId)
+    .maybeSingle();
+  if (tenantErr) {
+    logger.error('[news] ingest tenant lookup error', tenantErr);
+    return res.status(500).json({ error: 'Failed to resolve tenant.' });
+  }
+  if (!tenantRow || (tenantRow as { is_active?: boolean }).is_active === false) {
+    return res
+      .status(400)
+      .json({ error: 'Unknown or inactive tenant.', code: 'UNKNOWN_TENANT' });
+  }
 
   const body = (req.body ?? {}) as NewsPayload;
   if (!body.title || !body.content) {
