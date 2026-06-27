@@ -103,6 +103,8 @@ type AdminUserEntry = {
     provider: string;
     identity_data?: Record<string, unknown>;
   }>;
+  user_metadata?: Record<string, unknown>;
+  created_at?: string | null;
 };
 const _adminUsers = new Map<string, AdminUserEntry>();
 
@@ -176,8 +178,15 @@ export function setCookieUser(user: unknown, error: unknown = null) {
   _cookieError = error;
 }
 
-export function setAdminUser(userId: string, email: string | null) {
-  _adminUsers.set(userId, { email });
+export function setAdminUser(
+  userId: string,
+  email: string | null,
+  extra?: {
+    user_metadata?: Record<string, unknown>;
+    created_at?: string | null;
+  }
+) {
+  _adminUsers.set(userId, { email, ...extra });
 }
 
 /**
@@ -549,6 +558,8 @@ export const supabaseAdmin = {
                   id: userId,
                   email: entry.email,
                   identities: entry.identities ?? [],
+                  user_metadata: entry.user_metadata ?? {},
+                  created_at: entry.created_at ?? null,
                 } as any,
               }
             : { user: null as any },
