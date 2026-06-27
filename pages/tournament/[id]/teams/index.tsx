@@ -1,0 +1,177 @@
+// pages/tournament/[id]/teams/index.tsx
+// Page publique : liste des equipes inscrites a un tournoi. Chaque carte mene
+// vers la fiche d'equipe du tournoi (teams/[teamId]). Complete les onglets
+// bracket / matches / maps / podium de la page tournoi.
+
+import { GetStaticPaths, GetStaticProps } from 'next';
+import Head from 'next/head';
+import Link from 'next/link';
+import Image from 'next/image';
+import Heading from '@/components/Typography/heading';
+import Paragraph from '@/components/Typography/paragraph';
+import Button from '@/components/Buttons/button';
+import { supabaseAdmin } from '@/utils/supabase';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
+import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
+import { logger } from '@/utils/logger';
+
+type Tournament = {
+  id: string;
+  slug: string | null;
+  name: string;
+  game: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  is_public?: boolean | null;
+};
+
+type Team = {
+  id: string;
+  slug: string | null;
+  name: string;
+  short_name: string | null;
+  logo_url: string | null;
+};
+
+type Props = {
+  tournament: Tournament;
+  teams: Team[];
+};
+
+export const getStaticPaths: GetStaticPaths = async () => {
+  return { paths: [], fallback: 'blocking' };
+};
+
+export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
+  const id = ctx.params?.id;
+  if (!id || Array.isArray(id)) return { notFound: true, revalidate: 60 };
+  if (!supabaseAdmin) return { notFound: true, revalidate: 60 };
+
+  // S5d: getStaticProps → DEFAULT_TENANT_ID (TODO(S7) — SSR/ISR per tenant).
+  const tenantId = DEFAULT_TENANT_ID;
+
+  // Tournoi (UUID ou slug). Même garde de visibilité que la fiche d'équipe.
+  const tournament = await findTournamentByIdOrSlug<Tournament>(
+    id,
+    'id, name, slug, game, start_date, end_date, is_public',
+    tenantId
+  );
+  if (!tournament || tournament.is_public === false)
+    return { notFound: true, revalidate: 60 };
+
+  // Équipes inscrites (via tournament_teams), même jointure que la page tournoi.
+  const teamsRes = await supabaseAdmin
+    .from('tournament_teams')
+    .select('team:teams ( id, slug, name, short_name, logo_url )')
+    .eq('tenant_id', tenantId)
+    .eq('tournament_id', tournament.id);
+
+  if (teamsRes.error)
+    logger.error('tournament teams list error:', teamsRes.error);
+
+  // La jointure `team:teams(...)` est typée en tableau par Supabase mais renvoie
+  // un objet unique à l'exécution (relation 1-1 via la FK) — même traitement que
+  // la page tournoi parente.
+  const teamMap = new Map<string, Team>();
+  (teamsRes.data || []).forEach((row: any) => {
+    if (row.team) teamMap.set(row.team.id, row.team as Team);
+  });
+  const teams = Array.from(teamMap.values()).sort((a, b) =>
+    a.name.localeCompare(b.name, 'fr')
+  );
+
+  return { props: { tournament, teams }, revalidate: 60 };
+};
+
+export default function TournamentTeamsPage({ tournament, teams }: Props) {
+  const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
+
+  return (
+    <>
+      <Head>
+        <title>{`Équipes · ${tournament.name}`}</title>
+        <meta
+          name="description"
+          content={`Toutes les équipes inscrites au tournoi ${tournament.name}.`}
+        />
+      </Head>
+
+      <main className="bg-neutral-950 text-white min-h-screen pt-24 pb-16">
+        <div className="max-w-5xl mx-auto px-4">
+          <section className="mb-8">
+            <p className="text-xs uppercase tracking-[0.18em] text-purple-200/80">
+              Tournoi · Équipes
+            </p>
+            <Heading
+              level="h1"
+              typeStyle="heading-md"
+              className="text-gradient mb-1"
+            >
+              Équipes inscrites
+            </Heading>
+            <p className="text-sm text-gray-300">
+              <Link
+                href={tournamentPath}
+                className="text-purple-300 hover:text-purple-200 underline"
+              >
+                {tournament.name}
+              </Link>
+              {` · ${teams.length} équipe${teams.length > 1 ? 's' : ''}`}
+            </p>
+          </section>
+
+          {teams.length === 0 ? (
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-8 text-center">
+              <Paragraph typeStyle="body-md" textColor="text-gray-300">
+                Aucune équipe inscrite pour le moment.
+              </Paragraph>
+              <Link href={tournamentPath} className="mt-4 inline-block">
+                <Button
+                  type="button"
+                  className="px-6 py-2.5 text-xs font-semibold rounded-full bg-white/5 border border-white/20 hover:border-purple-400/60 hover:bg-purple-500/10 transition-all"
+                >
+                  Retour au tournoi
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {teams.map((team) => (
+                <li key={team.id}>
+                  <Link
+                    href={`${tournamentPath}/teams/${team.id}`}
+                    className="group flex items-center gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-4 transition-all hover:border-purple-400/50 hover:bg-purple-500/[0.07]"
+                  >
+                    {team.logo_url ? (
+                      <Image
+                        src={team.logo_url}
+                        alt={team.name}
+                        width={56}
+                        height={56}
+                        className="h-14 w-14 rounded-lg object-cover bg-neutral-900 border border-white/10"
+                      />
+                    ) : (
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-neutral-900 border border-white/10 text-lg font-bold text-purple-200">
+                        {(team.short_name || team.name).charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-white group-hover:text-purple-200">
+                        {team.name}
+                      </p>
+                      {team.short_name && (
+                        <p className="truncate text-xs uppercase tracking-wide text-gray-400">
+                          {team.short_name}
+                        </p>
+                      )}
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </main>
+    </>
+  );
+}
