@@ -13,6 +13,7 @@ import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
+import { maskBattleTag } from '@/utils/battleTag';
 
 type Tournament = {
   id: string;
@@ -208,7 +209,8 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   // 9) Construire le roster final
   const roster: RosterMember[] = (members || []).map((m: any) => ({
     id: m.id,
-    battle_tag: m.battle_tag ?? null,
+    // Anonymat public : on retire l'ID numérique du BattleTag (après le « # »).
+    battle_tag: maskBattleTag(m.battle_tag ?? null),
     role: m.role,
     is_substitute: !!m.is_substitute,
     is_captain: m.user_id === team.captain_id,

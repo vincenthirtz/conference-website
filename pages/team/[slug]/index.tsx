@@ -10,6 +10,7 @@ import Paragraph from '@/components/Typography/paragraph';
 import PublicScrimDialog from '@/components/Team/PublicScrimDialog';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
+import { maskBattleTag } from '@/utils/battleTag';
 import {
   renderTeamPublicMarkdown,
   normalizeAccentColor,
@@ -339,6 +340,8 @@ export const getStaticProps: GetStaticProps<TeamPageProps> = async (ctx) => {
   // Compute is_captain based on team.captain_id
   const membersWithCaptain = (rawMembers || []).map((m: any) => ({
     ...m,
+    // Anonymat public : on masque l'ID numérique du BattleTag (après le « # »).
+    battle_tag: maskBattleTag(m.battle_tag ?? null),
     is_captain: team.captain_id === m.user_id,
   }));
   // Sort captain first

@@ -10,6 +10,7 @@ import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
+import { maskBattleTag } from '@/utils/battleTag';
 
 type LeaderboardEntry = {
   memberId: string | null;
@@ -109,7 +110,8 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       team1Id: m.team1_id ?? null,
       team2Id: m.team2_id ?? null,
       memberId: poll?.winner_member_id ?? null,
-      battleTag: poll?.winner_battle_tag ?? null,
+      // Anonymat public : on masque l'ID numérique du BattleTag (après le « # »).
+      battleTag: maskBattleTag(poll?.winner_battle_tag ?? null),
     };
   });
 
