@@ -34,7 +34,7 @@ type Tournament = {
   id: string;
   slug?: string | null;
   name: string;
-  is_public?: boolean | null;
+  visibility?: string | null;
 };
 
 type Props = {
@@ -60,10 +60,13 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   // Phase A : tournoi (UUID ou slug)
   const tournament = await findTournamentByIdOrSlug<Tournament>(
     id,
-    'id, name, slug, is_public',
+    'id, name, slug, visibility',
     tenantId
   );
-  if (!tournament || !tournament.is_public)
+  if (
+    !tournament ||
+    (tournament.visibility != null && tournament.visibility !== 'public')
+  )
     return { notFound: true, revalidate: 60 };
   const tournamentId = tournament.id;
 
