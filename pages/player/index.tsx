@@ -2,7 +2,6 @@
 // Dashboard joueur - page principale pour les utilisateurs connectes
 
 import { useEffect, useState, useCallback } from 'react';
-import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabaseClient } from '@/utils/supabase';
@@ -18,6 +17,7 @@ import QuickAction, {
 import NextMatchCard from '@/components/player/NextMatchCard';
 import { PlayerDashboardSkeleton } from '@/components/player/Skeletons';
 import PushOptIn from '@/components/shared/PushOptIn';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../../utils/logger';
 type TeamInfo = {
@@ -137,7 +137,7 @@ function buildQuickActions(args: {
   return actions;
 }
 
-export default function PlayerDashboard() {
+function PlayerDashboard() {
   const router = useRouter();
   const { user, loading: authLoading, ready } = usePlayerSession();
   const { adminFetchJson } = useAdminFetch();
@@ -294,9 +294,6 @@ export default function PlayerDashboard() {
   if (!user) {
     return (
       <>
-        <Head>
-          <title>Mon espace joueur | OW Women&apos;s Cup</title>
-        </Head>
         <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
           <main className="max-w-md mx-auto px-4 py-10 pt-32 text-center">
             <h1 className="text-3xl font-bold text-gradient">Espace joueur</h1>
@@ -324,10 +321,6 @@ export default function PlayerDashboard() {
 
   return (
     <>
-      <Head>
-        <title>Mon espace joueur | OW Women&apos;s Cup</title>
-      </Head>
-
       <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
         <main className="max-w-4xl mx-auto px-4 py-10 pt-24">
           {/* Header */}
@@ -359,11 +352,7 @@ export default function PlayerDashboard() {
               loginPath='/login' : login universel qui route captain/player
               vers /player et le staff vers /admin. */}
           <div className="mb-6">
-            <PushOptIn
-              audience="player"
-              variant="card"
-              loginPath="/login"
-            />
+            <PushOptIn audience="player" variant="card" loginPath="/login" />
           </div>
 
           <div className="grid gap-6 md:grid-cols-2">
@@ -584,3 +573,17 @@ export default function PlayerDashboard() {
     </>
   );
 }
+
+// Espace joueur : gate cote client, contenu prive. Le titre passe par le
+// mecanisme `seo` consomme par _app.tsx ; `noindex` est de toute facon force
+// pour toutes les routes /player (cf. _app.tsx → effectiveSeo).
+const playerSeo: SeoProps = {
+  title: 'Mon espace joueur',
+  description:
+    "Espace joueur OW Women's Cup : profil, equipe, prochains matchs et demandes.",
+  noindex: true,
+};
+
+PlayerDashboard.seo = playerSeo;
+
+export default PlayerDashboard;

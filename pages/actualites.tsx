@@ -30,6 +30,7 @@ type BlizzardNews = {
 type ActualitesProps = {
   patchNotes: PatchNote[];
   news: BlizzardNews[];
+  loadError: boolean;
 };
 
 const PATCH_NOTES_SOURCE =
@@ -39,6 +40,9 @@ const NEWS_SOURCE = 'https://overwatch.blizzard.com/fr-fr/news/';
 export const getStaticProps: GetStaticProps<ActualitesProps> = async () => {
   let patchNotes: PatchNote[] = [];
   let news: BlizzardNews[] = [];
+  // Distinguish "no data" from "Supabase failure" so the UI can show an error
+  // banner instead of a misleading "aucune actualité" empty state.
+  let loadError = false;
 
   if (supabaseAdmin) {
     const [patchRes, newsRes] = await Promise.all([
@@ -53,6 +57,10 @@ export const getStaticProps: GetStaticProps<ActualitesProps> = async () => {
         .order('date_parsed', { ascending: false, nullsFirst: false })
         .limit(12),
     ]);
+
+    if (patchRes.error || newsRes.error) {
+      loadError = true;
+    }
 
     if (!patchRes.error && patchRes.data) {
       patchNotes = patchRes.data.map((row) => ({
@@ -79,12 +87,12 @@ export const getStaticProps: GetStaticProps<ActualitesProps> = async () => {
   }
 
   return {
-    props: { patchNotes, news },
+    props: { patchNotes, news, loadError },
     revalidate: 900, // 15 minutes
   };
 };
 
-function ActualitesPage({ patchNotes, news }: ActualitesProps) {
+function ActualitesPage({ patchNotes, news, loadError }: ActualitesProps) {
   const [activeTab, setActiveTab] = useState<'all' | 'patch' | 'news'>('all');
 
   const renderPatchNoteCard = (note: PatchNote) => {
@@ -234,7 +242,7 @@ function ActualitesPage({ patchNotes, news }: ActualitesProps) {
           {/* Header */}
           <div className="text-center mb-12">
             <div className="inline-block text-lg text-white font-semibold border-b-2 border-blue-400 mb-4">
-              Actualités
+              Actualités Blizzard
             </div>
             <Heading
               typeStyle="heading-lg"
@@ -245,9 +253,18 @@ function ActualitesPage({ patchNotes, news }: ActualitesProps) {
             </Heading>
             <div className="max-w-2xl mx-auto mt-4">
               <Paragraph typeStyle="body-lg" textColor="text-neutral-300">
-                Patch notes, mises à jour et actualités officielles directement
-                depuis Blizzard.
+                Patch notes, mises à jour et actualités officielles du jeu,
+                directement depuis Blizzard.
               </Paragraph>
+            </div>
+            <div className="mt-5">
+              <Link
+                href="/news"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-purple-400/40 bg-purple-500/10 px-4 py-2 text-sm font-medium text-purple-200 transition hover:border-purple-400/70 hover:bg-purple-500/20"
+              >
+                Voir les actualités du site
+                <span aria-hidden>→</span>
+              </Link>
             </div>
           </div>
 
@@ -283,7 +300,12 @@ function ActualitesPage({ patchNotes, news }: ActualitesProps) {
           </div>
 
           {/* Content */}
-          {filteredItems.length === 0 ? (
+          {loadError ? (
+            <div className="mx-auto max-w-xl rounded-2xl border border-red-500/40 bg-red-500/10 px-6 py-8 text-center text-red-100">
+              Impossible de charger les actualités Blizzard pour le moment.
+              Réessaie dans quelques instants.
+            </div>
+          ) : filteredItems.length === 0 ? (
             <div className="text-center py-20">
               <Paragraph textColor="text-neutral-400" className="text-lg">
                 Aucune actualité disponible pour le moment.
@@ -325,9 +347,9 @@ function ActualitesPage({ patchNotes, news }: ActualitesProps) {
 }
 
 const actualitesSeo: SeoProps = {
-  title: 'Actualités Overwatch & esport féminin',
+  title: 'Actualités Overwatch — patch notes & news Blizzard',
   description:
-    "Patch notes Overwatch, news Blizzard et actualités de l'OW Women's Cup : suis l'actu du tournoi et de l'esport 100% féminin.",
+    "Patch notes Overwatch et actualités officielles Blizzard. Pour les nouvelles de l'OW Women's Cup, rends-toi sur la page actualités du site.",
 };
 
 ActualitesPage.seo = actualitesSeo;
