@@ -5,7 +5,8 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
-import { withAuthRoute } from '@/utils/staff';
+import { withAuthRoute, getStaffByUserId } from '@/utils/staff';
+import { logStaffAction } from '@/utils/staffLogs';
 import {
   isTeamRosterLocked,
   rosterLockErrorMessage,
@@ -105,6 +106,22 @@ export default withAuthRoute(async function handler(
   if (updateErr) {
     logger.error('[transfer-captain] update error:', updateErr);
     return res.status(500).json({ error: 'Failed to transfer captaincy.' });
+  }
+
+  // Audit : designation d'un nouveau capitaine.
+  const staff = await getStaffByUserId(userId);
+  if (staff?.id) {
+    await logStaffAction({
+      staff_id: staff.id,
+      action: 'assign_team_captain',
+      entity_type: 'team',
+      entity_id: team.id,
+      tenant_id: tenantId,
+      payload: {
+        previous_captain_id: userId,
+        new_captain_id: newCaptainUserId,
+      },
+    });
   }
 
   return res.status(200).json({

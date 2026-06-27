@@ -51,6 +51,12 @@ export type StaffLogAction =
   | 'blacklist_update'
   | 'blacklist_remove'
   | 'view_player_data'
+  | 'update_player_battle_tag'
+  | 'transfer_player_team'
+  | 'assign_team_captain'
+  | 'manage_substitute'
+  | 'process_demande'
+  | 'bulk_roster_update'
   | 'other';
 
 export type StaffLog = {

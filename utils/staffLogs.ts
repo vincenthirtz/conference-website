@@ -206,6 +206,12 @@ export function formatStaffLog(log: StaffLog) {
     blacklist_update: 'Modification blacklist joueur',
     blacklist_remove: 'Suppression blacklist joueur',
     view_player_data: "a consulté l'espace joueur d'un utilisateur",
+    update_player_battle_tag: 'BattleTag joueur modifié',
+    transfer_player_team: "Transfert d'équipe d'un joueur",
+    assign_team_captain: 'Capitaine désigné',
+    manage_substitute: 'Gestion remplaçant',
+    process_demande: 'Traitement demande',
+    bulk_roster_update: 'Mise à jour roster en masse',
     other: 'Action staff',
   };
 

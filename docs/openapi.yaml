@@ -12148,6 +12148,93 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /api/admin/teams/{teamId}/roster-bulk:
+    parameters:
+      - $ref: "#/components/parameters/TeamId"
+    post:
+      summary: Bulk roster operations on a team.
+      description: |
+        Applies one operation to a list of team members (best-effort, per-member
+        result). Operations: `set_role`, `set_substitute`, `remove`,
+        `import_battle_tags`. The captain can never be removed or marked
+        substitute via bulk.
+      operationId: adminTeamRosterBulk
+      tags:
+        - admin/teams
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - operation
+              properties:
+                operation:
+                  type: string
+                  enum:
+                    - set_role
+                    - set_substitute
+                    - remove
+                    - import_battle_tags
+                memberIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  description: Member ids for set_role / set_substitute / remove.
+                role:
+                  type: string
+                  description: Required when operation = set_role.
+                isSubstitute:
+                  type: boolean
+                  description: Required when operation = set_substitute.
+                items:
+                  type: array
+                  description: Required when operation = import_battle_tags.
+                  items:
+                    type: object
+                    properties:
+                      memberId:
+                        type: string
+                        format: uuid
+                      battleTag:
+                        type: string
+      responses:
+        "200":
+          description: Per-member results.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  operation:
+                    type: string
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        memberId:
+                          type: string
+                        ok:
+                          type: boolean
+                        error:
+                          type: string
+                  successCount:
+                    type: integer
+                  failureCount:
+                    type: integer
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/admin/teams/{teamId}/tournaments:
     parameters:
       - $ref: "#/components/parameters/TeamId"
@@ -14062,6 +14149,124 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /api/admin/users/{userId}/actions:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      summary: Admin player actions from the player-view command center.
+      description: |
+        Server-side player actions that cannot reuse an existing endpoint.
+        Supported actions: `assign_captain` (promote the target user to captain
+        of their current team) and `transfer_team` (move the target user to
+        another team). Scoped to the staff's active tenant.
+      operationId: adminUserActions
+      tags:
+        - admin/users
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - action
+              properties:
+                action:
+                  type: string
+                  enum:
+                    - assign_captain
+                    - transfer_team
+                teamId:
+                  type: string
+                  format: uuid
+                  description: Destination team id (required for transfer_team).
+                battleTag:
+                  type: string
+                  description: Optional BattleTag override for transfer_team.
+      responses:
+        "200":
+          description: Action applied.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  info:
+                    type: string
+                  teamId:
+                    type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/admin/users/{userId}/player-view:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Read-only snapshot of a user's player area.
+      description: |
+        Inspection (not impersonation) of a target user's player area:
+        profile, team + members, matches, notification counters and demandes.
+        Scoped to the staff's active tenant.
+      operationId: adminUserPlayerView
+      tags:
+        - admin/users
+      security:
+        - StaffSession: []
+      responses:
+        "200":
+          description: Player-area snapshot.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                    additionalProperties: true
+                  team:
+                    type: object
+                    nullable: true
+                    additionalProperties: true
+                  matches:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                  notifications:
+                    type: object
+                    additionalProperties: true
+                  demandes:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/admin/users/search:
     get:
       summary: Search users by email, display name, Discord ID.
@@ -16026,6 +16231,52 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+  /api/teams/update-member:
+    patch:
+      tags:
+        - public/teams
+      summary: Le capitaine met a jour un membre de son equipe (role / battle_tag / remplacant).
+      description: |
+        Le capitaine (ou un role manager) met a jour un membre de l'equipe qu'il
+        gere : correction du BattleTag (Name#0000), (de)marquage remplacant
+        (is_substitute) et/ou changement de role. Au moins un champ requis.
+      operationId: updateTeamMember
+      security:
+        - PlayerBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - memberId
+              properties:
+                memberId:
+                  type: string
+                  format: uuid
+                role:
+                  type: string
+                battle_tag:
+                  type: string
+                is_substitute:
+                  type: boolean
+      responses:
+        "200":
+          description: Membre mis a jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/teams/update-member-role:
     patch:
       tags:
@@ -17901,6 +18152,40 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+  /api/player/matches:
+    get:
+      tags:
+        - public/auth
+      summary: Matchs du joueur connecte (a venir + passes).
+      description: |
+        Liste tous les matchs (toute statut) de l'equipe du joueur connecte,
+        scopes au tenant resolu, tries par scheduled_at decroissant. Pour chaque
+        match : slot, adversaire, score relatif, resultat win/loss/draw, tournoi
+        et fenetre de check-in pour les matchs pending encore actionnables.
+      operationId: getPlayerMatches
+      security:
+        - PlayerBearer: []
+      responses:
+        "200":
+          description: Equipe + liste des matchs (team peut etre null si pas d'equipe).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  team:
+                    type: object
+                    nullable: true
+                    additionalProperties: true
+                  matches:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
   /api/player/next-match:
     get:
       tags:

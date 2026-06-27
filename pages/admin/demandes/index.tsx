@@ -120,6 +120,34 @@ function sanitizeSearchInput(raw: string) {
   return raw.replace(/[,()*\\]/g, ' ').trim();
 }
 
+// Mirror of utils/teams/addMember.ts BATTLE_TAG_REGEX (that module imports
+// supabase and is server-only, so we can't import it into the client bundle).
+const BATTLE_TAG_REGEX = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
+
+// Only join / captain_request demandes carry a player BattleTag that gets
+// written when the membership is created.
+function demandeCarriesBattleTag(d: Demande) {
+  return d.type === 'join' || d.type === 'captain_request';
+}
+
+// Resolve the BattleTag a demande would write: payload first (join stores
+// `user_battle_tag`), falling back to the requester's auth metadata tag.
+function resolveDemandeBattleTag(d: Demande): string | null {
+  const fromPayload =
+    typeof d.payload?.user_battle_tag === 'string'
+      ? d.payload.user_battle_tag
+      : null;
+  return fromPayload || d.user?.battle_tag || null;
+}
+
+// A demande is flagged when it carries a BattleTag slot but the stored tag is
+// missing or fails the format check.
+function isBattleTagFlagged(d: Demande): boolean {
+  if (!demandeCarriesBattleTag(d)) return false;
+  const tag = resolveDemandeBattleTag(d);
+  return !tag || !BATTLE_TAG_REGEX.test(tag.trim());
+}
+
 export const getServerSideProps = withStaffPage('manager', async (ctx, staffCtx) => {
   const { query } = ctx;
   const type = typeof query.type === 'string' ? query.type : '';
@@ -424,6 +452,20 @@ function AdminDemandesPage({
   const [batchProcessing, setBatchProcessing] = useState(false);
   const [singleProcessing, setSingleProcessing] = useState<string | null>(null);
 
+  // Approval confirm modal for flagged (invalid/missing BattleTag) demandes:
+  // staff can fix the tag inline before the membership is created.
+  const [tagModal, setTagModal] = useState<{
+    demande: Demande;
+    value: string;
+  } | null>(null);
+
+  // "Demander plus d'infos" modal.
+  const [infoModal, setInfoModal] = useState<{
+    demande: Demande;
+    note: string;
+  } | null>(null);
+  const [infoProcessing, setInfoProcessing] = useState(false);
+
   const hasActiveFilters =
     !!typeFilter ||
     !!tournamentFilter ||
@@ -480,7 +522,8 @@ function AdminDemandesPage({
 
   async function postUpdateStatus(
     ids: string[],
-    newStatus: 'approved' | 'rejected'
+    newStatus: 'approved' | 'rejected',
+    battleTagOverrides?: Record<string, string>
   ) {
     return adminFetchJson<{ updatedCount: number }>('/api/admin/demandes', {
       method: 'POST',
@@ -488,6 +531,9 @@ function AdminDemandesPage({
         action: 'updateStatus',
         demandeIds: ids,
         newStatus,
+        ...(battleTagOverrides && Object.keys(battleTagOverrides).length > 0
+          ? { battleTagOverrides }
+          : {}),
       }),
     });
   }
@@ -518,6 +564,19 @@ function AdminDemandesPage({
     id: string,
     newStatus: 'approved' | 'rejected'
   ) {
+    // Intercept approval of a flagged (invalid/missing BattleTag) demande:
+    // open the confirm modal so staff can fix the tag inline first.
+    if (newStatus === 'approved') {
+      const d = demandes.find((x) => x.id === id);
+      if (d && isBattleTagFlagged(d)) {
+        setTagModal({
+          demande: d,
+          value: (resolveDemandeBattleTag(d) ?? '').trim(),
+        });
+        return;
+      }
+    }
+
     setSingleProcessing(id);
     setErrorMsg(null);
     try {
@@ -536,6 +595,70 @@ function AdminDemandesPage({
       addToast((err as Error)?.message || 'Erreur', 'error');
     } finally {
       setSingleProcessing(null);
+    }
+  }
+
+  // Confirm approval from the BattleTag modal. The corrected tag (if any) is
+  // sent as a per-demande override. We DON'T hard-block on an invalid tag —
+  // staff can approve anyway (a warning toast surfaces the issue).
+  async function confirmTagApproval() {
+    if (!tagModal) return;
+    const { demande, value } = tagModal;
+    const trimmed = value.trim();
+    const stillInvalid = !trimmed || !BATTLE_TAG_REGEX.test(trimmed);
+
+    setSingleProcessing(demande.id);
+    setErrorMsg(null);
+    try {
+      await postUpdateStatus(
+        [demande.id],
+        'approved',
+        trimmed ? { [demande.id]: trimmed } : undefined
+      );
+      addToast(
+        stillInvalid
+          ? 'Demande approuvée (BattleTag toujours invalide/absent).'
+          : 'Demande approuvée.',
+        stillInvalid ? 'error' : 'success'
+      );
+      setTagModal(null);
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(demande.id);
+        return next;
+      });
+      refresh();
+    } catch (err: unknown) {
+      addToast((err as Error)?.message || 'Erreur', 'error');
+    } finally {
+      setSingleProcessing(null);
+    }
+  }
+
+  async function submitRequestMoreInfo() {
+    if (!infoModal) return;
+    const note = infoModal.note.trim();
+    if (!note) {
+      addToast('Saisis une note avant d’envoyer.', 'error');
+      return;
+    }
+    setInfoProcessing(true);
+    try {
+      await adminFetchJson('/api/admin/demandes', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'requestMoreInfo',
+          demandeId: infoModal.demande.id,
+          note,
+        }),
+      });
+      addToast('Note enregistrée. La demande reste en attente.', 'success');
+      setInfoModal(null);
+      refresh();
+    } catch (err: unknown) {
+      addToast((err as Error)?.message || 'Erreur', 'error');
+    } finally {
+      setInfoProcessing(false);
     }
   }
 
@@ -1118,6 +1241,28 @@ function AdminDemandesPage({
                                 {d.source}
                               </span>
                             )}
+                            {isBattleTagFlagged(d) && (
+                              <span
+                                title="BattleTag manquant ou invalide — à corriger à l'approbation"
+                                data-testid="battletag-warning"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-orange-600/20 text-orange-300 border border-orange-500/40"
+                              >
+                                <svg
+                                  className="w-3 h-3"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                                  />
+                                </svg>
+                                BattleTag
+                              </span>
+                            )}
                           </div>
                           <div className="flex items-center gap-3 text-sm text-neutral-400 flex-wrap">
                             {d.type === 'scrim' &&
@@ -1221,6 +1366,30 @@ function AdminDemandesPage({
                       {/* Quick actions for pending demandes */}
                       {isPending && (
                         <div className="hidden md:flex items-center gap-1 flex-shrink-0">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setInfoModal({ demande: d, note: '' })
+                            }
+                            disabled={isProcessing || batchProcessing}
+                            title="Demander plus d'infos"
+                            data-testid="request-more-info"
+                            className="p-2 rounded-lg bg-amber-600/20 hover:bg-amber-600 text-amber-300 hover:text-white border border-amber-500/30 hover:border-amber-500 text-xs transition-colors disabled:opacity-50"
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                              />
+                            </svg>
+                          </button>
                           <button
                             type="button"
                             onClick={() =>
@@ -1355,6 +1524,111 @@ function AdminDemandesPage({
           </div>
         </div>
       </div>
+
+      {/* BattleTag fix / approve-confirm modal */}
+      {tagModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          data-testid="battletag-modal"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-neutral-700 bg-neutral-900 p-6 shadow-xl">
+            <h2 className="text-lg font-semibold text-white">
+              Corriger le BattleTag avant l&apos;approbation
+            </h2>
+            <p className="mt-1 text-sm text-neutral-400">
+              Le BattleTag de cette demande est manquant ou invalide. Corrige-le
+              ci-dessous — il sera utilisé lors de la création du membre. Tu peux
+              tout de même approuver sans corriger.
+            </p>
+            <label className="mt-4 block text-sm text-neutral-400 mb-1">
+              BattleTag (format Nom#0000)
+            </label>
+            <input
+              type="text"
+              data-testid="battletag-input"
+              autoFocus
+              value={tagModal.value}
+              onChange={(e) =>
+                setTagModal((m) => (m ? { ...m, value: e.target.value } : m))
+              }
+              placeholder="Nom#1234"
+              className="w-full px-3 py-2.5 rounded-xl bg-neutral-800 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+            />
+            {tagModal.value.trim() &&
+              !BATTLE_TAG_REGEX.test(tagModal.value.trim()) && (
+                <p className="mt-2 text-xs text-orange-300">
+                  Format invalide (attendu : alphanumérique + # + 3 à 6
+                  chiffres).
+                </p>
+              )}
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setTagModal(null)}
+                className="px-4 py-2 rounded-xl border border-neutral-600 hover:bg-neutral-800 text-sm transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                data-testid="battletag-confirm"
+                disabled={singleProcessing === tagModal.demande.id}
+                onClick={confirmTagApproval}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                Approuver
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* "Demander plus d'infos" modal */}
+      {infoModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          data-testid="info-modal"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-neutral-700 bg-neutral-900 p-6 shadow-xl">
+            <h2 className="text-lg font-semibold text-white">
+              Demander plus d&apos;infos
+            </h2>
+            <p className="mt-1 text-sm text-neutral-400">
+              La note est enregistrée sur la demande (note staff). Le statut
+              reste « en attente ».
+            </p>
+            <textarea
+              data-testid="info-note"
+              autoFocus
+              rows={4}
+              value={infoModal.note}
+              onChange={(e) =>
+                setInfoModal((m) => (m ? { ...m, note: e.target.value } : m))
+              }
+              placeholder="Ex : peux-tu confirmer ton BattleTag et ton rôle ?"
+              className="mt-4 w-full px-3 py-2.5 rounded-xl bg-neutral-800 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm"
+            />
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setInfoModal(null)}
+                className="px-4 py-2 rounded-xl border border-neutral-600 hover:bg-neutral-800 text-sm transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                data-testid="info-submit"
+                disabled={infoProcessing}
+                onClick={submitRequestMoreInfo}
+                className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                Envoyer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

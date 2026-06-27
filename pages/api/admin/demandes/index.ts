@@ -16,6 +16,8 @@ import {
 } from '@/utils/apiHelpers';
 import { emitScrimEvent } from '@/utils/scrimEvents';
 import { validateDemandeBatchTransitions } from '@/utils/demandes/stateMachine';
+import { insertTeamMember, setTeamCaptain } from '@/utils/teams/addMember';
+import slugify from 'slugify';
 
 export type DemandeType =
   | 'join'
@@ -75,14 +77,36 @@ type BatchUpdateStatusBody = {
   demandeIds: string[];
   newStatus: DemandeStatus;
   staffComment?: string | null;
+  /**
+   * Optional per-demande BattleTag corrections (demande id → corrected tag).
+   * When approving a `join` / `captain_request` whose stored BattleTag is
+   * missing or malformed, staff can fix it inline. The corrected tag is what
+   * gets written when the membership is created / the captain is assigned.
+   */
+  battleTagOverrides?: Record<string, string>;
 };
 
-type PostBody = BatchUpdateStatusBody;
+/**
+ * "Demander plus d'infos" — records / appends a staff_note on a single pending
+ * demande WITHOUT changing its status (stays 'pending'). No new enum value, no
+ * schema migration.
+ */
+type RequestMoreInfoBody = {
+  action: 'requestMoreInfo';
+  demandeId: string;
+  note: string;
+};
+
+type PostBody = BatchUpdateStatusBody | RequestMoreInfoBody;
 
 // rôle minimum : caster (le support peut traiter les demandes)
 export default withStaffRoute(handler, 'caster');
 
-async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   try {
     switch (req.method) {
       case 'GET':
@@ -329,7 +353,11 @@ async function handleGet(
  * }
  * ---------------------------------------------------------*/
 
-async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
+async function handlePost(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   if (!supabaseAdmin) {
     return res.status(500).json({ error: 'Supabase admin not configured' });
   }
@@ -342,6 +370,10 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
     });
   }
 
+  if (body.action === 'requestMoreInfo') {
+    return await handleRequestMoreInfo(res, ctx, body);
+  }
+
   if (body.action !== 'updateStatus') {
     return res.status(400).json({
       error: 'Unsupported action',
@@ -349,6 +381,10 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
   }
 
   const { demandeIds, newStatus, staffComment } = body;
+  const battleTagOverrides =
+    body.battleTagOverrides && typeof body.battleTagOverrides === 'object'
+      ? body.battleTagOverrides
+      : {};
 
   if (!Array.isArray(demandeIds) || demandeIds.length === 0) {
     return res.status(400).json({
@@ -394,6 +430,13 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
 
   const nowIso = new Date().toISOString();
   const staffId: string | null = ctx.staff?.id ?? null;
+
+  // Per-demande processing outcomes captured for the `process_demande` audit
+  // log (whether a team was auto-created / a BattleTag was corrected).
+  const outcomes: Record<
+    string,
+    { teamAutoCreated?: boolean; tagCorrected?: boolean }
+  > = {};
 
   // 1) Récupérer l'état avant pour log
   const { data: beforeList, error: fetchErr } = await supabaseAdmin
@@ -580,10 +623,11 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
 
         if (!existingScrim) {
           const scrimName = `${fromTeamName} vs ${targetLabel}`;
-          const slugBase = `${fromTeamName}-vs-${targetLabel}-${d.id.slice(0, 8)}`
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-+|-+$/g, '');
+          const slugBase =
+            `${fromTeamName}-vs-${targetLabel}-${d.id.slice(0, 8)}`
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, '-')
+              .replace(/^-+|-+$/g, '');
 
           const { data: createdScrim, error: scrimErr } = await supabaseAdmin
             .from('scrims')
@@ -631,7 +675,17 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
 
         if (!existingMember) {
           const desiredRole = (d.payload as any)?.desired_role || 'player';
-          const battleTag = (d.payload as any)?.user_battle_tag || null;
+          // Prefer the staff-corrected BattleTag (inline fix) over the stored
+          // payload value when one was provided for this demande.
+          const overrideTag =
+            typeof battleTagOverrides[d.id] === 'string'
+              ? battleTagOverrides[d.id].trim()
+              : null;
+          const storedTag = (d.payload as any)?.user_battle_tag || null;
+          const battleTag = overrideTag || storedTag;
+          if (overrideTag && overrideTag !== storedTag) {
+            outcomes[d.id] = { ...outcomes[d.id], tagCorrected: true };
+          }
 
           const { error: memberErr } = await supabaseAdmin
             .from('team_members')
@@ -679,6 +733,148 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
     }
   }
 
+  // 3b-bis) Side-effects: when approving a captain_request, make the requester
+  // captain of a team. Two flavors:
+  //   - EXISTING team (payload.request_type === 'existing_team' OR d.team_id
+  //     set): add the requester as a member (if not already) + set captain_id.
+  //   - NEW team (payload.request_type === 'new_team' + payload.team_name):
+  //     auto-create the team (reusing slugify + the duplicate-name guard from
+  //     the team-create flow), add the requester as captain member, set
+  //     captain_id. No manual pre-creation needed.
+  // Team creation + member insert reuse `insertTeamMember` / `setTeamCaptain`
+  // from utils/teams/addMember (same helpers the captain/staff/bot add-member
+  // endpoints use). Isolated in its own try/catch per demande.
+  if (newStatus === 'approved' && afterList) {
+    for (const d of afterList as DemandeRow[]) {
+      if (d.type !== 'captain_request' || !d.user_id) continue;
+
+      try {
+        const payload = (d.payload as Record<string, any> | null) || {};
+        const overrideTag =
+          typeof battleTagOverrides[d.id] === 'string'
+            ? battleTagOverrides[d.id].trim()
+            : null;
+        const storedTag = (payload.user_battle_tag as string) || null;
+        const battleTag = overrideTag || storedTag;
+        if (overrideTag && overrideTag !== storedTag) {
+          outcomes[d.id] = { ...outcomes[d.id], tagCorrected: true };
+        }
+
+        // Resolve the target team: existing (d.team_id / payload) or new.
+        let targetTeamId: string | null = d.team_id || null;
+        const wantsNewTeam =
+          !targetTeamId &&
+          payload.request_type === 'new_team' &&
+          typeof payload.team_name === 'string' &&
+          payload.team_name.trim().length > 0;
+
+        if (wantsNewTeam) {
+          const name = (payload.team_name as string).trim();
+
+          // Duplicate-name guard: reuse an existing same-name team within the
+          // tenant rather than creating a clashing one.
+          const { data: dupe } = await supabaseAdmin
+            .from('teams')
+            .select('id')
+            .eq('tenant_id', ctx.tenantId)
+            .ilike('name', name)
+            .maybeSingle();
+
+          if (dupe?.id) {
+            targetTeamId = dupe.id;
+          } else {
+            const baseSlug =
+              slugify(name, { lower: true, strict: true }) ||
+              `team-${Date.now().toString(36)}`;
+            let createdTeamId: string | null = null;
+            for (let i = 0; i < 3; i++) {
+              const suffix =
+                i === 0
+                  ? ''
+                  : `-${Math.random().toString(36).slice(2, 6).toLowerCase()}`;
+              const slug = `${baseSlug}${suffix}`;
+              const { data: createdTeam, error: createErr } =
+                await supabaseAdmin
+                  .from('teams')
+                  .insert({
+                    tenant_id: ctx.tenantId,
+                    name,
+                    slug,
+                    is_active: true,
+                  })
+                  .select('id')
+                  .maybeSingle();
+              if (!createErr && createdTeam?.id) {
+                createdTeamId = createdTeam.id;
+                break;
+              }
+              const msg = createErr?.message?.toLowerCase() || '';
+              if (!msg.includes('duplicate') && !msg.includes('unique')) {
+                logger.error(
+                  '[admin/demandes] captain auto-create team error:',
+                  createErr
+                );
+                break;
+              }
+            }
+            if (createdTeamId) {
+              targetTeamId = createdTeamId;
+              outcomes[d.id] = { ...outcomes[d.id], teamAutoCreated: true };
+            }
+          }
+        }
+
+        if (!targetTeamId) {
+          // Nothing to assign to (e.g. new-team creation failed). Skip the
+          // captain assignment but keep the demande approved.
+          continue;
+        }
+
+        // Add the requester as a member if they aren't already on the team.
+        const { data: existingMember } = await supabaseAdmin
+          .from('team_members')
+          .select('id')
+          .eq('tenant_id', ctx.tenantId)
+          .eq('team_id', targetTeamId)
+          .eq('user_id', d.user_id)
+          .maybeSingle();
+
+        if (!existingMember) {
+          const memberResult = await insertTeamMember({
+            tenantId: ctx.tenantId,
+            teamId: targetTeamId,
+            userId: d.user_id,
+            role: 'captain',
+            battleTag: battleTag || null,
+          });
+          if (!memberResult.ok && !memberResult.isDuplicate) {
+            logger.error(
+              '[admin/demandes] captain member insert error:',
+              memberResult.error
+            );
+          }
+        }
+
+        const captainResult = await setTeamCaptain(
+          targetTeamId,
+          d.user_id,
+          ctx.tenantId
+        );
+        if (!captainResult.ok) {
+          logger.error(
+            '[admin/demandes] captain assignment error:',
+            captainResult.error
+          );
+        }
+      } catch (captainEx) {
+        logger.error(
+          '[admin/demandes] captain_request promotion exception:',
+          captainEx
+        );
+      }
+    }
+  }
+
   // 3c) Side-effects: when approving a caster_application, promote the user to
   // staff role 'caster'. Idempotent + never downgrades:
   //   - no staff row  → INSERT { role:'caster', is_active:true }
@@ -698,8 +894,9 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
           (d.payload as any)?.user_display_name ?? null;
 
         try {
-          const { data: authData } =
-            await supabaseAdmin.auth.admin.getUserById(d.user_id);
+          const { data: authData } = await supabaseAdmin.auth.admin.getUserById(
+            d.user_id
+          );
           if (authData?.user) {
             const meta = (authData.user.user_metadata ?? {}) as Record<
               string,
@@ -763,23 +960,46 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
     }
   }
 
-  // 4) Log staff (batch)
+  // 4) Log staff (batch). We keep the existing `staff_batch_action` log for the
+  // full before/after snapshot AND emit a dedicated `process_demande` audit
+  // entry that records, per processing, the resulting status and whether a
+  // team was auto-created / a BattleTag was corrected.
   if (staffId) {
+    const anyTeamAutoCreated = Object.values(outcomes).some(
+      (o) => o.teamAutoCreated
+    );
+    const anyTagCorrected = Object.values(outcomes).some((o) => o.tagCorrected);
     try {
-      await logStaffAction({
-        staff_id: staffId,
-        action: 'staff_batch_action',
-        entity_type: 'demande',
-        entity_id: demandeIds.length === 1 ? demandeIds[0] : null,
-        tournament_id: null,
-        payload: {
-          demande_ids: demandeIds,
-          new_status: newStatus,
-          staff_comment: staffComment ?? null,
-          before: beforeList,
-          after: afterList,
-        },
-      });
+      await Promise.all([
+        logStaffAction({
+          staff_id: staffId,
+          action: 'staff_batch_action',
+          entity_type: 'demande',
+          entity_id: demandeIds.length === 1 ? demandeIds[0] : null,
+          tournament_id: null,
+          payload: {
+            demande_ids: demandeIds,
+            new_status: newStatus,
+            staff_comment: staffComment ?? null,
+            before: beforeList,
+            after: afterList,
+          },
+        }),
+        logStaffAction({
+          staff_id: staffId,
+          action: 'process_demande',
+          entity_type: 'demande',
+          entity_id: demandeIds.length === 1 ? demandeIds[0] : null,
+          tournament_id: null,
+          payload: {
+            demande_ids: demandeIds,
+            resulting_status: newStatus,
+            team_auto_created: anyTeamAutoCreated,
+            tag_corrected: anyTagCorrected,
+            outcomes,
+          },
+        }),
+      ]);
     } catch (e) {
       logger.error('admin demandes batch logStaffAction error:', e);
     }
@@ -789,5 +1009,96 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, ctx: Authen
     success: true,
     updatedCount: afterList?.length ?? 0,
     demandes: afterList,
+    outcomes,
   });
+}
+
+/* -----------------------------------------------------------
+ * "Demander plus d'infos" : record/append a staff_note on a single PENDING
+ * demande without changing its status. Reuses the existing `staff_note` column
+ * — no schema migration, no new status enum value.
+ * ---------------------------------------------------------*/
+
+async function handleRequestMoreInfo(
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext,
+  body: RequestMoreInfoBody
+) {
+  if (!supabaseAdmin) {
+    return res.status(500).json({ error: 'Supabase admin not configured' });
+  }
+
+  const { demandeId, note } = body;
+
+  if (typeof demandeId !== 'string' || !isValidUUID(demandeId)) {
+    return res.status(400).json({ error: 'Invalid demande ID format' });
+  }
+  if (typeof note !== 'string' || note.trim().length === 0) {
+    return res.status(400).json({ error: 'note is required' });
+  }
+  if (note.length > 2000) {
+    return res
+      .status(400)
+      .json({ error: 'note must be at most 2000 characters.' });
+  }
+
+  const nowIso = new Date().toISOString();
+  const staffId: string | null = ctx.staff?.id ?? null;
+  const trimmedNote = note.trim();
+
+  // Fetch the current demande (tenant-scoped) so we can append to staff_note.
+  const { data: current, error: fetchErr } = await supabaseAdmin
+    .from('demandes')
+    .select('*')
+    .eq('tenant_id', ctx.tenantId)
+    .eq('id', demandeId)
+    .maybeSingle();
+
+  if (fetchErr) {
+    logger.error('[admin/demandes] requestMoreInfo fetch error:', fetchErr);
+    return res.status(500).json({ error: 'Failed to fetch demande' });
+  }
+  if (!current) {
+    return res.status(404).json({ error: 'Demande not found' });
+  }
+
+  const stamp = `[${nowIso}] Infos demandées : ${trimmedNote}`;
+  const existingNote = (current as DemandeRow).staff_note;
+  const nextNote = existingNote ? `${existingNote}\n${stamp}` : stamp;
+
+  // Status stays 'pending' — we only touch staff_note + updated_at.
+  const { data: updated, error: updErr } = await supabaseAdmin
+    .from('demandes')
+    .update({ staff_note: nextNote, updated_at: nowIso })
+    .eq('tenant_id', ctx.tenantId)
+    .eq('id', demandeId)
+    .select('*')
+    .maybeSingle();
+
+  if (updErr) {
+    logger.error('[admin/demandes] requestMoreInfo update error:', updErr);
+    return res.status(500).json({ error: 'Failed to update demande' });
+  }
+
+  if (staffId) {
+    try {
+      await logStaffAction({
+        staff_id: staffId,
+        action: 'process_demande',
+        entity_type: 'demande',
+        entity_id: demandeId,
+        tournament_id: null,
+        payload: {
+          demande_ids: [demandeId],
+          resulting_status: 'pending',
+          requested_more_info: true,
+          note: trimmedNote,
+        },
+      });
+    } catch (e) {
+      logger.error('[admin/demandes] requestMoreInfo logStaffAction error:', e);
+    }
+  }
+
+  return res.status(200).json({ success: true, demande: updated });
 }

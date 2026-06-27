@@ -102,6 +102,38 @@ function AdminEditTeamPage({
   // Swap state
   const [swapSource, setSwapSource] = useState<TeamMemberRow | null>(null);
 
+  // Bulk selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkRole, setBulkRole] = useState('');
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  // CSV / paste import state
+  type ImportLine = {
+    raw: string;
+    key: string;
+    tag: string;
+    status: 'matched' | 'invalid' | 'not-found' | 'empty';
+    memberId?: string;
+    memberLabel?: string;
+  };
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importText, setImportText] = useState('');
+  const [importPreview, setImportPreview] = useState<ImportLine[] | null>(null);
+  const [importBusy, setImportBusy] = useState(false);
+
+  const BATTLE_TAG_RE = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
+
+  const toggleSelected = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+
   // Player search
   type SearchResult = {
     id: string;
@@ -502,6 +534,141 @@ function AdminEditTeamPage({
     }
   }
 
+  // --- Bulk actions -------------------------------------------------------
+  const captainUserId = team?.captain_id ?? null;
+  const selectedMembers = members.filter((m) => selectedIds.has(m.id));
+  const selectionHasCaptain = selectedMembers.some(
+    (m) => captainUserId !== null && m.user_id === captainUserId
+  );
+
+  async function runBulk(
+    operation: 'set_role' | 'set_substitute' | 'remove',
+    extra: Record<string, unknown> = {}
+  ) {
+    if (!teamId || selectedIds.size === 0) return;
+    setBulkBusy(true);
+    setErrorMsg(null);
+    try {
+      const res = await fetch(`/api/admin/teams/${teamId}/roster-bulk`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          operation,
+          memberIds: Array.from(selectedIds),
+          ...extra,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        throw new Error(json.error || "Échec de l'action groupée");
+      }
+      const { successCount = 0, failureCount = 0 } = json;
+      addToast(
+        failureCount > 0
+          ? `${successCount} appliqué(s), ${failureCount} ignoré(s)`
+          : `${successCount} membre(s) mis à jour`,
+        failureCount > 0 ? 'info' : 'success'
+      );
+      clearSelection();
+      setBulkRole('');
+      await fetchMembers();
+      await fetchTeam();
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
+  async function handleBulkRemove() {
+    if (selectedIds.size === 0) return;
+    if (
+      !confirm(
+        `Retirer ${selectedIds.size} membre(s) de l'équipe ? Le capitaine est protégé et ne sera pas retiré.`
+      )
+    )
+      return;
+    await runBulk('remove');
+  }
+
+  // --- BattleTag import ---------------------------------------------------
+  function buildImportPreview() {
+    const lines = importText
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0);
+
+    const preview: ImportLine[] = lines.map((raw) => {
+      const parts = raw.split(',').map((p) => p.trim());
+      const key = parts[0] ?? '';
+      const tag = parts[1] ?? '';
+      if (!key || !tag) {
+        return { raw, key, tag, status: 'empty' };
+      }
+      if (!BATTLE_TAG_RE.test(tag)) {
+        return { raw, key, tag, status: 'invalid' };
+      }
+      const keyLower = key.toLowerCase();
+      const match = members.find(
+        (m) =>
+          m.id === key ||
+          m.user_id === key ||
+          (m.battle_tag && m.battle_tag.toLowerCase() === keyLower)
+      );
+      if (!match) {
+        return { raw, key, tag, status: 'not-found' };
+      }
+      return {
+        raw,
+        key,
+        tag,
+        status: 'matched',
+        memberId: match.id,
+        memberLabel: match.battle_tag || match.user_id,
+      };
+    });
+    setImportPreview(preview);
+  }
+
+  async function applyImport() {
+    if (!teamId || !importPreview) return;
+    const items = importPreview
+      .filter((l) => l.status === 'matched' && l.memberId)
+      .map((l) => ({ memberId: l.memberId as string, battleTag: l.tag }));
+    if (items.length === 0) {
+      setErrorMsg('Aucune ligne valide à importer');
+      return;
+    }
+    setImportBusy(true);
+    setErrorMsg(null);
+    try {
+      const res = await fetch(`/api/admin/teams/${teamId}/roster-bulk`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ operation: 'import_battle_tags', items }),
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        throw new Error(json.error || "Échec de l'import");
+      }
+      const { successCount = 0, failureCount = 0 } = json;
+      addToast(
+        failureCount > 0
+          ? `${successCount} BattleTag(s) importé(s), ${failureCount} échoué(s)`
+          : `${successCount} BattleTag(s) importé(s)`,
+        failureCount > 0 ? 'info' : 'success'
+      );
+      setShowImportModal(false);
+      setImportText('');
+      setImportPreview(null);
+      await fetchMembers();
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+    } finally {
+      setImportBusy(false);
+    }
+  }
+
   return (
     <>
       <Head>
@@ -857,6 +1024,30 @@ function AdminEditTeamPage({
                         </button>
                       )}
                       <button
+                        onClick={() => {
+                          setImportText('');
+                          setImportPreview(null);
+                          setShowImportModal(true);
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors flex items-center gap-1.5"
+                        data-testid="open-import-modal"
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                          />
+                        </svg>
+                        Importer BattleTags
+                      </button>
+                      <button
                         onClick={openAddMemberModal}
                         className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors flex items-center gap-1.5"
                       >
@@ -897,6 +1088,139 @@ function AdminEditTeamPage({
                         Sélectionnez un membre pour échanger avec{' '}
                         <strong>{swapSource.battle_tag}</strong>
                       </span>
+                    </div>
+                  )}
+
+                  {/* Bulk actions toolbar */}
+                  {!swapSource && !membersLoading && members.length > 0 && (
+                    <div
+                      className="mb-4 rounded-xl bg-neutral-900/50 border border-neutral-700/60 px-4 py-3"
+                      data-testid="bulk-toolbar"
+                    >
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+                        <label className="flex items-center gap-2 text-sm text-neutral-300 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            data-testid="select-all-members"
+                            checked={
+                              members.length > 0 &&
+                              selectedIds.size === members.length
+                            }
+                            ref={(el) => {
+                              if (el)
+                                el.indeterminate =
+                                  selectedIds.size > 0 &&
+                                  selectedIds.size < members.length;
+                            }}
+                            onChange={(e) => {
+                              if (e.target.checked)
+                                setSelectedIds(
+                                  new Set(members.map((m) => m.id))
+                                );
+                              else clearSelection();
+                            }}
+                            className="h-4 w-4 rounded border-neutral-600 bg-neutral-700"
+                          />
+                          <span data-testid="selection-count">
+                            {selectedIds.size > 0
+                              ? `${selectedIds.size} sélectionné(s)`
+                              : 'Tout sélectionner'}
+                          </span>
+                        </label>
+
+                        {selectedIds.size > 0 && (
+                          <div className="flex flex-wrap items-center gap-2">
+                            {/* Bulk role */}
+                            <div className="flex items-center gap-1.5">
+                              <select
+                                value={bulkRole}
+                                onChange={(e) => setBulkRole(e.target.value)}
+                                disabled={bulkBusy}
+                                data-testid="bulk-role-select"
+                                className="px-2.5 py-1.5 rounded-lg bg-neutral-800 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                              >
+                                <option value="">Rôle…</option>
+                                {teamRoles.map((r) => (
+                                  <option key={r.value} value={r.value}>
+                                    {r.label}
+                                  </option>
+                                ))}
+                              </select>
+                              <button
+                                onClick={() =>
+                                  runBulk('set_role', { role: bulkRole })
+                                }
+                                disabled={!bulkRole || bulkBusy}
+                                data-testid="bulk-role-apply"
+                                className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
+                              >
+                                Appliquer
+                              </button>
+                            </div>
+
+                            {/* Bulk substitute */}
+                            <button
+                              onClick={() =>
+                                runBulk('set_substitute', {
+                                  isSubstitute: true,
+                                })
+                              }
+                              disabled={bulkBusy}
+                              data-testid="bulk-mark-sub"
+                              className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 disabled:opacity-50 text-sm font-medium transition-colors"
+                            >
+                              Marquer remplaçant
+                            </button>
+                            <button
+                              onClick={() =>
+                                runBulk('set_substitute', {
+                                  isSubstitute: false,
+                                })
+                              }
+                              disabled={bulkBusy}
+                              data-testid="bulk-unmark-sub"
+                              className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 disabled:opacity-50 text-sm font-medium transition-colors"
+                            >
+                              Retirer remplaçant
+                            </button>
+
+                            {/* Bulk remove */}
+                            <button
+                              onClick={handleBulkRemove}
+                              disabled={bulkBusy}
+                              data-testid="bulk-remove"
+                              className="px-3 py-1.5 rounded-lg bg-red-900/50 hover:bg-red-900/70 text-red-200 border border-red-700/50 disabled:opacity-50 text-sm font-medium transition-colors"
+                            >
+                              Retirer de l&apos;équipe
+                            </button>
+
+                            <button
+                              onClick={clearSelection}
+                              disabled={bulkBusy}
+                              className="px-2.5 py-1.5 rounded-lg text-neutral-400 hover:text-white text-sm transition-colors"
+                            >
+                              Désélectionner
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      {selectionHasCaptain && (
+                        <p className="mt-2 text-xs text-amber-300/90 flex items-center gap-1.5">
+                          <svg
+                            className="w-3.5 h-3.5 flex-shrink-0"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                          Le capitaine est protégé : il ne sera ni retiré ni
+                          passé remplaçant.
+                        </p>
+                      )}
                     </div>
                   )}
 
@@ -954,6 +1278,22 @@ function AdminEditTeamPage({
                                         }
                                       >
                                         <div className="flex items-center gap-3 min-w-0">
+                                          {!swapSource && (
+                                            <input
+                                              type="checkbox"
+                                              data-testid={`member-checkbox-${member.id}`}
+                                              checked={selectedIds.has(
+                                                member.id
+                                              )}
+                                              onClick={(e) =>
+                                                e.stopPropagation()
+                                              }
+                                              onChange={() =>
+                                                toggleSelected(member.id)
+                                              }
+                                              className="h-4 w-4 rounded border-neutral-600 bg-neutral-700 flex-shrink-0"
+                                            />
+                                          )}
                                           <div
                                             className={`w-10 h-10 rounded-lg flex items-center justify-center ${
                                               isCaptain
@@ -1136,6 +1476,22 @@ function AdminEditTeamPage({
                                         }
                                       >
                                         <div className="flex items-center gap-3 min-w-0">
+                                          {!swapSource && (
+                                            <input
+                                              type="checkbox"
+                                              data-testid={`member-checkbox-${member.id}`}
+                                              checked={selectedIds.has(
+                                                member.id
+                                              )}
+                                              onClick={(e) =>
+                                                e.stopPropagation()
+                                              }
+                                              onChange={() =>
+                                                toggleSelected(member.id)
+                                              }
+                                              className="h-4 w-4 rounded border-neutral-600 bg-neutral-700 flex-shrink-0"
+                                            />
+                                          )}
                                           <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-neutral-800 text-neutral-500">
                                             <svg
                                               className="w-5 h-5"
@@ -1920,6 +2276,175 @@ function AdminEditTeamPage({
                 )}
                 {memberSaving ? 'Enregistrement...' : 'Enregistrer'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import BattleTags Modal */}
+      {showImportModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4"
+          onClick={() => setShowImportModal(false)}
+        >
+          <div
+            className="bg-gradient-to-b from-neutral-800 to-neutral-900 border border-neutral-700 rounded-2xl w-full max-w-2xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+            data-testid="import-modal"
+          >
+            <div className="flex items-start justify-between gap-4 px-6 py-5 border-b border-neutral-700/70 bg-neutral-900/40">
+              <div>
+                <h3 className="text-lg font-semibold text-white">
+                  Importer des BattleTags
+                </h3>
+                <p className="text-xs text-neutral-400 mt-0.5">
+                  Une ligne par membre :{' '}
+                  <code className="font-mono">identifiant,BattleTag#1234</code>
+                  <br />
+                  L&apos;identifiant peut être un BattleTag actuel, un User ID
+                  ou un ID de membre.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowImportModal(false)}
+                className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-700 transition-colors flex-shrink-0"
+                aria-label="Fermer"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div className="px-6 py-5 overflow-y-auto flex-1 space-y-4">
+              <textarea
+                value={importText}
+                onChange={(e) => {
+                  setImportText(e.target.value);
+                  setImportPreview(null);
+                }}
+                data-testid="import-textarea"
+                className="w-full px-3 py-2 rounded-lg bg-neutral-900/70 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono min-h-[140px] resize-y"
+                placeholder={'Old#1234,New#5678\nuuid-du-membre,Pseudo#0001'}
+              />
+
+              <button
+                onClick={buildImportPreview}
+                disabled={!importText.trim()}
+                data-testid="import-preview-btn"
+                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
+              >
+                Prévisualiser
+              </button>
+
+              {importPreview && (
+                <div
+                  className="rounded-xl border border-neutral-700 overflow-hidden"
+                  data-testid="import-preview"
+                >
+                  <table className="w-full text-sm">
+                    <thead className="bg-neutral-900/60 text-neutral-400 text-xs uppercase">
+                      <tr>
+                        <th className="text-left px-3 py-2">Identifiant</th>
+                        <th className="text-left px-3 py-2">BattleTag</th>
+                        <th className="text-left px-3 py-2">Statut</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {importPreview.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={3}
+                            className="px-3 py-4 text-center text-neutral-500"
+                          >
+                            Aucune ligne
+                          </td>
+                        </tr>
+                      ) : (
+                        importPreview.map((line, i) => (
+                          <tr
+                            key={i}
+                            className="border-t border-neutral-800"
+                            data-testid={`import-row-${line.status}`}
+                          >
+                            <td className="px-3 py-2 font-mono text-xs text-neutral-300 truncate max-w-[200px]">
+                              {line.memberLabel || line.key || '—'}
+                            </td>
+                            <td className="px-3 py-2 font-mono text-xs">
+                              {line.tag || '—'}
+                            </td>
+                            <td className="px-3 py-2">
+                              {line.status === 'matched' && (
+                                <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                  Trouvé
+                                </span>
+                              )}
+                              {line.status === 'invalid' && (
+                                <span className="px-2 py-0.5 rounded-full text-xs bg-red-500/20 text-red-300 border border-red-500/30">
+                                  Format invalide
+                                </span>
+                              )}
+                              {line.status === 'not-found' && (
+                                <span className="px-2 py-0.5 rounded-full text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                  Introuvable
+                                </span>
+                              )}
+                              {line.status === 'empty' && (
+                                <span className="px-2 py-0.5 rounded-full text-xs bg-neutral-700 text-neutral-400 border border-neutral-600">
+                                  Ligne incomplète
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between gap-2 px-6 py-4 border-t border-neutral-700/70 bg-neutral-900/40">
+              <span className="text-xs text-neutral-400">
+                {importPreview
+                  ? `${importPreview.filter((l) => l.status === 'matched').length} à appliquer`
+                  : ''}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowImportModal(false)}
+                  className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={applyImport}
+                  disabled={
+                    importBusy ||
+                    !importPreview ||
+                    importPreview.filter((l) => l.status === 'matched')
+                      .length === 0
+                  }
+                  data-testid="import-apply-btn"
+                  className="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {importBusy && (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  )}
+                  Appliquer les BattleTags
+                </button>
+              </div>
             </div>
           </div>
         </div>

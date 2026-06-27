@@ -4,6 +4,9 @@ import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { BATTLE_TAG_REGEX } from '@/utils/teams/addMember';
 
 import { logger } from '../../../utils/logger';
 type StaffShape = {
@@ -38,6 +41,8 @@ type Member = {
   user_id: string | null;
   display_name: string | null;
   role: string | null;
+  battle_tag?: string | null;
+  is_substitute?: boolean | null;
   captain?: boolean | null;
   is_captain?: boolean | null;
 };
@@ -63,6 +68,8 @@ export const getServerSideProps = withStaffPage('caster');
 function MyTeamPage({ staff }: StaffProps) {
   const router = useRouter();
   const { adminFetch, adminFetchJson } = useAdminFetch();
+  const { addToast } = useToast();
+  const { confirm, dialog } = useConfirmDialog();
   const isStaffAdmin =
     staff.role === 'admin' ||
     staff.role === 'owner' ||
@@ -123,6 +130,14 @@ function MyTeamPage({ staff }: StaffProps) {
   const [newMemberRole, setNewMemberRole] = useState('player');
   const [newMemberBattleTag, setNewMemberBattleTag] = useState('');
   const [addingMember, setAddingMember] = useState(false);
+
+  // Inline member editing (BattleTag) + substitute / captain actions
+  const [editingBattleTagId, setEditingBattleTagId] = useState<string | null>(
+    null
+  );
+  const [battleTagDraft, setBattleTagDraft] = useState('');
+  const [memberActionId, setMemberActionId] = useState<string | null>(null);
+  const [swapSourceId, setSwapSourceId] = useState<string | null>(null);
 
   // Load all teams for admin selector
   const loadAllTeams = useCallback(async () => {
@@ -396,6 +411,205 @@ function MyTeamPage({ staff }: StaffProps) {
     }
   };
 
+  const reloadTeam = useCallback(() => {
+    if (isStaffAdmin && selectedTeamId) {
+      return load(selectedTeamId);
+    }
+    return load();
+  }, [isStaffAdmin, selectedTeamId, load]);
+
+  // --- Member: inline BattleTag edit --------------------------------------
+  const startEditBattleTag = (m: Member) => {
+    setEditingBattleTagId(m.id);
+    setBattleTagDraft(m.battle_tag || '');
+  };
+
+  const cancelEditBattleTag = () => {
+    setEditingBattleTagId(null);
+    setBattleTagDraft('');
+  };
+
+  const saveBattleTag = async (m: Member) => {
+    const trimmed = battleTagDraft.trim();
+    if (!BATTLE_TAG_REGEX.test(trimmed)) {
+      addToast('Format BattleTag invalide (ex: Pseudo#1234).', 'error');
+      return;
+    }
+    if (trimmed === (m.battle_tag || '')) {
+      cancelEditBattleTag();
+      return;
+    }
+    setMemberActionId(m.id);
+    try {
+      // Admins editing an arbitrary team go through the admin members endpoint;
+      // captains/managers use the captain-scoped /api/teams route.
+      const url =
+        isStaffAdmin && selectedTeamId
+          ? `/api/admin/teams/${selectedTeamId}/members`
+          : '/api/teams/update-member';
+      const res = await adminFetch(url, {
+        method: 'PATCH',
+        body: JSON.stringify({ memberId: m.id, battle_tag: trimmed }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        addToast(json?.error || 'Erreur lors de la mise a jour.', 'error');
+        return;
+      }
+      addToast('BattleTag mis a jour.', 'success');
+      cancelEditBattleTag();
+      await reloadTeam();
+    } catch (err) {
+      logger.error('saveBattleTag error', err);
+      addToast('Erreur lors de la mise a jour.', 'error');
+    } finally {
+      setMemberActionId(null);
+    }
+  };
+
+  // --- Member: substitute toggle ------------------------------------------
+  const toggleSubstitute = async (m: Member) => {
+    const next = !(m.is_substitute ?? false);
+    setMemberActionId(m.id);
+    try {
+      const url =
+        isStaffAdmin && selectedTeamId
+          ? `/api/admin/teams/${selectedTeamId}/members`
+          : '/api/teams/update-member';
+      const res = await adminFetch(url, {
+        method: 'PATCH',
+        body: JSON.stringify({ memberId: m.id, is_substitute: next }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        addToast(json?.error || 'Erreur lors de la mise a jour.', 'error');
+        return;
+      }
+      addToast(
+        next ? 'Membre marque remplacant.' : 'Membre marque titulaire.',
+        'success'
+      );
+      await reloadTeam();
+    } catch (err) {
+      logger.error('toggleSubstitute error', err);
+      addToast('Erreur lors de la mise a jour.', 'error');
+    } finally {
+      setMemberActionId(null);
+    }
+  };
+
+  // --- Member: swap starter <-> substitute --------------------------------
+  const handleSwapWith = async (target: Member) => {
+    if (!swapSourceId) return;
+    const source = data?.members?.find((m) => m.id === swapSourceId);
+    if (!source) {
+      setSwapSourceId(null);
+      return;
+    }
+    setMemberActionId(target.id);
+    try {
+      if (isStaffAdmin && selectedTeamId) {
+        // Admin path: dedicated swap endpoint (atomic) owned by the api agent.
+        const res = await adminFetch(
+          `/api/admin/teams/${selectedTeamId}/members`,
+          {
+            method: 'PATCH',
+            body: JSON.stringify({
+              memberId: source.id,
+              swapWithMemberId: target.id,
+            }),
+          }
+        );
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          addToast(json?.error || "Echec de l'echange.", 'error');
+          return;
+        }
+      } else {
+        // Captain path: flip both members' is_substitute via update-member.
+        const r1 = await adminFetch('/api/teams/update-member', {
+          method: 'PATCH',
+          body: JSON.stringify({
+            memberId: source.id,
+            is_substitute: !(source.is_substitute ?? false),
+          }),
+        });
+        if (!r1.ok) {
+          const j = await r1.json().catch(() => ({}));
+          addToast(j?.error || "Echec de l'echange.", 'error');
+          return;
+        }
+        const r2 = await adminFetch('/api/teams/update-member', {
+          method: 'PATCH',
+          body: JSON.stringify({
+            memberId: target.id,
+            is_substitute: !(target.is_substitute ?? false),
+          }),
+        });
+        if (!r2.ok) {
+          const j = await r2.json().catch(() => ({}));
+          addToast(j?.error || "Echange partiel : verifie le roster.", 'error');
+          return;
+        }
+      }
+      addToast('Echange effectue.', 'success');
+      setSwapSourceId(null);
+      await reloadTeam();
+    } catch (err) {
+      logger.error('handleSwapWith error', err);
+      addToast("Echec de l'echange.", 'error');
+    } finally {
+      setMemberActionId(null);
+    }
+  };
+
+  // --- Member: transfer captaincy -----------------------------------------
+  const handleTransferCaptain = async (m: Member) => {
+    if (!m.user_id) {
+      addToast('Ce membre ne peut pas devenir capitaine.', 'error');
+      return;
+    }
+    const ok = await confirm({
+      title: 'Designer ce membre comme capitaine ?',
+      subtitle: `${m.display_name || 'Ce joueur'} prendra le capitanat. Tu perdras tes droits de capitaine.`,
+      variant: 'warning',
+      confirmLabel: 'Transferer',
+    });
+    if (!ok) return;
+    setMemberActionId(m.id);
+    try {
+      if (isStaffAdmin && selectedTeamId) {
+        // Admin path: set captain_id directly on the team (api agent endpoint).
+        const res = await adminFetch(`/api/admin/teams/${selectedTeamId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ captain_id: m.user_id }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || json.error) {
+          addToast(json?.error || 'Echec du transfert.', 'error');
+          return;
+        }
+      } else {
+        const res = await adminFetch('/api/teams/transfer-captain', {
+          method: 'PATCH',
+          body: JSON.stringify({ newCaptainUserId: m.user_id }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          addToast(json?.error || 'Echec du transfert.', 'error');
+          return;
+        }
+      }
+      addToast('Capitaine designe.', 'success');
+      await reloadTeam();
+    } catch (err) {
+      logger.error('handleTransferCaptain error', err);
+      addToast('Echec du transfert.', 'error');
+    } finally {
+      setMemberActionId(null);
+    }
+  };
+
   // Load join requests when team data changes
   const teamId = data?.team?.id;
   const isCaptain = data?.isCaptain;
@@ -453,66 +667,248 @@ function MyTeamPage({ staff }: StaffProps) {
             : isManager
               ? 'bg-sky-500/20'
               : 'bg-neutral-700/50';
+          const isSubstitute = !!m.is_substitute;
+          const isEditingTag = editingBattleTagId === m.id;
+          const busy = memberActionId === m.id;
+          const swapMode = swapSourceId !== null;
+          const isSwapSource = swapSourceId === m.id;
           return (
             <div
               key={m.id}
-              className={`p-3 flex items-center gap-3 rounded-xl transition-colors ${containerClass}`}
+              data-testid={`member-row-${m.id}`}
+              className={`p-3 rounded-xl transition-colors ${containerClass} ${
+                isSwapSource ? 'ring-2 ring-emerald-500/60' : ''
+              }`}
             >
-              <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconBgClass}`}
-              >
-                {isCaptain ? (
-                  <svg
-                    className="w-5 h-5 text-amber-400"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
-                  </svg>
-                ) : isManager ? (
-                  <svg
-                    className="w-5 h-5 text-sky-400"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M12 2l3.5 7.5L23 11l-5.5 5 1.3 7.5L12 19.5 5.2 23.5 6.5 16 1 11l7.5-1.5L12 2z" />
-                  </svg>
-                ) : (
-                  <svg
-                    className="w-5 h-5 text-neutral-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                    />
-                  </svg>
+              <div className="flex items-center gap-3">
+                <div
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${iconBgClass}`}
+                >
+                  {isCaptain ? (
+                    <svg
+                      className="w-5 h-5 text-amber-400"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
+                    </svg>
+                  ) : isManager ? (
+                    <svg
+                      className="w-5 h-5 text-sky-400"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M12 2l3.5 7.5L23 11l-5.5 5 1.3 7.5L12 19.5 5.2 23.5 6.5 16 1 11l7.5-1.5L12 2z" />
+                    </svg>
+                  ) : (
+                    <svg
+                      className="w-5 h-5 text-neutral-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                      />
+                    </svg>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-white font-semibold truncate">
+                      {m.display_name || m.user_id || m.id}
+                    </span>
+                    {isCaptain && (
+                      <span className="text-[10px] uppercase tracking-wide bg-amber-500/20 text-amber-300 rounded-lg px-2 py-0.5 border border-amber-500/30 font-semibold">
+                        Capitaine
+                      </span>
+                    )}
+                    {isManager && (
+                      <span className="text-[10px] uppercase tracking-wide bg-sky-500/20 text-sky-300 rounded-lg px-2 py-0.5 border border-sky-500/30 font-semibold">
+                        Manager
+                      </span>
+                    )}
+                    {isSubstitute && (
+                      <span
+                        data-testid="substitute-badge"
+                        className="text-[10px] uppercase tracking-wide bg-purple-500/20 text-purple-300 rounded-lg px-2 py-0.5 border border-purple-500/30 font-semibold"
+                      >
+                        Remplaçant
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-neutral-400 truncate">
+                    {m.role || 'joueur'}
+                    {m.battle_tag && !isEditingTag && (
+                      <span className="text-blue-400 ml-2">
+                        {m.battle_tag}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Per-member actions */}
+                {canEdit && !isEditingTag && (
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {swapMode ? (
+                      isSwapSource ? (
+                        <button
+                          type="button"
+                          onClick={() => setSwapSourceId(null)}
+                          className="px-2 py-1 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-[11px] transition-colors"
+                        >
+                          Annuler
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          data-testid={`swap-target-${m.id}`}
+                          disabled={busy}
+                          onClick={() => handleSwapWith(m)}
+                          className="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-[11px] transition-colors disabled:opacity-50"
+                        >
+                          Echanger ici
+                        </button>
+                      )
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          title="Modifier le BattleTag"
+                          data-testid={`edit-battletag-${m.id}`}
+                          onClick={() => startEditBattleTag(m)}
+                          className="p-1.5 rounded-lg hover:bg-neutral-700 text-neutral-400 hover:text-white transition-colors"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                            />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          title={
+                            isSubstitute
+                              ? 'Marquer titulaire'
+                              : 'Marquer remplaçant'
+                          }
+                          data-testid={`toggle-substitute-${m.id}`}
+                          disabled={busy}
+                          onClick={() => toggleSubstitute(m)}
+                          className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 ${
+                            isSubstitute
+                              ? 'text-purple-300 hover:bg-purple-500/20'
+                              : 'text-neutral-400 hover:text-white hover:bg-neutral-700'
+                          }`}
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+                            />
+                          </svg>
+                        </button>
+                        {!isCaptain && data?.members && data.members.length > 1 && (
+                          <button
+                            type="button"
+                            title="Lancer un echange titulaire/remplaçant"
+                            data-testid={`start-swap-${m.id}`}
+                            onClick={() => setSwapSourceId(m.id)}
+                            className="p-1.5 rounded-lg hover:bg-neutral-700 text-neutral-400 hover:text-white transition-colors"
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                              />
+                            </svg>
+                          </button>
+                        )}
+                        {!isCaptain && m.user_id && (
+                          <button
+                            type="button"
+                            title="Designer comme capitaine"
+                            data-testid={`make-captain-${m.id}`}
+                            disabled={busy}
+                            onClick={() => handleTransferCaptain(m)}
+                            className="p-1.5 rounded-lg hover:bg-amber-500/20 text-neutral-400 hover:text-amber-300 transition-colors disabled:opacity-50"
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
+                            </svg>
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-white font-semibold truncate">
-                    {m.display_name || m.user_id || m.id}
-                  </span>
-                  {isCaptain && (
-                    <span className="text-[10px] uppercase tracking-wide bg-amber-500/20 text-amber-300 rounded-lg px-2 py-0.5 border border-amber-500/30 font-semibold">
-                      Capitaine
-                    </span>
-                  )}
-                  {isManager && (
-                    <span className="text-[10px] uppercase tracking-wide bg-sky-500/20 text-sky-300 rounded-lg px-2 py-0.5 border border-sky-500/30 font-semibold">
-                      Manager
-                    </span>
-                  )}
+
+              {/* Inline BattleTag editor */}
+              {canEdit && isEditingTag && (
+                <div className="mt-3 flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="text"
+                    value={battleTagDraft}
+                    onChange={(e) => setBattleTagDraft(e.target.value)}
+                    placeholder="Pseudo#1234"
+                    autoFocus
+                    data-testid={`battletag-input-${m.id}`}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') saveBattleTag(m);
+                      if (e.key === 'Escape') cancelEditBattleTag();
+                    }}
+                    className="flex-1 px-3 py-2 rounded-xl bg-neutral-900/70 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      data-testid={`save-battletag-${m.id}`}
+                      disabled={busy}
+                      onClick={() => saveBattleTag(m)}
+                      className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50"
+                    >
+                      {busy ? '...' : 'Enregistrer'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelEditBattleTag}
+                      className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm transition-colors"
+                    >
+                      Annuler
+                    </button>
+                  </div>
                 </div>
-                <div className="text-xs text-neutral-400">
-                  {m.role || 'joueur'}
-                </div>
-              </div>
+              )}
             </div>
           );
         })}
@@ -906,6 +1302,17 @@ function MyTeamPage({ staff }: StaffProps) {
                     <p className="text-xs text-neutral-500">
                       {data.members?.length || 0} membre
                       {(data.members?.length || 0) > 1 ? 's' : ''}
+                      {(() => {
+                        const subs = (data.members || []).filter(
+                          (m) => m.is_substitute
+                        ).length;
+                        return subs > 0 ? (
+                          <span data-testid="substitute-count">
+                            {' '}
+                            · {subs} remplaçant{subs > 1 ? 's' : ''}
+                          </span>
+                        ) : null;
+                      })()}
                     </p>
                   </div>
                   {canEdit && (
@@ -1090,6 +1497,8 @@ function MyTeamPage({ staff }: StaffProps) {
           )}
         </div>
       </div>
+
+      {dialog}
 
       {/* Add Member Modal */}
       {showAddModal && (

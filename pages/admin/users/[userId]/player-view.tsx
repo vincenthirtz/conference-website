@@ -1,19 +1,35 @@
 // pages/admin/users/[userId]/player-view.tsx
 //
-// Admin "Vue player" — READ-ONLY inspection of a given user's PLAYER area.
-// NO impersonation, NO actions: staff browse a snapshot of the user's
-// profile / team / matches / notifications / demandes, organised as tabs that
-// mirror the player navigation. Data comes from
+// Admin "Vue player" — per-player COMMAND CENTER. Staff browse a snapshot of the
+// user's profile / team / matches / notifications / demandes (organised as tabs
+// mirroring the player navigation) AND can act on the account. Every action is
+// audited. Snapshot comes from
 //   GET /api/admin/users/[userId]/player-view
-// gated at `manager` (mirrors the endpoint's withStaffRoute('manager')).
+// and actions REUSE the existing per-user endpoints:
+//   - PATCH /api/admin/users/manage        (display_name, role, battle_tag,
+//                                            resend_credentials)
+//   - POST  /api/admin/demandes            (approve/reject a pending demande)
+//   - GET   /api/admin/teams               (team picker for transfers)
+//   - POST  /api/admin/users/[userId]/actions  (assign_captain, transfer_team —
+//                                            the only paths that have no existing
+//                                            reusable endpoint)
+// Page gated at `manager`; admin-only actions (role change) hidden below admin.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
-import { withStaffPage } from '@/utils/staff';
+import {
+  withStaffPage,
+  STAFF_ROLES,
+  STAFF_ROLE_RANK,
+  hasAtLeastRole,
+  type StaffRole,
+} from '@/utils/staff';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
+import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import type { AdminPlayerViewPayload } from '@/pages/api/admin/users/[userId]/player-view';
 
 import { logger } from '../../../../utils/logger';
@@ -25,6 +41,51 @@ type StaffShape = {
 };
 
 export const getServerSideProps = withStaffPage('manager');
+
+/* ----------------------------------------------------------------------- */
+/* Role helpers — mirror manage.tsx so the UI never offers a forbidden      */
+/* change (the API enforces the same guards too).                           */
+/* ----------------------------------------------------------------------- */
+
+const ROLE_OPTIONS = [
+  'member',
+  'player',
+  'caster',
+  'manager',
+  'admin',
+  'owner',
+];
+
+const ROLE_LABELS: Record<string, string> = {
+  owner: 'Owner',
+  admin: 'Admin',
+  manager: 'Manager',
+  caster: 'Caster',
+  player: 'Joueur',
+  member: 'Membre',
+};
+
+function roleLabel(role: string | null): string {
+  return ROLE_LABELS[role?.toLowerCase() ?? ''] ?? role ?? 'Membre';
+}
+
+function isTargetProtected(targetRole: string | null): boolean {
+  const r = targetRole?.toLowerCase();
+  return r === 'owner' || r === 'admin';
+}
+
+function canGrantRole(requesterRole: string | null, role: string): boolean {
+  if (requesterRole === 'owner') return true;
+  const isStaffRole = (STAFF_ROLES as readonly string[]).includes(role);
+  if (!isStaffRole) return true; // member/player : révocation toujours permise
+  const newRank = STAFF_ROLE_RANK[role as StaffRole];
+  const requesterRank = requesterRole
+    ? (STAFF_ROLE_RANK[requesterRole as StaffRole] ?? -1)
+    : -1;
+  return newRank < requesterRank;
+}
+
+type TeamLite = { id: string; name: string };
 
 type TabKey = 'profil' | 'equipe' | 'matchs' | 'notifications' | 'demandes';
 
@@ -268,17 +329,39 @@ function StatTile({
 /* Page                                                                      */
 /* ----------------------------------------------------------------------- */
 
-function PlayerViewPage({ staff: _staff }: { staff: StaffShape }) {
+function PlayerViewPage({ staff }: { staff: StaffShape }) {
   const router = useRouter();
   const rawUserId = router.query.userId;
   const userId = Array.isArray(rawUserId) ? rawUserId[0] : rawUserId;
 
   const { adminFetchJson } = useAdminFetch();
+  const { addToast } = useToast();
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const [data, setData] = useState<AdminPlayerViewPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [tab, setTab] = useState<TabKey>('profil');
+
+  // Per-action busy flags (keep buttons from double-submitting).
+  const [busy, setBusy] = useState<string | null>(null);
+
+  // Edit display name modal.
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+
+  // Edit battle tag modal.
+  const [editingTag, setEditingTag] = useState(false);
+  const [tagDraft, setTagDraft] = useState('');
+  const [tagError, setTagError] = useState<string | null>(null);
+
+  // Transfer-to-team modal.
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [teamOptions, setTeamOptions] = useState<TeamLite[]>([]);
+  const [teamsLoading, setTeamsLoading] = useState(false);
+  const [transferTeamId, setTransferTeamId] = useState('');
+
+  const isAdmin = hasAtLeastRole(staff.role as StaffRole, 'admin');
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -310,6 +393,234 @@ function PlayerViewPage({ staff: _staff }: { staff: StaffShape }) {
   const headerName =
     data?.user.displayName || data?.user.email || 'Utilisateur';
 
+  /* --------------------------------------------------------------------- */
+  /* Actions — each reuses an existing endpoint then refetches the snapshot */
+  /* --------------------------------------------------------------------- */
+
+  // PATCH /api/admin/users/manage — display_name.
+  const saveName = useCallback(async () => {
+    if (!userId) return;
+    setBusy('name');
+    try {
+      await adminFetchJson('/api/admin/users/manage', {
+        method: 'PATCH',
+        body: JSON.stringify({ userId, display_name: nameDraft.trim() }),
+      });
+      setEditingName(false);
+      addToast('Nom affiché mis à jour', 'success');
+      await load();
+    } catch (err) {
+      addToast((err as Error)?.message || 'Erreur lors de la mise à jour.', 'error');
+    } finally {
+      setBusy(null);
+    }
+  }, [userId, nameDraft, adminFetchJson, addToast, load]);
+
+  // PATCH /api/admin/users/manage — resend_credentials.
+  const resendCredentials = useCallback(async () => {
+    if (!userId || !data?.user.email) return;
+    const ok = await confirm({
+      title: 'Réinitialiser le mot de passe ?',
+      subtitle: `Un nouveau mot de passe sera généré et envoyé à ${data.user.email}.`,
+      variant: 'warning',
+      confirmLabel: 'Envoyer',
+    });
+    if (!ok) return;
+    setBusy('resend');
+    try {
+      const json = await adminFetchJson<{ warning?: string }>(
+        '/api/admin/users/manage',
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ userId, action: 'resend_credentials' }),
+        }
+      );
+      if (json.warning) addToast(json.warning, 'warning');
+      else addToast(`Identifiants envoyés à ${data.user.email}`, 'success');
+    } catch (err) {
+      addToast((err as Error)?.message || "Erreur lors de l'envoi.", 'error');
+    } finally {
+      setBusy(null);
+    }
+  }, [userId, data?.user.email, confirm, adminFetchJson, addToast]);
+
+  // PATCH /api/admin/users/manage — role.
+  const changeRole = useCallback(
+    async (role: string) => {
+      if (!userId || !data) return;
+      const previousRole = data.user.role ?? null;
+      if (previousRole === role) return;
+
+      if (isTargetProtected(previousRole) && staff.role !== 'owner') {
+        addToast('Seul un owner peut modifier un compte owner ou admin.', 'error');
+        return;
+      }
+      if (!canGrantRole(staff.role, role)) {
+        addToast('Vous ne pouvez pas octroyer un rôle égal ou supérieur au vôtre.', 'error');
+        return;
+      }
+
+      const ok = await confirm({
+        title: `Changer le rôle vers « ${roleLabel(role)} » ?`,
+        subtitle: `Cet utilisateur passera de « ${roleLabel(previousRole)} » à « ${roleLabel(role)} ». Action à privilège.`,
+        variant: 'warning',
+        confirmLabel: 'Changer le rôle',
+      });
+      if (!ok) return;
+
+      setBusy('role');
+      try {
+        await adminFetchJson('/api/admin/users/manage', {
+          method: 'PATCH',
+          body: JSON.stringify({ userId, role }),
+        });
+        addToast('Rôle mis à jour', 'success');
+        await load();
+      } catch (err) {
+        addToast((err as Error)?.message || 'Erreur lors de la mise à jour du rôle.', 'error');
+      } finally {
+        setBusy(null);
+      }
+    },
+    [userId, data, staff.role, confirm, adminFetchJson, addToast, load]
+  );
+
+  // PATCH /api/admin/users/manage — battle_tag (scoped to the player's team).
+  const saveBattleTag = useCallback(async () => {
+    if (!userId || !data?.team) return;
+    setBusy('tag');
+    setTagError(null);
+    try {
+      await adminFetchJson('/api/admin/users/manage', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          userId,
+          teamId: data.team.id,
+          battleTag: tagDraft.trim(),
+        }),
+      });
+      setEditingTag(false);
+      addToast('BattleTag mis à jour', 'success');
+      await load();
+    } catch (err) {
+      setTagError((err as Error)?.message || 'Erreur inattendue');
+    } finally {
+      setBusy(null);
+    }
+  }, [userId, data?.team, tagDraft, adminFetchJson, addToast, load]);
+
+  // POST /api/admin/users/[userId]/actions — assign_captain.
+  const assignCaptain = useCallback(async () => {
+    if (!userId || !data?.team) return;
+    const ok = await confirm({
+      title: 'Désigner ce joueur capitaine ?',
+      subtitle: `${headerName} deviendra capitaine de « ${data.team.name} ».`,
+      variant: 'warning',
+      confirmLabel: 'Désigner capitaine',
+    });
+    if (!ok) return;
+    setBusy('captain');
+    try {
+      await adminFetchJson(
+        `/api/admin/users/${encodeURIComponent(userId)}/actions`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ action: 'assign_captain' }),
+        }
+      );
+      addToast('Capitanat transféré', 'success');
+      await load();
+    } catch (err) {
+      addToast((err as Error)?.message || 'Erreur lors de la désignation.', 'error');
+    } finally {
+      setBusy(null);
+    }
+  }, [userId, data?.team, headerName, confirm, adminFetchJson, addToast, load]);
+
+  // Open the transfer modal — lazy-load the teams list (GET /api/admin/teams).
+  const openTransfer = useCallback(async () => {
+    setTransferOpen(true);
+    setTransferTeamId('');
+    setTeamsLoading(true);
+    try {
+      const json = await adminFetchJson<{ teams: TeamLite[] }>(
+        '/api/admin/teams?limit=500'
+      );
+      const list = (json.teams || [])
+        .filter((t) => t.id !== data?.team?.id)
+        .map((t) => ({ id: t.id, name: t.name }));
+      setTeamOptions(list);
+    } catch (err) {
+      addToast((err as Error)?.message || 'Erreur lors du chargement des équipes.', 'error');
+    } finally {
+      setTeamsLoading(false);
+    }
+  }, [adminFetchJson, addToast, data?.team?.id]);
+
+  // POST /api/admin/users/[userId]/actions — transfer_team.
+  const transferTeam = useCallback(async () => {
+    if (!userId || !transferTeamId) return;
+    const target = teamOptions.find((t) => t.id === transferTeamId);
+    const ok = await confirm({
+      title: 'Transférer ce joueur ?',
+      subtitle: `${headerName} sera déplacé vers « ${target?.name ?? 'cette équipe'} ».`,
+      variant: 'warning',
+      confirmLabel: 'Transférer',
+    });
+    if (!ok) return;
+    setBusy('transfer');
+    try {
+      await adminFetchJson(
+        `/api/admin/users/${encodeURIComponent(userId)}/actions`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ action: 'transfer_team', teamId: transferTeamId }),
+        }
+      );
+      setTransferOpen(false);
+      addToast('Joueur transféré', 'success');
+      await load();
+    } catch (err) {
+      addToast((err as Error)?.message || 'Erreur lors du transfert.', 'error');
+    } finally {
+      setBusy(null);
+    }
+  }, [userId, transferTeamId, teamOptions, headerName, confirm, adminFetchJson, addToast, load]);
+
+  // POST /api/admin/demandes — approve / reject a pending demande.
+  const processDemande = useCallback(
+    async (demandeId: string, newStatus: 'approved' | 'rejected') => {
+      const verb = newStatus === 'approved' ? 'Approuver' : 'Refuser';
+      const ok = await confirm({
+        title: `${verb} cette demande ?`,
+        variant: newStatus === 'approved' ? 'info' : 'warning',
+        confirmLabel: verb,
+      });
+      if (!ok) return;
+      setBusy(`demande-${demandeId}`);
+      try {
+        await adminFetchJson('/api/admin/demandes', {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'updateStatus',
+            demandeIds: [demandeId],
+            newStatus,
+          }),
+        });
+        addToast(
+          newStatus === 'approved' ? 'Demande approuvée' : 'Demande refusée',
+          'success'
+        );
+        await load();
+      } catch (err) {
+        addToast((err as Error)?.message || 'Erreur lors du traitement.', 'error');
+      } finally {
+        setBusy(null);
+      }
+    },
+    [confirm, adminFetchJson, addToast, load]
+  );
+
   const { upcoming, past } = useMemo(() => {
     const matches = data?.matches ?? [];
     return {
@@ -324,6 +635,7 @@ function PlayerViewPage({ staff: _staff }: { staff: StaffShape }) {
 
   return (
     <>
+      {confirmDialog}
       <Head>
         <title>Vue player – {headerName}</title>
       </Head>
@@ -351,14 +663,14 @@ function PlayerViewPage({ staff: _staff }: { staff: StaffShape }) {
             Retour à la gestion des inscrits
           </Link>
 
-          {/* Read-only banner */}
+          {/* Admin command-center banner */}
           <div
             role="status"
-            className="mb-8 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-5 py-4"
+            className="mb-8 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-5 py-4"
           >
             <div className="flex items-start gap-3">
               <svg
-                className="w-6 h-6 text-amber-300 flex-shrink-0 mt-0.5"
+                className="w-6 h-6 text-emerald-300 flex-shrink-0 mt-0.5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -367,23 +679,19 @@ function PlayerViewPage({ staff: _staff }: { staff: StaffShape }) {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
               <div>
-                <h1 className="text-lg md:text-xl font-bold text-amber-100">
-                  Vue lecture seule — espace joueur de {headerName}
+                <h1 className="text-lg md:text-xl font-bold text-emerald-100">
+                  Espace joueur de {headerName}
                 </h1>
-                <p className="text-sm text-amber-100/80 mt-1">
-                  Inspection staff strictement informative. Aucune action
-                  n&apos;est effectuée au nom de l&apos;utilisateur (pas
-                  d&apos;usurpation, pas de modification).
+                <p className="text-sm text-emerald-100/80 mt-1">
+                  Outil d&apos;administration : les actions effectuées ici
+                  (profil, équipe, demandes) sont appliquées au compte du joueur
+                  et <strong>tracées</strong> dans les logs staff. Il ne
+                  s&apos;agit pas d&apos;une usurpation — vous agissez en tant
+                  que staff.
                 </p>
               </div>
             </div>
@@ -522,6 +830,75 @@ function PlayerViewPage({ staff: _staff }: { staff: StaffShape }) {
                       </dd>
                     </div>
                   </dl>
+
+                  {/* Profil actions */}
+                  <div className="mt-6 pt-6 border-t border-neutral-700/50">
+                    <h3 className="text-xs uppercase tracking-wide text-neutral-500 mb-3">
+                      Actions
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNameDraft(data.user.displayName || '');
+                          setEditingName(true);
+                        }}
+                        className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+                      >
+                        Modifier le nom affiché
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={resendCredentials}
+                        disabled={!data.user.email || busy === 'resend'}
+                        className="px-3 py-2 rounded-xl bg-amber-600/80 hover:bg-amber-600 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {busy === 'resend'
+                          ? 'Envoi…'
+                          : 'Renvoyer les identifiants'}
+                      </button>
+                    </div>
+
+                    {/* Role change — admin+ only, mirrors manage.tsx guards */}
+                    {isAdmin && (
+                      <div className="mt-4">
+                        <label className="block text-xs uppercase tracking-wide text-neutral-500 mb-1">
+                          Rôle
+                        </label>
+                        {(() => {
+                          const targetLocked =
+                            isTargetProtected(data.user.role) &&
+                            staff.role !== 'owner';
+                          return (
+                            <select
+                              aria-label="Rôle de l'utilisateur"
+                              value={(data.user.role || 'member').toLowerCase()}
+                              onChange={(e) => changeRole(e.target.value)}
+                              disabled={busy === 'role' || targetLocked}
+                              title={
+                                targetLocked
+                                  ? 'Seul un owner peut modifier un compte owner ou admin.'
+                                  : undefined
+                              }
+                              className="px-3 py-2 rounded-xl bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {ROLE_OPTIONS.map((r) => {
+                                const grantable =
+                                  r === (data.user.role || 'member').toLowerCase() ||
+                                  canGrantRole(staff.role, r);
+                                return (
+                                  <option key={r} value={r} disabled={!grantable}>
+                                    {roleLabel(r)}
+                                  </option>
+                                );
+                              })}
+                            </select>
+                          );
+                        })()}
+                      </div>
+                    )}
+                  </div>
                 </section>
               )}
 
@@ -620,6 +997,47 @@ function PlayerViewPage({ staff: _staff }: { staff: StaffShape }) {
                             </table>
                           </div>
                         )}
+                      </div>
+
+                      {/* Équipe actions */}
+                      <div className="mt-6 pt-6 border-t border-neutral-700/50">
+                        <h3 className="text-xs uppercase tracking-wide text-neutral-500 mb-3">
+                          Actions
+                        </h3>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTagDraft(data.user.battleTag || '');
+                              setTagError(null);
+                              setEditingTag(true);
+                            }}
+                            className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+                          >
+                            Modifier le BattleTag
+                          </button>
+
+                          {data.team.role !== 'captain' && (
+                            <button
+                              type="button"
+                              onClick={assignCaptain}
+                              disabled={busy === 'captain'}
+                              className="px-3 py-2 rounded-xl bg-emerald-700/80 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              {busy === 'captain'
+                                ? 'Désignation…'
+                                : 'Désigner capitaine'}
+                            </button>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={openTransfer}
+                            className="px-3 py-2 rounded-xl bg-blue-700/80 hover:bg-blue-700 text-sm font-medium transition-colors"
+                          >
+                            Transférer vers une autre équipe
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -761,6 +1179,30 @@ function PlayerViewPage({ staff: _staff }: { staff: StaffShape }) {
                                 &ldquo;{d.comment}&rdquo;
                               </p>
                             )}
+                            {d.status === 'pending' && (
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    processDemande(d.id, 'approved')
+                                  }
+                                  disabled={busy === `demande-${d.id}`}
+                                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                  Approuver
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    processDemande(d.id, 'rejected')
+                                  }
+                                  disabled={busy === `demande-${d.id}`}
+                                  className="px-3 py-1.5 rounded-lg bg-red-600/80 hover:bg-red-600 text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                  Refuser
+                                </button>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -772,6 +1214,145 @@ function PlayerViewPage({ staff: _staff }: { staff: StaffShape }) {
           ) : null}
         </div>
       </div>
+
+      {/* Edit display name modal */}
+      {editingName && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h3 className="text-lg font-semibold mb-4">
+              Modifier le nom affiché
+            </h3>
+            <label className="block text-sm text-neutral-400 mb-1">
+              Nom affiché
+            </label>
+            <input
+              type="text"
+              value={nameDraft}
+              onChange={(e) => setNameDraft(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+              placeholder="Nom affiché"
+            />
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                type="button"
+                onClick={() => setEditingName(false)}
+                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={saveName}
+                disabled={busy === 'name'}
+                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {busy === 'name' ? 'Enregistrement…' : 'Enregistrer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit battle tag modal */}
+      {editingTag && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h3 className="text-lg font-semibold mb-4">
+              Modifier le BattleTag
+            </h3>
+            <label className="block text-sm text-neutral-400 mb-1">
+              BattleTag
+            </label>
+            <input
+              type="text"
+              value={tagDraft}
+              onChange={(e) => setTagDraft(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+              placeholder="Pseudo#1234"
+            />
+            <p className="text-xs text-neutral-500 mt-1">
+              Format : Pseudo#0000 (alphanumérique + # + 3 à 6 chiffres)
+            </p>
+            {tagError && (
+              <div className="mt-3 rounded-lg bg-red-900/40 border border-red-500/50 px-3 py-2 text-sm text-red-200">
+                {tagError}
+              </div>
+            )}
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                type="button"
+                onClick={() => setEditingTag(false)}
+                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={saveBattleTag}
+                disabled={busy === 'tag'}
+                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {busy === 'tag' ? 'Enregistrement…' : 'Enregistrer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Transfer team modal */}
+      {transferOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h3 className="text-lg font-semibold mb-4">
+              Transférer vers une autre équipe
+            </h3>
+            <label className="block text-sm text-neutral-400 mb-1">
+              Équipe de destination
+            </label>
+            {teamsLoading ? (
+              <div className="flex items-center gap-2 text-sm text-neutral-400 py-2">
+                <div className="w-4 h-4 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+                Chargement des équipes…
+              </div>
+            ) : teamOptions.length === 0 ? (
+              <p className="text-sm text-neutral-500 py-2">
+                Aucune autre équipe disponible.
+              </p>
+            ) : (
+              <select
+                aria-label="Équipe de destination"
+                value={transferTeamId}
+                onChange={(e) => setTransferTeamId(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+              >
+                <option value="">Sélectionner une équipe…</option>
+                {teamOptions.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                type="button"
+                onClick={() => setTransferOpen(false)}
+                className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={transferTeam}
+                disabled={busy === 'transfer' || !transferTeamId}
+                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {busy === 'transfer' ? 'Transfert…' : 'Transférer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
