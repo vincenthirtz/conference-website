@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useMemo, useState, type JSX } from 'react';
 import { supabaseClient } from '@/utils/supabase';
 import { useStaffSession } from '@/hooks/useStaffSession';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import PublicNav from './PublicNav';
 import { ADMIN_LINKS, filterAdminLinks } from './adminLinks';
 
@@ -21,6 +22,7 @@ function Navbar(): JSX.Element {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const drawerRef = useFocusTrap<HTMLDivElement>();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -164,6 +166,7 @@ function Navbar(): JSX.Element {
           >
             {drawerOpen && (
               <NavDrop
+                ref={drawerRef}
                 setDrop={setDrawerOpen}
                 isStaff={isStaff}
                 staffName={staffName}
