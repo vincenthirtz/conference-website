@@ -35,6 +35,14 @@ export const VALID_STAGE_TYPES: StageType[] = [
   'other',
 ];
 
+/**
+ * Taille maximale d'un roster d'équipe (joueurs titulaires).
+ * Utilisé côté API pour exclure les équipes pleines de la liste « rejoindre »
+ * (`/api/teams?joinable=1`) et côté front comme repère d'affichage (`x/5`).
+ * Source de vérité produit : 5 joueurs par équipe Overwatch.
+ */
+export const MAX_TEAM_PLAYERS = 5;
+
 export const VALID_PARTNERSHIP_STATUSES = [
   'new',
   'read',

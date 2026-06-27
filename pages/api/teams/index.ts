@@ -11,6 +11,7 @@ import {
 } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { MAX_TEAM_PLAYERS } from '@/utils/constants';
 
 import { logger } from '../../../utils/logger';
 export type PublicTeam = {
@@ -46,6 +47,7 @@ export default async function handler(
     const search = sanitizeSearch(req.query.search);
 
     const joinable = req.query.joinable;
+    const onlyJoinable = joinable === '1' || joinable === 'true';
     const country =
       typeof req.query.country === 'string' ? req.query.country.trim() : '';
 
@@ -60,7 +62,7 @@ export default async function handler(
       .eq('tenant_id', tenantId);
 
     // Filter by joinable status
-    if (joinable === '1' || joinable === 'true') {
+    if (onlyJoinable) {
       query = query.eq('is_joinable', true);
     }
 
@@ -87,7 +89,7 @@ export default async function handler(
     }
 
     // Aplatir le count des membres
-    const teams = (data || []).map((t: any) => ({
+    let teams: PublicTeam[] = (data || []).map((t: any) => ({
       id: t.id,
       name: t.name,
       short_name: t.short_name,
@@ -96,6 +98,19 @@ export default async function handler(
       member_count: t.team_members?.[0]?.count ?? 0,
       is_joinable: t.is_joinable ?? false,
     }));
+
+    // Exclusion des équipes PLEINES en mode « rejoindre » (joinable=1).
+    // Le filtre par agrégat (`team_members(count)`) n'est pas exprimable côté
+    // PostgREST, donc on l'applique après coup sur le tableau aplati : une
+    // équipe joinable qui a atteint MAX_TEAM_PLAYERS membres ne doit jamais
+    // apparaître dans la liste de recrutement.
+    //
+    // NOTE sur `total` : il reflète le count DB (équipes joinable du tenant)
+    // AVANT exclusion des pleines. C'est volontaire — `total` reste un
+    // indicateur de cardinalité côté DB, pas la longueur exacte de `teams`.
+    if (onlyJoinable) {
+      teams = teams.filter((t) => t.member_count < MAX_TEAM_PLAYERS);
+    }
 
     res.setHeader(
       'Cache-Control',

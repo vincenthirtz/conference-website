@@ -133,6 +133,23 @@ describe('POST /api/teams/create-with-member', () => {
     expect((store.teams as any).length).toBe(1);
   });
 
+  it('201 creates team with is_joinable=true by default (ouverte au recrutement)', async () => {
+    store.teams = [];
+    const res = makeRes();
+    await createWithMemberHandler(
+      makeReq({
+        body: { name: 'Joinable Team' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(201);
+    // Le flag est posé explicitement dans le payload d'insert (pas seulement
+    // via le défaut DB) : la nouvelle équipe doit apparaître dans la liste
+    // « rejoindre » tant qu'elle n'est pas pleine.
+    expect((store.teams as any)[0].is_joinable).toBe(true);
+    expect((res.body as any).team.is_joinable).toBe(true);
+  });
+
   it('201 creates team with normalized fields from a slugifiable name', async () => {
     store.teams = [];
     const res = makeRes();

@@ -291,6 +291,10 @@ export default async function handler(
       discord: sanitizeUrl(body.discord) || null,
       website: sanitizeUrl(body.website) || null,
       tenant_id: tenantId,
+      // Une nouvelle équipe est ouverte au recrutement par défaut. On le pose
+      // EXPLICITEMENT (plutôt que de dépendre du défaut DB) : robuste si le
+      // défaut change, et testable directement sur le payload d'insert.
+      is_joinable: true,
     };
     return base;
   };

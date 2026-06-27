@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
+import { MAX_TEAM_PLAYERS } from '@/utils/constants';
 
 import { logger } from '../../utils/logger';
 type Team = {
@@ -27,6 +28,8 @@ export default function JoinTeamPage() {
   // Equipes
   const [teams, setTeams] = useState<Team[]>([]);
   const [teamsLoading, setTeamsLoading] = useState(false);
+  // Distingue « pas encore chargé » de « chargé mais vide » pour l'état vide.
+  const [teamsLoaded, setTeamsLoaded] = useState(false);
   const [selectedTeamId, setSelectedTeamId] = useState('');
   const [teamSearch, setTeamSearch] = useState('');
 
@@ -82,7 +85,10 @@ export default function JoinTeamPage() {
   const loadTeams = async (
     search?: string,
     country?: string,
-    hasSlots?: boolean
+    // L'API exclut déjà les équipes pleines en joinable=1 et le front re-filtre
+    // systématiquement, donc ce drapeau n'a plus d'effet sur le résultat. On le
+    // garde dans la signature pour la symétrie avec `reloadTeams` / l'UI.
+    _hasSlots?: boolean
   ) => {
     setTeamsLoading(true);
     try {
@@ -97,11 +103,15 @@ export default function JoinTeamPage() {
       if (res.ok) {
         const data = await res.json();
         let result: Team[] = data.teams || [];
-        if (hasSlots) {
-          result = result.filter(
-            (t) => typeof t.member_count !== 'number' || t.member_count < 5
-          );
-        }
+        // Garde-fou défensif : l'API exclut déjà les équipes pleines en
+        // joinable=1, mais on ne laisse jamais passer une équipe pleine côté
+        // front (member_count >= MAX_TEAM_PLAYERS), filtre « avec places » ou
+        // non. Le filtre `hasSlots` reste donc surtout cosmétique.
+        result = result.filter(
+          (t) =>
+            typeof t.member_count !== 'number' ||
+            t.member_count < MAX_TEAM_PLAYERS
+        );
         // Collecter les pays disponibles
         const countries = new Set<string>();
         for (const t of data.teams || []) {
@@ -114,6 +124,7 @@ export default function JoinTeamPage() {
       logger.error('[join-team] load teams error:', err);
     } finally {
       setTeamsLoading(false);
+      setTeamsLoaded(true);
     }
   };
 
@@ -306,9 +317,21 @@ export default function JoinTeamPage() {
                     </div>
                   )}
 
-                  {!teamsLoading && teams.length === 0 && (
-                    <div className="text-sm text-gray-500 text-center py-4">
-                      Aucune equipe ouverte au recrutement pour le moment
+                  {!teamsLoading && teamsLoaded && teams.length === 0 && (
+                    <div className="text-center py-6 px-4">
+                      <p className="text-sm text-gray-400">
+                        Aucune equipe ne recrute pour le moment.
+                      </p>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Reviens plus tard, ou cree la tienne pour lancer ton
+                        propre roster.
+                      </p>
+                      <Link
+                        href="/player/request-captain"
+                        className="mt-3 inline-block text-sm text-purple-400 hover:text-purple-300"
+                      >
+                        Creer mon equipe →
+                      </Link>
                     </div>
                   )}
 
@@ -357,7 +380,9 @@ export default function JoinTeamPage() {
                                 {(team.short_name || team.country) && (
                                   <span>·</span>
                                 )}
-                                <span>{team.member_count}/5 membres</span>
+                                <span>
+                                  {team.member_count}/{MAX_TEAM_PLAYERS} membres
+                                </span>
                               </>
                             )}
                           </div>
