@@ -108,10 +108,17 @@ const _adminUsers = new Map<string, AdminUserEntry>();
 
 /** State returned by `supabaseAdmin.auth.admin.generateLink()`. */
 let _generateLinkResult: {
-  data: { properties?: { action_link?: string } } | null;
+  data: {
+    properties?: { action_link?: string; hashed_token?: string };
+  } | null;
   error: { status?: number; message?: string } | null;
 } = {
-  data: { properties: { action_link: 'https://example.com/reset?t=fake' } },
+  data: {
+    properties: {
+      action_link: 'https://example.com/reset?t=fake',
+      hashed_token: 'fake-token-hash',
+    },
+  },
   error: null,
 };
 
@@ -197,7 +204,12 @@ export function resetSupabaseMock() {
   _cookieError = null;
   _adminUsers.clear();
   _generateLinkResult = {
-    data: { properties: { action_link: 'https://example.com/reset?t=fake' } },
+    data: {
+      properties: {
+        action_link: 'https://example.com/reset?t=fake',
+        hashed_token: 'fake-token-hash',
+      },
+    },
     error: null,
   };
   _authListUsers = [];

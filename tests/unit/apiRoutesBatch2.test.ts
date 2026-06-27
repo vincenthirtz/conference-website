@@ -249,7 +249,7 @@ describe('POST /api/auth/forgot-password', () => {
     expect(res.statusCode).toBe(500);
   });
 
-  it('returns 500 when generateLink returns no action_link', async () => {
+  it('returns 500 when generateLink returns no hashed_token', async () => {
     setGenerateLinkResult({ data: { properties: {} }, error: null });
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const res = makeRes();
