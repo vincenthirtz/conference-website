@@ -1,16 +1,20 @@
 // E2E — pages/admin/users/[userId]/player-view.tsx ("Vue player")
 //
-// READ-ONLY staff inspection of a target user's player area. We:
+// The "Vue player" is now an ACTIONABLE per-player command center (no longer
+// read-only). We:
 //   - log a REAL staff (manager) in through /login (genuine Supabase session,
 //     identical harness to admin-users.spec.ts);
 //   - route-mock GET /api/admin/users/[userId]/player-view with a representative
 //     payload (team + 1 upcoming + 1 past match + non-zero notifications +
-//     a demande);
-//   - assert the read-only banner renders, the 5 tabs switch content, the match
-//     score/badges show, and there are NO action controls.
+//     a PENDING demande);
+//   - assert the (updated) command-center banner renders, the 5 tabs switch
+//     content, the match score/badges show, and the staff CAN act:
+//       * editing a BattleTag triggers PATCH /api/admin/users/manage (payload),
+//       * approving a pending demande triggers POST /api/admin/demandes
+//         (action:updateStatus).
 //
-// The data endpoint is mocked so the UI is deterministic and independent of DB
-// state — the page itself is the system under test.
+// The reused endpoints are route-mocked so the UI is deterministic and
+// independent of DB state — the page itself is the system under test.
 
 import { test, expect } from '@playwright/test';
 import { createTestStaff, deleteTestStaff } from '../utils/supabaseTestClient';
@@ -111,9 +115,9 @@ function buildPayload() {
     },
     demandes: [
       {
-        id: 'd-1',
+        id: '22222222-2222-4222-8222-222222222222',
         type: 'join',
-        status: 'approved',
+        status: 'pending',
         created_at: '2025-02-01T12:00:00.000Z',
         comment: 'Je souhaite rejoindre cette équipe.',
         team: { id: 'team-1', name: 'Les Phénix' },
@@ -121,6 +125,8 @@ function buildPayload() {
     ],
   };
 }
+
+const DEMANDE_ID = '22222222-2222-4222-8222-222222222222';
 
 /**
  * Next.js dev mode renders a `<nextjs-portal>` overlay for hydration warnings
@@ -151,7 +157,7 @@ async function gotoPlayerView(page: import('@playwright/test').Page) {
   await page.goto(`/admin/users/${TARGET_USER_ID}/player-view`);
 }
 
-test.describe('Admin "Vue player" (read-only)', () => {
+test.describe('Admin "Vue player" (command center)', () => {
   test.beforeAll(async () => {
     await deleteTestStaff(STAFF_EMAIL);
     if (!skipIfNoServiceRole()) {
@@ -163,7 +169,7 @@ test.describe('Admin "Vue player" (read-only)', () => {
     await deleteTestStaff(STAFF_EMAIL);
   });
 
-  test('renders banner, switches all 5 tabs, shows score/badges, no actions', async ({
+  test('renders banner, switches all 5 tabs, shows score/badges + actions', async ({
     page,
   }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
@@ -183,13 +189,13 @@ test.describe('Admin "Vue player" (read-only)', () => {
 
     await gotoPlayerView(page);
 
-    // Read-only banner.
+    // Command-center banner (no longer read-only).
     await expect(
       page.getByRole('heading', {
-        name: /Vue lecture seule — espace joueur de Joueuse Test/,
+        name: /Espace joueur de Joueuse Test/,
       })
     ).toBeVisible({ timeout: 15000 });
-    await expect(page.getByText(/Aucune action n'est effectuée/)).toBeVisible();
+    await expect(page.getByText(/sont appliquées au compte/)).toBeVisible();
 
     await dismissNextDevOverlay(page);
 
@@ -198,10 +204,16 @@ test.describe('Admin "Vue player" (read-only)', () => {
       page.getByRole('link', { name: /Retour à la gestion des inscrits/ })
     ).toHaveAttribute('href', '/admin/users/manage');
 
-    // Default tab = Profil → email + battletag visible.
+    // Default tab = Profil → email + battletag visible + actions present.
     await expect(page.getByText('joueuse@example.com')).toBeVisible();
     await expect(
       page.getByText('Joueuse#1234', { exact: false }).first()
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Modifier le nom affiché' })
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Renvoyer les identifiants' })
     ).toBeVisible();
 
     // Équipe tab.
@@ -209,6 +221,14 @@ test.describe('Admin "Vue player" (read-only)', () => {
     await expect(page.getByText('Les Phénix')).toBeVisible();
     await expect(page.getByText('Coéquipière')).toBeVisible();
     await expect(page.getByText('Mate#5678')).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Modifier le BattleTag' })
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', {
+        name: 'Transférer vers une autre équipe',
+      })
+    ).toBeVisible();
 
     // Mes matchs tab → upcoming check-in text + past score + Victoire badge.
     await page.getByRole('tab', { name: 'Mes matchs' }).click();
@@ -225,24 +245,137 @@ test.describe('Admin "Vue player" (read-only)', () => {
     await expect(page.getByText('Scrims en attente')).toBeVisible();
     await expect(page.getByText('Total', { exact: true })).toBeVisible();
 
-    // Demandes tab → list with status badge + comment.
+    // Demandes tab → pending demande with Approuver / Refuser controls.
     await page.getByRole('tab', { name: 'Demandes' }).click();
     await expect(page.getByText('Rejoindre une équipe')).toBeVisible();
-    await expect(page.getByText('Approuvée')).toBeVisible();
+    await expect(page.getByText('En attente', { exact: true })).toBeVisible();
     await expect(
       page.getByText(/Je souhaite rejoindre cette équipe/)
     ).toBeVisible();
+    // Scope to main content — the cookie banner also has a "Refuser" button.
+    const main = page.locator('#main-content');
+    await expect(
+      main.getByRole('button', { name: 'Approuver' })
+    ).toBeVisible();
+    await expect(main.getByRole('button', { name: 'Refuser' })).toBeVisible();
+  });
 
-    // NO action controls anywhere on the page.
+  test('editing a BattleTag triggers PATCH /api/admin/users/manage', async ({
+    page,
+  }) => {
+    test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
+
+    await page.route(
+      (url) =>
+        url.pathname === `/api/admin/users/${TARGET_USER_ID}/player-view`,
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(buildPayload()),
+        });
+      }
+    );
+
+    let patchBody: Record<string, unknown> | null = null;
+    await page.route(
+      (url) => url.pathname === '/api/admin/users/manage',
+      async (route) => {
+        if (route.request().method() === 'PATCH') {
+          patchBody = route.request().postDataJSON() as Record<string, unknown>;
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ success: true }),
+          });
+          return;
+        }
+        await route.continue();
+      }
+    );
+
+    await gotoPlayerView(page);
     await expect(
-      page.getByRole('button', { name: /Enregistrer|Sauvegarder/ })
-    ).toHaveCount(0);
-    await expect(page.getByRole('button', { name: /Check-in/ })).toHaveCount(0);
+      page.getByRole('heading', { name: /Espace joueur de Joueuse Test/ })
+    ).toBeVisible({ timeout: 15000 });
+    await dismissNextDevOverlay(page);
+
+    await page.getByRole('tab', { name: 'Équipe' }).click();
+    await page.getByRole('button', { name: 'Modifier le BattleTag' }).click();
+
+    const input = page.getByPlaceholder('Pseudo#1234');
+    await expect(input).toBeVisible();
+    await input.fill('NewTag#4242');
+    await page.getByRole('button', { name: 'Enregistrer' }).click();
+
+    await expect.poll(() => patchBody).not.toBeNull();
+    expect(patchBody).toMatchObject({
+      userId: TARGET_USER_ID,
+      teamId: 'team-1',
+      battleTag: 'NewTag#4242',
+    });
+  });
+
+  test('approving a pending demande triggers POST /api/admin/demandes', async ({
+    page,
+  }) => {
+    test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
+
+    await page.route(
+      (url) =>
+        url.pathname === `/api/admin/users/${TARGET_USER_ID}/player-view`,
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(buildPayload()),
+        });
+      }
+    );
+
+    let demandeBody: Record<string, unknown> | null = null;
+    await page.route(
+      (url) => url.pathname === '/api/admin/demandes',
+      async (route) => {
+        if (route.request().method() === 'POST') {
+          demandeBody = route
+            .request()
+            .postDataJSON() as Record<string, unknown>;
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ success: true, updatedCount: 1 }),
+          });
+          return;
+        }
+        await route.continue();
+      }
+    );
+
+    await gotoPlayerView(page);
     await expect(
-      page.getByRole('link', { name: /Check-in/ })
-    ).toHaveCount(0);
-    await expect(page.getByRole('button', { name: /Quitter/ })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: /Annuler/ })).toHaveCount(0);
+      page.getByRole('heading', { name: /Espace joueur de Joueuse Test/ })
+    ).toBeVisible({ timeout: 15000 });
+    await dismissNextDevOverlay(page);
+
+    await page.getByRole('tab', { name: 'Demandes' }).click();
+    await page.getByRole('button', { name: 'Approuver' }).click();
+
+    // Confirmation dialog → confirm (scope to the confirm dialog by its
+    // accessible name so we don't re-click the row button or hit the cookie
+    // banner, which is also role="dialog").
+    const dialog = page.getByRole('dialog', {
+      name: /Approuver cette demande/,
+    });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', { name: 'Approuver' }).click();
+
+    await expect.poll(() => demandeBody).not.toBeNull();
+    expect(demandeBody).toMatchObject({
+      action: 'updateStatus',
+      demandeIds: [DEMANDE_ID],
+      newStatus: 'approved',
+    });
   });
 
   test('404 → "Utilisateur introuvable"', async ({ page }) => {

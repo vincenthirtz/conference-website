@@ -1220,7 +1220,14 @@ describe('POST /api/admin/demandes — batch updateStatus', () => {
     )[0];
     expect(after.status).toBe('approved');
     expect(after.staff_note).toBe('OK approved');
-    expect(logStaffActionMock).toHaveBeenCalledOnce();
+    // Two audit entries now: the legacy before/after snapshot
+    // (staff_batch_action) + the dedicated process_demande log.
+    expect(logStaffActionMock).toHaveBeenCalledTimes(2);
+    const actions = logStaffActionMock.mock.calls.map(
+      (c: any[]) => c[0]?.action
+    );
+    expect(actions).toContain('staff_batch_action');
+    expect(actions).toContain('process_demande');
   });
 
   it('200 approving a team_registration demande creates tournament_teams + news', async () => {
