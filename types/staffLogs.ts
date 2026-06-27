@@ -50,6 +50,7 @@ export type StaffLogAction =
   | 'blacklist_add'
   | 'blacklist_update'
   | 'blacklist_remove'
+  | 'view_player_data'
   | 'other';
 
 export type StaffLog = {

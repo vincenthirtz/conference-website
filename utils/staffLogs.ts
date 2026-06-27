@@ -205,6 +205,7 @@ export function formatStaffLog(log: StaffLog) {
     blacklist_add: 'Ajout blacklist joueur',
     blacklist_update: 'Modification blacklist joueur',
     blacklist_remove: 'Suppression blacklist joueur',
+    view_player_data: "a consulté l'espace joueur d'un utilisateur",
     other: 'Action staff',
   };
 
