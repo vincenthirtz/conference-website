@@ -1,7 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useToast } from '@/components/Toast';
+
+// Idempotency-Key pour un POST public/anonyme (pas de session Supabase, donc
+// useIdempotentMutation/useAdminFetch ne s'appliquent pas ici). On génère une
+// clé stable par intention utilisateur : tant qu'une création n'a pas réussi,
+// un double-submit / retry réseau renvoie la MÊME clé (dédup côté serveur si
+// honorée), et le bouton est verrouillé pendant la soumission.
+function genIdempotencyKey(): string {
+  if (
+    typeof crypto !== 'undefined' &&
+    typeof crypto.randomUUID === 'function'
+  ) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
 
 type CreateResponse = {
   team: {
@@ -67,6 +83,10 @@ export default function PublicCreateTeamPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [result, setResult] = useState<CreateResponse | null>(null);
+  const { addToast } = useToast();
+  // Clé d'idempotence courante : régénérée après chaque création réussie pour
+  // qu'une nouvelle équipe soit bien une nouvelle intention (non dédupliquée).
+  const idempotencyKeyRef = useRef<string>(genIdempotencyKey());
   const [tournamentInfo, setTournamentInfo] = useState<TournamentInfo | null>(
     null
   );
@@ -159,6 +179,8 @@ export default function PublicCreateTeamPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // Garde anti double-submit : si une soumission est déjà en cours, on ignore.
+    if (loading) return;
     setLoading(true);
     setErrorMsg(null);
     setResult(null);
@@ -184,7 +206,7 @@ export default function PublicCreateTeamPage() {
         );
         if (preparedMembers.length && missingBattle) {
           throw new Error(
-            'BattleTag requis pour chaque membre (format Pseudo#0000) lors d\'une inscription à un tournoi.'
+            "BattleTag requis pour chaque membre (format Pseudo#0000) lors d'une inscription à un tournoi."
           );
         }
       } else {
@@ -215,7 +237,10 @@ export default function PublicCreateTeamPage() {
 
       const res = await fetch('/api/teams/create-with-member', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKeyRef.current,
+        },
         body: JSON.stringify(payload),
       });
 
@@ -229,7 +254,12 @@ export default function PublicCreateTeamPage() {
         throw new Error(message);
       }
 
+      // Création réussie : nouvelle clé pour une éventuelle prochaine équipe.
+      idempotencyKeyRef.current = genIdempotencyKey();
       setResult(json);
+      // Message fixe et distinct du panneau "Résultat" (qui affiche json.info)
+      // pour éviter tout doublon de texte à l'écran.
+      addToast('Inscription enregistrée 🎉', 'success');
       setName('');
       setShortName('');
       setCountry('');
@@ -242,7 +272,9 @@ export default function PublicCreateTeamPage() {
       // Nouveau challenge captcha pour une éventuelle prochaine création.
       refreshCaptcha();
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? 'Erreur inattendue');
+      const message = (err as Error)?.message ?? 'Erreur inattendue';
+      setErrorMsg(message);
+      addToast(message, 'error');
     } finally {
       setLoading(false);
     }
@@ -625,7 +657,11 @@ export default function PublicCreateTeamPage() {
               </section>
 
               {errorMsg && (
-                <div className="rounded-xl border border-red-500/50 bg-red-500/10 px-3 py-2 text-sm text-red-100">
+                <div
+                  role="alert"
+                  aria-live="polite"
+                  className="rounded-xl border border-red-500/50 bg-red-500/10 px-3 py-2 text-sm text-red-100"
+                >
                   {errorMsg}
                 </div>
               )}

@@ -1,11 +1,27 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useToast } from '@/components/Toast';
 
 type Status = 'idle' | 'loading' | 'success' | 'error';
+
+// Idempotency-Key pour le POST /api/contact (public/anonyme : useAdminFetch ne
+// s'applique pas). Stable par intention tant que l'envoi n'a pas réussi : un
+// double-submit / retry réseau renvoie la même clé.
+function genIdempotencyKey(): string {
+  if (
+    typeof crypto !== 'undefined' &&
+    typeof crypto.randomUUID === 'function'
+  ) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
 
 export default function Contact({ className = '' }: { className?: string }) {
   const [status, setStatus] = useState<Status>('idle');
   const [error, setError] = useState<string | null>(null);
   const liveRef = useRef<HTMLSpanElement | null>(null);
+  const { addToast } = useToast();
+  const idempotencyKeyRef = useRef<string>(genIdempotencyKey());
 
   // --- Confetti (SSR-safe) ---
   const burstConfetti = useCallback(async () => {
@@ -35,6 +51,8 @@ export default function Contact({ className = '' }: { className?: string }) {
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    // Garde anti double-submit.
+    if (status === 'loading') return;
     setError(null);
 
     const form = e.currentTarget;
@@ -60,22 +78,33 @@ export default function Contact({ className = '' }: { className?: string }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKeyRef.current,
         },
         body: JSON.stringify(payload),
       });
       const json = await res.json();
 
       if (res.ok && json.ok) {
+        // Nouvelle clé pour un éventuel prochain message.
+        idempotencyKeyRef.current = genIdempotencyKey();
         setStatus('success');
         form.reset();
         liveRef.current?.focus();
+        addToast('Message envoyé avec succès.', 'success');
       } else {
+        idempotencyKeyRef.current = genIdempotencyKey();
+        const message =
+          json?.error || 'Une erreur est survenue. Réessaie plus tard.';
         setStatus('error');
-        setError(json?.error || 'Une erreur est survenue. Réessaie plus tard.');
+        setError(message);
+        addToast(message, 'error');
       }
     } catch {
+      idempotencyKeyRef.current = genIdempotencyKey();
+      const message = 'Impossible de joindre le service. Vérifie ta connexion.';
       setStatus('error');
-      setError('Impossible de joindre le service. Vérifie ta connexion.');
+      setError(message);
+      addToast(message, 'error');
     }
   };
 
@@ -211,7 +240,9 @@ export default function Contact({ className = '' }: { className?: string }) {
               </span>
             )}
             {status === 'error' && (
-              <span className="text-red-400">{error}</span>
+              <span role="alert" aria-live="polite" className="text-red-400">
+                {error}
+              </span>
             )}
           </div>
         </form>

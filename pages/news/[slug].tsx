@@ -5,10 +5,24 @@ import Button from '@/components/Buttons/button';
 import Link from 'next/link';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
-import { useEffect, useState, Fragment, type ReactNode } from 'react';
+import { useEffect, useRef, useState, Fragment, type ReactNode } from 'react';
+import { useToast } from '@/components/Toast';
 
 import { logger } from '../../utils/logger';
 const SITE_NAME = "OW Women's Cup";
+
+// Idempotency-Key pour le POST de commentaire (public/anonyme). Stable par
+// intention tant que la publication n'a pas réussi : double-submit / retry
+// réseau renvoie la même clé.
+function genIdempotencyKey(): string {
+  if (
+    typeof crypto !== 'undefined' &&
+    typeof crypto.randomUUID === 'function'
+  ) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
 
 /** Turn plain-text URLs into clickable <a> links, preserving surrounding text. */
 function linkifyContent(text: string): ReactNode {
@@ -308,6 +322,8 @@ function Comments({ newsId }: { newsId: string }) {
   const [captchaToken, setCaptchaToken] = useState('');
   const [captchaQuestion, setCaptchaQuestion] = useState('');
   const [captchaAnswer, setCaptchaAnswer] = useState('');
+  const { addToast } = useToast();
+  const idempotencyKeyRef = useRef<string>(genIdempotencyKey());
 
   const loadCaptcha = async () => {
     try {
@@ -346,6 +362,8 @@ function Comments({ newsId }: { newsId: string }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Garde anti double-submit.
+    if (loading) return;
     if (content.trim().length < 3) {
       setError('Le commentaire doit contenir au moins 3 caractères.');
       return;
@@ -355,7 +373,10 @@ function Comments({ newsId }: { newsId: string }) {
     try {
       const res = await fetch('/api/news/comments', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKeyRef.current,
+        },
         body: JSON.stringify({
           newsId,
           content: content.trim(),
@@ -369,11 +390,20 @@ function Comments({ newsId }: { newsId: string }) {
         const json = await res.json().catch(() => null);
         throw new Error(json?.error || 'Impossible de publier le commentaire');
       }
+      // Publication réussie : nouvelle clé pour un prochain commentaire.
+      idempotencyKeyRef.current = genIdempotencyKey();
       setContent('');
       setAuthor('');
       await Promise.all([loadComments(), loadCaptcha()]);
+      addToast('Commentaire publié.', 'success');
     } catch (err: unknown) {
-      setError((err as Error)?.message || 'Erreur lors de la publication');
+      // Le captcha est à usage unique : on régénère la clé d'idempotence en même
+      // temps que le challenge pour que le retry soit une intention propre.
+      idempotencyKeyRef.current = genIdempotencyKey();
+      const message =
+        (err as Error)?.message || 'Erreur lors de la publication';
+      setError(message);
+      addToast(message, 'error');
       await loadCaptcha();
     } finally {
       setLoading(false);
