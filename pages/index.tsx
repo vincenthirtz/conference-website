@@ -39,6 +39,10 @@ type HomeProps = {
   upcomingTournament: UpcomingTournament | null;
   partners: HomePartner[];
   countdownTarget: string | null;
+  // Vrai quand le chargement du contenu dynamique (news / annonces) a échoué
+  // côté serveur. Permet d'afficher un avis d'erreur distinct d'un site
+  // simplement vide, sans masquer le hero statique.
+  loadError: boolean;
 };
 
 function sanitizeAnnouncementUrl(url: string | null): string | null {
@@ -143,6 +147,9 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
   let upcomingTournament: UpcomingTournament | null = null;
   let partners: HomePartner[] = [];
   let countdownTarget: string | null = null;
+  // Client absent = on n'a pas pu charger le contenu : on le signale plutôt
+  // que d'afficher une home faussement vide.
+  let loadError = !supabaseAdmin;
 
   // S5d: pas de req → DEFAULT_TENANT_ID. TODO(S7) — switcher en SSR ou ISR
   // par-tenant quand le multi-tenant sera actif.
@@ -185,6 +192,12 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
     partners = partnersList;
     countdownTarget = countdownSetting ?? upcomingTournament?.startDate ?? null;
 
+    // Une erreur sur les requêtes de contenu (news / annonces) signale une
+    // panne, à distinguer d'un contenu légitimement vide.
+    if (newsRes.error || announcementsRes.error) {
+      loadError = true;
+    }
+
     if (!newsRes.error && newsRes.data) {
       news = newsRes.data.map((row: any) => ({
         id: row.id,
@@ -219,6 +232,7 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
       upcomingTournament,
       partners,
       countdownTarget,
+      loadError,
     },
     revalidate: 900,
   };
@@ -230,6 +244,7 @@ function Home({
   upcomingTournament,
   partners,
   countdownTarget,
+  loadError,
 }: HomeProps) {
   return (
     <div>
@@ -244,6 +259,20 @@ function Home({
         />
       </Head>
       <Header />
+
+      {loadError && (
+        <div className="container mx-auto px-4 mt-6">
+          <div
+            className="mx-auto max-w-2xl rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-center"
+            role="alert"
+          >
+            <p className="text-sm text-red-200">
+              Une partie du contenu n&apos;a pas pu être chargée. Réessayez dans
+              quelques instants.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div
         className="relative -mt-14 md:-mt-20 -mb-6 md:-mb-10 flex justify-center pointer-events-none select-none"

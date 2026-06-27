@@ -16,6 +16,18 @@
     "ref": "/jeux"
   },
   {
+    "title": "Équipes",
+    "ref": "/tournament/ow-womens-cup-2026/teams"
+  },
+  {
+    "title": "Actualités",
+    "ref": "/actualites"
+  },
+  {
+    "title": "Live",
+    "ref": "/live"
+  },
+  {
     "title": "Éditions",
     "subMenu": [
       { "title": "2025", "ref": "/tournoi" },

@@ -59,8 +59,6 @@ export default function NextMatchCard(): JSX.Element | null {
   const { adminFetchJson } = useAdminFetch();
   const [data, setData] = useState<NextMatch | null>(null);
   const [loading, setLoading] = useState(true);
-  const [checkinLoading, setCheckinLoading] = useState(false);
-  const [checkinError, setCheckinError] = useState<string | null>(null);
   const [now, setNow] = useState<number>(() => Date.now());
 
   const load = useCallback(async () => {
@@ -87,27 +85,6 @@ export default function NextMatchCard(): JSX.Element | null {
     const id = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(id);
   }, []);
-
-  const handleCheckin = async () => {
-    if (!data?.checkin?.token) return;
-    setCheckinLoading(true);
-    setCheckinError(null);
-    try {
-      const res = await fetch(
-        `/api/checkin/${encodeURIComponent(data.checkin.token)}`,
-        { method: 'POST' }
-      );
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error || 'Check-in échoué');
-      await load();
-    } catch (err: unknown) {
-      setCheckinError(
-        err instanceof Error ? err.message : 'Erreur réseau au check-in'
-      );
-    } finally {
-      setCheckinLoading(false);
-    }
-  };
 
   if (loading) {
     // Hide while loading to avoid layout flash; the rest of the dashboard
@@ -198,26 +175,22 @@ export default function NextMatchCard(): JSX.Element | null {
             Check-in clos
           </span>
         ) : checkin?.token && checkin.isOpen ? (
-          <button
-            type="button"
-            onClick={handleCheckin}
-            disabled={checkinLoading}
-            className="inline-flex items-center gap-1 rounded-full bg-white px-4 py-2 text-sm font-semibold text-neutral-900 shadow transition hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
+          <Link
+            href="/player/checkin"
+            className="inline-flex items-center gap-1 rounded-full bg-white px-4 py-2 text-sm font-semibold text-neutral-900 shadow transition hover:-translate-y-0.5 hover:shadow-lg"
           >
-            {checkinLoading ? 'Validation…' : 'Check-in maintenant'}
-          </button>
+            Check-in maintenant
+            <span aria-hidden>→</span>
+          </Link>
         ) : checkin?.token && checkin.opensAt ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-gray-300">
+          <Link
+            href="/player/checkin"
+            className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-gray-300 transition hover:bg-white/10"
+          >
             Check-in {formatRelative(checkin.opensAt, now) ?? 'bientôt'}
-          </span>
+          </Link>
         ) : null}
       </div>
-
-      {checkinError && (
-        <p className="mt-3 text-sm text-rose-200" role="alert">
-          {checkinError}
-        </p>
-      )}
     </div>
   );
 }

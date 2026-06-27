@@ -17,7 +17,14 @@ const DEFAULT_DESCRIPTION =
   "Tournoi Overwatch et communauté 100% féminine : staff inclusif, matchs commentés et actions pour rendre l'esport plus accessible.";
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || '';
 const CANONICAL_URL = BASE_URL || 'https://owwomenscup.fr';
-const DEFAULT_IMAGE = '/img/logos/2025-logo.png';
+// `summary_large_image` (Twitter) / og:image expect a landscape ~1.91:1 image.
+// The square 2025-logo (300×300) renders badly when used as the large card
+// preview. `fourplayers.jpg` (1280×853) is the widest landscape asset shipped
+// under public/img/ and is a much better default share preview. The square
+// logo is still used for the JSON-LD Organization `logo` field below.
+const DEFAULT_IMAGE = '/img/fourplayers.jpg';
+const DEFAULT_IMAGE_WIDTH = '1280';
+const DEFAULT_IMAGE_HEIGHT = '853';
 
 // JSON-LD Organization Schema
 const organizationSchema = {
@@ -129,9 +136,7 @@ export default function DefaultSeo({
       <title>{metaTitle}</title>
       <meta name="description" content={metaDescription} />
       {canonical && <link rel="canonical" href={canonical} />}
-      {canonical && (
-        <link rel="alternate" hrefLang="fr-FR" href={canonical} />
-      )}
+      {canonical && <link rel="alternate" hrefLang="fr-FR" href={canonical} />}
       {canonical && (
         <link rel="alternate" hrefLang="x-default" href={canonical} />
       )}
@@ -152,10 +157,15 @@ export default function DefaultSeo({
       {canonical && <meta property="og:url" content={canonical} />}
       {ogImage && <meta property="og:image" content={ogImage} />}
       {ogImage && <meta property="og:image:alt" content={title || SITE_NAME} />}
-      {hasExplicitImage && (
+      {hasExplicitImage ? (
         <>
           <meta property="og:image:width" content="1200" />
           <meta property="og:image:height" content="630" />
+        </>
+      ) : (
+        <>
+          <meta property="og:image:width" content={DEFAULT_IMAGE_WIDTH} />
+          <meta property="og:image:height" content={DEFAULT_IMAGE_HEIGHT} />
         </>
       )}
 

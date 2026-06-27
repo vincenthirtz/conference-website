@@ -5,13 +5,7 @@ import links from '@/config/links.json';
 import type { LinkItem } from '@/types/types';
 import type { INavDropProp } from '@/types/components';
 
-const HIDDEN_PUBLIC_LINKS = new Set([
-  'À propos',
-  'Cast',
-  'Sponsors',
-  'Équipes',
-  'Equipes',
-]);
+const HIDDEN_PUBLIC_LINKS = new Set(['À propos', 'Cast', 'Sponsors']);
 
 function Chevron({ open, size = 'md' }: { open: boolean; size?: 'sm' | 'md' }) {
   const cls = size === 'sm' ? 'h-3 w-3' : 'h-4 w-4';
@@ -328,6 +322,53 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(function NavDrop(
             );
           })}
         </div>
+
+        {!isStaff && (
+          <div className="mt-4 flex flex-col gap-2 border-t border-white/10 pt-4">
+            <Link
+              href="/inscription-2026"
+              onClick={closeAndNavigate}
+              data-test="nav-Inscription"
+              className="group flex min-h-[48px] items-center justify-between rounded-xl border border-fuchsia-400/40 bg-gradient-to-r from-fuchsia-500 to-purple-500 px-4 py-3 text-white shadow-[0_0_24px_-8px_rgba(217,70,239,0.7)] transition-all hover:from-fuchsia-400 hover:to-purple-400"
+            >
+              <span className="text-[15px] font-semibold">
+                Inscription 2026
+              </span>
+              <svg
+                aria-hidden
+                className="h-4 w-4 -translate-x-1 text-white transition-transform group-hover:translate-x-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M14 5l7 7m0 0l-7 7m7-7H3"
+                />
+              </svg>
+            </Link>
+            <Link
+              href="/don"
+              onClick={closeAndNavigate}
+              data-test="nav-Don"
+              className="group flex min-h-[48px] items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white transition-all hover:border-white/25 hover:bg-white/[0.08]"
+            >
+              <svg
+                aria-hidden
+                className="h-5 w-5 shrink-0 text-rose-400"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M12 21s-6.716-4.297-9.193-7.6C1.07 11.13 1.4 8.07 3.6 6.43c1.9-1.42 4.46-1 5.9.72L12 10.2l2.5-3.05c1.44-1.72 4-2.14 5.9-.72 2.2 1.64 2.53 4.7.793 6.97C18.716 16.703 12 21 12 21z" />
+              </svg>
+              <span className="text-[15px] font-medium">
+                Soutenir le projet
+              </span>
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -12,6 +12,7 @@ const publicRoutes = [
   { path: '/espace-capitaine', priority: '0.7', changefreq: 'monthly' },
   { path: '/guide/gerer-mon-equipe', priority: '0.8', changefreq: 'monthly' },
   { path: '/actualites', priority: '0.8', changefreq: 'daily' },
+  { path: '/news', priority: '0.8', changefreq: 'daily' },
   { path: '/timeline-2026', priority: '0.8', changefreq: 'weekly' },
   { path: '/scrim', priority: '0.7', changefreq: 'weekly' },
   { path: '/lore', priority: '0.7', changefreq: 'monthly' },

@@ -17,11 +17,13 @@ const LiveEventBanner = dynamic(
 
 type Props = {
   channels: TwitchChannel[];
+  // Différencie une panne de chargement d'une absence légitime de chaînes.
+  loadError: boolean;
 };
 
 export const getStaticProps: GetStaticProps<Props> = async () => {
   if (!supabaseAdmin) {
-    return { props: { channels: [] }, revalidate: 60 };
+    return { props: { channels: [], loadError: true }, revalidate: 60 };
   }
 
   // Static export -> no `req`, so we hard-code the conference tenant. Quand
@@ -40,7 +42,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 
   if (error) {
     logger.error('[live] fetch channels error', error);
-    return { props: { channels: [] }, revalidate: 60 };
+    return { props: { channels: [], loadError: true }, revalidate: 60 };
   }
 
   const channels: TwitchChannel[] = (data || []).map((row) => ({
@@ -51,15 +53,37 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
     background: row.background_url,
   }));
 
-  return { props: { channels }, revalidate: 300 };
+  return { props: { channels, loadError: false }, revalidate: 300 };
 };
 
-function LivePage({ channels }: Props) {
+function LivePage({ channels, loadError }: Props) {
   return (
     <div className="min-h-screen">
       <div className="container mx-auto px-4 pt-24 pb-20">
         <LiveEventBanner />
-        <LiveTwitchSection initialChannels={channels} />
+        {loadError ? (
+          <div
+            className="mt-12 mx-auto max-w-md text-center space-y-4"
+            role="alert"
+          >
+            <h2 className="text-xl font-semibold text-white">
+              Impossible de charger les chaînes
+            </h2>
+            <p className="text-sm text-gray-300">
+              Une erreur est survenue de notre côté. Réessayez dans quelques
+              instants.
+            </p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 rounded-md bg-purple-500 hover:bg-purple-400 text-sm font-semibold text-white transition-colors"
+            >
+              Réessayer
+            </button>
+          </div>
+        ) : (
+          <LiveTwitchSection initialChannels={channels} />
+        )}
       </div>
     </div>
   );

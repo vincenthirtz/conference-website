@@ -49,11 +49,13 @@ function MyApp({ Component, pageProps, router }: AppPropsWithSeo) {
   const isAdmin = router.pathname.startsWith('/admin');
   const isCaster = router.pathname.startsWith('/caster');
   const isPlayer = router.pathname.startsWith('/player');
-  // Routes "applicatives" (admin + cockpit caster) : pas d index, pas de
-  // navbar/footer marketing par defaut (chaque page caster gere sa propre
-  // chrome legere — cf. /caster/login, /caster/cockpit).
+  // Routes "applicatives" (admin + cockpit caster + espace joueur) : pas
+  // d'index. L'espace joueur est gate cote client et n'a pas de contenu
+  // public a referencer — on force noindex pour eviter d'indexer des coquilles
+  // vides / pages d'auth. La navbar/footer marketing restent (sauf caster qui
+  // gere sa propre chrome legere — cf. /caster/login, /caster/cockpit).
   const effectiveSeo: SeoProps =
-    isAdmin || isCaster ? { ...seo, noindex: true } : { ...seo };
+    isAdmin || isCaster || isPlayer ? { ...seo, noindex: true } : { ...seo };
 
   const manifestHref = useMemo(() => {
     if (isAdmin) return '/admin/manifest.webmanifest';

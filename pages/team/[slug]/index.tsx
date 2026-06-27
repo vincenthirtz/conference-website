@@ -1,16 +1,15 @@
 // pages/team/[slug]/index.tsx
 
-import { useState } from 'react';
-import { GetServerSideProps } from 'next';
+import { useEffect, useState } from 'react';
+import { GetStaticPaths, GetStaticProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import PublicScrimDialog from '@/components/Team/PublicScrimDialog';
-import { supabaseAdmin, getServerClient } from '@/utils/supabase';
-import { hasTeamPermission } from '@/utils/teams/permissions';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { supabaseAdmin } from '@/utils/supabase';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import {
   renderTeamPublicMarkdown,
   normalizeAccentColor,
@@ -172,23 +171,24 @@ type TeamPageProps = {
   tournaments: Tournament[];
   matchStats: MatchStats;
   recentMatches: RecentMatch[];
-  canEdit: boolean;
   embedHost: string;
   announcementActive: boolean;
 };
 
-export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
-  ctx
-) => {
+export const getStaticPaths: GetStaticPaths = async () => {
+  // On-demand generation: no team is pre-rendered at build time, every slug
+  // is rendered on first request then cached/revalidated (ISR).
+  return { paths: [], fallback: 'blocking' };
+};
+
+export const getStaticProps: GetStaticProps<TeamPageProps> = async (ctx) => {
   const slug = ctx.params?.slug as string;
   if (!slug) {
-    return { notFound: true };
+    return { notFound: true, revalidate: 60 };
   }
 
-  // S5d: page accessible aux capitaines connectés (édition) ET au public —
-  // on utilise le resolver "user" pour préfigurer la résolution via team
-  // gérée. En V1 = DEFAULT_TENANT_ID.
-  const tenantId = resolveTenantIdForUserRequest(ctx.req);
+  // S5d: getStaticProps → DEFAULT_TENANT_ID (TODO(S7) — SSR/ISR per tenant).
+  const tenantId = DEFAULT_TENANT_ID;
 
   // 1) Try lookup by slug (primary) — falls back to id/name/short_name for
   //    backwards compat with old URLs.
@@ -237,28 +237,103 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
   }
 
   if (!team) {
-    return { notFound: true };
+    return { notFound: true, revalidate: 60 };
   }
 
   // Only show active teams
   if (team.is_active === false) {
-    return { notFound: true };
+    return { notFound: true, revalidate: 60 };
   }
 
   const teamId = team.id;
 
-  // 2) Fetch members
-  const { data: rawMembers, error: membersError } = await supabaseAdmin
-    .from('team_members')
-    .select(
-      'id, user_id, role, battle_tag, is_substitute, display_name, specialty, avatar_url, pronouns, tagline, twitter, twitch, created_at'
-    )
-    .eq('tenant_id', tenantId)
-    .eq('team_id', teamId)
-    .order('created_at', { ascending: true });
+  // 2-5) Run all independent queries in parallel. They don't depend on each
+  // other, so a single wave keeps the (re)generation fast.
+  const [
+    membersResult,
+    registrationsResult,
+    tournamentTeamsResult,
+    stageTeamsResult,
+    allMatchesResult,
+    recentMatchesResult,
+  ] = await Promise.all([
+    // Members
+    supabaseAdmin
+      .from('team_members')
+      .select(
+        'id, user_id, role, battle_tag, is_substitute, display_name, specialty, avatar_url, pronouns, tagline, twitter, twitch, created_at'
+      )
+      .eq('tenant_id', tenantId)
+      .eq('team_id', teamId)
+      .order('created_at', { ascending: true }),
 
-  if (membersError) {
-    logger.error('Error fetching team members:', membersError);
+    // Tournaments via tournament_registrations
+    // NB: `tournament_registrations` n'est pas dans la liste des tables
+    // tenant-scopées en S2 (legacy). On reste sur l'unique filtre par team_id
+    // qui est lui-même scopé (cf. lookup team ci-dessus).
+    supabaseAdmin
+      .from('tournament_registrations')
+      .select(
+        `
+      tournament:tournaments (
+        id, name, slug, game, status, start_date, end_date, logo_url
+      )
+    `
+      )
+      .eq('team_id', teamId),
+
+    // Tournaments via tournament_teams
+    supabaseAdmin
+      .from('tournament_teams')
+      .select(
+        `
+      tournament:tournaments (
+        id, name, slug, game, status, start_date, end_date, logo_url
+      )
+    `
+      )
+      .eq('tenant_id', tenantId)
+      .eq('team_id', teamId),
+
+    // Tournaments via stage_teams
+    supabaseAdmin
+      .from('stage_teams')
+      .select(
+        `
+      stage:tournament_stages (
+        tournament:tournaments (
+          id, name, slug, game, status, start_date, end_date, logo_url
+        )
+      )
+    `
+      )
+      .eq('tenant_id', tenantId)
+      .eq('team_id', teamId),
+
+    // Match stats — use winner_team_id for accurate results
+    supabaseAdmin
+      .from('matches')
+      .select(
+        'id, status, team1_id, team2_id, team1_score, team2_score, winner_team_id'
+      )
+      .eq('tenant_id', tenantId)
+      .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
+      .in('status', ['finished', 'completed', 'done']),
+
+    // Recent matches
+    supabaseAdmin
+      .from('matches')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
+      .order('scheduled_at', { ascending: false, nullsFirst: false })
+      .limit(10),
+  ]);
+
+  // Members
+  const rawMembers = membersResult.data;
+  if (membersResult.error) {
+    logger.error('Error fetching team members:', membersResult.error);
   }
 
   // Compute is_captain based on team.captain_id
@@ -274,25 +349,11 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
   });
   const members = membersWithCaptain;
 
-  // 3) Fetch tournaments (via multiple sources)
+  // 3) Merge tournaments (via multiple sources)
   let tournaments: Tournament[] = [];
   const seenTournaments = new Set<string>();
 
-  // Try tournament_registrations
-  // NB: `tournament_registrations` n'est pas dans la liste des tables
-  // tenant-scopées en S2 (legacy). On reste sur l'unique filtre par team_id
-  // qui est lui-même scopé (cf. lookup team ci-dessus).
-  const { data: registrations } = await supabaseAdmin
-    .from('tournament_registrations')
-    .select(
-      `
-      tournament:tournaments (
-        id, name, slug, game, status, start_date, end_date, logo_url
-      )
-    `
-    )
-    .eq('team_id', teamId);
-
+  const registrations = registrationsResult.data;
   if (registrations) {
     registrations.forEach((r: any) => {
       if (r.tournament && !seenTournaments.has(r.tournament.id)) {
@@ -302,19 +363,7 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
     });
   }
 
-  // Try tournament_teams
-  const { data: tournamentTeams } = await supabaseAdmin
-    .from('tournament_teams')
-    .select(
-      `
-      tournament:tournaments (
-        id, name, slug, game, status, start_date, end_date, logo_url
-      )
-    `
-    )
-    .eq('tenant_id', tenantId)
-    .eq('team_id', teamId);
-
+  const tournamentTeams = tournamentTeamsResult.data;
   if (tournamentTeams) {
     tournamentTeams.forEach((tt: any) => {
       if (tt.tournament && !seenTournaments.has(tt.tournament.id)) {
@@ -324,21 +373,7 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
     });
   }
 
-  // Try stage_teams
-  const { data: stageTeams } = await supabaseAdmin
-    .from('stage_teams')
-    .select(
-      `
-      stage:tournament_stages (
-        tournament:tournaments (
-          id, name, slug, game, status, start_date, end_date, logo_url
-        )
-      )
-    `
-    )
-    .eq('tenant_id', tenantId)
-    .eq('team_id', teamId);
-
+  const stageTeams = stageTeamsResult.data;
   if (stageTeams) {
     stageTeams.forEach((st: any) => {
       const t = st.stage?.tournament;
@@ -349,15 +384,8 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
     });
   }
 
-  // 4) Fetch match stats - use winner_team_id for accurate results
-  const { data: allMatches } = await supabaseAdmin
-    .from('matches')
-    .select(
-      'id, status, team1_id, team2_id, team1_score, team2_score, winner_team_id'
-    )
-    .eq('tenant_id', tenantId)
-    .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
-    .in('status', ['finished', 'completed', 'done']);
+  // 4) Compute match stats - use winner_team_id for accurate results
+  const allMatches = allMatchesResult.data;
 
   let wins = 0;
   let losses = 0;
@@ -389,16 +417,9 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
   };
 
   // 5) Recent matches
-  const { data: recentMatchesData, error: matchesError } = await supabaseAdmin
-    .from('matches')
-    .select('*')
-    .eq('tenant_id', tenantId)
-    .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
-    .order('scheduled_at', { ascending: false, nullsFirst: false })
-    .limit(10);
-
-  if (matchesError) {
-    logger.error('Error fetching recent matches:', matchesError);
+  const recentMatchesData = recentMatchesResult.data;
+  if (recentMatchesResult.error) {
+    logger.error('Error fetching recent matches:', recentMatchesResult.error);
   }
 
   // Fetch opponent teams and tournaments separately
@@ -410,23 +431,24 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
     if (m.tournament_id) tournamentIds.add(m.tournament_id);
   });
 
-  const { data: opponentTeams } =
-    opponentIds.size > 0
-      ? await supabaseAdmin
-          .from('teams')
-          .select('id, name, short_name, logo_url')
-          .eq('tenant_id', tenantId)
-          .in('id', Array.from(opponentIds))
-      : { data: [] };
-
-  const { data: tournamentData } =
-    tournamentIds.size > 0
-      ? await supabaseAdmin
-          .from('tournaments')
-          .select('id, name')
-          .eq('tenant_id', tenantId)
-          .in('id', Array.from(tournamentIds))
-      : { data: [] };
+  const [{ data: opponentTeams }, { data: tournamentData }] = await Promise.all(
+    [
+      opponentIds.size > 0
+        ? supabaseAdmin
+            .from('teams')
+            .select('id, name, short_name, logo_url')
+            .eq('tenant_id', tenantId)
+            .in('id', Array.from(opponentIds))
+        : Promise.resolve({ data: [] as any[] }),
+      tournamentIds.size > 0
+        ? supabaseAdmin
+            .from('tournaments')
+            .select('id, name')
+            .eq('tenant_id', tenantId)
+            .in('id', Array.from(tournamentIds))
+        : Promise.resolve({ data: [] as any[] }),
+    ]
+  );
 
   const teamsMap = new Map((opponentTeams || []).map((t: any) => [t.id, t]));
   const tournamentsMap = new Map(
@@ -454,29 +476,28 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
     }
   );
 
-  // Detect whether the current viewer is allowed to edit this team's
-  // public page (captain or member with `edit_public_page` permission).
-  let canEdit = false;
-  try {
-    const authClient = getServerClient(ctx.req, ctx.res);
-    const {
-      data: { user },
-    } = await authClient.auth.getUser();
-    if (user) {
-      canEdit = await hasTeamPermission(user.id, teamId, 'edit_public_page');
+  // `canEdit` depends on the viewer's auth (captain / edit_public_page
+  // permission) which is NOT cacheable — it is resolved client-side after
+  // hydration (cf. useEffect in TeamPage, via /api/admin/teams/my). The
+  // statically-generated page therefore renders with the edit affordance
+  // hidden by default.
+
+  // Twitch embed iframe `parent` param: derive the host from the public site
+  // URL at generation time (no per-request host header in ISR). Falls back to
+  // localhost in dev / when the env var is missing.
+  let embedHost = 'localhost';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  if (siteUrl) {
+    try {
+      embedHost = new URL(siteUrl).hostname || 'localhost';
+    } catch {
+      embedHost = 'localhost';
     }
-  } catch (err) {
-    logger.error('[team page] permission check error:', err);
   }
 
-  // Used by the Twitch embed iframe (`parent` query param). Falls back to
-  // localhost in dev when the host header is missing.
-  const rawHost = (ctx.req.headers.host as string | undefined) ?? 'localhost';
-  const embedHost = rawHost.split(':')[0] || 'localhost';
-
-  // Compute the "is the announcement still active?" flag at request time so
-  // the render is pure (Date.now is forbidden during render by react-hooks
-  // rules). The page is SSR-only, so the freshness window is a single tick.
+  // Compute the "is the announcement still active?" flag at generation time so
+  // the render stays pure (Date.now is forbidden during render by react-hooks
+  // rules). `revalidate` keeps this fresh within the window.
   const announcementActive =
     !!team.pinned_announcement &&
     (!team.pinned_announcement_until ||
@@ -489,10 +510,10 @@ export const getServerSideProps: GetServerSideProps<TeamPageProps> = async (
       tournaments,
       matchStats,
       recentMatches,
-      canEdit,
       embedHost,
       announcementActive,
     },
+    revalidate: 60,
   };
 };
 
@@ -502,10 +523,40 @@ export default function TeamPage({
   tournaments,
   matchStats,
   recentMatches,
-  canEdit,
   embedHost,
   announcementActive,
 }: TeamPageProps) {
+  // `canEdit` is auth-dependent and therefore not part of the statically
+  // generated payload. We resolve it client-side after hydration: a captain
+  // or manager of *this* team (per /api/admin/teams/my) may edit its public
+  // page. Defaults to false so the SSG markup never leaks an edit affordance.
+  const [canEdit, setCanEdit] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/admin/teams/my', {
+          credentials: 'include',
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          team?: { id?: string } | null;
+          isCaptain?: boolean;
+          isManager?: boolean;
+        };
+        const sameTeam = data?.team?.id === team.id;
+        if (!cancelled && sameTeam && (data.isCaptain || data.isManager)) {
+          setCanEdit(true);
+        }
+      } catch {
+        // Silent: an unauthenticated / failed check simply hides the edit CTA.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [team.id]);
+
   const winRate =
     matchStats.total > 0
       ? Math.round((matchStats.wins / matchStats.total) * 100)
@@ -532,7 +583,8 @@ export default function TeamPage({
   const secondary = normalizeAccentColor(team.secondary_color);
   const overlay: BannerOverlay =
     normalizeBannerOverlay(team.banner_overlay) ?? 'gradient';
-  const focal: BannerFocal = normalizeBannerFocal(team.banner_focal) ?? 'center';
+  const focal: BannerFocal =
+    normalizeBannerFocal(team.banner_focal) ?? 'center';
   const richContent = renderTeamPublicMarkdown(team.public_content);
   const editHref = `/team/${encodeURIComponent(team.slug || team.id)}/edit`;
   const gradientStops = secondary && accent ? `${accent}, ${secondary}` : null;
@@ -598,7 +650,7 @@ export default function TeamPage({
             backgroundImage: gradientStops
               ? `linear-gradient(90deg, ${accent}, ${secondary})`
               : undefined,
-            backgroundColor: gradientStops ? undefined : accent ?? '#fbbf24',
+            backgroundColor: gradientStops ? undefined : (accent ?? '#fbbf24'),
           }}
         >
           {team.pinned_announcement}
@@ -873,9 +925,7 @@ export default function TeamPage({
 
         {/* Embed (Twitch/YouTube) */}
         {embedSrc && (
-          <section
-            className="mb-6 rounded-2xl border border-white/5 bg-black/40 overflow-hidden"
-          >
+          <section className="mb-6 rounded-2xl border border-white/5 bg-black/40 overflow-hidden">
             <div className="aspect-video w-full">
               <iframe
                 src={embedSrc}
@@ -904,7 +954,9 @@ export default function TeamPage({
                   <div
                     className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
                     style={{
-                      backgroundColor: accent ? `${accent}33` : 'rgba(251,191,36,0.2)',
+                      backgroundColor: accent
+                        ? `${accent}33`
+                        : 'rgba(251,191,36,0.2)',
                       color: accent ?? '#fbbf24',
                     }}
                   >
@@ -988,9 +1040,7 @@ export default function TeamPage({
             {/* Members */}
             <section className="bg-black/60 border border-white/5 rounded-2xl p-5">
               {(() => {
-                const rosterMembers = members.filter(
-                  (m) => !m.is_substitute
-                );
+                const rosterMembers = members.filter((m) => !m.is_substitute);
                 const subMembers = members.filter((m) => m.is_substitute);
 
                 return (
@@ -1263,7 +1313,10 @@ const SPECIALTY_STYLE: Record<
 
 function memberInitials(member: TeamMember): string {
   const source = member.display_name || member.battle_tag || 'M';
-  const parts = source.trim().split(/[\s#-]+/).filter(Boolean);
+  const parts = source
+    .trim()
+    .split(/[\s#-]+/)
+    .filter(Boolean);
   if (parts.length === 0) return 'M';
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[1][0]).toUpperCase();
@@ -1382,7 +1435,11 @@ function MemberCard({
                 aria-label="Twitter"
                 className="text-gray-400 hover:text-blue-300 transition-colors"
               >
-                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="w-3.5 h-3.5"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                 </svg>
               </a>
@@ -1395,7 +1452,11 @@ function MemberCard({
                 aria-label="Twitch"
                 className="text-gray-400 hover:text-purple-300 transition-colors"
               >
-                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="w-3.5 h-3.5"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path d="M2.149 0L.537 4.119v16.836h5.731V24h3.224l3.045-3.045h4.657L23.463 14.9V0H2.149zm1.612 1.612h17.985v12.298l-3.582 3.582h-5.731l-3.045 3.045v-3.045H3.761V1.612zm6.985 11.582h1.612V6.642h-1.612v6.552zm4.478 0h1.612V6.642h-1.612v6.552z" />
                 </svg>
               </a>

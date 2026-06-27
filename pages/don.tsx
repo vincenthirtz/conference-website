@@ -1,10 +1,25 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Button from '@/components/Buttons/button';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useSiteSetting } from '@/hooks/useSiteSettings';
+import { useToast } from '@/components/Toast';
+
+// Idempotency-Key pour le checkout HelloAsso (POST public/anonyme : pas de
+// session Supabase, donc useIdempotentMutation ne s'applique pas). Un
+// double-click / retry réseau renvoie la même clé tant que le checkout n'a pas
+// abouti — combiné au verrouillage du bouton jusqu'à la redirection.
+function genIdempotencyKey(): string {
+  if (
+    typeof crypto !== 'undefined' &&
+    typeof crypto.randomUUID === 'function'
+  ) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
 
 const uses = [
   {
@@ -67,6 +82,8 @@ function DonationPage() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState('');
+  const { addToast } = useToast();
+  const idempotencyKeyRef = useRef<string>(genIdempotencyKey());
 
   // Payment status from redirect
   const paymentStatus = router.query.status as string | undefined;
@@ -77,6 +94,9 @@ function DonationPage() {
 
   async function handleDonate(e: React.FormEvent) {
     e.preventDefault();
+    // Verrou anti double-checkout : dès le 1er clic, on bloque tant que la
+    // requête est en cours OU jusqu'à la redirection vers HelloAsso.
+    if (loading) return;
     setFormError('');
 
     if (effectiveAmount < 100) {
@@ -88,7 +108,10 @@ function DonationPage() {
     try {
       const res = await fetch('/api/helloasso/checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKeyRef.current,
+        },
         body: JSON.stringify({
           amount: effectiveAmount,
           firstName: firstName.trim(),
@@ -100,15 +123,25 @@ function DonationPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setFormError(data.error || 'Une erreur est survenue.');
+        // Échec : on régénère la clé pour que la prochaine tentative soit une
+        // nouvelle intention, et on réactive le bouton.
+        idempotencyKeyRef.current = genIdempotencyKey();
+        const message = data.error || 'Une erreur est survenue.';
+        setFormError(message);
+        addToast(message, 'error');
+        setLoading(false);
         return;
       }
 
-      // Redirect to HelloAsso payment page
+      // Succès : on NE réactive PAS le bouton — la redirection part. Garder le
+      // bouton verrouillé empêche un second checkout pendant la navigation.
       window.location.href = data.redirectUrl;
     } catch {
-      setFormError('Impossible de contacter le serveur. Réessayez plus tard.');
-    } finally {
+      idempotencyKeyRef.current = genIdempotencyKey();
+      const message =
+        'Impossible de contacter le serveur. Réessayez plus tard.';
+      setFormError(message);
+      addToast(message, 'error');
       setLoading(false);
     }
   }
@@ -405,7 +438,13 @@ function DonationPage() {
                 </div>
 
                 {formError && (
-                  <p className="text-sm text-red-400">{formError}</p>
+                  <p
+                    role="alert"
+                    aria-live="polite"
+                    className="text-sm text-red-400"
+                  >
+                    {formError}
+                  </p>
                 )}
 
                 <Button
