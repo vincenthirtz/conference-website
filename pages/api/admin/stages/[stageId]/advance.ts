@@ -13,6 +13,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
+import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { logStaffAction } from '@/utils/staffLogs';
 import { createBracketSnapshot } from '@/utils/bracket/snapshot';
 import {
@@ -33,7 +34,16 @@ type ApiResponse =
     }
   | { error: string };
 
-export default withStaffRoute(handler, 'manager');
+// Idempotency : le client (modale d'avancement de bracket) envoie un
+// `Idempotency-Key` sur ce POST. Un rejeu avec la même clé rejoue la réponse
+// cache (5 min) au lieu de ré-avancer les équipes / re-déclencher le snapshot.
+// Header absent → comportement normal (rétro-compatible). Composition calquée
+// sur pages/api/admin/matches/[matchId].ts : staff auth en wrapper externe,
+// idempotency interne (donc jamais de cache pour un non-staff).
+export default withStaffRoute(
+  withAdminIdempotency(handler, { key: 'admin-stage-advance' }),
+  'manager'
+);
 
 async function handler(
   req: NextApiRequest,

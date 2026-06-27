@@ -481,6 +481,71 @@ describe('/api/admin/matches/[matchId]/dispute', () => {
     expect(logStaffActionMock).toHaveBeenCalledOnce();
   });
 
+  // Régression : ce POST mutateur de bracket reçoit un `Idempotency-Key` côté
+  // client. Le handler étant désormais wrappé par withAdminIdempotency, un
+  // rejeu (même clé + body) doit rejouer la réponse cache sans ré-exécuter
+  // l'ouverture de dispute (donc sans 2e logStaffAction).
+  it('POST idempotent replay: same Idempotency-Key + body replays cache', async () => {
+    store.matches = [
+      { id: M_ID, status: 'pending', tournament_id: 'tour-1' },
+    ] as any;
+    const idemKey = 'dispute-idem-key-123';
+    const body = { reason: 'Idempotent dispute' };
+
+    const res1 = makeRes();
+    await disputeHandler(
+      makeReq({
+        method: 'POST',
+        query: { matchId: M_ID },
+        body,
+        headers: {
+          host: 'h',
+          authorization: freshBearer(),
+          'idempotency-key': idemKey,
+        },
+      }),
+      res1
+    );
+    expect(res1.statusCode).toBe(200);
+    expect(logStaffActionMock).toHaveBeenCalledOnce();
+
+    const res2 = makeRes();
+    await disputeHandler(
+      makeReq({
+        method: 'POST',
+        query: { matchId: M_ID },
+        body,
+        headers: {
+          host: 'h',
+          authorization: freshBearer(),
+          'idempotency-key': idemKey,
+        },
+      }),
+      res2
+    );
+    expect(res2.statusCode).toBe(200);
+    expect(res2.headers['Idempotency-Replay']).toBe('true');
+    // Pas de ré-exécution : toujours un seul logStaffAction.
+    expect(logStaffActionMock).toHaveBeenCalledOnce();
+  });
+
+  it('POST without Idempotency-Key → no replay (backward compatible)', async () => {
+    store.matches = [
+      { id: M_ID, status: 'pending', tournament_id: 'tour-1' },
+    ] as any;
+    const res = makeRes();
+    await disputeHandler(
+      makeReq({
+        method: 'POST',
+        query: { matchId: M_ID },
+        body: { reason: 'No idem key' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['Idempotency-Replay']).toBeUndefined();
+  });
+
   it('PATCH 400 when resolution missing', async () => {
     store.matches = [
       { id: M_ID, status: 'disputed', tournament_id: 'tour-1' },

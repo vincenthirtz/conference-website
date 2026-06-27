@@ -3,6 +3,10 @@
 // Appelle POST /api/admin/stages/[stageId]/advance avec { auto: true }.
 
 import { useState } from 'react';
+import {
+  useIdempotentMutation,
+  BgSyncQueuedError,
+} from '@/hooks/useIdempotentMutation';
 
 type Props = {
   open: boolean;
@@ -21,6 +25,7 @@ export default function ConfirmAdvanceModal({
 }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { mutateJson } = useIdempotentMutation();
 
   if (!open) return null;
 
@@ -28,21 +33,25 @@ export default function ConfirmAdvanceModal({
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/stages/${stageId}/advance`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ auto: true }),
-      });
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Échec de l'avancement");
-      }
-      const json = await res.json();
+      // mutateJson injecte l'Idempotency-Key : un retry réseau ne re-déclenche
+      // pas un second avancement (l'endpoint rejoue la 1ère réponse une fois
+      // qu'il honore le header).
+      const json = await mutateJson<{ advanced?: unknown }>(
+        `/api/admin/stages/${stageId}/advance`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ auto: true }),
+        }
+      );
       const count = Array.isArray(json.advanced) ? json.advanced.length : 0;
       onSuccess?.(count);
       onClose();
     } catch (e: unknown) {
-      setError((e as Error)?.message ?? 'Erreur inattendue');
+      const msg =
+        e instanceof BgSyncQueuedError
+          ? "Hors-ligne : l'avancement sera envoyé à la reconnexion."
+          : ((e as Error)?.message ?? 'Erreur inattendue');
+      setError(msg);
     } finally {
       setSubmitting(false);
     }

@@ -376,4 +376,99 @@ describe('POST /api/admin/stages/[stageId]/advance', () => {
     );
     expect([400, 404, 500].includes(res.statusCode)).toBe(true);
   });
+
+  // Régression : le client câble un `Idempotency-Key` sur ce POST mutateur de
+  // bracket. Le handler étant désormais wrappé par withAdminIdempotency, un
+  // rejeu (même clé + même body) doit rejouer la réponse cache et NE PAS
+  // ré-insérer les équipes dans le stage cible.
+  const TARGET_STAGE_ID = '550e8400-e29b-41d4-a716-446655440002';
+  const TEAM_ID = '550e8400-e29b-41d4-a716-446655440003';
+
+  function seedAdvanceManualScenario() {
+    store.tournament_stages = [
+      { id: STAGE_ID, tournament_id: TID, stage_type: 'group', settings: {} },
+      { id: TARGET_STAGE_ID, tournament_id: TID, stage_type: 'bracket' },
+    ] as any;
+    store.stage_teams = [{ stage_id: STAGE_ID, team_id: TEAM_ID }] as any;
+  }
+
+  it('manual advance succeeds (baseline for idempotency test)', async () => {
+    seedAdvanceManualScenario();
+    const res = makeRes();
+    await advanceHandler(
+      makeReq({
+        method: 'POST',
+        query: { stageId: STAGE_ID },
+        body: {
+          targetStageId: TARGET_STAGE_ID,
+          teamIds: [TEAM_ID],
+          seedMode: 'none',
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).advanced).toHaveLength(1);
+    // 1 row source + 1 row insérée dans le stage cible
+    expect((store.stage_teams as any[]).length).toBe(2);
+  });
+
+  it('idempotent replay: same Idempotency-Key + body does not re-advance', async () => {
+    seedAdvanceManualScenario();
+    const idemKey = 'advance-idem-key-123';
+    const body = {
+      targetStageId: TARGET_STAGE_ID,
+      teamIds: [TEAM_ID],
+      seedMode: 'none',
+    };
+
+    // 1er appel : avance réellement (insère dans le stage cible).
+    const res1 = makeRes();
+    await advanceHandler(
+      makeReq({
+        method: 'POST',
+        query: { stageId: STAGE_ID },
+        body,
+        headers: { host: 'h', authorization: freshBearer(), 'idempotency-key': idemKey },
+      }),
+      res1
+    );
+    expect(res1.statusCode).toBe(200);
+    expect((res1.body as any).advanced).toHaveLength(1);
+    const afterFirst = (store.stage_teams as any[]).length;
+    expect(afterFirst).toBe(2);
+
+    // 2e appel : même clé + même body → replay cache, AUCUNE nouvelle insertion.
+    const res2 = makeRes();
+    await advanceHandler(
+      makeReq({
+        method: 'POST',
+        query: { stageId: STAGE_ID },
+        body,
+        headers: { host: 'h', authorization: freshBearer(), 'idempotency-key': idemKey },
+      }),
+      res2
+    );
+    expect(res2.statusCode).toBe(200);
+    expect(res2.headers['Idempotency-Replay']).toBe('true');
+    expect((res2.body as any).advanced).toHaveLength(1);
+    // Pas de double-avancement : toujours 2 rows (source + 1 cible).
+    expect((store.stage_teams as any[]).length).toBe(afterFirst);
+  });
+
+  it('no Idempotency-Key → no replay (backward compatible)', async () => {
+    seedAdvanceManualScenario();
+    const body = {
+      targetStageId: TARGET_STAGE_ID,
+      teamIds: [TEAM_ID],
+      seedMode: 'none',
+    };
+    const res1 = makeRes();
+    await advanceHandler(
+      makeReq({ method: 'POST', query: { stageId: STAGE_ID }, body }),
+      res1
+    );
+    expect(res1.statusCode).toBe(200);
+    expect(res1.headers['Idempotency-Replay']).toBeUndefined();
+  });
 });

@@ -11,6 +11,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
+import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { applyMatchScore } from '@/utils/matches/applyScore';
@@ -28,7 +29,18 @@ const VALID_RESUME_STATUSES: MatchStatus[] = [
 ];
 
 // Ouvrir une dispute = decision sensible : minimum manager.
-export default withStaffRoute(handler, 'manager');
+//
+// Idempotency : le client (modales open/resolve/cancel dispute) envoie un
+// `Idempotency-Key`. Un rejeu avec la même clé rejoue la réponse cache (5 min)
+// au lieu de ré-ouvrir/re-résoudre la dispute (qui re-déclencherait
+// applyMatchScore + la propagation bracket). POST/PATCH/DELETE sont tous des
+// méthodes non-sûres → tous honorés par le wrapper. Header absent →
+// comportement normal (rétro-compatible). Composition calquée sur
+// pages/api/admin/matches/[matchId].ts : staff auth externe, idempotency interne.
+export default withStaffRoute(
+  withAdminIdempotency(handler, { key: 'admin-match-dispute' }),
+  'manager'
+);
 
 async function handler(req: NextApiRequest, res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   const { matchId } = req.query;
