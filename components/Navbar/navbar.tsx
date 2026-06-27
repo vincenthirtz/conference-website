@@ -5,20 +5,30 @@ import { useRouter } from 'next/router';
 import { useEffect, useMemo, useState, type JSX } from 'react';
 import { supabaseClient } from '@/utils/supabase';
 import { useStaffSession } from '@/hooks/useStaffSession';
+import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import PublicNav from './PublicNav';
 import { ADMIN_LINKS, filterAdminLinks } from './adminLinks';
+import { PLAYER_LINKS } from './playerLinks';
 
 const AdminTopBar = dynamic(() => import('./AdminTopBar'), { ssr: false });
+const PlayerTopBar = dynamic(() => import('./PlayerTopBar'), { ssr: false });
 const NavDrop = dynamic(() => import('./navDrop'), { ssr: false });
 
 const NAV_HEIGHT = 75;
 const ADMIN_BAR_HEIGHT = 44;
+const PLAYER_BAR_HEIGHT = 44;
 
 function Navbar(): JSX.Element {
   const router = useRouter();
 
   const { isStaff, staffName, staffRole, loading, clear } = useStaffSession();
+
+  // redirect:false → the navbar must never redirect anonymous visitors; it
+  // only observes the player session to decide whether to show PlayerTopBar.
+  const { user: playerUser, loading: playerLoading } = usePlayerSession({
+    redirect: false,
+  });
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -52,8 +62,33 @@ function Navbar(): JSX.Element {
     [staffRole]
   );
 
-  const headerOffset = !loading && isStaff ? ADMIN_BAR_HEIGHT : 0;
+  // Staff takes precedence: never show both bars. The player bar shows only on
+  // /player routes, for a signed-in non-staff user, once both sessions resolved.
+  const isPlayerRoute = router.pathname.startsWith('/player');
+  const showPlayerBar =
+    isPlayerRoute &&
+    !loading &&
+    !playerLoading &&
+    !!playerUser &&
+    !isStaff;
+
+  const playerName =
+    (playerUser?.user_metadata?.display_name as string | undefined) ||
+    (playerUser?.user_metadata?.full_name as string | undefined) ||
+    playerUser?.email?.split('@')[0] ||
+    'Joueur';
+  const playerRoleLabel =
+    playerUser?.user_metadata?.role === 'captain' ? 'Capitaine' : 'Joueur';
+
+  const headerOffset =
+    !loading && isStaff
+      ? ADMIN_BAR_HEIGHT
+      : showPlayerBar
+        ? PLAYER_BAR_HEIGHT
+        : 0;
   const headerHeight = NAV_HEIGHT + headerOffset;
+
+  const hideMarketingNav = isStaff || showPlayerBar;
 
   const handleLogout = async () => {
     setDrawerOpen(false);
@@ -62,6 +97,14 @@ function Navbar(): JSX.Element {
       await supabaseClient.auth.signOut();
     } catch {}
     router.push('/admin/logout');
+  };
+
+  const handlePlayerLogout = async () => {
+    setDrawerOpen(false);
+    try {
+      await supabaseClient.auth.signOut();
+    } catch {}
+    router.push('/');
   };
 
   return (
@@ -83,9 +126,19 @@ function Navbar(): JSX.Element {
         />
       )}
 
+      {showPlayerBar && (
+        <PlayerTopBar
+          playerName={playerName}
+          roleLabel={playerRoleLabel}
+          links={PLAYER_LINKS}
+          height={PLAYER_BAR_HEIGHT}
+          onLogout={handlePlayerLogout}
+        />
+      )}
+
       <div
         className={`fixed inset-x-0 z-[100] text-white transition-[background-color,backdrop-filter,border-color] duration-300 ${
-          isStaff
+          hideMarketingNav
             ? ''
             : scrolled || drawerOpen
               ? 'border-b border-white/[0.06] bg-[#0F0820]/85 backdrop-blur-2xl shadow-[0_8px_24px_-12px_rgba(0,0,0,0.5)]'
@@ -95,7 +148,7 @@ function Navbar(): JSX.Element {
       >
         <div
           className={
-            isStaff
+            hideMarketingNav
               ? ''
               : 'mx-auto flex h-[75px] w-full max-w-7xl items-center justify-between px-4'
           }
@@ -104,7 +157,7 @@ function Navbar(): JSX.Element {
             className="z-[99] flex items-center sm:w-full sm:justify-between"
             data-test="nav-Home"
           >
-            {!isStaff && (
+            {!hideMarketingNav && (
               <Link
                 href="/"
                 className="group flex shrink-0 cursor-pointer items-center"
@@ -122,7 +175,10 @@ function Navbar(): JSX.Element {
             )}
           </div>
 
-          <div data-test="nav-Hamberger" className="z-[99] min-[1119px]:hidden">
+          <div
+            data-test="nav-Hamberger"
+            className={`z-[99] min-[1119px]:hidden ${showPlayerBar ? 'hidden' : ''}`}
+          >
             <button
               type="button"
               aria-label={drawerOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
@@ -150,7 +206,7 @@ function Navbar(): JSX.Element {
             </button>
           </div>
 
-          {!isStaff && (
+          {!hideMarketingNav && (
             <div className="hidden min-[1119px]:flex">
               <PublicNav staffLoading={loading} showStaffLogin={!isStaff} />
             </div>

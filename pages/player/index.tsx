@@ -3,11 +3,9 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
-import { supabaseClient } from '@/utils/supabase';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
-import ProfileCard from '@/components/player/ProfileCard';
+import ProfileSummaryCard from '@/components/player/ProfileSummaryCard';
 import DiscordLinkCard from '@/components/player/DiscordLinkCard';
 import TeamCard, { type TeamMemberLite } from '@/components/player/TeamCard';
 import DemandesHistory from '@/components/player/DemandesHistory';
@@ -138,7 +136,6 @@ function buildQuickActions(args: {
 }
 
 function PlayerDashboard() {
-  const router = useRouter();
   const { user, loading: authLoading, ready } = usePlayerSession();
   const { adminFetchJson } = useAdminFetch();
   const [loading, setLoading] = useState(true);
@@ -234,11 +231,6 @@ function PlayerDashboard() {
     };
   }, [ready, loadData]);
 
-  const handleLogout = async () => {
-    await supabaseClient.auth.signOut();
-    router.replace('/');
-  };
-
   const handleCancelDemande = async (demandeId: string) => {
     await adminFetchJson('/api/demandes/cancel', {
       method: 'DELETE',
@@ -274,10 +266,6 @@ function PlayerDashboard() {
     setIsCaptain(false);
     await loadData();
   };
-
-  // The session hook listens to onAuthStateChange (incl. USER_UPDATED), so
-  // a profile save propagates automatically — no extra plumbing needed here.
-  const handleProfileUpdate = async () => {};
 
   const pendingCaptainRequest = demandes.find(
     (d) => d.type === 'captain_request' && d.status === 'pending'
@@ -333,12 +321,6 @@ function PlayerDashboard() {
                 Gere ton profil joueur et ton equipe depuis cet espace.
               </p>
             </div>
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 text-sm rounded-xl border border-white/15 bg-black/50 hover:border-red-400/50 hover:text-red-300 transition"
-            >
-              Deconnexion
-            </button>
           </div>
 
           {error && (
@@ -356,11 +338,7 @@ function PlayerDashboard() {
           </div>
 
           <div className="grid gap-6 md:grid-cols-2">
-            <ProfileCard
-              user={user}
-              displayName={displayName}
-              onProfileUpdate={handleProfileUpdate}
-            />
+            <ProfileSummaryCard user={user} displayName={displayName} />
             <TeamCard
               team={team}
               isCaptain={isCaptain}
