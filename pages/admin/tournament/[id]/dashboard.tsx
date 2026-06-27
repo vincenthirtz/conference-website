@@ -1249,6 +1249,7 @@ function MegaDashboardPage({ initialData, initialError }: Props) {
 
       {/* ─── Modales d'actions inline ───────────────────────────────── */}
       <ScoreEntryModal
+        key={scoreTarget?.id ?? 'score-modal'}
         open={!!scoreTarget}
         matchId={scoreTarget?.id ?? ''}
         team1Name={scoreTarget?.team1Name ?? null}
@@ -1260,6 +1261,7 @@ function MegaDashboardPage({ initialData, initialError }: Props) {
         onSuccess={fetchDashboard}
       />
       <DisputeResolveModal
+        key={disputeTarget?.id ?? 'dispute-modal'}
         open={!!disputeTarget}
         matchId={disputeTarget?.id ?? ''}
         team1Name={disputeTarget?.team1Name ?? null}

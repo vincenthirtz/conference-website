@@ -7,6 +7,10 @@
 //  - "Résoudre avec score corrigé" : { resolution, team1Score, team2Score, resumeStatus: 'finished' }
 
 import { useState } from 'react';
+import {
+  useIdempotentMutation,
+  BgSyncQueuedError,
+} from '@/hooks/useIdempotentMutation';
 
 type Props = {
   open: boolean;
@@ -46,6 +50,7 @@ export default function DisputeResolveModal({
   >('finished');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { mutateJson } = useIdempotentMutation();
 
   if (!open) return null;
 
@@ -75,19 +80,20 @@ export default function DisputeResolveModal({
         body.team1Score = t1;
         body.team2Score = t2;
       }
-      const res = await fetch(`/api/admin/matches/${matchId}/dispute`, {
+      // mutateJson injecte l'Idempotency-Key : un retry réseau ne re-propage
+      // pas l'avancement du bracket (l'endpoint rejoue la 1ère réponse).
+      await mutateJson(`/api/admin/matches/${matchId}/dispute`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'Échec de la résolution');
-      }
       onSuccess?.();
       onClose();
     } catch (e: unknown) {
-      setError((e as Error)?.message ?? 'Erreur inattendue');
+      const msg =
+        e instanceof BgSyncQueuedError
+          ? 'Hors-ligne : la résolution sera envoyée à la reconnexion.'
+          : ((e as Error)?.message ?? 'Erreur inattendue');
+      setError(msg);
     } finally {
       setSubmitting(false);
     }
