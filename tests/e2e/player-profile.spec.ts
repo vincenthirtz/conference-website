@@ -76,6 +76,9 @@ test.describe('Player profile page', () => {
 
     await section.getByLabel('Nom affiche').fill('Nouveau Pseudo');
     await section.getByLabel('BattleTag').fill('Nouveau#4242');
+    await section
+      .getByLabel('Avatar (URL)')
+      .fill('https://example.com/avatar.png');
     await section.getByRole('button', { name: 'Enregistrer' }).click();
 
     await expect(page.getByText(/Profil mis a jour/i)).toBeVisible({
@@ -85,6 +88,7 @@ test.describe('Player profile page', () => {
     expect(patchBody).toMatchObject({
       display_name: 'Nouveau Pseudo',
       battle_tag: 'Nouveau#4242',
+      avatar_url: 'https://example.com/avatar.png',
     });
   });
 

@@ -445,6 +445,82 @@ describe('PATCH /api/player/update-profile', () => {
     updateSpy.mockRestore();
   });
 
+  it('200 accepts a valid avatar_url and writes it to user_metadata', async () => {
+    setAuthUser({ id: 'user-1', user_metadata: { existing: 'old' } });
+    const updateSpy = vi.spyOn(supabaseAdmin.auth.admin, 'updateUserById');
+
+    const res = makeRes();
+    await updateProfileHandler(
+      makeReq(
+        {
+          method: 'PATCH',
+          body: { avatar_url: 'https://cdn.example.com/a.png' },
+        },
+        true
+      ),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect(updateSpy).toHaveBeenCalledOnce();
+    const args = updateSpy.mock.calls[0][1] as any;
+    expect(args.user_metadata.existing).toBe('old');
+    expect(args.user_metadata.avatar_url).toBe(
+      'https://cdn.example.com/a.png'
+    );
+    expect((res.body as any).avatar_url).toBe('https://cdn.example.com/a.png');
+    updateSpy.mockRestore();
+  });
+
+  it('200 clears avatar_url when given an empty string (stored as null)', async () => {
+    setAuthUser({
+      id: 'user-1',
+      user_metadata: { avatar_url: 'https://old.example.com/x.png' },
+    });
+    const updateSpy = vi.spyOn(supabaseAdmin.auth.admin, 'updateUserById');
+
+    const res = makeRes();
+    await updateProfileHandler(
+      makeReq({ method: 'PATCH', body: { avatar_url: '   ' } }, true),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    const args = updateSpy.mock.calls[0][1] as any;
+    expect(args.user_metadata.avatar_url).toBeNull();
+    expect((res.body as any).avatar_url).toBeNull();
+    updateSpy.mockRestore();
+  });
+
+  it('returns 400 when avatar_url is not an http(s) URL', async () => {
+    setAuthUser({ id: 'user-1', user_metadata: {} });
+    const res = makeRes();
+    await updateProfileHandler(
+      makeReq(
+        { method: 'PATCH', body: { avatar_url: 'javascript:alert(1)' } },
+        true
+      ),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('returns 400 when avatar_url exceeds 2048 chars', async () => {
+    setAuthUser({ id: 'user-1', user_metadata: {} });
+    const res = makeRes();
+    await updateProfileHandler(
+      makeReq(
+        {
+          method: 'PATCH',
+          body: { avatar_url: 'https://e.com/' + 'a'.repeat(2048) },
+        },
+        true
+      ),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
   it('200 propagates battle_tag to team_members rows', async () => {
     setAuthUser({ id: 'user-1', user_metadata: {} });
     store.team_members = [

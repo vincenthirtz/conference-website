@@ -134,6 +134,42 @@ test.describe('PlayerTopBar navigation', () => {
     ).toHaveAttribute('aria-current', 'page');
   });
 
+  test('mobile: hamburger opens the menu and a tab navigates', async ({
+    page,
+  }) => {
+    test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
+    await page.setViewportSize({ width: 375, height: 800 });
+    await mockPlayerApis(page);
+    await loginPlayer(page, PLAYER_EMAIL, '/player');
+
+    const bar = page.locator('div.fixed.top-0').first();
+
+    // On mobile the inline tabs collapse; the hamburger toggle is present.
+    const hamburger = bar.getByRole('button', { name: 'Ouvrir le menu' });
+    await expect(hamburger).toBeVisible({ timeout: 10000 });
+
+    // The inline desktop "Déconnexion" button is hidden at this width.
+    await expect(bar.getByRole('button', { name: 'Déconnexion' })).toBeHidden();
+
+    // Open the panel → the player tabs become reachable.
+    await hamburger.click();
+    const menu = bar.getByRole('menu');
+    await expect(
+      menu.getByRole('menuitem', { name: 'Mes matchs', exact: true })
+    ).toBeVisible();
+
+    // Navigate via a tab in the panel.
+    await menu
+      .getByRole('menuitem', { name: 'Mes matchs', exact: true })
+      .click();
+    await page.waitForURL(/\/player\/matches$/, { timeout: 10000 });
+
+    // Panel closes on navigation; the bell stays visible outside the menu.
+    await expect(
+      page.getByRole('link', { name: /Notifications \(/ })
+    ).toBeVisible();
+  });
+
   test('logout signs the player out and returns to the home page', async ({
     page,
   }) => {
