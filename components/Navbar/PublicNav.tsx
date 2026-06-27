@@ -252,12 +252,6 @@ export default function PublicNav({
           </Link>
           <Link
             href="/register"
-            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 text-[13px] font-medium text-neutral-200 backdrop-blur-md transition-all hover:border-white/20 hover:bg-white/[0.08] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
-          >
-            <span>Créer un compte</span>
-          </Link>
-          <Link
-            href="/inscription-2026"
             data-test="nav-Inscription"
             className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-fuchsia-400/40 bg-gradient-to-r from-fuchsia-500 to-purple-500 px-4 py-1.5 text-[13px] font-semibold text-white shadow-[0_0_20px_-6px_rgba(217,70,239,0.7)] transition-all hover:from-fuchsia-400 hover:to-purple-400 hover:shadow-[0_0_24px_-4px_rgba(217,70,239,0.85)] focus:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-400/50"
           >

@@ -123,12 +123,13 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(function NavDrop(
             <Link
               href="/register"
               onClick={closeAndNavigate}
-              className="group flex items-center justify-between rounded-xl border border-fuchsia-400/30 bg-gradient-to-r from-fuchsia-500/15 to-purple-500/15 px-4 py-3 text-white backdrop-blur-md transition-all hover:border-fuchsia-400/50 hover:from-fuchsia-500/25 hover:to-purple-500/25"
+              data-test="nav-Inscription"
+              className="group flex min-h-[48px] items-center justify-between rounded-xl border border-fuchsia-400/40 bg-gradient-to-r from-fuchsia-500 to-purple-500 px-4 py-3 text-white shadow-[0_0_24px_-8px_rgba(217,70,239,0.7)] transition-all hover:from-fuchsia-400 hover:to-purple-400"
             >
-              <span className="text-[15px] font-semibold">Créer un compte</span>
+              <span className="text-[15px] font-semibold">Inscription</span>
               <svg
                 aria-hidden
-                className="h-4 w-4 -translate-x-1 text-fuchsia-200 transition-transform group-hover:translate-x-0"
+                className="h-4 w-4 -translate-x-1 text-white transition-transform group-hover:translate-x-0"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -332,30 +333,6 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(function NavDrop(
 
         {!isStaff && (
           <div className="mt-4 flex flex-col gap-2 border-t border-white/10 pt-4">
-            <Link
-              href="/inscription-2026"
-              onClick={closeAndNavigate}
-              data-test="nav-Inscription"
-              className="group flex min-h-[48px] items-center justify-between rounded-xl border border-fuchsia-400/40 bg-gradient-to-r from-fuchsia-500 to-purple-500 px-4 py-3 text-white shadow-[0_0_24px_-8px_rgba(217,70,239,0.7)] transition-all hover:from-fuchsia-400 hover:to-purple-400"
-            >
-              <span className="text-[15px] font-semibold">
-                Inscription 2026
-              </span>
-              <svg
-                aria-hidden
-                className="h-4 w-4 -translate-x-1 text-white transition-transform group-hover:translate-x-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M14 5l7 7m0 0l-7 7m7-7H3"
-                />
-              </svg>
-            </Link>
             <Link
               href="/don"
               onClick={closeAndNavigate}
