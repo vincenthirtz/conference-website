@@ -9,6 +9,14 @@ type Props = {
 export default function ProfileSummaryCard({ user, displayName }: Props) {
   const role = (user.user_metadata?.role as string | undefined) || 'player';
   const battleTag = user.user_metadata?.battle_tag as string | undefined;
+  const avatarUrl =
+    (user.user_metadata?.avatar_url as string | undefined) || '';
+  const initials = displayName
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p) => p.charAt(0).toUpperCase())
+    .join('');
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
@@ -20,6 +28,25 @@ export default function ProfileSummaryCard({ user, displayName }: Props) {
         >
           Gérer mon profil
         </Link>
+      </div>
+
+      <div className="flex items-center gap-3 mb-4">
+        {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={avatarUrl}
+            alt="Avatar"
+            className="h-12 w-12 rounded-full border border-purple-500/40 object-cover"
+          />
+        ) : (
+          <span className="flex h-12 w-12 items-center justify-center rounded-full border border-purple-500/40 bg-purple-600/20 text-sm font-bold text-purple-100">
+            {initials || 'J'}
+          </span>
+        )}
+        <div className="min-w-0">
+          <div className="truncate font-semibold">{displayName}</div>
+          <div className="text-xs capitalize text-gray-400">{role}</div>
+        </div>
       </div>
 
       <div className="space-y-3 text-sm">

@@ -28,6 +28,7 @@ function PlayerProfile() {
   // Profile edit state
   const [editDisplayName, setEditDisplayName] = useState('');
   const [editBattleTag, setEditBattleTag] = useState('');
+  const [editAvatarUrl, setEditAvatarUrl] = useState('');
   const [editingInitialized, setEditingInitialized] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
@@ -57,6 +58,7 @@ function PlayerProfile() {
   if (user && !editingInitialized) {
     setEditDisplayName(displayName);
     setEditBattleTag((user.user_metadata?.battle_tag as string) || '');
+    setEditAvatarUrl((user.user_metadata?.avatar_url as string) || '');
     setEditingInitialized(true);
   }
 
@@ -71,6 +73,7 @@ function PlayerProfile() {
         body: JSON.stringify({
           display_name: editDisplayName,
           battle_tag: editBattleTag,
+          avatar_url: editAvatarUrl,
         }),
       });
 
@@ -221,6 +224,13 @@ function PlayerProfile() {
   const role = (user.user_metadata?.role as string | undefined) || 'player';
   const roleLabel = role === 'captain' ? 'Capitaine' : 'Joueur';
   const battleTag = (user.user_metadata?.battle_tag as string) || '—';
+  const avatarUrl = (user.user_metadata?.avatar_url as string) || '';
+  const initials = displayName
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p: string) => p.charAt(0).toUpperCase())
+    .join('');
   const createdAt = user.created_at
     ? new Date(user.created_at).toLocaleString('fr-FR')
     : '—';
@@ -247,11 +257,25 @@ function PlayerProfile() {
           {/* Résumé du compte */}
           <section className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
             <div className="flex items-center justify-between gap-4 flex-wrap mb-6">
-              <div>
-                <h2 className="text-2xl font-bold">{displayName}</h2>
-                <span className="inline-block mt-1 px-3 py-1 rounded-full text-sm font-semibold bg-purple-600/20 text-purple-200 border border-purple-500/30">
-                  {roleLabel}
-                </span>
+              <div className="flex items-center gap-4">
+                {avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={avatarUrl}
+                    alt="Avatar"
+                    className="w-16 h-16 rounded-xl border-2 border-purple-500/40 shadow-lg object-cover"
+                  />
+                ) : (
+                  <span className="flex w-16 h-16 items-center justify-center rounded-xl border-2 border-purple-500/40 bg-purple-600/20 text-xl font-bold text-purple-100 shadow-lg">
+                    {initials || 'J'}
+                  </span>
+                )}
+                <div>
+                  <h2 className="text-2xl font-bold">{displayName}</h2>
+                  <span className="inline-block mt-1 px-3 py-1 rounded-full text-sm font-semibold bg-purple-600/20 text-purple-200 border border-purple-500/30">
+                    {roleLabel}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -333,6 +357,25 @@ function PlayerProfile() {
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm font-mono placeholder:text-gray-500"
                   placeholder="Pseudo#1234"
                 />
+              </div>
+              <div>
+                <label
+                  htmlFor="player-avatar-url"
+                  className="block text-xs text-gray-400 mb-1"
+                >
+                  Avatar (URL)
+                </label>
+                <input
+                  id="player-avatar-url"
+                  type="url"
+                  value={editAvatarUrl}
+                  onChange={(e) => setEditAvatarUrl(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-500"
+                  placeholder="https://…"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Laisse vide pour retirer l&apos;avatar.
+                </p>
               </div>
               <button
                 type="submit"

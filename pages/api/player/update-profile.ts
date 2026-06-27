@@ -30,7 +30,7 @@ export default withAuthRoute(async function handler(
   )
     return;
 
-  const { display_name, battle_tag } = req.body || {};
+  const { display_name, battle_tag, avatar_url } = req.body || {};
   const updates: Record<string, unknown> = {};
 
   if (typeof display_name === 'string') {
@@ -51,6 +51,20 @@ export default withAuthRoute(async function handler(
         .json({ error: 'Format BattleTag invalide (ex: Pseudo#1234).' });
     }
     updates.battle_tag = trimmed || null;
+  }
+
+  if (typeof avatar_url === 'string') {
+    const trimmed = avatar_url.trim();
+    if (
+      trimmed &&
+      (!(
+        trimmed.startsWith('http://') || trimmed.startsWith('https://')
+      ) ||
+        trimmed.length > 2048)
+    ) {
+      return res.status(400).json({ error: "URL d'avatar invalide." });
+    }
+    updates.avatar_url = trimmed || null;
   }
 
   if (Object.keys(updates).length === 0) {

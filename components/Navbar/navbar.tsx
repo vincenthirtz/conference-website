@@ -66,11 +66,7 @@ function Navbar(): JSX.Element {
   // /player routes, for a signed-in non-staff user, once both sessions resolved.
   const isPlayerRoute = router.pathname.startsWith('/player');
   const showPlayerBar =
-    isPlayerRoute &&
-    !loading &&
-    !playerLoading &&
-    !!playerUser &&
-    !isStaff;
+    isPlayerRoute && !loading && !playerLoading && !!playerUser && !isStaff;
 
   const playerName =
     (playerUser?.user_metadata?.display_name as string | undefined) ||
@@ -79,6 +75,8 @@ function Navbar(): JSX.Element {
     'Joueur';
   const playerRoleLabel =
     playerUser?.user_metadata?.role === 'captain' ? 'Capitaine' : 'Joueur';
+  const playerAvatarUrl =
+    (playerUser?.user_metadata?.avatar_url as string | undefined) || null;
 
   const headerOffset =
     !loading && isStaff
@@ -133,6 +131,7 @@ function Navbar(): JSX.Element {
           links={PLAYER_LINKS}
           height={PLAYER_BAR_HEIGHT}
           onLogout={handlePlayerLogout}
+          avatarUrl={playerAvatarUrl}
         />
       )}
 
