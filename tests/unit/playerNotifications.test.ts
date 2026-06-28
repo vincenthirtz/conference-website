@@ -203,6 +203,52 @@ describe('/api/player/notifications — captain counters', () => {
   });
 });
 
+describe('/api/player/notifications — invitee pending invites', () => {
+  it('counts pending invitations addressed to the user (un-scoped to a team)', async () => {
+    // No team at all — invitee counter is independent of captain/manager status.
+    store.teams = [];
+    store.team_members = [];
+    store.demandes = [
+      {
+        id: 'inv-1',
+        user_id: USER_ID,
+        team_id: TEAM_ID,
+        type: 'invite',
+        status: 'pending',
+      },
+      {
+        id: 'inv-2',
+        user_id: USER_ID,
+        team_id: OTHER_TEAM_ID,
+        type: 'invite',
+        status: 'pending',
+      },
+      // already processed → ignored
+      {
+        id: 'inv-3',
+        user_id: USER_ID,
+        team_id: TEAM_ID,
+        type: 'invite',
+        status: 'approved',
+      },
+      // addressed to someone else → ignored
+      {
+        id: 'inv-4',
+        user_id: '00000000-0000-0000-0000-0000000000ff',
+        team_id: TEAM_ID,
+        type: 'invite',
+        status: 'pending',
+      },
+    ];
+    const res = makeRes();
+    await notificationsHandler(makeReq(), res);
+    expect(res.statusCode).toBe(200);
+    expect(res.body.pendingInvites).toBe(2);
+    // No captain counters, no checkin → total is just the invites.
+    expect(res.body.total).toBe(2);
+  });
+});
+
 describe('/api/player/notifications — check-in pending flag', () => {
   function seedMatchInWindow(over: Record<string, unknown> = {}) {
     store.matches = [

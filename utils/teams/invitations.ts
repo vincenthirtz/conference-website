@@ -4,15 +4,22 @@
 // Stocke dans la table `demandes` avec type='invite' :
 //   user_id  = invitee auth_user_id
 //   team_id  = team
-//   payload  = { captain_auth_user_id, captain_discord_user_id,
-//                invitee_discord_user_id, desired_role, battle_tag, expires_at }
+//   payload  = { captain_auth_user_id, captain_discord_user_id?,
+//                invitee_discord_user_id?, desired_role, battle_tag,
+//                specialty?, expires_at }
 //
 // Status flow : pending -> approved | rejected | cancelled.
 //
 // Garde-fous metier centralises ici pour etre partages entre :
-//   - /api/bot/v1/teams/[teamId]/invitations          (captain create)
+//   - /api/bot/v1/teams/[teamId]/invitations          (captain create, Discord)
 //   - /api/bot/v1/invitations/[demandeId]             (accept/reject/cancel)
-// Une future UI cote site pourra reutiliser les memes helpers.
+//   - /api/teams/create-with-member                   (web team creation)
+//   - /api/admin/demandes (captain_request new-team)  (web/staff)
+//
+// Origine : `source` distingue les invites créées par le bot ('discord_bot',
+// défaut) de celles créées côté site ('website'). Les champs Discord du payload
+// (captain_discord_user_id, invitee_discord_user_id) sont OPTIONNELS : une
+// invite web peut être créée sans aucun id Discord.
 //
 // Multi-tenant (S3) : toutes les fonctions exportées prennent `tenantId`
 // (string UUID) en premier paramètre. Les queries Supabase sur les tables
@@ -30,10 +37,14 @@ export const INVITATION_EXPIRY_DAYS = 7;
 
 export type InvitationPayload = {
   captain_auth_user_id: string;
-  captain_discord_user_id: string;
-  invitee_discord_user_id: string;
+  /** Optionnel : absent pour les invites créées côté site (pas de Discord). */
+  captain_discord_user_id?: string | null;
+  /** Optionnel : absent pour les invites créées côté site (pas de Discord). */
+  invitee_discord_user_id?: string | null;
   desired_role: string;
   battle_tag: string | null;
+  /** Optionnel : spécialité in-game (tank | dps | support | flex). */
+  specialty?: string | null;
   expires_at: string;
 };
 
@@ -73,15 +84,30 @@ function isExpired(payload: InvitationPayload | null | undefined): boolean {
 export type CreateInvitationInput = {
   teamId: string;
   captainAuthUserId: string;
-  captainDiscordUserId: string;
+  /**
+   * Optionnel : id Discord du capitaine. Requis pour les invites bot (le bot
+   * le passe toujours), absent pour les invites web.
+   */
+  captainDiscordUserId?: string | null;
   inviteeAuthUserId: string;
-  inviteeDiscordUserId: string;
+  /**
+   * Optionnel : id Discord de l'invitée. Requis pour les invites bot, absent
+   * pour les invites web (l'invitée n'a pas forcément lié son Discord).
+   */
+  inviteeDiscordUserId?: string | null;
   /** Defaults to 'player' (via validateRole). */
   role?: string | null;
   /** Optional BattleTag — validated against BATTLE_TAG_REGEX when provided. */
   battleTag?: string | null;
+  /** Optional in-game specialty (tank | dps | support | flex). */
+  specialty?: string | null;
   /** Optional free-text message from the captain. */
   comment?: string | null;
+  /**
+   * Origine de l'invitation. 'discord_bot' (défaut) pour les invites créées par
+   * le bot ; 'website' pour celles créées depuis le site.
+   */
+  source?: string;
 };
 
 /**
@@ -157,10 +183,11 @@ export async function createInvitation(
   const role = validateRole(input.role);
   const payload: InvitationPayload = {
     captain_auth_user_id: input.captainAuthUserId,
-    captain_discord_user_id: input.captainDiscordUserId,
-    invitee_discord_user_id: input.inviteeDiscordUserId,
+    captain_discord_user_id: input.captainDiscordUserId ?? null,
+    invitee_discord_user_id: input.inviteeDiscordUserId ?? null,
     desired_role: role,
     battle_tag: battleTag,
+    specialty: input.specialty ?? null,
     expires_at: expiresAtFromNow(),
   };
 
@@ -172,7 +199,7 @@ export async function createInvitation(
       team_id: input.teamId,
       type: 'invite',
       status: 'pending',
-      source: 'discord_bot',
+      source: input.source ?? 'discord_bot',
       comment: input.comment ?? null,
       payload,
     })
@@ -305,6 +332,7 @@ export async function acceptInvitation(
     userId: actorAuthUserId,
     role: demande.payload?.desired_role || 'player',
     battleTag: demande.payload?.battle_tag ?? null,
+    specialty: demande.payload?.specialty ?? null,
     enforceMaxPlayersPreCheck: true,
   });
   if (!insertResult.ok) {

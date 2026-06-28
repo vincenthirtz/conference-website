@@ -687,7 +687,22 @@
     "allUpToDate": "All caught up ✓",
     "noPending": "You have no pending actions.",
     "prefsHeading": "Notification preferences",
-    "prefsFootnote": "These settings apply to browser push notifications. Enable notifications above first to receive them."
+    "prefsFootnote": "These settings apply to browser push notifications. Enable notifications above first to receive them.",
+    "invitesTitle": "Received invitations",
+    "invitesIntro": "Some teams have invited you to join them.",
+    "inviteRole": "Proposed role: {role}",
+    "inviteRoleWithSpecialty": "Proposed role: {role} ({specialty})",
+    "inviteExpires": "Expires on {date}",
+    "inviteNoExpiry": "No expiry date",
+    "acceptInvite": "Join the team",
+    "declineInvite": "Decline",
+    "inviteAccepted": "You joined the team {team} 🎉",
+    "inviteDeclined": "Invitation declined.",
+    "alreadyInTeam": "You are already on a team. Leave it before joining another.",
+    "inviteExpired": "This invitation has expired.",
+    "inviteNotFound": "Invitation not found.",
+    "inviteForbidden": "This invitation is not addressed to you.",
+    "inviteError": "Something went wrong. Please try again later."
   },
   "discordLinkCard": {
     "statusError": "Unable to load status.",

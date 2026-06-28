@@ -14,6 +14,7 @@ import {
   validateExistingUserId,
 } from '@/utils/apiHelpers';
 import { emitBotEvent } from '@/utils/botEvents';
+import { createInvitation } from '@/utils/teams/invitations';
 import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 import { alertIfBlacklisted } from '@/utils/moderation/blacklist';
 import { verifyCaptcha } from '@/utils/captcha';
@@ -66,10 +67,26 @@ type MemberResult = {
   specialty: string | null;
 };
 
+/**
+ * Membre INVITÉ (pas inséré) : non-créateur du roster web. Une invitation
+ * pending (demandes type='invite') est créée et le membre devra l'accepter.
+ */
+type InvitedMemberResult = {
+  /** id de la demande type='invite' créée, ou null si la création a échoué. */
+  invitation_id: string | null;
+  user_id: string;
+  role: string;
+  battle_tag: string | null;
+  specialty: string | null;
+  /** Renseigné quand l'invitation n'a PAS pu être créée (déjà membre, etc.). */
+  skipped_reason?: string;
+};
+
 type ApiResponse =
   | {
       team: Record<string, any>;
       members?: MemberResult[];
+      invitedMembers?: InvitedMemberResult[];
       tournament?: { tournament_name: string; stages_count: number };
       info?: string;
     }
@@ -411,6 +428,7 @@ export default async function handler(
   }));
 
   const insertedMembers: MemberResult[] = [];
+  const invitedMembers: InvitedMemberResult[] = [];
 
   // Helper : cleanup d'une team orpheline (members + team).
   // Si le cleanup lui-meme echoue, on log NEEDS_REVIEW pour qu'un admin
@@ -438,7 +456,67 @@ export default async function handler(
     }
   };
 
+  // Invite-accept model : SEUL le capitaine/créateur (m.user_id ===
+  // captainUserId) est inséré directement dans team_members. Tous les autres
+  // membres du roster web sont INVITÉS (consentement requis) — on crée une
+  // invitation pending (demandes type='invite') au lieu de les forcer dans la
+  // team. L'échec d'une invitation (déjà membre d'une équipe, doublon, …) ne
+  // fait PAS échouer la création de l'équipe : on collecte et on continue (la
+  // team + le capitaine restent valides).
   for (const m of memberRecords) {
+    const isCaptainRecord = captainUserId !== null && m.user_id === captainUserId;
+
+    if (!isCaptainRecord) {
+      // Membre non-créateur → invitation pending. Nécessite un capitaine
+      // (inviteur). Sans capitaine désigné, on ne peut pas inviter : on skip.
+      if (captainUserId === null) {
+        invitedMembers.push({
+          invitation_id: null,
+          user_id: m.user_id,
+          role: m.role,
+          battle_tag: m.battle_tag,
+          specialty: m.specialty,
+          skipped_reason: 'no_captain_to_invite',
+        });
+        continue;
+      }
+
+      const inviteResult = await createInvitation(tenantId, {
+        teamId: createdTeam.id,
+        inviteeAuthUserId: m.user_id,
+        captainAuthUserId: captainUserId,
+        role: m.role,
+        battleTag: m.battle_tag,
+        specialty: m.specialty,
+        source: 'website',
+      });
+
+      if (inviteResult.ok) {
+        invitedMembers.push({
+          invitation_id: inviteResult.data.id,
+          user_id: m.user_id,
+          role: m.role,
+          battle_tag: m.battle_tag,
+          specialty: m.specialty,
+        });
+      } else {
+        logger.error(
+          '[/api/teams/create-with-member] invite error (skipped):',
+          inviteResult.error
+        );
+        invitedMembers.push({
+          invitation_id: null,
+          user_id: m.user_id,
+          role: m.role,
+          battle_tag: m.battle_tag,
+          specialty: m.specialty,
+          skipped_reason: inviteResult.error,
+        });
+      }
+      continue;
+    }
+
+    // Capitaine/créateur → insertion directe dans team_members.
     const memberPayload = {
       team_id: createdTeam.id,
       user_id: m.user_id,
@@ -618,8 +696,14 @@ export default async function handler(
   }
 
   const infoParts: string[] = [];
-  if (insertedMembers.length) infoParts.push('Équipe créée et membres ajoutés');
+  if (insertedMembers.length) infoParts.push('Équipe créée et capitaine ajouté');
   else infoParts.push('Équipe créée');
+  const sentInvites = invitedMembers.filter((i) => i.invitation_id).length;
+  if (sentInvites > 0) {
+    infoParts.push(
+      `${sentInvites} invitation(s) envoyée(s) — chaque joueuse doit l'accepter pour rejoindre l'équipe`
+    );
+  }
   if (tournamentRegistration) {
     infoParts.push(
       `inscrite au tournoi "${tournamentRegistration.tournament_name}"`
@@ -669,6 +753,7 @@ export default async function handler(
   return res.status(201).json({
     team: createdTeam,
     members: insertedMembers.length ? insertedMembers : undefined,
+    invitedMembers: invitedMembers.length ? invitedMembers : undefined,
     tournament: tournamentRegistration || undefined,
     info: infoParts.join(' — '),
   });

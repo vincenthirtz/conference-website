@@ -16,6 +16,7 @@ import QuickAction, {
   type QuickActionProps,
 } from '@/components/player/QuickAction';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
+import InvitationsSection from '@/components/player/InvitationsSection';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { PlayerNotificationsPayload } from '@/pages/api/player/notifications';
 import {
@@ -233,7 +234,10 @@ function PlayerNotifications() {
         )}
 
         <div className="space-y-8">
-          {/* (a) En attente */}
+          {/* (a) Invitations reçues — masquée s'il n'y en a aucune. */}
+          <InvitationsSection />
+
+          {/* (b) En attente */}
           <section>
             <h2 className="text-lg font-semibold mb-4 text-white">
               {t.pendingHeading}
@@ -257,7 +261,7 @@ function PlayerNotifications() {
             )}
           </section>
 
-          {/* (b) Preferences */}
+          {/* (c) Preferences */}
           <section>
             <h2 className="text-lg font-semibold mb-4 text-white">
               {t.prefsHeading}

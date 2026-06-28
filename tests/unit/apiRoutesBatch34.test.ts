@@ -215,14 +215,18 @@ describe('POST /api/teams/create-with-member', () => {
     expect(store.team_members.length).toBe(1);
   });
 
-  it('200 with multiple members (cleanedMembers path)', async () => {
+  // Invite-accept model : seul le capitaine (set_captain) est inséré dans
+  // team_members ; les autres membres du roster deviennent des invitations
+  // pending (demandes type='invite'), pas des team_members.
+  it('200 with multiple members: captain inserted, others invited', async () => {
     store.teams = [];
     store.team_members = [];
-    setAuthListUsers([]);
-    setCreateUserResult({
-      data: { user: { id: 'u-1', email: 'p1@example.com' } },
-      error: null,
-    });
+    store.demandes = [];
+    // p1 (captain) et p2 résolus comme users existants pour des ids stables.
+    setAuthListUsers([
+      { id: 'u-1', email: 'p1@example.com' },
+      { id: 'u-2', email: 'p2@example.com' },
+    ]);
     const res = makeRes();
     await createWithMemberHandler(
       makeReq({
@@ -239,6 +243,7 @@ describe('POST /api/teams/create-with-member', () => {
               email: 'p2@example.com',
               role: 'player',
               battle_tag: 'Player2#5678',
+              specialty: 'support',
             },
           ],
         },
@@ -247,6 +252,30 @@ describe('POST /api/teams/create-with-member', () => {
     );
     expect(res.statusCode).toBe(201);
     expect((store.teams as any).length).toBe(1);
+
+    // Only the captain is on the roster.
+    const members = (store.team_members as any[]) ?? [];
+    expect(members.length).toBe(1);
+    expect(members[0].user_id).toBe('u-1');
+    expect((store.teams as any)[0].captain_id).toBe('u-1');
+
+    // The non-captain member becomes a pending invite, not a team_member.
+    const invites = (store.demandes as any[]).filter(
+      (d) => d.type === 'invite' && d.status === 'pending'
+    );
+    expect(invites.length).toBe(1);
+    expect(invites[0].user_id).toBe('u-2');
+    expect(invites[0].source).toBe('website');
+    expect(invites[0].payload.desired_role).toBe('player');
+    expect(invites[0].payload.specialty).toBe('support');
+    expect(invites[0].payload.battle_tag).toBe('Player2#5678');
+    expect(invites[0].payload.captain_auth_user_id).toBe('u-1');
+
+    // Response surfaces invitedMembers separately from members.
+    expect((res.body as any).members.length).toBe(1);
+    expect((res.body as any).invitedMembers.length).toBe(1);
+    expect((res.body as any).invitedMembers[0].user_id).toBe('u-2');
+    expect((res.body as any).invitedMembers[0].invitation_id).toBeTruthy();
   });
 
   it('400 when set_captain provided without any member', async () => {
@@ -272,12 +301,13 @@ describe('POST /api/teams/create-with-member', () => {
           name: 'Alpha',
           member_email: 'p@example.com',
           member_role: 'player',
+          set_captain: true,
         },
       }),
       res
     );
     expect(res.statusCode).toBe(201);
-    // member créé avec battle_tag=null
+    // captain créé avec battle_tag=null
     const tm = (store.team_members as any[]) ?? [];
     expect(tm.length).toBe(1);
     expect(tm[0].battle_tag).toBeNull();
@@ -333,7 +363,9 @@ describe('POST /api/teams/create-with-member', () => {
       makeReq({
         body: {
           name: 'Alpha',
-          members: [{ email: 'p1@example.com', role: 'player' }],
+          members: [
+            { email: 'p1@example.com', role: 'player', set_captain: true },
+          ],
         },
       }),
       res
@@ -537,11 +569,12 @@ describe('POST /api/teams/create-with-member', () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it('200 with bulk members where one has (existing) user_id and one has email', async () => {
+  it('200 with bulk members where one has (existing) user_id and one has email: captain inserted, other invited', async () => {
     setAuthListUsers([{ id: 'u-existing', email: 'existing@example.com' }]);
     setAdminUser(EXISTING_UID, 'tank@example.com');
     store.teams = [];
     store.team_members = [];
+    store.demandes = [];
     const res = makeRes();
     await createWithMemberHandler(
       makeReq({
@@ -565,7 +598,15 @@ describe('POST /api/teams/create-with-member', () => {
       res
     );
     expect(res.statusCode).toBe(201);
-    expect((store.team_members as any).length).toBe(2);
+    // Captain (user_id path) inserted; email member invited (pending invite).
+    expect((store.team_members as any).length).toBe(1);
+    expect((store.team_members as any)[0].user_id).toBe(EXISTING_UID);
+    const invites = (store.demandes as any[]).filter(
+      (d) => d.type === 'invite' && d.status === 'pending'
+    );
+    expect(invites.length).toBe(1);
+    expect(invites[0].user_id).toBe('u-existing');
+    expect(invites[0].payload.captain_auth_user_id).toBe(EXISTING_UID);
   });
 
   // SECURITY : dans le chemin bulk, un user_id brut invalide (non-existant) est
@@ -646,7 +687,12 @@ describe('POST /api/teams/create-with-member', () => {
         body: {
           name: 'Spec Team',
           members: [
-            { email: 'p1@example.com', role: 'player', specialty: 'tank' },
+            {
+              email: 'p1@example.com',
+              role: 'player',
+              specialty: 'tank',
+              set_captain: true,
+            },
           ],
         },
       }),
@@ -668,7 +714,12 @@ describe('POST /api/teams/create-with-member', () => {
         body: {
           name: 'Spec Team 2',
           members: [
-            { email: 'p1@example.com', role: 'player', specialty: 'wizard' },
+            {
+              email: 'p1@example.com',
+              role: 'player',
+              specialty: 'wizard',
+              set_captain: true,
+            },
           ],
         },
       }),

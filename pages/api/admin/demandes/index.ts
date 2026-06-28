@@ -21,6 +21,7 @@ import {
   setTeamCaptain,
   resolveUserIdByEmail,
 } from '@/utils/teams/addMember';
+import { createInvitation } from '@/utils/teams/invitations';
 import slugify from 'slugify';
 
 export type DemandeType =
@@ -875,9 +876,14 @@ async function handlePost(
         // For existing-team captain_requests (d.team_id / payload.existing_team_id)
         // we deliberately do NOT touch the roster — the team already exists with
         // its own members and the request is purely a captain promotion.
-        // Mirrors create-with-member: resolve/create each invitee by email, then
-        // insert as a 'player' carrying battle_tag + specialty. Each insert is
-        // isolated so one bad invite can't fail the whole approval.
+        //
+        // Invite-accept model : les co-membres ne sont PAS insérés de force dans
+        // team_members. On crée une invitation pending (demandes type='invite',
+        // source='website') dont l'inviteur est le capitaine (d.user_id) ; chaque
+        // co-membre devra l'accepter pour rejoindre l'équipe. On résout/crée
+        // chaque invitée par email puis on émet l'invitation en portant son
+        // battle_tag + specialty. Chaque invite est isolée : un échec (déjà
+        // membre, doublon, …) ne casse pas le reste de l'approbation.
         if (wantsNewTeam && Array.isArray(payload.members)) {
           for (const m of payload.members as Array<Record<string, any>>) {
             try {
@@ -910,10 +916,10 @@ async function handlePost(
               // Skip if this resolved user is the requester (captain) anyway.
               if (resolved.userId === d.user_id) continue;
 
-              const memberResult = await insertTeamMember({
-                tenantId: ctx.tenantId,
+              const inviteResult = await createInvitation(ctx.tenantId, {
                 teamId: targetTeamId,
-                userId: resolved.userId,
+                inviteeAuthUserId: resolved.userId,
+                captainAuthUserId: d.user_id,
                 role: 'player',
                 battleTag:
                   typeof m?.battle_tag === 'string' && m.battle_tag.trim()
@@ -923,11 +929,12 @@ async function handlePost(
                   typeof m?.specialty === 'string' && m.specialty.trim()
                     ? m.specialty.trim()
                     : null,
+                source: 'website',
               });
-              if (!memberResult.ok && !memberResult.isDuplicate) {
+              if (!inviteResult.ok) {
                 logger.error(
-                  '[admin/demandes] invited member insert error:',
-                  memberResult.error
+                  '[admin/demandes] invited member invite error (skipped):',
+                  inviteResult.error
                 );
               }
             } catch (memberEx) {

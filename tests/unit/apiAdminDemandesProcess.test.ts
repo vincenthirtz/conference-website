@@ -4,6 +4,8 @@
 // Focus on the enhanced approval flow:
 //   - approving a captain_request with a NEW team name auto-creates the team
 //     and assigns the requester as captain in one step;
+//   - co-members on a new-team captain_request become PENDING INVITES
+//     (demandes type='invite', source='website') — NOT forced team_members;
 //   - approving with a corrected battle_tag writes the corrected tag;
 //   - the "request more info" action persists staff_note and keeps status
 //     pending;
@@ -248,28 +250,41 @@ describe('POST /api/admin/demandes — captain_request approval', () => {
     // captain_id set on the team.
     expect(created.captain_id).toBe(REQUESTER);
 
-    // Invited members are inserted as 'player' carrying their specialty.
+    // Invite-accept model : co-members are NOT inserted as team_members — only
+    // the captain is on the roster. They become PENDING INVITES instead.
     const teamMembers = (store.team_members as any[]).filter(
       (m) => m.team_id === created.id
     );
-    const inv1 = teamMembers.find((m) => m.user_id === 'invitee-1');
-    const inv2 = teamMembers.find((m) => m.user_id === 'invitee-2');
-    expect(inv1).toBeTruthy();
-    expect(inv1.role).toBe('player');
-    expect(inv1.specialty).toBe('tank');
-    expect(inv1.battle_tag).toBe('Inv1#1111');
-    expect(inv2).toBeTruthy();
-    expect(inv2.role).toBe('player');
-    expect(inv2.specialty).toBe('support');
+    expect(teamMembers.some((m) => m.user_id === 'invitee-1')).toBe(false);
+    expect(teamMembers.some((m) => m.user_id === 'invitee-2')).toBe(false);
 
-    // The requester (also present in the invited list) is NOT duplicated:
-    // exactly one row for them, and it's the captain row.
+    // The requester is the only roster member, with role captain.
     const requesterRows = teamMembers.filter((m) => m.user_id === REQUESTER);
     expect(requesterRows.length).toBe(1);
     expect(requesterRows[0].role).toBe('captain');
+    expect(teamMembers.length).toBe(1);
 
-    // Captain + 2 invitees = 3 rows total.
-    expect(teamMembers.length).toBe(3);
+    // Each co-member gets a pending invite (demandes type='invite',
+    // source='website') carrying role + battle_tag + specialty, inviter =
+    // the captain (requester). The requester is NOT self-invited.
+    const invites = (store.demandes as any[]).filter(
+      (dem) =>
+        dem.type === 'invite' &&
+        dem.status === 'pending' &&
+        dem.team_id === created.id
+    );
+    expect(invites.length).toBe(2);
+    const inv1 = invites.find((i) => i.user_id === 'invitee-1');
+    const inv2 = invites.find((i) => i.user_id === 'invitee-2');
+    expect(inv1).toBeTruthy();
+    expect(inv1.source).toBe('website');
+    expect(inv1.payload.desired_role).toBe('player');
+    expect(inv1.payload.specialty).toBe('tank');
+    expect(inv1.payload.battle_tag).toBe('Inv1#1111');
+    expect(inv1.payload.captain_auth_user_id).toBe(REQUESTER);
+    expect(inv2).toBeTruthy();
+    expect(inv2.payload.specialty).toBe('support');
+    expect(invites.some((i) => i.user_id === REQUESTER)).toBe(false);
 
     // Outcome flag surfaced + audit log emitted.
     expect(res.body.outcomes[DEMANDE_CAPTAIN_NEW].teamAutoCreated).toBe(true);
@@ -326,13 +341,18 @@ describe('POST /api/admin/demandes — captain_request approval', () => {
       res.body.outcomes[DEMANDE_CAPTAIN_EXISTING]?.teamAutoCreated
     ).toBeFalsy();
 
-    // SCOPING: invited members on an EXISTING-team request must NOT be inserted.
-    // Only the requester (captain promotion) should appear on the team.
+    // SCOPING: invited members on an EXISTING-team request must NOT be inserted
+    // NOR invited. Only the requester (captain promotion) should appear on the
+    // team, and no invite demande should be created.
     const existingMembers = (store.team_members as any[]).filter(
       (m) => m.team_id === EXISTING_TEAM
     );
     expect(existingMembers.some((m) => m.user_id === 'invitee-1')).toBe(false);
     expect(existingMembers.every((m) => m.user_id === REQUESTER)).toBe(true);
+    const existingTeamInvites = (store.demandes as any[]).filter(
+      (dem) => dem.type === 'invite' && dem.team_id === EXISTING_TEAM
+    );
+    expect(existingTeamInvites.length).toBe(0);
   });
 });
 

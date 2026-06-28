@@ -687,7 +687,22 @@
     "allUpToDate": "Tout est à jour ✓",
     "noPending": "Tu n’as aucune action en attente.",
     "prefsHeading": "Préférences de notifications",
-    "prefsFootnote": "Ces réglages s’appliquent aux notifications push du navigateur. Active d’abord les notifications ci-dessus pour les recevoir."
+    "prefsFootnote": "Ces réglages s’appliquent aux notifications push du navigateur. Active d’abord les notifications ci-dessus pour les recevoir.",
+    "invitesTitle": "Invitations reçues",
+    "invitesIntro": "Des équipes t'ont invitée à les rejoindre.",
+    "inviteRole": "Rôle proposé : {role}",
+    "inviteRoleWithSpecialty": "Rôle proposé : {role} ({specialty})",
+    "inviteExpires": "Expire le {date}",
+    "inviteNoExpiry": "Sans date d'expiration",
+    "acceptInvite": "Rejoindre l'équipe",
+    "declineInvite": "Décliner",
+    "inviteAccepted": "Tu as rejoint l'équipe {team} 🎉",
+    "inviteDeclined": "Invitation déclinée.",
+    "alreadyInTeam": "Tu fais déjà partie d'une équipe. Quitte-la avant de rejoindre une autre.",
+    "inviteExpired": "Cette invitation a expiré.",
+    "inviteNotFound": "Invitation introuvable.",
+    "inviteForbidden": "Cette invitation ne t'est pas destinée.",
+    "inviteError": "Une erreur est survenue. Réessaie plus tard."
   },
   "discordLinkCard": {
     "statusError": "Impossible de charger le statut.",

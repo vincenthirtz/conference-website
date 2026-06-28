@@ -262,8 +262,13 @@ export default function PublicCreateTeamPage() {
       idempotencyKeyRef.current = genIdempotencyKey();
       setResult(json);
       // Message fixe et distinct du panneau "Résultat" (qui affiche json.info)
-      // pour éviter tout doublon de texte à l'écran.
-      addToast('Inscription enregistrée 🎉', 'success');
+      // pour éviter tout doublon de texte à l'écran. On précise que les
+      // co-équipières sont INVITÉES (en attente d'acceptation), pas ajoutées
+      // immédiatement à l'équipe.
+      addToast(
+        'Équipe créée ! Les joueuses invitées doivent accepter l’invitation pour rejoindre.',
+        'success'
+      );
       setName('');
       setShortName('');
       setCountry('');
@@ -749,7 +754,13 @@ export default function PublicCreateTeamPage() {
 
                   {result.members && result.members.length > 0 && (
                     <div className="mt-3 rounded-xl border border-white/10 bg-white/5 px-3 py-3 space-y-2">
-                      <p className="text-sm font-semibold">Membres ajoutés</p>
+                      <p className="text-sm font-semibold">
+                        Joueuses invitées
+                      </p>
+                      <p className="text-[11px] text-gray-400">
+                        Elles doivent accepter l&apos;invitation depuis leur
+                        espace joueuse pour rejoindre l&apos;équipe.
+                      </p>
                       <ul className="space-y-1 text-xs text-gray-300">
                         {result.members.map((m) => (
                           <li
@@ -780,6 +791,11 @@ export default function PublicCreateTeamPage() {
                 <p>
                   • Les membres sont recherchés par email dans Supabase auth; un
                   compte est créé si besoin.
+                </p>
+                <p>
+                  • Les co-équipières reçoivent une invitation : elles
+                  rejoignent l&apos;équipe une fois qu&apos;elles l&apos;ont
+                  acceptée.
                 </p>
                 <p>• Sélectionne un capitaine dans la liste si besoin.</p>
                 <p>• Le slug est généré automatiquement à partir du nom.</p>

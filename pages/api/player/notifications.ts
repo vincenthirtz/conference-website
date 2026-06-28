@@ -5,6 +5,10 @@
 //   - unreadMessages       : number of unread inter-captain messages
 //   - pendingScrims        : open scrim requests received by the captain's team
 //   - pendingJoinRequests  : open team-join requests received by the captain
+//   - pendingInvites       : team invitations addressed TO this user that are
+//                             still pending (the rank-and-file invitee view —
+//                             un-scoped to any managed team, distinct from the
+//                             captain-scoped counters above)
 //   - checkinPending       : 1 when the next match has an open check-in window
 //                             that hasn't been validated yet, 0 otherwise
 //   - total                : sum of the above (for the bell badge)
@@ -33,6 +37,8 @@ export type PlayerNotificationsPayload = {
   unreadMessages: number;
   pendingScrims: number;
   pendingJoinRequests: number;
+  /** Pending team invitations addressed to this user (invitee view). */
+  pendingInvites: number;
   checkinPending: 0 | 1;
   total: number;
 };
@@ -77,6 +83,18 @@ export default withAuthRoute(async function handler(
   let pendingScrims = 0;
   let pendingJoinRequests = 0;
   let checkinPending: 0 | 1 = 0;
+
+  // Invitee-side counter: invitations addressed TO this user that are still
+  // pending. Un-scoped to a managed team — every authenticated user can be an
+  // invitee regardless of captain/manager status.
+  const { count: invites } = await supabaseAdmin!
+    .from('demandes')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .eq('tenant_id', tenantId)
+    .eq('type', 'invite')
+    .eq('status', 'pending');
+  const pendingInvites = invites ?? 0;
 
   if (canManageInbox && managedTeamId) {
     // All inbound demandes targeting this team. Messages, scrims and joins
@@ -147,7 +165,11 @@ export default withAuthRoute(async function handler(
   }
 
   const total =
-    unreadMessages + pendingScrims + pendingJoinRequests + checkinPending;
+    unreadMessages +
+    pendingScrims +
+    pendingJoinRequests +
+    pendingInvites +
+    checkinPending;
 
   res.setHeader('Cache-Control', 'private, max-age=10');
   return res.status(200).json({
@@ -159,6 +181,7 @@ export default withAuthRoute(async function handler(
     unreadMessages,
     pendingScrims,
     pendingJoinRequests,
+    pendingInvites,
     checkinPending,
     total,
   });

@@ -18301,6 +18301,134 @@ paths:
                 additionalProperties: true
         "401":
           $ref: "#/components/responses/Unauthorized"
+  /api/player/invitations:
+    get:
+      tags:
+        - public/auth
+      summary: Invitations d'equipe en attente pour le joueur connecte.
+      description: |
+        Liste les invitations (demandes type=invite, status=pending) adressees
+        au joueur connecte, scopees au tenant resolu. Chaque entree est enrichie
+        du nom de l'equipe. Pendant invitee uniquement (l'envoi/annulation cote
+        capitaine passe par le bot).
+      operationId: getPlayerInvitations
+      security:
+        - PlayerBearer: []
+      responses:
+        "200":
+          description: Liste des invitations en attente.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - invitations
+                properties:
+                  invitations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        teamId:
+                          type: string
+                          format: uuid
+                          nullable: true
+                        teamName:
+                          type: string
+                          nullable: true
+                        role:
+                          type: string
+                        specialty:
+                          type: string
+                          nullable: true
+                        battleTag:
+                          type: string
+                          nullable: true
+                        expiresAt:
+                          type: string
+                          format: date-time
+                          nullable: true
+                        createdAt:
+                          type: string
+                          format: date-time
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /api/player/invitations/{demandeId}:
+    post:
+      tags:
+        - public/auth
+      summary: Accepter ou refuser une invitation d'equipe.
+      description: |
+        Le joueur connecte accepte (`accept`) ou refuse (`reject`) une
+        invitation pending qui lui est adressee. `accept` cree l'adhesion
+        (team_members) et passe la demande en approved ; `reject` la passe en
+        rejected sans adhesion. Seul l'invite peut agir sur sa propre invitation.
+      operationId: actOnPlayerInvitation
+      security:
+        - PlayerBearer: []
+      parameters:
+        - name: demandeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - action
+              properties:
+                action:
+                  type: string
+                  enum:
+                    - accept
+                    - reject
+      responses:
+        "200":
+          description: Invitation traitee.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  action:
+                    type: string
+                    enum:
+                      - accept
+                      - reject
+                  teamId:
+                    type: string
+                    format: uuid
+                    nullable: true
+                  memberId:
+                    type: string
+                    format: uuid
+                    nullable: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Seule la joueuse invitee peut agir sur cette invitation.
+        "404":
+          description: Invitation introuvable.
+        "409":
+          description: Invitation deja traitee, ou joueur deja dans une equipe.
+        "410":
+          description: Invitation expiree.
+        "500":
+          $ref: "#/components/responses/ServerError"
   /api/player/update-profile:
     patch:
       tags:
