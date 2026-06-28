@@ -17,7 +17,8 @@
 //
 // Auth : x-api-key (per-tenant). Tenant-scopé : req.botContext.tenantId.
 //
-// Réponse 200 : { count, linked, unlinked }.
+// Réponse 200 : { count, linked, unlinked, unlinkedDiscordIds }.
+// `unlinkedDiscordIds` = les discordUserId du set reçu sans compte site lié.
 
 import { z } from 'zod';
 import type { NextApiResponse } from 'next';
@@ -111,7 +112,10 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
 
   const nowIso = new Date().toISOString();
   let linked = 0;
-  let unlinked = 0;
+  // discordUserId du set reçu dont le compte n'est PAS lié au site
+  // (auth_user_id null). Exposé tel quel au bot pour afficher un CTA
+  // « lance /inscription » uniquement à ces joueuses.
+  const unlinkedDiscordIds: string[] = [];
 
   // Full replace = delete-then-insert pour le set présent (déterministe et
   // équivalent à un upsert sur la contrainte UNIQUE(tenant_id, discord_user_id)).
@@ -119,7 +123,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const rows = players.map((p) => {
     const authUserId = linkByDiscordId.get(p.discordUserId) ?? null;
     if (authUserId) linked += 1;
-    else unlinked += 1;
+    else unlinkedDiscordIds.push(p.discordUserId);
     return {
       tenant_id: tenantId,
       discord_user_id: p.discordUserId,
@@ -156,7 +160,12 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     }
   }
 
-  return res.status(200).json({ count: rows.length, linked, unlinked });
+  return res.status(200).json({
+    count: rows.length,
+    linked,
+    unlinked: unlinkedDiscordIds.length,
+    unlinkedDiscordIds,
+  });
 }
 
 export default withBotRoute(handler, {

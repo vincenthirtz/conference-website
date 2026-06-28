@@ -4076,6 +4076,7 @@ paths:
                   - count
                   - linked
                   - unlinked
+                  - unlinkedDiscordIds
                 properties:
                   count:
                     type: integer
@@ -4086,6 +4087,14 @@ paths:
                   unlinked:
                     type: integer
                     description: Nombre de joueurs sans compte site lie.
+                  unlinkedDiscordIds:
+                    type: array
+                    description: >-
+                      Les discordUserId du set recu sans compte site lie
+                      (sous-ensemble du payload ; unlinked = longueur du
+                      tableau). Le bot l'utilise pour cibler le CTA /inscription.
+                    items:
+                      $ref: "#/components/schemas/DiscordId"
         "400":
           $ref: "#/components/responses/BadRequest"
   /api/bot/v1/teams:

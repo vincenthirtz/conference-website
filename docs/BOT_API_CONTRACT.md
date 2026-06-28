@@ -1452,12 +1452,25 @@ Body :
 Réponse `200` :
 
 ```json
-{ "count": 12, "linked": 9, "unlinked": 3 }
+{
+  "count": 12,
+  "linked": 9,
+  "unlinked": 3,
+  "unlinkedDiscordIds": [
+    "1234567890123456789",
+    "9876543210987654321",
+    "5555555555555555555"
+  ]
+}
 ```
 
 - `count` : nombre de joueurs libres après synchronisation.
 - `linked` : joueurs dont le compte Discord est lié au site (`auth_user_id` non null).
 - `unlinked` : joueurs sans compte site lié.
+- `unlinkedDiscordIds` : les `discordUserId` du set reçu sans compte site lié
+  (sous-ensemble du payload, `unlinked` = `unlinkedDiscordIds.length`). Le bot
+  s'en sert pour n'afficher le CTA « lance `/inscription` pour être recrutable »
+  qu'aux joueuses non liées.
 
 ```bash
 curl -sS -X POST https://site.example/api/bot/v1/free-players/sync \

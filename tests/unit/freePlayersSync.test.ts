@@ -105,7 +105,12 @@ describe('POST /api/bot/v1/free-players/sync', () => {
       res
     );
     expect(res.statusCode).toBe(200);
-    expect(res.body).toEqual({ count: 3, linked: 2, unlinked: 1 });
+    expect(res.body).toEqual({
+      count: 3,
+      linked: 2,
+      unlinked: 1,
+      unlinkedDiscordIds: [D_CAROL],
+    });
 
     const rows = store.free_players as any[];
     expect(rows).toHaveLength(3);
@@ -145,7 +150,12 @@ describe('POST /api/bot/v1/free-players/sync', () => {
       res
     );
     expect(res.statusCode).toBe(200);
-    expect(res.body).toEqual({ count: 1, linked: 0, unlinked: 1 });
+    expect(res.body).toEqual({
+      count: 1,
+      linked: 0,
+      unlinked: 1,
+      unlinkedDiscordIds: [D_CAROL],
+    });
 
     const ids = (store.free_players as any[]).map((r) => r.discord_user_id);
     expect(ids).toEqual([D_CAROL]);
@@ -163,7 +173,12 @@ describe('POST /api/bot/v1/free-players/sync', () => {
     const res = makeRes();
     await syncHandler(makeBotReq({ body: { players: [] } }), res);
     expect(res.statusCode).toBe(200);
-    expect(res.body).toEqual({ count: 0, linked: 0, unlinked: 0 });
+    expect(res.body).toEqual({
+      count: 0,
+      linked: 0,
+      unlinked: 0,
+      unlinkedDiscordIds: [],
+    });
     expect(store.free_players).toHaveLength(0);
   });
 
@@ -191,6 +206,30 @@ describe('POST /api/bot/v1/free-players/sync', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].discord_username).toBe('new-name');
     expect(rows[0].auth_user_id).toBe(U_ALICE);
+  });
+
+  it('unlinkedDiscordIds lists only the unlinked discord ids of the set', async () => {
+    const res = makeRes();
+    await syncHandler(
+      makeBotReq({
+        body: {
+          players: [
+            { discordUserId: D_ALICE, discordUsername: 'alice' }, // linked
+            { discordUserId: D_CAROL, discordUsername: 'carol' }, // unlinked
+            { discordUserId: D_BOB, discordUsername: 'bob' }, // linked
+          ],
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const body = res.body as any;
+    expect(body.linked).toBe(2);
+    expect(body.unlinked).toBe(1);
+    // Only the unlinked id, and never a linked one.
+    expect(body.unlinkedDiscordIds).toEqual([D_CAROL]);
+    expect(body.unlinkedDiscordIds).not.toContain(D_ALICE);
+    expect(body.unlinkedDiscordIds).not.toContain(D_BOB);
   });
 
   it('tenant isolation: does not touch another tenant rows', async () => {
