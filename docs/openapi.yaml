@@ -18227,6 +18227,26 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "500":
           $ref: "#/components/responses/ServerError"
+  /api/player/dashboard:
+    get:
+      tags:
+        - public/auth
+      summary: Donnees agregees de l'espace joueur (equipe, demandes, scrims, messages, prochain match + readiness).
+      operationId: getPlayerDashboard
+      security:
+        - PlayerBearer: []
+      responses:
+        "200":
+          description: Payload agrege du dashboard joueur. Les sections capitaine (scrims, messages) sont vides pour un non-capitaine.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
   /api/player/next-match:
     get:
       tags:

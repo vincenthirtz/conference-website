@@ -48,7 +48,16 @@
     "backToSite": "← Retour au site",
     "viewTournaments": "Voir les tournois",
     "leaveError": "Impossible de quitter l'équipe pour le moment. Réessayez dans un instant.",
-    "cancelError": "Impossible d'annuler la demande pour le moment. Réessayez dans un instant."
+    "cancelError": "Impossible d'annuler la demande pour le moment. Réessayez dans un instant.",
+    "readinessTitle": "Préparation du match",
+    "readinessRosterWarning": "Il te manque {n} joueuse(s) avant ton match.",
+    "readinessRosterOk": "Ton effectif est au complet pour ce match.",
+    "readinessCheckinLabel": "Check-in :",
+    "readinessCheckinDone": "✓ fait",
+    "readinessCheckinTodo": "à valider",
+    "readinessCheckinClosed": "fermé",
+    "readinessCheckinAction": "Faire le check-in",
+    "readinessViewMatch": "Voir le match"
   },
   "copyButton": {
     "copy": "Copier",
@@ -429,7 +438,11 @@
     "specialtySupport": "Support",
     "specialtyFlex": "Flex",
     "specialtyNone": "Non précisée",
-    "specialtyError": "Impossible de mettre à jour le rôle en jeu."
+    "specialtyError": "Impossible de mettre à jour le rôle en jeu.",
+    "onboardingTitle": "Invite ta première joueuse",
+    "onboardingBody": "Ton roster est vide pour l'instant. Ouvre le recrutement et partage la page publique de l'équipe pour recevoir des demandes.",
+    "onboardingCta": "Voir la page de l'équipe",
+    "removeConsequences": "Conséquences : perte d'éligibilité au tournoi et des messages liés."
   },
   "newTeamForm": {
     "invalidEmail": "Email invalide",

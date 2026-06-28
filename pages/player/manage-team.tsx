@@ -6,6 +6,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useManagedTeam } from '@/hooks/useManagedTeam';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import CopyButton from '@/components/player/CopyButton';
 import { useT, format } from '@/lib/i18n/useT';
@@ -59,8 +60,16 @@ export default function ManageTeamPage() {
   const locale = lang === 'fr' ? 'fr-FR' : 'en-US';
   const { loading: authLoading, ready } = usePlayerSession();
   const { adminFetchJson } = useAdminFetch();
-  const [loading, setLoading] = useState(true);
+  const {
+    data: managedTeam,
+    loading: teamLoading,
+    reload: reloadTeam,
+  } = useManagedTeam();
+  const [requestsLoading, setRequestsLoading] = useState(true);
 
+  // Team / roster / role flags are sourced from the shared useManagedTeam
+  // cache. We mirror them into local state so the existing optimistic updates
+  // (remove member, role change) keep working without an extra round-trip.
   const [team, setTeam] = useState<TeamInfo | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [isCaptain, setIsCaptain] = useState(false);
@@ -74,26 +83,21 @@ export default function ManageTeamPage() {
   const [pendingPromotion, setPendingPromotion] = useState<string | null>(null);
   const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const loadData = useCallback(async () => {
-    const [teamData, requestsData] = await Promise.all([
-      adminFetchJson<{
-        team?: TeamInfo;
-        members?: Member[];
-        isCaptain?: boolean;
-        isManager?: boolean;
-      }>('/api/admin/teams/my').catch(() => null),
-      adminFetchJson<{ demandes?: JoinRequest[] }>(
-        '/api/teams/join-requests'
-      ).catch(() => null),
-    ]);
+  const loading = authLoading || teamLoading || requestsLoading;
 
-    if (teamData) {
-      setTeam(teamData.team || null);
-      setMembers(teamData.members || []);
-      setIsCaptain(teamData.isCaptain || false);
-      setIsManager(teamData.isManager || false);
-    }
+  // Sync local mirror whenever the shared team payload changes.
+  useEffect(() => {
+    if (!managedTeam) return;
+    setTeam((managedTeam.team as TeamInfo) || null);
+    setMembers((managedTeam.members as Member[]) || []);
+    setIsCaptain(managedTeam.isCaptain);
+    setIsManager(managedTeam.isManager);
+  }, [managedTeam]);
 
+  const loadJoinRequests = useCallback(async () => {
+    const requestsData = await adminFetchJson<{ demandes?: JoinRequest[] }>(
+      '/api/teams/join-requests'
+    ).catch(() => null);
     if (requestsData) {
       setJoinRequests(requestsData.demandes || []);
     }
@@ -102,18 +106,18 @@ export default function ManageTeamPage() {
   useEffect(() => {
     if (!ready) return;
     let cancelled = false;
-    setLoading(true);
-    loadData()
+    setRequestsLoading(true);
+    loadJoinRequests()
       .catch(() => {
         if (!cancelled) setError(t.loadError);
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setRequestsLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [ready, loadData, t]);
+  }, [ready, loadJoinRequests, t]);
 
   const showSuccess = (msg: string) => {
     setSuccessMsg(msg);
@@ -141,6 +145,7 @@ export default function ManageTeamPage() {
       setTeam((prev) =>
         prev ? { ...prev, is_joinable: data.is_joinable } : prev
       );
+      void reloadTeam();
       showSuccess(data.is_joinable ? t.recruitmentOpen : t.recruitmentClosed);
     } catch (err: unknown) {
       setError((err as Error).message);
@@ -160,6 +165,8 @@ export default function ManageTeamPage() {
       });
       setMembers((prev) => prev.filter((m) => m.id !== memberId));
       setPendingRemoval(null);
+      // Keep the shared cache in sync for other player pages (silent).
+      void reloadTeam();
       showSuccess(t.memberRemoved);
     } catch (err: unknown) {
       setError((err as Error).message);
@@ -186,6 +193,7 @@ export default function ManageTeamPage() {
             : m
         )
       );
+      void reloadTeam();
       showSuccess(t.roleUpdated);
     } catch (err: unknown) {
       setError((err as Error).message);
@@ -204,7 +212,7 @@ export default function ManageTeamPage() {
         body: JSON.stringify({ newCaptainUserId: member.user_id }),
       });
       setPendingPromotion(null);
-      await loadData();
+      await reloadTeam();
       showSuccess(
         format(t.promoteSuccess, { name: member.battle_tag || t.unknown })
       );
@@ -229,7 +237,7 @@ export default function ManageTeamPage() {
         method: 'PATCH',
         body: JSON.stringify({ memberId, specialty }),
       });
-      await loadData();
+      await reloadTeam();
     } catch (err: unknown) {
       setError((err as Error).message || t.specialtyError);
     } finally {
@@ -250,7 +258,7 @@ export default function ManageTeamPage() {
       });
       setJoinRequests((prev) => prev.filter((r) => r.id !== demandeId));
       if (action === 'approve') {
-        await loadData();
+        await reloadTeam();
       }
       showSuccess(action === 'approve' ? t.playerAccepted : t.requestRejected);
     } catch (err: unknown) {
@@ -367,6 +375,37 @@ export default function ManageTeamPage() {
                 { count: members.length }
               )}
             </h2>
+            {members.filter((m) => !m.is_captain).length === 0 ? (
+              <div className="rounded-xl border border-purple-500/30 bg-purple-500/10 px-4 py-5 text-center">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-purple-500/20 flex items-center justify-center">
+                  <svg
+                    className="w-6 h-6 text-purple-300"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
+                    />
+                  </svg>
+                </div>
+                <p className="text-sm font-semibold text-purple-100 mb-1">
+                  {t.onboardingTitle}
+                </p>
+                <p className="text-xs text-purple-200/80 mb-4">
+                  {t.onboardingBody}
+                </p>
+                <Link
+                  href={`/team/${encodeURIComponent(team.slug || team.id)}`}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-sm font-semibold transition"
+                >
+                  {t.onboardingCta}
+                </Link>
+              </div>
+            ) : null}
             <div className="space-y-3">
               {members.map((m) => (
                 <div
@@ -410,6 +449,9 @@ export default function ManageTeamPage() {
                             {format(t.removeConfirm, {
                               name: m.battle_tag || t.unknown,
                             })}
+                            <span className="block text-[11px] text-red-300/80 mt-0.5">
+                              {t.removeConsequences}
+                            </span>
                           </span>
                           <button
                             onClick={() => handleRemoveMember(m.id)}

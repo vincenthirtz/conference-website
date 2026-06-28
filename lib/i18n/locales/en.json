@@ -48,7 +48,16 @@
     "backToSite": "← Back to site",
     "viewTournaments": "View tournaments",
     "leaveError": "Couldn't leave the team right now. Please try again in a moment.",
-    "cancelError": "Couldn't cancel the request right now. Please try again in a moment."
+    "cancelError": "Couldn't cancel the request right now. Please try again in a moment.",
+    "readinessTitle": "Match readiness",
+    "readinessRosterWarning": "You are short {n} player(s) before your match.",
+    "readinessRosterOk": "Your roster is complete for this match.",
+    "readinessCheckinLabel": "Check-in:",
+    "readinessCheckinDone": "✓ done",
+    "readinessCheckinTodo": "to confirm",
+    "readinessCheckinClosed": "closed",
+    "readinessCheckinAction": "Check in",
+    "readinessViewMatch": "View match"
   },
   "copyButton": {
     "copy": "Copy",
@@ -429,7 +438,11 @@
     "specialtySupport": "Support",
     "specialtyFlex": "Flex",
     "specialtyNone": "Not specified",
-    "specialtyError": "Could not update the in-game role."
+    "specialtyError": "Could not update the in-game role.",
+    "onboardingTitle": "Invite your first player",
+    "onboardingBody": "Your roster is empty for now. Open recruitment and share your team's public page to start receiving requests.",
+    "onboardingCta": "View team page",
+    "removeConsequences": "Consequences: loss of tournament eligibility and related messages."
   },
   "newTeamForm": {
     "invalidEmail": "Invalid email",

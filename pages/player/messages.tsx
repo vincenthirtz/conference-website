@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useManagedTeam } from '@/hooks/useManagedTeam';
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
 import { useDebounce } from '@/hooks/useDebounce';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
@@ -63,10 +64,10 @@ export default function MessagesPage() {
   const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
   const { loading: authLoading, ready } = usePlayerSession();
   const { adminFetchJson } = useAdminFetch();
-  const [loading, setLoading] = useState(true);
-  const [isCaptain, setIsCaptain] = useState(false);
-  const [isManager, setIsManager] = useState(false);
-  const [hasTeam, setHasTeam] = useState(false);
+  const { data: managedTeam, loading: teamLoading } = useManagedTeam();
+  const isCaptain = managedTeam?.isCaptain ?? false;
+  const isManager = managedTeam?.isManager ?? false;
+  const hasTeam = !!managedTeam?.team;
 
   // Inbox
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -102,33 +103,15 @@ export default function MessagesPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const loading = authLoading || teamLoading;
+
+  // Seed myTeamId from the shared team payload. openConversation later
+  // overwrites it with the per-conversation value from the API, so we only
+  // set it from the cache when we don't already have one.
   useEffect(() => {
-    if (!ready) return;
-    let cancelled = false;
-    setLoading(true);
-    (async () => {
-      try {
-        const data = await adminFetchJson<{
-          team?: { id: string };
-          isCaptain?: boolean;
-          isManager?: boolean;
-        }>('/api/admin/teams/my');
-        if (data.team && !cancelled) {
-          setHasTeam(true);
-          setMyTeamId(data.team.id);
-          setIsCaptain(data.isCaptain || false);
-          setIsManager(data.isManager || false);
-        }
-      } catch (err) {
-        logger.error('[messages] team load error:', err);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [ready, adminFetchJson]);
+    const teamId = managedTeam?.team?.id ?? null;
+    if (teamId) setMyTeamId((prev) => prev ?? teamId);
+  }, [managedTeam]);
 
   const loadConversations = useCallback(async () => {
     setConvLoading(true);
@@ -612,6 +595,10 @@ export default function MessagesPage() {
                             <img
                               src={t.logo_url}
                               alt=""
+                              width={32}
+                              height={32}
+                              loading="lazy"
+                              decoding="async"
                               className="w-full h-full object-cover"
                             />
                           ) : (

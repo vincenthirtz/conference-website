@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useManagedTeam } from '@/hooks/useManagedTeam';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import { useT, format } from '@/lib/i18n/useT';
 
@@ -27,15 +28,19 @@ type Team = {
 export default function PlayerRequestsPage() {
   const router = useRouter();
   const { user, token, loading: authLoading, ready } = usePlayerSession();
+  const {
+    data: managedTeam,
+    loading: teamLoading,
+    error: teamError,
+  } = useManagedTeam();
   const t = useT('playerRequests');
-  const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>('transfer');
 
-  // Contexte joueur
-  const [hasTeam, setHasTeam] = useState(false);
-  const [isCaptain, setIsCaptain] = useState(false);
-  const [isManager, setIsManager] = useState(false);
-  const [myTeamId, setMyTeamId] = useState<string | null>(null);
+  // Contexte joueur — derive depuis le cache partage useManagedTeam.
+  const hasTeam = !!managedTeam?.team;
+  const isCaptain = managedTeam?.isCaptain ?? false;
+  const isManager = managedTeam?.isManager ?? false;
+  const myTeamId = managedTeam?.team?.id ?? null;
 
   // Equipes
   const [teams, setTeams] = useState<Team[]>([]);
@@ -90,47 +95,40 @@ export default function PlayerRequestsPage() {
     []
   );
 
+  const loading = authLoading || teamLoading;
+
+  // Surface a connection error if the shared team fetch failed.
   useEffect(() => {
-    if (!ready || !token || !user) return;
-    let cancelled = false;
-    setLoading(true);
-    (async () => {
-      try {
-        const teamRes = await fetch('/api/admin/teams/my', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (teamRes.ok) {
-          const data = await teamRes.json();
-          if (data.team && !cancelled) {
-            setHasTeam(true);
-            setMyTeamId(data.team.id);
-            setIsCaptain(data.isCaptain || false);
-            setIsManager(data.isManager || false);
-            if (data.isCaptain || data.isManager) {
-              setTeamMembers(
-                (data.members || []).filter(
-                  (m: { user_id: string }) => m.user_id !== user.id
-                )
-              );
-            }
-          }
-        }
-
-        const urlTab = router.query.tab;
-        if (urlTab === 'scrim' && !cancelled) setTab('scrim');
-      } catch (err) {
-        logger.error('[requests] auth error:', err);
-        if (!cancelled) setError(t.connectionError);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    if (teamError) setError(t.connectionError);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, token, user, router.query.tab]);
+  }, [teamError]);
+
+  // Derive the transfer-target roster (captains/managers can propose a
+  // teammate) from the shared payload, excluding the current user.
+  useEffect(() => {
+    if (!user || !managedTeam?.team) {
+      setTeamMembers([]);
+      return;
+    }
+    if (managedTeam.isCaptain || managedTeam.isManager) {
+      setTeamMembers(
+        managedTeam.members
+          .filter((m) => m.user_id && m.user_id !== user.id)
+          .map((m) => ({
+            user_id: m.user_id as string,
+            role: m.role ?? 'player',
+            battle_tag: m.battle_tag,
+          }))
+      );
+    } else {
+      setTeamMembers([]);
+    }
+  }, [user, managedTeam]);
+
+  // Pre-select the scrim tab from the URL.
+  useEffect(() => {
+    if (router.query.tab === 'scrim') setTab('scrim');
+  }, [router.query.tab]);
 
   // Recharge la liste d'equipes quand la recherche (debouncee) change.
   useEffect(() => {
@@ -814,6 +812,10 @@ function TeamList({
                 <img
                   src={team.logo_url}
                   alt=""
+                  width={40}
+                  height={40}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover"
                 />
               ) : (

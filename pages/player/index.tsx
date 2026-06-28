@@ -68,6 +68,49 @@ type PendingScrim = {
   } | null;
 };
 
+// Mirror of the next-match slice the aggregated /api/player/dashboard returns
+// (same shape as NextMatchCard's NextMatch, plus the readiness block).
+type NextMatchData = {
+  match: {
+    id: string;
+    scheduledAt: string | null;
+    status: string;
+    format: string | null;
+    roundName: string | null;
+    streamUrl: string | null;
+    bestOf: number | null;
+  } | null;
+  team: { id: string; name: string; slot: 1 | 2 } | null;
+  opponent: { id: string; name: string } | null;
+  tournament: { id: string; name: string; slug: string | null } | null;
+  checkin: {
+    token: string | null;
+    alreadyCheckedIn: boolean;
+    checkedInAt: string | null;
+    opensAt: string | null;
+    closesAt: string | null;
+    isOpen: boolean;
+    isPassed: boolean;
+  } | null;
+  readiness: {
+    minPlayers: number | null;
+    rosterSize: number;
+    shortfall: number;
+  } | null;
+};
+
+type DashboardResponse = {
+  team?: TeamInfo;
+  members?: TeamMemberLite[];
+  isCaptain?: boolean;
+  isManager?: boolean;
+  demandesCaptain?: Demande[];
+  demandesJoin?: Demande[];
+  pendingScrims?: PendingScrim[];
+  unreadMessages?: number;
+  nextMatch?: NextMatchData;
+};
+
 const SVG_PATHS = {
   transfer: 'M16 3h5v5M21 3l-7 7M8 21H3v-5M3 21l7-7',
   scrim: 'M22 12a10 10 0 11-20 0 10 10 0 0120 0zM10 8l6 4-6 4z',
@@ -139,6 +182,94 @@ function buildQuickActions(args: {
   return actions;
 }
 
+// Product card — "Match readiness". Renders only when there is an upcoming
+// match. Surfaces (a) a roster-shortfall warning when the team is below the
+// tournament min_players, and (b) the per-team check-in status for that match.
+//
+// Visually consistent with the other dashboard cards (rounded-2xl, border,
+// blurred translucent surface).
+function MatchReadinessCard({
+  nextMatch,
+  t,
+}: {
+  nextMatch: NextMatchData | null;
+  t: ReturnType<typeof useT<'playerIndex'>>;
+}) {
+  if (!nextMatch?.match || !nextMatch.team) return null;
+
+  // New keys live in the i18n fragment (merged separately); bridge them here so
+  // this stays decoupled from the typed locale until the fragment lands.
+  const tr = t as unknown as Record<string, string>;
+
+  const readiness = nextMatch.readiness;
+  const shortfall = readiness?.shortfall ?? 0;
+  const hasWarning = shortfall > 0;
+
+  const checkin = nextMatch.checkin;
+  const matchHref = `/match/${nextMatch.match.id}`;
+
+  let checkinStatus: string;
+  if (checkin?.alreadyCheckedIn) checkinStatus = tr.readinessCheckinDone;
+  else if (checkin?.isPassed) checkinStatus = tr.readinessCheckinClosed;
+  else checkinStatus = tr.readinessCheckinTodo;
+
+  const needsCheckin =
+    !!checkin && !checkin.alreadyCheckedIn && !checkin.isPassed;
+
+  return (
+    <div
+      className={`mt-6 rounded-2xl border backdrop-blur-xl p-6 ${
+        hasWarning
+          ? 'border-amber-400/30 bg-amber-500/[0.06]'
+          : 'border-white/10 bg-white/[0.03]'
+      }`}
+    >
+      <h2 className="text-lg font-semibold mb-3">{tr.readinessTitle}</h2>
+
+      {hasWarning ? (
+        <div className="mb-4 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          {format(tr.readinessRosterWarning, { n: shortfall })}
+        </div>
+      ) : (
+        <p className="mb-4 text-sm text-gray-300">{tr.readinessRosterOk}</p>
+      )}
+
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        <span className="text-gray-400">{tr.readinessCheckinLabel}</span>
+        <span
+          className={
+            checkin?.alreadyCheckedIn
+              ? 'text-emerald-300 font-medium'
+              : checkin?.isPassed
+                ? 'text-rose-300 font-medium'
+                : 'text-amber-200 font-medium'
+          }
+        >
+          {checkinStatus}
+        </span>
+
+        {needsCheckin && checkin?.token && checkin.isOpen ? (
+          <Link
+            href="/player/checkin"
+            className="ml-auto inline-flex items-center gap-1 rounded-full bg-white px-4 py-1.5 text-xs font-semibold text-neutral-900 transition hover:-translate-y-0.5"
+          >
+            {tr.readinessCheckinAction}
+            <span aria-hidden>→</span>
+          </Link>
+        ) : (
+          <Link
+            href={matchHref}
+            className="ml-auto inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-xs font-medium text-white transition hover:bg-white/10"
+          >
+            {tr.readinessViewMatch}
+            <span aria-hidden>→</span>
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function PlayerDashboard() {
   const t = useT('playerIndex');
   const { lang } = useLang();
@@ -154,70 +285,43 @@ function PlayerDashboard() {
   const [scrimActionId, setScrimActionId] = useState<string | null>(null);
   const [scrimError, setScrimError] = useState<string | null>(null);
   const [unreadMessages, setUnreadMessages] = useState(0);
+  const [nextMatch, setNextMatch] = useState<NextMatchData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Single aggregated call (one request, one wave). Each section is optional in
+  // the payload and defaulted defensively, so a server-side section failure
+  // (returned as empty/null) never blanks out the rest of the dashboard.
   const loadData = useCallback(async () => {
-    const [teamData, captainData, joinData] = await Promise.all([
-      adminFetchJson<{
-        team?: TeamInfo;
-        members?: TeamMemberLite[];
-        isCaptain?: boolean;
-        isManager?: boolean;
-      }>('/api/admin/teams/my').catch(() => null),
-      adminFetchJson<{ demandes?: Demande[] }>('/api/demandes/captain').catch(
-        () => null
-      ),
-      adminFetchJson<{ demandes?: Demande[] }>('/api/demandes/join').catch(
-        () => null
-      ),
-    ]);
+    const data = await adminFetchJson<DashboardResponse>(
+      '/api/player/dashboard'
+    ).catch(() => null);
 
-    let isCaptainNow = false;
-    let isManagerNow = false;
-
-    if (teamData) {
-      setTeam(teamData.team || null);
-      setMembers(Array.isArray(teamData.members) ? teamData.members : []);
-      isCaptainNow = teamData.isCaptain || false;
-      isManagerNow = teamData.isManager || false;
-      setIsCaptain(isCaptainNow);
-      setIsManager(isManagerNow);
+    if (!data) {
+      throw new Error('dashboard fetch failed');
     }
 
-    const allDemandes: Demande[] = [];
-    if (captainData) allDemandes.push(...(captainData.demandes || []));
-    if (joinData) allDemandes.push(...(joinData.demandes || []));
+    setTeam(data.team || null);
+    setMembers(Array.isArray(data.members) ? data.members : []);
+    setIsCaptain(data.isCaptain || false);
+    setIsManager(data.isManager || false);
 
+    const allDemandes: Demande[] = [
+      ...(data.demandesCaptain || []),
+      ...(data.demandesJoin || []),
+    ];
     allDemandes.sort(
       (a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
-
     setDemandes(allDemandes);
 
-    // Captain or manager: load pending scrims and unread messages
-    if (isCaptainNow || isManagerNow) {
-      const [scrimData, msgData] = await Promise.all([
-        adminFetchJson<{ demandes?: PendingScrim[] }>(
-          '/api/teams/scrim-requests'
-        ).catch(() => null),
-        adminFetchJson<{ conversations?: { unreadCount: number }[] }>(
-          '/api/player/messages'
-        ).catch(() => null),
-      ]);
-
-      if (scrimData) {
-        setPendingScrims(scrimData.demandes || []);
-      }
-
-      if (msgData) {
-        const total = (msgData.conversations || []).reduce(
-          (sum: number, c: { unreadCount: number }) => sum + c.unreadCount,
-          0
-        );
-        setUnreadMessages(total);
-      }
-    }
+    setPendingScrims(
+      Array.isArray(data.pendingScrims) ? data.pendingScrims : []
+    );
+    setUnreadMessages(
+      typeof data.unreadMessages === 'number' ? data.unreadMessages : 0
+    );
+    setNextMatch(data.nextMatch ?? null);
   }, [adminFetchJson]);
 
   useEffect(() => {
@@ -364,7 +468,9 @@ function PlayerDashboard() {
 
           <DiscordLinkCard />
 
-          <NextMatchCard />
+          <NextMatchCard initialData={nextMatch} />
+
+          <MatchReadinessCard nextMatch={nextMatch} t={t} />
 
           {/* Rejoindre le cast — toujours visible (indépendant de l'équipe) */}
           {!team && (

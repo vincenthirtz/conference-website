@@ -43,11 +43,7 @@ function formatScheduled(iso: string | null, lang: Lang, t: T): string {
   });
 }
 
-function formatRelative(
-  iso: string | null,
-  now: number,
-  t: T
-): string | null {
+function formatRelative(iso: string | null, now: number, t: T): string | null {
   if (!iso) return null;
   const ms = new Date(iso).getTime() - now;
   if (!Number.isFinite(ms)) return null;
@@ -66,12 +62,26 @@ function formatRelative(
     : format(t.agoFmt, { parts: joined });
 }
 
-export default function NextMatchCard(): JSX.Element | null {
+type Props = {
+  /**
+   * Optional pre-fetched next-match payload (e.g. from the aggregated
+   * /api/player/dashboard call). When provided, the card seeds from it and
+   * skips the initial network fetch; the 60s self-refresh still runs so the
+   * relative clock and check-in window stay accurate.
+   */
+  initialData?: NextMatch | null;
+};
+
+export default function NextMatchCard({
+  initialData,
+}: Props = {}): JSX.Element | null {
   const { adminFetchJson } = useAdminFetch();
   const { lang } = useLang();
   const t = useT('nextMatchCard');
-  const [data, setData] = useState<NextMatch | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<NextMatch | null>(initialData ?? null);
+  // When parent supplies data, we already have something to render: don't show
+  // the loading (hidden) state on mount.
+  const [loading, setLoading] = useState(initialData === undefined);
   const [now, setNow] = useState<number>(() => Date.now());
 
   const load = useCallback(async () => {
@@ -87,9 +97,18 @@ export default function NextMatchCard(): JSX.Element | null {
     }
   }, [adminFetchJson]);
 
+  // Keep in sync if the parent re-supplies a payload (e.g. after loadData).
   useEffect(() => {
-    // Initial load always runs on mount, even if the tab starts hidden.
-    load();
+    if (initialData !== undefined) {
+      setData(initialData);
+      setLoading(false);
+    }
+  }, [initialData]);
+
+  useEffect(() => {
+    // Skip the initial fetch when the parent already provided data; the
+    // interval below still refreshes on a timer.
+    if (initialData === undefined) load();
 
     // Single 60s interval: refetches the payload and ticks the relative clock
     // (minute granularity). Both are skipped while the tab is backgrounded to
@@ -113,7 +132,7 @@ export default function NextMatchCard(): JSX.Element | null {
       clearInterval(id);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [load]);
+  }, [load, initialData]);
 
   if (loading) {
     // Hide while loading to avoid layout flash; the rest of the dashboard
@@ -218,8 +237,7 @@ export default function NextMatchCard(): JSX.Element | null {
             href="/player/checkin"
             className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-gray-300 transition hover:bg-white/10"
           >
-            {t.checkin}{' '}
-            {formatRelative(checkin.opensAt, now, t) ?? t.soon}
+            {t.checkin} {formatRelative(checkin.opensAt, now, t) ?? t.soon}
           </Link>
         ) : null}
       </div>
