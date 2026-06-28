@@ -445,6 +445,81 @@ export function sendMatchCheckinEmail(opts: {
 }
 
 /**
+ * Urgent check-in reminder sent at T-30 / T-15 to captains who have not yet
+ * checked in. Uses the SAME check-in link/token as `sendMatchCheckinEmail`.
+ * Critical-transactional — sent unconditionally (a missed reminder = forfeit),
+ * no opt-out consulted, consistent with the T-60 check-in email.
+ */
+export function sendCheckinReminderEmail(opts: {
+  to: string;
+  teamName: string;
+  opponentName: string;
+  scheduledAt: string;
+  checkinUrl: string;
+  tournamentName: string;
+  minutesBeforeKickoff: number;
+}): Promise<SendEmailResult> {
+  const dateStr = (() => {
+    try {
+      return new Date(opts.scheduledAt).toLocaleString('fr-FR', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'Europe/Paris',
+      });
+    } catch {
+      return opts.scheduledAt;
+    }
+  })();
+
+  const mins = opts.minutesBeforeKickoff;
+
+  return sendEmail({
+    to: opts.to,
+    subject: `⏰ Check-in dans ${mins} min — ${opts.teamName} vs ${opts.opponentName}`,
+    tags: ['match-checkin-reminder'],
+    html: emailLayout(`
+      ${gradientBar()}
+      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Dernier rappel — check-in</h1>
+      <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
+        Votre match commence dans <strong style="color:#ff9c29;">${mins} minutes</strong>
+        et votre &eacute;quipe n&apos;a <strong style="color:#e74694;">toujours pas confirm&eacute; sa pr&eacute;sence</strong>.
+        Confirmez maintenant pour &eacute;viter le forfait automatique.
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:rgba(255,255,255,0.05);border-radius:10px;border:1px solid rgba(255,255,255,0.08);margin:0 0 24px;">
+        <tr>
+          <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
+            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Tournoi</span><br/>
+            <span style="font-size:15px;color:#ffffff;font-weight:500;">${escapeHtml(opts.tournamentName)}</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
+            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Match</span><br/>
+            <span style="font-size:15px;color:#ffffff;font-weight:500;">${escapeHtml(opts.teamName)} vs ${escapeHtml(opts.opponentName)}</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:14px 20px;">
+            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">D&eacute;but pr&eacute;vu</span><br/>
+            <span style="font-size:15px;color:#2dccfd;font-weight:500;">${escapeHtml(dateStr)}</span>
+          </td>
+        </tr>
+      </table>
+      <p style="margin:0 0 8px;font-size:13px;color:#e74694;line-height:1.5;background:rgba(231,70,148,0.08);border:1px solid rgba(231,70,148,0.15);border-radius:8px;padding:10px 14px;">
+        Sans check-in avant le d&eacute;but du match, votre &eacute;quipe sera d&eacute;clar&eacute;e <strong>forfait</strong> automatiquement.
+      </p>
+      ${ctaButton(opts.checkinUrl, 'Confirmer ma présence maintenant')}
+      <p style="margin:24px 0 0;font-size:12px;color:#675788;line-height:1.5;text-align:center;">
+        Lien direct&nbsp;: <a href="${opts.checkinUrl}" style="color:#9081B0;">${escapeHtml(opts.checkinUrl)}</a>
+      </p>
+    `),
+  });
+}
+
+/**
  * Confirmation email sent to a support ticket reporter (only when not anonymous).
  */
 export function sendSupportConfirmationEmail(opts: {

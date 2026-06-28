@@ -12,7 +12,7 @@
 
 import crypto from 'crypto';
 import { supabaseAdmin } from './supabase';
-import { sendMatchCheckinEmail } from './email';
+import { sendMatchCheckinEmail, sendCheckinReminderEmail } from './email';
 import { notifyCheckinReminder, notifyCheckinForfeit } from './discord';
 import { applyMatchScore } from './matches/applyScore';
 import { emitBotEvent } from './botEvents';
@@ -234,6 +234,38 @@ async function getCaptainEmail(
   }
 }
 
+/**
+ * Resolve the captain email for a team and send the urgent check-in reminder.
+ * Fully fail-safe: any error (no email on file, Brevo failure, etc.) is caught
+ * and logged so it never breaks the reminder step or the forfeit pipeline.
+ */
+async function sendReminderEmailSafely(opts: {
+  tenantId: string;
+  teamId: string;
+  teamName: string;
+  opponentName: string;
+  scheduledAt: string;
+  checkinUrl: string;
+  tournamentName: string;
+  minutesBeforeKickoff: number;
+}): Promise<void> {
+  try {
+    const email = await getCaptainEmail(opts.tenantId, opts.teamId);
+    if (!email) return;
+    await sendCheckinReminderEmail({
+      to: email,
+      teamName: opts.teamName,
+      opponentName: opts.opponentName,
+      scheduledAt: opts.scheduledAt,
+      checkinUrl: opts.checkinUrl,
+      tournamentName: opts.tournamentName,
+      minutesBeforeKickoff: opts.minutesBeforeKickoff,
+    });
+  } catch (e) {
+    logger.error('[checkin] sendCheckinReminderEmail error:', e);
+  }
+}
+
 /* -----------------------------------------------------------
  * Per-match orchestration (the actual state machine)
  * ---------------------------------------------------------*/
@@ -449,6 +481,7 @@ async function runReminderStep(
   // Ping each team that hasn't checked in
   const team1Name = match.team1?.name || 'Équipe 1';
   const team2Name = match.team2?.name || 'Équipe 2';
+  const tournamentName = match.tournament?.name || "OW Women's Cup";
 
   const pings: Promise<unknown>[] = [];
 
@@ -484,6 +517,37 @@ async function runReminderStep(
 
   if (pings.length > 0) {
     await Promise.allSettled(pings);
+  }
+
+  // Email reminder ALONGSIDE the Discord ping — for captains without Discord.
+  // Critical-transactional: sent unconditionally (no opt-out), like the T-60
+  // email. The whole step is gated by reminder_{30,15}_sent_at, so this runs
+  // exactly once per match per step (idempotent — no double-send). Each send
+  // is fire-and-forget with its own try/catch so an email failure never breaks
+  // the step or the downstream forfeit pipeline.
+  if (!match.team1_checked_in_at && team1Token) {
+    await sendReminderEmailSafely({
+      tenantId: match.tenant_id,
+      teamId: match.team1_id!,
+      teamName: team1Name,
+      opponentName: team2Name,
+      scheduledAt: match.scheduled_at!,
+      checkinUrl: buildCheckinUrl(team1Token),
+      tournamentName,
+      minutesBeforeKickoff: minutes,
+    });
+  }
+  if (!match.team2_checked_in_at && team2Token) {
+    await sendReminderEmailSafely({
+      tenantId: match.tenant_id,
+      teamId: match.team2_id!,
+      teamName: team2Name,
+      opponentName: team1Name,
+      scheduledAt: match.scheduled_at!,
+      checkinUrl: buildCheckinUrl(team2Token),
+      tournamentName,
+      minutesBeforeKickoff: minutes,
+    });
   }
 
   const field = minutes === 30 ? 'reminder_30_sent_at' : 'reminder_15_sent_at';

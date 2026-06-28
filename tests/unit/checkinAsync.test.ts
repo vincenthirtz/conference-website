@@ -2,17 +2,22 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const {
   sendMatchCheckinEmail,
+  sendCheckinReminderEmail,
   notifyCheckinReminder,
   notifyCheckinForfeit,
   applyMatchScore,
 } = vi.hoisted(() => ({
   sendMatchCheckinEmail: vi.fn(async () => ({ ok: true as const })),
+  sendCheckinReminderEmail: vi.fn(async () => ({ ok: true as const })),
   notifyCheckinReminder: vi.fn(async () => undefined),
   notifyCheckinForfeit: vi.fn(async () => undefined),
   applyMatchScore: vi.fn(async () => undefined),
 }));
 
-vi.mock('../../utils/email', () => ({ sendMatchCheckinEmail }));
+vi.mock('../../utils/email', () => ({
+  sendMatchCheckinEmail,
+  sendCheckinReminderEmail,
+}));
 vi.mock('../../utils/discord', () => ({
   notifyCheckinReminder,
   notifyCheckinForfeit,
@@ -103,6 +108,7 @@ function scheduledIn(minutesFromNow: number): string {
 beforeEach(() => {
   resetSupabaseMock();
   sendMatchCheckinEmail.mockClear();
+  sendCheckinReminderEmail.mockClear();
   notifyCheckinReminder.mockClear();
   notifyCheckinForfeit.mockClear();
   applyMatchScore.mockClear();
@@ -421,6 +427,16 @@ describe('processMatchCheckin — T-60 open step', () => {
  * ---------------------------------------------------------*/
 
 describe('processMatchCheckin — reminders', () => {
+  /** Seed both captains so getCaptainEmail resolves a real address. */
+  function seedCaptains() {
+    setAdminUser('captain-a', 'a@example.com');
+    setAdminUser('captain-b', 'b@example.com');
+    store.teams = [
+      { id: 'team-a', tenant_id: TENANT_ID, captain_id: 'captain-a' },
+      { id: 'team-b', tenant_id: TENANT_ID, captain_id: 'captain-b' },
+    ] as any;
+  }
+
   it('pings both teams at T-30 when neither is checked in', async () => {
     store.matches = [{ id: 'match-1', tenant_id: TENANT_ID }] as any;
 
@@ -452,6 +468,85 @@ describe('processMatchCheckin — reminders', () => {
 
     expect(r.steps).toContain('reminder_15 (1 pinged)');
     expect(notifyCheckinReminder).toHaveBeenCalledTimes(1);
+  });
+
+  it('emails both captains at T-30 with minutesBeforeKickoff=30 and the existing token', async () => {
+    seedCaptains();
+    store.matches = [{ id: 'match-1', tenant_id: TENANT_ID }] as any;
+
+    const m = buildMatchLite({
+      scheduled_at: scheduledIn(20),
+      team1_checkin_token: 'tok-1',
+      team2_checkin_token: 'tok-2',
+      checkin_email_sent_at: '2026-04-01T12:00:00.000Z',
+    });
+    await processMatchCheckin(m);
+
+    // Email sent alongside the Discord ping, never replacing it.
+    expect(notifyCheckinReminder).toHaveBeenCalledTimes(2);
+    expect(sendCheckinReminderEmail).toHaveBeenCalledTimes(2);
+
+    const calls = sendCheckinReminderEmail.mock.calls.map(
+      (c: any[]) => c[0]
+    ) as any[];
+    const teamA = calls.find((c) => c.teamName === 'Alpha');
+    const teamB = calls.find((c) => c.teamName === 'Bravo');
+
+    expect(teamA).toMatchObject({
+      to: 'a@example.com',
+      opponentName: 'Bravo',
+      minutesBeforeKickoff: 30,
+    });
+    // Reuses the existing token already on the match (no regeneration).
+    expect(teamA.checkinUrl).toMatch(/\/checkin\/tok-1$/);
+    expect(teamB).toMatchObject({
+      to: 'b@example.com',
+      opponentName: 'Alpha',
+      minutesBeforeKickoff: 30,
+    });
+    expect(teamB.checkinUrl).toMatch(/\/checkin\/tok-2$/);
+  });
+
+  it('emails only the un-checked-in captain at T-15 with minutesBeforeKickoff=15', async () => {
+    seedCaptains();
+    store.matches = [{ id: 'match-1', tenant_id: TENANT_ID }] as any;
+
+    const m = buildMatchLite({
+      scheduled_at: scheduledIn(10),
+      team1_checkin_token: 'tok-1',
+      team2_checkin_token: 'tok-2',
+      team1_checked_in_at: '2026-04-01T12:00:00.000Z', // Alpha already in
+      checkin_email_sent_at: '2026-04-01T12:00:00.000Z',
+      reminder_30_sent_at: '2026-04-01T12:00:00.000Z',
+    });
+    await processMatchCheckin(m);
+
+    // Alpha checked in -> no email; only Bravo gets reminded.
+    expect(sendCheckinReminderEmail).toHaveBeenCalledTimes(1);
+    const arg = (sendCheckinReminderEmail.mock.calls[0] as any[])[0];
+    expect(arg).toMatchObject({
+      to: 'b@example.com',
+      teamName: 'Bravo',
+      minutesBeforeKickoff: 15,
+    });
+  });
+
+  it('does not re-send the reminder email once reminder_30_sent_at is set (idempotency)', async () => {
+    seedCaptains();
+    store.matches = [{ id: 'match-1', tenant_id: TENANT_ID }] as any;
+
+    const m = buildMatchLite({
+      scheduled_at: scheduledIn(20), // inside the T-30 window
+      team1_checkin_token: 'tok-1',
+      team2_checkin_token: 'tok-2',
+      checkin_email_sent_at: '2026-04-01T12:00:00.000Z',
+      reminder_30_sent_at: '2026-04-01T12:00:00.000Z', // gate already closed
+    });
+    const r = await processMatchCheckin(m);
+
+    expect(r.steps.some((s) => s.startsWith('reminder_30'))).toBe(false);
+    expect(notifyCheckinReminder).not.toHaveBeenCalled();
+    expect(sendCheckinReminderEmail).not.toHaveBeenCalled();
   });
 });
 
