@@ -33,6 +33,15 @@ type CampaignSchedule = {
   failed: number;
 };
 
+type CampaignBody = {
+  heading: string;
+  greetingEnabled: boolean;
+  bodyParagraphs: string[];
+  ctaLabel: string | null;
+  ctaUrl: string | null;
+  footerNote: string | null;
+};
+
 type CampaignSummary = {
   id: string;
   name: string;
@@ -40,6 +49,8 @@ type CampaignSummary = {
   subject: string;
   status: 'active' | 'draft' | 'archived' | string;
   audience: string;
+  source: 'builtin' | 'db';
+  body: CampaignBody | null;
   stats: CampaignStats;
   schedule: CampaignSchedule | null;
 };
@@ -117,6 +128,16 @@ function AdminCampaignsPage(_props: Props) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const activeCampaign = campaigns.find((c) => c.id === activeId) ?? null;
 
+  // Create / edit form: `null` = closed, `'new'` = create, otherwise the
+  // db campaign currently being edited.
+  const [formTarget, setFormTarget] = useState<'new' | CampaignSummary | null>(
+    null
+  );
+
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
+  const { mutateJson } = useIdempotentMutation();
+  const { addToast } = useToast();
+
   const fetchCampaigns = useCallback(async () => {
     setLoading(true);
     setErrorMsg(null);
@@ -142,6 +163,32 @@ function AdminCampaignsPage(_props: Props) {
   useEffect(() => {
     fetchCampaigns();
   }, [fetchCampaigns]);
+
+  const deleteCampaign = useCallback(
+    async (campaign: CampaignSummary) => {
+      const ok = await confirm({
+        title: 'Supprimer cette campagne ?',
+        subtitle:
+          `La campagne « ${campaign.name} » sera définitivement supprimée. ` +
+          'Toute programmation par vagues associée est également annulée. ' +
+          'Cette action est irréversible.',
+        variant: 'danger',
+        confirmLabel: 'Supprimer',
+        cancelLabel: 'Annuler',
+      });
+      if (!ok) return;
+      try {
+        await mutateJson(`/api/admin/broadcast/${campaign.id}`, {
+          method: 'DELETE',
+        });
+        addToast(`Campagne « ${campaign.name} » supprimée.`, 'success');
+        await fetchCampaigns();
+      } catch (err: unknown) {
+        addToast((err as Error)?.message || 'Suppression échouée', 'error');
+      }
+    },
+    [confirm, mutateJson, addToast, fetchCampaigns]
+  );
 
   return (
     <>
@@ -187,8 +234,30 @@ function AdminCampaignsPage(_props: Props) {
                     : ''}
                 </p>
               </div>
-              <div className="text-xs text-neutral-500 bg-neutral-800/50 px-3 py-2 rounded-xl border border-neutral-700/50">
-                Brevo gratuit : 300 emails/jour
+              <div className="flex flex-col items-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFormTarget('new')}
+                  className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-semibold transition-colors flex items-center gap-2"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
+                  Créer une campagne
+                </button>
+                <div className="text-xs text-neutral-500 bg-neutral-800/50 px-3 py-2 rounded-xl border border-neutral-700/50">
+                  Brevo gratuit : 300 emails/jour
+                </div>
               </div>
             </div>
           </div>
@@ -227,11 +296,11 @@ function AdminCampaignsPage(_props: Props) {
             <div className="bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-10 text-center text-neutral-400">
               Aucune campagne disponible pour le moment.
               <p className="text-xs text-neutral-500 mt-2">
-                Les campagnes sont d&eacute;clar&eacute;es dans
-                <code className="mx-1 px-1.5 py-0.5 rounded bg-neutral-900 text-neutral-300 font-mono text-[11px]">
-                  utils/broadcasts.ts
-                </code>
-                .
+                Utilise le bouton
+                <span className="mx-1 px-1.5 py-0.5 rounded bg-neutral-900 text-neutral-300 font-medium text-[11px]">
+                  Créer une campagne
+                </span>
+                ci-dessus pour en composer une.
               </p>
             </div>
           ) : (
@@ -241,6 +310,8 @@ function AdminCampaignsPage(_props: Props) {
                   key={c.id}
                   campaign={c}
                   onOpen={() => setActiveId(c.id)}
+                  onEdit={() => setFormTarget(c)}
+                  onDelete={() => deleteCampaign(c)}
                 />
               ))}
             </div>
@@ -302,6 +373,19 @@ function AdminCampaignsPage(_props: Props) {
         </div>
       </div>
 
+      {confirmDialog}
+
+      {formTarget && (
+        <CampaignFormModal
+          campaign={formTarget === 'new' ? null : formTarget}
+          onClose={() => setFormTarget(null)}
+          onSaved={async () => {
+            setFormTarget(null);
+            await fetchCampaigns();
+          }}
+        />
+      )}
+
       {activeCampaign && (
         <CampaignDrawer
           campaign={activeCampaign}
@@ -322,9 +406,13 @@ export default AdminCampaignsPage;
 function CampaignCard({
   campaign,
   onOpen,
+  onEdit,
+  onDelete,
 }: {
   campaign: CampaignSummary;
   onOpen: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
 }) {
   const status = STATUS_STYLES[campaign.status] ?? {
     label: campaign.status,
@@ -332,6 +420,7 @@ function CampaignCard({
   };
   const audience = AUDIENCE_LABELS[campaign.audience] ?? campaign.audience;
   const isArchived = campaign.status === 'archived';
+  const editable = campaign.source === 'db';
 
   return (
     <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
@@ -349,27 +438,73 @@ function CampaignCard({
             {campaign.description}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onOpen}
-          disabled={isArchived}
-          className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium transition-colors flex items-center gap-2"
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        <div className="flex flex-wrap items-center gap-2">
+          {editable && (
+            <>
+              <button
+                type="button"
+                onClick={onEdit}
+                className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                  />
+                </svg>
+                Modifier
+              </button>
+              <button
+                type="button"
+                onClick={onDelete}
+                className="px-3 py-2 rounded-xl border border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
+                </svg>
+                Supprimer
+              </button>
+            </>
+          )}
+          <button
+            type="button"
+            onClick={onOpen}
+            disabled={isArchived}
+            className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium transition-colors flex items-center gap-2"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-            />
-          </svg>
-          Gérer
-        </button>
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+              />
+            </svg>
+            Gérer
+          </button>
+        </div>
       </div>
 
       <p className="text-xs text-neutral-500 italic mb-4 truncate">
@@ -1217,6 +1352,379 @@ function CampaignDrawer({
         )}
       </div>
     </>
+  );
+}
+
+const FORM_STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: 'draft', label: 'Brouillon' },
+  { value: 'active', label: 'Active' },
+  { value: 'archived', label: 'Archivée' },
+];
+
+function CampaignFormModal({
+  campaign,
+  onClose,
+  onSaved,
+}: {
+  campaign: CampaignSummary | null;
+  onClose: () => void;
+  onSaved: () => void | Promise<void>;
+}) {
+  const isEdit = campaign !== null;
+  const { mutateJson } = useIdempotentMutation();
+  const { addToast } = useToast();
+
+  const [name, setName] = useState(campaign?.name ?? '');
+  const [subject, setSubject] = useState(campaign?.subject ?? '');
+  const [description, setDescription] = useState(campaign?.description ?? '');
+  const [status, setStatus] = useState<string>(
+    campaign?.status === 'active' ||
+      campaign?.status === 'archived' ||
+      campaign?.status === 'draft'
+      ? campaign.status
+      : 'draft'
+  );
+  const [heading, setHeading] = useState(campaign?.body?.heading ?? '');
+  const [greetingEnabled, setGreetingEnabled] = useState(
+    campaign?.body?.greetingEnabled ?? true
+  );
+  const [bodyText, setBodyText] = useState(
+    campaign?.body?.bodyParagraphs?.join('\n\n') ?? ''
+  );
+  const [ctaLabel, setCtaLabel] = useState(campaign?.body?.ctaLabel ?? '');
+  const [ctaUrl, setCtaUrl] = useState(campaign?.body?.ctaUrl ?? '');
+  const [footerNote, setFooterNote] = useState(
+    campaign?.body?.footerNote ?? ''
+  );
+
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const bodyParagraphs = bodyText
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0);
+
+  const ctaLabelTrimmed = ctaLabel.trim();
+  const ctaUrlTrimmed = ctaUrl.trim();
+  const ctaMismatch =
+    (ctaLabelTrimmed && !ctaUrlTrimmed) || (!ctaLabelTrimmed && ctaUrlTrimmed);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setFormError(null);
+
+    if (!name.trim()) {
+      setFormError('Le nom est requis.');
+      return;
+    }
+    if (!subject.trim()) {
+      setFormError('L’objet est requis.');
+      return;
+    }
+    if (!heading.trim()) {
+      setFormError('Le titre de l’email est requis.');
+      return;
+    }
+    if (bodyParagraphs.length === 0) {
+      setFormError('Le corps doit contenir au moins un paragraphe.');
+      return;
+    }
+    if (ctaMismatch) {
+      setFormError(
+        'Le bouton requiert un libellé ET une URL (ou aucun des deux).'
+      );
+      return;
+    }
+
+    const payload: Record<string, unknown> = {
+      name: name.trim(),
+      subject: subject.trim(),
+      description: description.trim() || undefined,
+      status,
+      heading: heading.trim(),
+      greetingEnabled,
+      bodyParagraphs,
+      ctaLabel: ctaLabelTrimmed || undefined,
+      ctaUrl: ctaUrlTrimmed || undefined,
+      footerNote: footerNote.trim() || undefined,
+    };
+
+    setSubmitting(true);
+    try {
+      if (isEdit && campaign) {
+        await mutateJson(`/api/admin/broadcast/${campaign.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify(payload),
+        });
+        addToast(`Campagne « ${name.trim()} » mise à jour.`, 'success');
+      } else {
+        await mutateJson('/api/admin/broadcast', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+        addToast(`Campagne « ${name.trim()} » créée.`, 'success');
+      }
+      await onSaved();
+    } catch (err: unknown) {
+      const msg = (err as Error)?.message || 'Enregistrement échoué';
+      setFormError(msg);
+      addToast(msg, 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-stretch justify-end"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-2xl h-full bg-neutral-900 border-l border-neutral-700/50 overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 z-10 bg-neutral-900/95 backdrop-blur border-b border-neutral-800 px-6 py-4 flex items-center justify-between">
+          <div className="min-w-0">
+            <p className="text-xs uppercase tracking-wider text-neutral-500">
+              {isEdit ? 'Modifier' : 'Nouvelle campagne'}
+            </p>
+            <h2 className="text-lg font-semibold truncate">
+              {isEdit ? campaign?.name : 'Composer un email'}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-2 text-neutral-400 hover:bg-neutral-800 hover:text-white transition-colors"
+            aria-label="Fermer"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="px-6 py-6 space-y-5">
+          {/* Meta */}
+          <div className="grid grid-cols-1 gap-4">
+            <FormField label="Nom" required>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={120}
+                placeholder="Annonce ouverture des inscriptions"
+                className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              />
+            </FormField>
+
+            <FormField label="Objet de l’email" required>
+              <input
+                type="text"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                maxLength={200}
+                placeholder="Les inscriptions sont ouvertes !"
+                className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              />
+            </FormField>
+
+            <FormField
+              label="Description"
+              hint="Courte note interne, affichée dans la liste."
+            >
+              <input
+                type="text"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                maxLength={280}
+                placeholder="Email transactionnel envoyé aux confirmés"
+                className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              />
+            </FormField>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField label="Statut">
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                >
+                  {FORM_STATUS_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+
+              <FormField
+                label="Audience"
+                hint="Fixée côté serveur, non modifiable."
+              >
+                <input
+                  type="text"
+                  value="Tous les inscrits confirmés"
+                  disabled
+                  readOnly
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/30 border border-neutral-700 text-neutral-400 text-sm cursor-not-allowed"
+                />
+              </FormField>
+            </div>
+          </div>
+
+          <hr className="border-neutral-800" />
+
+          {/* Template body */}
+          <FormField label="Titre de l’email" required>
+            <input
+              type="text"
+              value={heading}
+              onChange={(e) => setHeading(e.target.value)}
+              maxLength={160}
+              placeholder="Bienvenue dans l’aventure"
+              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            />
+          </FormField>
+
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={greetingEnabled}
+              onChange={(e) => setGreetingEnabled(e.target.checked)}
+              className="mt-0.5 w-4 h-4 rounded border-neutral-600 bg-neutral-900 text-blue-600 focus:ring-blue-500"
+            />
+            <span className="text-sm text-neutral-300">
+              Personnaliser avec le prénom
+              <span className="block text-xs text-neutral-500">
+                Ajoute « Bonjour Prénom, » en tête de l’email.
+              </span>
+            </span>
+          </label>
+
+          <FormField
+            label="Corps"
+            required
+            hint="Sépare chaque paragraphe par une ligne vide."
+          >
+            <textarea
+              value={bodyText}
+              onChange={(e) => setBodyText(e.target.value)}
+              rows={8}
+              placeholder={
+                'Premier paragraphe d’introduction.\n\nDeuxième paragraphe avec les détails.'
+              }
+              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-y leading-relaxed"
+            />
+            <p className="text-xs text-neutral-500 mt-1">
+              {bodyParagraphs.length} paragraphe
+              {bodyParagraphs.length > 1 ? 's' : ''} détecté
+              {bodyParagraphs.length > 1 ? 's' : ''}.
+            </p>
+          </FormField>
+
+          <FormField
+            label="Bouton (optionnel)"
+            hint="Libellé + URL http(s). Laisse les deux vides pour aucun bouton."
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <input
+                type="text"
+                value={ctaLabel}
+                onChange={(e) => setCtaLabel(e.target.value)}
+                maxLength={80}
+                placeholder="S’inscrire maintenant"
+                className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              />
+              <input
+                type="url"
+                value={ctaUrl}
+                onChange={(e) => setCtaUrl(e.target.value)}
+                placeholder="https://exemple.com/inscription"
+                className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              />
+            </div>
+            {ctaMismatch && (
+              <p className="text-xs text-amber-300 mt-1">
+                Renseigne le libellé ET l’URL, ou laisse les deux vides.
+              </p>
+            )}
+          </FormField>
+
+          <FormField label="Note de bas de page (optionnel)">
+            <input
+              type="text"
+              value={footerNote}
+              onChange={(e) => setFooterNote(e.target.value)}
+              maxLength={280}
+              placeholder="Tu reçois cet email car tu as un compte confirmé."
+              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            />
+          </FormField>
+
+          {formError && (
+            <div className="px-3 py-2 rounded-xl bg-red-900/40 border border-red-500/50 text-red-300 text-sm">
+              {formError}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={submitting}
+              className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold transition-colors flex items-center gap-2"
+            >
+              {submitting ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : null}
+              {isEdit ? 'Enregistrer' : 'Créer la campagne'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function FormField({
+  label,
+  required,
+  hint,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-neutral-200 mb-1">
+        {label}
+        {required && <span className="text-rose-400 ml-0.5">*</span>}
+      </label>
+      {hint && <p className="text-xs text-neutral-500 mb-1.5">{hint}</p>}
+      {children}
+    </div>
   );
 }
 
