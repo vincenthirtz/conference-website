@@ -9,6 +9,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useManagedTeam } from '@/hooks/useManagedTeam';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import CopyButton from '@/components/player/CopyButton';
+import FreePlayersSection from '@/components/player/FreePlayersSection';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLang } from '@/lib/i18n/LanguageProvider';
 
@@ -640,6 +641,9 @@ export default function ManageTeamPage() {
               </div>
             )}
           </div>
+
+          {/* Joueurs cherchant une equipe */}
+          <FreePlayersSection teamId={team.id} />
         </main>
       </div>
     </>

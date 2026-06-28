@@ -460,6 +460,22 @@
     "onboardingCta": "Voir la page de l'équipe",
     "removeConsequences": "Conséquences : perte d'éligibilité au tournoi et des messages liés."
   },
+  "freePlayers": {
+    "title": "Joueurs cherchant une équipe",
+    "description": "Membres Discord du serveur sans équipe. Invite ceux qui ont lié leur compte du site.",
+    "loading": "Chargement…",
+    "loadError": "Erreur de chargement des joueurs.",
+    "empty": "Aucun joueur ne cherche d'équipe pour le moment.",
+    "invite": "Inviter",
+    "inviting": "Invitation…",
+    "invited": "Invité ✓",
+    "inviteError": "Impossible d'envoyer l'invitation.",
+    "alreadyInvited": "Ce joueur est déjà invité ou membre d'une équipe.",
+    "notLinkedBadge": "Compte non lié",
+    "notLinkedHint": "Ce joueur doit lier son compte du site avant de pouvoir être invité.",
+    "noDiscordName": "Pseudo Discord inconnu",
+    "anonymous": "Joueur"
+  },
   "newTeamForm": {
     "invalidEmail": "Email invalide",
     "duplicateEmail": "Email déjà utilisé par un autre membre",

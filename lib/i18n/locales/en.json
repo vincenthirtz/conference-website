@@ -460,6 +460,22 @@
     "onboardingCta": "View team page",
     "removeConsequences": "Consequences: loss of tournament eligibility and related messages."
   },
+  "freePlayers": {
+    "title": "Players looking for a team",
+    "description": "Discord members of the server without a team. Invite those who have linked their site account.",
+    "loading": "Loading…",
+    "loadError": "Failed to load players.",
+    "empty": "No player is looking for a team right now.",
+    "invite": "Invite",
+    "inviting": "Inviting…",
+    "invited": "Invited ✓",
+    "inviteError": "Could not send the invitation.",
+    "alreadyInvited": "This player is already invited or in a team.",
+    "notLinkedBadge": "Account not linked",
+    "notLinkedHint": "This player must link their site account before they can be invited.",
+    "noDiscordName": "Unknown Discord name",
+    "anonymous": "Player"
+  },
   "newTeamForm": {
     "invalidEmail": "Invalid email",
     "duplicateEmail": "Email already used by another member",
