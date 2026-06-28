@@ -4,6 +4,7 @@
 // - GET  : recuperer ses propres demandes de type "scrim"
 
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { z } from 'zod';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { notifyScrimRequest } from '@/utils/discord';
@@ -13,13 +14,24 @@ import {
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { normalizeSlots } from '@/utils/teams/scrimNegotiation';
 
 import { logger } from '../../../utils/logger';
 export type ScrimRequestBody = {
   teamId: string;
   message?: string;
+  /** Multi-slot negotiation: 1..5 ISO datetimes on the table. */
+  proposedSlots?: string[];
+  /** Legacy single-slot fallback (folded into proposedSlots). */
   preferredDate?: string;
 };
+
+const scrimBodySchema = z.object({
+  teamId: z.string().trim().min(1, 'Selectionne une equipe adverse.'),
+  message: z.string().trim().max(1000).optional().nullable(),
+  proposedSlots: z.array(z.string()).optional(),
+  preferredDate: z.string().optional(),
+});
 
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
@@ -50,22 +62,18 @@ export default withAuthRoute(async function handler(
   }
 
   if (req.method === 'POST') {
-    const body = req.body as ScrimRequestBody;
-
-    if (!body?.teamId?.trim()) {
+    const parsed = scrimBodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      const first = parsed.error.issues[0];
       return res.status(400).json({
-        error: 'Selectionne une equipe adverse.',
+        error: first?.message || 'Requête invalide.',
+        field: first?.path?.join('.') || undefined,
       });
     }
+    const body = parsed.data;
 
     const teamId = body.teamId.trim();
-    const rawMessage = body.message?.trim() || null;
-    if (rawMessage && rawMessage.length > 1000) {
-      return res
-        .status(400)
-        .json({ error: 'Message trop long (max 1000 caracteres).' });
-    }
-    const message = rawMessage?.slice(0, 1000) || null;
+    const message = body.message?.trim()?.slice(0, 1000) || null;
 
     // Verifier que l'user est capitaine ou manager d'une equipe active
     const access = await getManagedTeam(userId, tenantId);
@@ -126,15 +134,22 @@ export default withAuthRoute(async function handler(
       });
     }
 
-    // Valider la date preferee si fournie
-    let preferredDate: string | null = null;
-    if (body.preferredDate?.trim()) {
-      const d = new Date(body.preferredDate.trim());
-      if (isNaN(d.getTime())) {
-        return res.status(400).json({ error: 'Date invalide.' });
-      }
-      preferredDate = d.toISOString();
+    // Multi-slot negotiation : prefer `proposedSlots`, fall back to the legacy
+    // single `preferredDate`. Validate 1..MAX_SCRIM_SLOTS + ISO + dedupe.
+    const slotInput =
+      body.proposedSlots && body.proposedSlots.length > 0
+        ? body.proposedSlots
+        : body.preferredDate
+          ? [body.preferredDate]
+          : [];
+    const slotsResult = normalizeSlots(slotInput);
+    if (!slotsResult.ok) {
+      return res.status(400).json({ error: slotsResult.error });
     }
+    const proposedSlots = slotsResult.slots;
+
+    // Back-compat : preferred_date suit toujours slots[0].
+    const preferredDate = proposedSlots[0];
 
     const payload: Record<string, unknown> = {
       user_email: user.email,
@@ -146,6 +161,12 @@ export default withAuthRoute(async function handler(
       from_team_name: myTeam.name,
       target_team_name: targetTeam.name,
       preferred_date: preferredDate,
+      scrim_nego: {
+        slots: proposedSlots,
+        proposed_by: myTeam.id,
+        rounds: 1,
+        agreed_slot: null,
+      },
     };
 
     const { data: newDemande, error: insertErr } = await supabaseAdmin

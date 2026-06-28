@@ -354,7 +354,11 @@ describe('/api/demandes/scrim as manager', () => {
     await scrimDemandHandler(
       makeAuthedReq({
         method: 'POST',
-        body: { teamId: OTHER_TEAM_ID, message: 'hi' },
+        body: {
+          teamId: OTHER_TEAM_ID,
+          message: 'hi',
+          proposedSlots: ['2026-08-01T20:00:00.000Z'],
+        },
       }),
       res
     );

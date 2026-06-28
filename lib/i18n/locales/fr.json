@@ -57,7 +57,23 @@
     "readinessCheckinTodo": "à valider",
     "readinessCheckinClosed": "fermé",
     "readinessCheckinAction": "Faire le check-in",
-    "readinessViewMatch": "Voir le match"
+    "readinessViewMatch": "Voir le match",
+    "proposedSlotsLabel": "Créneaux proposés",
+    "acceptSlot": "Accepter ce créneau",
+    "counterCta": "Proposer d'autres créneaux",
+    "counterSubmit": "Envoyer la contre-proposition",
+    "rejectScrim": "Refuser",
+    "round": "Tour {n}",
+    "proposedByOpponent": "Proposé par l'adversaire",
+    "proposedByYou": "Proposé par vous",
+    "selectSlotFirst": "Sélectionnez d'abord un créneau.",
+    "atLeastOneSlot": "Proposez au moins un créneau.",
+    "agreedOn": "Créneau confirmé : {date}",
+    "awaitingOpponent": "En attente de l'adversaire",
+    "slotsLabel": "Nouveaux créneaux",
+    "addSlot": "Ajouter un créneau",
+    "removeSlot": "Retirer ce créneau",
+    "maxSlotsHint": "Proposez jusqu'à 5 créneaux."
   },
   "copyButton": {
     "copy": "Copier",
@@ -555,7 +571,12 @@
     "loading": "Chargement...",
     "sending": "Envoi en cours...",
     "defaultMsgPlaceholder": "Un message pour accompagner ta demande...",
-    "membersCount": "{count}/5 membres"
+    "membersCount": "{count}/5 membres",
+    "slotsLabel": "Créneaux proposés",
+    "addSlot": "Ajouter un créneau",
+    "removeSlot": "Retirer ce créneau",
+    "maxSlotsHint": "Proposez jusqu'à 5 créneaux. L'adversaire en choisira un ou vous en reproposera d'autres.",
+    "atLeastOneSlot": "Proposez au moins un créneau."
   },
   "requestCaptain": {
     "connectionError": "Erreur de connexion.",

@@ -57,7 +57,23 @@
     "readinessCheckinTodo": "to confirm",
     "readinessCheckinClosed": "closed",
     "readinessCheckinAction": "Check in",
-    "readinessViewMatch": "View match"
+    "readinessViewMatch": "View match",
+    "proposedSlotsLabel": "Proposed slots",
+    "acceptSlot": "Accept this slot",
+    "counterCta": "Propose other slots",
+    "counterSubmit": "Send counter-proposal",
+    "rejectScrim": "Decline",
+    "round": "Round {n}",
+    "proposedByOpponent": "Proposed by the opponent",
+    "proposedByYou": "Proposed by you",
+    "selectSlotFirst": "Select a slot first.",
+    "atLeastOneSlot": "Propose at least one slot.",
+    "agreedOn": "Slot confirmed: {date}",
+    "awaitingOpponent": "Awaiting the opponent",
+    "slotsLabel": "New slots",
+    "addSlot": "Add a slot",
+    "removeSlot": "Remove this slot",
+    "maxSlotsHint": "Propose up to 5 slots."
   },
   "copyButton": {
     "copy": "Copy",
@@ -555,7 +571,12 @@
     "loading": "Loading...",
     "sending": "Sending...",
     "defaultMsgPlaceholder": "A message to go with your request...",
-    "membersCount": "{count}/5 members"
+    "membersCount": "{count}/5 members",
+    "slotsLabel": "Proposed slots",
+    "addSlot": "Add a slot",
+    "removeSlot": "Remove this slot",
+    "maxSlotsHint": "Propose up to 5 slots. Your opponent will pick one or counter with others.",
+    "atLeastOneSlot": "Propose at least one slot."
   },
   "requestCaptain": {
     "connectionError": "Connection error.",

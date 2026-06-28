@@ -326,6 +326,84 @@ export async function notifyScrimRequest(
 }
 
 /* -----------------------------------------------------------
+ * Scrim counter-proposal (negotiation)
+ * ---------------------------------------------------------*/
+
+export type ScrimCounterProposalNotification = {
+  /** Team that just proposed the new slots (the counter author). */
+  fromTeamName: string;
+  /** Team whose turn it now is to accept/counter. */
+  targetTeamName: string;
+  /** ISO datetimes now on the table. */
+  proposedSlots: string[];
+  /** Negotiation round (>= 2 for a counter). */
+  rounds: number;
+  message?: string | null;
+  requesterDisplayName?: string | null;
+};
+
+export async function notifyScrimCounterProposal(
+  data: ScrimCounterProposalNotification
+): Promise<void> {
+  const webhookUrl = process.env.DISCORD_SCRIM_WEBHOOK_URL;
+  if (!webhookUrl) {
+    logger.warn('[discord] DISCORD_SCRIM_WEBHOOK_URL not configured');
+    return;
+  }
+
+  const slotLabels = (data.proposedSlots || [])
+    .map((s) => formatDateFr(s))
+    .filter(Boolean) as string[];
+
+  const fields: DiscordEmbedField[] = [
+    { name: 'Proposé par', value: data.fromTeamName, inline: true },
+    { name: 'En attente de', value: data.targetTeamName, inline: true },
+    { name: 'Tour', value: String(data.rounds), inline: true },
+  ];
+
+  if (slotLabels.length > 0) {
+    fields.push({
+      name: 'Créneaux proposés',
+      value: slotLabels
+        .map((l) => `• ${l}`)
+        .join('\n')
+        .slice(0, 1024),
+      inline: false,
+    });
+  }
+
+  if (data.message) {
+    fields.push({
+      name: 'Message',
+      value: data.message.slice(0, 1000),
+      inline: false,
+    });
+  }
+
+  if (data.requesterDisplayName) {
+    fields.push({
+      name: 'Capitaine',
+      value: data.requesterDisplayName,
+      inline: true,
+    });
+  }
+
+  await postToDiscordWebhook(webhookUrl, {
+    username: "OW Women's Cup — Scrims",
+    embeds: [
+      {
+        title: '🔄 Contre-proposition de scrim',
+        description: `**${data.fromTeamName}** propose de nouveaux créneaux à **${data.targetTeamName}**.`,
+        color: COLORS.scrim,
+        fields,
+        timestamp: new Date().toISOString(),
+        footer: { text: "C'est au tour de l'équipe adverse de répondre" },
+      },
+    ],
+  });
+}
+
+/* -----------------------------------------------------------
  * Match starting (status -> ongoing)
  * ---------------------------------------------------------*/
 

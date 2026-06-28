@@ -14,6 +14,7 @@ import QuickAction, {
 } from '@/components/player/QuickAction';
 import NextMatchCard from '@/components/player/NextMatchCard';
 import { PlayerDashboardSkeleton } from '@/components/player/Skeletons';
+import ScrimSlotPicker from '@/components/player/ScrimSlotPicker';
 import PushOptIn from '@/components/shared/PushOptIn';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT, format } from '@/lib/i18n/useT';
@@ -49,6 +50,13 @@ type Demande = {
   } | null;
 };
 
+type ScrimNego = {
+  slots: string[];
+  proposedBy: string;
+  rounds: number;
+  agreedSlot: string | null;
+};
+
 type PendingScrim = {
   id: string;
   comment: string | null;
@@ -66,6 +74,11 @@ type PendingScrim = {
     email?: string | null;
     discord?: string | null;
   } | null;
+  // Multi-slot negotiation context (scrims awaiting MY action; I am always the
+  // non-proposer of the current slots).
+  scrimNego?: ScrimNego;
+  iAmRequester?: boolean;
+  myTeamId?: string;
 };
 
 // Mirror of the next-match slice the aggregated /api/player/dashboard returns
@@ -272,6 +285,9 @@ function MatchReadinessCard({
 
 function PlayerDashboard() {
   const t = useT('playerIndex');
+  // Bridge for keys that live in the i18n fragment (merged separately) and are
+  // not yet present in the typed locale.
+  const tr = t as unknown as Record<string, string>;
   const { lang } = useLang();
   const { user, loading: authLoading, ready } = usePlayerSession();
   const { adminFetchJson } = useAdminFetch();
@@ -284,6 +300,16 @@ function PlayerDashboard() {
   const [pendingScrims, setPendingScrims] = useState<PendingScrim[]>([]);
   const [scrimActionId, setScrimActionId] = useState<string | null>(null);
   const [scrimError, setScrimError] = useState<string | null>(null);
+  // Selected slot (for "accept") keyed by scrim id.
+  const [selectedScrimSlot, setSelectedScrimSlot] = useState<
+    Record<string, string>
+  >({});
+  // Id of the scrim whose inline counter-proposal picker is open.
+  const [counterOpenId, setCounterOpenId] = useState<string | null>(null);
+  // Counter-proposal slots (datetime-local rows) keyed by scrim id.
+  const [counterSlots, setCounterSlots] = useState<Record<string, string[]>>(
+    {}
+  );
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [nextMatch, setNextMatch] = useState<NextMatchData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -355,18 +381,50 @@ function PlayerDashboard() {
     }
   };
 
+  // Multi-slot negotiation actions:
+  //  - 'accept'  + { slot }  → agree on one of the proposed slots
+  //  - 'counter' + { slots } → propose new times back to the opponent
+  //  - 'reject'
+  // Each removes the row optimistically once the server confirms.
   const handleScrimAction = async (
     demandeId: string,
-    action: 'approve' | 'reject' | 'report'
+    action: 'accept' | 'counter' | 'reject'
   ) => {
     setScrimError(null);
+
+    let body: Record<string, unknown> = { demandeId, action };
+
+    if (action === 'accept') {
+      const slot = selectedScrimSlot[demandeId];
+      if (!slot) {
+        setScrimError(tr.selectSlotFirst);
+        return;
+      }
+      body = { ...body, slot };
+    }
+
+    if (action === 'counter') {
+      const slots = (counterSlots[demandeId] || [])
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .map((s) => new Date(s).toISOString());
+      if (slots.length === 0) {
+        setScrimError(tr.atLeastOneSlot);
+        return;
+      }
+      body = { ...body, slots };
+    }
+
     setScrimActionId(demandeId);
     try {
       await adminFetchJson('/api/teams/scrim-requests', {
         method: 'POST',
-        body: JSON.stringify({ demandeId, action }),
+        body: JSON.stringify(body),
       });
+      // Awaiting MY action either way: agreeing, rejecting, or sending the ball
+      // back to the opponent all remove the card from my actionable list.
       setPendingScrims((prev) => prev.filter((s) => s.id !== demandeId));
+      setCounterOpenId((id) => (id === demandeId ? null : id));
     } catch (err) {
       setScrimError((err as Error).message);
     } finally {
@@ -386,6 +444,16 @@ function PlayerDashboard() {
       setError(t.leaveError);
     }
   };
+
+  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
+  const formatSlot = (iso: string) =>
+    new Date(iso).toLocaleString(locale, {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
 
   const pendingCaptainRequest = demandes.find(
     (d) => d.type === 'captain_request' && d.status === 'pending'
@@ -530,6 +598,15 @@ function PlayerDashboard() {
                     scrim.payload?.requester_discord ||
                     null;
                   const busy = scrimActionId === scrim.id;
+                  const nego = scrim.scrimNego;
+                  const negoSlots = nego?.slots ?? [];
+                  const round = nego?.rounds ?? 1;
+                  const agreedSlot = nego?.agreedSlot ?? null;
+                  const counterIsOpen = counterOpenId === scrim.id;
+                  const currentCounterSlots = counterSlots[scrim.id] ?? [''];
+                  // The proposer of the *current* slots is the opponent when I
+                  // am the requester (they countered), and "me" otherwise.
+                  const proposedByOpponent = !!scrim.iAmRequester;
                   return (
                     <div
                       key={scrim.id}
@@ -599,9 +676,62 @@ function PlayerDashboard() {
                                 ),
                               })}
                             </span>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[10px] uppercase tracking-wide text-gray-300">
+                              {format(tr.round, { n: round })}
+                            </span>
+                            <span className="text-gray-400">
+                              {proposedByOpponent
+                                ? tr.proposedByOpponent
+                                : tr.proposedByYou}
+                            </span>
                           </div>
                         </div>
                       </div>
+
+                      {/* Agreed slot (negotiation already concluded) */}
+                      {agreedSlot && (
+                        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-100">
+                          {format(tr.agreedOn, { date: formatSlot(agreedSlot) })}
+                        </div>
+                      )}
+
+                      {/* Proposed slots — selectable (accept one) */}
+                      {!agreedSlot && negoSlots.length > 0 && (
+                        <fieldset className="space-y-1.5">
+                          <legend className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">
+                            {tr.proposedSlotsLabel}
+                          </legend>
+                          {negoSlots.map((slot) => {
+                            const checked =
+                              selectedScrimSlot[scrim.id] === slot;
+                            return (
+                              <label
+                                key={slot}
+                                className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer text-xs transition ${
+                                  checked
+                                    ? 'bg-blue-600/30 border-blue-400/50 text-white'
+                                    : 'bg-white/5 border-white/10 text-gray-200 hover:bg-white/10'
+                                }`}
+                              >
+                                <input
+                                  type="radio"
+                                  name={`scrim-slot-${scrim.id}`}
+                                  value={slot}
+                                  checked={checked}
+                                  onChange={() =>
+                                    setSelectedScrimSlot((prev) => ({
+                                      ...prev,
+                                      [scrim.id]: slot,
+                                    }))
+                                  }
+                                  className="accent-blue-500"
+                                />
+                                <span>{formatSlot(slot)}</span>
+                              </label>
+                            );
+                          })}
+                        </fieldset>
+                      )}
 
                       {isExternal && (contactEmail || contactDiscord) && (
                         <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-100 space-y-0.5">
@@ -632,35 +762,77 @@ function PlayerDashboard() {
                         </div>
                       )}
 
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => handleScrimAction(scrim.id, 'approve')}
-                          className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-xs font-medium text-white"
-                        >
-                          {t.accept}
-                        </button>
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => handleScrimAction(scrim.id, 'reject')}
-                          className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-50 text-xs"
-                        >
-                          {t.reject}
-                        </button>
-                        {isExternal && (
+                      {/* Inline counter-proposal picker */}
+                      {counterIsOpen && (
+                        <div className="rounded-lg border border-white/10 bg-black/40 p-3">
+                          <ScrimSlotPicker
+                            slots={currentCounterSlots}
+                            onChange={(next) =>
+                              setCounterSlots((prev) => ({
+                                ...prev,
+                                [scrim.id]: next,
+                              }))
+                            }
+                            accent="blue"
+                            idPrefix={`counter-${scrim.id}`}
+                            labels={{
+                              slotsLabel: tr.slotsLabel,
+                              addSlot: tr.addSlot,
+                              removeSlot: tr.removeSlot,
+                              maxSlotsHint: tr.maxSlotsHint,
+                            }}
+                          />
                           <button
                             type="button"
                             disabled={busy}
                             onClick={() =>
-                              handleScrimAction(scrim.id, 'report')
+                              handleScrimAction(scrim.id, 'counter')
                             }
-                            className="px-3 py-1.5 rounded-lg border border-red-500/30 text-red-200 hover:bg-red-500/10 disabled:opacity-50 text-xs ml-auto"
+                            className="mt-3 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-xs font-medium text-white"
                           >
-                            {t.report}
+                            {tr.counterSubmit}
+                          </button>
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap gap-2">
+                        {!agreedSlot && (
+                          <button
+                            type="button"
+                            disabled={busy || !selectedScrimSlot[scrim.id]}
+                            onClick={() => handleScrimAction(scrim.id, 'accept')}
+                            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium text-white"
+                          >
+                            {tr.acceptSlot}
                           </button>
                         )}
+                        {!agreedSlot && (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => {
+                              setCounterOpenId((id) =>
+                                id === scrim.id ? null : scrim.id
+                              );
+                              setCounterSlots((prev) =>
+                                prev[scrim.id]
+                                  ? prev
+                                  : { ...prev, [scrim.id]: [''] }
+                              );
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-50 text-xs"
+                          >
+                            {tr.counterCta}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => handleScrimAction(scrim.id, 'reject')}
+                          className="px-3 py-1.5 rounded-lg border border-red-500/30 text-red-200 hover:bg-red-500/10 disabled:opacity-50 text-xs ml-auto"
+                        >
+                          {tr.rejectScrim}
+                        </button>
                       </div>
                     </div>
                   );

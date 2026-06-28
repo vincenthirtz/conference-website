@@ -9,6 +9,7 @@ import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useManagedTeam } from '@/hooks/useManagedTeam';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
+import ScrimSlotPicker from '@/components/player/ScrimSlotPicker';
 import { useT, format } from '@/lib/i18n/useT';
 
 import { logger } from '../../utils/logger';
@@ -34,6 +35,9 @@ export default function PlayerRequestsPage() {
     error: teamError,
   } = useManagedTeam();
   const t = useT('playerRequests');
+  // Bridge for keys that live in the i18n fragment (merged separately) and are
+  // not yet present in the typed locale.
+  const tr = t as unknown as Record<string, string>;
   const [tab, setTab] = useState<Tab>('transfer');
 
   // Contexte joueur — derive depuis le cache partage useManagedTeam.
@@ -63,8 +67,9 @@ export default function PlayerRequestsPage() {
   >([]);
   const [selectedPlayerId, setSelectedPlayerId] = useState('');
 
-  // Scrim
-  const [preferredDate, setPreferredDate] = useState('');
+  // Scrim — multi-slot negotiation. Each entry is a `datetime-local` value;
+  // converted to ISO on submit. Always at least one row.
+  const [scrimSlots, setScrimSlots] = useState<string[]>(['']);
 
   // Commun
   const [message, setMessage] = useState('');
@@ -142,6 +147,7 @@ export default function PlayerRequestsPage() {
     setSelectedPlayerId('');
     setTransferMode('self');
     setMessage('');
+    setScrimSlots(['']);
     setError(null);
     setSuccess(null);
   };
@@ -221,6 +227,17 @@ export default function PlayerRequestsPage() {
       return;
     }
 
+    // Convert filled `datetime-local` rows to ISO; require at least one.
+    const proposedSlots = scrimSlots
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((s) => new Date(s).toISOString());
+
+    if (proposedSlots.length === 0) {
+      setError(tr.atLeastOneSlot);
+      return;
+    }
+
     setSubmitting(true);
     try {
       const res = await fetch('/api/demandes/scrim', {
@@ -232,7 +249,7 @@ export default function PlayerRequestsPage() {
         body: JSON.stringify({
           teamId: selectedTeamId,
           message: message.trim() || undefined,
-          preferredDate: preferredDate || undefined,
+          proposedSlots,
         }),
       });
 
@@ -245,7 +262,7 @@ export default function PlayerRequestsPage() {
       );
       setSelectedTeamId('');
       setMessage('');
-      setPreferredDate('');
+      setScrimSlots(['']);
     } catch (err: unknown) {
       setError((err as Error).message || t.errGeneric);
     } finally {
@@ -707,21 +724,18 @@ export default function PlayerRequestsPage() {
                       />
                     </div>
 
-                    <div>
-                      <label
-                        htmlFor="preferred-date"
-                        className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
-                      >
-                        {t.dateLabel}
-                      </label>
-                      <input
-                        id="preferred-date"
-                        type="datetime-local"
-                        value={preferredDate}
-                        onChange={(e) => setPreferredDate(e.target.value)}
-                        className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-400/80 transition"
-                      />
-                    </div>
+                    <ScrimSlotPicker
+                      slots={scrimSlots}
+                      onChange={setScrimSlots}
+                      accent="blue"
+                      idPrefix="scrim-slot"
+                      labels={{
+                        slotsLabel: tr.slotsLabel,
+                        addSlot: tr.addSlot,
+                        removeSlot: tr.removeSlot,
+                        maxSlotsHint: tr.maxSlotsHint,
+                      }}
+                    />
 
                     <MessageField
                       value={message}

@@ -24,6 +24,7 @@ import { withAuthRoute } from '@/utils/staff';
 import { getManagedTeam } from '@/utils/teams/managementAccess';
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 import { CHECKIN_OPEN_MINUTES } from '@/utils/checkin';
+import { readScrimNego } from '@/utils/teams/scrimNegotiation';
 
 import { logger } from '../../../utils/logger';
 
@@ -65,6 +66,16 @@ type PendingScrim = {
     display_name: string | null;
     discord: string | null;
   } | null;
+  /** Negotiation contract (cf. utils/teams/scrimNegotiation.ts). */
+  scrimNego: {
+    slots: string[];
+    proposedBy: string | null;
+    rounds: number;
+    agreedSlot: string | null;
+  };
+  /** true when my team is the requester (payload.from_team_id). */
+  iAmRequester: boolean;
+  myTeamId: string;
 };
 
 type NextMatchSection = {
@@ -236,19 +247,52 @@ async function loadPendingScrims(
   tenantId: string
 ): Promise<PendingScrim[]> {
   try {
-    const { data: demandes, error } = await supabaseAdmin
-      .from('demandes')
-      .select('*')
-      .eq('team_id', teamId)
-      .eq('tenant_id', tenantId)
-      .eq('type', 'scrim')
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false });
+    // Scrims AWAITING MY ACTION in both directions :
+    //  - my team is a participant (target via team_id OR requester via
+    //    payload.from_team_id), AND
+    //  - the current proposal was NOT made by my team (it's my turn).
+    // Two queries (one per direction) merged + deduped in code — the unit-test
+    // supabase mock treats .or() as a no-op so we never rely on it.
+    const [asTargetRes, asRequesterRes] = await Promise.all([
+      supabaseAdmin
+        .from('demandes')
+        .select('*')
+        .eq('team_id', teamId)
+        .eq('tenant_id', tenantId)
+        .eq('type', 'scrim')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false }),
+      supabaseAdmin
+        .from('demandes')
+        .select('*')
+        .filter('payload->>from_team_id', 'eq', teamId)
+        .eq('tenant_id', tenantId)
+        .eq('type', 'scrim')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false }),
+    ]);
 
-    if (error) {
-      logger.error('[player/dashboard] pendingScrims error:', error);
+    if (asTargetRes.error || asRequesterRes.error) {
+      logger.error(
+        '[player/dashboard] pendingScrims error:',
+        asTargetRes.error || asRequesterRes.error
+      );
       return [];
     }
+
+    const byId = new Map<string, Record<string, unknown>>();
+    for (const d of [
+      ...(asTargetRes.data || []),
+      ...(asRequesterRes.data || []),
+    ] as Record<string, unknown>[]) {
+      byId.set(d.id as string, d);
+    }
+
+    // Keep only the demandes where it's MY turn (non-proposer).
+    const demandes = Array.from(byId.values()).filter((d) => {
+      const nego = readScrimNego((d.payload as Record<string, unknown>) || {});
+      return nego.proposed_by !== teamId;
+    });
 
     // Enrich with sender info (mirrors /api/teams/scrim-requests GET).
     const enriched = await Promise.all(
@@ -283,15 +327,26 @@ async function loadPendingScrims(
             discord: (p.requester_discord as string) || null,
           };
         }
+        const payload = (d.payload as Record<string, unknown> | null) ?? null;
+        const nego = readScrimNego(payload || {});
+        const fromTeamId = (payload?.from_team_id as string | null) ?? null;
         return {
           id: d.id as string,
           user_id: (d.user_id as string | null) ?? null,
           source: (d.source as string | null) ?? null,
           status: d.status as string,
           comment: (d.comment as string | null) ?? null,
-          payload: (d.payload as Record<string, unknown> | null) ?? null,
+          payload,
           created_at: d.created_at as string,
           user: userInfo,
+          scrimNego: {
+            slots: nego.slots,
+            proposedBy: nego.proposed_by,
+            rounds: nego.rounds,
+            agreedSlot: nego.agreed_slot,
+          },
+          iAmRequester: teamId === fromTeamId,
+          myTeamId: teamId,
         };
       })
     );
