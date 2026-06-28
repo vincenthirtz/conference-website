@@ -1,3 +1,4 @@
+import Head from 'next/head';
 import Link from 'next/link';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { ACTIVE_WOMEN_TOURNAMENT_ID } from '@/utils/activeEdition';
@@ -95,6 +96,10 @@ function EspaceCapitainePage() {
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
+      <Head>
+        <title>{t.seoTitle}</title>
+        <meta name="description" content={t.seoDescription} />
+      </Head>
       {/* Hero */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
@@ -342,11 +347,12 @@ function EspaceCapitainePage() {
   );
 }
 
-const espaceCapitaineSeo: SeoProps = {
-  title: 'Espace capitaine — gérer ton équipe',
-  description:
-    "Présentation de l'espace capitaine OW Women's Cup : roster, recrutement, scrims, messagerie et transferts pour gérer ton équipe en tournoi.",
-};
+// Titre & description SEO sont rendus dans le corps via `<Head>` (traduits
+// selon la langue active) — ils ne vivent plus ici pour eviter deux <title>
+// concurrents avec le DefaultSeo global d'_app.tsx. On conserve l'objet `seo`
+// (sans title/description) pour rester une page publique indexable (pas de
+// noindex applique par _app.tsx).
+const espaceCapitaineSeo: SeoProps = {};
 
 EspaceCapitainePage.seo = espaceCapitaineSeo;
 

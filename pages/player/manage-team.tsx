@@ -1,7 +1,7 @@
 // pages/player/manage-team.tsx
 // Page de gestion d'equipe pour le capitaine
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
@@ -67,6 +67,8 @@ export default function ManageTeamPage() {
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [pendingRemoval, setPendingRemoval] = useState<string | null>(null);
+  const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadData = useCallback(async () => {
     const [teamData, requestsData] = await Promise.all([
@@ -111,8 +113,15 @@ export default function ManageTeamPage() {
 
   const showSuccess = (msg: string) => {
     setSuccessMsg(msg);
-    setTimeout(() => setSuccessMsg(null), 3000);
+    if (successTimer.current) clearTimeout(successTimer.current);
+    successTimer.current = setTimeout(() => setSuccessMsg(null), 3000);
   };
+
+  useEffect(() => {
+    return () => {
+      if (successTimer.current) clearTimeout(successTimer.current);
+    };
+  }, []);
 
   const handleToggleJoinable = async () => {
     setActionLoading('joinable');
@@ -146,6 +155,7 @@ export default function ManageTeamPage() {
         body: JSON.stringify({ memberId }),
       });
       setMembers((prev) => prev.filter((m) => m.id !== memberId));
+      setPendingRemoval(null);
       showSuccess(t.memberRemoved);
     } catch (err: unknown) {
       setError((err as Error).message);
@@ -347,36 +357,67 @@ export default function ManageTeamPage() {
 
                   {!m.is_captain && (
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <select
-                        value={m.role || 'player'}
-                        onChange={(e) => handleUpdateRole(m.id, e.target.value)}
-                        disabled={!!actionLoading}
-                        className="bg-black/60 border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-purple-400"
-                      >
-                        <option value="player">{t.optionPlayer}</option>
-                        <option value="substitute">{t.optionSubstitute}</option>
-                        <option value="coach">{t.optionCoach}</option>
-                      </select>
-                      <button
-                        onClick={() => handleRemoveMember(m.id)}
-                        disabled={actionLoading === `remove-${m.id}`}
-                        className="p-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 transition disabled:opacity-50"
-                        title={t.removeTitle}
-                      >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M6 18L18 6M6 6l12 12"
-                          />
-                        </svg>
-                      </button>
+                      {pendingRemoval === m.id ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-red-200 max-w-[10rem] sm:max-w-none">
+                            {format(t.removeConfirm, {
+                              name: m.battle_tag || t.unknown,
+                            })}
+                          </span>
+                          <button
+                            onClick={() => handleRemoveMember(m.id)}
+                            disabled={actionLoading === `remove-${m.id}`}
+                            className="px-2 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-semibold transition disabled:opacity-50"
+                          >
+                            {t.confirmRemove}
+                          </button>
+                          <button
+                            onClick={() => setPendingRemoval(null)}
+                            disabled={actionLoading === `remove-${m.id}`}
+                            className="px-2 py-1 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-xs transition disabled:opacity-50"
+                          >
+                            {t.cancelRemove}
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <select
+                            value={m.role || 'player'}
+                            onChange={(e) =>
+                              handleUpdateRole(m.id, e.target.value)
+                            }
+                            disabled={!!actionLoading}
+                            className="bg-black/60 border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-purple-400"
+                          >
+                            <option value="player">{t.optionPlayer}</option>
+                            <option value="substitute">
+                              {t.optionSubstitute}
+                            </option>
+                            <option value="coach">{t.optionCoach}</option>
+                          </select>
+                          <button
+                            onClick={() => setPendingRemoval(m.id)}
+                            disabled={!!actionLoading}
+                            className="p-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 transition disabled:opacity-50"
+                            title={t.removeTitle}
+                            aria-label={t.removeTitle}
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M6 18L18 6M6 6l12 12"
+                              />
+                            </svg>
+                          </button>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>

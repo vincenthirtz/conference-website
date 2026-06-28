@@ -54,6 +54,14 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Garde <html lang> aligne sur la langue active (a11y + SEO). Le defaut SSR
+  // reste 'fr' (cf. _document) ; cet effet ne tourne que cote client.
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = lang;
+    }
+  }, [lang]);
+
   const setLang = useCallback((next: Lang) => {
     setLangState(next);
     try {

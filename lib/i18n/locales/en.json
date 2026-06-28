@@ -46,7 +46,9 @@
     "reject": "Decline",
     "report": "Report",
     "backToSite": "← Back to site",
-    "viewTournaments": "View tournaments"
+    "viewTournaments": "View tournaments",
+    "leaveError": "Couldn't leave the team right now. Please try again in a moment.",
+    "cancelError": "Couldn't cancel the request right now. Please try again in a moment."
   },
   "copyButton": {
     "copy": "Copy",
@@ -169,7 +171,9 @@
     "helpDescription": "A question about a captaincy handover, a BattleTag to fix, a blocked transfer? The staff supports you on Discord and by email.",
     "helpDiscord": "Discord ↗",
     "helpContact": "Contact form",
-    "helpGuide": "Registration guide"
+    "helpGuide": "Registration guide",
+    "seoTitle": "Captain hub — manage your team",
+    "seoDescription": "An overview of the OW Women's Cup captain hub: roster, recruiting, scrims, messaging and transfers to run your team throughout the tournament."
   },
   "checkin": {
     "loadError": "Failed to load your match.",
@@ -400,7 +404,10 @@
     "defaultPlayerName": "Player",
     "wantsToJoinAs": "Wants to join as ",
     "accept": "Accept",
-    "reject": "Decline"
+    "reject": "Decline",
+    "removeConfirm": "Remove {name} from the team?",
+    "confirmRemove": "Confirm",
+    "cancelRemove": "Cancel"
   },
   "newTeamForm": {
     "invalidEmail": "Invalid email",
@@ -633,7 +640,9 @@
     "unknown": "unknown",
     "unlink": "Unlink",
     "link": "Link my Discord account",
-    "busy": "…"
+    "busy": "…",
+    "confirmUnlink": "Confirm",
+    "cancel": "Cancel"
   },
   "playerTopBar": {
     "site": "Site",
@@ -656,6 +665,22 @@
       "captain": "Captain",
       "player": "Player"
     },
-    "fallbackName": "Player"
+    "fallbackName": "Player",
+    "skipToContent": "Skip to main content",
+    "homeAria": "Home",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
+  },
+  "playerBell": {
+    "title": "Notifications",
+    "empty": "No notifications",
+    "ariaLabel": "My player space — {tooltip}",
+    "checkinPending": "check-in to confirm",
+    "messages_one": "{count} message",
+    "messages_other": "{count} messages",
+    "scrims_one": "{count} scrim",
+    "scrims_other": "{count} scrims",
+    "candidatures_one": "{count} application",
+    "candidatures_other": "{count} applications"
   }
 }

@@ -68,9 +68,13 @@ function validateMember(
   return errors;
 }
 
-function FieldError({ message }: { message?: string }) {
+function FieldError({ id, message }: { id?: string; message?: string }) {
   if (!message) return null;
-  return <p className="text-xs text-red-400 mt-1">{message}</p>;
+  return (
+    <p id={id} role="alert" className="text-xs text-red-400 mt-1">
+      {message}
+    </p>
+  );
 }
 
 export default function NewTeamForm({
@@ -148,11 +152,18 @@ export default function NewTeamForm({
                       onChange={(e) =>
                         onUpdateMember(index, 'email', e.target.value)
                       }
+                      aria-invalid={errors.email ? true : undefined}
+                      aria-describedby={
+                        errors.email ? `member-${index}-email-error` : undefined
+                      }
                       className={`w-full rounded-lg border bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-purple-400/60 ${
                         errors.email ? 'border-red-500/50' : 'border-white/10'
                       }`}
                     />
-                    <FieldError message={errors.email} />
+                    <FieldError
+                      id={`member-${index}-email-error`}
+                      message={errors.email}
+                    />
                   </div>
                   <div>
                     <input
@@ -162,13 +173,22 @@ export default function NewTeamForm({
                       onChange={(e) =>
                         onUpdateMember(index, 'battleTag', e.target.value)
                       }
+                      aria-invalid={errors.battleTag ? true : undefined}
+                      aria-describedby={
+                        errors.battleTag
+                          ? `member-${index}-battleTag-error`
+                          : undefined
+                      }
                       className={`w-full rounded-lg border bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-purple-400/60 ${
                         errors.battleTag
                           ? 'border-red-500/50'
                           : 'border-white/10'
                       }`}
                     />
-                    <FieldError message={errors.battleTag} />
+                    <FieldError
+                      id={`member-${index}-battleTag-error`}
+                      message={errors.battleTag}
+                    />
                   </div>
                   <input
                     type="text"

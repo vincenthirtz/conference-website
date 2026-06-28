@@ -310,12 +310,20 @@ function PlayerProfile() {
             <h2 className="text-lg font-semibold mb-4">{t.editProfile}</h2>
 
             {profileSuccess && (
-              <div className="mb-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
+              <div
+                id="player-profile-success"
+                aria-live="polite"
+                className="mb-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200"
+              >
                 {profileSuccess}
               </div>
             )}
             {profileError && (
-              <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+              <div
+                id="player-profile-error"
+                role="alert"
+                className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200"
+              >
                 {profileError}
               </div>
             )}
@@ -386,12 +394,20 @@ function PlayerProfile() {
             <h2 className="text-lg font-semibold mb-4">{t.changeEmail}</h2>
 
             {emailSuccess && (
-              <div className="mb-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
+              <div
+                id="player-email-success"
+                aria-live="polite"
+                className="mb-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200"
+              >
                 {emailSuccess}
               </div>
             )}
             {emailError && (
-              <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+              <div
+                id="player-email-error"
+                role="alert"
+                className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200"
+              >
                 {emailError}
               </div>
             )}
@@ -410,6 +426,10 @@ function PlayerProfile() {
                   placeholder={t.newEmailPlaceholder}
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
+                  aria-invalid={Boolean(emailError)}
+                  aria-describedby={
+                    emailError ? 'player-email-error' : undefined
+                  }
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-500"
                   required
                 />
@@ -430,12 +450,20 @@ function PlayerProfile() {
             <h2 className="text-lg font-semibold mb-4">{t.changePassword}</h2>
 
             {passwordSuccess && (
-              <div className="mb-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
+              <div
+                id="player-password-success"
+                aria-live="polite"
+                className="mb-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200"
+              >
                 {passwordSuccess}
               </div>
             )}
             {passwordError && (
-              <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+              <div
+                id="player-password-error"
+                role="alert"
+                className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200"
+              >
                 {passwordError}
               </div>
             )}
@@ -454,6 +482,10 @@ function PlayerProfile() {
                   placeholder="••••••••"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
+                  aria-invalid={Boolean(passwordError)}
+                  aria-describedby={
+                    passwordError ? 'player-password-error' : undefined
+                  }
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-500"
                   minLength={8}
                   required
@@ -472,6 +504,10 @@ function PlayerProfile() {
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
+                  aria-invalid={Boolean(passwordError)}
+                  aria-describedby={
+                    passwordError ? 'player-password-error' : undefined
+                  }
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-500"
                   minLength={8}
                   required
@@ -493,7 +529,11 @@ function PlayerProfile() {
             <h2 className="text-lg font-semibold mb-4">{t.myData}</h2>
 
             {dataError && (
-              <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+              <div
+                id="player-data-error"
+                role="alert"
+                className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200"
+              >
                 {dataError}
               </div>
             )}

@@ -46,7 +46,9 @@
     "reject": "Refuser",
     "report": "Signaler",
     "backToSite": "← Retour au site",
-    "viewTournaments": "Voir les tournois"
+    "viewTournaments": "Voir les tournois",
+    "leaveError": "Impossible de quitter l'équipe pour le moment. Réessayez dans un instant.",
+    "cancelError": "Impossible d'annuler la demande pour le moment. Réessayez dans un instant."
   },
   "copyButton": {
     "copy": "Copier",
@@ -169,7 +171,9 @@
     "helpDescription": "Question sur la passation de capitanat, BattleTag à corriger, transfert bloqué ? Le staff t'accompagne sur Discord et par email.",
     "helpDiscord": "Discord ↗",
     "helpContact": "Formulaire de contact",
-    "helpGuide": "Guide d'inscription"
+    "helpGuide": "Guide d'inscription",
+    "seoTitle": "Espace capitaine — gérer ton équipe",
+    "seoDescription": "Présentation de l'espace capitaine OW Women's Cup : roster, recrutement, scrims, messagerie et transferts pour gérer ton équipe en tournoi."
   },
   "checkin": {
     "loadError": "Erreur lors du chargement de ton match.",
@@ -400,7 +404,10 @@
     "defaultPlayerName": "Joueur",
     "wantsToJoinAs": "Souhaite rejoindre en tant que ",
     "accept": "Accepter",
-    "reject": "Refuser"
+    "reject": "Refuser",
+    "removeConfirm": "Retirer {name} de l'équipe ?",
+    "confirmRemove": "Confirmer",
+    "cancelRemove": "Annuler"
   },
   "newTeamForm": {
     "invalidEmail": "Email invalide",
@@ -633,7 +640,9 @@
     "unknown": "inconnu",
     "unlink": "Délier",
     "link": "Lier mon compte Discord",
-    "busy": "…"
+    "busy": "…",
+    "confirmUnlink": "Confirmer",
+    "cancel": "Annuler"
   },
   "playerTopBar": {
     "site": "Site",
@@ -656,6 +665,22 @@
       "captain": "Capitaine",
       "player": "Joueuse"
     },
-    "fallbackName": "Joueuse"
+    "fallbackName": "Joueuse",
+    "skipToContent": "Aller au contenu principal",
+    "homeAria": "Accueil",
+    "openMenu": "Ouvrir le menu",
+    "closeMenu": "Fermer le menu"
+  },
+  "playerBell": {
+    "title": "Notifications",
+    "empty": "Aucune notification",
+    "ariaLabel": "Mon espace joueur — {tooltip}",
+    "checkinPending": "check-in à valider",
+    "messages_one": "{count} message",
+    "messages_other": "{count} messages",
+    "scrims_one": "{count} scrim",
+    "scrims_other": "{count} scrims",
+    "candidatures_one": "{count} candidature",
+    "candidatures_other": "{count} candidatures"
   }
 }

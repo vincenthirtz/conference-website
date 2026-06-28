@@ -1,11 +1,12 @@
 // pages/player/join-team.tsx
 // Page pour demander a rejoindre une equipe existante (sans etre capitaine)
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
+import { useDebounce } from '@/hooks/useDebounce';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import { MAX_TEAM_PLAYERS } from '@/utils/constants';
 import { useT, format } from '@/lib/i18n/useT';
@@ -38,7 +39,6 @@ export default function JoinTeamPage() {
 
   // Filtres
   const [filterCountry, setFilterCountry] = useState('');
-  const [filterHasSlots, setFilterHasSlots] = useState(false);
   const [availableCountries, setAvailableCountries] = useState<string[]>([]);
 
   // Role souhaite
@@ -52,6 +52,46 @@ export default function JoinTeamPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [successTeamName, setSuccessTeamName] = useState('');
+
+  const debouncedSearch = useDebounce(teamSearch, 300);
+
+  const loadTeams = useCallback(async (search?: string, country?: string) => {
+    setTeamsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (search?.trim()) {
+        params.set('search', search.trim());
+      }
+      params.set('limit', '50');
+      params.set('joinable', '1');
+      if (country) params.set('country', country);
+      const res = await fetch(`/api/teams?${params.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        let result: Team[] = data.teams || [];
+        // Garde-fou défensif : l'API exclut déjà les équipes pleines en
+        // joinable=1, mais on ne laisse jamais passer une équipe pleine côté
+        // front (member_count >= MAX_TEAM_PLAYERS).
+        result = result.filter(
+          (tm) =>
+            typeof tm.member_count !== 'number' ||
+            tm.member_count < MAX_TEAM_PLAYERS
+        );
+        // Collecter les pays disponibles
+        const countries = new Set<string>();
+        for (const tm of data.teams || []) {
+          if (tm.country) countries.add(tm.country);
+        }
+        setAvailableCountries(Array.from(countries).sort());
+        setTeams(result);
+      }
+    } catch (err) {
+      logger.error('[join-team] load teams error:', err);
+    } finally {
+      setTeamsLoading(false);
+      setTeamsLoaded(true);
+    }
+  }, []);
 
   useEffect(() => {
     if (!ready || !token) return;
@@ -72,7 +112,6 @@ export default function JoinTeamPage() {
             return;
           }
         }
-        if (!cancelled) await loadTeams();
       } catch (err) {
         logger.error('[join-team] auth error:', err);
         if (!cancelled) setError(t.connectionError);
@@ -83,83 +122,14 @@ export default function JoinTeamPage() {
     return () => {
       cancelled = true;
     };
-  }, [ready, token, router, t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, token, router]);
 
-  const loadTeams = async (
-    search?: string,
-    country?: string,
-    // L'API exclut déjà les équipes pleines en joinable=1 et le front re-filtre
-    // systématiquement, donc ce drapeau n'a plus d'effet sur le résultat. On le
-    // garde dans la signature pour la symétrie avec `reloadTeams` / l'UI.
-    _hasSlots?: boolean
-  ) => {
-    setTeamsLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (search?.trim()) {
-        params.set('search', search.trim());
-      }
-      params.set('limit', '50');
-      params.set('joinable', '1');
-      if (country) params.set('country', country);
-      const res = await fetch(`/api/teams?${params.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        let result: Team[] = data.teams || [];
-        // Garde-fou défensif : l'API exclut déjà les équipes pleines en
-        // joinable=1, mais on ne laisse jamais passer une équipe pleine côté
-        // front (member_count >= MAX_TEAM_PLAYERS), filtre « avec places » ou
-        // non. Le filtre `hasSlots` reste donc surtout cosmétique.
-        result = result.filter(
-          (t) =>
-            typeof t.member_count !== 'number' ||
-            t.member_count < MAX_TEAM_PLAYERS
-        );
-        // Collecter les pays disponibles
-        const countries = new Set<string>();
-        for (const t of data.teams || []) {
-          if (t.country) countries.add(t.country);
-        }
-        setAvailableCountries(Array.from(countries).sort());
-        setTeams(result);
-      }
-    } catch (err) {
-      logger.error('[join-team] load teams error:', err);
-    } finally {
-      setTeamsLoading(false);
-      setTeamsLoaded(true);
-    }
-  };
-
-  const reloadTeams = (
-    search?: string,
-    country?: string,
-    hasSlots?: boolean
-  ) => {
-    loadTeams(
-      search ?? teamSearch,
-      country ?? filterCountry,
-      hasSlots ?? filterHasSlots
-    );
-  };
-
-  const handleTeamSearchChange = (value: string) => {
-    setTeamSearch(value);
-    const timeout = setTimeout(() => {
-      reloadTeams(value);
-    }, 300);
-    return () => clearTimeout(timeout);
-  };
-
-  const handleCountryChange = (value: string) => {
-    setFilterCountry(value);
-    reloadTeams(undefined, value);
-  };
-
-  const handleHasSlotsChange = (checked: boolean) => {
-    setFilterHasSlots(checked);
-    reloadTeams(undefined, undefined, checked);
-  };
+  // Recharge la liste quand la recherche (debouncee) ou le pays change.
+  useEffect(() => {
+    if (!ready) return;
+    loadTeams(debouncedSearch, filterCountry);
+  }, [debouncedSearch, filterCountry, ready, loadTeams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -278,16 +248,16 @@ export default function JoinTeamPage() {
                 <input
                   type="text"
                   value={teamSearch}
-                  onChange={(e) => handleTeamSearchChange(e.target.value)}
+                  onChange={(e) => setTeamSearch(e.target.value)}
                   className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 mb-3"
                   placeholder={t.searchPlaceholder}
                 />
 
-                <div className="flex flex-wrap items-center gap-3 mb-3">
-                  {availableCountries.length > 0 && (
+                {availableCountries.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-3 mb-3">
                     <select
                       value={filterCountry}
-                      onChange={(e) => handleCountryChange(e.target.value)}
+                      onChange={(e) => setFilterCountry(e.target.value)}
                       className="rounded-lg bg-black/60 border border-white/10 px-3 py-1.5 text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-purple-400"
                     >
                       <option value="">{t.allCountries}</option>
@@ -297,17 +267,8 @@ export default function JoinTeamPage() {
                         </option>
                       ))}
                     </select>
-                  )}
-                  <label className="inline-flex items-center gap-2 text-xs text-gray-400 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={filterHasSlots}
-                      onChange={(e) => handleHasSlotsChange(e.target.checked)}
-                      className="rounded border-white/20 bg-black/60 text-purple-500 focus:ring-purple-400"
-                    />
-                    {t.slotsOnly}
-                  </label>
-                </div>
+                  </div>
+                )}
 
                 <div className="max-h-72 overflow-y-auto space-y-2 rounded-xl border border-white/10 bg-black/40 p-2">
                   {teamsLoading && (

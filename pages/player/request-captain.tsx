@@ -1,11 +1,12 @@
 // pages/player/request-captain.tsx
 // Page pour demander à devenir capitaine d'une équipe (existante ou nouvelle)
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
+import { useDebounce } from '@/hooks/useDebounce';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import ExistingTeamSelector from '@/components/player/ExistingTeamSelector';
 import NewTeamForm from '@/components/player/NewTeamForm';
@@ -54,6 +55,30 @@ export default function RequestCaptainPage() {
   const [success, setSuccess] = useState(false);
   const [successTeamName, setSuccessTeamName] = useState('');
 
+  const debouncedSearch = useDebounce(teamSearch, 300);
+
+  const loadTeams = useCallback(
+    async (search?: string) => {
+      setTeamsLoading(true);
+      try {
+        const params = new URLSearchParams();
+        if (search?.trim()) {
+          params.set('search', search.trim());
+        }
+        const res = await fetch(`/api/teams?${params.toString()}`);
+        if (res.ok) {
+          const data = await res.json();
+          setTeams(data.teams || []);
+        }
+      } catch (err) {
+        logger.error('[request-captain] load teams error:', err);
+      } finally {
+        setTeamsLoading(false);
+      }
+    },
+    []
+  );
+
   useEffect(() => {
     if (!ready || !token) return;
     let cancelled = false;
@@ -73,7 +98,6 @@ export default function RequestCaptainPage() {
             return;
           }
         }
-        if (!cancelled) await loadTeams();
       } catch (err) {
         logger.error('[request-captain] auth error:', err);
         if (!cancelled) setError(t.connectionError);
@@ -84,34 +108,14 @@ export default function RequestCaptainPage() {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, token, router]);
 
-  const loadTeams = async (search?: string) => {
-    setTeamsLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (search?.trim()) {
-        params.set('search', search.trim());
-      }
-      const res = await fetch(`/api/teams?${params.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        setTeams(data.teams || []);
-      }
-    } catch (err) {
-      logger.error('[request-captain] load teams error:', err);
-    } finally {
-      setTeamsLoading(false);
-    }
-  };
-
-  const handleTeamSearchChange = (value: string) => {
-    setTeamSearch(value);
-    const timeout = setTimeout(() => {
-      loadTeams(value);
-    }, 300);
-    return () => clearTimeout(timeout);
-  };
+  // Recharge la liste d'equipes quand la recherche (debouncee) change.
+  useEffect(() => {
+    if (!ready) return;
+    loadTeams(debouncedSearch);
+  }, [debouncedSearch, ready, loadTeams]);
 
   const addMember = () => {
     if (members.length >= 5) return;
@@ -311,7 +315,7 @@ export default function RequestCaptainPage() {
                   teamsLoading={teamsLoading}
                   selectedTeamId={selectedTeamId}
                   teamSearch={teamSearch}
-                  onTeamSearchChange={handleTeamSearchChange}
+                  onTeamSearchChange={setTeamSearch}
                   onSelectTeam={setSelectedTeamId}
                 />
               )}

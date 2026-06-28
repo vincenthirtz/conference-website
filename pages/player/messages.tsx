@@ -8,6 +8,7 @@ import { useRouter } from 'next/router';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
+import { useDebounce } from '@/hooks/useDebounce';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import { useT } from '@/lib/i18n/useT';
 import { useLang } from '@/lib/i18n/LanguageProvider';
@@ -235,23 +236,35 @@ export default function MessagesPage() {
     },
   });
 
-  const loadTeams = async (search?: string) => {
-    setTeamsLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (search?.trim()) params.set('search', search.trim());
-      params.set('limit', '50');
-      const res = await fetch(`/api/teams?${params.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        setTeams((data.teams || []).filter((t: Team) => t.id !== myTeamId));
+  const loadTeams = useCallback(
+    async (search?: string) => {
+      setTeamsLoading(true);
+      try {
+        const params = new URLSearchParams();
+        if (search?.trim()) params.set('search', search.trim());
+        params.set('limit', '50');
+        const res = await fetch(`/api/teams?${params.toString()}`);
+        if (res.ok) {
+          const data = await res.json();
+          setTeams((data.teams || []).filter((t: Team) => t.id !== myTeamId));
+        }
+      } catch (err) {
+        logger.error('[messages] load teams error:', err);
+      } finally {
+        setTeamsLoading(false);
       }
-    } catch (err) {
-      logger.error('[messages] load teams error:', err);
-    } finally {
-      setTeamsLoading(false);
-    }
-  };
+    },
+    [myTeamId]
+  );
+
+  // Debounce the team search input so we fire at most one /api/teams request
+  // per 300ms pause, instead of one per keystroke.
+  const debouncedTeamSearch = useDebounce(teamSearch, 300);
+  useEffect(() => {
+    if (!showNewConv) return;
+    loadTeams(debouncedTeamSearch);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedTeamSearch, showNewConv]);
 
   const handleNewConversation = () => {
     setShowNewConv(true);
@@ -262,12 +275,8 @@ export default function MessagesPage() {
     setTeamSearch('');
     setNewMessage('');
     setError(null);
-    loadTeams();
-  };
-
-  const handleTeamSearchChange = (value: string) => {
-    setTeamSearch(value);
-    setTimeout(() => loadTeams(value), 300);
+    // The debounced-search effect (keyed on showNewConv) handles the initial
+    // team load once the picker opens — no manual fetch needed here.
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -281,6 +290,7 @@ export default function MessagesPage() {
       return;
     }
 
+    const content = newMessage.trim();
     setSending(true);
     setError(null);
 
@@ -291,23 +301,36 @@ export default function MessagesPage() {
           method: 'POST',
           body: JSON.stringify({
             targetTeamId,
-            content: newMessage.trim(),
+            content,
           }),
         }
       );
 
       setNewMessage('');
 
-      // If starting a new conversation, open it
       if (!activeConvId) {
+        // First message of a brand-new conversation: open the freshly created
+        // thread (no existing thread state to append to).
         setShowNewConv(false);
         openConversation(data.conversationId);
       } else {
-        // Reload the current conversation
-        openConversation(activeConvId);
+        // Optimistically append the just-sent message so it appears instantly
+        // (no loading-spinner flash), then reconcile silently in the
+        // background — silentReloadActive also refreshes the inbox.
+        const optimistic: Message = {
+          id: `optimistic-${Date.now()}`,
+          content,
+          senderId: '',
+          senderTeamId: myTeamId ?? '',
+          senderName: '',
+          fromTeamName: '',
+          isRead: true,
+          createdAt: new Date().toISOString(),
+        };
+        setMessages((prev) => [...prev, optimistic]);
+        setTimeout(scrollToBottom, 80);
+        silentReloadActive();
       }
-
-      loadConversations();
     } catch (err: unknown) {
       setError((err as Error).message);
     } finally {
@@ -529,13 +552,17 @@ export default function MessagesPage() {
             {/* New conversation - team picker */}
             {showNewConv && (
               <div className="p-6">
-                <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
+                <label
+                  htmlFor="msg-team-search"
+                  className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
+                >
                   {t.sendTo}
                 </label>
                 <input
+                  id="msg-team-search"
                   type="text"
                   value={teamSearch}
-                  onChange={(e) => handleTeamSearchChange(e.target.value)}
+                  onChange={(e) => setTeamSearch(e.target.value)}
                   className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/80 mb-3"
                   placeholder={t.searchTeam}
                 />
@@ -618,7 +645,11 @@ export default function MessagesPage() {
                   />
 
                   {error && (
-                    <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+                    <div
+                      role="alert"
+                      aria-live="assertive"
+                      className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100"
+                    >
                       {error}
                     </div>
                   )}
@@ -720,7 +751,11 @@ export default function MessagesPage() {
                     </form>
 
                     {error && (
-                      <div className="mx-4 mb-3 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-100">
+                      <div
+                        role="alert"
+                        aria-live="assertive"
+                        className="mx-4 mb-3 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-100"
+                      >
                         {error}
                       </div>
                     )}

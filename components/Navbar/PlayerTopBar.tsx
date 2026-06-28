@@ -1,12 +1,14 @@
 /* eslint-disable @next/next/no-img-element */
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import linksConfig from '@/config/links.json';
 import type { LinkItem } from '@/types/types';
 import type { PlayerLink } from './playerLinks';
 import type { PlayerNotificationsPayload } from '@/pages/api/player/notifications';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import LanguageToggle from './LanguageToggle';
 import { useT, format } from '@/lib/i18n/useT';
 
@@ -84,26 +86,29 @@ export default function PlayerTopBar({
 }: PlayerTopBarProps) {
   const t = useT('playerTopBar');
   const router = useRouter();
+  const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const menuAreaRef = useRef<HTMLDivElement>(null);
   const mobileAreaRef = useRef<HTMLDivElement>(null);
+  const drawerRef = useFocusTrap<HTMLDivElement>();
 
   const [notifTotal, setNotifTotal] = useState<number | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function poll() {
-      try {
-        const res = await fetch('/api/player/notifications');
-        if (!res.ok) return;
-        const json = (await res.json()) as PlayerNotificationsPayload;
-        if (!cancelled && typeof json?.total === 'number') {
-          setNotifTotal(json.total);
-        }
-      } catch {
-        // silent — pas d'incidence sur l'UX si ça plante
+  const poll = useCallback(async () => {
+    try {
+      const json = await adminFetchJson<PlayerNotificationsPayload>(
+        '/api/player/notifications',
+        { skipAuthRedirect: true }
+      );
+      if (typeof json?.total === 'number') {
+        setNotifTotal(json.total);
       }
+    } catch {
+      // silent — pas d'incidence sur l'UX si ça plante
     }
+  }, [adminFetchJson]);
+
+  useEffect(() => {
     poll();
     const interval = setInterval(() => {
       if (
@@ -114,10 +119,9 @@ export default function PlayerTopBar({
       poll();
     }, 90_000);
     return () => {
-      cancelled = true;
       clearInterval(interval);
     };
-  }, []);
+  }, [poll]);
 
   useEffect(() => {
     if (!openMenu) return;
@@ -334,14 +338,11 @@ export default function PlayerTopBar({
             </span>
           </button>
 
+          {openMenu === MOBILE_MENU_KEY && (
           <div
-            className={`absolute right-0 top-[calc(100%+8px)] z-[130] w-[min(85vw,300px)] overflow-hidden rounded-xl border border-white/10 bg-neutral-900/95 shadow-2xl backdrop-blur-xl transition-all duration-200 ease-out ${
-              openMenu === MOBILE_MENU_KEY
-                ? 'pointer-events-auto translate-y-0 opacity-100'
-                : 'pointer-events-none -translate-y-1 opacity-0'
-            }`}
+            ref={drawerRef}
+            className="absolute right-0 top-[calc(100%+8px)] z-[130] w-[min(85vw,300px)] overflow-hidden rounded-xl border border-white/10 bg-neutral-900/95 shadow-2xl backdrop-blur-xl"
             role="menu"
-            aria-hidden={openMenu !== MOBILE_MENU_KEY}
           >
             <div className="py-1">
               {links.map((link) => {
@@ -389,6 +390,7 @@ export default function PlayerTopBar({
               </button>
             </div>
           </div>
+          )}
         </div>
       </div>
     </div>

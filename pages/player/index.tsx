@@ -235,14 +235,20 @@ function PlayerDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [ready, loadData]);
+  }, [ready, loadData, t]);
 
   const handleCancelDemande = async (demandeId: string) => {
-    await adminFetchJson('/api/demandes/cancel', {
-      method: 'DELETE',
-      body: JSON.stringify({ demandeId }),
-    });
-    await loadData();
+    setError(null);
+    try {
+      await adminFetchJson('/api/demandes/cancel', {
+        method: 'DELETE',
+        body: JSON.stringify({ demandeId }),
+      });
+      await loadData();
+    } catch (err) {
+      logger.error('[player] cancel demande error:', err);
+      setError(t.cancelError);
+    }
   };
 
   const handleScrimAction = async (
@@ -265,12 +271,16 @@ function PlayerDashboard() {
   };
 
   const handleLeaveTeam = async () => {
-    await adminFetchJson('/api/teams/leave', { method: 'POST' });
-
-    setTeam(null);
-    setMembers([]);
-    setIsCaptain(false);
-    await loadData();
+    setError(null);
+    try {
+      await adminFetchJson('/api/teams/leave', { method: 'POST' });
+      // Ne pas vider l'état localement avant confirmation : on reconcilie
+      // depuis le serveur via loadData (qui remettra team/members/isCaptain).
+      await loadData();
+    } catch (err) {
+      logger.error('[player] leave team error:', err);
+      setError(t.leaveError);
+    }
   };
 
   const pendingCaptainRequest = demandes.find(

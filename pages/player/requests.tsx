@@ -1,11 +1,12 @@
 // pages/player/requests.tsx
 // Page pour demander un transfert de joueur ou un scrim contre une autre equipe
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
+import { useDebounce } from '@/hooks/useDebounce';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import { useT, format } from '@/lib/i18n/useT';
 
@@ -66,6 +67,29 @@ export default function PlayerRequestsPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const debouncedSearch = useDebounce(teamSearch, 300);
+
+  const loadTeams = useCallback(
+    async (search?: string) => {
+      setTeamsLoading(true);
+      try {
+        const params = new URLSearchParams();
+        if (search?.trim()) params.set('search', search.trim());
+        params.set('limit', '50');
+        const res = await fetch(`/api/teams?${params.toString()}`);
+        if (res.ok) {
+          const data = await res.json();
+          setTeams(data.teams || []);
+        }
+      } catch (err) {
+        logger.error('[requests] load teams error:', err);
+      } finally {
+        setTeamsLoading(false);
+      }
+    },
+    []
+  );
+
   useEffect(() => {
     if (!ready || !token || !user) return;
     let cancelled = false;
@@ -95,8 +119,6 @@ export default function PlayerRequestsPage() {
 
         const urlTab = router.query.tab;
         if (urlTab === 'scrim' && !cancelled) setTab('scrim');
-
-        await loadTeams();
       } catch (err) {
         logger.error('[requests] auth error:', err);
         if (!cancelled) setError(t.connectionError);
@@ -107,31 +129,14 @@ export default function PlayerRequestsPage() {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, token, user, router.query.tab]);
 
-  const loadTeams = async (search?: string) => {
-    setTeamsLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (search?.trim()) params.set('search', search.trim());
-      params.set('limit', '50');
-      const res = await fetch(`/api/teams?${params.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        setTeams(data.teams || []);
-      }
-    } catch (err) {
-      logger.error('[requests] load teams error:', err);
-    } finally {
-      setTeamsLoading(false);
-    }
-  };
-
-  const handleTeamSearchChange = (value: string) => {
-    setTeamSearch(value);
-    const timeout = setTimeout(() => loadTeams(value), 300);
-    return () => clearTimeout(timeout);
-  };
+  // Recharge la liste d'equipes quand la recherche (debouncee) change.
+  useEffect(() => {
+    if (!ready) return;
+    loadTeams(debouncedSearch);
+  }, [debouncedSearch, ready, loadTeams]);
 
   const handleTabChange = (newTab: Tab) => {
     setTab(newTab);
@@ -287,7 +292,13 @@ export default function PlayerRequestsPage() {
               </svg>
             </div>
             <h1 className="text-2xl font-bold mb-4">{t.successHeading}</h1>
-            <p className="text-gray-400 mb-6">{success}</p>
+            <p
+              id="requests-success"
+              aria-live="polite"
+              className="text-gray-400 mb-6"
+            >
+              {success}
+            </p>
             <Link
               href="/player"
               className="inline-block px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white font-semibold transition"
@@ -509,8 +520,10 @@ export default function PlayerRequestsPage() {
                           <input
                             type="text"
                             value={teamSearch}
-                            onChange={(e) =>
-                              handleTeamSearchChange(e.target.value)
+                            onChange={(e) => setTeamSearch(e.target.value)}
+                            aria-invalid={!!error}
+                            aria-describedby={
+                              error ? 'requests-error' : undefined
                             }
                             className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 mb-3"
                             placeholder={t.searchTeam}
@@ -583,8 +596,10 @@ export default function PlayerRequestsPage() {
                           <input
                             type="text"
                             value={teamSearch}
-                            onChange={(e) =>
-                              handleTeamSearchChange(e.target.value)
+                            onChange={(e) => setTeamSearch(e.target.value)}
+                            aria-invalid={!!error}
+                            aria-describedby={
+                              error ? 'requests-error' : undefined
                             }
                             className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 mb-3"
                             placeholder={t.searchTeam}
@@ -678,7 +693,9 @@ export default function PlayerRequestsPage() {
                       <input
                         type="text"
                         value={teamSearch}
-                        onChange={(e) => handleTeamSearchChange(e.target.value)}
+                        onChange={(e) => setTeamSearch(e.target.value)}
+                        aria-invalid={!!error}
+                        aria-describedby={error ? 'requests-error' : undefined}
                         className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400/80 mb-3"
                         placeholder={t.searchTeam}
                       />
@@ -875,7 +892,11 @@ function MessageField({
 
 function ErrorBanner({ message }: { message: string }) {
   return (
-    <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+    <div
+      id="requests-error"
+      role="alert"
+      className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100"
+    >
       {message}
     </div>
   );

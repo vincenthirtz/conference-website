@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState, type JSX } from 'react';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useT, format } from '@/lib/i18n/useT';
 
 type Notifications = {
   hasTeam: boolean;
@@ -21,6 +22,7 @@ const POLL_MS = 60_000;
 export default function PlayerBell(): JSX.Element | null {
   const { user, loading } = useAuthSession();
   const { adminFetchJson } = useAdminFetch();
+  const t = useT('playerBell');
   const [data, setData] = useState<Notifications | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -64,25 +66,35 @@ export default function PlayerBell(): JSX.Element | null {
   const tooltip = data
     ? [
         data.unreadMessages
-          ? `${data.unreadMessages} message${data.unreadMessages > 1 ? 's' : ''}`
+          ? format(
+              data.unreadMessages > 1 ? t.messages_other : t.messages_one,
+              { count: data.unreadMessages }
+            )
           : null,
         data.pendingScrims
-          ? `${data.pendingScrims} scrim${data.pendingScrims > 1 ? 's' : ''}`
+          ? format(data.pendingScrims > 1 ? t.scrims_other : t.scrims_one, {
+              count: data.pendingScrims,
+            })
           : null,
         data.pendingJoinRequests
-          ? `${data.pendingJoinRequests} candidature${data.pendingJoinRequests > 1 ? 's' : ''}`
+          ? format(
+              data.pendingJoinRequests > 1
+                ? t.candidatures_other
+                : t.candidatures_one,
+              { count: data.pendingJoinRequests }
+            )
           : null,
-        data.checkinPending ? 'check-in à valider' : null,
+        data.checkinPending ? t.checkinPending : null,
       ]
         .filter(Boolean)
-        .join(' · ') || 'Aucune notification'
-    : 'Notifications';
+        .join(' · ') || t.empty
+    : t.title;
 
   return (
     <Link
       href="/player"
       title={tooltip}
-      aria-label={`Mon espace joueur — ${tooltip}`}
+      aria-label={format(t.ariaLabel, { tooltip })}
       className="group/bell relative ml-2 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-neutral-200 backdrop-blur-md transition-all hover:border-white/20 hover:bg-white/[0.08] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
     >
       <svg

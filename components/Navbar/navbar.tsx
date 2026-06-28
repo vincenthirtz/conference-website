@@ -115,7 +115,7 @@ function Navbar(): JSX.Element {
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-[200] focus:rounded-lg focus:bg-purple-600 focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white focus:outline-none focus:ring-2 focus:ring-white"
       >
-        Aller au contenu principal
+        {tNav.skipToContent}
       </a>
 
       {!loading && isStaff && (
@@ -164,7 +164,7 @@ function Navbar(): JSX.Element {
               <Link
                 href="/"
                 className="group flex shrink-0 cursor-pointer items-center"
-                aria-label="Accueil"
+                aria-label={tNav.homeAria}
               >
                 <Image
                   src="/img/logos/2025-logo.png"
@@ -184,7 +184,7 @@ function Navbar(): JSX.Element {
           >
             <button
               type="button"
-              aria-label={drawerOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+              aria-label={drawerOpen ? tNav.closeMenu : tNav.openMenu}
               aria-expanded={drawerOpen}
               onClick={() => setDrawerOpen((v) => !v)}
               className="group relative inline-flex h-10 w-10 items-center justify-center rounded-lg text-white transition-colors hover:bg-white/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
