@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from 'react';
 import { logger } from '@/utils/logger';
+import { maskBattleTag } from '@/utils/battleTag';
 
 type TeamMember = {
   id: string;
@@ -183,7 +184,7 @@ export default function BriefingPanel({ matchId, accessToken }: Props) {
                       className="flex items-center gap-2 text-[11px] text-gray-200"
                     >
                       <span className="font-mono truncate flex-1">
-                        {m.battle_tag || '—'}
+                        {maskBattleTag(m.battle_tag) || '—'}
                       </span>
                       <span className="text-[10px] text-gray-500">
                         {m.role}

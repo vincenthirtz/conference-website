@@ -9,6 +9,7 @@ import Head from 'next/head';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { maskBattleTag } from '@/utils/battleTag';
 import type { StaffProps } from '@/types/admin';
 
 type Member = {
@@ -733,7 +734,7 @@ function RosterColumn({ team }: { team: Team | null }) {
                       : 'text-neutral-200'
                 }`}
               >
-                {m.battle_tag || `(${m.id.slice(0, 6)})`}
+                {maskBattleTag(m.battle_tag) || `(${m.id.slice(0, 6)})`}
               </span>
               {m.is_substitute && (
                 <span className="text-[9px] uppercase text-neutral-500 tracking-widest">
