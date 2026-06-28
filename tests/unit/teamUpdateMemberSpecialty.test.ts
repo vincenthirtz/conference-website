@@ -174,6 +174,30 @@ describe('/api/teams/update-member-specialty - access control', () => {
     );
     expect(res.statusCode).toBe(404);
   });
+
+  it('manager CANNOT edit the captain own member row (403)', async () => {
+    setAuthUser({ id: MANAGER_ID });
+    const res = makeRes();
+    await updateSpecialtyHandler(
+      makeAuthedReq({ body: { memberId: TM_CAP, specialty: 'tank' } }),
+      res
+    );
+    expect(res.statusCode).toBe(403);
+    const member = (store.team_members as any[]).find((m) => m.id === TM_CAP);
+    expect(member.specialty).toBeNull();
+  });
+
+  it('captain CAN edit own member row', async () => {
+    // captain is the default signed-in user
+    const res = makeRes();
+    await updateSpecialtyHandler(
+      makeAuthedReq({ body: { memberId: TM_CAP, specialty: 'tank' } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const member = (store.team_members as any[]).find((m) => m.id === TM_CAP);
+    expect(member.specialty).toBe('tank');
+  });
 });
 
 describe('/api/teams/update-member-specialty - validation', () => {

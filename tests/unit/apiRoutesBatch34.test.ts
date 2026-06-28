@@ -12,7 +12,13 @@ import {
   setAuthUser,
   setAuthListUsers,
   setCreateUserResult,
+  setAdminUser,
 } from './__helpers__/supabaseMock';
+
+// UUIDs valides utilisés par les tests du chemin `user_id` brut. La garde
+// anti-abuse exige désormais un UUID valide ET un utilisateur existant.
+const EXISTING_UID = '11111111-2222-3333-4444-555555555555';
+const EXISTING_UID_2 = '66666666-7777-8888-9999-aaaaaaaaaaaa';
 
 import createWithMemberHandler from '../../pages/api/teams/create-with-member';
 import { generateChallenge } from '../../utils/captcha';
@@ -29,9 +35,9 @@ import { generateChallenge } from '../../utils/captcha';
  */
 function validCaptcha(): { captchaToken: string; captchaAnswer: string } {
   const { token } = generateChallenge();
-  const decoded = JSON.parse(
-    Buffer.from(token, 'base64url').toString()
-  ) as { answer: number };
+  const decoded = JSON.parse(Buffer.from(token, 'base64url').toString()) as {
+    answer: number;
+  };
   return { captchaToken: token, captchaAnswer: String(decoded.answer) };
 }
 
@@ -436,15 +442,18 @@ describe('POST /api/teams/create-with-member', () => {
     expect((res.body as any).tournament).toBeFalsy();
   });
 
-  it('201 with member_user_id directly (no email lookup)', async () => {
+  it('201 with member_user_id directly (existing user, no email lookup)', async () => {
     store.teams = [];
     store.team_members = [];
+    // La garde anti-abuse exige un UUID valide ET un utilisateur existant :
+    // on seed l'utilisateur dans la table admin (getUserById le retournera).
+    setAdminUser(EXISTING_UID, 'direct@example.com');
     const res = makeRes();
     await createWithMemberHandler(
       makeReq({
         body: {
           name: 'Direct UID Team',
-          member_user_id: 'u-direct',
+          member_user_id: EXISTING_UID,
           member_role: 'player',
           member_battle_tag: 'Direct#9999',
           set_captain: true,
@@ -454,16 +463,71 @@ describe('POST /api/teams/create-with-member', () => {
     );
     expect(res.statusCode).toBe(201);
     expect((store.team_members as any).length).toBe(1);
-    expect((store.team_members as any)[0].user_id).toBe('u-direct');
+    expect((store.team_members as any)[0].user_id).toBe(EXISTING_UID);
+    // Capitaine épinglé uniquement après validation existence.
+    expect((store.teams as any)[0].captain_id).toBe(EXISTING_UID);
+  });
+
+  // SECURITY : un user_id qui n'est pas un UUID est rejeté (anti-injection de
+  // chaîne arbitraire) AVANT toute écriture en base.
+  it('400 when member_user_id is not a valid UUID', async () => {
+    store.teams = [];
+    store.team_members = [];
+    const res = makeRes();
+    await createWithMemberHandler(
+      makeReq({
+        body: {
+          name: 'Bad UID Team',
+          member_user_id: 'u-direct',
+          member_role: 'player',
+          member_battle_tag: 'Direct#9999',
+          set_captain: true,
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect((res.body as any).error).toMatch(/user id/i);
+    // Aucune équipe ni membre créé : la garde s'exécute avant l'insert team.
+    expect((store.teams as any[]) ?? []).toHaveLength(0);
+    expect((store.team_members as any[]) ?? []).toHaveLength(0);
+  });
+
+  // SECURITY : un UUID bien formé mais qui ne correspond à AUCUN utilisateur
+  // existant est rejeté. Bloque l'épinglage d'un id fabriqué.
+  it('400 when member_user_id is a UUID for a non-existent user', async () => {
+    store.teams = [];
+    store.team_members = [];
+    // Aucun setAdminUser → getUserById renvoie { user: null }.
+    const res = makeRes();
+    await createWithMemberHandler(
+      makeReq({
+        body: {
+          name: 'Ghost UID Team',
+          member_user_id: EXISTING_UID,
+          member_role: 'player',
+          member_battle_tag: 'Ghost#9999',
+          set_captain: true,
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect((res.body as any).error).toMatch(
+      /unknown user id|no matching user/i
+    );
+    expect((store.teams as any[]) ?? []).toHaveLength(0);
+    expect((store.team_members as any[]) ?? []).toHaveLength(0);
   });
 
   it('400 when single member_user_id has invalid battle_tag format', async () => {
+    setAdminUser(EXISTING_UID, 'direct@example.com');
     const res = makeRes();
     await createWithMemberHandler(
       makeReq({
         body: {
           name: 'BadBT',
-          member_user_id: 'u-direct',
+          member_user_id: EXISTING_UID,
           member_role: 'player',
           member_battle_tag: 'no_hash',
         },
@@ -473,8 +537,9 @@ describe('POST /api/teams/create-with-member', () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it('200 with bulk members where one has user_id and one has email', async () => {
+  it('200 with bulk members where one has (existing) user_id and one has email', async () => {
     setAuthListUsers([{ id: 'u-existing', email: 'existing@example.com' }]);
+    setAdminUser(EXISTING_UID, 'tank@example.com');
     store.teams = [];
     store.team_members = [];
     const res = makeRes();
@@ -484,7 +549,7 @@ describe('POST /api/teams/create-with-member', () => {
           name: 'Mixed Team',
           members: [
             {
-              user_id: 'u-direct',
+              user_id: EXISTING_UID,
               role: 'tank',
               battle_tag: 'Tank#1234',
               set_captain: true,
@@ -501,6 +566,36 @@ describe('POST /api/teams/create-with-member', () => {
     );
     expect(res.statusCode).toBe(201);
     expect((store.team_members as any).length).toBe(2);
+  });
+
+  // SECURITY : dans le chemin bulk, un user_id brut invalide (non-existant) est
+  // rejeté et l'équipe entière est refusée (pas d'insertion partielle).
+  it('400 bulk member with a non-existent user_id (rejected, no team created)', async () => {
+    setAuthListUsers([{ id: 'u-existing', email: 'existing@example.com' }]);
+    store.teams = [];
+    store.team_members = [];
+    const res = makeRes();
+    await createWithMemberHandler(
+      makeReq({
+        body: {
+          name: 'Pinned Victim Team',
+          members: [
+            {
+              // UUID valide mais aucun utilisateur correspondant (pas de
+              // setAdminUser) → rejeté avant tout insert.
+              user_id: EXISTING_UID_2,
+              role: 'tank',
+              battle_tag: 'Tank#1234',
+              set_captain: true,
+            },
+          ],
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect((store.teams as any[]) ?? []).toHaveLength(0);
+    expect((store.team_members as any[]) ?? []).toHaveLength(0);
   });
 
   it('201 skips auto-register when tournament status is not published', async () => {

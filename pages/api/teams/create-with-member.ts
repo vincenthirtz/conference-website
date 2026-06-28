@@ -7,7 +7,12 @@ import {
 } from '@/utils/find-or-create-user';
 import { sendTeamJoinEmail } from '@/utils/email';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { sanitizeUrl, validateRole, validateSpecialty } from '@/utils/apiHelpers';
+import {
+  sanitizeUrl,
+  validateRole,
+  validateSpecialty,
+  validateExistingUserId,
+} from '@/utils/apiHelpers';
 import { emitBotEvent } from '@/utils/botEvents';
 import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 import { alertIfBlacklisted } from '@/utils/moderation/blacklist';
@@ -196,9 +201,7 @@ export default async function handler(
   // Lot 6 : BattleTag obligatoire UNIQUEMENT lors d'une inscription à un
   // tournoi. Hors tournoi (équipe scrim-only ou création sans engagement),
   // le BattleTag reste validé s'il est fourni mais peut être laissé vide.
-  const tournamentRequiresBattleTag = !!(
-    body.tournament_id?.toString().trim()
-  );
+  const tournamentRequiresBattleTag = !!body.tournament_id?.toString().trim();
 
   let memberRecords: {
     user_id: string;
@@ -232,7 +235,9 @@ export default async function handler(
     const trimmed = (raw ?? '').trim();
     if (!trimmed) {
       if (tournamentRequiresBattleTag) {
-        throw new Error('BattleTag required for each member when registering to a tournament.');
+        throw new Error(
+          'BattleTag required for each member when registering to a tournament.'
+        );
       }
       return null;
     }
@@ -253,8 +258,18 @@ export default async function handler(
         .json({ error: (err as Error)?.message || 'Invalid BattleTag' });
     }
     if (memberUserId) {
+      // Anti-abuse : ce endpoint est PUBLIC. Un `user_id` brut fourni par le
+      // client ne doit JAMAIS être inséré (ni promu capitaine) sans validation
+      // — sinon un attaquant connaissant l'id d'une victime (ces ids fuient,
+      // cf. pages/profile.tsx) pourrait l'épingler dans une équipe. Le flux
+      // légitime (pages/team/create.tsx) résout par email et n'envoie jamais
+      // de `user_id`. On exige donc : UUID valide + utilisateur existant.
+      const check = await validateExistingUserId(memberUserId);
+      if (!check.ok) {
+        return res.status(check.status).json({ error: check.error });
+      }
       memberRecords.push({
-        user_id: memberUserId,
+        user_id: check.userId,
         role: resolvedRole,
         captain: Boolean(body.set_captain),
         battle_tag: resolvedBattleTag,
@@ -297,8 +312,15 @@ export default async function handler(
       }
 
       if (m.user_id) {
+        // Même garde anti-abuse que le chemin single-member : valider tout
+        // `user_id` brut (UUID valide + utilisateur existant) avant insertion /
+        // promotion capitaine sur ce endpoint public.
+        const check = await validateExistingUserId(m.user_id);
+        if (!check.ok) {
+          return res.status(check.status).json({ error: check.error });
+        }
         memberRecords.push({
-          user_id: m.user_id,
+          user_id: check.userId,
           role: resolvedRole,
           captain: Boolean(m.set_captain),
           battle_tag: resolvedBattleTag,
@@ -627,7 +649,8 @@ export default async function handler(
         .select('discord_user_id')
         .eq('user_id', captainUserId)
         .maybeSingle();
-      captainDiscordUserId = (link?.discord_user_id as string | undefined) ?? null;
+      captainDiscordUserId =
+        (link?.discord_user_id as string | undefined) ?? null;
     }
     await emitBotEvent(
       'team.created',

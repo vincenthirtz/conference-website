@@ -276,6 +276,38 @@ describe('/api/teams/update-member-role as manager', () => {
     const member = (store.team_members as any[]).find((m) => m.id === TM_PLY);
     expect(member.role).toBe('manager');
   });
+
+  it('manager CANNOT edit the captain own member row (403)', async () => {
+    // Manager is signed in by default; target the captain's team_members row.
+    const res = makeRes();
+    await updateRoleHandler(
+      makeAuthedReq({
+        method: 'PATCH',
+        body: { memberId: TM_CAP, role: 'substitute' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(403);
+    const member = (store.team_members as any[]).find((m) => m.id === TM_CAP);
+    // unchanged
+    expect(member.role).toBe('player');
+  });
+
+  it('rejects an invalid/unknown role with 400 (no silent coercion)', async () => {
+    const res = makeRes();
+    await updateRoleHandler(
+      makeAuthedReq({
+        method: 'PATCH',
+        body: { memberId: TM_PLY, role: 'plyaer' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    const member = (store.team_members as any[]).find((m) => m.id === TM_PLY);
+    // not coerced to 'player' — left untouched
+    expect(member.role).toBe('player');
+    expect(member.is_substitute).toBeUndefined();
+  });
 });
 
 /* -----------------------------------------------------------

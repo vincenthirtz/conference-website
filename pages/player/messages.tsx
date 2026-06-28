@@ -92,6 +92,11 @@ export default function MessagesPage() {
   const [error, setError] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  // Tracks the conversation whose open() call is currently the latest one.
+  // Each await in openConversation re-checks this against its own convId and
+  // bails before setState if a newer open() superseded it, so a slow response
+  // for conversation A can't clobber the freshly-opened conversation B.
+  const activeRequestRef = useRef<string | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -157,6 +162,9 @@ export default function MessagesPage() {
   }, [router.query.conv, ready, canManage]);
 
   const openConversation = async (convId: string) => {
+    // Mark this as the latest requested conversation. Any in-flight open() for
+    // a previous convId will see a different value here and bail out below.
+    activeRequestRef.current = convId;
     setActiveConvId(convId);
     setShowNewConv(false);
     setMsgLoading(true);
@@ -169,6 +177,10 @@ export default function MessagesPage() {
         myTeamId: string | null;
       }>(`/api/player/messages/${convId}`);
 
+      // A newer open() superseded us while the GET was in flight — drop this
+      // stale response so it can't overwrite the now-active conversation.
+      if (activeRequestRef.current !== convId) return;
+
       setMessages(data.messages || []);
       setOtherTeam(data.otherTeam || null);
       setMyTeamId(data.myTeamId);
@@ -178,14 +190,18 @@ export default function MessagesPage() {
         method: 'PATCH',
       });
 
+      if (activeRequestRef.current !== convId) return;
+
       // Refresh conversation list to update unread counts
       loadConversations();
 
       setTimeout(scrollToBottom, 100);
     } catch (err: unknown) {
+      if (activeRequestRef.current !== convId) return;
       setError((err as Error).message);
     } finally {
-      setMsgLoading(false);
+      // Only the latest request owns the loading flag.
+      if (activeRequestRef.current === convId) setMsgLoading(false);
     }
   };
 

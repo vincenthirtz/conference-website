@@ -17,7 +17,7 @@ type Notifications = {
   total: number;
 };
 
-const POLL_MS = 60_000;
+const POLL_MS = 90_000;
 
 export default function PlayerBell(): JSX.Element | null {
   const { user, loading } = useAuthSession();
@@ -41,7 +41,14 @@ export default function PlayerBell(): JSX.Element | null {
   useEffect(() => {
     if (!user) return undefined;
     load();
-    intervalRef.current = setInterval(load, POLL_MS);
+    intervalRef.current = setInterval(() => {
+      if (
+        typeof document !== 'undefined' &&
+        document.visibilityState !== 'visible'
+      )
+        return;
+      load();
+    }, POLL_MS);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };

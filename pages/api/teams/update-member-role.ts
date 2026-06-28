@@ -6,7 +6,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { isValidUUID, validateRole } from '@/utils/apiHelpers';
+import { isValidUUID } from '@/utils/apiHelpers';
 import { withAuthRoute } from '@/utils/staff';
 import {
   getManagedTeam,
@@ -19,6 +19,12 @@ import {
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
+
+// Roles acceptes par cet endpoint. On REJETTE toute valeur inconnue en 400
+// plutot que de la corriger silencieusement vers 'player' (ce que ferait le
+// helper partage validateRole, conserve pour les appelants comme
+// create-with-member qui s'appuient sur sa coercition).
+const ALLOWED_ROLES = new Set(['player', 'coach', 'substitute', 'manager']);
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -50,7 +56,7 @@ export default withAuthRoute(async function handler(
 
   const { data: captainTeam, error: teamErr } = await supabaseAdmin
     .from('teams')
-    .select('id, name')
+    .select('id, name, captain_id')
     .eq('id', access.teamId)
     .eq('tenant_id', tenantId)
     .maybeSingle();
@@ -69,7 +75,16 @@ export default withAuthRoute(async function handler(
     return res.status(400).json({ error: 'role requis.' });
   }
 
-  const newRole = validateRole(role);
+  // Validation stricte au niveau de l'endpoint : une valeur inconnue est
+  // rejetee (400) au lieu d'etre coercee silencieusement vers 'player' (ce qui
+  // demoterait un membre sur une simple faute de frappe du capitaine).
+  const newRole = role.trim().toLowerCase();
+  if (!ALLOWED_ROLES.has(newRole)) {
+    return res.status(400).json({
+      error: 'role invalide. Attendu : player | coach | substitute | manager.',
+    });
+  }
+
   const teamRoles = await loadTeamRolesFromSupabase(supabaseAdmin);
 
   // Anti-escalation : seul le capitaine peut accorder un role privilegie
@@ -100,6 +115,15 @@ export default withAuthRoute(async function handler(
     return res
       .status(400)
       .json({ error: 'Tu ne peux pas changer ton propre role.' });
+  }
+
+  // Seul le capitaine peut modifier sa propre ligne de membre. Le privilege du
+  // capitaine vit dans teams.captain_id (et non dans son role de membre), donc
+  // un manager qui cible la ligne du capitaine doit etre bloque ici (403).
+  if (member.user_id === captainTeam.captain_id && !access.isCaptain) {
+    return res.status(403).json({
+      error: 'Seul le capitaine peut modifier sa propre ligne de membre.',
+    });
   }
 
   // Anti-escalation : un membre privilegie ne peut etre degrade que par le

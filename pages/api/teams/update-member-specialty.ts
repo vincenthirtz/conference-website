@@ -53,7 +53,7 @@ export default withAuthRoute(async function handler(
 
   const { data: managedTeam, error: teamErr } = await supabaseAdmin
     .from('teams')
-    .select('id, name')
+    .select('id, name, captain_id')
     .eq('id', access.teamId)
     .eq('tenant_id', tenantId)
     .maybeSingle();
@@ -100,6 +100,15 @@ export default withAuthRoute(async function handler(
     return res
       .status(404)
       .json({ error: 'Membre introuvable dans ton equipe.' });
+  }
+
+  // Seul le capitaine peut modifier sa propre ligne de membre. Le privilege du
+  // capitaine vit dans teams.captain_id (et non dans son role de membre), donc
+  // un manager qui cible la ligne du capitaine doit etre bloque ici (403).
+  if (member.user_id === managedTeam.captain_id && !access.isCaptain) {
+    return res.status(403).json({
+      error: 'Seul le capitaine peut modifier sa propre ligne de membre.',
+    });
   }
 
   const { error: updateErr } = await supabaseAdmin

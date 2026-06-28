@@ -40,11 +40,13 @@ function PlayerProfile() {
 
   // Email change state
   const [newEmail, setNewEmail] = useState('');
+  const [emailCurrentPassword, setEmailCurrentPassword] = useState('');
   const [emailChanging, setEmailChanging] = useState(false);
   const [emailSuccess, setEmailSuccess] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
 
   // Password change state
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordChanging, setPasswordChanging] = useState(false);
@@ -93,12 +95,29 @@ function PlayerProfile() {
   const handleEmailChange = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEmail || newEmail === user?.email) return;
+    if (!emailCurrentPassword) {
+      setEmailError(t.currentPasswordRequired);
+      return;
+    }
 
     setEmailChanging(true);
     setEmailError(null);
     setEmailSuccess(null);
 
     try {
+      // Re-authenticate before any sensitive change: a hijacked session
+      // (JWT in localStorage) must not be able to take over the account by
+      // silently swapping the email. We require the current password.
+      const { error: reauthError } =
+        await supabaseClient.auth.signInWithPassword({
+          email: user?.email ?? '',
+          password: emailCurrentPassword,
+        });
+      if (reauthError) {
+        setEmailError(t.wrongCurrentPassword);
+        return;
+      }
+
       const { error } = await supabaseClient.auth.updateUser({
         email: newEmail,
       });
@@ -106,6 +125,7 @@ function PlayerProfile() {
 
       setEmailSuccess(t.emailConfirmSent);
       setNewEmail('');
+      setEmailCurrentPassword('');
     } catch (err: unknown) {
       logger.error('[player] email change error:', err);
       setEmailError((err as Error)?.message || t.emailChangeError);
@@ -116,6 +136,10 @@ function PlayerProfile() {
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentPassword) {
+      setPasswordError(t.currentPasswordRequired);
+      return;
+    }
     if (!newPassword || newPassword.length < 8) {
       setPasswordError(t.passwordTooShort);
       return;
@@ -130,14 +154,39 @@ function PlayerProfile() {
     setPasswordSuccess(null);
 
     try {
+      // Re-authenticate with the current password before changing it. Without
+      // this gate, a hijacked session could lock the owner out by silently
+      // rotating the password.
+      const { error: reauthError } =
+        await supabaseClient.auth.signInWithPassword({
+          email: user?.email ?? '',
+          password: currentPassword,
+        });
+      if (reauthError) {
+        setPasswordError(t.wrongCurrentPassword);
+        return;
+      }
+
       const { error } = await supabaseClient.auth.updateUser({
         password: newPassword,
       });
       if (error) throw error;
 
-      setPasswordSuccess(t.passwordChanged);
+      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+
+      // Revoke every other live session for this user so a hijacked token can
+      // no longer be used after the legitimate owner rotates the password.
+      try {
+        await supabaseClient.auth.signOut({ scope: 'global' });
+      } catch (signOutErr) {
+        logger.error('[player] global sign-out after pwd change:', signOutErr);
+      }
+
+      setPasswordSuccess(t.signedOutAfterPasswordChange);
+      // Send the user back to login to re-authenticate with the new password.
+      router.replace('/login?next=/player/profile');
     } catch (err: unknown) {
       logger.error('[player] password change error:', err);
       setPasswordError((err as Error)?.message || t.passwordChangeError);
@@ -415,6 +464,28 @@ function PlayerProfile() {
             <form onSubmit={handleEmailChange} className="space-y-4">
               <div>
                 <label
+                  htmlFor="player-email-current-password"
+                  className="block text-xs text-gray-400 mb-1"
+                >
+                  {t.currentPasswordLabel}
+                </label>
+                <input
+                  id="player-email-current-password"
+                  type="password"
+                  autoComplete="current-password"
+                  placeholder={t.currentPasswordPlaceholder}
+                  value={emailCurrentPassword}
+                  onChange={(e) => setEmailCurrentPassword(e.target.value)}
+                  aria-invalid={Boolean(emailError)}
+                  aria-describedby={
+                    emailError ? 'player-email-error' : undefined
+                  }
+                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-500"
+                  required
+                />
+              </div>
+              <div>
+                <label
                   htmlFor="player-new-email"
                   className="block text-xs text-gray-400 mb-1"
                 >
@@ -436,7 +507,12 @@ function PlayerProfile() {
               </div>
               <button
                 type="submit"
-                disabled={emailChanging || !newEmail || newEmail === user.email}
+                disabled={
+                  emailChanging ||
+                  !newEmail ||
+                  newEmail === user.email ||
+                  !emailCurrentPassword
+                }
                 className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition"
               >
                 {emailChanging ? t.sending : t.changeEmailBtn}
@@ -471,6 +547,28 @@ function PlayerProfile() {
             <form onSubmit={handlePasswordChange} className="space-y-4">
               <div>
                 <label
+                  htmlFor="player-current-password"
+                  className="block text-xs text-gray-400 mb-1"
+                >
+                  {t.currentPasswordLabel}
+                </label>
+                <input
+                  id="player-current-password"
+                  type="password"
+                  autoComplete="current-password"
+                  placeholder={t.currentPasswordPlaceholder}
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  aria-invalid={Boolean(passwordError)}
+                  aria-describedby={
+                    passwordError ? 'player-password-error' : undefined
+                  }
+                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-500"
+                  required
+                />
+              </div>
+              <div>
+                <label
                   htmlFor="player-new-password"
                   className="block text-xs text-gray-400 mb-1"
                 >
@@ -479,6 +577,7 @@ function PlayerProfile() {
                 <input
                   id="player-new-password"
                   type="password"
+                  autoComplete="new-password"
                   placeholder="••••••••"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
@@ -501,6 +600,7 @@ function PlayerProfile() {
                 <input
                   id="player-confirm-password"
                   type="password"
+                  autoComplete="new-password"
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
@@ -515,13 +615,19 @@ function PlayerProfile() {
               </div>
               <button
                 type="submit"
-                disabled={passwordChanging || !newPassword || !confirmPassword}
+                disabled={
+                  passwordChanging ||
+                  !currentPassword ||
+                  !newPassword ||
+                  !confirmPassword
+                }
                 className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition"
               >
                 {passwordChanging ? t.updatingPassword : t.changePasswordBtn}
               </button>
             </form>
             <p className="text-xs text-gray-500 mt-3">{t.passwordHelp}</p>
+            <p className="text-xs text-gray-500 mt-1">{t.reauthHelp}</p>
           </section>
 
           {/* Mes données — export & suppression */}

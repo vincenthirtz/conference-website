@@ -88,16 +88,32 @@ export default function NextMatchCard(): JSX.Element | null {
   }, [adminFetchJson]);
 
   useEffect(() => {
+    // Initial load always runs on mount, even if the tab starts hidden.
     load();
-    const id = setInterval(load, 60_000);
-    return () => clearInterval(id);
-  }, [load]);
 
-  // Tick the relative clock once a minute so "dans 12 min" stays accurate.
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 30_000);
-    return () => clearInterval(id);
-  }, []);
+    // Single 60s interval: refetches the payload and ticks the relative clock
+    // (minute granularity). Both are skipped while the tab is backgrounded to
+    // avoid useless network + work in hidden tabs.
+    const id = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      setNow(Date.now());
+      load();
+    }, 60_000);
+
+    // Refresh immediately when the user returns to the tab so stale data and a
+    // stale clock are corrected without waiting for the next tick.
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      setNow(Date.now());
+      load();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [load]);
 
   if (loading) {
     // Hide while loading to avoid layout flash; the rest of the dashboard

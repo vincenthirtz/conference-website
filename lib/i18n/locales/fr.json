@@ -314,7 +314,13 @@
     "deleteWarningEnd": ". Toutes tes données, ton appartenance à une équipe et tes demandes seront définitivement supprimées.",
     "deleting": "Suppression...",
     "confirmDelete": "Confirmer la suppression",
-    "deleteHelp": "Droit à l'oubli RGPD — ton compte et toutes tes données seront supprimés définitivement."
+    "deleteHelp": "Droit à l'oubli RGPD — ton compte et toutes tes données seront supprimés définitivement.",
+    "currentPasswordLabel": "Mot de passe actuel",
+    "currentPasswordPlaceholder": "Ton mot de passe actuel",
+    "wrongCurrentPassword": "Mot de passe actuel incorrect.",
+    "currentPasswordRequired": "Saisis ton mot de passe actuel pour confirmer.",
+    "reauthHelp": "Pour ta sécurité, confirme ton mot de passe actuel avant de modifier ton compte.",
+    "signedOutAfterPasswordChange": "Mot de passe modifié. Par sécurité, toutes tes sessions ont été déconnectées. Reconnecte-toi avec ton nouveau mot de passe."
   },
   "casterApplication": {
     "motivationTooLong": "La motivation ne peut pas dépasser {max} caractères.",

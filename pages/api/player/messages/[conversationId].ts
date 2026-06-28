@@ -13,6 +13,7 @@ import {
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { isValidUUID } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../utils/logger';
 type CaptainTeam = { id: string; captain_id: string | null; name: string };
@@ -58,12 +59,25 @@ export default withAuthRoute(async function handler(
   )
     return;
 
-  const conversationId = req.query.conversationId as string;
-  if (!conversationId || !conversationId.includes('_')) {
+  const rawConversationId = req.query.conversationId;
+  // Validate the boundary input strictly: the conversation id must be exactly
+  // two team UUIDs joined by a single '_'. Both halves are later interpolated
+  // into PostgREST `.or()` filter strings, so any non-UUID half (which could
+  // contain `, . ( ) :`) would allow filter injection. UUID validation closes
+  // this: a valid UUID cannot contain those operator characters.
+  const conversationId =
+    typeof rawConversationId === 'string' ? rawConversationId : '';
+  const parts = conversationId.split('_');
+  if (
+    !conversationId ||
+    parts.length !== 2 ||
+    !isValidUUID(parts[0]) ||
+    !isValidUUID(parts[1])
+  ) {
     return res.status(400).json({ error: 'Invalid conversation ID.' });
   }
 
-  const [teamIdA, teamIdB] = conversationId.split('_');
+  const [teamIdA, teamIdB] = parts;
   const tenantId = resolveTenantIdForUserRequest(req, { authUserId: user.id });
 
   if (req.method === 'GET') {

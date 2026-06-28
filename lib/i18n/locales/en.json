@@ -314,7 +314,13 @@
     "deleteWarningEnd": ". All your data, your team membership and your requests will be permanently deleted.",
     "deleting": "Deleting...",
     "confirmDelete": "Confirm deletion",
-    "deleteHelp": "GDPR right to erasure — your account and all your data will be permanently deleted."
+    "deleteHelp": "GDPR right to erasure — your account and all your data will be permanently deleted.",
+    "currentPasswordLabel": "Current password",
+    "currentPasswordPlaceholder": "Your current password",
+    "wrongCurrentPassword": "Current password is incorrect.",
+    "currentPasswordRequired": "Enter your current password to confirm.",
+    "reauthHelp": "For your security, confirm your current password before changing your account.",
+    "signedOutAfterPasswordChange": "Password changed. For your security, all your sessions have been signed out. Sign back in with your new password."
   },
   "casterApplication": {
     "motivationTooLong": "Motivation cannot exceed {max} characters.",

@@ -2,6 +2,7 @@
 // Shared helpers for admin API routes to reduce boilerplate
 
 import type { NextApiRequest } from 'next';
+import { supabaseAdmin } from '@/utils/supabase';
 
 /**
  * Extract and validate pagination parameters (limit + offset) from query string.
@@ -65,6 +66,60 @@ const UUID_RE =
  */
 export function isValidUUID(value: string): boolean {
   return UUID_RE.test(value);
+}
+
+export type AcceptUserIdResult =
+  | { ok: true; userId: string }
+  | { ok: false; status: number; error: string };
+
+/**
+ * Validate a client-supplied raw `user_id` before it is trusted enough to be
+ * inserted into `team_members` / promoted to `teams.captain_id`.
+ *
+ * This guards PUBLIC, unauthenticated endpoints (e.g.
+ * `pages/api/teams/create-with-member.ts`) where an attacker who learns a
+ * user id (these ids leak — `pages/profile.tsx` renders `user.id`) could
+ * otherwise pin an arbitrary user as a team member/captain.
+ *
+ * Two gates, both required:
+ *   1. The value must be a well-formed UUID (rejects arbitrary strings, which
+ *      also keeps CodeQL taint tracking happy: we never forward unparsed input
+ *      into a DB write — we re-emit a typed, format-checked value).
+ *   2. The id must correspond to an EXISTING auth user. A non-existent id is
+ *      rejected outright (404-ish → 400 for a public boundary).
+ *
+ * NOTE: existence does NOT prove consent. A caller who already knows a real
+ * victim's id still passes both gates. On a public consent-free endpoint that
+ * residual risk is inherent; the legit website flow never supplies `user_id`
+ * (it resolves members by email), so prefer email resolution upstream and only
+ * reach this validator for the rare/explicit raw-id path.
+ */
+export async function validateExistingUserId(
+  rawUserId: string | null | undefined
+): Promise<AcceptUserIdResult> {
+  const trimmed = (rawUserId ?? '').trim();
+  if (!trimmed) {
+    return { ok: false, status: 400, error: 'A user id is required.' };
+  }
+  if (!isValidUUID(trimmed)) {
+    return {
+      ok: false,
+      status: 400,
+      error: 'Invalid user id: a valid user UUID is required.',
+    };
+  }
+  if (!supabaseAdmin) {
+    return { ok: false, status: 503, error: 'Service unavailable.' };
+  }
+  const { data, error } = await supabaseAdmin.auth.admin.getUserById(trimmed);
+  if (error || !data?.user?.id) {
+    return {
+      ok: false,
+      status: 400,
+      error: 'Unknown user id: no matching user exists.',
+    };
+  }
+  return { ok: true, userId: data.user.id };
 }
 
 /**
