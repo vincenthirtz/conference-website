@@ -25,6 +25,7 @@ type TeamMember = {
   email: string;
   battleTag: string;
   displayName: string;
+  specialty: string;
 };
 
 export default function RequestCaptainPage() {
@@ -119,7 +120,10 @@ export default function RequestCaptainPage() {
 
   const addMember = () => {
     if (members.length >= 5) return;
-    setMembers([...members, { email: '', battleTag: '', displayName: '' }]);
+    setMembers([
+      ...members,
+      { email: '', battleTag: '', displayName: '', specialty: '' },
+    ]);
   };
 
   const updateMember = (
@@ -181,6 +185,7 @@ export default function RequestCaptainPage() {
             email: m.email.trim(),
             battleTag: m.battleTag.trim() || undefined,
             displayName: m.displayName.trim() || undefined,
+            specialty: m.specialty.trim() || null,
           }));
         }
       }

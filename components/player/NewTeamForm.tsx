@@ -7,6 +7,7 @@ type TeamMember = {
   email: string;
   battleTag: string;
   displayName: string;
+  specialty: string;
 };
 
 type Props = {
@@ -143,7 +144,7 @@ export default function NewTeamForm({
                   </button>
                 </div>
 
-                <div className="grid gap-2 sm:grid-cols-3">
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                   <div>
                     <input
                       type="email"
@@ -199,6 +200,20 @@ export default function NewTeamForm({
                     }
                     className="rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-purple-400/60"
                   />
+                  <select
+                    aria-label={format(t.specialtyLabel, { n: index + 1 })}
+                    value={member.specialty}
+                    onChange={(e) =>
+                      onUpdateMember(index, 'specialty', e.target.value)
+                    }
+                    className="rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-400/60"
+                  >
+                    <option value="">{t.specialtyNone}</option>
+                    <option value="tank">{t.specialtyTank}</option>
+                    <option value="dps">{t.specialtyDps}</option>
+                    <option value="support">{t.specialtySupport}</option>
+                    <option value="flex">{t.specialtyFlex}</option>
+                  </select>
                 </div>
               </div>
             );

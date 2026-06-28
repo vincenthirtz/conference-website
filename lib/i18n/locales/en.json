@@ -205,7 +205,10 @@
     "passedTitle": "The check-in window is closed",
     "passedBody": "You didn't confirm your check-in in time. Contact staff if this is a mistake.",
     "contactStaff": "Contact staff",
-    "unavailable": "Check-in is not available for this match."
+    "unavailable": "Check-in is not available for this match.",
+    "successToast": "Attendance confirmed! You're checked in for this match.",
+    "alreadyToast": "You were already checked in for this match.",
+    "confirmedHeading": "Attendance confirmed ✓"
   },
   "playerMatches": {
     "loadError": "Failed to load your matches.",
@@ -407,7 +410,20 @@
     "reject": "Decline",
     "removeConfirm": "Remove {name} from the team?",
     "confirmRemove": "Confirm",
-    "cancelRemove": "Cancel"
+    "cancelRemove": "Cancel",
+    "promote": "Make captain",
+    "promoteConfirm": "Make {name} captain?",
+    "promoteConfirmYes": "Confirm",
+    "promoteCancel": "Cancel",
+    "promoteSuccess": "{name} is now the captain.",
+    "promoteError": "Could not transfer captaincy.",
+    "specialtyLabel": "In-game role",
+    "specialtyTank": "Tank",
+    "specialtyDps": "DPS",
+    "specialtySupport": "Support",
+    "specialtyFlex": "Flex",
+    "specialtyNone": "Not specified",
+    "specialtyError": "Could not update the in-game role."
   },
   "newTeamForm": {
     "invalidEmail": "Invalid email",
@@ -423,7 +439,13 @@
     "emailPlaceholder": "Email *",
     "battleTagPlaceholder": "BattleTag (Name#1234)",
     "nicknamePlaceholder": "Nickname",
-    "addPlayer": "+ Add a player"
+    "addPlayer": "+ Add a player",
+    "specialtyLabel": "Player {n} specialty",
+    "specialtyNone": "Unspecified",
+    "specialtyTank": "Tank",
+    "specialtyDps": "DPS",
+    "specialtySupport": "Support",
+    "specialtyFlex": "Flex"
   },
   "existingTeamSelector": {
     "searchLabel": "Search for a team",

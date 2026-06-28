@@ -11,6 +11,8 @@ import CopyButton from '@/components/player/CopyButton';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLang } from '@/lib/i18n/LanguageProvider';
 
+type Specialty = 'tank' | 'dps' | 'support' | 'flex' | null;
+
 type Member = {
   id: string;
   user_id: string | null;
@@ -18,6 +20,7 @@ type Member = {
   battle_tag: string | null;
   is_substitute: boolean;
   is_captain?: boolean;
+  specialty?: Specialty;
 };
 
 type TeamInfo = {
@@ -68,6 +71,7 @@ export default function ManageTeamPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [pendingRemoval, setPendingRemoval] = useState<string | null>(null);
+  const [pendingPromotion, setPendingPromotion] = useState<string | null>(null);
   const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadData = useCallback(async () => {
@@ -185,6 +189,49 @@ export default function ManageTeamPage() {
       showSuccess(t.roleUpdated);
     } catch (err: unknown) {
       setError((err as Error).message);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handlePromoteCaptain = async (member: Member) => {
+    if (!member.user_id) return;
+    setActionLoading(`promote-${member.id}`);
+    setError(null);
+    try {
+      await adminFetchJson('/api/teams/transfer-captain', {
+        method: 'PATCH',
+        body: JSON.stringify({ newCaptainUserId: member.user_id }),
+      });
+      setPendingPromotion(null);
+      await loadData();
+      showSuccess(
+        format(t.promoteSuccess, { name: member.battle_tag || t.unknown })
+      );
+    } catch (err: unknown) {
+      setError((err as Error).message || t.promoteError);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleUpdateSpecialty = async (
+    memberId: string,
+    value: string
+  ) => {
+    const specialty: Specialty = value
+      ? (value as Exclude<Specialty, null>)
+      : null;
+    setActionLoading(`specialty-${memberId}`);
+    setError(null);
+    try {
+      await adminFetchJson('/api/teams/update-member-specialty', {
+        method: 'PATCH',
+        body: JSON.stringify({ memberId, specialty }),
+      });
+      await loadData();
+    } catch (err: unknown) {
+      setError((err as Error).message || t.specialtyError);
     } finally {
       setActionLoading(null);
     }
@@ -379,8 +426,48 @@ export default function ManageTeamPage() {
                             {t.cancelRemove}
                           </button>
                         </div>
+                      ) : pendingPromotion === m.id ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-purple-200 max-w-[10rem] sm:max-w-none">
+                            {format(t.promoteConfirm, {
+                              name: m.battle_tag || t.unknown,
+                            })}
+                          </span>
+                          <button
+                            onClick={() => handlePromoteCaptain(m)}
+                            disabled={actionLoading === `promote-${m.id}`}
+                            className="px-2 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-xs font-semibold transition disabled:opacity-50"
+                          >
+                            {t.promoteConfirmYes}
+                          </button>
+                          <button
+                            onClick={() => setPendingPromotion(null)}
+                            disabled={actionLoading === `promote-${m.id}`}
+                            className="px-2 py-1 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-xs transition disabled:opacity-50"
+                          >
+                            {t.promoteCancel}
+                          </button>
+                        </div>
                       ) : (
                         <>
+                          <select
+                            value={m.specialty || ''}
+                            onChange={(e) =>
+                              handleUpdateSpecialty(m.id, e.target.value)
+                            }
+                            disabled={!!actionLoading}
+                            aria-label={t.specialtyLabel}
+                            title={t.specialtyLabel}
+                            className="bg-black/60 border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-purple-400"
+                          >
+                            <option value="">{t.specialtyNone}</option>
+                            <option value="tank">{t.specialtyTank}</option>
+                            <option value="dps">{t.specialtyDps}</option>
+                            <option value="support">
+                              {t.specialtySupport}
+                            </option>
+                            <option value="flex">{t.specialtyFlex}</option>
+                          </select>
                           <select
                             value={m.role || 'player'}
                             onChange={(e) =>
@@ -395,6 +482,15 @@ export default function ManageTeamPage() {
                             </option>
                             <option value="coach">{t.optionCoach}</option>
                           </select>
+                          <button
+                            onClick={() => setPendingPromotion(m.id)}
+                            disabled={!!actionLoading || !m.user_id}
+                            className="px-2 py-1 rounded-lg border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 text-xs font-semibold transition disabled:opacity-50"
+                            title={t.promote}
+                            aria-label={t.promote}
+                          >
+                            {t.promote}
+                          </button>
                           <button
                             onClick={() => setPendingRemoval(m.id)}
                             disabled={!!actionLoading}

@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useToast } from '@/components/Toast';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import { useLang, type Lang } from '@/lib/i18n/LanguageProvider';
 import { useT, format } from '@/lib/i18n/useT';
@@ -61,6 +62,7 @@ function PlayerCheckin() {
     redirectTo: '/login?next=/player/checkin',
   });
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
+  const { addToast } = useToast();
   const { lang } = useLang();
   const t = useT('checkin');
   const [loading, setLoading] = useState(true);
@@ -68,6 +70,10 @@ function PlayerCheckin() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // True once THIS session has just turned the check-in green, so the
+  // confirmed card can play an explicit "just confirmed" state instead of
+  // silently re-rendering. Reset is not needed: the action is one-way.
+  const [justConfirmed, setJustConfirmed] = useState(false);
   const [now, setNow] = useState<number>(() => Date.now());
 
   const load = useCallback(async () => {
@@ -108,6 +114,15 @@ function PlayerCheckin() {
       const json = await res.json().catch(() => null);
       if (!res.ok) {
         throw new Error(json?.error || t.submitFailed);
+      }
+      // The POST is idempotent: a second submit returns alreadyCheckedIn:true
+      // without a double write. Differentiate the two so feedback is honest.
+      const wasAlready = json?.alreadyCheckedIn === true;
+      if (wasAlready) {
+        addToast(t.alreadyToast, 'info');
+      } else {
+        addToast(t.successToast, 'success');
+        setJustConfirmed(true);
       }
       await load();
     } catch (err: unknown) {
@@ -207,6 +222,7 @@ function PlayerCheckin() {
               now={now}
               submitting={submitting}
               submitError={submitError}
+              justConfirmed={justConfirmed}
               onSubmit={handleSubmit}
               lang={lang}
               t={t}
@@ -223,6 +239,7 @@ function CheckinState({
   now,
   submitting,
   submitError,
+  justConfirmed,
   onSubmit,
   lang,
   t,
@@ -231,6 +248,7 @@ function CheckinState({
   now: number;
   submitting: boolean;
   submitError: string | null;
+  justConfirmed: boolean;
   onSubmit: () => void;
   lang: Lang;
   t: T;
@@ -245,8 +263,67 @@ function CheckinState({
 
   // 1) Deja valide.
   if (checkin.alreadyCheckedIn) {
-    return (
-      <section className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 backdrop-blur-xl p-6">
+    // When the player just confirmed in this very session, play an explicit,
+    // celebratory state so the transition is unmistakable (highest-stakes
+    // action). Otherwise show the calmer "already checked in" recap.
+    return justConfirmed ? (
+      <section
+        className="rounded-2xl border border-emerald-400/40 bg-emerald-500/15 backdrop-blur-xl p-6 text-center motion-safe:animate-[fadeIn_300ms_ease-out]"
+        role="status"
+        aria-live="polite"
+      >
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-400/20 ring-2 ring-emerald-400/40 motion-safe:animate-[scaleIn_350ms_ease-out]">
+          <svg
+            className="w-9 h-9 text-emerald-300"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h3 className="mt-4 text-2xl font-bold text-emerald-50">
+          {t.confirmedHeading}
+        </h3>
+        <p className="mt-1 text-sm text-emerald-200/90">
+          {checkin.checkedInAt
+            ? format(t.validatedAt, {
+                time: formatTime(checkin.checkedInAt, lang),
+              })
+            : t.confirmed}
+        </p>
+        <style jsx>{`
+          @keyframes fadeIn {
+            from {
+              opacity: 0;
+              transform: translateY(6px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+          @keyframes scaleIn {
+            from {
+              opacity: 0;
+              transform: scale(0.6);
+            }
+            to {
+              opacity: 1;
+              transform: scale(1);
+            }
+          }
+        `}</style>
+      </section>
+    ) : (
+      <section
+        className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 backdrop-blur-xl p-6"
+        role="status"
+      >
         <div className="flex items-start gap-3">
           <svg
             className="w-7 h-7 flex-shrink-0 text-emerald-300"

@@ -7,7 +7,7 @@ import {
 } from '@/utils/find-or-create-user';
 import { sendTeamJoinEmail } from '@/utils/email';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { sanitizeUrl, validateRole } from '@/utils/apiHelpers';
+import { sanitizeUrl, validateRole, validateSpecialty } from '@/utils/apiHelpers';
 import { emitBotEvent } from '@/utils/botEvents';
 import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 import { alertIfBlacklisted } from '@/utils/moderation/blacklist';
@@ -26,6 +26,7 @@ type Body = {
   member_role?: string | null;
   member_user_id?: string | null;
   member_battle_tag?: string | null;
+  member_specialty?: string | null;
   set_captain?: boolean;
   members?: MemberInput[];
   tournament_id?: string | null;
@@ -46,6 +47,7 @@ type MemberInput = {
   role?: string | null;
   set_captain?: boolean;
   battle_tag?: string | null;
+  specialty?: string | null;
 };
 
 type MemberResult = {
@@ -55,6 +57,8 @@ type MemberResult = {
   captain: boolean;
   /** Lot 6 : NULL quand l'équipe n'est pas inscrite à un tournoi. */
   battle_tag: string | null;
+  /** tank | dps | support | flex | null (spécialité in-game). */
+  specialty: string | null;
 };
 
 type ApiResponse =
@@ -169,6 +173,7 @@ export default async function handler(
       role: m.role?.toString().trim() || '',
       set_captain: Boolean(m.set_captain),
       battle_tag: m.battle_tag?.toString().trim() || '',
+      specialty: m.specialty?.toString().trim() || '',
     }))
     .filter((m) => m.email || m.user_id);
 
@@ -200,6 +205,7 @@ export default async function handler(
     role: string;
     captain: boolean;
     battle_tag: string | null;
+    specialty: string | null;
   }[] = [];
   let usersEmailMap: Map<string, string> | null = null;
   const ensureUsersEmailMap = async () => {
@@ -236,6 +242,7 @@ export default async function handler(
   if (cleanedMembers.length === 0 && wantsMember) {
     // Fallback to single member fields
     const resolvedRole = validateRole(body.member_role);
+    const resolvedSpecialty = validateSpecialty(body.member_specialty);
     const memberBattleTag = body.member_battle_tag?.trim() || '';
     let resolvedBattleTag: string | null;
     try {
@@ -251,6 +258,7 @@ export default async function handler(
         role: resolvedRole,
         captain: Boolean(body.set_captain),
         battle_tag: resolvedBattleTag,
+        specialty: resolvedSpecialty,
       });
     } else if (memberEmail) {
       try {
@@ -266,6 +274,7 @@ export default async function handler(
           role: resolvedRole,
           captain: Boolean(body.set_captain),
           battle_tag: resolvedBattleTag,
+          specialty: resolvedSpecialty,
         });
       } catch (err: unknown) {
         const message =
@@ -277,6 +286,7 @@ export default async function handler(
   } else if (cleanedMembers.length > 0) {
     for (const m of cleanedMembers) {
       const resolvedRole = validateRole(m.role);
+      const resolvedSpecialty = validateSpecialty(m.specialty);
       let resolvedBattleTag: string | null;
       try {
         resolvedBattleTag = resolveBattleTag(m.battle_tag);
@@ -292,6 +302,7 @@ export default async function handler(
           role: resolvedRole,
           captain: Boolean(m.set_captain),
           battle_tag: resolvedBattleTag,
+          specialty: resolvedSpecialty,
         });
         continue;
       }
@@ -311,6 +322,7 @@ export default async function handler(
           role: resolvedRole,
           captain: Boolean(m.set_captain),
           battle_tag: resolvedBattleTag,
+          specialty: resolvedSpecialty,
         });
       } catch (err: unknown) {
         const message =
@@ -410,6 +422,7 @@ export default async function handler(
       user_id: m.user_id,
       role: m.role,
       battle_tag: m.battle_tag,
+      specialty: m.specialty,
       tenant_id: tenantId,
     };
 
@@ -442,6 +455,7 @@ export default async function handler(
       role: m.role,
       captain: m.captain,
       battle_tag: m.battle_tag,
+      specialty: m.specialty,
     });
   }
 

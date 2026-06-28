@@ -205,7 +205,10 @@
     "passedTitle": "La fenêtre de check-in est fermée",
     "passedBody": "Tu n'as pas validé ton check-in à temps. Contacte le staff si c'est une erreur.",
     "contactStaff": "Contacter le staff",
-    "unavailable": "Le check-in n'est pas disponible pour ce match."
+    "unavailable": "Le check-in n'est pas disponible pour ce match.",
+    "successToast": "Présence confirmée ! Tu es bien check-in pour ce match.",
+    "alreadyToast": "Tu étais déjà check-in pour ce match.",
+    "confirmedHeading": "Présence confirmée ✓"
   },
   "playerMatches": {
     "loadError": "Erreur lors du chargement de tes matchs.",
@@ -407,7 +410,20 @@
     "reject": "Refuser",
     "removeConfirm": "Retirer {name} de l'équipe ?",
     "confirmRemove": "Confirmer",
-    "cancelRemove": "Annuler"
+    "cancelRemove": "Annuler",
+    "promote": "Nommer capitaine",
+    "promoteConfirm": "Nommer {name} capitaine ?",
+    "promoteConfirmYes": "Confirmer",
+    "promoteCancel": "Annuler",
+    "promoteSuccess": "{name} est désormais capitaine.",
+    "promoteError": "Impossible de transférer le capitanat.",
+    "specialtyLabel": "Rôle en jeu",
+    "specialtyTank": "Tank",
+    "specialtyDps": "DPS",
+    "specialtySupport": "Support",
+    "specialtyFlex": "Flex",
+    "specialtyNone": "Non précisée",
+    "specialtyError": "Impossible de mettre à jour le rôle en jeu."
   },
   "newTeamForm": {
     "invalidEmail": "Email invalide",
@@ -423,7 +439,13 @@
     "emailPlaceholder": "Email *",
     "battleTagPlaceholder": "BattleTag (Pseudo#1234)",
     "nicknamePlaceholder": "Pseudo",
-    "addPlayer": "+ Ajouter une joueuse"
+    "addPlayer": "+ Ajouter une joueuse",
+    "specialtyLabel": "Spécialité de la joueuse {n}",
+    "specialtyNone": "Non précisée",
+    "specialtyTank": "Tank",
+    "specialtyDps": "DPS",
+    "specialtySupport": "Support",
+    "specialtyFlex": "Flex"
   },
   "existingTeamSelector": {
     "searchLabel": "Rechercher une equipe",

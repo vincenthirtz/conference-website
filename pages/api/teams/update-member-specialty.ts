@@ -1,0 +1,127 @@
+// pages/api/teams/update-member-specialty.ts
+// PATCH : le capitaine ou un manager peut definir/effacer la specialite in-game
+// d'un membre de son equipe (tank | dps | support | flex | null).
+//
+// Miroir de update-member-role.ts : meme middleware (withAuthRoute), meme
+// resolution de tenant, meme controle d'acces (getManagedTeam), meme pattern
+// de rate-limit. La specialite est purement cosmetique (carte publique) : pas
+// d'anti-escalation a appliquer ici.
+
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { supabaseAdmin } from '@/utils/supabase';
+import { applyRateLimit } from '@/utils/rateLimit';
+import { isValidUUID, validateSpecialty } from '@/utils/apiHelpers';
+import { withAuthRoute } from '@/utils/staff';
+import {
+  getManagedTeam,
+  TEAM_MANAGEMENT_FORBIDDEN,
+} from '@/utils/teams/managementAccess';
+import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+
+import { logger } from '../../../utils/logger';
+
+const ALLOWED_SPECIALTIES = new Set(['tank', 'dps', 'support', 'flex']);
+
+export default withAuthRoute(async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  { user }
+) {
+  if (req.method !== 'PATCH') {
+    res.setHeader('Allow', 'PATCH');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  if (
+    applyRateLimit(
+      req,
+      res,
+      { max: 30, windowMs: 60_000 },
+      'update-member-specialty'
+    )
+  )
+    return;
+
+  const userId = user.id;
+  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: userId });
+
+  // Check if user can manage a team (captain or manager)
+  const access = await getManagedTeam(userId, tenantId);
+  if (!access) {
+    return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
+  }
+
+  const { data: managedTeam, error: teamErr } = await supabaseAdmin
+    .from('teams')
+    .select('id, name')
+    .eq('id', access.teamId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+
+  if (teamErr || !managedTeam) {
+    return res.status(404).json({ error: 'Team introuvable.' });
+  }
+
+  const { memberId } = req.body || {};
+  const rawSpecialty = (req.body || {}).specialty;
+
+  if (!memberId || typeof memberId !== 'string' || !isValidUUID(memberId)) {
+    return res.status(400).json({ error: 'memberId invalide.' });
+  }
+
+  // `specialty` accepte une valeur de l'enum OU null (pour effacer). Tout le
+  // reste (chaine inconnue, nombre, etc.) est rejete en 400 — on ne "corrige"
+  // pas silencieusement vers null, contrairement au helper public de creation,
+  // pour que le client soit averti d'une valeur erronee.
+  let specialty: string | null;
+  if (rawSpecialty === null || rawSpecialty === undefined) {
+    specialty = null;
+  } else if (
+    typeof rawSpecialty === 'string' &&
+    ALLOWED_SPECIALTIES.has(rawSpecialty.trim().toLowerCase())
+  ) {
+    specialty = validateSpecialty(rawSpecialty);
+  } else {
+    return res.status(400).json({
+      error: 'specialty invalide. Attendu : tank | dps | support | flex | null.',
+    });
+  }
+
+  // Fetch the member to verify they belong to this team
+  const { data: member, error: memberErr } = await supabaseAdmin
+    .from('team_members')
+    .select('id, user_id')
+    .eq('id', memberId)
+    .eq('team_id', managedTeam.id)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+
+  if (memberErr || !member) {
+    return res
+      .status(404)
+      .json({ error: 'Membre introuvable dans ton equipe.' });
+  }
+
+  const { error: updateErr } = await supabaseAdmin
+    .from('team_members')
+    .update({ specialty })
+    .eq('id', memberId)
+    .eq('team_id', managedTeam.id)
+    .eq('tenant_id', tenantId);
+
+  if (updateErr) {
+    logger.error('[update-member-specialty] error:', updateErr);
+    return res
+      .status(500)
+      .json({ error: 'Echec de la mise a jour de la specialite.' });
+  }
+
+  return res.status(200).json({
+    success: true,
+    memberId,
+    specialty,
+    message: specialty
+      ? `Specialite mise a jour vers "${specialty}".`
+      : 'Specialite effacee.',
+  });
+});

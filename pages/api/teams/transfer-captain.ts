@@ -12,6 +12,7 @@ import {
   rosterLockErrorMessage,
 } from '@/utils/teams/rosterLock';
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { emitRoleSyncEvent } from '@/utils/botRoleSync';
 
 import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
@@ -107,6 +108,20 @@ export default withAuthRoute(async function handler(
     logger.error('[transfer-captain] update error:', updateErr);
     return res.status(500).json({ error: 'Failed to transfer captaincy.' });
   }
+
+  // Bot role-sync + web-push : ce handler fait son propre UPDATE (il n'appelle
+  // pas setTeamCaptain), donc rien n'est émis sans ça. On miroite EXACTEMENT la
+  // forme d'event de setTeamCaptain (utils/teams/addMember.ts) : deux events
+  // `team.captain.changed`, un pour l'ancien capitaine (`role: 'previous'`, il
+  // perd le rôle) et un pour le nouveau (`role: 'new'`, il le gagne). Le bot
+  // fait 1 sync par event — idempotent. Fire-and-forget : un échec d'émission
+  // ne doit pas faire échouer le transfert déjà persisté.
+  void emitRoleSyncEvent('team.captain.changed', userId, tenantId, {
+    extras: { teamId: team.id, role: 'previous' },
+  }).catch(logger.error);
+  void emitRoleSyncEvent('team.captain.changed', newCaptainUserId, tenantId, {
+    extras: { teamId: team.id, role: 'new' },
+  }).catch(logger.error);
 
   // Audit : designation d'un nouveau capitaine.
   const staff = await getStaffByUserId(userId);

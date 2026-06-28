@@ -88,6 +88,20 @@ export function validateRole(role: string | null | undefined): string {
   return ALLOWED_ROLES.has(trimmed) ? trimmed : 'player';
 }
 
+const ALLOWED_SPECIALTIES = new Set(['tank', 'dps', 'support', 'flex']);
+
+/**
+ * Validate a team member in-game specialty against the allowed list
+ * (tank | dps | support | flex). Anything else (including empty/unknown)
+ * resolves to `null` — the DB column is nullable and means "unspecified".
+ */
+export function validateSpecialty(
+  specialty: string | null | undefined
+): string | null {
+  const trimmed = (specialty || '').trim().toLowerCase();
+  return ALLOWED_SPECIALTIES.has(trimmed) ? trimmed : null;
+}
+
 const SAFE_URL_SCHEMES = new Set(['http:', 'https:']);
 
 /**

@@ -539,4 +539,48 @@ describe('POST /api/teams/create-with-member', () => {
     expect(res.statusCode).toBe(201);
     expect((res.body as any).tournament).toBeFalsy();
   });
+
+  // Specialty in-game (tank | dps | support | flex | null)
+  it('201 persists a valid member specialty', async () => {
+    setAuthListUsers([{ id: 'u1', email: 'p1@example.com' }]);
+    store.teams = [];
+    store.team_members = [];
+    const res = makeRes();
+    await createWithMemberHandler(
+      makeReq({
+        body: {
+          name: 'Spec Team',
+          members: [
+            { email: 'p1@example.com', role: 'player', specialty: 'tank' },
+          ],
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(201);
+    const tm = (store.team_members as any[]) ?? [];
+    expect(tm[0].specialty).toBe('tank');
+    expect((res.body as any).members[0].specialty).toBe('tank');
+  });
+
+  it('201 normalizes an unknown specialty to null', async () => {
+    setAuthListUsers([{ id: 'u1', email: 'p1@example.com' }]);
+    store.teams = [];
+    store.team_members = [];
+    const res = makeRes();
+    await createWithMemberHandler(
+      makeReq({
+        body: {
+          name: 'Spec Team 2',
+          members: [
+            { email: 'p1@example.com', role: 'player', specialty: 'wizard' },
+          ],
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(201);
+    const tm = (store.team_members as any[]) ?? [];
+    expect(tm[0].specialty).toBeNull();
+  });
 });

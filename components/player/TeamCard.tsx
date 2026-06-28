@@ -14,6 +14,7 @@ type TeamInfo = {
 export type TeamMemberLite = {
   id: string;
   role: string | null;
+  specialty?: string | null;
   is_substitute?: boolean;
   is_captain?: boolean;
 };
@@ -62,15 +63,22 @@ function computeRoster(members: TeamMemberLite[] | undefined): RosterCounts {
   };
   for (const m of members ?? []) {
     counts.total += 1;
-    if (m.is_substitute) {
+    const role = (m.role || '').toLowerCase();
+    if (m.is_substitute || role === 'substitute') {
       counts.substitute += 1;
       continue;
     }
-    const role = (m.role || '').toLowerCase();
-    if (role === 'tank') counts.tank += 1;
-    else if (role === 'dps') counts.dps += 1;
-    else if (role === 'support') counts.support += 1;
-    else if (role === 'coach') counts.coach += 1;
+    if (role === 'coach') {
+      counts.coach += 1;
+      continue;
+    }
+    // In-game role lives in `specialty` ('tank'|'dps'|'support'|'flex'|null),
+    // NOT in `role` (which is 'player'|'coach'|'substitute'|'manager').
+    const specialty = (m.specialty || '').toLowerCase();
+    if (specialty === 'tank') counts.tank += 1;
+    else if (specialty === 'dps') counts.dps += 1;
+    else if (specialty === 'support') counts.support += 1;
+    // 'flex' (and null/unknown) are not tallied into tank/dps/support.
   }
   return counts;
 }

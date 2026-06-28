@@ -52,6 +52,7 @@ type MemberForm = {
   email: string;
   role: string;
   battleTag: string;
+  specialty: string;
 };
 
 const WOMEN_TOURNAMENT_ID_2026 = 'e8fa740c-d92b-49d8-a654-05a37d0eea3b';
@@ -76,6 +77,7 @@ export default function PublicCreateTeamPage() {
       email: '',
       role: 'player',
       battleTag: '',
+      specialty: '',
     },
   ]);
   const [captainIndex, setCaptainIndex] = useState<number | null>(0);
@@ -147,6 +149,7 @@ export default function PublicCreateTeamPage() {
           email: '',
           role: 'player',
           battleTag: '',
+          specialty: '',
         },
       ];
     });
@@ -192,6 +195,7 @@ export default function PublicCreateTeamPage() {
           email: m.email.trim(),
           role: m.role.trim() || 'player',
           battle_tag: m.battleTag.trim(),
+          specialty: m.specialty.trim() || null,
           set_captain: captainIndex === idx,
         }))
         .filter((m) => m.email.length > 0);
@@ -267,7 +271,9 @@ export default function PublicCreateTeamPage() {
       setWebsite('');
       setDescription('');
       setDiscord('');
-      setMembers([{ id: 'm-0', email: '', role: 'player', battleTag: '' }]);
+      setMembers([
+        { id: 'm-0', email: '', role: 'player', battleTag: '', specialty: '' },
+      ]);
       setCaptainIndex(null);
       // Nouveau challenge captcha pour une éventuelle prochaine création.
       refreshCaptcha();
@@ -507,7 +513,7 @@ export default function PublicCreateTeamPage() {
                   {members.map((member, idx) => (
                     <div
                       key={member.id}
-                      className="rounded-xl border border-white/10 bg-white/5 p-3 grid gap-3 md:grid-cols-[1.2fr_0.9fr_1.1fr_auto] items-center"
+                      className="rounded-xl border border-white/10 bg-white/5 p-3 grid gap-3 md:grid-cols-[1.2fr_0.9fr_1.1fr_0.9fr_auto] items-center"
                     >
                       <div>
                         <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-gray-300 mb-1">
@@ -559,6 +565,29 @@ export default function PublicCreateTeamPage() {
                             Optionnel hors inscription tournoi.
                           </p>
                         )}
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-gray-300 mb-1">
+                          Spécialité
+                        </label>
+                        <select
+                          value={member.specialty}
+                          onChange={(e) =>
+                            handleMemberChange(
+                              idx,
+                              'specialty',
+                              e.target.value
+                            )
+                          }
+                          className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/70 focus:border-emerald-400/70 transition"
+                        >
+                          <option value="">Non précisée</option>
+                          <option value="tank">Tank</option>
+                          <option value="dps">DPS</option>
+                          <option value="support">Support</option>
+                          <option value="flex">Flex</option>
+                        </select>
                       </div>
 
                       <div className="flex items-center gap-2 justify-between">
