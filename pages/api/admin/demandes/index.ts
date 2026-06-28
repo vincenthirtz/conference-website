@@ -16,7 +16,11 @@ import {
 } from '@/utils/apiHelpers';
 import { emitScrimEvent } from '@/utils/scrimEvents';
 import { validateDemandeBatchTransitions } from '@/utils/demandes/stateMachine';
-import { insertTeamMember, setTeamCaptain } from '@/utils/teams/addMember';
+import {
+  insertTeamMember,
+  setTeamCaptain,
+  resolveUserIdByEmail,
+} from '@/utils/teams/addMember';
 import slugify from 'slugify';
 
 export type DemandeType =
@@ -865,6 +869,74 @@ async function handlePost(
             '[admin/demandes] captain assignment error:',
             captainResult.error
           );
+        }
+
+        // Invited members: ONLY when this approval AUTO-CREATES A NEW TEAM.
+        // For existing-team captain_requests (d.team_id / payload.existing_team_id)
+        // we deliberately do NOT touch the roster — the team already exists with
+        // its own members and the request is purely a captain promotion.
+        // Mirrors create-with-member: resolve/create each invitee by email, then
+        // insert as a 'player' carrying battle_tag + specialty. Each insert is
+        // isolated so one bad invite can't fail the whole approval.
+        if (wantsNewTeam && Array.isArray(payload.members)) {
+          for (const m of payload.members as Array<Record<string, any>>) {
+            try {
+              const email =
+                typeof m?.email === 'string' ? m.email.trim() : '';
+              if (!email) continue;
+
+              // Skip the requester: they're already inserted as captain above.
+              const requesterEmail =
+                typeof payload.user_email === 'string'
+                  ? payload.user_email.trim().toLowerCase()
+                  : null;
+              if (requesterEmail && email.toLowerCase() === requesterEmail) {
+                continue;
+              }
+
+              const resolved = await resolveUserIdByEmail({
+                email,
+                create: true,
+                defaultRole: 'player',
+              });
+              if (!resolved.ok) {
+                logger.error(
+                  '[admin/demandes] invited member resolve error:',
+                  resolved.error
+                );
+                continue;
+              }
+
+              // Skip if this resolved user is the requester (captain) anyway.
+              if (resolved.userId === d.user_id) continue;
+
+              const memberResult = await insertTeamMember({
+                tenantId: ctx.tenantId,
+                teamId: targetTeamId,
+                userId: resolved.userId,
+                role: 'player',
+                battleTag:
+                  typeof m?.battle_tag === 'string' && m.battle_tag.trim()
+                    ? m.battle_tag.trim()
+                    : undefined,
+                specialty:
+                  typeof m?.specialty === 'string' && m.specialty.trim()
+                    ? m.specialty.trim()
+                    : null,
+              });
+              if (!memberResult.ok && !memberResult.isDuplicate) {
+                logger.error(
+                  '[admin/demandes] invited member insert error:',
+                  memberResult.error
+                );
+              }
+            } catch (memberEx) {
+              logger.error(
+                '[admin/demandes] invited member exception:',
+                memberEx
+              );
+            }
+          }
         }
       } catch (captainEx) {
         logger.error(

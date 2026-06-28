@@ -192,7 +192,12 @@ describe('/api/demandes/captain', () => {
           body: {
             teamName: 'My New Team',
             members: [
-              { email: 'a@a.com', battleTag: 'Player#1234', displayName: 'A' },
+              {
+                email: 'a@a.com',
+                battleTag: 'Player#1234',
+                displayName: 'A',
+                specialty: 'tank',
+              },
             ],
             message: 'A motivation message',
           },
@@ -206,6 +211,36 @@ describe('/api/demandes/captain', () => {
     expect(created.type).toBe('captain_request');
     expect(created.payload.team_name).toBe('My New Team');
     expect(created.payload.members[0].email).toBe('a@a.com');
+    // specialty is persisted into the demande payload (was dropped before).
+    expect(created.payload.members[0].specialty).toBe('tank');
+  });
+
+  it('POST 201 persists null specialty when unspecified', async () => {
+    setAuthUser({ id: 'user-1', email: 'me@me.com', user_metadata: {} });
+    store.demandes = [];
+    const res = makeRes();
+    await demandesCaptainHandler(
+      makeReq(
+        {
+          method: 'POST',
+          body: {
+            teamName: 'Roster Team',
+            members: [
+              {
+                email: 'b@b.com',
+                battleTag: 'Player#5678',
+                specialty: null,
+              },
+            ],
+          },
+        },
+        true
+      ),
+      res
+    );
+    expect(res.statusCode).toBe(201);
+    const created = (store.demandes as any)[0];
+    expect(created.payload.members[0].specialty).toBeNull();
   });
 
   it('POST 201 creates demande for existing team', async () => {

@@ -117,6 +117,7 @@ export default withAuthRoute(async function handler(
         email: m.email,
         battle_tag: m.battleTag?.trim() || null,
         display_name: m.displayName?.trim() || null,
+        specialty: m.specialty ?? null,
       }));
     }
 

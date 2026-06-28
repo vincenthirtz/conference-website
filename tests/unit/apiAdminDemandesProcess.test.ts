@@ -23,6 +23,7 @@ import {
   store,
   resetSupabaseMock,
   setAuthUser,
+  setAuthListUsers,
 } from './__helpers__/supabaseMock';
 import { invalidateStaffCache } from '../../utils/staff';
 
@@ -113,6 +114,29 @@ function seedBase() {
         request_type: 'new_team',
         team_name: 'Brand New Team',
         user_battle_tag: 'Cap#1234',
+        user_email: 'captain@x.com',
+        members: [
+          {
+            email: 'invitee1@x.com',
+            battle_tag: 'Inv1#1111',
+            display_name: 'Invitee One',
+            specialty: 'tank',
+          },
+          {
+            email: 'invitee2@x.com',
+            battle_tag: 'Inv2#2222',
+            display_name: 'Invitee Two',
+            specialty: 'support',
+          },
+          // The requester is also (redundantly) in the invited list; the
+          // approval path must NOT re-insert them as a player.
+          {
+            email: 'captain@x.com',
+            battle_tag: 'Cap#1234',
+            display_name: 'Captain',
+            specialty: 'dps',
+          },
+        ],
       },
       created_at: '2026-01-01T00:00:00.000Z',
     },
@@ -130,6 +154,16 @@ function seedBase() {
         request_type: 'existing_team',
         existing_team_id: EXISTING_TEAM,
         existing_team_name: 'Existing Squad',
+        user_email: 'captain@x.com',
+        // Invited members present on an EXISTING-team request must be ignored:
+        // the approval is a pure captain promotion, not a roster edit.
+        members: [
+          {
+            email: 'invitee1@x.com',
+            battle_tag: 'Inv1#1111',
+            specialty: 'tank',
+          },
+        ],
       },
       created_at: '2026-01-01T00:00:00.000Z',
     },
@@ -171,6 +205,13 @@ beforeEach(() => {
   resetSupabaseMock();
   invalidateStaffCache();
   setAuthUser({ id: 'user-1' });
+  // Invitees resolve to pre-existing auth users (resolveUserIdByEmail →
+  // findOrCreateUserByEmail builds its email map from listUsers).
+  setAuthListUsers([
+    { id: 'invitee-1', email: 'invitee1@x.com' },
+    { id: 'invitee-2', email: 'invitee2@x.com' },
+    { id: REQUESTER, email: 'captain@x.com' },
+  ]);
   seedBase();
 });
 
@@ -206,6 +247,29 @@ describe('POST /api/admin/demandes — captain_request approval', () => {
 
     // captain_id set on the team.
     expect(created.captain_id).toBe(REQUESTER);
+
+    // Invited members are inserted as 'player' carrying their specialty.
+    const teamMembers = (store.team_members as any[]).filter(
+      (m) => m.team_id === created.id
+    );
+    const inv1 = teamMembers.find((m) => m.user_id === 'invitee-1');
+    const inv2 = teamMembers.find((m) => m.user_id === 'invitee-2');
+    expect(inv1).toBeTruthy();
+    expect(inv1.role).toBe('player');
+    expect(inv1.specialty).toBe('tank');
+    expect(inv1.battle_tag).toBe('Inv1#1111');
+    expect(inv2).toBeTruthy();
+    expect(inv2.role).toBe('player');
+    expect(inv2.specialty).toBe('support');
+
+    // The requester (also present in the invited list) is NOT duplicated:
+    // exactly one row for them, and it's the captain row.
+    const requesterRows = teamMembers.filter((m) => m.user_id === REQUESTER);
+    expect(requesterRows.length).toBe(1);
+    expect(requesterRows[0].role).toBe('captain');
+
+    // Captain + 2 invitees = 3 rows total.
+    expect(teamMembers.length).toBe(3);
 
     // Outcome flag surfaced + audit log emitted.
     expect(res.body.outcomes[DEMANDE_CAPTAIN_NEW].teamAutoCreated).toBe(true);
@@ -261,6 +325,14 @@ describe('POST /api/admin/demandes — captain_request approval', () => {
     expect(
       res.body.outcomes[DEMANDE_CAPTAIN_EXISTING]?.teamAutoCreated
     ).toBeFalsy();
+
+    // SCOPING: invited members on an EXISTING-team request must NOT be inserted.
+    // Only the requester (captain promotion) should appear on the team.
+    const existingMembers = (store.team_members as any[]).filter(
+      (m) => m.team_id === EXISTING_TEAM
+    );
+    expect(existingMembers.some((m) => m.user_id === 'invitee-1')).toBe(false);
+    expect(existingMembers.every((m) => m.user_id === REQUESTER)).toBe(true);
   });
 });
 

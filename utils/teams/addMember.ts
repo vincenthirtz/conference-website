@@ -138,6 +138,8 @@ export type InsertTeamMemberInput = {
   role: string;
   /** Optionnel : tous les endpoints ne stockent pas le battle_tag. */
   battleTag?: string | null;
+  /** Optionnel : spécialité in-game (tank | dps | support | flex). */
+  specialty?: string | null;
   /**
    * Si true, on fait un pre-check `max_players` avant d'insert :
    * compte les membres non-coach actuels et compare a la plus petite limite
@@ -210,6 +212,7 @@ export async function insertTeamMember(
     role: input.role,
   };
   if (input.battleTag) payload.battle_tag = input.battleTag;
+  if (input.specialty) payload.specialty = input.specialty;
 
   const { data: member, error: insertErr } = await supabaseAdmin
     .from('team_members')

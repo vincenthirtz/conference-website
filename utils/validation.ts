@@ -49,6 +49,7 @@ const teamMemberSchema = z.object({
   email: emailField,
   battleTag: z.string().optional(),
   displayName: z.string().optional(),
+  specialty: z.enum(['tank', 'dps', 'support', 'flex']).nullable().optional(),
 });
 
 export const captainRequestSchema = z

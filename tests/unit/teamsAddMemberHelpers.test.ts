@@ -176,6 +176,35 @@ describe('insertTeamMember', () => {
     }
   });
 
+  it('carries specialty into the inserted row when provided', async () => {
+    const r = await insertTeamMember({
+      tenantId: TENANT_ID,
+      teamId: 'team-1',
+      userId: 'u-1',
+      role: 'player',
+      battleTag: 'Player#1234',
+      specialty: 'support',
+    });
+    expect(r.ok).toBe(true);
+    expect((store.team_members as any[])[0]).toMatchObject({
+      user_id: 'u-1',
+      role: 'player',
+      specialty: 'support',
+    });
+  });
+
+  it('omits specialty from payload when null/undefined', async () => {
+    const r = await insertTeamMember({
+      tenantId: TENANT_ID,
+      teamId: 'team-1',
+      userId: 'u-1',
+      role: 'player',
+      specialty: null,
+    });
+    expect(r.ok).toBe(true);
+    expect((store.team_members as any[])[0].specialty).toBeUndefined();
+  });
+
   it('omits battle_tag from payload when not provided (Discord endpoint)', async () => {
     const r = await insertTeamMember({
       tenantId: TENANT_ID,
