@@ -702,7 +702,21 @@
     "inviteExpired": "Cette invitation a expiré.",
     "inviteNotFound": "Invitation introuvable.",
     "inviteForbidden": "Cette invitation ne t'est pas destinée.",
-    "inviteError": "Une erreur est survenue. Réessaie plus tard."
+    "inviteError": "Une erreur est survenue. Réessaie plus tard.",
+    "prefsChannelEvent": "Type d'événement",
+    "prefsChannelPush": "Push",
+    "prefsChannelEmail": "E-mail",
+    "prefsPushHint": "Les notifications push sont en temps réel, directement dans ton navigateur.",
+    "prefsEmailOptInHint": "Les e-mails sont désactivés par défaut (opt-in). Ils sont envoyés sous forme de récapitulatif environ deux fois par jour (pas en temps réel), avec un lien de désinscription dans chaque message.",
+    "prefsChannelNotApplicable": "Indisponible pour ce canal",
+    "extraEventLabels": {
+      "match.scheduled": "Match planifié",
+      "scrim.scheduled": "Scrim planifié"
+    },
+    "extraEventDescriptions": {
+      "match.scheduled": "Quand un de tes matchs est ajouté au planning.",
+      "scrim.scheduled": "Quand un scrim est planifié avec ton équipe."
+    }
   },
   "discordLinkCard": {
     "statusError": "Impossible de charger le statut.",

@@ -85,6 +85,44 @@ export function playerUrlForEvent(
   }
 }
 
+/**
+ * Sous-ensemble d'event_types éligibles au canal EMAIL (digest staff/joueuses).
+ *
+ * Critères d'inclusion (conservateurs) :
+ *   - l'event est RÉELLEMENT émis dans bot_event_outbox (vérifié via les call
+ *     sites emitBotEvent / emitScrimEvent), sinon il ne sera jamais candidat.
+ *   - il est pertinent pour une joueuse/capitaine et "digestible" (un récap
+ *     quotidien a du sens) : changement de planning, début/fin de match,
+ *     check-in, forfait adverse, scrim planifié, actualité.
+ *   - EXCLUS volontairement :
+ *       · haute fréquence / temps réel (cast.hotkey_triggered, match.starting
+ *         imminent inutile en digest J+1 ? → conservé car émis et utile, mais
+ *         les events purement temps-réel comme les hotkeys ne sont pas listés).
+ *       · staff-only / ops (helloasso.payment.received, registration.new,
+ *         dispute.sla_breached, staff.role.changed, broadcast.state_changed).
+ *       · événements non émis dans l'outbox (match.score_reported,
+ *         scrim.confirmed n'ont pas de call site emit → non inclus).
+ *
+ * NB: la liste est un sur-ensemble libre de WEB_PUSH_EVENT_TYPES — le canal
+ * email a sa propre courbe d'opt-in (modèle opt-IN), donc on ne se contraint
+ * pas à la même whitelist que le push.
+ */
+export const EMAIL_EVENT_TYPES = [
+  'match.scheduled',
+  'match.starting',
+  'match.finished',
+  'checkin.opened',
+  'team.forfeit',
+  'scrim.scheduled',
+  'news.published',
+] as const;
+
+export type EmailEventType = (typeof EMAIL_EVENT_TYPES)[number];
+
+export function isEmailEventType(value: string): value is EmailEventType {
+  return (EMAIL_EVENT_TYPES as readonly string[]).includes(value);
+}
+
 export const PLAYER_PUSH_EVENT_TYPES = [
   'match.starting',
   'match.finished',
@@ -436,6 +474,101 @@ export function renderWebPushPayload(
         title: 'Nouvelle notification',
         body: eventName,
         url: '/admin',
+      };
+  }
+}
+
+/* ===========================================================================
+ * Email rendering — heading / body / deep-link URL
+ * ===========================================================================
+ *
+ * Pendant email de `renderWebPushPayload`, consommé par le dispatcher digest
+ * (utils/emailDispatcher.ts). Une joueuse reçoit un récap : on rend chaque
+ * event en (heading, body, url) lisible hors-contexte.
+ *
+ * Garanti NON-THROW : tout payload malformé tombe sur un fallback neutre. Un
+ * item de digest générique vaut mieux qu'un envoi qui plante.
+ *
+ * `url` : on réutilise `playerUrlForEvent` (perspective joueuse). Si l'event
+ * n'a pas d'URL player dédiée (ex. news), on retombe sur un chemin neutre
+ * `/player`. Les URLs restent relatives ; le dispatcher préfixe SITE_URL.
+ */
+export type EmailRendered = {
+  heading: string;
+  body: string;
+  url: string;
+};
+
+export function renderEmailPayload(
+  eventName: string,
+  payload: EventPayload
+): EmailRendered {
+  const data = unwrap(payload);
+  // URL joueuse (relative), fallback neutre sur /player.
+  const url = playerUrlForEvent(eventName, payload) ?? '/player';
+
+  switch (eventName) {
+    case 'match.scheduled': {
+      return {
+        heading: 'Match planifié',
+        body: `${matchLabel(data)} a été planifié. Consultez l'horaire.`,
+        url,
+      };
+    }
+    case 'match.starting': {
+      return {
+        heading: 'Match imminent',
+        body: `${matchLabel(data)} commence bientôt.`,
+        url,
+      };
+    }
+    case 'match.finished': {
+      return {
+        heading: 'Match terminé',
+        body: `${matchLabel(data)} est terminé.`,
+        url,
+      };
+    }
+    case 'checkin.opened': {
+      return {
+        heading: 'Check-in ouvert',
+        body: `${matchLabel(data)} : le check-in est ouvert, pensez à confirmer votre présence.`,
+        url,
+      };
+    }
+    case 'team.forfeit': {
+      return {
+        heading: 'Forfait',
+        body: str(data, 'team_name')
+          ? `${str(data, 'team_name')} a déclaré forfait.`
+          : 'Une équipe a déclaré forfait.',
+        url,
+      };
+    }
+    case 'scrim.scheduled': {
+      return {
+        heading: 'Scrim planifié',
+        body: str(data, 'team_name')
+          ? `Un scrim a été planifié avec ${str(data, 'team_name')}.`
+          : 'Un scrim a été planifié.',
+        url,
+      };
+    }
+    case 'news.published': {
+      const title = str(data, 'title');
+      return {
+        heading: 'Nouvelle actualité',
+        body: title ? `« ${title} » est en ligne.` : 'Une actualité est en ligne.',
+        url,
+      };
+    }
+    default:
+      // Fallback neutre — l'event_name est filtré en amont par
+      // EMAIL_EVENT_TYPES, mais on protège tout de même.
+      return {
+        heading: 'Nouvelle notification',
+        body: eventName,
+        url,
       };
   }
 }

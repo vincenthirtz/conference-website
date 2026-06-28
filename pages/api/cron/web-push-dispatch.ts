@@ -63,6 +63,14 @@ import {
   playerUrlForEvent,
   type WebPushEventType,
 } from '@/utils/webPushEvents';
+import {
+  loadCandidateEvents as loadCandidateEventsShared,
+  loadStaffUserIdsForTenant,
+  loadPlayerUserIdsForMatch,
+  loadCasterUserIdsForMatch,
+  loadOptedOutUserIds,
+  type OutboxRow,
+} from '@/utils/notificationAudience';
 
 const DEFAULT_VAPID_SUBJECT = 'mailto:hirtzvincent@gmail.com';
 const DEFAULT_BATCH_LIMIT = 200;
@@ -116,15 +124,6 @@ function extractErrorBody(err: unknown): string {
   return String(err).slice(0, 500);
 }
 
-type OutboxRow = {
-  id: number;
-  event_id: string;
-  event_name: string;
-  tenant_id: string | null;
-  payload: Record<string, unknown> | null;
-  created_at: string;
-};
-
 type SubscriptionRow = {
   id: string;
   user_id: string;
@@ -156,28 +155,19 @@ type TickCounters = {
 };
 
 /**
- * Charge les events outbox candidats au dispatch Web Push.
- * Filtre par event_name (∈ WEB_PUSH_EVENT_TYPES) et par fenêtre temporelle.
+ * Charge les events outbox candidats au dispatch Web Push (wrapper sur le
+ * helper partagé, avec la liste blanche WEB_PUSH_EVENT_TYPES).
  */
-async function loadCandidateEvents(
+function loadCandidateEvents(
   windowHours: number,
   batchLimit: number
 ): Promise<OutboxRow[]> {
-  const cutoffIso = new Date(
-    Date.now() - windowHours * 3_600_000
-  ).toISOString();
-  const { data, error } = await supabaseAdmin
-    .from('bot_event_outbox')
-    .select('id, event_id, event_name, tenant_id, payload, created_at')
-    .in('event_name', WEB_PUSH_EVENT_TYPES as readonly string[] as string[])
-    .gte('created_at', cutoffIso)
-    .order('created_at', { ascending: true })
-    .limit(batchLimit);
-  if (error) {
-    logger.error('[cron/web-push] load candidates error', error);
-    return [];
-  }
-  return (data ?? []) as OutboxRow[];
+  return loadCandidateEventsShared(
+    WEB_PUSH_EVENT_TYPES as readonly string[],
+    windowHours,
+    batchLimit,
+    '[cron/web-push]'
+  );
 }
 
 /**
@@ -208,182 +198,9 @@ async function loadExistingDeliveries(
   return out;
 }
 
-/**
- * Pour un tenant donné, retourne la liste des auth_user_id staff candidats :
- *   - rows tenant_staff(tenant_id) → staff_id → staff.auth_user_id
- *   - rows staff(is_pole_admin=true) (cross-tenant)
- * Combinés et dédupliqués.
- */
-async function loadStaffUserIdsForTenant(tenantId: string): Promise<string[]> {
-  const userIds = new Set<string>();
-
-  // 1. Staff scopés au tenant via tenant_staff.
-  const { data: tsRows, error: tsErr } = await supabaseAdmin
-    .from('tenant_staff')
-    .select('staff_id')
-    .eq('tenant_id', tenantId);
-  if (tsErr) {
-    logger.error('[cron/web-push] tenant_staff load error', tsErr);
-  }
-  const staffIds = ((tsRows ?? []) as Array<{ staff_id: string }>).map(
-    (r) => r.staff_id
-  );
-
-  // 2. Cross-tenant pole admins.
-  const { data: poleRows, error: poleErr } = await supabaseAdmin
-    .from('staff')
-    .select('id')
-    .eq('is_pole_admin', true);
-  if (poleErr) {
-    logger.error('[cron/web-push] pole admins load error', poleErr);
-  }
-  for (const r of (poleRows ?? []) as Array<{ id: string }>) {
-    if (!staffIds.includes(r.id)) staffIds.push(r.id);
-  }
-
-  if (staffIds.length === 0) return [];
-
-  // 3. Resolve auth_user_id via la table staff (un seul query batché).
-  const { data: staffRows, error: staffErr } = await supabaseAdmin
-    .from('staff')
-    .select('id, auth_user_id, is_active, deleted_at')
-    .in('id', staffIds);
-  if (staffErr) {
-    logger.error('[cron/web-push] staff resolve error', staffErr);
-    return [];
-  }
-  for (const r of (staffRows ?? []) as Array<{
-    id: string;
-    auth_user_id: string | null;
-    is_active?: boolean | null;
-    deleted_at?: string | null;
-  }>) {
-    // Soft-delete filtering : un staff inactif/deleted ne reçoit plus de
-    // notifications (cohérent avec utils/staff.ts:getStaffByUserId).
-    if (r.is_active === false || r.deleted_at) continue;
-    if (r.auth_user_id) userIds.add(r.auth_user_id);
-  }
-  return Array.from(userIds);
-}
-
-/**
- * Pour `event_segment.transitioned` (segment type='match' → live), l'audience
- * n'est PAS le staff général du tenant mais uniquement les casteurs assignés
- * au match concerné. Ce sont les seuls qui ont besoin de savoir que leur
- * cast commence — les autres staff ont le bot Discord pour ça.
- *
- * Pipeline (2 queries pour rester lisible et compatible avec le mock supabase
- * de tests — qui ne fait pas de jointure) :
- *   1. cast_assignments.match_id = matchId → liste de cast_member_id
- *   2. cast_members.id IN (...) AND is_active = true AND auth_user_id IS NOT
- *      NULL → liste d'auth_user_id
- *
- * Note : on ne filtre pas par tenant_id ici. Un match appartient à un seul
- * tenant et cast_assignments est scoped via la FK match_id. Si jamais un
- * cast_member d'un autre tenant était assigné (ne devrait pas arriver),
- * le filtre opt-out aval le couvrirait.
- */
-/**
- * Renvoie les auth user ids des joueuses des DEUX équipes d'un match.
- * Utilisé pour le fanout player des events match-related (match.starting,
- * match.finished, match.score_reported, checkin.opened) en plus du staff.
- *
- * Retourne un array vide si le match n'existe pas ou n'a pas d'équipes
- * (cas bye, match pas encore seedé, etc.) — bénin, pas d'audience player
- * = pas de push player pour cet event.
- */
-async function loadPlayerUserIdsForMatch(matchId: string): Promise<string[]> {
-  const { data: match, error: matchErr } = await supabaseAdmin
-    .from('matches')
-    .select('team1_id, team2_id')
-    .eq('id', matchId)
-    .maybeSingle();
-  if (matchErr || !match) {
-    if (matchErr) {
-      logger.error('[cron/web-push] loadPlayerUserIdsForMatch match err', matchErr);
-    }
-    return [];
-  }
-  const teamIds = [match.team1_id, match.team2_id].filter(
-    (v): v is string => typeof v === 'string' && v.length > 0
-  );
-  if (teamIds.length === 0) return [];
-
-  const { data: members, error: memErr } = await supabaseAdmin
-    .from('team_members')
-    .select('user_id')
-    .in('team_id', teamIds);
-  if (memErr) {
-    logger.error('[cron/web-push] loadPlayerUserIdsForMatch members err', memErr);
-    return [];
-  }
-  const userIds = new Set<string>();
-  for (const r of (members ?? []) as Array<{ user_id: string | null }>) {
-    if (r.user_id) userIds.add(r.user_id);
-  }
-  return Array.from(userIds);
-}
-
-async function loadCasterUserIdsForMatch(matchId: string): Promise<string[]> {
-  const { data: assignments, error: assignErr } = await supabaseAdmin
-    .from('cast_assignments')
-    .select('cast_member_id')
-    .eq('match_id', matchId);
-  if (assignErr) {
-    logger.error('[cron/web-push] cast_assignments load error', assignErr);
-    return [];
-  }
-  const memberIds = ((assignments ?? []) as Array<{ cast_member_id: string }>)
-    .map((r) => r.cast_member_id)
-    .filter((v): v is string => typeof v === 'string' && v.length > 0);
-  if (memberIds.length === 0) return [];
-
-  const { data: members, error: memErr } = await supabaseAdmin
-    .from('cast_members')
-    .select('id, auth_user_id, is_active')
-    .in('id', memberIds);
-  if (memErr) {
-    logger.error('[cron/web-push] cast_members load error', memErr);
-    return [];
-  }
-
-  const userIds = new Set<string>();
-  for (const r of (members ?? []) as Array<{
-    id: string;
-    auth_user_id: string | null;
-    is_active?: boolean | null;
-  }>) {
-    if (r.is_active === false) continue;
-    if (r.auth_user_id) userIds.add(r.auth_user_id);
-  }
-  return Array.from(userIds);
-}
-
-/**
- * Pour une liste de user_ids et un event_type, retourne le sous-ensemble qui
- * a OPT-OUT explicite (row notification_prefs avec enabled=false).
- */
-async function loadOptedOutUserIds(
-  userIds: string[],
-  eventType: string
-): Promise<Set<string>> {
-  if (userIds.length === 0) return new Set();
-  const { data, error } = await supabaseAdmin
-    .from('notification_prefs')
-    .select('user_id, enabled')
-    .in('user_id', userIds)
-    .eq('event_type', eventType)
-    .eq('enabled', false);
-  if (error) {
-    logger.error('[cron/web-push] prefs load error', error);
-    return new Set();
-  }
-  const out = new Set<string>();
-  for (const r of (data ?? []) as Array<{ user_id: string }>) {
-    out.add(r.user_id);
-  }
-  return out;
-}
+// Audience resolvers (staff / player / caster) et filtre opt-out push sont
+// désormais partagés via utils/notificationAudience.ts (réutilisés par le
+// dispatcher email). Le comportement push reste strictement identique.
 
 /**
  * Charge toutes les push_subscriptions des user_ids éligibles.

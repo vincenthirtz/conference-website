@@ -1474,6 +1474,36 @@ components:
           description: One entry per scheduled campaign (success or error).
           items:
             $ref: "#/components/schemas/BroadcastWaveResult"
+    CronEmailDigestResult:
+      type: object
+      required:
+        - success
+        - candidates
+        - emailsSent
+        - recipients
+        - skipped
+      description: |
+        Summary returned by `runEmailDispatcher()`. `candidates` = outbox events
+        examined this run, `emailsSent` = digest emails actually sent,
+        `recipients` = distinct users emailed, `skipped` = (event,user) pairs
+        deduped / dropped (already delivered, no email, no opt-in, etc.).
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        candidates:
+          type: integer
+          minimum: 0
+        emailsSent:
+          type: integer
+          minimum: 0
+        recipients:
+          type: integer
+          minimum: 0
+        skipped:
+          type: integer
+          minimum: 0
     CronCheckinResult:
       type: object
       required:
@@ -14297,6 +14327,47 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /api/email/unsubscribe:
+    get:
+      tags:
+        - public
+      summary: One-click email unsubscribe (RGPD, clicked from an email).
+      operationId: emailUnsubscribe
+      description: |
+        Lien de désabonnement présent en bas de chaque digest email. PAS d'auth
+        session : l'identité est portée par un token HMAC-SHA256 auto-portant
+        (`?token=...`, cf. `utils/emailUnsubscribe.ts`).
+
+        Effet : opt-out GLOBAL du canal email — pose une row
+        `notification_prefs(channel='email', enabled=false)` pour chaque
+        `EMAIL_EVENT_TYPES` de l'utilisateur résolu depuis le token. Idempotent.
+
+        Réponse : une page HTML brandée (confirmation sur succès, message
+        d'erreur amical sur token invalide/altéré → `400`). Pas de CSRF (GET
+        idempotent, mutation impossible sans le token signé).
+      security: []
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Token de désabonnement signé (HMAC-SHA256).
+      responses:
+        "200":
+          description: Désabonnement confirmé (page HTML).
+          content:
+            text/html:
+              schema:
+                type: string
+        "400":
+          description: Token invalide ou altéré (page HTML d'erreur).
+          content:
+            text/html:
+              schema:
+                type: string
+        "405":
+          description: Méthode non autorisée (seul GET est accepté).
   /api/cron/broadcast-process:
     get:
       tags:
@@ -14345,6 +14416,60 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CronBroadcastResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /api/cron/email-digest:
+    get:
+      tags:
+        - cron
+      summary: Send the notification email digest (twice daily).
+      operationId: cronEmailDigestGet
+      description: |
+        Schedule: twice daily at 07:00 and 17:00 UTC (`0 7,17 * * *`) via the
+        Netlify scheduled function `email-digest-cron` (≈ 08h/18h Paris in
+        winter). Twice-daily cadence keeps it a true digest and stays under the
+        free Brevo quota (300 emails/day).
+
+        Delegates to `runEmailDispatcher()`: reads `bot_event_outbox`, resolves
+        the OPT-IN email audience, dedups via `email_deliveries`, aggregates
+        pending events per user into one digest email and sends via Brevo.
+        Returns the run stats (`candidates`, `emailsSent`, `recipients`,
+        `skipped`).
+
+        Auth: `Authorization: Bearer <CRON_SECRET>` header OR
+        `?secret=<CRON_SECRET>` query string. Both GET and POST are accepted.
+      security:
+        - CronSecret: []
+      responses:
+        "200":
+          description: Digest run summary.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CronEmailDigestResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
+    post:
+      tags:
+        - cron
+      summary: Send the notification email digest (twice daily).
+      operationId: cronEmailDigestPost
+      description: |
+        Same as `GET /api/cron/email-digest`. POST is the method used by the
+        Netlify scheduled function; GET is allowed for manual ops.
+      security:
+        - CronSecret: []
+      responses:
+        "200":
+          description: Digest run summary.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CronEmailDigestResult"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "500":
@@ -18982,10 +19107,12 @@ paths:
           $ref: "#/components/responses/ServerError"
   /api/player/push/prefs:
     get:
-      summary: Préférences Web Push du joueur courant.
+      summary: Préférences de notification (push + email) du joueur courant.
       description: |
-        Renvoie les préférences fusionnées avec les défauts (`row absente =
-        enabled`) pour les event types joueur. `withAuthRoute`.
+        Renvoie les préférences CHANNEL-AWARE fusionnées avec les défauts :
+        `push` couvre les event types joueur en modèle OPT-OUT (row absente =
+        `true`), `email` couvre les event types email en modèle OPT-IN (row
+        absente = `false`). `withAuthRoute`.
       operationId: playerPushGetPrefs
       tags:
         - public
@@ -18993,35 +19120,40 @@ paths:
         - PlayerBearer: []
       responses:
         "200":
-          description: Préférences fusionnées.
+          description: Préférences fusionnées par canal.
           content:
             application/json:
               schema:
                 type: object
                 required:
-                  - prefs
+                  - push
+                  - email
                 properties:
-                  prefs:
-                    type: array
-                    items:
-                      type: object
-                      required:
-                        - event_type
-                        - enabled
-                      properties:
-                        event_type:
-                          type: string
-                        enabled:
-                          type: boolean
+                  push:
+                    type: object
+                    additionalProperties:
+                      type: boolean
+                    description: |
+                      Map event_type → enabled pour le canal push (opt-out,
+                      défaut true).
+                  email:
+                    type: object
+                    additionalProperties:
+                      type: boolean
+                    description: |
+                      Map event_type → enabled pour le canal email (opt-in,
+                      défaut false).
         "401":
           $ref: "#/components/responses/Unauthorized"
         "500":
           $ref: "#/components/responses/ServerError"
     put:
-      summary: Mettre à jour les préférences Web Push du joueur courant.
+      summary: Mettre à jour une préférence de notification du joueur courant.
       description: |
-        Modèle opt-out : seules les préférences `enabled: false` sont persistées,
-        les autres sont supprimées (retour au défaut `enabled`). `withAuthRoute`.
+        Met à jour UNE préférence (event_type, channel). Seules les valeurs
+        NON-DÉFAUT sont persistées (push opt-out `enabled:false`, email opt-in
+        `enabled:true`) ; un retour au défaut supprime la row. `event_type` est
+        validé contre la whitelist du canal. `withAuthRoute`.
       operationId: playerPushPutPrefs
       tags:
         - public
@@ -19034,39 +19166,38 @@ paths:
             schema:
               type: object
               required:
-                - prefs
+                - eventType
+                - channel
+                - enabled
               properties:
-                prefs:
-                  type: array
-                  items:
-                    type: object
-                    required:
-                      - event_type
-                      - enabled
-                    properties:
-                      event_type:
-                        type: string
-                      enabled:
-                        type: boolean
+                eventType:
+                  type: string
+                channel:
+                  type: string
+                  enum:
+                    - push
+                    - email
+                enabled:
+                  type: boolean
       responses:
         "200":
-          description: Préférences mises à jour (état fusionné).
+          description: Préférences mises à jour (état fusionné par canal).
           content:
             application/json:
               schema:
                 type: object
                 required:
-                  - prefs
+                  - push
+                  - email
                 properties:
-                  prefs:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        event_type:
-                          type: string
-                        enabled:
-                          type: boolean
+                  push:
+                    type: object
+                    additionalProperties:
+                      type: boolean
+                  email:
+                    type: object
+                    additionalProperties:
+                      type: boolean
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":

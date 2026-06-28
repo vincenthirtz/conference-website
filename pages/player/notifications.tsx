@@ -12,6 +12,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useT } from '@/lib/i18n/useT';
 import PushOptIn from '@/components/shared/PushOptIn';
+import NotificationPrefsGrid from '@/components/player/NotificationPrefsGrid';
 import QuickAction, {
   type QuickActionProps,
 } from '@/components/player/QuickAction';
@@ -19,14 +20,18 @@ import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import InvitationsSection from '@/components/player/InvitationsSection';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { PlayerNotificationsPayload } from '@/pages/api/player/notifications';
-import {
-  PLAYER_PUSH_EVENT_TYPES,
-  type PlayerPushEventType,
-} from '@/utils/webPushEvents';
 
 import { logger } from '../../utils/logger';
 
-type PrefRow = { event_type: string; enabled: boolean };
+// Réponse du GET /api/player/push/prefs : deux maps event_type -> bool.
+// `push` = opt-OUT (clé absente => activé). `email` = opt-IN (clé absente =>
+// désactivé). Les deux maps peuvent couvrir des ensembles d'event_types
+// DIFFÉRENTS — on rend les clés propres à chaque map.
+type NotificationChannel = 'push' | 'email';
+type PrefsResponse = {
+  push: Record<string, boolean>;
+  email: Record<string, boolean>;
+};
 
 const SVG_PATHS = {
   messages: 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z',
@@ -34,38 +39,6 @@ const SVG_PATHS = {
   team: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 7a4 4 0 100 8 4 4 0 000-8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75',
   checkin: 'M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
 };
-
-function Toggle({
-  checked,
-  disabled,
-  onChange,
-  label,
-}: {
-  checked: boolean;
-  disabled: boolean;
-  onChange: () => void;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      disabled={disabled}
-      onClick={onChange}
-      className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60 disabled:opacity-50 disabled:cursor-not-allowed ${
-        checked ? 'bg-purple-500' : 'bg-white/15'
-      }`}
-    >
-      <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
-          checked ? 'translate-x-6' : 'translate-x-1'
-        }`}
-      />
-    </button>
-  );
-}
 
 function PlayerNotifications() {
   const {
@@ -83,8 +56,8 @@ function PlayerNotifications() {
   const [counters, setCounters] = useState<PlayerNotificationsPayload | null>(
     null
   );
-  const [prefs, setPrefs] = useState<PrefRow[]>([]);
-  const [savingType, setSavingType] = useState<string | null>(null);
+  const [prefs, setPrefs] = useState<PrefsResponse | null>(null);
+  const [savingKey, setSavingKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -95,7 +68,7 @@ function PlayerNotifications() {
         logger.error('[player/notifications] counters error:', err);
         return null;
       }),
-      adminFetchJson<{ prefs: PrefRow[] }>('/api/player/push/prefs', {
+      adminFetchJson<PrefsResponse>('/api/player/push/prefs', {
         skipAuthRedirect: true,
       }).catch((err) => {
         logger.error('[player/notifications] prefs error:', err);
@@ -104,7 +77,12 @@ function PlayerNotifications() {
     ]);
 
     if (countersData) setCounters(countersData);
-    if (prefsData) setPrefs(prefsData.prefs ?? []);
+    if (prefsData) {
+      setPrefs({
+        push: prefsData.push ?? {},
+        email: prefsData.email ?? {},
+      });
+    }
     if (!countersData && !prefsData) {
       setError(t.loadError);
     }
@@ -116,37 +94,39 @@ function PlayerNotifications() {
     load().finally(() => setLoading(false));
   }, [ready, load]);
 
-  const handleToggle = async (eventType: string, nextEnabled: boolean) => {
-    setSavingType(eventType);
-    // Optimistic update.
+  const handleToggle = async (
+    eventType: string,
+    channel: NotificationChannel,
+    nextEnabled: boolean
+  ) => {
+    const saveKey = `${channel}:${eventType}`;
+    setSavingKey(saveKey);
+    // Optimistic update + snapshot pour rollback.
     const previous = prefs;
-    setPrefs((rows) =>
-      rows.map((r) =>
-        r.event_type === eventType ? { ...r, enabled: nextEnabled } : r
-      )
+    setPrefs((current) =>
+      current
+        ? {
+            ...current,
+            [channel]: { ...current[channel], [eventType]: nextEnabled },
+          }
+        : current
     );
     try {
-      const res = await adminFetchJson<{ prefs: PrefRow[] }>(
-        '/api/player/push/prefs',
-        {
-          method: 'PUT',
-          body: JSON.stringify({
-            prefs: [{ event_type: eventType, enabled: nextEnabled }],
-          }),
-        }
-      );
-      setPrefs(res.prefs ?? []);
+      await adminFetchJson('/api/player/push/prefs', {
+        method: 'PUT',
+        body: JSON.stringify({ eventType, channel, enabled: nextEnabled }),
+      });
       addToast(t.prefSaved, 'success');
     } catch (err) {
       logger.error('[player/notifications] toggle error:', err);
       setPrefs(previous);
       addToast((err as Error)?.message || t.prefSaveError, 'error');
     } finally {
-      setSavingType(null);
+      setSavingKey(null);
     }
   };
 
-  if (authLoading || (loading && !counters && prefs.length === 0)) {
+  if (authLoading || (loading && !counters && prefs === null)) {
     return <PlayerPageSkeleton rows={2} />;
   }
 
@@ -210,8 +190,6 @@ function PlayerNotifications() {
     }
   }
 
-  const prefMap = new Map(prefs.map((p) => [p.event_type, p.enabled]));
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <main className="max-w-3xl mx-auto px-4 py-10 pt-24 pb-16">
@@ -271,32 +249,12 @@ function PlayerNotifications() {
               <PushOptIn audience="player" variant="card" loginPath="/login" />
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl divide-y divide-white/[0.06]">
-              {PLAYER_PUSH_EVENT_TYPES.map((eventType) => {
-                const enabled = prefMap.get(eventType) ?? true;
-                return (
-                  <div
-                    key={eventType}
-                    className="flex items-center justify-between gap-4 px-5 py-4"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-white">
-                        {t.eventLabels[eventType]}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {t.eventDescriptions[eventType]}
-                      </p>
-                    </div>
-                    <Toggle
-                      checked={enabled}
-                      disabled={savingType === eventType}
-                      onChange={() => handleToggle(eventType, !enabled)}
-                      label={t.eventLabels[eventType]}
-                    />
-                  </div>
-                );
-              })}
-            </div>
+            <NotificationPrefsGrid
+              prefs={prefs}
+              savingKey={savingKey}
+              onToggle={handleToggle}
+            />
+
             <p className="text-xs text-gray-500 mt-3">{t.prefsFootnote}</p>
           </section>
         </div>

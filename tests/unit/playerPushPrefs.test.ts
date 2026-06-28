@@ -1,10 +1,11 @@
-// Unit tests for pages/api/player/push/prefs.ts
+// Unit tests for pages/api/player/push/prefs.ts (channel-aware).
 //
-// GET  → returns every PLAYER_PUSH_EVENT_TYPES entry, defaulting to enabled
-//        when no `notification_prefs` row exists (the "row-absent = enabled"
-//        opt-out model).
-// PUT  → validates event_type against the player enum, persists opt-outs as
-//        rows (and removes rows for re-enables), then echoes the merged state.
+// GET → returns `{ push: {...}, email: {...} }`:
+//        - push covers PLAYER_PUSH_EVENT_TYPES, OPT-OUT default (absent → true).
+//        - email covers EMAIL_EVENT_TYPES, OPT-IN default (absent → false).
+// PUT → body `{ eventType, channel, enabled }`. Validates eventType ∈ the
+//        channel's whitelist; persists only non-default rows (push opt-out,
+//        email opt-in), removes the row when returning to default.
 //
 // supabase + rateLimit are auto-mocked by tests/unit/__helpers__/testSetup.ts.
 // A fresh Bearer token per call defeats the 60s token→user cache in
@@ -18,7 +19,10 @@ import {
   setAuthUser,
 } from './__helpers__/supabaseMock';
 
-import { PLAYER_PUSH_EVENT_TYPES } from '@/utils/webPushEvents';
+import {
+  PLAYER_PUSH_EVENT_TYPES,
+  EMAIL_EVENT_TYPES,
+} from '@/utils/webPushEvents';
 
 import handler from '@/pages/api/player/push/prefs';
 
@@ -48,6 +52,7 @@ function makeRes() {
   };
   res.status = (c: number) => ((res.statusCode = c), res);
   res.json = (b: unknown) => ((res.body = b), res);
+  res.send = (b: unknown) => ((res.body = b), res);
   res.end = () => res;
   res.setHeader = (k: string, v: unknown) => {
     res.headers[k] = v;
@@ -55,80 +60,135 @@ function makeRes() {
   return res;
 }
 
-type PrefRow = { event_type: string; enabled: boolean };
+type PrefsBody = {
+  push: Record<string, boolean>;
+  email: Record<string, boolean>;
+};
 
-describe('GET /api/player/push/prefs', () => {
+describe('GET /api/player/push/prefs (channel-aware)', () => {
   beforeEach(() => {
     resetSupabaseMock();
     setAuthUser({ id: USER_ID });
   });
 
-  it('defaults every player event type to enabled when no rows exist', async () => {
+  it('defaults push to enabled and email to disabled when no rows exist', async () => {
     const req = makeReq({ method: 'GET' });
     const res = makeRes();
     await handler(req, res);
 
     expect(res.statusCode).toBe(200);
-    const prefs = (res.body as { prefs: PrefRow[] }).prefs;
-    // Exactly the player subset, all enabled.
-    expect(prefs.map((p) => p.event_type).sort()).toEqual(
+    const body = res.body as PrefsBody;
+
+    // push covers exactly PLAYER_PUSH_EVENT_TYPES, all true (opt-out default).
+    expect(Object.keys(body.push).sort()).toEqual(
       [...PLAYER_PUSH_EVENT_TYPES].sort()
     );
-    expect(prefs.every((p) => p.enabled === true)).toBe(true);
+    expect(Object.values(body.push).every((v) => v === true)).toBe(true);
+
+    // email covers exactly EMAIL_EVENT_TYPES, all false (opt-in default).
+    expect(Object.keys(body.email).sort()).toEqual(
+      [...EMAIL_EVENT_TYPES].sort()
+    );
+    expect(Object.values(body.email).every((v) => v === false)).toBe(true);
   });
 
-  it('reflects an existing opt-out row (enabled=false)', async () => {
+  it('reflects a push opt-out row (enabled=false)', async () => {
     store.notification_prefs = [
-      { user_id: USER_ID, event_type: 'scrim.invitation', enabled: false },
+      {
+        user_id: USER_ID,
+        event_type: 'scrim.invitation',
+        channel: 'push',
+        enabled: false,
+      },
     ];
 
     const req = makeReq({ method: 'GET' });
     const res = makeRes();
     await handler(req, res);
 
-    expect(res.statusCode).toBe(200);
-    const prefs = (res.body as { prefs: PrefRow[] }).prefs;
-    const scrim = prefs.find((p) => p.event_type === 'scrim.invitation');
-    expect(scrim?.enabled).toBe(false);
-    // Other types remain enabled by default.
+    const body = res.body as PrefsBody;
+    expect(body.push['scrim.invitation']).toBe(false);
+    // Other push types remain enabled by default.
     expect(
-      prefs
-        .filter((p) => p.event_type !== 'scrim.invitation')
-        .every((p) => p.enabled === true)
+      Object.entries(body.push)
+        .filter(([k]) => k !== 'scrim.invitation')
+        .every(([, v]) => v === true)
     ).toBe(true);
+  });
+
+  it('reflects an email opt-in row (enabled=true)', async () => {
+    store.notification_prefs = [
+      {
+        user_id: USER_ID,
+        event_type: 'match.starting',
+        channel: 'email',
+        enabled: true,
+      },
+    ];
+
+    const req = makeReq({ method: 'GET' });
+    const res = makeRes();
+    await handler(req, res);
+
+    const body = res.body as PrefsBody;
+    expect(body.email['match.starting']).toBe(true);
+    // Other email types remain disabled (opt-in) by default.
+    expect(
+      Object.entries(body.email)
+        .filter(([k]) => k !== 'match.starting')
+        .every(([, v]) => v === false)
+    ).toBe(true);
+  });
+
+  it('a push row does not leak into the email channel and vice-versa', async () => {
+    store.notification_prefs = [
+      {
+        user_id: USER_ID,
+        event_type: 'match.starting',
+        channel: 'push',
+        enabled: false,
+      },
+    ];
+
+    const req = makeReq({ method: 'GET' });
+    const res = makeRes();
+    await handler(req, res);
+
+    const body = res.body as PrefsBody;
+    expect(body.push['match.starting']).toBe(false);
+    // The email channel must still see its default (opt-in → false).
+    expect(body.email['match.starting']).toBe(false);
   });
 
   it('ignores rows for another user', async () => {
     store.notification_prefs = [
-      { user_id: 'other-user', event_type: 'match.starting', enabled: false },
+      {
+        user_id: 'other-user',
+        event_type: 'match.starting',
+        channel: 'push',
+        enabled: false,
+      },
     ];
 
     const req = makeReq({ method: 'GET' });
     const res = makeRes();
     await handler(req, res);
 
-    const prefs = (res.body as { prefs: PrefRow[] }).prefs;
-    expect(prefs.find((p) => p.event_type === 'match.starting')?.enabled).toBe(
-      true
-    );
+    const body = res.body as PrefsBody;
+    expect(body.push['match.starting']).toBe(true);
   });
 });
 
-describe('PUT /api/player/push/prefs', () => {
+describe('PUT /api/player/push/prefs (channel-aware)', () => {
   beforeEach(() => {
     resetSupabaseMock();
     setAuthUser({ id: USER_ID });
   });
 
-  it('400s when an event_type is outside the player enum', async () => {
+  it('400s when channel is invalid', async () => {
     const req = makeReq({
       method: 'PUT',
-      body: {
-        prefs: [
-          // Valid WebPush type but NOT in PLAYER_PUSH_EVENT_TYPES.
-          { event_type: 'staff.role.changed', enabled: false },
-        ],
-      },
+      body: { eventType: 'match.starting', channel: 'sms', enabled: true },
     });
     const res = makeRes();
     await handler(req, res);
@@ -137,70 +197,157 @@ describe('PUT /api/player/push/prefs', () => {
     expect((res.body as { code?: string }).code).toBe('INVALID_BODY');
   });
 
-  it('persists an opt-out and a subsequent GET reflects it', async () => {
-    // 1) PUT: disable scrim.invitation.
+  it('400s when eventType is outside the push whitelist', async () => {
+    const req = makeReq({
+      method: 'PUT',
+      body: {
+        // Valid WebPush type but NOT in PLAYER_PUSH_EVENT_TYPES.
+        eventType: 'staff.role.changed',
+        channel: 'push',
+        enabled: false,
+      },
+    });
+    const res = makeRes();
+    await handler(req, res);
+
+    expect(res.statusCode).toBe(400);
+    expect((res.body as { code?: string }).code).toBe('INVALID_EVENT_TYPE');
+  });
+
+  it('400s when eventType is outside the email whitelist', async () => {
+    const req = makeReq({
+      method: 'PUT',
+      body: {
+        // In PLAYER_PUSH but NOT in EMAIL_EVENT_TYPES.
+        eventType: 'scrim.invitation',
+        channel: 'email',
+        enabled: true,
+      },
+    });
+    const res = makeRes();
+    await handler(req, res);
+
+    expect(res.statusCode).toBe(400);
+    expect((res.body as { code?: string }).code).toBe('INVALID_EVENT_TYPE');
+  });
+
+  it('persists a push opt-out and a subsequent GET reflects it', async () => {
     const putReq = makeReq({
       method: 'PUT',
       body: {
-        prefs: [{ event_type: 'scrim.invitation', enabled: false }],
+        eventType: 'scrim.invitation',
+        channel: 'push',
+        enabled: false,
       },
     });
     const putRes = makeRes();
     await handler(putReq, putRes);
 
     expect(putRes.statusCode).toBe(200);
-    const putPrefs = (putRes.body as { prefs: PrefRow[] }).prefs;
-    expect(
-      putPrefs.find((p) => p.event_type === 'scrim.invitation')?.enabled
-    ).toBe(false);
+    expect((putRes.body as PrefsBody).push['scrim.invitation']).toBe(false);
 
-    // A persisted opt-out row must exist for this user.
+    // A persisted opt-out row must exist (channel='push').
     expect(
       (store.notification_prefs ?? []).some(
         (r) =>
           r.user_id === USER_ID &&
           r.event_type === 'scrim.invitation' &&
+          r.channel === 'push' &&
           r.enabled === false
       )
     ).toBe(true);
 
-    // 2) GET: the opt-out survives a fresh read.
     const getReq = makeReq({ method: 'GET' });
     const getRes = makeRes();
     await handler(getReq, getRes);
-
-    const getPrefs = (getRes.body as { prefs: PrefRow[] }).prefs;
-    expect(
-      getPrefs.find((p) => p.event_type === 'scrim.invitation')?.enabled
-    ).toBe(false);
+    expect((getRes.body as PrefsBody).push['scrim.invitation']).toBe(false);
   });
 
-  it('re-enabling removes the opt-out row (no enabled=true rows persisted)', async () => {
+  it('persists an email opt-in (enabled=true is non-default for email)', async () => {
+    const putReq = makeReq({
+      method: 'PUT',
+      body: {
+        eventType: 'news.published',
+        channel: 'email',
+        enabled: true,
+      },
+    });
+    const putRes = makeRes();
+    await handler(putReq, putRes);
+
+    expect(putRes.statusCode).toBe(200);
+    expect((putRes.body as PrefsBody).email['news.published']).toBe(true);
+
+    // The opt-in row must be persisted with channel='email', enabled=true.
+    expect(
+      (store.notification_prefs ?? []).some(
+        (r) =>
+          r.user_id === USER_ID &&
+          r.event_type === 'news.published' &&
+          r.channel === 'email' &&
+          r.enabled === true
+      )
+    ).toBe(true);
+  });
+
+  it('returning push to default (enabled=true) removes the opt-out row', async () => {
     store.notification_prefs = [
-      { user_id: USER_ID, event_type: 'team.forfeit', enabled: false },
+      {
+        user_id: USER_ID,
+        event_type: 'team.forfeit',
+        channel: 'push',
+        enabled: false,
+      },
     ];
 
     const req = makeReq({
       method: 'PUT',
-      body: {
-        prefs: [{ event_type: 'team.forfeit', enabled: true }],
-      },
+      body: { eventType: 'team.forfeit', channel: 'push', enabled: true },
     });
     const res = makeRes();
     await handler(req, res);
 
     expect(res.statusCode).toBe(200);
-    // Re-enable = delete the row, never insert an enabled=true row.
+    // Re-enable push = delete the row, never persist an enabled=true push row.
     expect(
       (store.notification_prefs ?? []).some(
-        (r) => r.user_id === USER_ID && r.event_type === 'team.forfeit'
+        (r) =>
+          r.user_id === USER_ID &&
+          r.event_type === 'team.forfeit' &&
+          r.channel === 'push'
       )
     ).toBe(false);
+    expect((res.body as PrefsBody).push['team.forfeit']).toBe(true);
+  });
 
-    const prefs = (res.body as { prefs: PrefRow[] }).prefs;
-    expect(prefs.find((p) => p.event_type === 'team.forfeit')?.enabled).toBe(
-      true
-    );
+  it('returning email to default (enabled=false) removes the opt-in row', async () => {
+    store.notification_prefs = [
+      {
+        user_id: USER_ID,
+        event_type: 'news.published',
+        channel: 'email',
+        enabled: true,
+      },
+    ];
+
+    const req = makeReq({
+      method: 'PUT',
+      body: { eventType: 'news.published', channel: 'email', enabled: false },
+    });
+    const res = makeRes();
+    await handler(req, res);
+
+    expect(res.statusCode).toBe(200);
+    // Opt-out of email = delete the row, never persist an enabled=false email row.
+    expect(
+      (store.notification_prefs ?? []).some(
+        (r) =>
+          r.user_id === USER_ID &&
+          r.event_type === 'news.published' &&
+          r.channel === 'email'
+      )
+    ).toBe(false);
+    expect((res.body as PrefsBody).email['news.published']).toBe(false);
   });
 });
 

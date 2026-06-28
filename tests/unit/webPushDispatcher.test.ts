@@ -340,6 +340,7 @@ describe('filtering', () => {
       {
         user_id: USER_A,
         event_type: 'cast.assigned',
+        channel: 'push',
         enabled: false,
         updated_at: NOW,
       },
@@ -865,6 +866,7 @@ describe('event_segment.transitioned', () => {
       {
         user_id: USER_A,
         event_type: 'event_segment.transitioned',
+        channel: 'push',
         enabled: false,
         updated_at: NOW,
       },

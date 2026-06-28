@@ -3,13 +3,19 @@
 // GET  /api/player/push/prefs
 // PUT  /api/player/push/prefs
 //
-// Préférences Web Push pour le user player courant. Symétrique de
-// /api/admin/notifications/prefs mais expose UNIQUEMENT le sous-ensemble
-// `PLAYER_PUSH_EVENT_TYPES` (match, scrim, check-in, news, forfait) — pas
-// les events staff-only que la joueuse ne reçoit jamais.
+// Préférences de notification CHANNEL-AWARE du user player courant. Deux canaux :
+//   - push  : sous-ensemble PLAYER_PUSH_EVENT_TYPES, modèle OPT-OUT (absent =
+//             true). Le dispatcher Web Push n'écarte que sur un opt-out
+//             explicite (notification_prefs channel='push' enabled=false).
+//   - email : sous-ensemble EMAIL_EVENT_TYPES, modèle OPT-IN (absent = false).
+//             Le digest email n'envoie QUE si une row channel='email'
+//             enabled=true existe (cf. utils/notificationAudience).
 //
-// Modèle "row absente = enabled" (cf. admin prefs). Le dispatcher consulte
-// la même table `notification_prefs` pour décider d'envoyer ou non.
+// La table `notification_prefs` est keyée (user_id, event_type, channel).
+// Une row n'existe que pour exprimer un état NON-DÉFAUT :
+//   - push : on persiste seulement les opt-out (enabled=false).
+//   - email : on persiste seulement les opt-in (enabled=true).
+// Tout retour au défaut = suppression de la row.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import type { User } from '@supabase/supabase-js';
@@ -19,42 +25,72 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 import { logger } from '@/utils/logger';
-import { PLAYER_PUSH_EVENT_TYPES } from '@/utils/webPushEvents';
+import {
+  PLAYER_PUSH_EVENT_TYPES,
+  EMAIL_EVENT_TYPES,
+} from '@/utils/webPushEvents';
+
+type Channel = 'push' | 'email';
+
+const CHANNEL_TYPES: Record<Channel, readonly string[]> = {
+  push: PLAYER_PUSH_EVENT_TYPES,
+  email: EMAIL_EVENT_TYPES,
+};
+
+// Défaut par canal : push opt-out (absent = true), email opt-in (absent = false).
+const CHANNEL_DEFAULT: Record<Channel, boolean> = {
+  push: true,
+  email: false,
+};
 
 const prefsPutSchema = z.object({
-  prefs: z
-    .array(
-      z.object({
-        event_type: z.enum(PLAYER_PUSH_EVENT_TYPES),
-        enabled: z.boolean(),
-      })
-    )
-    .max(PLAYER_PUSH_EVENT_TYPES.length * 2),
+  eventType: z.string().min(1),
+  channel: z.enum(['push', 'email']),
+  enabled: z.boolean(),
 });
 
-type PrefRow = { event_type: string; enabled: boolean };
+type PrefRow = { event_type: string; channel: string; enabled: boolean };
 
-function mergeWithDefaults(rows: PrefRow[]): PrefRow[] {
-  const map = new Map<string, boolean>();
-  for (const r of rows) map.set(r.event_type, r.enabled);
-  return PLAYER_PUSH_EVENT_TYPES.map((event_type) => ({
-    event_type,
-    enabled: map.has(event_type) ? (map.get(event_type) as boolean) : true,
-  }));
-}
-
+/** Charge toutes les rows notification_prefs du user (tous canaux). */
 async function loadPrefs(authUserId: string): Promise<PrefRow[]> {
   const { data, error } = await supabaseAdmin!
     .from('notification_prefs')
-    .select('event_type, enabled')
-    .eq('user_id', authUserId)
-    .in('event_type', PLAYER_PUSH_EVENT_TYPES as unknown as string[]);
+    .select('event_type, channel, enabled')
+    .eq('user_id', authUserId);
 
   if (error) {
     logger.error('[player/push/prefs] load error', error);
     throw new Error('Failed to load prefs');
   }
   return (data ?? []) as PrefRow[];
+}
+
+/**
+ * Construit l'état exhaustif d'un canal : chaque event_type du canal mappé à
+ * son `enabled`, en appliquant le défaut du canal quand aucune row n'existe.
+ */
+function mergeChannel(
+  rows: PrefRow[],
+  channel: Channel
+): Record<string, boolean> {
+  const map = new Map<string, boolean>();
+  for (const r of rows) {
+    if (r.channel === channel) map.set(r.event_type, r.enabled);
+  }
+  const out: Record<string, boolean> = {};
+  for (const eventType of CHANNEL_TYPES[channel]) {
+    out[eventType] = map.has(eventType)
+      ? (map.get(eventType) as boolean)
+      : CHANNEL_DEFAULT[channel];
+  }
+  return out;
+}
+
+function buildResponse(rows: PrefRow[]) {
+  return {
+    push: mergeChannel(rows, 'push'),
+    email: mergeChannel(rows, 'email'),
+  };
 }
 
 async function handler(
@@ -74,7 +110,7 @@ async function handler(
   if (req.method === 'GET') {
     try {
       const rows = await loadPrefs(authUserId);
-      return res.status(200).json({ prefs: mergeWithDefaults(rows) });
+      return res.status(200).json(buildResponse(rows));
     } catch {
       return res.status(500).json({ error: 'Erreur serveur.' });
     }
@@ -90,46 +126,40 @@ async function handler(
       });
     }
 
-    const finalState = new Map<string, boolean>();
-    for (const p of parsed.data.prefs) finalState.set(p.event_type, p.enabled);
+    const { eventType, channel, enabled } = parsed.data;
 
-    const toUpsert: Array<{
-      user_id: string;
-      event_type: string;
-      enabled: boolean;
-      updated_at: string;
-    }> = [];
-    const nowIso = new Date().toISOString();
-    for (const [event_type, enabled] of finalState) {
-      if (!enabled) {
-        toUpsert.push({
-          user_id: authUserId,
-          event_type,
-          enabled: false,
-          updated_at: nowIso,
-        });
-      }
+    // Validation : l'event_type doit appartenir à la whitelist du canal visé.
+    if (!CHANNEL_TYPES[channel].includes(eventType)) {
+      return res.status(400).json({
+        error: `event_type "${eventType}" non autorisé pour le canal "${channel}".`,
+        code: 'INVALID_EVENT_TYPE',
+      });
     }
 
-    // 1) DELETE des rows visées (qu'on va ré-insérer pour les opt-out, et
-    //    purement supprimer pour les re-enable). Scope au user courant.
-    const allTargetedTypes = Array.from(finalState.keys());
-    if (allTargetedTypes.length > 0) {
-      const { error: deleteError } = await supabaseAdmin!
-        .from('notification_prefs')
-        .delete()
-        .eq('user_id', authUserId)
-        .in('event_type', allTargetedTypes);
-      if (deleteError) {
-        logger.error('[player/push/prefs] PUT delete error', deleteError);
-        return res.status(500).json({ error: 'Erreur serveur.' });
-      }
+    // Une row n'existe que pour un état NON-DÉFAUT. On supprime d'abord la row
+    // ciblée (user, event_type, channel), puis on ré-insère uniquement si
+    // `enabled` diffère du défaut du canal.
+    const { error: deleteError } = await supabaseAdmin!
+      .from('notification_prefs')
+      .delete()
+      .eq('user_id', authUserId)
+      .eq('event_type', eventType)
+      .eq('channel', channel);
+    if (deleteError) {
+      logger.error('[player/push/prefs] PUT delete error', deleteError);
+      return res.status(500).json({ error: 'Erreur serveur.' });
     }
 
-    if (toUpsert.length > 0) {
+    if (enabled !== CHANNEL_DEFAULT[channel]) {
       const { error: insertError } = await supabaseAdmin!
         .from('notification_prefs')
-        .insert(toUpsert);
+        .insert({
+          user_id: authUserId,
+          event_type: eventType,
+          channel,
+          enabled,
+          updated_at: new Date().toISOString(),
+        });
       if (insertError) {
         logger.error('[player/push/prefs] PUT insert error', insertError);
         return res.status(500).json({ error: 'Erreur serveur.' });
@@ -138,7 +168,7 @@ async function handler(
 
     try {
       const rows = await loadPrefs(authUserId);
-      return res.status(200).json({ prefs: mergeWithDefaults(rows) });
+      return res.status(200).json(buildResponse(rows));
     } catch {
       return res.status(500).json({ error: 'Erreur serveur.' });
     }

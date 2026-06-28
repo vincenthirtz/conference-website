@@ -829,6 +829,68 @@ export function sendSupportStaffNotificationEmail(opts: {
   });
 }
 
+/**
+ * Generic digest email — one message aggregating several notification items
+ * (the email counterpart of a Web Push fan-out). Each item is rendered as a
+ * heading + body + CTA link. A footer "se désabonner" link is appended.
+ *
+ * Used by the email dispatcher (utils/emailDispatcher.ts) to batch a user's
+ * pending events into a single message, staying well under Brevo's daily cap.
+ * FR copy, consistent with the other branded templates.
+ */
+export function sendDigestEmail(opts: {
+  to: string;
+  items: Array<{ heading: string; body: string; url: string }>;
+  unsubscribeUrl: string;
+}): Promise<SendEmailResult> {
+  const count = opts.items.length;
+  const subject =
+    count === 1
+      ? `Notification — ${opts.items[0].heading}`
+      : `${count} notifications — OW Women's Cup`;
+
+  const intro =
+    count === 1
+      ? 'Vous avez une nouvelle notification&nbsp;:'
+      : `Vous avez <strong style="color:#ffffff;">${count}</strong> nouvelles notifications&nbsp;:`;
+
+  const itemsHtml = opts.items
+    .map((item) => {
+      // Les URLs rendues sont relatives ('/player', ...) ; on préfixe SITE_URL
+      // si besoin pour produire un lien cliquable absolu dans l'email.
+      const href = item.url.startsWith('http')
+        ? item.url
+        : `${SITE_URL}${item.url.startsWith('/') ? '' : '/'}${item.url}`;
+      return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:rgba(255,255,255,0.05);border-radius:10px;border:1px solid rgba(255,255,255,0.08);margin:0 0 16px;">
+        <tr><td style="padding:18px 20px;">
+          <p style="margin:0 0 6px;font-size:16px;font-weight:600;color:#ffffff;line-height:1.4;">${escapeHtml(item.heading)}</p>
+          <p style="margin:0 0 12px;font-size:14px;color:#C6BED9;line-height:1.6;">${escapeHtml(item.body)}</p>
+          <a href="${href}" target="_blank" style="display:inline-block;font-size:13px;font-weight:600;color:#2dccfd;text-decoration:none;">Ouvrir &rarr;</a>
+        </td></tr>
+      </table>`;
+    })
+    .join('');
+
+  return sendEmail({
+    to: opts.to,
+    subject,
+    tags: ['digest'],
+    html: emailLayout(`
+      ${gradientBar()}
+      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Vos notifications</h1>
+      <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
+        ${intro}
+      </p>
+      ${itemsHtml}
+      ${ctaButton(SITE_URL + '/player', 'Ouvrir mon espace')}
+      <p style="margin:28px 0 0;font-size:12px;color:#675788;line-height:1.5;text-align:center;">
+        Vous recevez cet email car vous avez activé les notifications par email.
+        <a href="${opts.unsubscribeUrl}" style="color:#9081B0;text-decoration:underline;">Se désabonner</a>.
+      </p>
+    `),
+  });
+}
+
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, '&amp;')

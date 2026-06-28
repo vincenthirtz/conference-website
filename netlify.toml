@@ -60,6 +60,14 @@
 [functions."sync-game-heroes-cron"]
   schedule = "0 4 * * *"
 
+# Scheduled function: digest email des events bot_event_outbox vers les users
+# opt-IN (canal email). TWICE DAILY pour rester un vrai digest et sous le quota
+# Brevo (300 emails/jour free tier). Cron `0 7,17 * * *` en UTC (≈ 08h/18h
+# Paris en hiver, 09h/19h en été). Délègue à utils/emailDispatcher.ts.
+# Requiert CRON_SECRET + BREVO_API_KEY + EMAIL_FROM en env.
+[functions."email-digest-cron"]
+  schedule = "0 7,17 * * *"
+
 # Scheduled function: server-side draft timer (Lot 3 — MOBA draft system).
 # Every minute, scans match_drafts status='in_progress' whose current
 # match_draft_steps.deadline_at has passed and auto-picks a deterministic

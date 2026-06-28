@@ -702,7 +702,21 @@
     "inviteExpired": "This invitation has expired.",
     "inviteNotFound": "Invitation not found.",
     "inviteForbidden": "This invitation is not addressed to you.",
-    "inviteError": "Something went wrong. Please try again later."
+    "inviteError": "Something went wrong. Please try again later.",
+    "prefsChannelEvent": "Event type",
+    "prefsChannelPush": "Push",
+    "prefsChannelEmail": "Email",
+    "prefsPushHint": "Push notifications are real-time, delivered straight to your browser.",
+    "prefsEmailOptInHint": "Emails are off by default (opt-in). They are sent as a digest about twice a day (not real-time), with an unsubscribe link in every message.",
+    "prefsChannelNotApplicable": "Not available for this channel",
+    "extraEventLabels": {
+      "match.scheduled": "Match scheduled",
+      "scrim.scheduled": "Scrim scheduled"
+    },
+    "extraEventDescriptions": {
+      "match.scheduled": "When one of your matches is added to the schedule.",
+      "scrim.scheduled": "When a scrim is scheduled with your team."
+    }
   },
   "discordLinkCard": {
     "statusError": "Unable to load status.",
