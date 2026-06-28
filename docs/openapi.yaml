@@ -32,6 +32,8 @@ tags:
     description: Endpoints bot pour la gestion des matchs (planif, score, dispute).
   - name: bot/teams
     description: Endpoints bot pour la gestion des équipes (membres, captain).
+  - name: bot/free-players
+    description: Endpoints bot pour les joueurs libres (rôle "Recherche une équipe").
   - name: bot/tournaments
     description: Endpoints bot pour la gestion des tournois et phases.
   - name: bot/scrims
@@ -4024,6 +4026,68 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+  /api/bot/v1/free-players/sync:
+    post:
+      tags:
+        - bot/free-players
+      summary: Full-replace des joueurs libres du tenant (role "Recherche une equipe").
+      description: >-
+        Le bot pousse la liste complete des membres Discord portant le role
+        "Recherche une equipe". Le site remplace integralement la table
+        free_players du tenant par la liste recue (upsert des presents + purge
+        des absents). Pour chaque joueur, auth_user_id est resolu via
+        user_discord_links (null si non lie au site).
+      operationId: botSyncFreePlayers
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - players
+              properties:
+                players:
+                  type: array
+                  maxItems: 5000
+                  items:
+                    type: object
+                    required:
+                      - discordUserId
+                    properties:
+                      discordUserId:
+                        $ref: "#/components/schemas/DiscordId"
+                      discordUsername:
+                        type: string
+                        maxLength: 100
+                      displayName:
+                        type: string
+                        maxLength: 100
+      responses:
+        "200":
+          description: Synchronisation effectuee.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - count
+                  - linked
+                  - unlinked
+                properties:
+                  count:
+                    type: integer
+                    description: Nombre de joueurs libres apres synchronisation.
+                  linked:
+                    type: integer
+                    description: Nombre de joueurs dont le compte Discord est lie au site.
+                  unlinked:
+                    type: integer
+                    description: Nombre de joueurs sans compte site lie.
+        "400":
+          $ref: "#/components/responses/BadRequest"
   /api/bot/v1/teams:
     get:
       tags:
@@ -16115,6 +16179,122 @@ paths:
               schema:
                 type: object
                 additionalProperties: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /api/teams/free-players:
+    get:
+      tags:
+        - public/teams
+      summary: Liste les joueurs libres du tenant (réservé capitaine/manager).
+      description: >-
+        Liste les joueurs libres (rôle Discord "Recherche une équipe",
+        synchronisés via POST /api/bot/v1/free-players/sync) pour recrutement.
+        Exclut l'appelant et toute personne déjà dans une équipe du tenant. Les
+        rows liées sont enrichies depuis profiles (battle_tag, display_name).
+      operationId: playerListFreePlayers
+      security:
+        - PlayerBearer: []
+      responses:
+        "200":
+          description: Liste des joueurs libres.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - players
+                properties:
+                  players:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - discordUserId
+                        - linked
+                      properties:
+                        discordUserId:
+                          $ref: "#/components/schemas/DiscordId"
+                        discordUsername:
+                          type: string
+                          nullable: true
+                        linked:
+                          type: boolean
+                        authUserId:
+                          type: string
+                          format: uuid
+                          nullable: true
+                        displayName:
+                          type: string
+                          nullable: true
+                        battleTag:
+                          type: string
+                          nullable: true
+                        specialty:
+                          type: string
+                          nullable: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "405":
+          description: Méthode non autorisée (seul GET est accepté).
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /api/teams/invite-free-player:
+    post:
+      tags:
+        - public/teams
+      summary: Le capitaine/manager invite un joueur libre (lié) dans son équipe.
+      description: >-
+        Crée une invitation pending (demandes type='invite') pour un joueur
+        libre lié au site. L'appelant doit gérer l'équipe ciblée. Garde-fous :
+        roster lock, déjà membre / invitation déjà pending (409), cible non
+        joueur libre du tenant (404).
+      operationId: playerInviteFreePlayer
+      security:
+        - PlayerBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - teamId
+                - authUserId
+              properties:
+                teamId:
+                  type: string
+                  format: uuid
+                authUserId:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: Invitation créée.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - ok
+                  - demandeId
+                properties:
+                  ok:
+                    type: boolean
+                  demandeId:
+                    type: string
+                    format: uuid
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":

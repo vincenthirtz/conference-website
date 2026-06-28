@@ -1409,6 +1409,74 @@ curl -sS -X POST "https://site.example/api/bot/v1/tenants/request-onboard" \
   }'
 ```
 
+### Free players
+
+| Route                                                              | Methods | Idem. | Rate-key                |
+| ------------------------------------------------------------------ | ------- | ----- | ----------------------- |
+| [`free-players/sync.ts`](../pages/api/bot/v1/free-players/sync.ts) | POST    | yes   | `bot-free-players-sync` |
+
+#### `POST /api/bot/v1/free-players/sync`
+
+Full-replace, **par tenant**, des « joueurs libres » — les membres Discord
+portant le rôle « Recherche une équipe ». Le bot lit ce rôle côté Discord et
+pousse la liste complète ; le site remplace intégralement la table
+`free_players` du tenant par la liste reçue :
+
+- chaque joueur présent est upserté (insert/update de `discord_username` +
+  `auth_user_id` + `updated_at` ; `marked_at` préservé s'il était déjà présent),
+- les rows du tenant absentes du payload sont supprimées (le membre a perdu le
+  rôle côté Discord),
+- pour chaque joueur, `auth_user_id` est résolu via `user_discord_links` sur
+  `discord_user_id` (`null` si le compte Discord n'est pas lié au site).
+
+Auth : `x-api-key` (tenant-scopé). Le tenant est déterminé par la clé.
+
+Body :
+
+```json
+{
+  "players": [
+    {
+      "discordUserId": "1234567890123456789",
+      "discordUsername": "Pseudo",
+      "displayName": "Pseudo affiché"
+    }
+  ]
+}
+```
+
+- `discordUserId` (requis) : snowflake Discord.
+- `discordUsername` (optionnel) : pseudo Discord persisté.
+- `displayName` (optionnel) : utilisé en repli si `discordUsername` est absent.
+
+Réponse `200` :
+
+```json
+{ "count": 12, "linked": 9, "unlinked": 3 }
+```
+
+- `count` : nombre de joueurs libres après synchronisation.
+- `linked` : joueurs dont le compte Discord est lié au site (`auth_user_id` non null).
+- `unlinked` : joueurs sans compte site lié.
+
+```bash
+curl -sS -X POST https://site.example/api/bot/v1/free-players/sync \
+  -H "x-api-key: $BOT_API_KEY" \
+  -H "content-type: application/json" \
+  -H "Idempotency-Key: free-players-sync-2026-06-28T00:00:00Z" \
+  -d '{
+    "players": [
+      { "discordUserId": "1234567890123456789", "discordUsername": "Alice" },
+      { "discordUserId": "9876543210987654321", "discordUsername": "Bob" }
+    ]
+  }'
+```
+
+> Les surfaces côté site qui consomment ces données (liste capitaine
+> `GET /api/teams/free-players`, invitation `POST /api/teams/invite-free-player`)
+> ne sont **pas** des endpoints bot — elles sont authentifiées par session
+> joueur (Bearer) et ne figurent donc pas dans ce contrat.
+
 ### Teams
 
 | Route                                                                                          | Methods    | Idem. | Rate-key                    |
