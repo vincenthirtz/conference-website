@@ -212,6 +212,7 @@ export function formatStaffLog(log: StaffLog) {
     manage_substitute: 'Gestion remplaçant',
     process_demande: 'Traitement demande',
     bulk_roster_update: 'Mise à jour roster en masse',
+    ticket_closed: 'Ticket fermé',
     other: 'Action staff',
   };
 

@@ -1490,6 +1490,76 @@ curl -sS -X POST https://site.example/api/bot/v1/free-players/sync \
 > ne sont **pas** des endpoints bot — elles sont authentifiées par session
 > joueur (Bearer) et ne figurent donc pas dans ce contrat.
 
+### Tickets
+
+| Route                                                              | Methods | Idem. | Rate-key                |
+| ------------------------------------------------------------------ | ------- | ----- | ----------------------- |
+| [`tickets/close-log.ts`](../pages/api/bot/v1/tickets/close-log.ts) | POST    | —     | `bot-tickets-close-log` |
+
+#### `POST /api/bot/v1/tickets/close-log`
+
+Le bot Discord possède un système de tickets. À la **fermeture** d'un ticket, il
+pousse ici un enregistrement d'audit ; le site l'archive dans `staff_logs`
+(action `ticket_closed`, visible dans `/admin/logs`) avec `via: 'discord_bot'`.
+
+Le Discord id de la personne qui ferme (`closedByDiscordId`) est résolu vers son
+compte site via `user_discord_links` (table **globale** — pas de scope tenant).
+L'`auth_user_id` lié devient le `staff_id` de la row de log. **Si le compte
+Discord n'est pas lié au site, aucune row n'est écrite** (l'audit n'a pas
+d'acteur staff identifiable).
+
+Auth : `x-api-key` (tenant-scopé). Le tenant est déterminé par la clé.
+
+Body :
+
+```json
+{
+  "closedByDiscordId": "1234567890123456789",
+  "number": 42,
+  "category": "support",
+  "openerDiscordId": "9876543210987654321",
+  "claimedByDiscordId": "5555555555555555555",
+  "messageCount": 17,
+  "channelName": "ticket-0042"
+}
+```
+
+- `closedByDiscordId` (requis) : snowflake de la personne qui ferme le ticket.
+- `number` (requis) : numéro du ticket (entier ≥ 0). Devient `entity_id` du log.
+- `category` (requis) : catégorie du ticket (1–100 car.).
+- `openerDiscordId` (requis) : snowflake de l'ouvreur du ticket.
+- `claimedByDiscordId` (optionnel, nullable) : snowflake du staff ayant pris le
+  ticket.
+- `messageCount` (optionnel, nullable) : nombre de messages dans le ticket.
+- `channelName` (optionnel, nullable) : nom du salon du ticket (1–200 car.).
+
+Tout sauf `closedByDiscordId`/`number` est repris tel quel dans le `payload` du
+log (`category`, `openerDiscordId`, `claimedByDiscordId`, `messageCount`,
+`channelName`), aux côtés de `via: 'discord_bot'`.
+
+Réponse `200` :
+
+```json
+{ "logged": true }
+```
+
+- `logged` : `true` si une row `staff_logs` a été écrite (closer lié au site),
+  `false` si le closer n'est pas lié (aucune row écrite). L'écriture du log ne
+  fait jamais échouer la requête — un échec d'insertion est swallow côté site et
+  renvoie quand même `logged: true` (best-effort audit).
+
+```bash
+curl -sS -X POST https://site.example/api/bot/v1/tickets/close-log \
+  -H "x-api-key: $BOT_API_KEY" \
+  -H "content-type: application/json" \
+  -d '{
+    "closedByDiscordId": "1234567890123456789",
+    "number": 42,
+    "category": "support",
+    "openerDiscordId": "9876543210987654321"
+  }'
+```
+
 ### Teams
 
 | Route                                                                                          | Methods    | Idem. | Rate-key                    |

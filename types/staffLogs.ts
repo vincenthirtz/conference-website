@@ -57,6 +57,7 @@ export type StaffLogAction =
   | 'manage_substitute'
   | 'process_demande'
   | 'bulk_roster_update'
+  | 'ticket_closed'
   | 'other';
 
 export type StaffLog = {

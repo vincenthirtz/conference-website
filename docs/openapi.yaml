@@ -4097,6 +4097,76 @@ paths:
                       $ref: "#/components/schemas/DiscordId"
         "400":
           $ref: "#/components/responses/BadRequest"
+  /api/bot/v1/tickets/close-log:
+    post:
+      tags:
+        - bot/tickets
+      summary: Archive la fermeture d'un ticket Discord dans staff_logs.
+      description: >-
+        Le bot Discord pousse ici un enregistrement d'audit a la fermeture d'un
+        ticket. Le site l'archive dans staff_logs (action ticket_closed, via
+        discord_bot, visible dans /admin/logs). Le closer (closedByDiscordId) est
+        resolu vers son compte site via user_discord_links (table globale) ;
+        l'auth_user_id lie devient le staff_id du log. Si le compte n'est pas
+        lie, aucune row n'est ecrite (logged: false). L'echec d'insertion n'est
+        jamais propage (audit best-effort).
+      operationId: botTicketCloseLog
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - closedByDiscordId
+                - number
+                - category
+                - openerDiscordId
+              properties:
+                closedByDiscordId:
+                  $ref: "#/components/schemas/DiscordId"
+                number:
+                  type: integer
+                  minimum: 0
+                  description: Numero du ticket (devient entity_id du log).
+                category:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                openerDiscordId:
+                  $ref: "#/components/schemas/DiscordId"
+                claimedByDiscordId:
+                  type: string
+                  nullable: true
+                  description: Snowflake du staff ayant pris le ticket (optionnel).
+                messageCount:
+                  type: integer
+                  minimum: 0
+                  nullable: true
+                  description: Nombre de messages dans le ticket (optionnel).
+                channelName:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                  nullable: true
+                  description: Nom du salon du ticket (optionnel).
+      responses:
+        "200":
+          description: Enregistrement traite.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - logged
+                properties:
+                  logged:
+                    type: boolean
+                    description: >-
+                      true si une row staff_logs a ete ecrite (closer lie au
+                      site), false si le closer n'est pas lie.
+        "400":
+          $ref: "#/components/responses/BadRequest"
   /api/bot/v1/teams:
     get:
       tags:
