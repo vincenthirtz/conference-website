@@ -1,9 +1,10 @@
 import { useEffect, useState, type JSX } from 'react';
+import { useT } from '@/lib/i18n/useT';
 
 type Props = {
   /** The string copied to the clipboard. */
   value: string;
-  /** Accessible label & tooltip; defaults to "Copier". */
+  /** Accessible label & tooltip; defaults to the localized "Copier". */
   label?: string;
   /** Tailwind classes appended to the button (size, color, etc.). */
   className?: string;
@@ -13,10 +14,11 @@ type Props = {
 
 export default function CopyButton({
   value,
-  label = 'Copier',
+  label,
   className = '',
   resetMs = 1500,
 }: Props): JSX.Element {
+  const t = useT('copyButton');
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState(false);
 
@@ -57,7 +59,7 @@ export default function CopyButton({
     }
   };
 
-  const tooltip = error ? 'Erreur' : copied ? 'Copié !' : label;
+  const tooltip = error ? t.error : copied ? t.copied : (label ?? t.copy);
   return (
     <button
       type="button"

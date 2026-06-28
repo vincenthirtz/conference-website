@@ -8,12 +8,16 @@ import { useRouter } from 'next/router';
 import { supabaseClient } from '@/utils/supabase';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useT } from '@/lib/i18n/useT';
+import { useLang } from '@/lib/i18n/LanguageProvider';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../../utils/logger';
 
 function PlayerProfile() {
   const router = useRouter();
+  const t = useT('playerProfile');
+  const { lang } = useLang();
   const { user, loading: authLoading } = usePlayerSession({
     redirectTo: '/login?next=/player/profile',
   });
@@ -23,7 +27,7 @@ function PlayerProfile() {
     user?.user_metadata?.display_name ||
     user?.user_metadata?.full_name ||
     user?.email?.split('@')[0] ||
-    'Joueur';
+    t.defaultName;
 
   // Profile edit state
   const [editDisplayName, setEditDisplayName] = useState('');
@@ -78,9 +82,9 @@ function PlayerProfile() {
       });
 
       await supabaseClient.auth.refreshSession();
-      setProfileSuccess('Profil mis a jour.');
+      setProfileSuccess(t.profileUpdated);
     } catch (err: unknown) {
-      setProfileError((err as Error)?.message || 'Erreur');
+      setProfileError((err as Error)?.message || t.genericError);
     } finally {
       setProfileSaving(false);
     }
@@ -100,15 +104,11 @@ function PlayerProfile() {
       });
       if (error) throw error;
 
-      setEmailSuccess(
-        'Un email de confirmation a été envoyé à ta nouvelle adresse. Clique sur le lien pour confirmer le changement.'
-      );
+      setEmailSuccess(t.emailConfirmSent);
       setNewEmail('');
     } catch (err: unknown) {
       logger.error('[player] email change error:', err);
-      setEmailError(
-        (err as Error)?.message || "Erreur lors du changement d'email."
-      );
+      setEmailError((err as Error)?.message || t.emailChangeError);
     } finally {
       setEmailChanging(false);
     }
@@ -117,11 +117,11 @@ function PlayerProfile() {
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPassword || newPassword.length < 8) {
-      setPasswordError('Le mot de passe doit contenir au moins 8 caractères.');
+      setPasswordError(t.passwordTooShort);
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordError('Les mots de passe ne correspondent pas.');
+      setPasswordError(t.passwordMismatch);
       return;
     }
 
@@ -135,14 +135,12 @@ function PlayerProfile() {
       });
       if (error) throw error;
 
-      setPasswordSuccess('Ton mot de passe a été modifié avec succès.');
+      setPasswordSuccess(t.passwordChanged);
       setNewPassword('');
       setConfirmPassword('');
     } catch (err: unknown) {
       logger.error('[player] password change error:', err);
-      setPasswordError(
-        (err as Error)?.message || 'Erreur lors du changement de mot de passe.'
-      );
+      setPasswordError((err as Error)?.message || t.passwordChangeError);
     } finally {
       setPasswordChanging(false);
     }
@@ -156,7 +154,7 @@ function PlayerProfile() {
 
       if (!resp.ok) {
         const body = await resp.json().catch(() => null);
-        throw new Error(body?.error || 'Erreur lors de l’export.');
+        throw new Error(body?.error || t.exportError);
       }
 
       const blob = await resp.blob();
@@ -168,7 +166,7 @@ function PlayerProfile() {
       URL.revokeObjectURL(url);
     } catch (err: unknown) {
       logger.error('[player] export error:', err);
-      setDataError((err as Error)?.message || 'Erreur lors de l’export.');
+      setDataError((err as Error)?.message || t.exportError);
     } finally {
       setExporting(false);
     }
@@ -183,7 +181,7 @@ function PlayerProfile() {
       router.replace('/');
     } catch (err: unknown) {
       logger.error('[player] delete account error:', err);
-      setDataError((err as Error)?.message || 'Erreur lors de la suppression.');
+      setDataError((err as Error)?.message || t.deleteError);
     } finally {
       setDeleting(false);
       setDeleteConfirm(false);
@@ -206,15 +204,15 @@ function PlayerProfile() {
     return (
       <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
         <main className="max-w-md mx-auto px-4 py-10 pt-32 text-center">
-          <h1 className="text-3xl font-bold text-gradient">Mon profil</h1>
-          <p className="mt-4 text-gray-300">
-            Connecte-toi pour accéder à ton profil joueur.
-          </p>
+          <h1 className="text-3xl font-bold text-gradient">
+            {t.signedOutTitle}
+          </h1>
+          <p className="mt-4 text-gray-300">{t.signedOutText}</p>
           <Link
             href="/login?next=/player/profile"
             className="mt-8 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-purple-500/20 transition hover:brightness-110"
           >
-            Se connecter
+            {t.signIn}
           </Link>
         </main>
       </div>
@@ -222,7 +220,7 @@ function PlayerProfile() {
   }
 
   const role = (user.user_metadata?.role as string | undefined) || 'player';
-  const roleLabel = role === 'captain' ? 'Capitaine' : 'Joueur';
+  const roleLabel = role === 'captain' ? t.roleCaptain : t.rolePlayer;
   const battleTag = (user.user_metadata?.battle_tag as string) || '—';
   const avatarUrl = (user.user_metadata?.avatar_url as string) || '';
   const initials = displayName
@@ -232,7 +230,7 @@ function PlayerProfile() {
     .map((p: string) => p.charAt(0).toUpperCase())
     .join('');
   const createdAt = user.created_at
-    ? new Date(user.created_at).toLocaleString('fr-FR')
+    ? new Date(user.created_at).toLocaleString(lang === 'fr' ? 'fr-FR' : 'en-GB')
     : '—';
 
   return (
@@ -242,15 +240,13 @@ function PlayerProfile() {
         <div className="mb-8">
           <div className="flex items-center gap-3 text-sm text-gray-400">
             <Link href="/player" className="hover:text-white transition">
-              &larr; Tableau de bord
+              &larr; {t.backToDashboard}
             </Link>
           </div>
           <h1 className="text-3xl md:text-4xl font-bold text-gradient mt-2">
-            Mon profil
+            {t.pageTitle}
           </h1>
-          <p className="text-sm text-gray-400 mt-2">
-            Gère ton compte, ton email, ton mot de passe et tes données.
-          </p>
+          <p className="text-sm text-gray-400 mt-2">{t.pageSubtitle}</p>
         </div>
 
         <div className="space-y-6">
@@ -262,7 +258,7 @@ function PlayerProfile() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={avatarUrl}
-                    alt="Avatar"
+                    alt={t.avatarAlt}
                     className="w-16 h-16 rounded-xl border-2 border-purple-500/40 shadow-lg object-cover"
                   />
                 ) : (
@@ -282,25 +278,25 @@ function PlayerProfile() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                 <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">
-                  Email
+                  {t.email}
                 </div>
                 <div className="font-medium text-sm truncate">{user.email}</div>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                 <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">
-                  BattleTag
+                  {t.battleTag}
                 </div>
                 <div className="font-mono text-sm truncate">{battleTag}</div>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                 <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">
-                  Compte créé le
+                  {t.createdOn}
                 </div>
                 <div className="font-medium text-sm">{createdAt}</div>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 col-span-2 md:col-span-3">
                 <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">
-                  ID utilisateur
+                  {t.userId}
                 </div>
                 <div className="font-mono text-xs text-gray-300 break-all">
                   {user.id}
@@ -311,7 +307,7 @@ function PlayerProfile() {
 
           {/* Modifier mon profil */}
           <section className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
-            <h2 className="text-lg font-semibold mb-4">Modifier mon profil</h2>
+            <h2 className="text-lg font-semibold mb-4">{t.editProfile}</h2>
 
             {profileSuccess && (
               <div className="mb-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
@@ -330,7 +326,7 @@ function PlayerProfile() {
                   htmlFor="player-display-name"
                   className="block text-xs text-gray-400 mb-1"
                 >
-                  Nom affiche
+                  {t.displayNameLabel}
                 </label>
                 <input
                   id="player-display-name"
@@ -339,7 +335,7 @@ function PlayerProfile() {
                   onChange={(e) => setEditDisplayName(e.target.value)}
                   maxLength={50}
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-500"
-                  placeholder="Ton pseudo"
+                  placeholder={t.displayNamePlaceholder}
                 />
               </div>
               <div>
@@ -347,7 +343,7 @@ function PlayerProfile() {
                   htmlFor="player-battle-tag"
                   className="block text-xs text-gray-400 mb-1"
                 >
-                  BattleTag
+                  {t.battleTag}
                 </label>
                 <input
                   id="player-battle-tag"
@@ -355,7 +351,7 @@ function PlayerProfile() {
                   value={editBattleTag}
                   onChange={(e) => setEditBattleTag(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm font-mono placeholder:text-gray-500"
-                  placeholder="Pseudo#1234"
+                  placeholder={t.battleTagPlaceholder}
                 />
               </div>
               <div>
@@ -363,7 +359,7 @@ function PlayerProfile() {
                   htmlFor="player-avatar-url"
                   className="block text-xs text-gray-400 mb-1"
                 >
-                  Avatar (URL)
+                  {t.avatarLabel}
                 </label>
                 <input
                   id="player-avatar-url"
@@ -371,25 +367,23 @@ function PlayerProfile() {
                   value={editAvatarUrl}
                   onChange={(e) => setEditAvatarUrl(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-500"
-                  placeholder="https://…"
+                  placeholder={t.avatarPlaceholder}
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Laisse vide pour retirer l&apos;avatar.
-                </p>
+                <p className="text-xs text-gray-500 mt-1">{t.avatarHelp}</p>
               </div>
               <button
                 type="submit"
                 disabled={profileSaving}
                 className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition"
               >
-                {profileSaving ? 'Enregistrement...' : 'Enregistrer'}
+                {profileSaving ? t.saving : t.save}
               </button>
             </form>
           </section>
 
           {/* Changer mon email */}
           <section className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
-            <h2 className="text-lg font-semibold mb-4">Changer mon email</h2>
+            <h2 className="text-lg font-semibold mb-4">{t.changeEmail}</h2>
 
             {emailSuccess && (
               <div className="mb-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
@@ -408,12 +402,12 @@ function PlayerProfile() {
                   htmlFor="player-new-email"
                   className="block text-xs text-gray-400 mb-1"
                 >
-                  Nouvel email
+                  {t.newEmailLabel}
                 </label>
                 <input
                   id="player-new-email"
                   type="email"
-                  placeholder="nouveau@email.com"
+                  placeholder={t.newEmailPlaceholder}
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-500"
@@ -425,19 +419,15 @@ function PlayerProfile() {
                 disabled={emailChanging || !newEmail || newEmail === user.email}
                 className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition"
               >
-                {emailChanging ? 'Envoi en cours...' : 'Changer mon email'}
+                {emailChanging ? t.sending : t.changeEmailBtn}
               </button>
             </form>
-            <p className="text-xs text-gray-500 mt-3">
-              Un email de confirmation sera envoyé à la nouvelle adresse.
-            </p>
+            <p className="text-xs text-gray-500 mt-3">{t.emailHelp}</p>
           </section>
 
           {/* Changer mon mot de passe */}
           <section className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
-            <h2 className="text-lg font-semibold mb-4">
-              Changer mon mot de passe
-            </h2>
+            <h2 className="text-lg font-semibold mb-4">{t.changePassword}</h2>
 
             {passwordSuccess && (
               <div className="mb-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
@@ -456,7 +446,7 @@ function PlayerProfile() {
                   htmlFor="player-new-password"
                   className="block text-xs text-gray-400 mb-1"
                 >
-                  Nouveau mot de passe
+                  {t.newPasswordLabel}
                 </label>
                 <input
                   id="player-new-password"
@@ -474,7 +464,7 @@ function PlayerProfile() {
                   htmlFor="player-confirm-password"
                   className="block text-xs text-gray-400 mb-1"
                 >
-                  Confirmer le mot de passe
+                  {t.confirmPasswordLabel}
                 </label>
                 <input
                   id="player-confirm-password"
@@ -492,17 +482,15 @@ function PlayerProfile() {
                 disabled={passwordChanging || !newPassword || !confirmPassword}
                 className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition"
               >
-                {passwordChanging
-                  ? 'Modification...'
-                  : 'Changer mon mot de passe'}
+                {passwordChanging ? t.updatingPassword : t.changePasswordBtn}
               </button>
             </form>
-            <p className="text-xs text-gray-500 mt-3">Minimum 8 caractères.</p>
+            <p className="text-xs text-gray-500 mt-3">{t.passwordHelp}</p>
           </section>
 
           {/* Mes données — export & suppression */}
           <section className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
-            <h2 className="text-lg font-semibold mb-4">Mes données</h2>
+            <h2 className="text-lg font-semibold mb-4">{t.myData}</h2>
 
             {dataError && (
               <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200">
@@ -516,14 +504,13 @@ function PlayerProfile() {
                 disabled={exporting}
                 className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-purple-500/50 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition mb-3"
               >
-                {exporting ? 'Export en cours...' : 'Télécharger mes données'}
+                {exporting ? t.exporting : t.downloadData}
               </button>
             ) : (
               <div className="rounded-xl border border-purple-500/40 bg-purple-500/10 p-4 space-y-3 mb-3">
                 <p className="text-xs text-purple-200">
-                  Un fichier <strong>mes-donnees.json</strong> contenant toutes
-                  tes informations personnelles (compte, équipes, demandes) sera
-                  téléchargé.
+                  {t.aFile} <strong>mes-donnees.json</strong>{' '}
+                  {t.exportConfirmText}
                 </p>
                 <div className="flex gap-2">
                   <button
@@ -534,38 +521,33 @@ function PlayerProfile() {
                     disabled={exporting}
                     className="flex-1 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition"
                   >
-                    {exporting
-                      ? 'Export en cours...'
-                      : 'Confirmer le téléchargement'}
+                    {exporting ? t.exporting : t.confirmDownload}
                   </button>
                   <button
                     onClick={() => setExportConfirm(false)}
                     className="px-4 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm transition"
                   >
-                    Annuler
+                    {t.cancel}
                   </button>
                 </div>
               </div>
             )}
 
-            <p className="text-xs text-gray-500 mb-5">
-              Récupère toutes tes informations personnelles au format JSON
-              (droit d&apos;accès RGPD).
-            </p>
+            <p className="text-xs text-gray-500 mb-5">{t.dataHelp}</p>
 
             {!deleteConfirm ? (
               <button
                 onClick={() => setDeleteConfirm(true)}
                 className="w-full px-4 py-2.5 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-sm font-medium transition"
               >
-                Supprimer mon compte
+                {t.deleteAccount}
               </button>
             ) : (
               <div className="rounded-xl border border-red-500/40 bg-red-900/30 p-4 space-y-3">
                 <p className="text-sm text-red-200">
-                  Cette action est <strong>irréversible</strong>. Toutes tes
-                  données, ton appartenance à une équipe et tes demandes seront
-                  définitivement supprimées.
+                  {t.deleteWarningStart}{' '}
+                  <strong>{t.deleteWarningBold}</strong>
+                  {t.deleteWarningEnd}
                 </p>
                 <div className="flex gap-2">
                   <button
@@ -573,23 +555,20 @@ function PlayerProfile() {
                     disabled={deleting}
                     className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition"
                   >
-                    {deleting ? 'Suppression...' : 'Confirmer la suppression'}
+                    {deleting ? t.deleting : t.confirmDelete}
                   </button>
                   <button
                     onClick={() => setDeleteConfirm(false)}
                     disabled={deleting}
                     className="px-4 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm transition"
                   >
-                    Annuler
+                    {t.cancel}
                   </button>
                 </div>
               </div>
             )}
 
-            <p className="text-xs text-gray-500 mt-3">
-              Droit à l&apos;oubli RGPD — ton compte et toutes tes données
-              seront supprimés définitivement.
-            </p>
+            <p className="text-xs text-gray-500 mt-3">{t.deleteHelp}</p>
           </section>
         </div>
       </main>

@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
+import { useLang, type Lang } from '@/lib/i18n/LanguageProvider';
+import { useT, format } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { PlayerMatchesPayload } from '@/pages/api/player/matches';
 
@@ -14,9 +16,11 @@ import { logger } from '../../utils/logger';
 
 type PlayerMatch = PlayerMatchesPayload['matches'][number];
 
-function formatScheduled(iso: string | null): string {
-  if (!iso) return 'Date à venir';
-  return new Date(iso).toLocaleString('fr-FR', {
+type T = ReturnType<typeof useT<'playerMatches'>>;
+
+function formatScheduled(iso: string | null, lang: Lang, t: T): string {
+  if (!iso) return t.dateToCome;
+  return new Date(iso).toLocaleString(lang === 'fr' ? 'fr-FR' : 'en-GB', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -44,32 +48,46 @@ function scheduledTime(match: PlayerMatch): number {
   return match.scheduledAt ? new Date(match.scheduledAt).getTime() : 0;
 }
 
-function ResultBadge({ result }: { result: PlayerMatch['result'] }) {
+function ResultBadge({
+  result,
+  t,
+}: {
+  result: PlayerMatch['result'];
+  t: T;
+}) {
   if (result === 'win') {
     return (
       <span className="inline-flex items-center rounded-full border border-emerald-400/30 bg-emerald-500/15 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-100">
-        Victoire
+        {t.win}
       </span>
     );
   }
   if (result === 'loss') {
     return (
       <span className="inline-flex items-center rounded-full border border-rose-400/30 bg-rose-500/15 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-rose-100">
-        Défaite
+        {t.loss}
       </span>
     );
   }
   if (result === 'draw') {
     return (
       <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-200">
-        Nul
+        {t.draw}
       </span>
     );
   }
   return null;
 }
 
-function MatchCard({ match }: { match: PlayerMatch }) {
+function MatchCard({
+  match,
+  lang,
+  t,
+}: {
+  match: PlayerMatch;
+  lang: Lang;
+  t: T;
+}) {
   const upcoming = isUpcoming(match);
   const checkin = match.checkin;
   const label = formatLabel(match);
@@ -84,7 +102,7 @@ function MatchCard({ match }: { match: PlayerMatch }) {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-60" />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-rose-500" />
             </span>
-            En direct
+            {t.live}
           </span>
         )}
         {match.tournament && (
@@ -109,11 +127,11 @@ function MatchCard({ match }: { match: PlayerMatch }) {
         <div className="min-w-0">
           <h3 className="text-xl md:text-2xl font-bold text-white leading-tight">
             <span className="text-white/50">vs</span>{' '}
-            {match.opponent?.name ?? 'Adversaire à définir'}
+            {match.opponent?.name ?? t.opponentTbd}
           </h3>
           <p className="text-sm text-gray-300 mt-1">
             <span className="capitalize">
-              {formatScheduled(match.scheduledAt)}
+              {formatScheduled(match.scheduledAt, lang, t)}
             </span>
           </p>
         </div>
@@ -124,7 +142,7 @@ function MatchCard({ match }: { match: PlayerMatch }) {
               {match.score.mine ?? '–'} <span className="text-white/40">–</span>{' '}
               {match.score.opponent ?? '–'}
             </span>
-            <ResultBadge result={match.result} />
+            <ResultBadge result={match.result} t={t} />
           </div>
         )}
       </div>
@@ -134,7 +152,7 @@ function MatchCard({ match }: { match: PlayerMatch }) {
           href={`/match/${match.id}`}
           className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
         >
-          Voir le match
+          {t.viewMatch}
           <span aria-hidden>→</span>
         </Link>
 
@@ -145,7 +163,7 @@ function MatchCard({ match }: { match: PlayerMatch }) {
             rel="noreferrer"
             className="inline-flex items-center gap-1 rounded-full border border-fuchsia-400/30 bg-fuchsia-500/10 px-4 py-2 text-sm font-medium text-fuchsia-100 transition hover:bg-fuchsia-500/20"
           >
-            Live cast
+            {t.liveCast}
             <span aria-hidden>↗</span>
           </a>
         )}
@@ -164,7 +182,7 @@ function MatchCard({ match }: { match: PlayerMatch }) {
             >
               <path d="M5 13l4 4L19 7" />
             </svg>
-            Check-in validé
+            {t.checkedIn}
           </span>
         )}
 
@@ -173,7 +191,7 @@ function MatchCard({ match }: { match: PlayerMatch }) {
             href="/player/checkin"
             className="inline-flex items-center gap-1 rounded-full bg-white px-4 py-2 text-sm font-semibold text-neutral-900 shadow transition hover:-translate-y-0.5 hover:shadow-lg"
           >
-            Check-in
+            {t.checkin}
             <span aria-hidden>→</span>
           </Link>
         )}
@@ -191,6 +209,8 @@ function PlayerMatches() {
     redirectTo: '/login?next=/player/matches',
   });
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
+  const { lang } = useLang();
+  const t = useT('playerMatches');
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<PlayerMatchesPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -204,11 +224,11 @@ function PlayerMatches() {
       setData(json);
     } catch (err) {
       logger.error('[player/matches] load error:', err);
-      setError('Erreur lors du chargement de tes matchs.');
+      setError(t.loadError);
     } finally {
       setLoading(false);
     }
-  }, [adminFetchJson]);
+  }, [adminFetchJson, t]);
 
   useEffect(() => {
     if (!ready) return;
@@ -223,15 +243,13 @@ function PlayerMatches() {
     return (
       <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
         <main className="max-w-md mx-auto px-4 py-10 pt-32 text-center">
-          <h1 className="text-3xl font-bold text-gradient">Mes matchs</h1>
-          <p className="mt-4 text-gray-300">
-            Connecte-toi pour voir les matchs de ton équipe.
-          </p>
+          <h1 className="text-3xl font-bold text-gradient">{t.title}</h1>
+          <p className="mt-4 text-gray-300">{t.signinPrompt}</p>
           <Link
             href="/login?next=/player/matches"
             className="mt-8 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-purple-500/20 transition hover:brightness-110"
           >
-            Se connecter
+            {t.signin}
           </Link>
         </main>
       </div>
@@ -252,20 +270,18 @@ function PlayerMatches() {
         <div className="mb-8">
           <div className="flex items-center gap-3 text-sm text-gray-400">
             <Link href="/player" className="hover:text-white transition">
-              &larr; Tableau de bord
+              &larr; {t.backToDashboard}
             </Link>
           </div>
           <h1 className="text-3xl md:text-4xl font-bold text-gradient mt-2">
-            Mes matchs
+            {t.title}
           </h1>
           {data?.team ? (
             <p className="text-sm text-gray-400 mt-2">
-              Calendrier et résultats de {data.team.name}.
+              {format(t.teamSchedule, { team: data.team.name })}
             </p>
           ) : (
-            <p className="text-sm text-gray-400 mt-2">
-              Ton calendrier de matchs.
-            </p>
+            <p className="text-sm text-gray-400 mt-2">{t.yourSchedule}</p>
           )}
         </div>
 
@@ -278,41 +294,36 @@ function PlayerMatches() {
         {!data?.team && !error ? (
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-8 text-center">
             <p className="text-lg font-semibold text-white">
-              Tu n&apos;es pas encore dans une équipe
+              {t.noTeamTitle}
             </p>
-            <p className="mt-2 text-sm text-gray-400">
-              Rejoins ou crée une équipe pour voir tes matchs ici.
-            </p>
+            <p className="mt-2 text-sm text-gray-400">{t.noTeamBody}</p>
             <Link
               href="/player"
               className="mt-6 inline-flex items-center justify-center rounded-full bg-purple-600 hover:bg-purple-500 px-5 py-2.5 text-sm font-medium text-white transition"
             >
-              Aller au tableau de bord
+              {t.goToDashboard}
             </Link>
           </div>
         ) : data?.team && matches.length === 0 && !error ? (
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-8 text-center">
             <p className="text-lg font-semibold text-white">
-              Aucun match programmé
+              {t.noMatchTitle}
             </p>
-            <p className="mt-2 text-sm text-gray-400">
-              Tes prochains matchs apparaîtront ici dès qu&apos;ils seront
-              planifiés.
-            </p>
+            <p className="mt-2 text-sm text-gray-400">{t.noMatchBody}</p>
           </div>
         ) : (
           <div className="space-y-10">
             {upcoming.length > 0 && (
               <section>
                 <h2 className="text-lg font-semibold mb-4 text-white">
-                  À venir
+                  {t.upcoming}
                   <span className="ml-2 text-sm font-normal text-gray-500">
                     ({upcoming.length})
                   </span>
                 </h2>
                 <div className="space-y-4">
                   {upcoming.map((m) => (
-                    <MatchCard key={m.id} match={m} />
+                    <MatchCard key={m.id} match={m} lang={lang} t={t} />
                   ))}
                 </div>
               </section>
@@ -321,14 +332,14 @@ function PlayerMatches() {
             {past.length > 0 && (
               <section>
                 <h2 className="text-lg font-semibold mb-4 text-white">
-                  Résultats
+                  {t.results}
                   <span className="ml-2 text-sm font-normal text-gray-500">
                     ({past.length})
                   </span>
                 </h2>
                 <div className="space-y-4">
                   {past.map((m) => (
-                    <MatchCard key={m.id} match={m} />
+                    <MatchCard key={m.id} match={m} lang={lang} t={t} />
                   ))}
                 </div>
               </section>

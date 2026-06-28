@@ -7,8 +7,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
+import { useT, format } from '@/lib/i18n/useT';
 
 import { logger } from '../../utils/logger';
+
 type Tab = 'transfer' | 'scrim';
 
 type Team = {
@@ -24,6 +26,7 @@ type Team = {
 export default function PlayerRequestsPage() {
   const router = useRouter();
   const { user, token, loading: authLoading, ready } = usePlayerSession();
+  const t = useT('playerRequests');
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>('transfer');
 
@@ -96,7 +99,7 @@ export default function PlayerRequestsPage() {
         await loadTeams();
       } catch (err) {
         logger.error('[requests] auth error:', err);
-        if (!cancelled) setError('Erreur de connexion.');
+        if (!cancelled) setError(t.connectionError);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -145,12 +148,12 @@ export default function PlayerRequestsPage() {
     setError(null);
 
     if (!selectedTeamId) {
-      setError('Selectionne une equipe cible.');
+      setError(t.errSelectTargetTeam);
       return;
     }
 
     if (transferMode === 'propose' && !selectedPlayerId) {
-      setError('Selectionne un joueur a transferer.');
+      setError(t.errSelectPlayer);
       return;
     }
 
@@ -176,27 +179,31 @@ export default function PlayerRequestsPage() {
       });
 
       const data = await res.json();
-      if (!res.ok)
-        throw new Error(data.error || 'Impossible de creer la demande.');
+      if (!res.ok) throw new Error(data.error || t.errCreateRequest);
 
-      const team = teams.find((t) => t.id === selectedTeamId);
+      const team = teams.find((tm) => tm.id === selectedTeamId);
       if (transferMode === 'propose') {
         const player = teamMembers.find((m) => m.user_id === selectedPlayerId);
         const playerName =
-          player?.display_name || player?.battle_tag || 'le joueur';
+          player?.display_name || player?.battle_tag || t.fallbackPlayer;
         setSuccess(
-          `La proposition de transfert de ${playerName} vers "${team?.name || "l'equipe"}" a ete envoyee.`
+          format(t.successProposeTransfer, {
+            playerName,
+            teamName: team?.name || t.fallbackTeam,
+          })
         );
       } else {
         setSuccess(
-          `Ta demande de transfert vers "${team?.name || "l'equipe"}" a ete envoyee. Le capitaine de l'equipe cible la validera.`
+          format(t.successSelfTransfer, {
+            teamName: team?.name || t.fallbackTeam,
+          })
         );
       }
       setSelectedTeamId('');
       setSelectedPlayerId('');
       setMessage('');
     } catch (err: unknown) {
-      setError((err as Error).message || 'Une erreur est survenue.');
+      setError((err as Error).message || t.errGeneric);
     } finally {
       setSubmitting(false);
     }
@@ -207,7 +214,7 @@ export default function PlayerRequestsPage() {
     setError(null);
 
     if (!selectedTeamId) {
-      setError('Selectionne une equipe adverse.');
+      setError(t.errSelectOpponent);
       return;
     }
 
@@ -227,18 +234,17 @@ export default function PlayerRequestsPage() {
       });
 
       const data = await res.json();
-      if (!res.ok)
-        throw new Error(data.error || 'Impossible de creer la demande.');
+      if (!res.ok) throw new Error(data.error || t.errCreateRequest);
 
-      const team = teams.find((t) => t.id === selectedTeamId);
+      const team = teams.find((tm) => tm.id === selectedTeamId);
       setSuccess(
-        `Ta demande de scrim contre "${team?.name || "l'equipe"}" a ete envoyee.`
+        format(t.successScrim, { teamName: team?.name || t.fallbackTeam })
       );
       setSelectedTeamId('');
       setMessage('');
       setPreferredDate('');
     } catch (err: unknown) {
-      setError((err as Error).message || 'Une erreur est survenue.');
+      setError((err as Error).message || t.errGeneric);
     } finally {
       setSubmitting(false);
     }
@@ -261,7 +267,7 @@ export default function PlayerRequestsPage() {
     return (
       <>
         <Head>
-          <title>Demande envoyee | OW Women&apos;s Cup</title>
+          <title>{t.successTitleTab}</title>
         </Head>
         <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white flex items-center justify-center px-4">
           <div className="max-w-md text-center">
@@ -280,13 +286,13 @@ export default function PlayerRequestsPage() {
                 />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold mb-4">Demande envoyee</h1>
+            <h1 className="text-2xl font-bold mb-4">{t.successHeading}</h1>
             <p className="text-gray-400 mb-6">{success}</p>
             <Link
               href="/player"
               className="inline-block px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white font-semibold transition"
             >
-              Retour a mon espace
+              {t.backToSpace}
             </Link>
           </div>
         </div>
@@ -297,7 +303,7 @@ export default function PlayerRequestsPage() {
   return (
     <>
       <Head>
-        <title>Demandes | OW Women&apos;s Cup</title>
+        <title>{t.pageTitleTab}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
@@ -306,14 +312,12 @@ export default function PlayerRequestsPage() {
             href="/player"
             className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-6"
           >
-            &larr; Retour a mon espace
+            &larr; {t.backToSpace}
           </Link>
 
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
-            <h1 className="text-2xl font-bold mb-2">Demandes</h1>
-            <p className="text-gray-400 text-sm mb-6">
-              Demande un transfert vers une autre equipe ou propose un scrim.
-            </p>
+            <h1 className="text-2xl font-bold mb-2">{t.heading}</h1>
+            <p className="text-gray-400 text-sm mb-6">{t.intro}</p>
 
             {/* Onglets */}
             <div className="flex gap-2 mb-6">
@@ -340,7 +344,7 @@ export default function PlayerRequestsPage() {
                   <path d="M8 21H3v-5" />
                   <line x1="3" y1="21" x2="10" y2="14" />
                 </svg>
-                Transfert
+                {t.tabTransfer}
               </button>
               <button
                 type="button"
@@ -363,7 +367,7 @@ export default function PlayerRequestsPage() {
                   <circle cx="12" cy="12" r="10" />
                   <polygon points="10 8 16 12 10 16 10 8" />
                 </svg>
-                Scrim
+                {t.tabScrim}
               </button>
             </div>
 
@@ -372,15 +376,14 @@ export default function PlayerRequestsPage() {
               <>
                 {!hasTeam ? (
                   <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 text-sm text-amber-200">
-                    <p className="font-semibold mb-1">Pas d&apos;equipe</p>
+                    <p className="font-semibold mb-1">{t.noTeamTitle}</p>
                     <p>
-                      Tu dois etre membre d&apos;une equipe pour demander un
-                      transfert.{' '}
+                      {t.noTeamTransfer}{' '}
                       <Link
                         href="/player/join-team"
                         className="text-purple-300 hover:text-purple-200 underline"
                       >
-                        Rejoindre une equipe
+                        {t.joinTeam}
                       </Link>
                     </p>
                   </div>
@@ -403,7 +406,7 @@ export default function PlayerRequestsPage() {
                               : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
                           }`}
                         >
-                          Proposer un transfert
+                          {t.proposeTransferMode}
                         </button>
                         <button
                           type="button"
@@ -419,7 +422,7 @@ export default function PlayerRequestsPage() {
                               : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
                           }`}
                         >
-                          Mon transfert
+                          {t.selfTransferMode}
                         </button>
                       </div>
                     )}
@@ -427,12 +430,8 @@ export default function PlayerRequestsPage() {
                     {/* Capitaine : mode "mon transfert" bloque */}
                     {isCaptain && transferMode === 'self' && (
                       <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 text-sm text-amber-200">
-                        <p className="font-semibold mb-1">Capitaine</p>
-                        <p>
-                          En tant que capitaine, tu dois d&apos;abord transferer
-                          le role de capitaine avant de pouvoir demander ton
-                          propre transfert.
-                        </p>
+                        <p className="font-semibold mb-1">{t.captainTitle}</p>
+                        <p>{t.captainBlocked}</p>
                       </div>
                     )}
 
@@ -444,12 +443,12 @@ export default function PlayerRequestsPage() {
                       >
                         <div>
                           <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
-                            Joueur a transferer
+                            {t.playerToTransfer}
                           </label>
                           <div className="max-h-48 overflow-y-auto space-y-2 rounded-xl border border-white/10 bg-black/40 p-2">
                             {teamMembers.length === 0 && (
                               <div className="text-sm text-gray-500 text-center py-4">
-                                Aucun joueur dans ton equipe
+                                {t.noPlayersInTeam}
                               </div>
                             )}
                             {teamMembers.map((m) => (
@@ -472,14 +471,16 @@ export default function PlayerRequestsPage() {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="font-medium text-white text-sm truncate">
-                                    {m.display_name || m.battle_tag || 'Joueur'}
+                                    {m.display_name ||
+                                      m.battle_tag ||
+                                      t.fallbackPlayerName}
                                   </div>
                                   <div className="text-xs text-gray-400">
                                     {m.role === 'substitute'
-                                      ? 'Remplacant'
+                                      ? t.roleSubstitute
                                       : m.role === 'coach'
-                                        ? 'Coach'
-                                        : 'Joueur'}
+                                        ? t.roleCoach
+                                        : t.rolePlayer}
                                     {m.battle_tag && ` \u00b7 ${m.battle_tag}`}
                                   </div>
                                 </div>
@@ -503,7 +504,7 @@ export default function PlayerRequestsPage() {
 
                         <div>
                           <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
-                            Equipe cible
+                            {t.targetTeam}
                           </label>
                           <input
                             type="text"
@@ -512,20 +513,20 @@ export default function PlayerRequestsPage() {
                               handleTeamSearchChange(e.target.value)
                             }
                             className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 mb-3"
-                            placeholder="Rechercher une equipe..."
+                            placeholder={t.searchTeam}
                           />
                           <TeamList
                             teams={displayTeams}
                             loading={teamsLoading}
                             selectedId={selectedTeamId}
                             onSelect={setSelectedTeamId}
-                            emptyMessage="Aucune equipe ouverte au recrutement"
+                            emptyMessage={t.emptyJoinable}
                           />
                         </div>
 
                         <div>
                           <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
-                            Role souhaite
+                            {t.desiredRole}
                           </label>
                           <div className="flex gap-3">
                             {(['player', 'substitute', 'coach'] as const).map(
@@ -541,10 +542,10 @@ export default function PlayerRequestsPage() {
                                   }`}
                                 >
                                   {role === 'player'
-                                    ? 'Joueur'
+                                    ? t.rolePlayer
                                     : role === 'substitute'
-                                      ? 'Remplacant'
-                                      : 'Coach'}
+                                      ? t.roleSubstitute
+                                      : t.roleCoach}
                                 </button>
                               )
                             )}
@@ -554,7 +555,7 @@ export default function PlayerRequestsPage() {
                         <MessageField
                           value={message}
                           onChange={setMessage}
-                          label="Message au capitaine cible (optionnel)"
+                          label={t.msgToTargetCaptain}
                         />
 
                         {error && <ErrorBanner message={error} />}
@@ -564,7 +565,7 @@ export default function PlayerRequestsPage() {
                             submitting || !selectedTeamId || !selectedPlayerId
                           }
                           loading={submitting}
-                          label="Proposer le transfert"
+                          label={t.submitProposeTransfer}
                         />
                       </form>
                     )}
@@ -577,7 +578,7 @@ export default function PlayerRequestsPage() {
                       >
                         <div>
                           <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
-                            Equipe cible
+                            {t.targetTeam}
                           </label>
                           <input
                             type="text"
@@ -586,20 +587,20 @@ export default function PlayerRequestsPage() {
                               handleTeamSearchChange(e.target.value)
                             }
                             className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 mb-3"
-                            placeholder="Rechercher une equipe..."
+                            placeholder={t.searchTeam}
                           />
                           <TeamList
                             teams={displayTeams}
                             loading={teamsLoading}
                             selectedId={selectedTeamId}
                             onSelect={setSelectedTeamId}
-                            emptyMessage="Aucune equipe ouverte au recrutement"
+                            emptyMessage={t.emptyJoinable}
                           />
                         </div>
 
                         <div>
                           <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
-                            Role souhaite
+                            {t.desiredRole}
                           </label>
                           <div className="flex gap-3">
                             {(['player', 'substitute', 'coach'] as const).map(
@@ -615,10 +616,10 @@ export default function PlayerRequestsPage() {
                                   }`}
                                 >
                                   {role === 'player'
-                                    ? 'Joueur'
+                                    ? t.rolePlayer
                                     : role === 'substitute'
-                                      ? 'Remplacant'
-                                      : 'Coach'}
+                                      ? t.roleSubstitute
+                                      : t.roleCoach}
                                 </button>
                               )
                             )}
@@ -628,7 +629,7 @@ export default function PlayerRequestsPage() {
                         <MessageField
                           value={message}
                           onChange={setMessage}
-                          label="Message au capitaine (optionnel)"
+                          label={t.msgToCaptain}
                         />
 
                         {error && <ErrorBanner message={error} />}
@@ -636,7 +637,7 @@ export default function PlayerRequestsPage() {
                         <SubmitButton
                           disabled={submitting || !selectedTeamId}
                           loading={submitting}
-                          label="Envoyer la demande de transfert"
+                          label={t.submitSelfTransfer}
                         />
                       </form>
                     )}
@@ -650,45 +651,43 @@ export default function PlayerRequestsPage() {
               <>
                 {!hasTeam ? (
                   <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 text-sm text-amber-200">
-                    <p className="font-semibold mb-1">Pas d&apos;equipe</p>
+                    <p className="font-semibold mb-1">{t.noTeamTitle}</p>
                     <p>
-                      Tu dois etre membre d&apos;une equipe pour proposer un
-                      scrim.{' '}
+                      {t.noTeamScrim}{' '}
                       <Link
                         href="/player/join-team"
                         className="text-purple-300 hover:text-purple-200 underline"
                       >
-                        Rejoindre une equipe
+                        {t.joinTeam}
                       </Link>
                     </p>
                   </div>
                 ) : !isCaptain && !isManager ? (
                   <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 text-sm text-amber-200">
-                    <p className="font-semibold mb-1">Capitaine ou manager requis</p>
-                    <p>
-                      Seul le capitaine ou un manager de l&apos;equipe peut
-                      envoyer une demande de scrim.
+                    <p className="font-semibold mb-1">
+                      {t.captainOrManagerTitle}
                     </p>
+                    <p>{t.captainOrManagerBody}</p>
                   </div>
                 ) : (
                   <form onSubmit={handleSubmitScrim} className="space-y-6">
                     <div>
                       <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
-                        Equipe adverse
+                        {t.opponentTeam}
                       </label>
                       <input
                         type="text"
                         value={teamSearch}
                         onChange={(e) => handleTeamSearchChange(e.target.value)}
                         className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400/80 mb-3"
-                        placeholder="Rechercher une equipe..."
+                        placeholder={t.searchTeam}
                       />
                       <TeamList
                         teams={displayTeams}
                         loading={teamsLoading}
                         selectedId={selectedTeamId}
                         onSelect={setSelectedTeamId}
-                        emptyMessage="Aucune equipe trouvee"
+                        emptyMessage={t.emptyTeams}
                         accentColor="blue"
                       />
                     </div>
@@ -698,7 +697,7 @@ export default function PlayerRequestsPage() {
                         htmlFor="preferred-date"
                         className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
                       >
-                        Date souhaitee (optionnel)
+                        {t.dateLabel}
                       </label>
                       <input
                         id="preferred-date"
@@ -712,8 +711,8 @@ export default function PlayerRequestsPage() {
                     <MessageField
                       value={message}
                       onChange={setMessage}
-                      label="Message a l'equipe adverse (optionnel)"
-                      placeholder="Propose un creneau, un format, des maps..."
+                      label={t.msgToOpponent}
+                      placeholder={t.msgScrimPlaceholder}
                     />
 
                     {error && <ErrorBanner message={error} />}
@@ -721,7 +720,7 @@ export default function PlayerRequestsPage() {
                     <SubmitButton
                       disabled={submitting || !selectedTeamId}
                       loading={submitting}
-                      label="Envoyer la demande de scrim"
+                      label={t.submitScrim}
                       color="blue"
                     />
                   </form>
@@ -754,6 +753,7 @@ function TeamList({
   emptyMessage: string;
   accentColor?: 'purple' | 'blue';
 }) {
+  const t = useT('playerRequests');
   const accent =
     accentColor === 'blue'
       ? {
@@ -771,7 +771,7 @@ function TeamList({
     <div className="max-h-72 overflow-y-auto space-y-2 rounded-xl border border-white/10 bg-black/40 p-2">
       {loading && (
         <div className="text-sm text-gray-500 text-center py-4">
-          Chargement...
+          {t.loading}
         </div>
       )}
       {!loading && teams.length === 0 && (
@@ -818,7 +818,9 @@ function TeamList({
                 {typeof team.member_count === 'number' && (
                   <>
                     {(team.short_name || team.country) && <span>&middot;</span>}
-                    <span>{team.member_count}/5 membres</span>
+                    <span>
+                      {format(t.membersCount, { count: team.member_count })}
+                    </span>
                   </>
                 )}
               </div>
@@ -853,6 +855,7 @@ function MessageField({
   label: string;
   placeholder?: string;
 }) {
+  const t = useT('playerRequests');
   return (
     <div>
       <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
@@ -863,7 +866,7 @@ function MessageField({
         onChange={(e) => onChange(e.target.value)}
         rows={3}
         className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 transition resize-none"
-        placeholder={placeholder || 'Un message pour accompagner ta demande...'}
+        placeholder={placeholder || t.defaultMsgPlaceholder}
         maxLength={1000}
       />
     </div>
@@ -889,6 +892,7 @@ function SubmitButton({
   label: string;
   color?: 'purple' | 'blue';
 }) {
+  const t = useT('playerRequests');
   const gradient =
     color === 'blue'
       ? 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-400 hover:to-cyan-400'
@@ -902,7 +906,7 @@ function SubmitButton({
         disabled ? 'bg-gray-600 cursor-not-allowed' : gradient
       }`}
     >
-      {loading ? 'Envoi en cours...' : label}
+      {loading ? t.sending : label}
     </button>
   );
 }

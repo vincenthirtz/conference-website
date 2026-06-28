@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabaseClient } from '@/utils/supabase';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useT } from '@/lib/i18n/useT';
 import { logger } from '../../utils/logger';
 
 type LinkState = {
@@ -15,6 +16,7 @@ type LinkState = {
 };
 
 export default function DiscordLinkCard() {
+  const t = useT('discordLinkCard');
   const { adminFetchJson } = useAdminFetch();
   const [state, setState] = useState<LinkState | null>(null);
   const [loading, setLoading] = useState(true);
@@ -29,7 +31,7 @@ export default function DiscordLinkCard() {
       setState(data);
     } catch (e) {
       logger.error('[DiscordLinkCard] refresh', e);
-      setError('Impossible de charger le statut.');
+      setError(t.statusError);
     } finally {
       setLoading(false);
     }
@@ -72,7 +74,7 @@ export default function DiscordLinkCard() {
       // No URL returned → already linked, refresh state.
       await refresh();
     } catch (e) {
-      const msg = (e as Error).message || 'Échec du lien Discord';
+      const msg = (e as Error).message || t.linkError;
       setError(msg);
       logger.error('[DiscordLinkCard] link', e);
     } finally {
@@ -81,19 +83,14 @@ export default function DiscordLinkCard() {
   }
 
   async function handleUnlink() {
-    if (
-      !confirm(
-        'Délier ton compte Discord ? Tu ne recevras plus de DM de rappel.'
-      )
-    )
-      return;
+    if (!confirm(t.unlinkConfirm)) return;
     setBusy(true);
     setError(null);
     try {
       await adminFetchJson('/api/auth/discord-link', { method: 'DELETE' });
       await refresh();
     } catch (e) {
-      setError((e as Error).message || 'Échec');
+      setError((e as Error).message || t.unlinkError);
     } finally {
       setBusy(false);
     }
@@ -102,27 +99,24 @@ export default function DiscordLinkCard() {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-semibold">Discord</h2>
+        <h2 className="text-lg font-semibold">{t.title}</h2>
         {state?.linked && (
           <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-600/30 text-indigo-200 border border-indigo-500/40">
-            Lié
+            {t.linkedBadge}
           </span>
         )}
       </div>
 
-      <p className="text-sm text-gray-400 mb-4">
-        Lie ton compte Discord pour recevoir en DM les rappels de check-in et
-        les notifications du tournoi.
-      </p>
+      <p className="text-sm text-gray-400 mb-4">{t.intro}</p>
 
       {loading ? (
-        <div className="text-sm text-neutral-500">Chargement…</div>
+        <div className="text-sm text-neutral-500">{t.loading}</div>
       ) : state?.linked ? (
         <div className="space-y-3 text-sm">
           <div className="flex justify-between">
-            <span className="text-gray-400">Compte</span>
+            <span className="text-gray-400">{t.account}</span>
             <span className="font-mono text-indigo-200">
-              @{state.discordUsername || 'inconnu'}
+              @{state.discordUsername || t.unknown}
             </span>
           </div>
           <button
@@ -131,7 +125,7 @@ export default function DiscordLinkCard() {
             disabled={busy}
             className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 disabled:opacity-50 text-sm transition"
           >
-            {busy ? '…' : 'Délier'}
+            {busy ? t.busy : t.unlink}
           </button>
         </div>
       ) : (
@@ -141,7 +135,7 @@ export default function DiscordLinkCard() {
           disabled={busy}
           className="w-full px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-sm font-medium transition"
         >
-          {busy ? '…' : 'Lier mon compte Discord'}
+          {busy ? t.busy : t.link}
         </button>
       )}
 

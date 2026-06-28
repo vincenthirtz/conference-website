@@ -1,127 +1,22 @@
 import Link from 'next/link';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { ACTIVE_WOMEN_TOURNAMENT_ID } from '@/utils/activeEdition';
+import { useT } from '@/lib/i18n/useT';
+import LanguageToggle from '@/components/Navbar/LanguageToggle';
 
 const DISCORD_INVITE = 'https://discord.gg/gERSsjC3Vd';
 const REGISTER_TEAM_HREF = `/team/create?tournament=${ACTIVE_WOMEN_TOURNAMENT_ID}`;
 
-type Feature = {
-  title: string;
-  description: string;
-  icon: 'roster' | 'door' | 'inbox' | 'swords' | 'chat' | 'transfer' | 'eye';
-};
+type IconName =
+  | 'roster'
+  | 'door'
+  | 'inbox'
+  | 'swords'
+  | 'chat'
+  | 'transfer'
+  | 'eye';
 
-type Step = {
-  number: string;
-  title: string;
-  description: string;
-  cta?: { label: string; href: string };
-};
-
-type Faq = {
-  question: string;
-  answer: string;
-};
-
-const features: Feature[] = [
-  {
-    icon: 'roster',
-    title: 'Gérer le roster',
-    description:
-      'Ajoute ou retire des joueuses, change leur rôle (Tank, DPS, Support, remplaçante, coach) et passe le brassard de capitaine en un clic.',
-  },
-  {
-    icon: 'door',
-    title: 'Ouvrir ou fermer le recrutement',
-    description:
-      'Active le mode "ouvert" pour recevoir des candidatures, ou ferme l’équipe le temps des matchs pour stabiliser le roster.',
-  },
-  {
-    icon: 'inbox',
-    title: 'Valider les demandes',
-    description:
-      'Reçois les demandes de joueuses qui veulent rejoindre, lis leur message, accepte ou refuse — tout depuis le même écran.',
-  },
-  {
-    icon: 'swords',
-    title: 'Proposer des scrims',
-    description:
-      'Lance ou accepte des matchs amicaux entre équipes pour t’entraîner avant les rencontres officielles.',
-  },
-  {
-    icon: 'chat',
-    title: 'Messagerie capitaines',
-    description:
-      'Discute en direct avec les autres capitaines pour caler horaires, lobbies ou règles maison sans quitter le site.',
-  },
-  {
-    icon: 'transfer',
-    title: 'Gérer les transferts',
-    description:
-      'Propose un transfert vers une autre équipe ou réceptionne ceux qui te sont adressés, avec validation côté staff.',
-  },
-  {
-    icon: 'eye',
-    title: 'Page publique de l’équipe',
-    description:
-      'Profite d’une page vitrine pour ton équipe (logo, roster, palmarès) à partager sur les réseaux et avec les sponsors.',
-  },
-];
-
-const steps: Step[] = [
-  {
-    number: '01',
-    title: 'Crée ton compte',
-    description:
-      'Inscris-toi avec ton email ou via Discord. Renseigne ton BattleTag pour gagner du temps lors de la création d’équipe.',
-    cta: { label: 'Créer mon compte', href: '/register' },
-  },
-  {
-    number: '02',
-    title: 'Crée ton équipe (ou rejoins-en une)',
-    description:
-      'Si tu crées l’équipe, tu en deviens automatiquement la capitaine. Si tu rejoins une équipe existante, tu pourras demander le rôle de capitaine ensuite.',
-    cta: { label: 'Inscrire mon équipe', href: REGISTER_TEAM_HREF },
-  },
-  {
-    number: '03',
-    title: 'Pilote depuis ton espace',
-    description:
-      'Une fois capitaine, ouvre /player pour accéder au dashboard, à la gestion du roster, à la messagerie et aux scrims.',
-    cta: { label: 'Aller à mon espace', href: '/player' },
-  },
-];
-
-const faqs: Faq[] = [
-  {
-    question: 'Qui peut devenir capitaine ?',
-    answer:
-      'Toute joueuse qui crée une équipe via le formulaire d’inscription en devient capitaine. Si tu as rejoint une équipe sans en être la capitaine, tu peux ensuite faire une demande depuis ton espace joueur — la capitaine actuelle ou le staff valide le passage de relais.',
-  },
-  {
-    question: 'Combien de capitaines par équipe ?',
-    answer:
-      'Une seule capitaine officielle à la fois. C’est elle qui reçoit les check-ins de match, les notifications staff et les messages des autres équipes. La passation se fait à n’importe quel moment via le dashboard.',
-  },
-  {
-    question:
-      'Que se passe-t-il si je ne réponds pas à temps à un scrim ou à un check-in ?',
-    answer:
-      'Les check-ins de match ont une fenêtre stricte (~1h avant le coup d’envoi) — sans validation, l’équipe est déclarée forfait. Les scrims n’ont pas de pénalité, mais un refus rapide aide la communauté à s’organiser.',
-  },
-  {
-    question: 'Puis-je gérer plusieurs équipes ?',
-    answer:
-      'Non, une joueuse ne peut être capitaine que d’une seule équipe à la fois. C’est un garde-fou pour éviter les conflits d’horaires et garantir la disponibilité de la capitaine pendant les phases de tournoi.',
-  },
-  {
-    question: 'Si je quitte mon équipe, qu’est-ce qui se passe ?',
-    answer:
-      'Si tu n’es pas capitaine, tu peux partir librement (la capitaine et le staff sont notifiés). Si tu es capitaine, transfère d’abord le brassard à une autre membre, sinon le staff te demandera de le faire avant de valider ta sortie.',
-  },
-];
-
-function FeatureIcon({ name }: { name: Feature['icon'] }) {
+function FeatureIcon({ name }: { name: IconName }) {
   const common = {
     className: 'w-6 h-6 text-pink-300',
     fill: 'none' as const,
@@ -196,6 +91,8 @@ function FeatureIcon({ name }: { name: Feature['icon'] }) {
 }
 
 function EspaceCapitainePage() {
+  const t = useT('espaceCapitaine');
+
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
       {/* Hero */}
@@ -205,45 +102,47 @@ function EspaceCapitainePage() {
           <div className="absolute right-10 top-10 h-[360px] w-[360px] rounded-full bg-pink-500/20 blur-3xl" />
         </div>
 
-        <div className="relative mx-auto max-w-5xl px-6 pt-32 pb-16 text-center">
+        <div className="relative mx-auto flex max-w-5xl justify-end px-6 pt-24">
+          <LanguageToggle />
+        </div>
+
+        <div className="relative mx-auto max-w-5xl px-6 pt-6 pb-16 text-center">
           <p className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-200">
             <span className="rounded-full bg-gradient-to-r from-pink-400 to-purple-400 px-2 py-[2px] text-[10px] font-semibold text-black">
-              Espace capitaine
+              {t.heroBadge}
             </span>
-            <span>Gestion d&apos;équipe</span>
+            <span>{t.heroKicker}</span>
           </p>
           <h1 className="mt-4 text-4xl font-bold leading-tight sm:text-5xl md:text-6xl">
-            Pilote ton équipe depuis un seul tableau de bord
+            {t.heroTitle}
           </h1>
           <p className="mx-auto mt-4 max-w-3xl text-lg text-gray-200">
-            Roster, recrutement, scrims, messagerie, transferts : tout ce
-            qu&apos;il te faut pour mener ton équipe sans courir entre Discord,
-            Excel et les DM.
+            {t.heroDescription}
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               href="/player"
               className="rounded-full bg-gradient-to-r from-pink-500 to-orange-400 px-6 py-3 text-sm font-bold text-black shadow-lg shadow-pink-500/20 transition hover:brightness-110"
             >
-              Accéder à mon espace ↗
+              {t.heroCtaSpace}
             </Link>
             <Link
               href={REGISTER_TEAM_HREF}
               className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
             >
-              Inscrire mon équipe
+              {t.heroCtaRegister}
             </Link>
             <a
               href="#fonctionnalites"
               className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
             >
-              Voir les fonctionnalités
+              {t.heroCtaFeatures}
             </a>
             <a
               href="#faq"
               className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
             >
-              FAQ
+              {t.heroCtaFaq}
             </a>
           </div>
         </div>
@@ -253,24 +152,16 @@ function EspaceCapitainePage() {
         {/* Pour qui */}
         <section className="rounded-3xl border border-white/10 bg-gradient-to-r from-[#0F1F3A] via-[#1A0F2E] to-[#2C0B2C] p-6 sm:p-10 shadow-2xl">
           <p className="text-xs uppercase tracking-[0.18em] text-gray-200">
-            Pour qui ?
+            {t.forWhoKicker}
           </p>
           <h2 className="mt-2 text-2xl font-bold sm:text-3xl">
-            Pensé pour les capitaines d&apos;équipe
+            {t.forWhoTitle}
           </h2>
           <p className="mt-3 max-w-3xl text-sm text-gray-200 sm:text-base">
-            L&apos;espace capitaine est ouvert dès que tu deviens capitaine
-            d&apos;une équipe inscrite à un tournoi. Si tu n&apos;as pas encore
-            d&apos;équipe, commence par en créer une — la capitaine, c&apos;est
-            celle qui inscrit le roster.
+            {t.forWhoDescription}
           </p>
           <ul className="mt-5 grid gap-3 sm:grid-cols-2">
-            {[
-              'Tu as créé ton compte sur le site (email ou Discord).',
-              'Tu as inscrit une équipe au tournoi en cours.',
-              'Tu es désignée capitaine du roster (par défaut, la créatrice).',
-              'Tu es présente sur le Discord officiel pour recevoir les pings.',
-            ].map((item) => (
+            {t.forWhoItems.map((item) => (
               <li
                 key={item}
                 className="flex items-start gap-2 text-sm text-gray-100"
@@ -289,25 +180,24 @@ function EspaceCapitainePage() {
         <section id="fonctionnalites" className="scroll-mt-24">
           <div className="mb-6">
             <p className="text-xs uppercase tracking-[0.24em] text-purple-200/80">
-              Fonctionnalités
+              {t.featuresKicker}
             </p>
             <h2 className="mt-2 text-3xl font-extrabold tracking-tight">
-              Tout ce que tu peux faire
+              {t.featuresTitle}
             </h2>
             <p className="mt-3 max-w-2xl text-sm text-gray-300">
-              Chaque outil est accessible en un clic depuis le dashboard
-              capitaine, sans quitter la plateforme.
+              {t.featuresDescription}
             </p>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            {features.map((feature) => (
+            {t.features.map((feature) => (
               <div
                 key={feature.title}
                 className="rounded-2xl border border-white/10 bg-white/[0.05] p-5 shadow-xl shadow-black/20"
               >
                 <div className="flex items-start gap-3">
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500/30 to-pink-500/30 ring-1 ring-white/10">
-                    <FeatureIcon name={feature.icon} />
+                    <FeatureIcon name={feature.icon as IconName} />
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-white">
@@ -327,14 +217,14 @@ function EspaceCapitainePage() {
         <section id="etapes" className="scroll-mt-24">
           <div className="mb-6">
             <p className="text-xs uppercase tracking-[0.24em] text-purple-200/80">
-              Démarrer
+              {t.stepsKicker}
             </p>
             <h2 className="mt-2 text-3xl font-extrabold tracking-tight">
-              3 étapes pour devenir capitaine
+              {t.stepsTitle}
             </h2>
           </div>
           <ol className="space-y-4">
-            {steps.map((step) => (
+            {t.steps.map((step) => (
               <li
                 key={step.number}
                 className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-white/[0.05] p-5 shadow-xl shadow-black/20 sm:flex-row sm:items-start"
@@ -349,12 +239,16 @@ function EspaceCapitainePage() {
                   <p className="mt-2 text-sm text-gray-200">
                     {step.description}
                   </p>
-                  {step.cta && (
+                  {step.ctaLabel && step.ctaHref && (
                     <Link
-                      href={step.cta.href}
+                      href={
+                        step.ctaHref === 'REGISTER_TEAM_HREF'
+                          ? REGISTER_TEAM_HREF
+                          : step.ctaHref
+                      }
                       className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-purple-200 underline decoration-purple-400/60 underline-offset-4 transition hover:text-white"
                     >
-                      {step.cta.label} ↗
+                      {step.ctaLabel} ↗
                     </Link>
                   )}
                 </div>
@@ -368,21 +262,16 @@ function EspaceCapitainePage() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-gray-200">
-                Prête à prendre les commandes ?
+                {t.ctaKicker}
               </p>
-              <h3 className="mt-2 text-2xl font-bold">
-                Ouvre ton dashboard capitaine
-              </h3>
-              <p className="mt-2 text-sm text-gray-200">
-                Si tu as déjà une équipe, l&apos;espace est accessible
-                immédiatement après connexion.
-              </p>
+              <h3 className="mt-2 text-2xl font-bold">{t.ctaTitle}</h3>
+              <p className="mt-2 text-sm text-gray-200">{t.ctaDescription}</p>
             </div>
             <Link
               href="/player"
               className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-orange-400 px-6 py-3 text-sm font-bold text-black shadow-lg shadow-pink-500/20 transition hover:brightness-110"
             >
-              Accéder à mon espace ↗
+              {t.ctaButton}
             </Link>
           </div>
         </section>
@@ -391,14 +280,14 @@ function EspaceCapitainePage() {
         <section id="faq" className="scroll-mt-24">
           <div className="mb-6">
             <p className="text-xs uppercase tracking-[0.24em] text-purple-200/80">
-              Questions fréquentes
+              {t.faqKicker}
             </p>
             <h2 className="mt-2 text-3xl font-extrabold tracking-tight">
-              FAQ capitaine
+              {t.faqTitle}
             </h2>
           </div>
           <div className="space-y-3">
-            {faqs.map((faq) => (
+            {t.faqs.map((faq) => (
               <details
                 key={faq.question}
                 className="group rounded-2xl border border-white/10 bg-white/[0.05] p-5 shadow-xl shadow-black/20 open:border-purple-400/40"
@@ -421,16 +310,10 @@ function EspaceCapitainePage() {
         {/* Help */}
         <section className="rounded-2xl border border-white/10 bg-white/[0.05] p-6 sm:p-8 shadow-xl shadow-black/20">
           <p className="text-xs uppercase tracking-[0.18em] text-gray-300">
-            Besoin d&apos;aide ?
+            {t.helpKicker}
           </p>
-          <h3 className="mt-2 text-2xl font-bold text-white">
-            Le staff répond sur Discord
-          </h3>
-          <p className="mt-3 text-sm text-gray-200">
-            Question sur la passation de capitanat, BattleTag à corriger,
-            transfert bloqué ? Le staff t&apos;accompagne sur Discord et par
-            email.
-          </p>
+          <h3 className="mt-2 text-2xl font-bold text-white">{t.helpTitle}</h3>
+          <p className="mt-3 text-sm text-gray-200">{t.helpDescription}</p>
           <div className="mt-5 flex flex-wrap gap-3">
             <a
               href={DISCORD_INVITE}
@@ -438,19 +321,19 @@ function EspaceCapitainePage() {
               rel="noreferrer noopener"
               className="rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
             >
-              Discord ↗
+              {t.helpDiscord}
             </a>
             <Link
               href="/contact"
               className="rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
             >
-              Formulaire de contact
+              {t.helpContact}
             </Link>
             <Link
               href="/inscription-2026"
               className="rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
             >
-              Guide d&apos;inscription
+              {t.helpGuide}
             </Link>
           </div>
         </section>

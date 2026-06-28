@@ -10,6 +10,7 @@ import { useFocusTrap } from '@/hooks/useFocusTrap';
 import PublicNav from './PublicNav';
 import { ADMIN_LINKS, filterAdminLinks } from './adminLinks';
 import { PLAYER_LINKS } from './playerLinks';
+import { useT } from '@/lib/i18n/useT';
 
 const AdminTopBar = dynamic(() => import('./AdminTopBar'), { ssr: false });
 const PlayerTopBar = dynamic(() => import('./PlayerTopBar'), { ssr: false });
@@ -21,6 +22,7 @@ const PLAYER_BAR_HEIGHT = 44;
 
 function Navbar(): JSX.Element {
   const router = useRouter();
+  const tNav = useT('navbar');
 
   const { isStaff, staffName, staffRole, loading, clear } = useStaffSession();
 
@@ -72,9 +74,11 @@ function Navbar(): JSX.Element {
     (playerUser?.user_metadata?.display_name as string | undefined) ||
     (playerUser?.user_metadata?.full_name as string | undefined) ||
     playerUser?.email?.split('@')[0] ||
-    'Joueur';
+    tNav.fallbackName;
   const playerRoleLabel =
-    playerUser?.user_metadata?.role === 'captain' ? 'Capitaine' : 'Joueur';
+    playerUser?.user_metadata?.role === 'captain'
+      ? tNav.roleLabels.captain
+      : tNav.roleLabels.player;
   const playerAvatarUrl =
     (playerUser?.user_metadata?.avatar_url as string | undefined) || null;
 

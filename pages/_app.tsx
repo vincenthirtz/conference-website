@@ -10,6 +10,7 @@ import type { AppProps } from 'next/app';
 import DefaultSeo, { SeoProps } from '@/components/Seo/DefaultSeo';
 import { ToastProvider } from '@/components/Toast';
 import { ToastContainer } from '@/components/Toast';
+import { LanguageProvider } from '@/lib/i18n/LanguageProvider';
 
 const workSans = Work_Sans({
   subsets: ['latin'],
@@ -77,7 +78,8 @@ function MyApp({ Component, pageProps, router }: AppPropsWithSeo) {
 
   return (
     <ErrorBoundary>
-      <ToastProvider>
+      <LanguageProvider>
+       <ToastProvider>
         <div className={workSans.variable}>
           <Head>
             <link key="manifest" rel="manifest" href={manifestHref} />
@@ -110,7 +112,8 @@ function MyApp({ Component, pageProps, router }: AppPropsWithSeo) {
           <CookieBanner />
           <ToastContainer />
         </div>
-      </ToastProvider>
+       </ToastProvider>
+      </LanguageProvider>
     </ErrorBoundary>
   );
 }

@@ -7,6 +7,8 @@ import linksConfig from '@/config/links.json';
 import type { LinkItem } from '@/types/types';
 import type { PlayerLink } from './playerLinks';
 import type { PlayerNotificationsPayload } from '@/pages/api/player/notifications';
+import LanguageToggle from './LanguageToggle';
+import { useT, format } from '@/lib/i18n/useT';
 
 const SITE_MENU_KEY = '__site__';
 const MOBILE_MENU_KEY = '__mobile__';
@@ -80,6 +82,7 @@ export default function PlayerTopBar({
   onLogout,
   avatarUrl,
 }: PlayerTopBarProps) {
+  const t = useT('playerTopBar');
   const router = useRouter();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const menuAreaRef = useRef<HTMLDivElement>(null);
@@ -175,9 +178,10 @@ export default function PlayerTopBar({
 
   const hasNotifs = typeof notifTotal === 'number' && notifTotal > 0;
   const notifBadgeLabel = notifTotal && notifTotal > 99 ? '99+' : notifTotal;
-  const bellAriaLabel = hasNotifs
-    ? `Notifications (${notifTotal} en attente)`
-    : 'Notifications (aucune en attente)';
+  const bellAriaLabel =
+    hasNotifs && typeof notifTotal === 'number'
+      ? format(t.bellPending, { count: notifTotal })
+      : t.bellEmpty;
 
   return (
     <div
@@ -188,7 +192,7 @@ export default function PlayerTopBar({
         <Link
           href="/"
           className="flex h-full shrink-0 items-center border-r border-white/[0.06] pr-3 min-[900px]:pr-4"
-          aria-label="Accueil"
+          aria-label={t.homeAria}
         >
           <Image
             src="/img/logos/2025-logo.png"
@@ -214,7 +218,7 @@ export default function PlayerTopBar({
             </span>
           )}
           <span className="truncate font-medium text-neutral-100">
-            {playerName || 'Joueur'}
+            {playerName || t.fallbackName}
           </span>
           {roleLabel && (
             <span className="hidden shrink-0 rounded-md border border-purple-400/30 bg-purple-500/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-purple-200 min-[420px]:inline-block">
@@ -229,7 +233,7 @@ export default function PlayerTopBar({
           className="relative hidden flex-1 items-center gap-1 overflow-visible whitespace-nowrap min-[900px]:flex"
         >
           <DropdownButton
-            label="Site"
+            label={t.site}
             open={openMenu === SITE_MENU_KEY}
             onToggle={() => toggleMenu(SITE_MENU_KEY)}
           />
@@ -256,7 +260,7 @@ export default function PlayerTopBar({
                     : 'text-neutral-300 hover:bg-white/[0.06] hover:text-white'
                 }`}
               >
-                {link.title}
+                {t.linkLabels[link.key]}
               </Link>
             );
           })}
@@ -264,6 +268,9 @@ export default function PlayerTopBar({
 
         {/* Spacer pushes the bell/hamburger to the right on mobile. */}
         <div className="flex-1 min-[900px]:hidden" />
+
+        {/* Bascule de langue FR / EN — toujours visible (gere son propre aria-label bilingue) */}
+        <LanguageToggle />
 
         {/* Notification bell — always visible (desktop + mobile) */}
         <Link
@@ -285,7 +292,7 @@ export default function PlayerTopBar({
           onClick={onLogout}
           className="hidden whitespace-nowrap rounded-lg px-3 py-1.5 text-[11px] font-medium uppercase tracking-wide text-neutral-400 transition-all hover:bg-red-500/10 hover:text-red-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/40 min-[900px]:inline-flex"
         >
-          Déconnexion
+          {t.logout}
         </button>
 
         {/* Mobile hamburger + panel */}
@@ -293,7 +300,7 @@ export default function PlayerTopBar({
           <button
             type="button"
             aria-label={
-              openMenu === MOBILE_MENU_KEY ? 'Fermer le menu' : 'Ouvrir le menu'
+              openMenu === MOBILE_MENU_KEY ? t.closeMenu : t.openMenu
             }
             aria-expanded={openMenu === MOBILE_MENU_KEY}
             aria-haspopup="true"
@@ -352,7 +359,7 @@ export default function PlayerTopBar({
                         : 'text-neutral-300 hover:bg-white/[0.06] hover:text-white'
                     }`}
                   >
-                    {link.title}
+                    {t.linkLabels[link.key]}
                   </Link>
                 );
               })}
@@ -360,7 +367,7 @@ export default function PlayerTopBar({
 
             <div className="border-t border-white/10">
               <div className="px-4 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
-                Site
+                {t.site}
               </div>
               {publicLinks.map((pl) => (
                 <PanelLink key={pl.ref} href={pl.ref} onNavigate={closeAll}>
@@ -378,7 +385,7 @@ export default function PlayerTopBar({
                 }}
                 className="block w-full px-4 py-2.5 text-left text-[12px] font-medium uppercase tracking-wide text-neutral-400 transition-colors hover:bg-red-500/10 hover:text-red-400"
               >
-                Déconnexion
+                {t.logout}
               </button>
             </div>
           </div>

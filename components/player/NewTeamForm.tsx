@@ -1,4 +1,7 @@
 import { useMemo } from 'react';
+import { useT, format } from '@/lib/i18n/useT';
+
+type Tr = ReturnType<typeof useT<'newTeamForm'>>;
 
 type TeamMember = {
   email: string;
@@ -25,12 +28,13 @@ const BATTLETAG_RE = /^.+#\d{4,}$/;
 function validateMember(
   member: TeamMember,
   index: number,
-  allMembers: TeamMember[]
+  allMembers: TeamMember[],
+  t: Tr
 ) {
   const errors: Partial<Record<keyof TeamMember, string>> = {};
 
   if (member.email && !EMAIL_RE.test(member.email)) {
-    errors.email = 'Email invalide';
+    errors.email = t.invalidEmail;
   }
 
   // Check duplicate emails
@@ -41,11 +45,11 @@ function validateMember(
         i !== index && m.email.toLowerCase() === member.email.toLowerCase()
     )
   ) {
-    errors.email = 'Email déjà utilisé par un autre membre';
+    errors.email = t.duplicateEmail;
   }
 
   if (member.battleTag && !BATTLETAG_RE.test(member.battleTag)) {
-    errors.battleTag = 'Format attendu : Pseudo#1234';
+    errors.battleTag = t.battleTagFormat;
   }
 
   // Check duplicate battletags
@@ -58,7 +62,7 @@ function validateMember(
         m.battleTag.toLowerCase() === member.battleTag.toLowerCase()
     )
   ) {
-    errors.battleTag = 'BattleTag déjà utilisé par un autre membre';
+    errors.battleTag = t.duplicateBattleTag;
   }
 
   return errors;
@@ -77,9 +81,10 @@ export default function NewTeamForm({
   onUpdateMember,
   onRemoveMember,
 }: Props) {
+  const t = useT('newTeamForm');
   const memberErrors = useMemo(
-    () => members.map((m, i) => validateMember(m, i, members)),
-    [members]
+    () => members.map((m, i) => validateMember(m, i, members, t)),
+    [members, t]
   );
 
   return (
@@ -89,7 +94,7 @@ export default function NewTeamForm({
           htmlFor="teamName"
           className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
         >
-          Nom de l&apos;equipe *
+          {t.teamNameLabel}
         </label>
         <input
           id="teamName"
@@ -97,7 +102,7 @@ export default function NewTeamForm({
           value={teamName}
           onChange={(e) => onTeamNameChange(e.target.value)}
           className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 transition"
-          placeholder="Ex: Les Licornes de l'Espace"
+          placeholder={t.teamNamePlaceholder}
           maxLength={100}
         />
       </div>
@@ -106,14 +111,12 @@ export default function NewTeamForm({
       <div>
         <div className="flex items-center justify-between mb-2">
           <label className="text-xs font-medium tracking-[0.12em] uppercase text-gray-300">
-            Joueuses (optionnel)
+            {t.playersLabel}
           </label>
           <span className="text-xs text-gray-500">{members.length}/5</span>
         </div>
 
-        <p className="text-xs text-gray-500 mb-3">
-          Ajoute les joueuses de ton equipe. Elles recevront une invitation.
-        </p>
+        <p className="text-xs text-gray-500 mb-3">{t.playersHelp}</p>
 
         <div className="space-y-3">
           {members.map((member, index) => {
@@ -125,14 +128,14 @@ export default function NewTeamForm({
               >
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs text-gray-400">
-                    Joueuse {index + 1}
+                    {format(t.player, { n: index + 1 })}
                   </span>
                   <button
                     type="button"
                     onClick={() => onRemoveMember(index)}
                     className="text-xs text-red-400 hover:text-red-300"
                   >
-                    Retirer
+                    {t.remove}
                   </button>
                 </div>
 
@@ -140,7 +143,7 @@ export default function NewTeamForm({
                   <div>
                     <input
                       type="email"
-                      placeholder="Email *"
+                      placeholder={t.emailPlaceholder}
                       value={member.email}
                       onChange={(e) =>
                         onUpdateMember(index, 'email', e.target.value)
@@ -154,7 +157,7 @@ export default function NewTeamForm({
                   <div>
                     <input
                       type="text"
-                      placeholder="BattleTag (Pseudo#1234)"
+                      placeholder={t.battleTagPlaceholder}
                       value={member.battleTag}
                       onChange={(e) =>
                         onUpdateMember(index, 'battleTag', e.target.value)
@@ -169,7 +172,7 @@ export default function NewTeamForm({
                   </div>
                   <input
                     type="text"
-                    placeholder="Pseudo"
+                    placeholder={t.nicknamePlaceholder}
                     value={member.displayName}
                     onChange={(e) =>
                       onUpdateMember(index, 'displayName', e.target.value)
@@ -187,7 +190,7 @@ export default function NewTeamForm({
               onClick={onAddMember}
               className="w-full px-4 py-3 rounded-xl border border-dashed border-white/20 text-sm text-gray-400 hover:border-purple-400/50 hover:text-purple-300 transition"
             >
-              + Ajouter une joueuse
+              {t.addPlayer}
             </button>
           )}
         </div>

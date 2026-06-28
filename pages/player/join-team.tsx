@@ -8,8 +8,10 @@ import { useRouter } from 'next/router';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import { MAX_TEAM_PLAYERS } from '@/utils/constants';
+import { useT, format } from '@/lib/i18n/useT';
 
 import { logger } from '../../utils/logger';
+
 type Team = {
   id: string;
   name: string;
@@ -21,6 +23,7 @@ type Team = {
 };
 
 export default function JoinTeamPage() {
+  const t = useT('joinTeam');
   const router = useRouter();
   const { user, token, loading: authLoading, ready } = usePlayerSession();
   const [loading, setLoading] = useState(true);
@@ -72,7 +75,7 @@ export default function JoinTeamPage() {
         if (!cancelled) await loadTeams();
       } catch (err) {
         logger.error('[join-team] auth error:', err);
-        if (!cancelled) setError('Erreur de connexion.');
+        if (!cancelled) setError(t.connectionError);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -80,7 +83,7 @@ export default function JoinTeamPage() {
     return () => {
       cancelled = true;
     };
-  }, [ready, token, router]);
+  }, [ready, token, router, t]);
 
   const loadTeams = async (
     search?: string,
@@ -163,7 +166,7 @@ export default function JoinTeamPage() {
     setError(null);
 
     if (!selectedTeamId) {
-      setError('Selectionne une equipe a rejoindre.');
+      setError(t.selectTeamError);
       return;
     }
 
@@ -186,14 +189,14 @@ export default function JoinTeamPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || 'Impossible de creer la demande.');
+        throw new Error(data.error || t.createRequestError);
       }
 
-      const team = teams.find((t) => t.id === selectedTeamId);
-      setSuccessTeamName(team?.name || "l'equipe selectionnee");
+      const team = teams.find((tm) => tm.id === selectedTeamId);
+      setSuccessTeamName(team?.name || t.selectedTeamFallback);
       setSuccess(true);
     } catch (err: unknown) {
-      setError((err as Error).message || 'Une erreur est survenue.');
+      setError((err as Error).message || t.genericError);
     } finally {
       setSubmitting(false);
     }
@@ -211,7 +214,7 @@ export default function JoinTeamPage() {
     return (
       <>
         <Head>
-          <title>Demande envoyee | OW Women&apos;s Cup</title>
+          <title>{t.successTabTitle}</title>
         </Head>
 
         <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white flex items-center justify-center px-4">
@@ -231,16 +234,15 @@ export default function JoinTeamPage() {
                 />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold mb-4">Demande envoyee</h1>
+            <h1 className="text-2xl font-bold mb-4">{t.successTitle}</h1>
             <p className="text-gray-400 mb-6">
-              Ta demande pour rejoindre &quot;{successTeamName}&quot; a bien ete
-              envoyee. Le capitaine de l&apos;equipe la validera prochainement.
+              {format(t.successBody, { name: successTeamName })}
             </p>
             <Link
               href="/player"
               className="inline-block px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white font-semibold transition"
             >
-              Retour a mon espace
+              {t.backToSpace}
             </Link>
           </div>
         </div>
@@ -251,7 +253,7 @@ export default function JoinTeamPage() {
   return (
     <>
       <Head>
-        <title>Rejoindre une equipe | OW Women&apos;s Cup</title>
+        <title>{t.pageTabTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
@@ -260,28 +262,25 @@ export default function JoinTeamPage() {
             href="/player"
             className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-6"
           >
-            ← Retour a mon espace
+            ← {t.backToSpace}
           </Link>
 
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
-            <h1 className="text-2xl font-bold mb-2">Rejoindre une equipe</h1>
-            <p className="text-gray-400 text-sm mb-6">
-              Recherche et selectionne l&apos;equipe que tu souhaites rejoindre.
-              Le capitaine de l&apos;equipe validera ta demande.
-            </p>
+            <h1 className="text-2xl font-bold mb-2">{t.pageTitle}</h1>
+            <p className="text-gray-400 text-sm mb-6">{t.pageIntro}</p>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Recherche d'equipe */}
               <div>
                 <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
-                  Rechercher une equipe
+                  {t.searchLabel}
                 </label>
                 <input
                   type="text"
                   value={teamSearch}
                   onChange={(e) => handleTeamSearchChange(e.target.value)}
                   className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 mb-3"
-                  placeholder="Rechercher par nom..."
+                  placeholder={t.searchPlaceholder}
                 />
 
                 <div className="flex flex-wrap items-center gap-3 mb-3">
@@ -291,7 +290,7 @@ export default function JoinTeamPage() {
                       onChange={(e) => handleCountryChange(e.target.value)}
                       className="rounded-lg bg-black/60 border border-white/10 px-3 py-1.5 text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-purple-400"
                     >
-                      <option value="">Tous les pays</option>
+                      <option value="">{t.allCountries}</option>
                       {availableCountries.map((c) => (
                         <option key={c} value={c}>
                           {c}
@@ -306,31 +305,28 @@ export default function JoinTeamPage() {
                       onChange={(e) => handleHasSlotsChange(e.target.checked)}
                       className="rounded border-white/20 bg-black/60 text-purple-500 focus:ring-purple-400"
                     />
-                    Places disponibles uniquement
+                    {t.slotsOnly}
                   </label>
                 </div>
 
                 <div className="max-h-72 overflow-y-auto space-y-2 rounded-xl border border-white/10 bg-black/40 p-2">
                   {teamsLoading && (
                     <div className="text-sm text-gray-500 text-center py-4">
-                      Chargement...
+                      {t.loading}
                     </div>
                   )}
 
                   {!teamsLoading && teamsLoaded && teams.length === 0 && (
                     <div className="text-center py-6 px-4">
-                      <p className="text-sm text-gray-400">
-                        Aucune equipe ne recrute pour le moment.
-                      </p>
+                      <p className="text-sm text-gray-400">{t.emptyTitle}</p>
                       <p className="mt-1 text-xs text-gray-500">
-                        Reviens plus tard, ou cree la tienne pour lancer ton
-                        propre roster.
+                        {t.emptySubtitle}
                       </p>
                       <Link
                         href="/player/request-captain"
                         className="mt-3 inline-block text-sm text-purple-400 hover:text-purple-300"
                       >
-                        Creer mon equipe →
+                        {t.createMyTeam}
                       </Link>
                     </div>
                   )}
@@ -381,7 +377,8 @@ export default function JoinTeamPage() {
                                   <span>·</span>
                                 )}
                                 <span>
-                                  {team.member_count}/{MAX_TEAM_PLAYERS} membres
+                                  {team.member_count}/{MAX_TEAM_PLAYERS}{' '}
+                                  {t.membersSuffix}
                                 </span>
                               </>
                             )}
@@ -408,7 +405,7 @@ export default function JoinTeamPage() {
               {/* Role souhaite */}
               <div>
                 <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
-                  Role souhaite
+                  {t.desiredRoleLabel}
                 </label>
                 <div className="flex gap-3">
                   <button
@@ -420,7 +417,7 @@ export default function JoinTeamPage() {
                         : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
                     }`}
                   >
-                    Joueur
+                    {t.rolePlayer}
                   </button>
                   <button
                     type="button"
@@ -431,7 +428,7 @@ export default function JoinTeamPage() {
                         : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
                     }`}
                   >
-                    Remplacant (sub)
+                    {t.roleSub}
                   </button>
                 </div>
               </div>
@@ -442,7 +439,7 @@ export default function JoinTeamPage() {
                   htmlFor="message"
                   className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
                 >
-                  Message au capitaine (optionnel)
+                  {t.messageLabel}
                 </label>
                 <textarea
                   id="message"
@@ -450,7 +447,7 @@ export default function JoinTeamPage() {
                   onChange={(e) => setMessage(e.target.value)}
                   rows={3}
                   className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 transition resize-none"
-                  placeholder="Presente-toi brievement au capitaine..."
+                  placeholder={t.messagePlaceholder}
                   maxLength={500}
                 />
               </div>
@@ -470,19 +467,19 @@ export default function JoinTeamPage() {
                     : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400'
                 }`}
               >
-                {submitting ? 'Envoi en cours...' : 'Envoyer ma demande'}
+                {submitting ? t.submitting : t.submit}
               </button>
             </form>
           </div>
 
           <div className="mt-6 text-center text-sm text-gray-500">
             <p>
-              Tu veux creer ta propre equipe ?{' '}
+              {t.ctaQuestion}{' '}
               <Link
                 href="/player/request-captain"
                 className="text-purple-400 hover:text-purple-300"
               >
-                Devenir capitaine
+                {t.becomeCaptain}
               </Link>
             </p>
           </div>

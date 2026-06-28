@@ -1,3 +1,5 @@
+import { useT } from '@/lib/i18n/useT';
+
 type Team = {
   id: string;
   name: string;
@@ -22,29 +24,30 @@ export default function ExistingTeamSelector({
   onTeamSearchChange,
   onSelectTeam,
 }: Props) {
+  const t = useT('existingTeamSelector');
   return (
     <div>
       <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
-        Rechercher une equipe
+        {t.searchLabel}
       </label>
       <input
         type="text"
         value={teamSearch}
         onChange={(e) => onTeamSearchChange(e.target.value)}
         className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 mb-3"
-        placeholder="Rechercher par nom..."
+        placeholder={t.searchPlaceholder}
       />
 
       <div className="max-h-60 overflow-y-auto space-y-2 rounded-xl border border-white/10 bg-black/40 p-2">
         {teamsLoading && (
           <div className="text-sm text-gray-500 text-center py-4">
-            Chargement...
+            {t.loading}
           </div>
         )}
 
         {!teamsLoading && teams.length === 0 && (
           <div className="text-sm text-gray-500 text-center py-4">
-            Aucune equipe trouvee
+            {t.noTeams}
           </div>
         )}
 

@@ -1,8 +1,14 @@
-export type PlayerLink = { title: string; ref: string };
+export type PlayerLinkKey =
+  | 'dashboard'
+  | 'matches'
+  | 'notifications'
+  | 'profile';
+
+export type PlayerLink = { key: PlayerLinkKey; ref: string };
 
 export const PLAYER_LINKS: PlayerLink[] = [
-  { title: 'Tableau de bord', ref: '/player' },
-  { title: 'Mes matchs', ref: '/player/matches' },
-  { title: 'Notifications', ref: '/player/notifications' },
-  { title: 'Mon profil', ref: '/player/profile' },
+  { key: 'dashboard', ref: '/player' },
+  { key: 'matches', ref: '/player/matches' },
+  { key: 'notifications', ref: '/player/notifications' },
+  { key: 'profile', ref: '/player/profile' },
 ];

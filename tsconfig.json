@@ -22,7 +22,8 @@
       "@/pages/*": ["./pages/*"],
       "@/config/*": ["./config/*"],
       "@/components/*": ["./components/*"],
-      "@/hooks/*": ["./hooks/*"]
+      "@/hooks/*": ["./hooks/*"],
+      "@/lib/*": ["./lib/*"]
     }
   },
   "exclude": ["node_modules", "vitest.config.ts"],

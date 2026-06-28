@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
+import { useT, format } from '@/lib/i18n/useT';
+import { useLang } from '@/lib/i18n/LanguageProvider';
 
 type TeamInfo = {
   id: string;
@@ -81,6 +83,9 @@ export default function TeamCard({
   onLeaveTeam,
   members,
 }: Props) {
+  const t = useT('teamCard');
+  const { lang } = useLang();
+  const locale = lang === 'fr' ? 'fr-FR' : 'en-US';
   const hasPendingRequest = pendingCaptainRequest || pendingJoinRequest;
   const [leaveConfirm, setLeaveConfirm] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -94,7 +99,7 @@ export default function TeamCard({
     try {
       await onLeaveTeam();
     } catch (err: unknown) {
-      setLeaveError((err as Error).message || 'Erreur');
+      setLeaveError((err as Error).message || t.genericError);
     } finally {
       setLeaving(false);
       setLeaveConfirm(false);
@@ -103,7 +108,7 @@ export default function TeamCard({
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
-      <h2 className="text-lg font-semibold mb-4">Mon equipe</h2>
+      <h2 className="text-lg font-semibold mb-4">{t.myTeam}</h2>
 
       {team ? (
         <div className="space-y-4">
@@ -126,7 +131,7 @@ export default function TeamCard({
 
           {isCaptain && (
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-400/30 text-xs text-purple-200">
-              <span>Capitaine</span>
+              <span>{t.captain}</span>
             </div>
           )}
 
@@ -137,26 +142,30 @@ export default function TeamCard({
                   {roster.total}
                 </span>
                 <span className="text-xs text-gray-400">
-                  membre{roster.total > 1 ? 's' : ''}
+                  {roster.total > 1 ? t.members_other : t.members_one}
                 </span>
               </div>
               <div className="flex flex-wrap gap-1.5 text-[10px] uppercase tracking-[0.12em]">
-                <RoleBadge label="Tank" count={roster.tank} tone="rose" />
-                <RoleBadge label="DPS" count={roster.dps} tone="orange" />
+                <RoleBadge label={t.roleTank} count={roster.tank} tone="rose" />
+                <RoleBadge label={t.roleDps} count={roster.dps} tone="orange" />
                 <RoleBadge
-                  label="Support"
+                  label={t.roleSupport}
                   count={roster.support}
                   tone="emerald"
                 />
                 {roster.substitute > 0 && (
                   <RoleBadge
-                    label="Sub"
+                    label={t.roleSub}
                     count={roster.substitute}
                     tone="slate"
                   />
                 )}
                 {roster.coach > 0 && (
-                  <RoleBadge label="Coach" count={roster.coach} tone="cyan" />
+                  <RoleBadge
+                    label={t.roleCoach}
+                    count={roster.coach}
+                    tone="cyan"
+                  />
                 )}
               </div>
             </div>
@@ -168,7 +177,7 @@ export default function TeamCard({
                 href="/player/manage-team"
                 className="block w-full text-center px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-sm font-semibold transition"
               >
-                Gerer mon equipe
+                {t.manageTeam}
               </Link>
             )}
 
@@ -176,7 +185,7 @@ export default function TeamCard({
               href={`/team/${encodeURIComponent(team.slug || team.id)}`}
               className="block w-full text-center px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm text-gray-300 transition"
             >
-              Voir la page equipe
+              {t.viewTeamPage}
             </Link>
 
             {!isCaptain && (
@@ -184,7 +193,7 @@ export default function TeamCard({
                 href="/player/requests?tab=transfer"
                 className="block w-full text-center px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm text-gray-300 transition"
               >
-                Demander un transfert
+                {t.requestTransfer}
               </Link>
             )}
 
@@ -193,7 +202,7 @@ export default function TeamCard({
                 href="/player/requests?tab=scrim"
                 className="block w-full text-center px-4 py-2 rounded-xl border border-blue-400/20 bg-blue-500/10 hover:bg-blue-500/20 text-sm text-blue-200 transition"
               >
-                Proposer un scrim
+                {t.proposeScrim}
               </Link>
             )}
 
@@ -202,7 +211,7 @@ export default function TeamCard({
                 href="/player/messages"
                 className="block w-full text-center px-4 py-2 rounded-xl border border-emerald-400/20 bg-emerald-500/10 hover:bg-emerald-500/20 text-sm text-emerald-200 transition"
               >
-                Messagerie capitaine
+                {t.captainMessages}
               </Link>
             )}
 
@@ -219,12 +228,12 @@ export default function TeamCard({
                     onClick={() => setLeaveConfirm(true)}
                     className="w-full px-4 py-2 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-sm transition"
                   >
-                    Quitter l&apos;equipe
+                    {t.leaveTeam}
                   </button>
                 ) : (
                   <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-3 space-y-3">
                     <p className="text-xs text-red-200">
-                      Es-tu sur de vouloir quitter {team.name} ?
+                      {format(t.leaveConfirm, { name: team.name })}
                     </p>
                     <div className="flex gap-2">
                       <button
@@ -232,14 +241,14 @@ export default function TeamCard({
                         disabled={leaving}
                         className="flex-1 px-3 py-2 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-50 text-sm font-medium transition"
                       >
-                        {leaving ? 'En cours...' : 'Confirmer'}
+                        {leaving ? t.leaving : t.confirm}
                       </button>
                       <button
                         onClick={() => setLeaveConfirm(false)}
                         disabled={leaving}
                         className="px-3 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-sm transition"
                       >
-                        Annuler
+                        {t.cancel}
                       </button>
                     </div>
                   </div>
@@ -250,28 +259,24 @@ export default function TeamCard({
         </div>
       ) : (
         <div className="text-sm text-gray-400">
-          <p className="mb-4">
-            Tu n&apos;es pas encore membre d&apos;une equipe.
-          </p>
+          <p className="mb-4">{t.notMember}</p>
 
           {hasPendingRequest && (
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 mb-4">
               <div className="text-amber-200 font-medium mb-1">
-                {pendingCaptainRequest
-                  ? 'Demande de capitaine en attente'
-                  : 'Demande en attente'}
+                {pendingCaptainRequest ? t.pendingCaptain : t.pendingGeneric}
               </div>
               <div className="text-xs text-amber-300/70">
                 {pendingCaptainRequest ? (
                   <>
-                    Equipe :{' '}
+                    {t.teamLabel}
                     {pendingCaptainRequest.payload?.team_name ||
                       pendingCaptainRequest.payload?.existing_team_name ||
                       '\u2014'}
                   </>
                 ) : pendingJoinRequest ? (
                   <>
-                    Rejoindre :{' '}
+                    {t.joinLabel}
                     {pendingJoinRequest.team?.name ||
                       pendingJoinRequest.payload?.team_name ||
                       '\u2014'}
@@ -279,10 +284,11 @@ export default function TeamCard({
                 ) : null}
               </div>
               <div className="text-xs text-gray-500 mt-1">
-                Envoyee le{' '}
-                {new Date(
-                  (pendingCaptainRequest || pendingJoinRequest)!.created_at
-                ).toLocaleDateString()}
+                {format(t.sentOn, {
+                  date: new Date(
+                    (pendingCaptainRequest || pendingJoinRequest)!.created_at
+                  ).toLocaleDateString(locale),
+                })}
               </div>
             </div>
           )}
@@ -293,13 +299,13 @@ export default function TeamCard({
                 href="/player/join-team"
                 className="block w-full text-center px-4 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white text-sm font-semibold transition"
               >
-                Rejoindre une equipe
+                {t.joinTeam}
               </Link>
               <Link
                 href="/player/request-captain"
                 className="block w-full text-center px-4 py-3 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 text-white text-sm font-medium transition"
               >
-                Creer ma propre equipe
+                {t.createTeam}
               </Link>
             </div>
           )}

@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useState, type JSX } from 'react';
 import Link from 'next/link';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useLang, type Lang } from '@/lib/i18n/LanguageProvider';
+import { useT, format } from '@/lib/i18n/useT';
 
 import { logger } from '../../utils/logger';
+
+type T = ReturnType<typeof useT<'nextMatchCard'>>;
 type NextMatch = {
   match: {
     id: string;
@@ -27,9 +31,9 @@ type NextMatch = {
   } | null;
 };
 
-function formatScheduled(iso: string | null): string {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleString('fr-FR', {
+function formatScheduled(iso: string | null, lang: Lang, t: T): string {
+  if (!iso) return t.noDate;
+  return new Date(iso).toLocaleString(lang === 'fr' ? 'fr-FR' : 'en-GB', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -39,7 +43,11 @@ function formatScheduled(iso: string | null): string {
   });
 }
 
-function formatRelative(iso: string | null, now: number): string | null {
+function formatRelative(
+  iso: string | null,
+  now: number,
+  t: T
+): string | null {
   if (!iso) return null;
   const ms = new Date(iso).getTime() - now;
   if (!Number.isFinite(ms)) return null;
@@ -48,15 +56,20 @@ function formatRelative(iso: string | null, now: number): string | null {
   const hours = Math.floor((abs % 86_400_000) / 3_600_000);
   const mins = Math.floor((abs % 3_600_000) / 60_000);
   const parts: string[] = [];
-  if (days) parts.push(`${days}j`);
-  if (hours) parts.push(`${hours}h`);
-  if (!days && mins) parts.push(`${mins}min`);
-  if (parts.length === 0) parts.push("moins d'1 min");
-  return ms >= 0 ? `dans ${parts.join(' ')}` : `il y a ${parts.join(' ')}`;
+  if (days) parts.push(format(t.days, { n: days }));
+  if (hours) parts.push(format(t.hours, { n: hours }));
+  if (!days && mins) parts.push(format(t.mins, { n: mins }));
+  if (parts.length === 0) parts.push(t.lessThanMin);
+  const joined = parts.join(' ');
+  return ms >= 0
+    ? format(t.inFmt, { parts: joined })
+    : format(t.agoFmt, { parts: joined });
 }
 
 export default function NextMatchCard(): JSX.Element | null {
   const { adminFetchJson } = useAdminFetch();
+  const { lang } = useLang();
+  const t = useT('nextMatchCard');
   const [data, setData] = useState<NextMatch | null>(null);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState<number>(() => Date.now());
@@ -94,7 +107,7 @@ export default function NextMatchCard(): JSX.Element | null {
   if (!data?.match || !data.team || !data.opponent) return null;
 
   const scheduled = data.match.scheduledAt;
-  const relative = formatRelative(scheduled, now);
+  const relative = formatRelative(scheduled, now, t);
   const isLive = data.match.status === 'ongoing';
   const checkin = data.checkin;
   const matchHref = `/match/${data.match.id}`;
@@ -103,7 +116,7 @@ export default function NextMatchCard(): JSX.Element | null {
     <div className="mt-6 rounded-2xl border border-white/10 bg-gradient-to-br from-purple-500/10 via-white/[0.03] to-cyan-500/10 backdrop-blur-xl p-6">
       <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.16em] text-blue-200/80">
         <span className="inline-flex items-center rounded-full border border-blue-300/40 bg-blue-500/15 px-2.5 py-1 text-[10px] font-semibold text-blue-50">
-          Prochain match
+          {t.nextMatch}
         </span>
         {isLive && (
           <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-400/40 bg-rose-500/15 px-2.5 py-1 text-rose-100 text-[10px] font-semibold">
@@ -111,7 +124,7 @@ export default function NextMatchCard(): JSX.Element | null {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-60" />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-rose-500" />
             </span>
-            En direct
+            {t.live}
           </span>
         )}
         {data.tournament && <span>{data.tournament.name}</span>}
@@ -129,7 +142,9 @@ export default function NextMatchCard(): JSX.Element | null {
           {data.opponent.name}
         </h3>
         <p className="text-sm text-gray-300">
-          <span className="capitalize">{formatScheduled(scheduled)}</span>
+          <span className="capitalize">
+            {formatScheduled(scheduled, lang, t)}
+          </span>
           {relative && <span className="text-gray-500"> · {relative}</span>}
         </p>
       </div>
@@ -139,7 +154,7 @@ export default function NextMatchCard(): JSX.Element | null {
           href={matchHref}
           className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
         >
-          Voir le match
+          {t.viewMatch}
           <span aria-hidden>→</span>
         </Link>
         {data.match.streamUrl && (
@@ -149,7 +164,7 @@ export default function NextMatchCard(): JSX.Element | null {
             rel="noreferrer"
             className="inline-flex items-center gap-1 rounded-full border border-fuchsia-400/30 bg-fuchsia-500/10 px-4 py-2 text-sm font-medium text-fuchsia-100 transition hover:bg-fuchsia-500/20"
           >
-            Live cast
+            {t.liveCast}
             <span aria-hidden>↗</span>
           </a>
         )}
@@ -168,18 +183,18 @@ export default function NextMatchCard(): JSX.Element | null {
             >
               <path d="M5 13l4 4L19 7" />
             </svg>
-            Check-in confirmé
+            {t.checkedIn}
           </span>
         ) : checkin?.isPassed ? (
           <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-400/30 bg-rose-500/10 px-4 py-2 text-sm font-medium text-rose-100">
-            Check-in clos
+            {t.checkinClosed}
           </span>
         ) : checkin?.token && checkin.isOpen ? (
           <Link
             href="/player/checkin"
             className="inline-flex items-center gap-1 rounded-full bg-white px-4 py-2 text-sm font-semibold text-neutral-900 shadow transition hover:-translate-y-0.5 hover:shadow-lg"
           >
-            Check-in maintenant
+            {t.checkinNow}
             <span aria-hidden>→</span>
           </Link>
         ) : checkin?.token && checkin.opensAt ? (
@@ -187,7 +202,8 @@ export default function NextMatchCard(): JSX.Element | null {
             href="/player/checkin"
             className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-gray-300 transition hover:bg-white/10"
           >
-            Check-in {formatRelative(checkin.opensAt, now) ?? 'bientôt'}
+            {t.checkin}{' '}
+            {formatRelative(checkin.opensAt, now, t) ?? t.soon}
           </Link>
         ) : null}
       </div>

@@ -9,8 +9,11 @@ import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
+import { useT } from '@/lib/i18n/useT';
+import { useLang } from '@/lib/i18n/LanguageProvider';
 
 import { logger } from '../../utils/logger';
+
 type Conversation = {
   conversationId: string;
   otherTeamId: string;
@@ -54,6 +57,9 @@ type Team = {
 
 export default function MessagesPage() {
   const router = useRouter();
+  const t = useT('playerMessages');
+  const { lang } = useLang();
+  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
   const { loading: authLoading, ready } = usePlayerSession();
   const { adminFetchJson } = useAdminFetch();
   const [loading, setLoading] = useState(true);
@@ -271,7 +277,7 @@ export default function MessagesPage() {
     const targetTeamId = activeConvId ? otherTeam?.id : selectedTeamId;
 
     if (!targetTeamId) {
-      setError('Selectionne une equipe.');
+      setError(t.selectTeamError);
       return;
     }
 
@@ -326,7 +332,7 @@ export default function MessagesPage() {
     return (
       <>
         <Head>
-          <title>Messages | OW Women&apos;s Cup</title>
+          <title>{t.pageTitle} | OW Women&apos;s Cup</title>
         </Head>
         <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white flex items-center justify-center px-4">
           <div className="max-w-md text-center">
@@ -345,17 +351,15 @@ export default function MessagesPage() {
                 />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold mb-4">Messagerie capitaine</h1>
+            <h1 className="text-2xl font-bold mb-4">{t.gateTitle}</h1>
             <p className="text-gray-400 mb-6">
-              {!hasTeam
-                ? "Tu dois etre membre d'une equipe pour acceder a la messagerie."
-                : "Seul le capitaine de l'equipe peut utiliser la messagerie."}
+              {!hasTeam ? t.gateNoTeam : t.gateNotCaptain}
             </p>
             <Link
               href="/player"
               className="inline-block px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white font-semibold transition"
             >
-              Retour a mon espace
+              {t.backToSpace}
             </Link>
           </div>
         </div>
@@ -366,7 +370,7 @@ export default function MessagesPage() {
   return (
     <>
       <Head>
-        <title>Messages | OW Women&apos;s Cup</title>
+        <title>{t.pageTitle} | OW Women&apos;s Cup</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
@@ -375,7 +379,7 @@ export default function MessagesPage() {
             href="/player"
             className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-6"
           >
-            &larr; Retour a mon espace
+            &larr; {t.backToSpace}
           </Link>
 
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl overflow-hidden">
@@ -399,10 +403,10 @@ export default function MessagesPage() {
                       d="M15 19l-7-7 7-7"
                     />
                   </svg>
-                  Inbox
+                  {t.inbox}
                 </button>
               ) : (
-                <h1 className="text-lg font-semibold">Messages</h1>
+                <h1 className="text-lg font-semibold">{t.pageTitle}</h1>
               )}
 
               {activeConvId && otherTeam && (
@@ -420,7 +424,9 @@ export default function MessagesPage() {
               )}
 
               {showNewConv && (
-                <span className="text-sm text-gray-400">Nouveau message</span>
+                <span className="text-sm text-gray-400">
+                  {t.newMessageHeader}
+                </span>
               )}
 
               {!activeConvId && !showNewConv && (
@@ -441,7 +447,7 @@ export default function MessagesPage() {
                       d="M12 4v16m8-8H4"
                     />
                   </svg>
-                  Nouveau
+                  {t.newButton}
                 </button>
               )}
             </div>
@@ -451,7 +457,7 @@ export default function MessagesPage() {
               <div className="divide-y divide-white/5">
                 {convLoading && (
                   <div className="px-6 py-12 text-center text-sm text-gray-500">
-                    Chargement...
+                    {t.loading}
                   </div>
                 )}
 
@@ -473,10 +479,10 @@ export default function MessagesPage() {
                       </svg>
                     </div>
                     <p className="text-sm text-gray-500 mb-2">
-                      Aucune conversation
+                      {t.noConversations}
                     </p>
                     <p className="text-xs text-gray-600">
-                      Envoie un premier message a un autre capitaine.
+                      {t.noConversationsHint}
                     </p>
                   </div>
                 )}
@@ -513,7 +519,7 @@ export default function MessagesPage() {
                         </p>
                       </div>
                       <div className="text-xs text-gray-600 flex-shrink-0">
-                        {formatDate(conv.lastMessage.created_at)}
+                        {formatDate(conv.lastMessage.created_at, locale, t)}
                       </div>
                     </button>
                   ))}
@@ -524,25 +530,25 @@ export default function MessagesPage() {
             {showNewConv && (
               <div className="p-6">
                 <label className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2">
-                  Envoyer un message a
+                  {t.sendTo}
                 </label>
                 <input
                   type="text"
                   value={teamSearch}
                   onChange={(e) => handleTeamSearchChange(e.target.value)}
                   className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/80 mb-3"
-                  placeholder="Rechercher une equipe..."
+                  placeholder={t.searchTeam}
                 />
 
                 <div className="max-h-48 overflow-y-auto space-y-1 rounded-xl border border-white/10 bg-black/40 p-2 mb-4">
                   {teamsLoading && (
                     <div className="text-sm text-gray-500 text-center py-4">
-                      Chargement...
+                      {t.loading}
                     </div>
                   )}
                   {!teamsLoading && teams.length === 0 && (
                     <div className="text-sm text-gray-500 text-center py-4">
-                      Aucune equipe trouvee
+                      {t.noTeamFound}
                     </div>
                   )}
                   {!teamsLoading &&
@@ -607,7 +613,7 @@ export default function MessagesPage() {
                     onChange={(e) => setNewMessage(e.target.value)}
                     rows={3}
                     className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/80 transition resize-none"
-                    placeholder="Ton message..."
+                    placeholder={t.composePlaceholder}
                     maxLength={2000}
                   />
 
@@ -626,7 +632,7 @@ export default function MessagesPage() {
                         : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400'
                     }`}
                   >
-                    {sending ? 'Envoi...' : 'Envoyer'}
+                    {sending ? t.sending : t.send}
                   </button>
                 </form>
               </div>
@@ -637,7 +643,7 @@ export default function MessagesPage() {
               <div className="flex flex-col" style={{ minHeight: '400px' }}>
                 {msgLoading && (
                   <div className="flex-1 flex items-center justify-center py-12">
-                    <div className="text-sm text-gray-500">Chargement...</div>
+                    <div className="text-sm text-gray-500">{t.loading}</div>
                   </div>
                 )}
 
@@ -649,7 +655,7 @@ export default function MessagesPage() {
                     >
                       {messages.length === 0 && (
                         <div className="text-center text-sm text-gray-500 py-8">
-                          Aucun message dans cette conversation.
+                          {t.noMessages}
                         </div>
                       )}
 
@@ -678,7 +684,7 @@ export default function MessagesPage() {
                               <div
                                 className={`text-[10px] mt-1 ${isMine ? 'text-emerald-400/60' : 'text-gray-500'}`}
                               >
-                                {formatTime(msg.createdAt)}
+                                {formatTime(msg.createdAt, locale)}
                               </div>
                             </div>
                           </div>
@@ -697,7 +703,7 @@ export default function MessagesPage() {
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         className="flex-1 rounded-xl border border-white/15 bg-black/60 px-4 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/80 transition"
-                        placeholder="Ecrire un message..."
+                        placeholder={t.replyPlaceholder}
                         maxLength={2000}
                       />
                       <button
@@ -709,7 +715,7 @@ export default function MessagesPage() {
                             : 'bg-emerald-500 hover:bg-emerald-400 text-white'
                         }`}
                       >
-                        {sending ? '...' : 'Envoyer'}
+                        {sending ? t.sendingShort : t.send}
                       </button>
                     </form>
 
@@ -729,24 +735,28 @@ export default function MessagesPage() {
   );
 }
 
-function formatDate(iso: string): string {
+function formatDate(
+  iso: string,
+  locale: string,
+  t: { yesterday: string }
+): string {
   const d = new Date(iso);
   const now = new Date();
   const diffMs = now.getTime() - d.getTime();
   const diffDays = Math.floor(diffMs / 86_400_000);
 
   if (diffDays === 0) {
-    return d.toLocaleTimeString('fr-FR', {
+    return d.toLocaleTimeString(locale, {
       hour: '2-digit',
       minute: '2-digit',
     });
   }
-  if (diffDays === 1) return 'Hier';
-  if (diffDays < 7) return d.toLocaleDateString('fr-FR', { weekday: 'short' });
-  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  if (diffDays === 1) return t.yesterday;
+  if (diffDays < 7) return d.toLocaleDateString(locale, { weekday: 'short' });
+  return d.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
 }
 
-function formatTime(iso: string): string {
+function formatTime(iso: string, locale: string): string {
   const d = new Date(iso);
-  return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
 }

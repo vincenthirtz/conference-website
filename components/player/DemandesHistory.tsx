@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useT, format } from '@/lib/i18n/useT';
+import { useLang } from '@/lib/i18n/LanguageProvider';
 
 type Demande = {
   id: string;
@@ -25,25 +27,11 @@ type Props = {
   onCancel?: (demandeId: string) => Promise<void>;
 };
 
-const TYPE_LABELS: Record<Demande['type'], string> = {
-  captain_request: 'Demande de capitaine',
-  join: 'Rejoindre une equipe',
-  leave: "Quitter l'equipe",
-  other: 'Demande',
-};
-
 const STATUS_STYLES: Record<Demande['status'], string> = {
   pending: 'bg-amber-500/20 text-amber-300',
   approved: 'bg-emerald-500/20 text-emerald-300',
   rejected: 'bg-red-500/20 text-red-300',
   cancelled: 'bg-gray-500/20 text-gray-300',
-};
-
-const STATUS_LABELS: Record<Demande['status'], string> = {
-  pending: 'En attente',
-  approved: 'Approuvee',
-  rejected: 'Refusee',
-  cancelled: 'Annulee',
 };
 
 function isRecent(dateStr?: string | null): boolean {
@@ -53,6 +41,9 @@ function isRecent(dateStr?: string | null): boolean {
 }
 
 export default function DemandesHistory({ demandes, onCancel }: Props) {
+  const t = useT('demandesHistory');
+  const { lang } = useLang();
+  const dateLocale = lang === 'fr' ? 'fr-FR' : 'en-GB';
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [cancelError, setCancelError] = useState<string | null>(null);
 
@@ -65,7 +56,7 @@ export default function DemandesHistory({ demandes, onCancel }: Props) {
     try {
       await onCancel(id);
     } catch (err: unknown) {
-      setCancelError((err as Error).message || 'Erreur');
+      setCancelError((err as Error).message || t.cancelError);
     } finally {
       setCancellingId(null);
     }
@@ -73,7 +64,7 @@ export default function DemandesHistory({ demandes, onCancel }: Props) {
 
   return (
     <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
-      <h2 className="text-lg font-semibold mb-4">Historique des demandes</h2>
+      <h2 className="text-lg font-semibold mb-4">{t.title}</h2>
 
       {cancelError && (
         <div className="mb-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200">
@@ -100,7 +91,9 @@ export default function DemandesHistory({ demandes, onCancel }: Props) {
             >
               <div className="flex items-center justify-between text-sm">
                 <div className="min-w-0">
-                  <span className="font-medium">{TYPE_LABELS[d.type]}</span>
+                  <span className="font-medium">
+                    {t.typeLabels[d.type]}
+                  </span>
                   {teamName && (
                     <span className="text-gray-400 ml-2">({teamName})</span>
                   )}
@@ -109,16 +102,16 @@ export default function DemandesHistory({ demandes, onCancel }: Props) {
                   {recentlyProcessed && (
                     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[10px] font-semibold">
                       <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-                      Nouveau
+                      {t.badgeNew}
                     </span>
                   )}
                   <span
                     className={`px-2 py-1 rounded-full text-xs font-semibold ${STATUS_STYLES[d.status]}`}
                   >
-                    {STATUS_LABELS[d.status]}
+                    {t.statusLabels[d.status]}
                   </span>
                   <span className="text-xs text-gray-500">
-                    {new Date(d.created_at).toLocaleDateString()}
+                    {new Date(d.created_at).toLocaleDateString(dateLocale)}
                   </span>
                   {d.status === 'pending' && onCancel && (
                     <button
@@ -126,7 +119,7 @@ export default function DemandesHistory({ demandes, onCancel }: Props) {
                       disabled={cancellingId === d.id}
                       className="px-2 py-1 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-xs font-medium transition disabled:opacity-50"
                     >
-                      {cancellingId === d.id ? '...' : 'Annuler'}
+                      {cancellingId === d.id ? '...' : t.cancel}
                     </button>
                   )}
                 </div>
@@ -142,7 +135,7 @@ export default function DemandesHistory({ demandes, onCancel }: Props) {
               {/* Raison du refus */}
               {d.status === 'rejected' && d.staff_note && (
                 <div className="mt-1.5 text-xs text-red-300/70 pl-0">
-                  Motif : {d.staff_note}
+                  {format(t.reasonLabel, { note: d.staff_note })}
                 </div>
               )}
             </div>

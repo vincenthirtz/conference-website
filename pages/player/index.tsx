@@ -16,8 +16,11 @@ import NextMatchCard from '@/components/player/NextMatchCard';
 import { PlayerDashboardSkeleton } from '@/components/player/Skeletons';
 import PushOptIn from '@/components/shared/PushOptIn';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
+import { useT, format } from '@/lib/i18n/useT';
+import { useLang } from '@/lib/i18n/LanguageProvider';
 
 import { logger } from '../../utils/logger';
+
 type TeamInfo = {
   id: string;
   slug?: string | null;
@@ -80,15 +83,16 @@ function buildQuickActions(args: {
   isCaptain: boolean;
   isManager: boolean;
   unreadMessages: number;
+  t: ReturnType<typeof useT<'playerIndex'>>;
 }): QuickActionProps[] {
-  const { team, isCaptain, isManager, unreadMessages } = args;
+  const { team, isCaptain, isManager, unreadMessages, t } = args;
   const canManage = isCaptain || isManager;
   const actions: QuickActionProps[] = [];
 
   actions.push({
     href: '/player/requests?tab=transfer',
-    label: canManage ? 'Proposer un transfert' : 'Demander un transfert',
-    description: canManage ? 'Transférer un joueur' : 'Vers une autre équipe',
+    label: canManage ? t.qaProposeTransfer : t.qaRequestTransfer,
+    description: canManage ? t.qaTransferPlayer : t.qaTransferToOther,
     iconPath: SVG_PATHS.transfer,
     tone: 'purple',
   });
@@ -96,38 +100,38 @@ function buildQuickActions(args: {
   if (canManage) {
     actions.push({
       href: '/player/requests?tab=scrim',
-      label: 'Proposer un scrim',
-      description: 'Match amical',
+      label: t.qaProposeScrim,
+      description: t.qaFriendlyMatch,
       iconPath: SVG_PATHS.scrim,
       tone: 'blue',
     });
     actions.push({
       href: '/player/messages',
-      label: 'Messagerie',
-      description: 'Discuter entre capitaines',
+      label: t.qaMessaging,
+      description: t.qaCaptainChat,
       iconPath: SVG_PATHS.messages,
       tone: 'emerald',
       badge: unreadMessages,
     });
     actions.push({
       href: '/player/manage-team',
-      label: "Gérer l'équipe",
-      description: 'Roster et demandes',
+      label: t.qaManageTeam,
+      description: t.qaRosterRequests,
       iconPath: SVG_PATHS.team,
     });
   }
 
   actions.push({
     href: `/team/${encodeURIComponent(team.slug || team.id)}`,
-    label: 'Page équipe',
-    description: 'Profil public',
+    label: t.qaTeamPage,
+    description: t.qaPublicProfile,
     iconPath: SVG_PATHS.publicTeam,
   });
 
   actions.push({
     href: '/player/caster-application',
-    label: 'Devenir casteuse',
-    description: 'Rejoindre le cast',
+    label: t.qaBecomeCaster,
+    description: t.qaJoinCast,
     iconPath: SVG_PATHS.caster,
     tone: 'cyan',
   });
@@ -136,6 +140,8 @@ function buildQuickActions(args: {
 }
 
 function PlayerDashboard() {
+  const t = useT('playerIndex');
+  const { lang } = useLang();
   const { user, loading: authLoading, ready } = usePlayerSession();
   const { adminFetchJson } = useAdminFetch();
   const [loading, setLoading] = useState(true);
@@ -221,7 +227,7 @@ function PlayerDashboard() {
     loadData()
       .catch((err: unknown) => {
         logger.error('[player] load error:', err);
-        if (!cancelled) setError('Erreur lors du chargement de ton profil.');
+        if (!cancelled) setError(t.loadError);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -284,16 +290,15 @@ function PlayerDashboard() {
       <>
         <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
           <main className="max-w-md mx-auto px-4 py-10 pt-32 text-center">
-            <h1 className="text-3xl font-bold text-gradient">Espace joueur</h1>
-            <p className="mt-4 text-gray-300">
-              Connecte-toi pour accéder à ton espace : profil, équipe et
-              prochains matchs.
-            </p>
+            <h1 className="text-3xl font-bold text-gradient">
+              {t.playerSpace}
+            </h1>
+            <p className="mt-4 text-gray-300">{t.connectPrompt}</p>
             <Link
               href="/login?next=/player"
               className="mt-8 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-purple-500/20 transition hover:brightness-110"
             >
-              Se connecter
+              {t.signIn}
             </Link>
           </main>
         </div>
@@ -305,7 +310,7 @@ function PlayerDashboard() {
     user.user_metadata?.display_name ||
     user.user_metadata?.full_name ||
     user.email?.split('@')[0] ||
-    'Joueur';
+    t.fallbackName;
 
   return (
     <>
@@ -315,11 +320,9 @@ function PlayerDashboard() {
           <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
             <div>
               <h1 className="text-3xl font-bold text-gradient">
-                Bienvenue, {displayName}
+                {format(t.welcome, { name: displayName })}
               </h1>
-              <p className="text-gray-400 text-sm mt-1">
-                Gere ton profil joueur et ton equipe depuis cet espace.
-              </p>
+              <p className="text-gray-400 text-sm mt-1">{t.headerSubtitle}</p>
             </div>
           </div>
 
@@ -356,12 +359,12 @@ function PlayerDashboard() {
           {/* Rejoindre le cast — toujours visible (indépendant de l'équipe) */}
           {!team && (
             <div className="mt-6 rounded-2xl border border-cyan-400/20 bg-cyan-500/[0.06] backdrop-blur-xl p-6">
-              <h2 className="text-lg font-semibold mb-4">Envie de caster ?</h2>
+              <h2 className="text-lg font-semibold mb-4">{t.wantToCast}</h2>
               <div className="grid gap-3 sm:grid-cols-2">
                 <QuickAction
                   href="/player/caster-application"
-                  label="Devenir casteuse"
-                  description="Rejoindre le cast"
+                  label={t.qaBecomeCaster}
+                  description={t.qaJoinCast}
                   iconPath={SVG_PATHS.caster}
                   tone="cyan"
                 />
@@ -372,13 +375,14 @@ function PlayerDashboard() {
           {/* Actions rapides */}
           {team && (
             <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
-              <h2 className="text-lg font-semibold mb-4">Actions rapides</h2>
+              <h2 className="text-lg font-semibold mb-4">{t.quickActions}</h2>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {buildQuickActions({
                   team,
                   isCaptain,
                   isManager,
                   unreadMessages,
+                  t,
                 }).map((action) => (
                   <QuickAction key={action.href} {...action} />
                 ))}
@@ -390,7 +394,7 @@ function PlayerDashboard() {
           {(isCaptain || isManager) && pendingScrims.length > 0 && (
             <div className="mt-6 rounded-2xl border border-blue-400/20 bg-blue-500/5 backdrop-blur-xl p-6">
               <h2 className="text-lg font-semibold mb-4">
-                Demandes de scrim en attente
+                {t.pendingScrims}
                 <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-blue-500 text-[10px] font-bold text-white">
                   {pendingScrims.length}
                 </span>
@@ -419,23 +423,26 @@ function PlayerDashboard() {
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-sm font-medium text-white">
-                              {scrim.payload?.from_team_name ||
-                                'Equipe inconnue'}
+                              {scrim.payload?.from_team_name || t.unknownTeam}
                             </span>
                             {isExternal && (
                               <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-200 border border-amber-500/40 text-[10px] uppercase tracking-wide">
-                                Externe
+                                {t.external}
                               </span>
                             )}
                           </div>
                           {scrim.user?.display_name && !isExternal && (
                             <p className="text-xs text-gray-400 mt-0.5">
-                              Capitaine : {scrim.user.display_name}
+                              {format(t.captainLabel, {
+                                name: scrim.user.display_name,
+                              })}
                             </p>
                           )}
                           {isExternal && scrim.user?.display_name && (
                             <p className="text-xs text-gray-400 mt-0.5">
-                              Contact : {scrim.user.display_name}
+                              {format(t.contactLabel, {
+                                name: scrim.user.display_name,
+                              })}
                             </p>
                           )}
                           {scrim.comment && (
@@ -446,25 +453,35 @@ function PlayerDashboard() {
                           <div className="flex items-center gap-3 flex-wrap text-xs text-gray-500 mt-2">
                             {scrim.payload?.preferred_date && (
                               <span>
-                                Date :{' '}
+                                {t.dateLabel}{' '}
                                 {new Date(
                                   scrim.payload.preferred_date
-                                ).toLocaleDateString('fr-FR', {
-                                  day: 'numeric',
-                                  month: 'short',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })}
+                                ).toLocaleDateString(
+                                  lang === 'fr' ? 'fr-FR' : 'en-GB',
+                                  {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  }
+                                )}
                               </span>
                             )}
                             {scrim.payload?.format && (
-                              <span>Format : {scrim.payload.format}</span>
+                              <span>
+                                {format(t.formatLabel, {
+                                  format: scrim.payload.format,
+                                })}
+                              </span>
                             )}
                             <span>
-                              Reçu le{' '}
-                              {new Date(scrim.created_at).toLocaleDateString(
-                                'fr-FR'
-                              )}
+                              {format(t.receivedOn, {
+                                date: new Date(
+                                  scrim.created_at
+                                ).toLocaleDateString(
+                                  lang === 'fr' ? 'fr-FR' : 'en-GB'
+                                ),
+                              })}
                             </span>
                           </div>
                         </div>
@@ -473,11 +490,13 @@ function PlayerDashboard() {
                       {isExternal && (contactEmail || contactDiscord) && (
                         <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-100 space-y-0.5">
                           <p className="uppercase tracking-wide text-[10px] text-amber-300/80">
-                            Contact pour répondre
+                            {t.contactToReply}
                           </p>
                           {contactEmail && (
                             <p>
-                              <span className="text-gray-400">Email :</span>{' '}
+                              <span className="text-gray-400">
+                                {t.emailLabel}
+                              </span>{' '}
                               <a
                                 href={`mailto:${contactEmail}`}
                                 className="underline hover:text-white"
@@ -488,7 +507,9 @@ function PlayerDashboard() {
                           )}
                           {contactDiscord && (
                             <p>
-                              <span className="text-gray-400">Discord :</span>{' '}
+                              <span className="text-gray-400">
+                                {t.discordLabel}
+                              </span>{' '}
                               {contactDiscord}
                             </p>
                           )}
@@ -502,7 +523,7 @@ function PlayerDashboard() {
                           onClick={() => handleScrimAction(scrim.id, 'approve')}
                           className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-xs font-medium text-white"
                         >
-                          Accepter
+                          {t.accept}
                         </button>
                         <button
                           type="button"
@@ -510,7 +531,7 @@ function PlayerDashboard() {
                           onClick={() => handleScrimAction(scrim.id, 'reject')}
                           className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-50 text-xs"
                         >
-                          Refuser
+                          {t.reject}
                         </button>
                         {isExternal && (
                           <button
@@ -521,7 +542,7 @@ function PlayerDashboard() {
                             }
                             className="px-3 py-1.5 rounded-lg border border-red-500/30 text-red-200 hover:bg-red-500/10 disabled:opacity-50 text-xs ml-auto"
                           >
-                            Signaler
+                            {t.report}
                           </button>
                         )}
                       </div>
@@ -537,13 +558,13 @@ function PlayerDashboard() {
           {/* Liens utiles */}
           <div className="mt-8 flex flex-wrap gap-4 text-sm">
             <Link href="/" className="text-gray-400 hover:text-white">
-              &larr; Retour au site
+              {t.backToSite}
             </Link>
             <Link
               href="/tournaments"
               className="text-purple-300 hover:text-purple-200"
             >
-              Voir les tournois
+              {t.viewTournaments}
             </Link>
           </div>
         </main>

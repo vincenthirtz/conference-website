@@ -8,6 +8,8 @@ import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import CopyButton from '@/components/player/CopyButton';
+import { useT, format } from '@/lib/i18n/useT';
+import { useLang } from '@/lib/i18n/LanguageProvider';
 
 type Member = {
   id: string;
@@ -49,6 +51,9 @@ type JoinRequest = {
 };
 
 export default function ManageTeamPage() {
+  const t = useT('manageTeam');
+  const { lang } = useLang();
+  const locale = lang === 'fr' ? 'fr-FR' : 'en-US';
   const { loading: authLoading, ready } = usePlayerSession();
   const { adminFetchJson } = useAdminFetch();
   const [loading, setLoading] = useState(true);
@@ -94,7 +99,7 @@ export default function ManageTeamPage() {
     setLoading(true);
     loadData()
       .catch(() => {
-        if (!cancelled) setError('Erreur de chargement.');
+        if (!cancelled) setError(t.loadError);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -102,7 +107,7 @@ export default function ManageTeamPage() {
     return () => {
       cancelled = true;
     };
-  }, [ready, loadData]);
+  }, [ready, loadData, t]);
 
   const showSuccess = (msg: string) => {
     setSuccessMsg(msg);
@@ -123,9 +128,7 @@ export default function ManageTeamPage() {
       setTeam((prev) =>
         prev ? { ...prev, is_joinable: data.is_joinable } : prev
       );
-      showSuccess(
-        data.is_joinable ? 'Recrutement ouvert' : 'Recrutement ferme'
-      );
+      showSuccess(data.is_joinable ? t.recruitmentOpen : t.recruitmentClosed);
     } catch (err: unknown) {
       setError((err as Error).message);
     } finally {
@@ -143,7 +146,7 @@ export default function ManageTeamPage() {
         body: JSON.stringify({ memberId }),
       });
       setMembers((prev) => prev.filter((m) => m.id !== memberId));
-      showSuccess('Membre retire');
+      showSuccess(t.memberRemoved);
     } catch (err: unknown) {
       setError((err as Error).message);
     } finally {
@@ -169,7 +172,7 @@ export default function ManageTeamPage() {
             : m
         )
       );
-      showSuccess('Role mis a jour');
+      showSuccess(t.roleUpdated);
     } catch (err: unknown) {
       setError((err as Error).message);
     } finally {
@@ -192,7 +195,7 @@ export default function ManageTeamPage() {
       if (action === 'approve') {
         await loadData();
       }
-      showSuccess(action === 'approve' ? 'Joueur accepte' : 'Demande rejetee');
+      showSuccess(action === 'approve' ? t.playerAccepted : t.requestRejected);
     } catch (err: unknown) {
       setError((err as Error).message);
     } finally {
@@ -208,16 +211,13 @@ export default function ManageTeamPage() {
     return (
       <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white flex items-center justify-center px-4">
         <div className="text-center">
-          <h1 className="text-xl font-bold mb-4">Acces refuse</h1>
-          <p className="text-gray-400 mb-6">
-            Tu dois etre capitaine ou manager d&apos;une equipe pour acceder a
-            cette page.
-          </p>
+          <h1 className="text-xl font-bold mb-4">{t.accessDeniedTitle}</h1>
+          <p className="text-gray-400 mb-6">{t.accessDeniedBody}</p>
           <Link
             href="/player"
             className="inline-block px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 font-semibold transition"
           >
-            Retour a mon espace
+            {t.backToSpace}
           </Link>
         </div>
       </div>
@@ -227,7 +227,7 @@ export default function ManageTeamPage() {
   return (
     <>
       <Head>
-        <title>Gerer {team.name} | OW Women&apos;s Cup</title>
+        <title>{format(t.tabTitle, { name: team.name })}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
@@ -236,7 +236,7 @@ export default function ManageTeamPage() {
             href="/player"
             className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-6"
           >
-            &larr; Retour a mon espace
+            &larr; {t.backToSpace}
           </Link>
 
           {/* Team header */}
@@ -259,7 +259,7 @@ export default function ManageTeamPage() {
               href={`/team/${encodeURIComponent(team.slug || team.id)}`}
               className="text-sm text-purple-300 hover:text-purple-200"
             >
-              Page publique &rarr;
+              {t.publicPage}
             </Link>
           </div>
 
@@ -279,11 +279,11 @@ export default function ManageTeamPage() {
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6 mb-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-semibold">Recrutement</h2>
+                <h2 className="text-lg font-semibold">{t.recruitment}</h2>
                 <p className="text-sm text-gray-400 mt-1">
                   {team.is_joinable
-                    ? 'Ton equipe est ouverte aux demandes de joueurs.'
-                    : 'Ton equipe est fermee au recrutement.'}
+                    ? t.recruitmentOpenDesc
+                    : t.recruitmentClosedDesc}
                 </p>
               </div>
               <button
@@ -305,7 +305,10 @@ export default function ManageTeamPage() {
           {/* Roster */}
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6 mb-6">
             <h2 className="text-lg font-semibold mb-4">
-              Roster ({members.length} membre{members.length > 1 ? 's' : ''})
+              {format(
+                members.length > 1 ? t.roster_other : t.roster_one,
+                { count: members.length }
+              )}
             </h2>
             <div className="space-y-3">
               {members.map((m) => (
@@ -322,19 +325,19 @@ export default function ManageTeamPage() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span className="font-medium text-sm truncate">
-                          {m.battle_tag || 'Inconnu'}
+                          {m.battle_tag || t.unknown}
                         </span>
                         {m.battle_tag && (
                           <CopyButton
                             value={m.battle_tag}
-                            label="Copier le BattleTag"
+                            label={t.copyBattleTag}
                             className="h-5 w-5 shrink-0"
                           />
                         )}
                       </div>
                       <div className="text-xs text-gray-500">
                         {m.is_captain ? (
-                          <span className="text-purple-300">Capitaine</span>
+                          <span className="text-purple-300">{t.captain}</span>
                         ) : (
                           m.role || 'player'
                         )}
@@ -350,15 +353,15 @@ export default function ManageTeamPage() {
                         disabled={!!actionLoading}
                         className="bg-black/60 border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-purple-400"
                       >
-                        <option value="player">Joueur</option>
-                        <option value="substitute">Remplacant</option>
-                        <option value="coach">Coach</option>
+                        <option value="player">{t.optionPlayer}</option>
+                        <option value="substitute">{t.optionSubstitute}</option>
+                        <option value="coach">{t.optionCoach}</option>
                       </select>
                       <button
                         onClick={() => handleRemoveMember(m.id)}
                         disabled={actionLoading === `remove-${m.id}`}
                         className="p-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 transition disabled:opacity-50"
-                        title="Retirer"
+                        title={t.removeTitle}
                       >
                         <svg
                           className="w-4 h-4"
@@ -384,7 +387,7 @@ export default function ManageTeamPage() {
           {/* Demandes en attente */}
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
             <h2 className="text-lg font-semibold mb-4">
-              Demandes en attente
+              {t.pendingRequests}
               {joinRequests.length > 0 && (
                 <span className="ml-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold">
                   {joinRequests.length}
@@ -393,9 +396,7 @@ export default function ManageTeamPage() {
             </h2>
 
             {joinRequests.length === 0 ? (
-              <p className="text-sm text-gray-500">
-                Aucune demande en attente.
-              </p>
+              <p className="text-sm text-gray-500">{t.noPendingRequests}</p>
             ) : (
               <div className="space-y-3">
                 {joinRequests.map((req) => {
@@ -403,7 +404,7 @@ export default function ManageTeamPage() {
                     req.user?.display_name ||
                     req.payload?.user_display_name ||
                     req.user?.email?.split('@')[0] ||
-                    'Joueur';
+                    t.defaultPlayerName;
                   const btag =
                     req.user?.battle_tag || req.payload?.user_battle_tag;
                   const role = req.payload?.desired_role || 'player';
@@ -424,10 +425,12 @@ export default function ManageTeamPage() {
                             )}
                           </div>
                           <div className="text-xs text-gray-500 mt-1">
-                            Souhaite rejoindre en tant que{' '}
+                            {t.wantsToJoinAs}
                             <span className="text-gray-300">{role}</span>
                             {' · '}
-                            {new Date(req.created_at).toLocaleDateString()}
+                            {new Date(req.created_at).toLocaleDateString(
+                              locale
+                            )}
                           </div>
                           {req.comment && (
                             <div className="mt-2 text-xs text-gray-400 italic bg-white/5 rounded-lg px-3 py-2">
@@ -441,14 +444,14 @@ export default function ManageTeamPage() {
                             disabled={actionLoading === `join-${req.id}`}
                             className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold transition disabled:opacity-50"
                           >
-                            Accepter
+                            {t.accept}
                           </button>
                           <button
                             onClick={() => handleJoinAction(req.id, 'reject')}
                             disabled={actionLoading === `join-${req.id}`}
                             className="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-xs font-semibold transition disabled:opacity-50"
                           >
-                            Refuser
+                            {t.reject}
                           </button>
                         </div>
                       </div>

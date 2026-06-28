@@ -9,8 +9,10 @@ import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import ExistingTeamSelector from '@/components/player/ExistingTeamSelector';
 import NewTeamForm from '@/components/player/NewTeamForm';
+import { useT, format } from '@/lib/i18n/useT';
 
 import { logger } from '../../utils/logger';
+
 type Team = {
   id: string;
   name: string;
@@ -27,6 +29,7 @@ type TeamMember = {
 export default function RequestCaptainPage() {
   const router = useRouter();
   const { user, token, loading: authLoading, ready } = usePlayerSession();
+  const t = useT('requestCaptain');
   const [loading, setLoading] = useState(true);
 
   // Mode de sélection
@@ -73,7 +76,7 @@ export default function RequestCaptainPage() {
         if (!cancelled) await loadTeams();
       } catch (err) {
         logger.error('[request-captain] auth error:', err);
-        if (!cancelled) setError('Erreur de connexion.');
+        if (!cancelled) setError(t.connectionError);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -135,16 +138,16 @@ export default function RequestCaptainPage() {
 
     if (mode === 'existing') {
       if (!selectedTeamId) {
-        setError('Sélectionne une équipe.');
+        setError(t.errSelectTeam);
         return;
       }
     } else {
       if (!teamName.trim()) {
-        setError("Le nom de l'équipe est requis.");
+        setError(t.errTeamNameRequired);
         return;
       }
       if (teamName.trim().length < 2) {
-        setError("Le nom de l'équipe doit contenir au moins 2 caractères.");
+        setError(t.errTeamNameTooShort);
         return;
       }
     }
@@ -153,7 +156,7 @@ export default function RequestCaptainPage() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     for (const m of validMembers) {
       if (!emailRegex.test(m.email.trim())) {
-        setError(`Email invalide : ${m.email}`);
+        setError(format(t.errInvalidEmail, { email: m.email }));
         return;
       }
     }
@@ -190,19 +193,19 @@ export default function RequestCaptainPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || 'Impossible de créer la demande.');
+        throw new Error(data.error || t.errCreateRequest);
       }
 
       if (mode === 'existing') {
-        const team = teams.find((t) => t.id === selectedTeamId);
-        setSuccessTeamName(team?.name || "l'équipe sélectionnée");
+        const team = teams.find((tm) => tm.id === selectedTeamId);
+        setSuccessTeamName(team?.name || t.fallbackSelectedTeam);
       } else {
         setSuccessTeamName(teamName.trim());
       }
 
       setSuccess(true);
     } catch (err: unknown) {
-      setError((err as Error).message || 'Une erreur est survenue.');
+      setError((err as Error).message || t.errGeneric);
     } finally {
       setSubmitting(false);
     }
@@ -220,7 +223,7 @@ export default function RequestCaptainPage() {
     return (
       <>
         <Head>
-          <title>Demande envoyee | OW Women&apos;s Cup</title>
+          <title>{t.successTitleTab}</title>
         </Head>
 
         <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white flex items-center justify-center px-4">
@@ -240,16 +243,15 @@ export default function RequestCaptainPage() {
                 />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold mb-4">Demande envoyee</h1>
+            <h1 className="text-2xl font-bold mb-4">{t.successHeading}</h1>
             <p className="text-gray-400 mb-6">
-              Ta demande pour devenir capitaine de &quot;{successTeamName}&quot;
-              a bien ete envoyee. Un admin la validera prochainement.
+              {format(t.successBody, { teamName: successTeamName })}
             </p>
             <Link
               href="/player"
               className="inline-block px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white font-semibold transition"
             >
-              Retour a mon espace
+              {t.backToSpace}
             </Link>
           </div>
         </div>
@@ -260,7 +262,7 @@ export default function RequestCaptainPage() {
   return (
     <>
       <Head>
-        <title>Devenir capitaine | OW Women&apos;s Cup</title>
+        <title>{t.pageTitleTab}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
@@ -269,17 +271,12 @@ export default function RequestCaptainPage() {
             href="/player"
             className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-6"
           >
-            ← Retour a mon espace
+            {t.backLink}
           </Link>
 
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
-            <h1 className="text-2xl font-bold mb-2">
-              Devenir capitaine d&apos;equipe
-            </h1>
-            <p className="text-gray-400 text-sm mb-6">
-              Choisis une equipe existante ou cree-en une nouvelle. Un admin
-              validera ta demande.
-            </p>
+            <h1 className="text-2xl font-bold mb-2">{t.heading}</h1>
+            <p className="text-gray-400 text-sm mb-6">{t.intro}</p>
 
             {/* Toggle mode */}
             <div className="flex gap-2 mb-6">
@@ -292,7 +289,7 @@ export default function RequestCaptainPage() {
                     : 'bg-white/5 text-gray-400 hover:bg-white/10'
                 }`}
               >
-                Creer une equipe
+                {t.modeNew}
               </button>
               <button
                 type="button"
@@ -303,7 +300,7 @@ export default function RequestCaptainPage() {
                     : 'bg-white/5 text-gray-400 hover:bg-white/10'
                 }`}
               >
-                Equipe existante
+                {t.modeExisting}
               </button>
             </div>
 
@@ -336,7 +333,7 @@ export default function RequestCaptainPage() {
                   htmlFor="message"
                   className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
                 >
-                  Message (optionnel)
+                  {t.messageLabel}
                 </label>
                 <textarea
                   id="message"
@@ -344,7 +341,7 @@ export default function RequestCaptainPage() {
                   onChange={(e) => setMessage(e.target.value)}
                   rows={3}
                   className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 transition resize-none"
-                  placeholder="Informations complementaires pour les admins..."
+                  placeholder={t.messagePlaceholder}
                   maxLength={500}
                 />
               </div>
@@ -364,16 +361,13 @@ export default function RequestCaptainPage() {
                     : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400'
                 }`}
               >
-                {submitting ? 'Envoi en cours...' : 'Envoyer ma demande'}
+                {submitting ? t.submitting : t.submit}
               </button>
             </form>
           </div>
 
           <div className="mt-6 text-center text-sm text-gray-500">
-            <p>
-              En devenant capitaine, tu pourras gerer les membres de ton equipe
-              et l&apos;inscrire aux tournois.
-            </p>
+            <p>{t.footerNote}</p>
           </div>
         </main>
       </div>

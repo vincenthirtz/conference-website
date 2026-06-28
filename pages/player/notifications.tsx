@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
+import { useT } from '@/lib/i18n/useT';
 import PushOptIn from '@/components/shared/PushOptIn';
 import QuickAction, {
   type QuickActionProps,
@@ -25,28 +26,6 @@ import {
 import { logger } from '../../utils/logger';
 
 type PrefRow = { event_type: string; enabled: boolean };
-
-const EVENT_LABELS: Record<PlayerPushEventType, string> = {
-  'match.starting': 'Match imminent',
-  'match.finished': 'Match terminé',
-  'match.score_reported': 'Score reporté',
-  'checkin.opened': 'Ouverture du check-in',
-  'scrim.invitation': 'Invitation à un scrim',
-  'scrim.confirmed': 'Scrim confirmé',
-  'team.forfeit': 'Forfait d’équipe',
-  'news.published': 'Nouvelle actualité',
-};
-
-const EVENT_DESCRIPTIONS: Record<PlayerPushEventType, string> = {
-  'match.starting': 'Quand un de tes matchs va bientôt commencer.',
-  'match.finished': 'Quand un de tes matchs se termine.',
-  'match.score_reported': 'Quand un score est reporté sur un de tes matchs.',
-  'checkin.opened': 'Quand la fenêtre de check-in s’ouvre.',
-  'scrim.invitation': 'Quand ton équipe reçoit une invitation à un scrim.',
-  'scrim.confirmed': 'Quand un scrim est confirmé.',
-  'team.forfeit': 'Quand un forfait concerne ton équipe.',
-  'news.published': 'Quand une actualité est publiée.',
-};
 
 const SVG_PATHS = {
   messages: 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z',
@@ -97,6 +76,7 @@ function PlayerNotifications() {
   });
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { addToast } = useToast();
+  const t = useT('playerNotifications');
 
   const [loading, setLoading] = useState(true);
   const [counters, setCounters] = useState<PlayerNotificationsPayload | null>(
@@ -125,9 +105,9 @@ function PlayerNotifications() {
     if (countersData) setCounters(countersData);
     if (prefsData) setPrefs(prefsData.prefs ?? []);
     if (!countersData && !prefsData) {
-      setError('Erreur lors du chargement de tes notifications.');
+      setError(t.loadError);
     }
-  }, [adminFetchJson]);
+  }, [adminFetchJson, t]);
 
   useEffect(() => {
     if (!ready) return;
@@ -155,14 +135,11 @@ function PlayerNotifications() {
         }
       );
       setPrefs(res.prefs ?? []);
-      addToast('Préférence enregistrée.', 'success');
+      addToast(t.prefSaved, 'success');
     } catch (err) {
       logger.error('[player/notifications] toggle error:', err);
       setPrefs(previous);
-      addToast(
-        (err as Error)?.message || 'Impossible d’enregistrer la préférence.',
-        'error'
-      );
+      addToast((err as Error)?.message || t.prefSaveError, 'error');
     } finally {
       setSavingType(null);
     }
@@ -176,15 +153,13 @@ function PlayerNotifications() {
     return (
       <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
         <main className="max-w-md mx-auto px-4 py-10 pt-32 text-center">
-          <h1 className="text-3xl font-bold text-gradient">Notifications</h1>
-          <p className="mt-4 text-gray-300">
-            Connecte-toi pour gérer tes notifications.
-          </p>
+          <h1 className="text-3xl font-bold text-gradient">{t.pageTitle}</h1>
+          <p className="mt-4 text-gray-300">{t.signedOutIntro}</p>
           <Link
             href="/login?next=/player/notifications"
             className="mt-8 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-purple-500/20 transition hover:brightness-110"
           >
-            Se connecter
+            {t.signIn}
           </Link>
         </main>
       </div>
@@ -196,8 +171,8 @@ function PlayerNotifications() {
     if (counters.unreadMessages > 0) {
       actions.push({
         href: '/player/messages',
-        label: 'Messages non lus',
-        description: 'Discussions entre capitaines',
+        label: t.unreadMessages,
+        description: t.unreadMessagesDesc,
         iconPath: SVG_PATHS.messages,
         tone: 'emerald',
         badge: counters.unreadMessages,
@@ -206,8 +181,8 @@ function PlayerNotifications() {
     if (counters.pendingScrims > 0) {
       actions.push({
         href: '/player',
-        label: 'Demandes de scrim',
-        description: 'À traiter sur le tableau de bord',
+        label: t.pendingScrims,
+        description: t.pendingScrimsDesc,
         iconPath: SVG_PATHS.scrim,
         tone: 'blue',
         badge: counters.pendingScrims,
@@ -216,8 +191,8 @@ function PlayerNotifications() {
     if (counters.pendingJoinRequests > 0) {
       actions.push({
         href: '/player/manage-team',
-        label: 'Demandes d’adhésion',
-        description: 'Rejoindre ton équipe',
+        label: t.joinRequests,
+        description: t.joinRequestsDesc,
         iconPath: SVG_PATHS.team,
         tone: 'purple',
         badge: counters.pendingJoinRequests,
@@ -226,8 +201,8 @@ function PlayerNotifications() {
     if (counters.checkinPending > 0) {
       actions.push({
         href: '/player/checkin',
-        label: 'Check-in à valider',
-        description: 'Valide ta présence',
+        label: t.checkinPending,
+        description: t.checkinPendingDesc,
         iconPath: SVG_PATHS.checkin,
         tone: 'cyan',
       });
@@ -242,15 +217,13 @@ function PlayerNotifications() {
         <div className="mb-8">
           <div className="flex items-center gap-3 text-sm text-gray-400">
             <Link href="/player" className="hover:text-white transition">
-              &larr; Tableau de bord
+              &larr; {t.backToDashboard}
             </Link>
           </div>
           <h1 className="text-3xl md:text-4xl font-bold text-gradient mt-2">
-            Notifications
+            {t.pageTitle}
           </h1>
-          <p className="text-sm text-gray-400 mt-2">
-            Tes actions en attente et tes préférences de notifications push.
-          </p>
+          <p className="text-sm text-gray-400 mt-2">{t.intro}</p>
         </div>
 
         {error && (
@@ -263,7 +236,7 @@ function PlayerNotifications() {
           {/* (a) En attente */}
           <section>
             <h2 className="text-lg font-semibold mb-4 text-white">
-              En attente
+              {t.pendingHeading}
             </h2>
             {actions.length > 0 ? (
               <div className="grid gap-3 sm:grid-cols-2">
@@ -277,11 +250,9 @@ function PlayerNotifications() {
             ) : (
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6 text-center">
                 <p className="text-sm font-medium text-white">
-                  Tout est à jour ✓
+                  {t.allUpToDate}
                 </p>
-                <p className="mt-1 text-xs text-gray-400">
-                  Tu n&apos;as aucune action en attente.
-                </p>
+                <p className="mt-1 text-xs text-gray-400">{t.noPending}</p>
               </div>
             )}
           </section>
@@ -289,7 +260,7 @@ function PlayerNotifications() {
           {/* (b) Preferences */}
           <section>
             <h2 className="text-lg font-semibold mb-4 text-white">
-              Préférences de notifications
+              {t.prefsHeading}
             </h2>
 
             <div className="mb-4">
@@ -306,27 +277,23 @@ function PlayerNotifications() {
                   >
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-white">
-                        {EVENT_LABELS[eventType]}
+                        {t.eventLabels[eventType]}
                       </p>
                       <p className="text-xs text-gray-500 mt-0.5">
-                        {EVENT_DESCRIPTIONS[eventType]}
+                        {t.eventDescriptions[eventType]}
                       </p>
                     </div>
                     <Toggle
                       checked={enabled}
                       disabled={savingType === eventType}
                       onChange={() => handleToggle(eventType, !enabled)}
-                      label={EVENT_LABELS[eventType]}
+                      label={t.eventLabels[eventType]}
                     />
                   </div>
                 );
               })}
             </div>
-            <p className="text-xs text-gray-500 mt-3">
-              Ces réglages s&apos;appliquent aux notifications push du
-              navigateur. Active d&apos;abord les notifications ci-dessus pour
-              les recevoir.
-            </p>
+            <p className="text-xs text-gray-500 mt-3">{t.prefsFootnote}</p>
           </section>
         </div>
       </main>

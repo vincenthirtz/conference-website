@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useToast } from '@/components/Toast';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
+import { useT, format } from '@/lib/i18n/useT';
+import { useLang } from '@/lib/i18n/LanguageProvider';
 
 import { logger } from '../../utils/logger';
 
@@ -25,6 +27,7 @@ type CasterApplication = {
 export default function CasterApplicationPage() {
   const { user, token, loading: authLoading, ready } = usePlayerSession();
   const { addToast } = useToast();
+  const t = useT('casterApplication');
 
   const [loading, setLoading] = useState(true);
   const [application, setApplication] = useState<CasterApplication | null>(null);
@@ -65,7 +68,7 @@ export default function CasterApplicationPage() {
 
     const trimmedMotivation = motivation.trim();
     if (trimmedMotivation.length > MOTIVATION_MAX) {
-      setError(`La motivation ne peut pas dépasser ${MOTIVATION_MAX} caractères.`);
+      setError(format(t.motivationTooLong, { max: MOTIVATION_MAX }));
       return;
     }
 
@@ -75,7 +78,7 @@ export default function CasterApplicationPage() {
         // Valide l'URL côté client avant l'envoi (l'API revalide).
         new URL(trimmedPortfolio);
       } catch {
-        setError('Le lien doit être une URL valide (https://...).');
+        setError(t.invalidUrl);
         return;
       }
     }
@@ -99,39 +102,28 @@ export default function CasterApplicationPage() {
       if (res.status === 409) {
         const code = data?.code;
         if (code === 'ALREADY_STAFF') {
-          addToast('Tu fais déjà partie du staff.', 'info');
+          addToast(t.alreadyStaff, 'info');
         } else if (code === 'ALREADY_PENDING') {
-          addToast(
-            'Tu as déjà une demande en cours d’examen.',
-            'info'
-          );
+          addToast(t.alreadyPending, 'info');
           // Reflète l'état côté UI si on ne l'avait pas encore.
           if (data?.application) setApplication(data.application);
         } else {
-          addToast(
-            (data?.error as string) || 'Demande déjà existante.',
-            'info'
-          );
+          addToast((data?.error as string) || t.alreadyExists, 'info');
         }
         return;
       }
 
       if (!res.ok || !data?.application) {
-        throw new Error(
-          (data?.error as string) || 'Impossible d’envoyer ta candidature.'
-        );
+        throw new Error((data?.error as string) || t.sendFailed);
       }
 
       setApplication(data.application as CasterApplication);
       setMotivation('');
       setPortfolioUrl('');
-      addToast('Ta candidature au cast a bien été envoyée !', 'success');
+      addToast(t.applicationSent, 'success');
     } catch (err: unknown) {
-      setError((err as Error).message || 'Une erreur est survenue.');
-      addToast(
-        (err as Error).message || 'Une erreur est survenue.',
-        'error'
-      );
+      setError((err as Error).message || t.genericError);
+      addToast((err as Error).message || t.genericError, 'error');
     } finally {
       setSubmitting(false);
     }
@@ -150,7 +142,7 @@ export default function CasterApplicationPage() {
   return (
     <>
       <Head>
-        <title>Rejoindre le cast | OW Women&apos;s Cup</title>
+        <title>{t.headTitle}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
@@ -159,7 +151,7 @@ export default function CasterApplicationPage() {
             href="/player"
             className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-6"
           >
-            &larr; Retour a mon espace
+            &larr; {t.backToSpace}
           </Link>
 
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
@@ -170,25 +162,17 @@ export default function CasterApplicationPage() {
               >
                 🎙️
               </span>
-              <h1 className="text-2xl font-bold">Rejoindre le cast</h1>
+              <h1 className="text-2xl font-bold">{t.pageTitle}</h1>
             </div>
-            <p className="text-gray-400 text-sm mb-6">
-              Tu veux caster nos matchs en live ? Présente ta motivation et
-              partage un lien vers tes casts ou ta chaîne Twitch. L&apos;équipe
-              casting étudiera ta candidature.
-            </p>
+            <p className="text-gray-400 text-sm mb-6">{t.intro}</p>
 
             {/* Statut de la candidature existante */}
-            {application && (
-              <StatusBanner application={application} />
-            )}
+            {application && <StatusBanner application={application} />}
 
             {showForm && (
               <form onSubmit={handleSubmit} className="space-y-6">
                 {application?.status === 'rejected' && (
-                  <p className="text-sm text-gray-400">
-                    Tu peux soumettre une nouvelle candidature ci-dessous.
-                  </p>
+                  <p className="text-sm text-gray-400">{t.canResubmit}</p>
                 )}
 
                 {/* Motivation */}
@@ -197,7 +181,7 @@ export default function CasterApplicationPage() {
                     htmlFor="motivation"
                     className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
                   >
-                    Motivation (optionnel)
+                    {t.motivationLabel}
                   </label>
                   <textarea
                     id="motivation"
@@ -206,7 +190,7 @@ export default function CasterApplicationPage() {
                     rows={5}
                     maxLength={MOTIVATION_MAX}
                     className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400/80 transition resize-none"
-                    placeholder="Parle-nous de ton expérience, ton style, pourquoi tu veux caster..."
+                    placeholder={t.motivationPlaceholder}
                   />
                   <div className="mt-1 text-right text-xs text-gray-500">
                     {motivation.length}/{MOTIVATION_MAX}
@@ -219,7 +203,7 @@ export default function CasterApplicationPage() {
                     htmlFor="portfolioUrl"
                     className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
                   >
-                    Lien portfolio / Twitch (optionnel)
+                    {t.portfolioLabel}
                   </label>
                   <input
                     id="portfolioUrl"
@@ -228,7 +212,7 @@ export default function CasterApplicationPage() {
                     value={portfolioUrl}
                     onChange={(e) => setPortfolioUrl(e.target.value)}
                     className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400/80 transition"
-                    placeholder="https://twitch.tv/ta-chaine"
+                    placeholder={t.portfolioPlaceholder}
                   />
                 </div>
 
@@ -251,21 +235,17 @@ export default function CasterApplicationPage() {
                   }`}
                 >
                   {submitting
-                    ? 'Envoi en cours...'
+                    ? t.sending
                     : application?.status === 'rejected'
-                      ? 'Re-soumettre ma candidature'
-                      : 'Envoyer ma candidature'}
+                      ? t.resubmit
+                      : t.submit}
                 </button>
               </form>
             )}
           </div>
 
           <div className="mt-6 text-center text-sm text-gray-500">
-            <p>
-              Le casting est ouvert à toutes : pas besoin d&apos;expérience pro,
-              juste de l&apos;envie et de la disponibilité sur nos créneaux de
-              stream.
-            </p>
+            <p>{t.footer}</p>
           </div>
         </main>
       </div>
@@ -282,20 +262,22 @@ function StatusBanner({
 }: {
   application: CasterApplication;
 }) {
-  const created = new Date(application.created_at).toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
+  const t = useT('casterApplication');
+  const { lang } = useLang();
+  const created = new Date(application.created_at).toLocaleDateString(
+    lang === 'fr' ? 'fr-FR' : 'en-GB',
+    {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }
+  );
 
   if (application.status === 'pending') {
     return (
       <div className="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-4 text-sm text-amber-100">
-        <p className="font-semibold mb-1">Demande en cours d&apos;examen</p>
-        <p>
-          Ta candidature au cast a été envoyée le {created}. L&apos;équipe
-          casting reviendra vers toi prochainement.
-        </p>
+        <p className="font-semibold mb-1">{t.pendingTitle}</p>
+        <p>{format(t.pendingText, { date: created })}</p>
       </div>
     );
   }
@@ -303,11 +285,8 @@ function StatusBanner({
   if (application.status === 'approved') {
     return (
       <div className="mb-6 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-4 text-sm text-emerald-100">
-        <p className="font-semibold mb-1">Bienvenue dans le cast ! 🎉</p>
-        <p>
-          Ta candidature a été acceptée. Tu fais désormais partie de
-          l&apos;équipe casting des OW Women&apos;s Cup.
-        </p>
+        <p className="font-semibold mb-1">{t.approvedTitle}</p>
+        <p>{t.approvedText}</p>
         {application.comment && (
           <p className="mt-2 text-emerald-200/80">{application.comment}</p>
         )}
@@ -318,11 +297,8 @@ function StatusBanner({
   // rejected
   return (
     <div className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-4 text-sm text-red-100">
-      <p className="font-semibold mb-1">Demande non retenue</p>
-      <p>
-        Ta précédente candidature n&apos;a pas été retenue. Tu peux re-soumettre
-        une demande quand tu le souhaites.
-      </p>
+      <p className="font-semibold mb-1">{t.rejectedTitle}</p>
+      <p>{t.rejectedText}</p>
       {application.comment && (
         <p className="mt-2 text-red-200/80">{application.comment}</p>
       )}
