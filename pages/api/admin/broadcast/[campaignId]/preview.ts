@@ -15,7 +15,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   const campaignId = String(req.query.campaignId ?? '');
-  const campaign = getCampaign(campaignId);
+  const campaign = await getCampaign(campaignId);
   if (!campaign) {
     return res.status(404).json({ error: 'Campagne inconnue.' });
   }

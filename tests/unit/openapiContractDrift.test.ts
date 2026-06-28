@@ -60,6 +60,17 @@ const ALLOWLIST_METHOD_MISMATCH = new Set<string>([
   // Heuristic limitation — handler accepts GET + POST, but detector only sees
   // POST because the GET path is gated by `if (req.method !== 'GET')`.
   'GET /api/news',
+  // Heuristic limitation — broadcast index accepts GET + POST (campaign create),
+  // but the detector only reports POST: the positive `req.method === 'POST'`
+  // check fires first, so the later `if (req.method !== 'GET')` negative form is
+  // ignored (rule 4 only runs when found.size === 0). Spec documents both; the
+  // handler genuinely accepts GET.
+  'GET /api/admin/broadcast',
+  // Heuristic limitation — the [campaignId] handler accepts POST (send) + PATCH
+  // (edit) + DELETE (delete). The detector sees PATCH/DELETE via positive
+  // `req.method === ...` checks, which suppresses the negative-form POST gate
+  // (`if (req.method !== 'POST')`). Spec documents all three; POST is real.
+  'POST /api/admin/broadcast/{campaignId}',
 ]);
 
 /**

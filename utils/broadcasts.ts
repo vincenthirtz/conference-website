@@ -7,8 +7,13 @@
 // à reconstruire l'historique d'envoi pour le tableau de bord admin.
 
 import { supabaseAdmin } from './supabase';
-import { buildIdahobitLiveEmailHtml, sendIdahobitLiveEmail } from './email';
-import type { SendEmailResult } from './email';
+import {
+  buildIdahobitLiveEmailHtml,
+  sendIdahobitLiveEmail,
+  buildCampaignEmailHtml,
+  sendCampaignEmail,
+} from './email';
+import type { SendEmailResult, CampaignBody } from './email';
 
 import { logger } from './logger';
 export type CampaignAudience = 'all-confirmed-users';
@@ -21,12 +26,19 @@ export type BroadcastCampaign = {
   subject: string;
   audience: CampaignAudience;
   status: CampaignStatus;
+  /** 'builtin' = catalogue codé en dur (legacy, non éditable) ; 'db' = créée depuis l'admin */
+  source: 'builtin' | 'db';
+  /** Corps structuré — présent uniquement pour les campagnes 'db' (prefill du formulaire) */
+  body?: CampaignBody;
   /** Envoi réel via Brevo */
   send: (to: string, label: string | null) => Promise<SendEmailResult>;
   /** Génère le HTML rendu (utilisé pour le live preview admin) */
   buildHtml: (label: string | null) => string;
 };
 
+// Catalogue codé en dur — campagnes one-shot historiques, non éditables depuis
+// l'admin. getCampaign()/listCampaigns() lisent la DB en priorité et retombent
+// ici par id (fallback). Les nouvelles campagnes vivent dans email_campaigns.
 export const BROADCAST_CAMPAIGNS: BroadcastCampaign[] = [
   {
     id: 'idahobit-live-2026',
@@ -37,13 +49,105 @@ export const BROADCAST_CAMPAIGNS: BroadcastCampaign[] = [
       'Live Twitch — Journée internationale contre les LGBTphobies, dimanche 17 mai à 14h',
     audience: 'all-confirmed-users',
     status: 'active',
+    source: 'builtin',
     send: sendIdahobitLiveEmail,
     buildHtml: buildIdahobitLiveEmailHtml,
   },
 ];
 
-export function getCampaign(id: string): BroadcastCampaign | undefined {
+/** Ligne brute de la table email_campaigns. */
+export type EmailCampaignRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  subject: string;
+  audience: CampaignAudience;
+  status: CampaignStatus;
+  heading: string;
+  greeting_enabled: boolean;
+  body_paragraphs: unknown;
+  cta_label: string | null;
+  cta_url: string | null;
+  footer_note: string | null;
+};
+
+/** Convertit une ligne email_campaigns en BroadcastCampaign exécutable. */
+export function rowToCampaign(row: EmailCampaignRow): BroadcastCampaign {
+  const body: CampaignBody = {
+    heading: row.heading,
+    greetingEnabled: row.greeting_enabled,
+    bodyParagraphs: Array.isArray(row.body_paragraphs)
+      ? (row.body_paragraphs as unknown[]).filter(
+          (p): p is string => typeof p === 'string'
+        )
+      : [],
+    ctaLabel: row.cta_label,
+    ctaUrl: row.cta_url,
+    footerNote: row.footer_note,
+  };
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description ?? '',
+    subject: row.subject,
+    audience: row.audience,
+    status: row.status,
+    source: 'db',
+    body,
+    send: (to, label) =>
+      sendCampaignEmail({
+        to,
+        subject: row.subject,
+        body,
+        displayLabel: label,
+        tags: [row.id],
+      }),
+    buildHtml: (label) => buildCampaignEmailHtml(body, label),
+  };
+}
+
+/**
+ * Résout une campagne par id : DB (email_campaigns) en priorité, puis fallback
+ * sur le catalogue codé en dur. Renvoie undefined si introuvable.
+ */
+export async function getCampaign(
+  id: string
+): Promise<BroadcastCampaign | undefined> {
+  if (supabaseAdmin) {
+    const { data, error } = await supabaseAdmin
+      .from('email_campaigns')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+    if (error) {
+      logger.error('[broadcasts] getCampaign DB error:', error);
+    } else if (data) {
+      return rowToCampaign(data as EmailCampaignRow);
+    }
+  }
   return BROADCAST_CAMPAIGNS.find((c) => c.id === id);
+}
+
+/**
+ * Liste toutes les campagnes : DB d'abord (plus récentes en tête), puis les
+ * campagnes builtin dont l'id n'est pas déjà couvert par une entrée DB.
+ */
+export async function listCampaigns(): Promise<BroadcastCampaign[]> {
+  let dbCampaigns: BroadcastCampaign[] = [];
+  if (supabaseAdmin) {
+    const { data, error } = await supabaseAdmin
+      .from('email_campaigns')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) {
+      logger.error('[broadcasts] listCampaigns DB error:', error);
+    } else if (data) {
+      dbCampaigns = (data as EmailCampaignRow[]).map(rowToCampaign);
+    }
+  }
+  const dbIds = new Set(dbCampaigns.map((c) => c.id));
+  const builtin = BROADCAST_CAMPAIGNS.filter((c) => !dbIds.has(c.id));
+  return [...dbCampaigns, ...builtin];
 }
 
 export type ComputedRecipient = {
@@ -149,7 +253,7 @@ export async function processCampaignWave(
   if (!supabaseAdmin) {
     throw new Error('Supabase admin not configured');
   }
-  const campaign = getCampaign(campaignId);
+  const campaign = await getCampaign(campaignId);
   if (!campaign) {
     throw new Error(`Unknown campaign: ${campaignId}`);
   }

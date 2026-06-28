@@ -7119,6 +7119,43 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+    post:
+      summary: Create a DB-backed email campaign.
+      description: |
+        Creates an editable campaign in `email_campaigns`. The id is a stable
+        kebab-case slug derived from the name (with a -2/-3 suffix on collision).
+        The body is a structured template (not free HTML).
+      operationId: adminCreateBroadcastCampaign
+      tags:
+        - admin/broadcast
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "201":
+          description: Campaign created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  campaign:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /api/admin/broadcast/state:
     get:
       summary: Aggregate live state of the broadcast console.
@@ -7198,9 +7235,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
     post:
-      summary: Trigger a campaign wave (send / queue).
+      summary: Trigger a campaign send (test / dry-run / broadcast).
       operationId: adminTriggerBroadcastCampaign
       tags:
         - admin/broadcast
@@ -7225,6 +7261,63 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+    patch:
+      summary: Edit a DB-backed email campaign.
+      description: |
+        Updates the structured body / metadata of a campaign stored in
+        `email_campaigns`. Builtin (legacy, non-editable) campaigns return 403.
+      operationId: adminUpdateBroadcastCampaign
+      tags:
+        - admin/broadcast
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Campaign updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Delete a DB-backed email campaign.
+      description: |
+        Removes a campaign from `email_campaigns` plus its associated wave
+        schedule and recipient snapshot. Builtin (legacy) campaigns return 403.
+      operationId: adminDeleteBroadcastCampaign
+      tags:
+        - admin/broadcast
+      security:
+        - StaffSession: []
+      responses:
+        "200":
+          description: Campaign deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/admin/broadcast/{campaignId}/preview:
     parameters:
       - in: path

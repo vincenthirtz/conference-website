@@ -333,6 +333,74 @@ export function sendIdahobitLiveEmail(
   });
 }
 
+// ─── Generic campaign template ─────────────────────────────────
+//
+// Corps STRUCTURÉ d'une campagne créée depuis l'admin (table email_campaigns).
+// Pas de HTML libre : on assemble heading + greeting + paragraphes + CTA +
+// footer dans le wrapper de marque (emailLayout). Tout le texte fourni par
+// l'admin est échappé (escapeHtml) — y compris l'URL du CTA (contexte attribut).
+
+export type CampaignBody = {
+  heading: string;
+  greetingEnabled?: boolean;
+  bodyParagraphs: string[];
+  ctaLabel?: string | null;
+  ctaUrl?: string | null;
+  footerNote?: string | null;
+};
+
+export function buildCampaignEmailHtml(
+  body: CampaignBody,
+  displayLabel: string | null
+): string {
+  const greeting =
+    body.greetingEnabled !== false && displayLabel
+      ? `<p style="margin:0 0 16px;font-size:15px;color:#C6BED9;line-height:1.6;">Hey ${escapeHtml(displayLabel)},</p>`
+      : '';
+
+  const paragraphs = (body.bodyParagraphs ?? [])
+    .filter((p) => typeof p === 'string' && p.trim())
+    .map(
+      (p) =>
+        `<p style="margin:0 0 20px;font-size:15px;color:#C6BED9;line-height:1.6;">${escapeHtml(p)}</p>`
+    )
+    .join('');
+
+  const cta =
+    body.ctaUrl && body.ctaUrl.trim() && body.ctaLabel && body.ctaLabel.trim()
+      ? ctaButton(escapeHtml(body.ctaUrl.trim()), escapeHtml(body.ctaLabel.trim()))
+      : '';
+
+  const footer =
+    body.footerNote && body.footerNote.trim()
+      ? `<p style="margin:24px 0 0;font-size:13px;color:#9081B0;line-height:1.5;text-align:center;">${escapeHtml(body.footerNote.trim())}</p>`
+      : '';
+
+  return emailLayout(`
+    ${gradientBar()}
+    <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">${escapeHtml(body.heading)}</h1>
+    ${greeting}
+    ${paragraphs}
+    ${cta}
+    ${footer}
+  `);
+}
+
+export function sendCampaignEmail(opts: {
+  to: string;
+  subject: string;
+  body: CampaignBody;
+  displayLabel: string | null;
+  tags?: string[];
+}): Promise<SendEmailResult> {
+  return sendEmail({
+    to: opts.to,
+    subject: opts.subject,
+    tags: opts.tags ?? ['campaign'],
+    html: buildCampaignEmailHtml(opts.body, opts.displayLabel),
+  });
+}
+
 /**
  * Notification sent to team captains when a tournament is open or approaching.
  */
