@@ -10049,6 +10049,69 @@ paths:
           description: Unsubscribed.
         "401":
           $ref: "#/components/responses/Unauthorized"
+  /api/admin/overview-summary:
+    get:
+      summary: Aggregated KPI counts for the admin hub (single call).
+      description: >
+        One-shot replacement for the 5 parallel calls the admin hub used to
+        make. Every value is a count-only query (`head:true, count:'exact'`) run
+        in parallel; no rows are loaded. Tenant-scoped counts
+        (tournamentsActive / teams / demandesPending / disputesOpen) filter on
+        the caller's active tenant; supportOpen / supportHigh are intentionally
+        GLOBAL because `support_tickets` has no tenant_id (see
+        BOT_API_CONTRACT.md › Tenant identification). On a per-count failure the
+        endpoint still returns 200 and sets that single key to `null`.
+      operationId: adminGetOverviewSummary
+      tags:
+        - admin/misc
+      security:
+        - StaffSession: []
+      responses:
+        "200":
+          description: KPI counters. A `null` value means that count failed.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  tournamentsActive:
+                    type: integer
+                    nullable: true
+                    description: Tournaments with status='running' (tenant-scoped).
+                  teams:
+                    type: integer
+                    nullable: true
+                    description: Total teams (tenant-scoped).
+                  demandesPending:
+                    type: integer
+                    nullable: true
+                    description: Demandes with status='pending' (tenant-scoped).
+                  supportOpen:
+                    type: integer
+                    nullable: true
+                    description: Support tickets with status='open' (GLOBAL, not tenant-scoped).
+                  supportHigh:
+                    type: integer
+                    nullable: true
+                    description: >
+                      Support tickets severity='high' AND status not in
+                      (resolved, closed) (GLOBAL, not tenant-scoped).
+                  disputesOpen:
+                    type: integer
+                    nullable: true
+                    description: Matches with status='disputed' (tenant-scoped).
+                required:
+                  - tournamentsActive
+                  - teams
+                  - demandesPending
+                  - supportOpen
+                  - supportHigh
+                  - disputesOpen
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /api/admin/partners:
     get:
       summary: List partners.

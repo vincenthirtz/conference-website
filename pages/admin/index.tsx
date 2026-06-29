@@ -30,8 +30,9 @@ type Props = {
 export const getServerSideProps = withStaffPage('caster');
 
 /* -----------------------------------------------------------
- * KPI globaux : on agrège des endpoints existants en parallèle.
- * Chaque appel demande juste le total (limit=1) pour rester léger.
+ * KPI globaux : un unique appel à l'endpoint d'agrégat.
+ * /api/admin/overview-summary renvoie déjà les 6 counts (200 même
+ * en dégradation partielle : une clé à null = ce count a échoué).
  * ---------------------------------------------------------*/
 
 type Kpis = {
@@ -42,12 +43,6 @@ type Kpis = {
   supportHigh: number | null;
   disputesOpen: number | null;
 };
-
-type ListTotalResponse = { total?: number | null };
-type SupportTicketsResponse = {
-  counts?: { open?: number; high_severity?: number };
-};
-type DisputesResponse = { counts?: { total?: number } };
 
 /* -----------------------------------------------------------
  * Cartes de navigation : grille de raccourcis vers les sections.
@@ -337,53 +332,20 @@ function AdminDashboardPage({ staff }: Props) {
       );
       setAlertsSummary(alerts);
 
-      // KPI globaux : managers+ uniquement (les endpoints exigent ce rôle).
-      // Chaque appel reste léger (limit=1, on ne lit que le total/counts).
+      // KPI globaux : managers+ uniquement (l'endpoint exige ce rôle).
+      // Un seul appel d'agrégat ; le shape correspond déjà à l'état Kpis.
+      // Le endpoint renvoie 200 même en dégradation partielle (clé à null).
       if (canManage) {
-        const [tournaments, teams, demandes, support, disputes] =
-          await Promise.allSettled([
-            adminFetchJson<ListTotalResponse>(
-              '/api/admin/tournaments?status=running&includeTotal=1&limit=1'
-            ),
-            adminFetchJson<ListTotalResponse>(
-              '/api/admin/teams?includeTotal=1&limit=1'
-            ),
-            adminFetchJson<ListTotalResponse>(
-              '/api/admin/demandes?status=pending&includeTotal=1&limit=1'
-            ),
-            // counts.open / counts.high_severity sont des agrégats globaux ;
-            // on ne filtre PAS par status pour qu'ils couvrent tout le set.
-            adminFetchJson<SupportTicketsResponse>(
-              '/api/admin/support/tickets?limit=1'
-            ),
-            // Le board /disputes ne liste QUE les litiges ouverts ; counts.total
-            // reflète déjà ce total. Pas de filtre status ici (non supporté).
-            adminFetchJson<DisputesResponse>('/api/admin/disputes?limit=1'),
-          ]);
-
+        const summary = await adminFetchJson<Kpis>(
+          '/api/admin/overview-summary'
+        );
         setKpis({
-          tournamentsActive:
-            tournaments.status === 'fulfilled'
-              ? (tournaments.value.total ?? null)
-              : null,
-          teams:
-            teams.status === 'fulfilled' ? (teams.value.total ?? null) : null,
-          demandesPending:
-            demandes.status === 'fulfilled'
-              ? (demandes.value.total ?? null)
-              : null,
-          supportOpen:
-            support.status === 'fulfilled'
-              ? (support.value.counts?.open ?? null)
-              : null,
-          supportHigh:
-            support.status === 'fulfilled'
-              ? (support.value.counts?.high_severity ?? null)
-              : null,
-          disputesOpen:
-            disputes.status === 'fulfilled'
-              ? (disputes.value.counts?.total ?? null)
-              : null,
+          tournamentsActive: summary.tournamentsActive ?? null,
+          teams: summary.teams ?? null,
+          demandesPending: summary.demandesPending ?? null,
+          supportOpen: summary.supportOpen ?? null,
+          supportHigh: summary.supportHigh ?? null,
+          disputesOpen: summary.disputesOpen ?? null,
         });
       }
     } catch (err: unknown) {

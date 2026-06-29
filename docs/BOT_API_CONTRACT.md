@@ -114,9 +114,13 @@ stashes it on `req.botContext.tenantId`. The `x-tenant-id` header is now
     `tenant_id` column**, so `/api/admin/support/tickets` (and its aggregate
     counts) returns every tenant's tickets to any `manager`+. On this
     mono-tenant instance that is the desired behaviour and support stays
-    tenant-agnostic on purpose. **Day a 2nd tenant is onboarded:** add
-    `tenant_id` to `support_tickets` (+ backfill migration) and scope the list
-    query **and** the count aggregates by the staff context tenant.
+    tenant-agnostic on purpose. The admin-hub aggregate
+    `GET /api/admin/overview-summary` reuses these global counts: its
+    `supportOpen` / `supportHigh` keys are deliberately **not** tenant-scoped
+    (every other key in that endpoint is). **Day a 2nd tenant is onboarded:**
+    add `tenant_id` to `support_tickets` (+ backfill migration) and scope the
+    list query **and** the count aggregates by the staff context tenant — this
+    includes `supportOpen` / `supportHigh` in `overview-summary`.
 
 ### Error codes
 
@@ -765,6 +769,48 @@ scope explicitement par `tenant_id`. Lecture réservée au rôle `manager`.
 ```
 
 **Errors** : `400` (query invalide), `401`, `403`, `500`.
+
+#### `GET /api/admin/overview-summary` (KPI agrégés du hub admin)
+
+Remplace les 5 appels parallèles que le hub `/admin` faisait (tournaments,
+teams, demandes, support/tickets, disputes) par **un seul** endpoint. Chaque
+valeur est un count-only (`head:true, count:'exact'`) exécuté en parallèle via
+`Promise.allSettled` — aucune ligne chargée. Les comptes
+`tournamentsActive / teams / demandesPending / disputesOpen` sont scopés au
+tenant courant ; `supportOpen / supportHigh` sont **globaux** (table
+`support_tickets` sans `tenant_id`, cf. note « Intentionally global tables »).
+
+**Auth** : session staff (`withStaffRoute(handler, 'manager')`).
+
+**Rate limit** : 60/min (`admin-overview-summary`).
+
+**Dégradation** : si un count échoue, l'endpoint renvoie tout de même `200` et
+met `null` pour CETTE clé (les autres restent valides). `null` (et non `0`)
+distingue « inconnu / en échec » de « zéro ».
+
+**Response 200**
+
+```json
+{
+  "tournamentsActive": 1,
+  "teams": 42,
+  "demandesPending": 3,
+  "supportOpen": 5,
+  "supportHigh": 2,
+  "disputesOpen": 0
+}
+```
+
+| Clé                 | Définition                                                  | Scope      |
+| ------------------- | ----------------------------------------------------------- | ---------- |
+| `tournamentsActive` | tournois `status = 'running'`                               | tenant     |
+| `teams`             | total équipes                                               | tenant     |
+| `demandesPending`   | demandes `status = 'pending'`                               | tenant     |
+| `supportOpen`       | tickets support `status = 'open'`                           | **global** |
+| `supportHigh`       | tickets `severity = 'high'` AND status ∉ {resolved, closed} | **global** |
+| `disputesOpen`      | matches `status = 'disputed'`                               | tenant     |
+
+**Errors** : `401`, `403`, `405` (méthode ≠ GET), `500` (Supabase admin absent).
 
 ### Autocomplete (Discord choice-pickers)
 
