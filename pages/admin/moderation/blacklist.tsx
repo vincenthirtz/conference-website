@@ -29,6 +29,35 @@ type BlacklistEntry = {
   created_at: string;
 };
 
+type AlertStrength = 'strong' | 'soft';
+type AlertSource = 'bot_scan' | 'bot_member_add' | 'registration';
+
+type BlacklistAlert = {
+  id: string;
+  createdAt: string;
+  discordUserId: string;
+  battleTag: string | null;
+  displayName: string | null;
+  matchedOn: string;
+  strength: string;
+  source: string;
+  context: string | null;
+  reason: string | null;
+  blacklistEntryId: string | null;
+};
+
+const ALERTS_PAGE_SIZE = 50;
+
+const SOURCE_LABELS: Record<AlertSource, string> = {
+  bot_scan: 'Scan du bot',
+  bot_member_add: 'Arrivée membre',
+  registration: 'Inscription site',
+};
+
+function sourceLabel(source: string): string {
+  return SOURCE_LABELS[source as AlertSource] ?? source;
+}
+
 const FILTER_KEYS = ['search', 'active'] as const;
 
 function formatDateFr(value: string): string {
@@ -87,6 +116,15 @@ function AdminBlacklistPage(_: StaffProps) {
   // Lignes en cours de mutation (toggle / delete) pour désactiver les boutons.
   const [busyId, setBusyId] = useState<string | null>(null);
 
+  // Historique des détections (alertes blacklist).
+  const [alerts, setAlerts] = useState<BlacklistAlert[]>([]);
+  const [alertsLoading, setAlertsLoading] = useState(true);
+  const [alertsLoadingMore, setAlertsLoadingMore] = useState(false);
+  const [alertsError, setAlertsError] = useState<string | null>(null);
+  const [alertsCursor, setAlertsCursor] = useState<string | null>(null);
+  const [alertStrength, setAlertStrength] = useState<'' | AlertStrength>('');
+  const [alertSource, setAlertSource] = useState<'' | AlertSource>('');
+
   const fetchEntries = useCallback(async () => {
     setLoading(true);
     setErrorMsg(null);
@@ -111,6 +149,43 @@ function AdminBlacklistPage(_: StaffProps) {
   useEffect(() => {
     fetchEntries();
   }, [fetchEntries]);
+
+  const fetchAlerts = useCallback(
+    async (cursor: string | null) => {
+      const isMore = cursor !== null;
+      if (isMore) setAlertsLoadingMore(true);
+      else setAlertsLoading(true);
+      setAlertsError(null);
+
+      const params = new URLSearchParams();
+      params.set('limit', String(ALERTS_PAGE_SIZE));
+      if (cursor) params.set('before', cursor);
+      if (alertStrength) params.set('strength', alertStrength);
+      if (alertSource) params.set('source', alertSource);
+
+      try {
+        const res = await fetch(
+          `/api/admin/moderation/blacklist/alerts?${params.toString()}`
+        );
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Erreur');
+        const page: BlacklistAlert[] = json.alerts || [];
+        setAlerts((prev) => (isMore ? [...prev, ...page] : page));
+        setAlertsCursor(json.nextCursor ?? null);
+      } catch (err) {
+        setAlertsError((err as Error).message);
+      } finally {
+        if (isMore) setAlertsLoadingMore(false);
+        else setAlertsLoading(false);
+      }
+    },
+    [alertStrength, alertSource]
+  );
+
+  // Recharge depuis le début quand un filtre d'alerte change.
+  useEffect(() => {
+    fetchAlerts(null);
+  }, [fetchAlerts]);
 
   function submitSearch() {
     setFilters({ search: searchInput.trim() || null });
@@ -545,6 +620,154 @@ function AdminBlacklistPage(_: StaffProps) {
                   })}
                 </div>
               </section>
+            </>
+          )}
+
+          {/* Historique des détections */}
+          <div className="mt-12 mb-6">
+            <h2 className="text-2xl font-bold tracking-tight">
+              Historique des détections
+            </h2>
+            <p className="text-sm text-neutral-400 mt-1">
+              Journal des correspondances détectées par le bot (scan, arrivée
+              d&apos;un membre) ou lors d&apos;une inscription sur le site.
+            </p>
+          </div>
+
+          {/* Filtres alertes */}
+          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-4 mb-4 flex flex-wrap gap-3 items-center">
+            <label className="flex items-center gap-2 text-sm">
+              <span className="text-neutral-400">Force</span>
+              <select
+                className="px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 text-sm"
+                value={alertStrength}
+                onChange={(e) =>
+                  setAlertStrength(e.target.value as '' | AlertStrength)
+                }
+              >
+                <option value="">Toutes</option>
+                <option value="strong">Forte (strong)</option>
+                <option value="soft">Faible (soft)</option>
+              </select>
+            </label>
+
+            <label className="flex items-center gap-2 text-sm">
+              <span className="text-neutral-400">Source</span>
+              <select
+                className="px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 text-sm"
+                value={alertSource}
+                onChange={(e) =>
+                  setAlertSource(e.target.value as '' | AlertSource)
+                }
+              >
+                <option value="">Toutes</option>
+                <option value="bot_scan">Scan du bot</option>
+                <option value="bot_member_add">Arrivée membre</option>
+                <option value="registration">Inscription site</option>
+              </select>
+            </label>
+
+            <button
+              type="button"
+              onClick={() => fetchAlerts(null)}
+              className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm transition-colors"
+            >
+              Rafraîchir
+            </button>
+          </section>
+
+          {alertsError && (
+            <div className="mb-4 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm">
+              {alertsError}
+            </div>
+          )}
+
+          {alertsLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+            </div>
+          ) : alerts.length === 0 ? (
+            <div className="text-center py-20 text-neutral-500 text-sm">
+              Aucune détection enregistrée.
+            </div>
+          ) : (
+            <>
+              <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
+                <div className="divide-y divide-neutral-700/50">
+                  {alerts.map((alert) => (
+                    <div key={alert.id} className="px-4 py-3">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium border ${
+                            alert.strength === 'strong'
+                              ? 'bg-red-600/20 text-red-200 border-red-500/40'
+                              : 'bg-amber-600/20 text-amber-200 border-amber-500/40'
+                          }`}
+                        >
+                          {alert.strength === 'strong'
+                            ? 'Forte'
+                            : alert.strength === 'soft'
+                              ? 'Faible'
+                              : alert.strength}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium border bg-indigo-600/20 text-indigo-200 border-indigo-500/40">
+                          {sourceLabel(alert.source)}
+                        </span>
+                        <span className="text-xs text-neutral-500">
+                          {formatDateFr(alert.createdAt)}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-sm">
+                        {alert.battleTag && (
+                          <span className="font-mono text-white">
+                            {alert.battleTag}
+                          </span>
+                        )}
+                        {alert.displayName && (
+                          <span className="text-neutral-200">
+                            {alert.displayName}
+                          </span>
+                        )}
+                        <span className="font-mono text-indigo-300 text-xs self-center">
+                          Discord: {alert.discordUserId}
+                        </span>
+                      </div>
+
+                      <p className="text-xs text-neutral-400 mt-1">
+                        Critère :{' '}
+                        <span className="text-neutral-200">
+                          {alert.matchedOn}
+                        </span>
+                      </p>
+
+                      {alert.context && (
+                        <p className="text-xs text-neutral-500 mt-0.5">
+                          Contexte : {alert.context}
+                        </p>
+                      )}
+                      {alert.reason && (
+                        <p className="text-sm text-neutral-300 mt-1">
+                          {alert.reason}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {alertsCursor && (
+                <div className="flex justify-center mt-4">
+                  <button
+                    type="button"
+                    onClick={() => fetchAlerts(alertsCursor)}
+                    disabled={alertsLoadingMore}
+                    className="px-4 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors disabled:opacity-50"
+                  >
+                    {alertsLoadingMore ? 'Chargement…' : 'Charger plus'}
+                  </button>
+                </div>
+              )}
             </>
           )}
         </div>

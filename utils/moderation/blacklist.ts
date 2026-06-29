@@ -249,6 +249,48 @@ export async function alertIfBlacklisted(
     void emitBotEvent('registration.blacklisted', payload, tenantId).catch(
       (e) => logger.warn('[blacklist] registration.blacklisted emit error', e)
     );
+
+    // Persistance best-effort dans `blacklist_alerts` (source='registration').
+    // NE DOIT JAMAIS faire échouer l'inscription : try/catch englobant, erreur
+    // avalée en warn. `matched_on`/`strength` = le match le plus fort
+    // (`strongest`), `criteria` = la liste complète des critères matchés. Le
+    // `discord_user_id` est obligatoire en table : si l'input n'en fournit pas
+    // (cas register/team_create sans Discord lié), on skip l'insert (l'event
+    // outbox reste l'alerte) plutôt que d'écrire une row invalide.
+    try {
+      const discordUserId = normalizeDiscordUserId(input.discordUserId);
+      if (discordUserId) {
+        const { error: insertError } = await supabaseAdmin
+          .from('blacklist_alerts')
+          .insert({
+            tenant_id: tenantId,
+            blacklist_entry_id: strongest.id,
+            discord_user_id: discordUserId,
+            battle_tag: normalizeBattleTag(input.battleTag),
+            display_name: normalizeDisplayName(input.displayName),
+            matched_on: strongest.matchedOn,
+            strength: strongest.strength,
+            criteria: entries.map((e) => ({
+              matchedOn: e.matchedOn,
+              strength: e.strength,
+            })),
+            reason: strongest.reason,
+            source: 'registration',
+            context,
+          });
+        if (insertError) {
+          logger.warn(
+            '[blacklist] blacklist_alerts insert error (registration)',
+            insertError
+          );
+        }
+      }
+    } catch (insertErr) {
+      logger.warn(
+        '[blacklist] blacklist_alerts insert unexpected error',
+        insertErr
+      );
+    }
   } catch (err) {
     logger.warn('[blacklist] alertIfBlacklisted unexpected error', err);
   }

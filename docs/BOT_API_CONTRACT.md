@@ -360,7 +360,11 @@ of `battle_tag | display_name | discord_user_id`; `strength` is `strong | soft`.
 The identifier fields (`battleTag` / `displayName` / `discordUserId`) are only
 present when supplied at the interception point. The bot posts an alert embed in
 the configured `staff_log_channel_id` (battletag, criterion, strength, reason) —
-it does **not** ban or kick automatically (human decision).
+it does **not** ban or kick automatically (human decision), and now records the
+detection via `POST /api/bot/v1/moderation/blacklist-alert` so the alert is
+persisted in `blacklist_alerts` (auditable from the admin dashboard). The
+registration flow itself also persists a `source: 'registration'` row directly
+(best-effort, never blocks the registration).
 
 ## Idempotency
 
@@ -496,14 +500,15 @@ body shapes live there. `Idem.` means the route honours `Idempotency-Key`.
 
 ### Announcements & moderation
 
-| Route                                                                            | Methods         | Idem.  | Rate-key                   |
-| -------------------------------------------------------------------------------- | --------------- | ------ | -------------------------- |
-| [`announcements.ts`](../pages/api/bot/v1/announcements.ts)                       | POST            | yes    | `bot-announcements`        |
-| [`broadcast/on-air.ts`](../pages/api/bot/v1/broadcast/on-air.ts) (Lot 7)         | GET             | —      | `bot-broadcast-on-air`     |
-| [`disputes.ts`](../pages/api/bot/v1/disputes.ts)                                 | GET             | —      | `bot-disputes`             |
-| [`disputes/escalations.ts`](../pages/api/bot/v1/disputes/escalations.ts) (Lot 4) | GET             | —      | `bot-disputes-escalations` |
-| [`moderation/blacklist.ts`](../pages/api/bot/v1/moderation/blacklist.ts)         | GET/POST/DELETE | DELETE | `bot-moderation`           |
-| [`staff-logs.ts`](../pages/api/bot/v1/staff-logs.ts)                             | GET             | —      | `bot-staff-logs`           |
+| Route                                                                                | Methods         | Idem.  | Rate-key                   |
+| ------------------------------------------------------------------------------------ | --------------- | ------ | -------------------------- |
+| [`announcements.ts`](../pages/api/bot/v1/announcements.ts)                           | POST            | yes    | `bot-announcements`        |
+| [`broadcast/on-air.ts`](../pages/api/bot/v1/broadcast/on-air.ts) (Lot 7)             | GET             | —      | `bot-broadcast-on-air`     |
+| [`disputes.ts`](../pages/api/bot/v1/disputes.ts)                                     | GET             | —      | `bot-disputes`             |
+| [`disputes/escalations.ts`](../pages/api/bot/v1/disputes/escalations.ts) (Lot 4)     | GET             | —      | `bot-disputes-escalations` |
+| [`moderation/blacklist.ts`](../pages/api/bot/v1/moderation/blacklist.ts)             | GET/POST/DELETE | DELETE | `bot-moderation`           |
+| [`moderation/blacklist-alert.ts`](../pages/api/bot/v1/moderation/blacklist-alert.ts) | POST            | yes    | `bot-moderation`           |
+| [`staff-logs.ts`](../pages/api/bot/v1/staff-logs.ts)                                 | GET             | —      | `bot-staff-logs`           |
 
 #### `GET /api/bot/v1/disputes/escalations`
 
@@ -657,6 +662,54 @@ deux fois).
 
 **Errors** : `400` (body invalide / pas de sélecteur), `401`, `403` (acteur
 non staff), `404` (aucune entrée active correspondante), `500`.
+
+#### `POST /api/bot/v1/moderation/blacklist-alert` (Persistance des détections)
+
+Le bot rapporte ici une **détection** blacklist pour qu'elle soit persistée dans
+la table `blacklist_alerts` (service-role only, RLS default-deny ; scope
+`tenant_id`). Source : scan périodique des membres du serveur Discord
+(`source: 'bot_scan'`) ou arrivée d'un nouveau membre (`source: 'bot_member_add'`).
+La détection N'A PAS d'acteur staff (c'est le bot système qui rapporte) :
+contrairement aux autres écritures de `moderation/blacklist`, **aucun
+`actorDiscordUserId` n'est requis** et aucun rôle staff n'est vérifié. L'insert
+ne ban ni ne kick personne (décision humaine) — il alimente le journal auditable
+depuis le dashboard admin (`GET /api/admin/moderation/blacklist/alerts`).
+
+**Auth** : `x-api-key` + tenant via per-tenant key (`crossTenant: false`).
+
+**Rate limit** : 30/min global (`bot-moderation`).
+
+**Idempotency** : oui (`Idempotency-Key` honoré — un retry réseau ne crée pas
+deux rows).
+
+**Body**
+
+- `discordUserId` _(requis)_ — snowflake du membre détecté (`1..32`).
+- `matchedOn` _(requis)_ — `battle_tag | display_name | discord_user_id` (le
+  critère le plus fort si plusieurs matchent).
+- `strength` _(requis)_ — `strong | soft`.
+- `source` _(requis)_ — `bot_scan | bot_member_add`.
+- `battleTag` _(optionnel, nullable)_ — battletag détecté.
+- `displayName` _(optionnel, nullable)_ — pseudo détecté.
+- `blacklistEntryId` _(optionnel, nullable, uuid)_ — entrée `player_blacklist`
+  matchée.
+- `reason` _(optionnel, nullable)_ — motif du ban (recopié de l'entrée).
+- `criteria` _(optionnel, nullable)_ — liste complète des critères matchés :
+  `[{ matchedOn, strength }]` (quand plusieurs critères matchent).
+- `context` _(optionnel, nullable)_ — contexte libre côté bot.
+
+**Response 201**
+
+```json
+{
+  "alert": {
+    "id": "uuid",
+    "createdAt": "2026-06-29T18:42:00.000Z"
+  }
+}
+```
+
+**Errors** : `400` (body invalide), `401`, `500`.
 
 ### Autocomplete (Discord choice-pickers)
 
