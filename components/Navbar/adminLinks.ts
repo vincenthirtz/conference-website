@@ -3,6 +3,7 @@ import { hasAtLeastRole, type StaffRole } from '@/utils/staff';
 
 export const ADMIN_LINKS: AdminLink[] = [
   { title: 'Dashboard', ref: '/admin', minRole: 'caster' },
+  { title: 'Mon profil', ref: '/admin/profile', minRole: 'caster' },
   {
     title: 'Tournoi en cours',
     ref: '/admin/tournoi-en-cours',
